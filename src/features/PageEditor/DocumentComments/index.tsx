@@ -231,10 +231,8 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
           </>
         ) : (
           <>
-            <h2 className="text-[20px] font-semibold">{t('pageEditor.comments.title')}</h2>
-            {summary.data && (
-              <div className={cn('text-[14px]', styles.meta)}>{summary.data.total}</div>
-            )}
+            <h2 className="text-xl font-semibold">{t('pageEditor.comments.title')}</h2>
+            {summary.data && <div className={cn('text-sm', styles.meta)}>{summary.data.total}</div>}
           </>
         )}
       </div>

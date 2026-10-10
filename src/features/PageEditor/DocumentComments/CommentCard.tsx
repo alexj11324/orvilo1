@@ -187,25 +187,25 @@ const CommentCard = memo<CommentCardProps>(
             avatar={comment.author.avatar || authorName}
             size={variant === 'reply' ? 28 : 32}
           />
-          <div className="text-[14px] font-semibold">{authorName}</div>
+          <div className="text-sm font-semibold">{authorName}</div>
           {replyToName && (
             <>
               <ChevronRight aria-hidden className={styles.replyTargetIcon} size={14} />
-              <div className="text-[14px] font-semibold">{replyToName}</div>
+              <div className="text-sm font-semibold">{replyToName}</div>
             </>
           )}
           {comment.author.status === 'former' && (
-            <div className={cn('text-[12px]', styles.meta)}>
+            <div className={cn('text-xs', styles.meta)}>
               {t('pageEditor.comments.author.former')}
             </div>
           )}
           {time && (
-            <div className={cn('text-[14px]', styles.meta)} title={timeTitle}>
+            <div className={cn('text-sm', styles.meta)} title={timeTitle}>
               {time}
             </div>
           )}
           {edited && !deleted && (
-            <div className={cn('text-[12px]', styles.meta)}>{t('pageEditor.comments.edited')}</div>
+            <div className={cn('text-xs', styles.meta)}>{t('pageEditor.comments.edited')}</div>
           )}
         </div>
 

@@ -47,7 +47,7 @@ const Body = memo(() => {
   return (
     <div className="flex flex-col items-center flex-1 gap-4 p-8" style={{ overflowY: 'auto' }}>
       <AssigneeAvatar agentId={agentId} size={80} />
-      <div className="text-center text-[24px] font-bold">{displayName}</div>
+      <div className="text-center text-2xl font-bold">{displayName}</div>
       {meta.description && (
         <div className="text-center text-muted-foreground">{meta.description}</div>
       )}

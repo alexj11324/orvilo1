@@ -122,7 +122,7 @@ const ThreadBody = memo(() => {
             void root.mutate();
           }}
         />
-        <div className="text-[12px] text-muted-foreground font-medium" style={{ marginTop: 16 }}>
+        <div className="text-xs text-muted-foreground font-medium" style={{ marginTop: 16 }}>
           {t('topicComment.repliesTitle')}
         </div>
         {visibleReplies.map((reply) => (

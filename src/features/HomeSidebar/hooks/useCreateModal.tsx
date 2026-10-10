@@ -41,10 +41,10 @@ const ExampleItem = memo<ExampleItemProps>(({ title, description, onClick, promp
       onClick={() => onClick(prompt)}
     >
       <div className="flex flex-col gap-1 py-3 px-[14px]">
-        <div className="truncate text-[14px]" style={{ fontWeight: 500 }}>
+        <div className="truncate text-sm" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+        <div className="line-clamp-2 text-xs" style={{ color: cssVar.colorTextTertiary }}>
           {description}
         </div>
       </div>
@@ -73,7 +73,7 @@ const Examples = memo<ExamplesProps>(({ suggestMode, onExampleClick }) => {
         </div>
         <div className="flex items-center gap-1" style={{ cursor: 'pointer' }} onClick={refresh}>
           <ActionIcon icon={RefreshCw} size={'small'} />
-          <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
+          <div className="text-xs" style={{ color: cssVar.colorTextSecondary }}>
             {tCommon('switch')}
           </div>
         </div>

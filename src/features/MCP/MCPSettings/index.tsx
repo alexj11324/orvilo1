@@ -362,7 +362,7 @@ const Settings = ({
               <Settings2Icon size={16} />
               {t('settings.configuration.title')}
             </div>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('settings.envConfigDescription')}
             </div>
             <Form

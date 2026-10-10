@@ -70,10 +70,7 @@ const NodeRow = memo<{
       onClick={() => openGoalNode(goalId, nodeId)}
     >
       {view.seq !== undefined && (
-        <div
-          className={cn('text-[12px] text-muted-foreground', styles.mono)}
-          style={{ flex: 'none' }}
-        >
+        <div className={cn('text-xs text-muted-foreground', styles.mono)} style={{ flex: 'none' }}>
           #{view.seq}
         </div>
       )}
@@ -114,7 +111,7 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
             key={event.id}
           >
             <div
-              className={cn('text-[12px] text-muted-foreground', styles.mono)}
+              className={cn('text-xs text-muted-foreground', styles.mono)}
               style={{ flex: 'none' }}
             >
               {formatAbsoluteDateTime(event.createdAt)}
@@ -124,7 +121,7 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
                 {t(`goalProcess.eventType.${event.eventType}` as const)}
                 {subject ? ` · ${subject}` : ''}
               </div>
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t(`goalProcess.actor.${event.actorType}` as const)}
                 {event.reason ? ` · ${event.reason}` : ''}
               </div>
@@ -191,7 +188,7 @@ const Findings = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
           extra={
             view.producedBy ? (
               <div
-                className="truncate min-w-0 text-[12px] text-muted-foreground"
+                className="truncate min-w-0 text-xs text-muted-foreground"
                 style={{ flexShrink: 1, minWidth: 0 }}
               >
                 {t('goalProcess.findings.from', { title: view.producedBy.title })}
@@ -303,7 +300,7 @@ const BudgetField = memo<{
             disabled={!canEdit || saving}
             min={meta.min}
             placeholder={placeholder ?? t('goalProcess.metricDetail.budget.uncapped')}
-            prefix={money ? <div className="text-[12px] text-muted-foreground">$</div> : undefined}
+            prefix={money ? <div className="text-xs text-muted-foreground">$</div> : undefined}
             style={{ width: 120 }}
             value={draft}
             onChange={setDraft}
@@ -360,7 +357,7 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
               <div className="flex flex-row items-center gap-2" key={row.taskId}>
                 {row.view?.seq !== undefined && (
                   <div
-                    className={cn('text-[12px] text-muted-foreground', styles.mono)}
+                    className={cn('text-xs text-muted-foreground', styles.mono)}
                     style={{ flex: 'none' }}
                   >
                     #{row.view.seq}
@@ -370,7 +367,7 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
                   {row.view?.node.title ?? row.taskId}
                 </div>
                 <div
-                  className={cn('text-[12px] text-muted-foreground', styles.mono)}
+                  className={cn('text-xs text-muted-foreground', styles.mono)}
                   style={{ flex: 'none' }}
                 >
                   {t('goalProcess.metricDetail.budget.tokensValue', {
@@ -447,7 +444,7 @@ const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }
         {/* Raising a cap is how a user restarts a goal the coordinator parked on
             one — say so, because the alternative gesture (Resume) looks like the
             obvious one and does nothing while the budget is still binding. */}
-        <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.7 }}>
+        <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.7 }}>
           {t('goalProcess.metricDetail.budget.raiseNote')}
         </div>
       </div>
@@ -472,7 +469,7 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
           <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>
             {formatSpan(end.getTime() - startedAt.getTime())}
           </div>
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {formatAbsoluteDateTime(startedAt)} →{' '}
             {completedAt
               ? formatAbsoluteDateTime(completedAt)
@@ -495,7 +492,7 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
                 nodeId={view.node.id}
                 extra={
                   <div
-                    className={cn('text-[12px] text-muted-foreground', styles.mono)}
+                    className={cn('text-xs text-muted-foreground', styles.mono)}
                     style={{ flex: 'none' }}
                   >
                     {dayjs(first.startedAt).format('HH:mm')}–
@@ -548,7 +545,7 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
       )}
       {/* The contract that makes "walk away" safe: event-driven advancement
           plus the recovery sweep. State it where the user checks for a pulse. */}
-      <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.7 }}>
+      <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.7 }}>
         {t('goalProcess.metricDetail.liveness.driver')}
       </div>
     </div>

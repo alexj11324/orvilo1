@@ -27,17 +27,17 @@ const getGradeColor = (grade: string): string => {
 const styles = {
   colorDot: 'size-2 rounded-[50%]',
   container: 'p-6 border border-sidebar-border rounded-[12px] bg-(--ant-color-fill-quaternary)',
-  description: '[margin-block-start:8px] text-[14px] text-muted-foreground',
+  description: '[margin-block-start:8px] text-sm text-muted-foreground',
   gradeBadge:
-    'flex-none size-8 border-2 border-solid border-current rounded-[50%] text-[16px] font-bold',
+    'flex-none size-8 border-2 border-solid border-current rounded-[50%] text-base font-bold',
   gradeInfo: 'flex gap-3 items-center [margin-block-start:12px]',
   itemList: 'my-2 mx-0 ps-4 [&_li]:my-1 [&_li]:mx-0',
-  legend: 'flex gap-4 [margin-block-start:8px] text-[12px]',
+  legend: 'flex gap-4 [margin-block-start:8px] text-xs',
   legendItem: 'flex gap-1 items-center',
   progressContainer: '[margin-block-start:16px]',
-  scoreText: 'text-[24px] font-semibold text-foreground',
+  scoreText: 'text-2xl font-semibold text-foreground',
   sectionTitle:
-    '[margin-block:12px_6px] mx-0 [padding-block-start:8px] [border-block-start:1px_solid_var(--sidebar-border)] text-[14px] font-semibold text-foreground first-of-type:[padding-block-start:0] first-of-type:[border-block-start:none]',
+    '[margin-block:12px_6px] mx-0 [padding-block-start:8px] [border-block-start:1px_solid_var(--sidebar-border)] text-sm font-semibold text-foreground first-of-type:[padding-block-start:0] first-of-type:[border-block-start:none]',
   tooltipContent: 'max-w-100 leading-[1.5]',
 };
 

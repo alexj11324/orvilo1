@@ -33,7 +33,7 @@ import { goalSelectors, useGoalStore } from '@/store/goal';
 
 const styles = {
   attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
-  label: 'text-[12px] font-semibold text-muted-foreground',
+  label: 'text-xs font-semibold text-muted-foreground',
   linkRow: 'cursor-pointer rounded-(--ant-border-radius-sm) hover:bg-(--ant-color-fill-quaternary)',
   mono: 'font-mono tabular-nums',
 };
@@ -61,18 +61,18 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
             key={attempt.index}
           >
             <div
-              className={cn('text-[12px] text-muted-foreground', styles.mono)}
+              className={cn('text-xs text-muted-foreground', styles.mono)}
               style={{ flex: 'none' }}
             >
               {formatAbsoluteDateTime(attempt.startedAt)}
             </div>
-            <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
+            <div className="text-xs text-muted-foreground" style={{ flex: 'none' }}>
               {t('goalProcess.attempts.nth', { index: attempt.index })}
             </div>
             <div
               style={{ flex: 'none' }}
               className={cn(
-                'text-[12px]',
+                'text-xs',
                 attempt.outcome === 'passed'
                   ? 'text-success'
                   : attempt.outcome === 'failed'
@@ -82,7 +82,7 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
             >
               {t(`goalProcess.attempts.${attempt.outcome}` as const)}
             </div>
-            <div className="text-[12px] text-muted-foreground" style={{ flex: 1, minWidth: 0 }}>
+            <div className="text-xs text-muted-foreground" style={{ flex: 1, minWidth: 0 }}>
               {attempt.reason ?? ''}
             </div>
           </div>
@@ -101,7 +101,7 @@ const NodeLinkRow = memo<{ onClick: () => void; text: string; view: GoalNodeView
       onClick={onClick}
     >
       <KindDot kind={view.node.kind} />
-      <div className="truncate min-w-0 text-[12px] text-muted-foreground">{text}</div>
+      <div className="truncate min-w-0 text-xs text-muted-foreground">{text}</div>
     </div>
   ),
 );

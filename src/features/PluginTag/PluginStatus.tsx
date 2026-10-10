@@ -73,7 +73,7 @@ const PluginStatus = memo<PluginStatusProps>(({ title, id, deprecated }) => {
           {tag}
         </div>
         {installError ? (
-          <div className="text-[12px] text-destructive">
+          <div className="text-xs text-destructive">
             {t(`error.${installError.message}`, {
               defaultValue: installError.cause,
               error: installError.cause,

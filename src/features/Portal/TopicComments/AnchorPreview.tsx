@@ -58,14 +58,14 @@ const AnchorPreview = memo<{ comment: TopicCommentItem }>(({ comment }) => {
         <span className="anticon" role="img">
           <MessageSquareText fill={'transparent'} height={14} size={14} width={14} />
         </span>
-        <div className="text-[12px] font-medium">{t('topicComment.anchor')}</div>
+        <div className="text-xs font-medium">{t('topicComment.anchor')}</div>
         {isDeleted && (
           <Badge size="sm" variant="secondary">
             {t('topicComment.anchorDeletedTag')}
           </Badge>
         )}
       </div>
-      <div className="line-clamp-2 text-[12px] text-muted-foreground">
+      <div className="line-clamp-2 text-xs text-muted-foreground">
         {comment.anchorPreview.excerpt || t('topicComment.anchorEmpty')}
       </div>
     </div>

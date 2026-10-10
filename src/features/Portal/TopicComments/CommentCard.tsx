@@ -166,21 +166,19 @@ const CommentCard = memo<CommentCardProps>(
           <Avatar avatar={comment.author.avatar || authorName} size={24} />
           <div className="text-[13px] font-medium">{authorName}</div>
           {comment.author.status === 'former' && (
-            <div className="text-[12px] text-muted-foreground">
-              {t('topicComment.author.former')}
-            </div>
+            <div className="text-xs text-muted-foreground">{t('topicComment.author.former')}</div>
           )}
           {pending ? (
-            <div className="text-[12px] text-muted-foreground">{t('topicComment.sending')}</div>
+            <div className="text-xs text-muted-foreground">{t('topicComment.sending')}</div>
           ) : (
             time && (
-              <div className="text-[12px] text-muted-foreground" title={timeTitle}>
+              <div className="text-xs text-muted-foreground" title={timeTitle}>
                 {time}
               </div>
             )
           )}
           {edited && !deleted && (
-            <div className={cn('text-[12px]', styles.edited)}>{t('topicComment.edited')}</div>
+            <div className={cn('text-xs', styles.edited)}>{t('topicComment.edited')}</div>
           )}
         </div>
 
@@ -204,7 +202,7 @@ const CommentCard = memo<CommentCardProps>(
             )}
             {comment.canRestore && comment.moderationExpiresAt && (
               <div className="flex flex-row items-center gap-2 justify-between">
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('topicComment.restoreDeadline', {
                     date: formatAbsoluteDateTime(comment.moderationExpiresAt),
                   })}

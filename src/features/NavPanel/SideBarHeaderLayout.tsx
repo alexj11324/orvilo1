@@ -83,7 +83,7 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
       >
         {showBack && <BackButton size={DESKTOP_HEADER_ICON_SMALL_SIZE} to={backTo} />}
         {left && typeof left === 'string' ? (
-          <div className="truncate text-[16px] font-medium">{left}</div>
+          <div className="truncate text-base font-medium">{left}</div>
         ) : (
           left
         )}

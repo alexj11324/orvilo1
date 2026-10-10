@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -111,7 +110,13 @@ const TopicChat = memo(() => {
       </Suspense>
       {topicPending ? (
         <div className="flex flex-row items-center justify-center py-1.5 px-4">
-          <span style={{ color: cssVar.colorTextDescription, fontSize: 12, textAlign: 'center' }}>
+          <span
+            style={{
+              color: 'var(--ant-color-text-description)',
+              fontSize: 12,
+              textAlign: 'center',
+            }}
+          >
             {t(
               migrationJob?.type === 'copy'
                 ? 'transferMigration.inputDisabledHintCopy'

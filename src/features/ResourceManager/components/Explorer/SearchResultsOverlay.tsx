@@ -1,7 +1,6 @@
 'use client';
 
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
-import { cssVar } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -146,7 +145,7 @@ const SearchResultsOverlay = memo(() => {
   return (
     <div
       style={{
-        background: cssVar.colorBgContainer as string,
+        background: 'var(--ant-color-bg-container)' as string,
         bottom: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -172,8 +171,8 @@ const SearchResultsOverlay = memo(() => {
       ) : !data || data.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full">
           <div className="flex flex-col items-center gap-2">
-            <SearchIcon size={32} style={{ color: cssVar.colorTextQuaternary as string }} />
-            <span style={{ color: cssVar.colorTextDescription as string, fontSize: 14 }}>
+            <SearchIcon size={32} style={{ color: 'var(--ant-color-text-quaternary)' as string }} />
+            <span style={{ color: 'var(--ant-color-text-description)' as string, fontSize: 14 }}>
               {t('FileManager.search.noResults')}
             </span>
           </div>
@@ -184,8 +183,8 @@ const SearchResultsOverlay = memo(() => {
             <div
               className="flex flex-row items-center px-2"
               style={{
-                borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
-                color: cssVar.colorTextDescription as string,
+                borderBlockEnd: `1px solid ${'var(--ant-color-border-secondary)'}`,
+                color: 'var(--ant-color-text-description)' as string,
                 fontSize: 12,
                 height: 40,
                 minHeight: 40,

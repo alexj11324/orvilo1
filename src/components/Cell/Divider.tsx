@@ -1,24 +1,14 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
 import { useIsDark } from '@/hooks/useIsDark';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  dividerDark: css`
-    flex: none;
-    width: 100%;
-    height: 6px;
-    background: color-mix(in srgb, ${cssVar.colorFillTertiary} 4%, transparent);
-  `,
-  dividerLight: css`
-    flex: none;
-    width: 100%;
-    height: 6px;
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  dividerDark:
+    'flex-none w-full h-1.5 [background:initial] supports-[background:color-mix(in_srgb,black,transparent)]:[background:color-mix(in_srgb,var(--accent)_4%,transparent)]',
+  dividerLight: 'flex-none w-full h-1.5 [background:var(--accent)]',
+};
 
 const Divider = memo(() => {
   const isDarkMode = useIsDark();

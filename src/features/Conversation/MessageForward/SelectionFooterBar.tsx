@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { Forward, Trash2, X } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -13,28 +12,10 @@ import { Button } from '@/components/ui/button';
 import { messageStateSelectors, useConversationStore, useConversationStoreApi } from '../store';
 import { openForwardModal } from './ForwardModal';
 
-const styles = createStaticStyles(({ css }) => ({
-  // Full-width bar docked at the bottom in place of the composer (hidden by
-  // MessageForwardFooter while selecting). Count on the leading edge, actions on
-  // the trailing edge.
-  bar: css`
-    position: relative;
-
-    inline-size: 100%;
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  // Pinned to the side so the actions stay centered regardless of the count.
-  count: css`
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-start: 16px;
-    transform: translateY(-50%);
-  `,
-}));
+const styles = {
+  bar: 'relative [inline-size:100%] px-4 py-3 [border-block-start:1px_solid_var(--sidebar-border)] bg-card',
+  count: 'absolute [inset-block-start:50%] [inset-inline-start:16px] [transform:translateY(-50%)]',
+};
 
 /**
  * Bottom action bar shown while multi-selecting: selection count on the leading

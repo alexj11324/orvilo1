@@ -20,7 +20,7 @@ const MoveFileItem = memo<MoveFileItemProps>(({ oldPath, newPath }) => {
   const displayNewPath = displayRelativePath ? displayRelativePath(newPath) : newPath;
 
   return (
-    <div className={cn('flex flex-row items-center gap-2 w-[100%]', styles.item)}>
+    <div className={cn('flex flex-row items-center gap-2 w-full', styles.item)}>
       <div className="flex flex-col flex-1">
         <div className={cn('text-muted-foreground', styles.path)}>{displayOldPath}</div>
       </div>

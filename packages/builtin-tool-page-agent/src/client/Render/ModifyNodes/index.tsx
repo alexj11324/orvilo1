@@ -9,7 +9,7 @@ import type { ModifyNodesState } from '../../../types';
 
 const styles = {
   content: 'min-w-0 flex-1 truncate font-mono text-[12px] text-foreground',
-  index: 'w-[18px] shrink-0 text-end text-[12px] text-(--ant-color-text-quaternary)',
+  index: 'w-4.5 shrink-0 text-end text-[12px] text-(--ant-color-text-quaternary)',
   position:
     'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-[11px] text-muted-foreground',
   row: 'flex items-center gap-2 px-3 py-2 not-last:[border-block-end:1px_dashed_var(--sidebar-border)]',

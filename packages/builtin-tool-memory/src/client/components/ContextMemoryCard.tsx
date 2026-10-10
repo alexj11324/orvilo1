@@ -105,7 +105,7 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }, (_, index) => (
                       <div
-                        className="h-[2px] w-[12px] rounded-full"
+                        className="h-0.5 w-3 rounded-full"
                         key={index}
                         style={{
                           background:

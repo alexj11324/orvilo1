@@ -20,9 +20,9 @@ const styles = {
     'shrink-0 rounded-[999px] bg-(--ant-color-success-bg) px-2 py-px font-mono text-[12px] text-success',
   assigneeAvatar: 'shrink-0',
   assigneeChip:
-    'inline-flex min-w-0 max-w-[220px] shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent py-px ps-1 pe-2 text-[12px] text-foreground',
+    'inline-flex min-w-0 max-w-55 shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent py-px ps-1 pe-2 text-[12px] text-foreground',
   assigneeName: 'truncate',
-  chip: 'inline-flex min-w-0 max-w-[200px] shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground',
+  chip: 'inline-flex min-w-0 max-w-50 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground',
   group: 'inline-flex flex-wrap items-center gap-1',
   identifierChip:
     'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground',

@@ -14,7 +14,7 @@ const styles = {
     'shrink-0 rounded-[999px] bg-(--ant-color-success-bg) px-2 py-px text-[12px] font-medium text-success',
   moreBadge: 'shrink-0 text-[12px] text-(--ant-color-text-tertiary)',
   previewChip:
-    'inline-flex min-w-0 max-w-[280px] shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground',
+    'inline-flex min-w-0 max-w-70 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground',
   separator: 'shrink-0 text-(--ant-color-text-quaternary)',
 };
 

@@ -118,11 +118,8 @@ interface SectionProps {
  * fold away, instead of three flat blocks bleeding into each other.
  */
 const Section = memo<SectionProps>(({ children, extra, label, onToggle, open }) => (
-  <div className={cn('flex', 'flex-col', 'gap-[7px]', styles.section)}>
-    <div
-      className={cn('flex', 'items-center', 'gap-[6px]', styles.sectionHeader)}
-      onClick={onToggle}
-    >
+  <div className={cn('flex', 'flex-col', 'gap-1.75', styles.section)}>
+    <div className={cn('flex', 'items-center', 'gap-1.5', styles.sectionHeader)} onClick={onToggle}>
       <ChevronRight
         size={13}
         style={{
@@ -230,7 +227,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
           open={openSections.criteria}
           onToggle={() => toggleSection('criteria')}
         >
-          <div className="flex flex-col gap-[7px]">
+          <div className="flex flex-col gap-1.75">
             <CriterionList className={styles.list}>
               {/* Rows are read-only on purpose. A focusable input sitting in a
                 dense list is one stray click away from silently rewriting a

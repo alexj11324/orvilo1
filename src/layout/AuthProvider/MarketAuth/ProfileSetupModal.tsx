@@ -404,7 +404,10 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
             <div className="font-semibold text-[16px]" style={{ lineHeight: 1.4 }}>
               {isFirstTimeSetup ? t('profileSetup.titleFirstTime') : t('profileSetup.titleEdit')}
             </div>
-            <div className="text-[13px] text-muted-foreground" style={{ lineHeight: 1.4 }}>
+            <div
+              className="text-(length:--text-dense) text-muted-foreground"
+              style={{ lineHeight: 1.4 }}
+            >
               {isFirstTimeSetup
                 ? t('profileSetup.descriptionFirstTime')
                 : t('profileSetup.descriptionEdit')}

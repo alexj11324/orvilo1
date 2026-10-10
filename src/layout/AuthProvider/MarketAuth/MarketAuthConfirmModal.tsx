@@ -55,7 +55,7 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
     };
 
     const footer = (
-      <div className="text-center text-[13px] text-muted-foreground">
+      <div className="text-center text-(length:--text-dense) text-muted-foreground">
         <Trans
           i18nKey={'authorize.footer.agreement'}
           ns={'marketAuth'}

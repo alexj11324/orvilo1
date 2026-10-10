@@ -16,7 +16,7 @@ const GoalDetailContentSkeleton = () => (
     </div>
     <div className={'flex'} style={{ gap: 18 }}>
       {Array.from({ length: 4 }).map((_, index) => (
-        <div className={'flex flex-col w-[112px]'} key={index} style={{ gap: 6 }}>
+        <div className={'flex flex-col w-28'} key={index} style={{ gap: 6 }}>
           <SkeletonBar height={22} width={index === 0 ? 68 : 52} />
           <SkeletonBar height={12} width={76} />
         </div>

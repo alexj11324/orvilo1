@@ -29,7 +29,7 @@ const GoalSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => (
           </div>
           <div className={'flex gap-5'}>
             {Array.from({ length: 3 }).map((_, index) => (
-              <div className={'flex flex-col w-[88px]'} key={index} style={{ gap: 5 }}>
+              <div className={'flex flex-col w-22'} key={index} style={{ gap: 5 }}>
                 <SkeletonBar height={20} width={32} />
                 <SkeletonBar height={12} width={56} />
               </div>

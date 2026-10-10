@@ -41,7 +41,7 @@ const Connection = () => {
           <SheetTitle className="sr-only">{t('remoteServer.configTitle')}</SheetTitle>
           {/* Clears the Electron title bar, which only overlaps the drawer off macOS. */}
           <ActionIcon
-            className={cn('absolute end-1.5', isMac ? 'top-3' : 'top-[46px]')}
+            className={cn('absolute end-1.5', isMac ? 'top-3' : 'top-11.5')}
             icon={XIcon}
             onClick={handleClose}
           />
@@ -53,7 +53,7 @@ const Connection = () => {
             }
           >
             <div className="flex h-full flex-col items-center justify-center overflow-auto p-6">
-              <div className="flex w-full max-w-[560px] flex-col">
+              <div className="flex w-full max-w-140 flex-col">
                 <LoginStep mode={'status'} onBack={handleClose} onNext={handleClose} />
               </div>
             </div>

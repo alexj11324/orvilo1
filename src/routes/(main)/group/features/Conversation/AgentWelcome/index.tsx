@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
 
 import { Markdown } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';

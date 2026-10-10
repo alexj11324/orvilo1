@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 26px title geometry pending a design-scale choice; no matching role is approved.
 
 import { DnaIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';

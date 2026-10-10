@@ -121,7 +121,13 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
         <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
           {t('apikey.created.hint')}
         </span>
-        <Button className="w-full" type="button" variant="default" onClick={() => close()}>
+        <Button
+          className="w-full"
+          size="lg"
+          type="button"
+          variant="default"
+          onClick={() => close()}
+        >
           {t('apikey.created.done')}
         </Button>
       </div>

@@ -114,6 +114,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
             aria-busy={isCheckingUpdate}
             className={mobile ? 'w-full' : ''}
             disabled={isCheckingUpdate}
+            size="lg"
             variant="outline"
             onClick={() => recheckUpdate()}
           >
@@ -134,6 +135,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
             aria-busy={true}
             className={mobile ? 'w-full' : ''}
             disabled={true}
+            size="lg"
             variant="outline"
           >
             <Spinner />
@@ -148,6 +150,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
             aria-busy={true}
             className={mobile ? 'w-full' : ''}
             disabled={true}
+            size="lg"
             variant="outline"
           >
             <Spinner />
@@ -159,6 +162,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
         return (
           <Button
             className={mobile ? 'w-full' : ''}
+            size="lg"
             variant="default"
             onClick={() => void getHostPort().updater.installUpdateNow()}
           >
@@ -168,7 +172,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       }
       case 'latest': {
         return (
-          <Button disabled className={mobile ? 'w-full' : ''} variant="outline">
+          <Button disabled className={mobile ? 'w-full' : ''} size="lg" variant="outline">
             {t('alreadyUpToDate')}
           </Button>
         );
@@ -177,6 +181,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
         return (
           <Button
             className={mobile ? 'w-full' : ''}
+            size="lg"
             variant="outline"
             onClick={() => void getHostPort().updater.checkUpdate()}
           >

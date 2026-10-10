@@ -124,6 +124,7 @@ const FallbackFontList = ({
         <Button
           className="w-full"
           disabled={atLimit}
+          size="lg"
           variant="outline"
           onClick={() => setAdding(true)}
         >

@@ -163,12 +163,13 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
       </Form.Item>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>
+        <Button size="lg" type="button" variant="outline" onClick={onBack}>
           {t('creds.form.back')}
         </Button>
         <Button
           disabled={createMutation.isPending || !fileHashId || disabled}
           loading={createMutation.isPending}
+          size="lg"
           type="submit"
           variant="default"
         >

@@ -199,7 +199,7 @@ const TaskDock = memo(() => {
         onClick={() => setExpand(!expand)}
       >
         {icon}
-        <div className="flex flex-1 items-baseline gap-[7px]" style={{ minWidth: 0 }}>
+        <div className="flex flex-1 items-baseline gap-1.75" style={{ minWidth: 0 }}>
           <div style={{ fontSize: 14 }}>{t(`taskDock.status.${status}`)}</div>
           <div className="truncate min-w-0 text-muted-foreground" style={{ fontSize: 12 }}>
             {activeCount > 0
@@ -250,7 +250,7 @@ const TaskDock = memo(() => {
               {groups.map((group) => (
                 <div className="flex flex-col" key={group.label}>
                   <div
-                    className={`flex items-center justify-between py-[5px] ${styles.groupHead}`}
+                    className={`flex items-center justify-between py-1.25 ${styles.groupHead}`}
                     // The count aligns with the rows' action glyphs, which sit
                     // 5px inside their own hit area — not with the row padding.
                     style={{ paddingInlineEnd: 19, paddingInlineStart: 12 }}

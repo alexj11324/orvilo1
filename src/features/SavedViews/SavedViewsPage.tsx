@@ -524,7 +524,7 @@ const SavedViewsPage = memo(() => {
                   )}
                 </div>
                 <div className="flex flex-row gap-2">
-                  <Button variant="default" onClick={() => setCreating(true)}>
+                  <Button size="lg" variant="default" onClick={() => setCreating(true)}>
                     {
                       <span className="anticon" role="img">
                         <PlusIcon fill={'transparent'} height={14} size={14} width={14} />
@@ -533,6 +533,7 @@ const SavedViewsPage = memo(() => {
                     {t('teams.viewCreateNew')}
                   </Button>
                   <Button
+                    size="lg"
                     onClick={() => window.open(DIRECTORY_DOC_URL, '_blank', 'noopener,noreferrer')}
                   >
                     {t('teams.viewDocumentation')}

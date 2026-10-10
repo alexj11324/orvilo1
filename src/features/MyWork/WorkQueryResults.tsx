@@ -1007,7 +1007,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               <ListTodoIcon aria-hidden className="size-8" />
               <p>{emptyLabel}</p>
               {filtered && onClearFilters ? (
-                <Button variant="outline" onClick={onClearFilters}>
+                <Button size="lg" variant="outline" onClick={onClearFilters}>
                   {t('myWork.clearFilters')}
                 </Button>
               ) : null}

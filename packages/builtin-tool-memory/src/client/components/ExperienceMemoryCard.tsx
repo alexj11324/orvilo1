@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -28,64 +27,19 @@ import { highlightTextStyles } from '@/styles';
 
 import type { AddExperienceMemoryParams } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  content: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-  `,
-  detail: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  header: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  keyLearning: css`
-    font-size: 14px;
-    line-height: 1.6;
-    color: ${cssVar.colorText};
-  `,
-  section: css`
-    padding: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  stepContent: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-    white-space: pre-wrap;
-  `,
-  summary: css`
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  tags: css`
-    padding-block-start: 8px;
-    border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  container: 'overflow-hidden w-full border border-sidebar-border rounded-[16px] bg-card',
+  content: '[padding-block:12px] [padding-inline:16px]',
+  detail: 'text-[13px] leading-[1.6] text-muted-foreground',
+  header:
+    '[padding-block:10px] [padding-inline:12px] [border-block-end:1px_solid_var(--sidebar-border)]',
+  keyLearning: 'text-sm leading-[1.6] text-foreground',
+  section: 'p-1 [border-block-start:1px_solid_var(--sidebar-border)]',
+  stepContent: 'text-[13px] leading-[1.6] text-muted-foreground whitespace-pre-wrap',
+  summary: 'text-sm leading-[inherit] font-medium text-muted-foreground',
+  tags: '[padding-block-start:8px] [border-block-start:1px_dashed_var(--sidebar-border)]',
+  title: 'line-clamp-1 font-medium text-foreground',
+};
 
 export interface ExperienceMemoryCardProps {
   data?: AddExperienceMemoryParams;
@@ -174,7 +128,7 @@ export const ExperienceMemoryCard = memo<ExperienceMemoryCardProps>(({ data, loa
                                 shape={'square'}
                                 size={20}
                                 style={{
-                                  border: `1px solid ${cssVar.colorBorderSecondary}`,
+                                  border: '1px solid var(--sidebar-border)',
                                   fontSize: 11,
                                 }}
                               />

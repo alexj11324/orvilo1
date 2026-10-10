@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -11,18 +10,10 @@ import StreamingMarkdown from '@/components/StreamingMarkdown';
 import type { IdentityMemoryViewModel } from './identityMemoryViewModel';
 import { memoryCardStyles as styles, MemorySection, SummaryAccordion } from './MemoryCardParts';
 
-const localStyles = createStaticStyles(({ css, cssVar }) => ({
-  evidence: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-inline-start: 2px solid ${cssVar.colorBorder};
-
-    font-size: 13px;
-    font-style: italic;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const localStyles = {
+  evidence:
+    '[padding-block:8px] [padding-inline:12px] [border-inline-start:2px_solid_var(--border)] text-[13px] italic leading-[1.6] text-muted-foreground',
+};
 
 export interface IdentityMemoryCardProps {
   data: IdentityMemoryViewModel;

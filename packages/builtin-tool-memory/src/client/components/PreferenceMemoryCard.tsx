@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -28,75 +27,21 @@ import { highlightTextStyles } from '@/styles';
 
 import type { AddPreferenceMemoryParams } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  content: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-  `,
-  detail: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  directive: css`
-    font-size: 14px;
-    line-height: 1.6;
-    color: ${cssVar.colorText};
-  `,
-  header: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  section: css`
-    padding: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  stepContent: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-    white-space: pre-wrap;
-  `,
-  suggestion: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: 8px;
-
-    font-size: 13px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  summary: css`
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  tags: css`
-    padding-block-start: 8px;
-    border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  container: 'overflow-hidden w-full border border-sidebar-border rounded-[16px] bg-card',
+  content: '[padding-block:12px] [padding-inline:16px]',
+  detail: 'text-[13px] leading-[1.6] text-muted-foreground',
+  directive: 'text-sm leading-[1.6] text-foreground',
+  header:
+    '[padding-block:10px] [padding-inline:12px] [border-block-end:1px_solid_var(--sidebar-border)]',
+  section: 'p-1 [border-block-start:1px_solid_var(--sidebar-border)]',
+  stepContent: 'text-[13px] leading-[1.6] text-muted-foreground whitespace-pre-wrap',
+  suggestion:
+    '[padding-block:8px] [padding-inline:12px] rounded-(--radius-card) text-[13px] leading-[1.5] text-muted-foreground bg-(--ant-color-fill-quaternary)',
+  summary: 'text-sm leading-[inherit] font-medium text-muted-foreground',
+  tags: '[padding-block-start:8px] [border-block-start:1px_dashed_var(--sidebar-border)]',
+  title: 'line-clamp-1 font-medium text-foreground',
+};
 
 export interface PreferenceMemoryCardProps {
   data?: AddPreferenceMemoryParams;
@@ -215,7 +160,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                                   shape={'square'}
                                   size={20}
                                   style={{
-                                    border: `1px solid ${cssVar.colorBorderSecondary}`,
+                                    border: '1px solid var(--sidebar-border)',
                                     fontSize: 11,
                                   }}
                                 />
@@ -269,7 +214,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                                   shape={'square'}
                                   size={20}
                                   style={{
-                                    border: `1px solid ${cssVar.colorBorderSecondary}`,
+                                    border: '1px solid var(--sidebar-border)',
                                     fontSize: 11,
                                   }}
                                 />

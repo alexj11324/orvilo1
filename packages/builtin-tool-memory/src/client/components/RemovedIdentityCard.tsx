@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Trash2 } from 'lucide-react';
 import { memo } from 'react';
@@ -9,18 +8,10 @@ import type { RemoveIdentityMemoryParams } from '../../types';
 import { getRemoveIdentityViewModel } from './identityMemoryViewModel';
 import { memoryCardStyles as styles } from './MemoryCardParts';
 
-const localStyles = createStaticStyles(({ css, cssVar }) => ({
-  id: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  reason: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const localStyles = {
+  id: 'font-mono text-xs leading-[inherit] text-(--ant-color-text-quaternary)',
+  reason: 'text-[13px] leading-[1.6] text-muted-foreground',
+};
 
 export interface RemovedIdentityCardProps {
   data?: RemoveIdentityMemoryParams;

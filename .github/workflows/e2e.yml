@@ -66,7 +66,10 @@ jobs:
         with:
           concurrent_skipping: 'same_content_newer'
           skip_after_successful_duplicate: 'true'
-          do_not_skip: '["workflow_dispatch", "schedule"]'
+          # Preview gates require an executed push run for this exact commit.
+          # A PR sibling must neither make that owner skip nor cancel it.
+          do_not_skip: '["push", "workflow_dispatch", "schedule"]'
+          cancel_others: 'false'
 
   e2e:
     needs: check-duplicate-run

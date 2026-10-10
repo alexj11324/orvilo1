@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import {
   BadgeCheck,
   CircleAlert,
@@ -17,83 +16,15 @@ import { Button } from '@/components/ui/button';
 
 import { acceptanceContentLayout } from '../layout';
 
-const styles = createStaticStyles(({ css }) => ({
-  /* Floats over the scrolling checklist — the decision stays reachable
-     however deep the review goes. */
-  bar: css`
-    position: sticky;
-    z-index: 20;
-    inset-block-end: 16px;
-
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-
-    width: 100%;
-    max-width: ${acceptanceContentLayout.maxWidth - 2 * acceptanceContentLayout.paddingInline}px;
-    margin-inline: auto;
-    padding-block: 12px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowTertiary};
-
-    @media (width <= 767px) {
-      inset-block-end: max(8px, env(safe-area-inset-bottom));
-      padding: 12px;
-    }
-  `,
-  summary: css`
-    flex: 1;
-    min-width: 160px;
-  `,
-  actions: css`
-    flex: none;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-
-    > button {
-      flex: none;
-    }
-
-    @media (width <= 480px) {
-      width: 100%;
-
-      > button {
-        flex: 1;
-      }
-    }
-  `,
-  // The completion mark springs in the instant review finishes — the felt beat
-  // the abrupt ring→disc swap never had, landing at the decision bar where the
-  // user's next action (accept / send back) already is, not behind a filter.
-  completePop: css`
-    @keyframes acceptance-decision-complete-pop {
-      0% {
-        transform: scale(0.5);
-        opacity: 0;
-      }
-
-      55% {
-        transform: scale(1);
-      }
-
-      100% {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-    animation: acceptance-decision-complete-pop 0.2s ease-out both;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  `,
-}));
+const styles = {
+  // Keep decisions reachable above the scrolling checklist.
+  bar: 'sticky bottom-4 z-20 mx-auto flex w-full flex-wrap items-center gap-3 rounded-(--ant-border-radius-lg) border border-sidebar-border bg-popover px-4 py-3 shadow-(--ant-box-shadow-tertiary) [@media(width<=767px)]:bottom-[max(8px,env(safe-area-inset-bottom))] [@media(width<=767px)]:p-3',
+  summary: 'min-w-[160px] flex-1',
+  actions:
+    'flex-none flex-wrap justify-end [&>button]:flex-none [@media(width<=480px)]:w-full [@media(width<=480px)]:[&>button]:flex-1',
+  completePop:
+    'animate-[acceptance-decision-complete-pop_0.2s_ease-out_both] motion-reduce:animate-none',
+};
 
 type BarState = 'accepted' | 'live' | 'rejected' | 'settled';
 
@@ -117,7 +48,7 @@ const ProgressRing = memo<{ done: number; total: number }>(({ done, total }) => 
           cy={size / 2}
           fill={'none'}
           r={radius}
-          stroke={cssVar.colorTextQuaternary}
+          stroke={'var(--ant-color-text-quaternary)'}
           strokeDasharray={'3 5'}
           strokeLinecap={'round'}
           strokeWidth={stroke}
@@ -133,7 +64,7 @@ const ProgressRing = memo<{ done: number; total: number }>(({ done, total }) => 
           cy={size / 2}
           fill={'none'}
           r={radius}
-          stroke={cssVar.colorFillSecondary}
+          stroke={'var(--selected)'}
           strokeWidth={stroke}
         />
         <circle
@@ -141,7 +72,7 @@ const ProgressRing = memo<{ done: number; total: number }>(({ done, total }) => 
           cy={size / 2}
           fill={'none'}
           r={radius}
-          stroke={cssVar.colorPrimary}
+          stroke={'var(--primary)'}
           strokeDasharray={`${circumference * ratio} ${circumference}`}
           strokeLinecap={'round'}
           strokeWidth={stroke}
@@ -153,7 +84,7 @@ const ProgressRing = memo<{ done: number; total: number }>(({ done, total }) => 
         className="flex flex-col items-center justify-center"
         style={{ fontSize: 10, fontVariantNumeric: 'tabular-nums', inset: 0, position: 'absolute' }}
       >
-        <span style={{ color: cssVar.colorTextSecondary, fontWeight: 600 }}>{done}</span>
+        <span style={{ color: 'var(--muted-foreground)', fontWeight: 600 }}>{done}</span>
       </div>
     </div>
   );
@@ -232,13 +163,13 @@ const DecisionBar = memo<DecisionBarProps>(
     const { t } = useTranslation('verify');
 
     const stateMeta = {
-      accepted: { color: cssVar.colorSuccess, icon: BadgeCheck },
+      accepted: { color: 'var(--success)', icon: BadgeCheck },
       // A repair round is an in-progress TASK — warn-coloured refresh, matching
       // the task-process cue; a plain verify stays neutral info.
       live: repairing
-        ? { color: cssVar.colorWarning, icon: RefreshCw }
-        : { color: cssVar.colorInfo, icon: Loader2 },
-      rejected: { color: cssVar.colorError, icon: RotateCcw },
+        ? { color: 'var(--warning)', icon: RefreshCw }
+        : { color: 'var(--info)', icon: Loader2 },
+      rejected: { color: 'var(--destructive)', icon: RotateCcw },
       settled: null,
     }[state];
 
@@ -266,7 +197,12 @@ const DecisionBar = memo<DecisionBarProps>(
     }, [reviewComplete]);
 
     return (
-      <div className={styles.bar}>
+      <div
+        className={styles.bar}
+        style={{
+          maxWidth: acceptanceContentLayout.maxWidth - 2 * acceptanceContentLayout.paddingInline,
+        }}
+      >
         <div className={`flex items-center gap-2 ${styles.summary}`}>
           {stateMeta ? (
             // accepted / live / rejected — a plain coloured status mark.
@@ -280,14 +216,14 @@ const DecisionBar = memo<DecisionBarProps>(
             // Every check signed off — the same clean badge the accepted state carries.
             <BadgeCheck
               className={justCompleted ? styles.completePop : undefined}
-              color={cssVar.colorSuccess}
+              color={'var(--success)'}
               size={22}
               style={{ flex: 'none' }}
             />
           ) : settledNeedsFix ? (
             <CircleAlert
               className={justCompleted ? styles.completePop : undefined}
-              color={cssVar.colorWarning}
+              color={'var(--warning)'}
               size={22}
               style={{ flex: 'none' }}
             />

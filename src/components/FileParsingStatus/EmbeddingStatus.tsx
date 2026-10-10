@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { BoltIcon, RotateCwIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -10,17 +10,9 @@ import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  errorReason: css`
-    padding: 4px;
-    border-radius: 4px;
-
-    font-family: monospace;
-    font-size: 12px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  errorReason: 'rounded-(--radius-chip) bg-muted p-1 font-mono text-xs leading-5',
+};
 
 interface EmbeddingStatusProps extends FileParsingTask {
   className?: string;
@@ -63,8 +55,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
                 {t('FileParsingStatus.chunks.embeddingStatus.error')}{' '}
                 <span
                   {...clickableProps()}
-                  className={CLICKABLE_FOCUS_RING}
-                  style={{ cursor: 'pointer' }}
+                  className={cn('cursor-pointer', CLICKABLE_FOCUS_RING)}
                   title={t('retry', { ns: 'common' })}
                   onClick={() => {
                     onErrorClick?.('embedding');
@@ -74,7 +65,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
                 </span>
               </Badge>
             </TooltipTrigger>
-            <TooltipContent style={{ maxWidth: 340 }}>
+            <TooltipContent className="max-w-85">
               <div className={'flex flex-col gap-1'}>
                 {t('FileParsingStatus.chunks.embeddingStatus.errorResult')}
                 {embeddingError && (

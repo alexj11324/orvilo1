@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 
@@ -7,54 +7,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 import { findClosestOptionIndex } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  label: css`
-    cursor: pointer;
-
-    padding: 0;
-    border: none;
-
-    font: inherit;
-    font-size: 12px;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-    overflow-wrap: anywhere;
-
-    background: transparent;
-
-    transition: color 0.2s ease;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-
-    &:focus-visible {
-      border-radius: 6px;
-      outline: 1px solid ${cssVar.colorBorder};
-      outline-offset: 2px;
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-    }
-  `,
-  labels: css`
-    display: grid;
-    gap: 8px;
-    width: 100%;
-  `,
-  root: css`
-    width: 100%;
-  `,
-  selectedLabel: css`
-    color: ${cssVar.colorText};
-  `,
-  slider: css`
-    width: 100%;
-    padding-inline: 6px;
-  `,
-}));
+const styles = {
+  label:
+    'min-h-7 min-w-6 cursor-pointer rounded-(--radius-input) border-0 bg-transparent p-0 text-center text-xs leading-5 [overflow-wrap:anywhere] transition-colors duration-200 ease-[ease] hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed motion-reduce:transition-none [@media(pointer:coarse)]:min-h-11',
+  labels: 'grid w-full gap-2',
+  root: 'w-full',
+  selectedLabel: 'text-foreground',
+  slider: 'w-full px-1.5',
+};
 
 export interface DiscreteSliderOption {
   ariaLabel?: string;
@@ -149,11 +109,14 @@ const DiscreteSlider = memo<DiscreteSliderProps>(
               <button
                 aria-current={index === currentIndex ? 'true' : undefined}
                 aria-label={option.ariaLabel}
-                className={cx(styles.label, index === currentIndex && styles.selectedLabel)}
                 disabled={disabled}
                 key={option.value}
                 style={{ textAlign, ...option.style }}
                 type={'button'}
+                className={cx(
+                  styles.label,
+                  index === currentIndex ? styles.selectedLabel : 'text-muted-foreground',
+                )}
                 onClick={() => onChange?.(option.value)}
               >
                 {option.label}

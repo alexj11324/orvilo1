@@ -26,78 +26,65 @@ const LOCAL_PATH_TONE = {
   iconSoftBg: `color-mix(in srgb, ${cssVar.purple} 64%, white)`,
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    position: relative;
-  `,
-  content: css`
-    position: relative;
-    z-index: 1;
-
-    box-sizing: border-box;
-    width: 100%;
-    height: 100%;
-    padding-block: 24px;
-    padding-inline: 28px;
-  `,
-  desc: css`
-    font-size: 12px;
-    line-height: 18px;
-    color: #fff;
-  `,
-  icon: css`
-    border-radius: ${cssVar.borderRadiusSM};
-  `,
-  iconGroup: css`
-    margin-block-start: 0;
-  `,
-  overlay: css`
-    pointer-events: none;
-
-    position: absolute;
-    z-index: 100;
-    inset: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background: ${cssVar.colorBgMask};
-
-    transition: all 0.2s ease-in-out;
-  `,
-  overlayContent: css`
-    position: relative;
-
-    box-sizing: border-box;
-    width: min(460px, 72vw);
-    padding: ${OVERLAY_INSET}px;
-    border-radius: 16px;
-
-    background: ${cssVar.geekblue};
-    box-shadow: 0 16px 48px color-mix(in srgb, ${cssVar.geekblue} 32%, transparent);
-
-    &::before {
+const styles = {
+  ...createStaticStyles(({ css }) => ({
+    desc: css`
+      font-size: 12px;
+      line-height: 18px;
+      color: #fff;
+    `,
+    overlay: css`
       pointer-events: none;
-      content: '';
 
       position: absolute;
-      inset: ${OVERLAY_BORDER_INSET}px;
+      z-index: 100;
+      inset: 0;
 
-      border: 1.5px dashed #fff;
-      border-radius: ${cssVar.borderRadiusLG};
-    }
-  `,
-  overlayContentLocalPath: css`
-    background: color-mix(in srgb, ${cssVar.purple} 82%, ${cssVar.geekblue});
-    box-shadow: 0 16px 48px color-mix(in srgb, ${cssVar.purple} 32%, transparent);
-  `,
-  title: css`
-    font-size: 16px;
-    font-weight: bold;
-    color: #fff;
-  `,
-}));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: ${cssVar.colorBgMask};
+
+      transition: all 0.2s ease-in-out;
+    `,
+    overlayContent: css`
+      position: relative;
+
+      box-sizing: border-box;
+      width: min(460px, 72vw);
+      padding: ${OVERLAY_INSET}px;
+      border-radius: 16px;
+
+      background: ${cssVar.geekblue};
+      box-shadow: 0 16px 48px color-mix(in srgb, ${cssVar.geekblue} 32%, transparent);
+
+      &::before {
+        pointer-events: none;
+        content: '';
+
+        position: absolute;
+        inset: ${OVERLAY_BORDER_INSET}px;
+
+        border: 1.5px dashed #fff;
+        border-radius: ${cssVar.borderRadiusLG};
+      }
+    `,
+    overlayContentLocalPath: css`
+      background: color-mix(in srgb, ${cssVar.purple} 82%, ${cssVar.geekblue});
+      box-shadow: 0 16px 48px color-mix(in srgb, ${cssVar.purple} 32%, transparent);
+    `,
+    title: css`
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+    `,
+  })),
+  container: 'relative',
+  content: 'relative z-1 box-border h-full w-full px-7 py-6',
+  icon: 'rounded-(--radius-card)',
+  iconGroup: 'mt-0',
+};
 
 export interface DragUploadZoneProps {
   /**

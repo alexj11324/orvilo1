@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { BoltIcon, RotateCwIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -14,17 +14,9 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import EmbeddingStatus from './EmbeddingStatus';
 
-const styles = createStaticStyles(({ css }) => ({
-  errorReason: css`
-    padding: 4px;
-    border-radius: 4px;
-
-    font-family: monospace;
-    font-size: 12px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  errorReason: 'rounded-(--radius-chip) bg-muted p-1 font-mono text-xs leading-5',
+};
 
 interface FileParsingStatusProps extends FileParsingTask {
   className?: string;
@@ -60,7 +52,9 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
               <Badge className={className} variant="info">
                 <span
                   aria-hidden
-                  className={'inline-block size-2 animate-pulse rounded-full bg-white'}
+                  className={
+                    'inline-block size-2 animate-pulse rounded-full bg-current motion-reduce:animate-none'
+                  }
                 />
                 {t('FileParsingStatus.chunks.status.processing')}
               </Badge>
@@ -78,8 +72,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
                 {t('FileParsingStatus.chunks.status.error')}{' '}
                 <span
                   {...clickableProps()}
-                  className={CLICKABLE_FOCUS_RING}
-                  style={{ cursor: 'pointer' }}
+                  className={cn('cursor-pointer', CLICKABLE_FOCUS_RING)}
                   title={t('retry', { ns: 'common' })}
                   onClick={() => {
                     onErrorClick?.('chunking');
@@ -89,7 +82,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
                 </span>
               </Badge>
             </TooltipTrigger>
-            <TooltipContent style={{ maxWidth: 340 }}>
+            <TooltipContent className="max-w-85">
               <div className={'flex flex-col gap-1'}>
                 {t('FileParsingStatus.chunks.status.errorResult')}
                 {chunkingError && (
@@ -114,8 +107,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
               <Tooltip>
                 <TooltipTrigger render={<span />}>
                   <Badge
-                    className={cx('chunk-tag', className)}
-                    style={{ cursor: 'pointer' }}
+                    className={cx('chunk-tag min-h-7 h-auto cursor-pointer', className)}
                     variant="secondary"
                     onClick={() => {
                       onClick?.(AsyncTaskStatus.Success);
@@ -129,13 +121,9 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
                       // or if preparing the embedding
                       preparingEmbedding ? null : (
                         <Button
+                          className="ps-2 pe-0"
+                          size="sm"
                           variant="link"
-                          style={{
-                            fontSize: 12,
-                            height: 'auto',
-                            paddingBlock: 0,
-                            paddingInline: '8px 0',
-                          }}
                           onClick={(e) => {
                             e.stopPropagation();
                             onEmbeddingClick?.();

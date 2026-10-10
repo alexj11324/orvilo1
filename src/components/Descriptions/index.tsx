@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx, responsive } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { type LucideIcon } from 'lucide-react';
 import {
@@ -11,27 +11,12 @@ import {
 
 import CopyableLabel from '../CopyableLabel';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    bordered: css`
-      overflow: hidden;
-      border: 1px solid ${cssVar.colorBorderSecondary};
-      border-radius: ${cssVar.borderRadiusLG};
-      ${responsive.sm} {
-        background: ${cssVar.colorBgContainer};
-      }
-    `,
-    cell: css`
-      overflow: hidden;
-      box-shadow: 0 0 0 0.5px ${cssVar.colorBorderSecondary};
-    `,
-    label: css`
-      overflow: hidden;
-      border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-      background: ${cssVar.colorFillQuaternary};
-    `,
-  };
-});
+const styles = {
+  bordered:
+    'overflow-hidden rounded-(--radius-card) border border-divider [@media(width<=575.98px)]:bg-card',
+  cell: 'overflow-hidden [box-shadow:0_0_0_0.5px_var(--divider)]',
+  label: 'overflow-hidden border-e border-divider bg-muted',
+};
 
 export interface DescriptionItem {
   className?: string;
@@ -94,7 +79,7 @@ const Descriptions = memo<DescriptionsProps>(
   }) => {
     return (
       <>
-        {title && <h3 style={{ marginTop: 12 }}>{title}</h3>}
+        {title && <h3 className="mt-3">{title}</h3>}
         <div
           className={cx(bordered && styles.bordered, className)}
           style={{
@@ -137,13 +122,13 @@ const Descriptions = memo<DescriptionsProps>(
                   (typeof item.icon === 'function'
                     ? createElement(item.icon as LucideIcon, {
                         size: 16,
-                        style: { color: cssVar.colorTextSecondary },
+                        style: { color: 'var(--muted-foreground)' },
                       })
                     : item.icon)}
                 <div
                   className={cn('truncate min-w-0', cx(classNames?.label, item.classNames?.label))}
                   style={{
-                    color: cssVar.colorTextSecondary,
+                    color: 'var(--muted-foreground)',
                     ...customStyles?.label,
                     ...item.styles?.label,
                   }}

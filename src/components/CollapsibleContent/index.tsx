@@ -1,10 +1,11 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { memo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { useCollapsible } from './useCollapsible';
 
@@ -17,53 +18,13 @@ const FADE_RATIO = 0.2;
 // handful of extra pixels.
 const OVERFLOW_THRESHOLD = 32;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    position: relative;
-    width: 100%;
-  `,
-  contentCollapsed: css`
-    overflow: hidden;
-
-    /* Fade height scales with the clamp — a fixed 48px would swallow most of a
-       three-line preview and leave the last line unreadable. */
-    mask-image: linear-gradient(to bottom, #000 calc(100% - var(--collapse-fade)), transparent);
-  `,
-  contentExpanded: css`
-    overflow: visible;
-  `,
-  toggleButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    block-size: 24px;
-    padding-inline: 10px;
-    border: none;
-    border-radius: 12px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-
-    transition:
-      color 150ms ${cssVar.motionEaseOut},
-      background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  toggleWrapper: css`
-    display: flex;
-    justify-content: center;
-    margin-block-start: 6px;
-  `,
-}));
+const styles = {
+  container: 'relative w-full',
+  contentCollapsed:
+    'overflow-hidden [mask-image:linear-gradient(to_bottom,#000_calc(100%_-_var(--collapse-fade)),transparent)]',
+  contentExpanded: 'overflow-visible',
+  toggleWrapper: 'mt-1.5 flex justify-center',
+};
 
 interface CollapsibleContentProps {
   children: ReactNode;
@@ -138,15 +99,16 @@ const CollapsibleContent = memo<CollapsibleContentProps>(
         </div>
         {shouldCollapse && (
           <div className={styles.toggleWrapper}>
-            <button
+            <Button
               aria-expanded={!collapsed}
-              className={styles.toggleButton}
+              size="sm"
               type="button"
+              variant="secondary"
               onClick={toggle}
             >
               {collapsed ? <ChevronDownIcon size={14} /> : <ChevronUpIcon size={14} />}
               {collapsed ? t('messageLongCollapse.expand') : t('messageLongCollapse.collapse')}
-            </button>
+            </Button>
           </div>
         )}
       </div>

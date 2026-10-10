@@ -1,34 +1,15 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { LockIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 
 import LibIcon from './index';
 
-const styles = createStaticStyles(({ css }) => ({
-  // The plate under the lock keeps it legible over the folder strokes.
-  badge: css`
-    position: absolute;
-    inset-block-end: -3px;
-    inset-inline-end: -4px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 1px;
-    border-radius: 50%;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorBgLayout};
-  `,
-  root: css`
-    position: relative;
-    display: flex;
-  `,
-}));
+const styles = {
+  badge:
+    'absolute -bottom-0.5 -end-1 flex items-center justify-center rounded-full bg-background p-0.5 text-muted-foreground',
+  root: 'relative flex',
+};
 
 interface LockedLibIconProps {
   size?: number;
@@ -43,7 +24,7 @@ interface LockedLibIconProps {
 const LockedLibIcon = memo<LockedLibIconProps>(({ size = 20 }) => (
   <span className={styles.root}>
     <LibIcon size={size} />
-    <span className={styles.badge}>{createElement(LockIcon, { size: 16 })}</span>
+    <span className={styles.badge}>{createElement(LockIcon, { size: 12 })}</span>
   </span>
 ));
 

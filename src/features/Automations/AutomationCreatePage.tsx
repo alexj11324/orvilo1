@@ -203,6 +203,7 @@ const AutomationCreatePage = memo(() => {
             <div className="flex flex-col items-start gap-2" role="status">
               <div className="text-muted-foreground">{t('create.saved_configuration')}</div>
               <Button
+                size="lg"
                 variant="outline"
                 onClick={() => navigate(automationDetailPath(createdIdentifier))}
               >
@@ -216,6 +217,7 @@ const AutomationCreatePage = memo(() => {
             placeholder={t('create.title_placeholder')}
             style={{ fontSize: 20, fontWeight: 600 }}
             value={name}
+            visualSize="normal"
             onChange={(e) => setNameOverride(e.target.value)}
           />
           <div className="flex">

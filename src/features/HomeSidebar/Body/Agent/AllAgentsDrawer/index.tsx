@@ -37,6 +37,7 @@ const AllAgentsDrawer = memo<AllAgentsDrawerProps>(({ open, onClose }) => {
             placeholder={t('navPanel.searchAgent')}
             type="search"
             value={searchKeyword}
+            visualSize="compact"
             onChange={(event) => setSearchKeyword(event.target.value)}
           />
         </div>

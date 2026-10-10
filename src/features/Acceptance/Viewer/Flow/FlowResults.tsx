@@ -222,7 +222,7 @@ export function FlowResults({
                 }))}
                 onValueChange={(id) => setAttemptId(String(id))}
               >
-                <SelectTrigger>
+                <SelectTrigger size="compact">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

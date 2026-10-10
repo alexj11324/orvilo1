@@ -188,7 +188,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                         if (typeof next === 'string') onCycleChange(next);
                       }}
                     >
-                      <SelectTrigger aria-label={t('teams.cycle')} style={{ minWidth: 160 }}>
+                      <SelectTrigger
+                        aria-label={t('teams.cycle')}
+                        size="compact"
+                        style={{ minWidth: 160 }}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -244,7 +248,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                     if (next === 'board' || next === 'list') onLayoutChange(next);
                   }}
                 >
-                  <SelectTrigger aria-label={t('myWork.displayLayout')} style={{ minWidth: 140 }}>
+                  <SelectTrigger
+                    aria-label={t('myWork.displayLayout')}
+                    size="compact"
+                    style={{ minWidth: 140 }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -278,7 +286,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                     }
                   }}
                 >
-                  <SelectTrigger aria-label={t('savedViews.grouping')} style={{ minWidth: 150 }}>
+                  <SelectTrigger
+                    aria-label={t('savedViews.grouping')}
+                    size="compact"
+                    style={{ minWidth: 150 }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -301,7 +313,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                       }
                     }}
                   >
-                    <SelectTrigger aria-label={t('myWork.subGrouping')} style={{ minWidth: 150 }}>
+                    <SelectTrigger
+                      aria-label={t('myWork.subGrouping')}
+                      size="compact"
+                      style={{ minWidth: 150 }}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -324,7 +340,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                     }
                   }}
                 >
-                  <SelectTrigger aria-label={t('savedViews.ordering')} style={{ minWidth: 170 }}>
+                  <SelectTrigger
+                    aria-label={t('savedViews.ordering')}
+                    size="compact"
+                    style={{ minWidth: 170 }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -348,7 +368,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                     }
                   }}
                 >
-                  <SelectTrigger aria-label={t('myWork.completedIssues')} style={{ minWidth: 140 }}>
+                  <SelectTrigger
+                    aria-label={t('myWork.completedIssues')}
+                    size="compact"
+                    style={{ minWidth: 140 }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

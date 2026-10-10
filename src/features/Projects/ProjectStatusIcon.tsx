@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
@@ -37,7 +36,7 @@ export const ProjectStatusIcon = memo<{
       {resolved === 'completed' && (
         <path
           d="m4 7 2 2 4-4"
-          stroke={cssVar.colorBgContainer}
+          stroke={'var(--card)'}
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={1.5}
@@ -46,7 +45,7 @@ export const ProjectStatusIcon = memo<{
       {resolved === 'canceled' && (
         <path
           d="m4.5 4.5 5 5m0-5-5 5"
-          stroke={cssVar.colorBgContainer}
+          stroke={'var(--card)'}
           strokeLinecap="round"
           strokeWidth={1.5}
         />

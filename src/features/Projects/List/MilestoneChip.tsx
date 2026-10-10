@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
@@ -9,32 +8,11 @@ import { useCurrentProjectDetail } from '@/store/project';
 
 import { pickNextMilestone } from './displayOptions';
 
-const styles = createStaticStyles(({ css }) => ({
-  chip: css`
-    display: inline-flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    max-width: 220px;
-    padding-block: 1px;
-    padding-inline: 6px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 4px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  date: css`
-    flex: none;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  name: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-  `,
-}));
+const styles = {
+  chip: 'inline-flex max-w-55 flex-none items-center gap-1 rounded-(--radius-chip) border border-sidebar-border px-1.5 py-px text-[11px] text-muted-foreground whitespace-nowrap', // linear-token-override: preserve existing 11px milestone metadata during the style-only migration.
+  date: 'flex-none text-[var(--ant-color-text-quaternary)]', // linear-token-override: existing quaternary theme role has no exact local semantic alias yet.
+  name: 'overflow-hidden text-ellipsis',
+};
 
 /**
  * Linear's inline milestone marker in the projects list: `◆ name Sep 30`.

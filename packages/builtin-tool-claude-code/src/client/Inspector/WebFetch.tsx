@@ -2,45 +2,18 @@
 
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ClaudeCodeApiName, type WebFetchArgs } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  icon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
-  url: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
+  icon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  url: 'overflow-hidden min-w-0 font-mono text-[12px] text-foreground text-ellipsis whitespace-nowrap',
+};
 
 /**
  * Strip the protocol so the chip leads with the host — full URLs eat the
@@ -55,14 +28,14 @@ export const WebFetchInspector = memo<BuiltinInspectorProps<WebFetchArgs>>(
     const url = (args?.url || partialArgs?.url || '').trim();
 
     if (isArgumentsStreaming && !url) {
-      return <div className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
+      return <div className={cn(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
     }
 
     const isShiny = isArgumentsStreaming || isLoading;
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isShiny && shinyTextStyles.shinyText)}>
+        <span className={cn(isShiny && shinyTextStyles.shinyText)}>
           {url ? `${label}:` : label}
         </span>
         {url && (

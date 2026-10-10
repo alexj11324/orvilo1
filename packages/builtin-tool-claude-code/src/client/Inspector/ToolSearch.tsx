@@ -6,7 +6,7 @@ import {
   shinyTextStyles,
 } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,33 +14,10 @@ import { ClaudeCodeApiName, type ToolSearchArgs } from '../../types';
 
 const SELECT_PREFIX = 'select:';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  baseline: css`
-    align-items: baseline;
-  `,
-  tag: css`
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  tagsList: css`
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  tag: 'py-0.5 px-2.5 rounded-[999px] font-mono text-[12px] text-foreground bg-accent',
+  tagsList: 'inline-flex shrink gap-1 items-center min-w-0 ms-1.5 whitespace-nowrap',
+};
 
 interface ParsedQuery {
   names: string[] | null;
@@ -72,15 +49,15 @@ export const ToolSearchInspector = memo<BuiltinInspectorProps<ToolSearchArgs>>(
     const parsed = parseQuery(args?.query || partialArgs?.query);
 
     if (isArgumentsStreaming && !parsed) {
-      return <div className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
+      return <div className={cn(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
     }
 
     const isShiny = isArgumentsStreaming || isLoading;
 
     if (parsed?.names) {
       return (
-        <div className={cx(inspectorTextStyles.root, styles.baseline)}>
-          <span className={cx(isShiny && shinyTextStyles.shinyText)}>{label}:</span>
+        <div className={inspectorTextStyles.root} style={{ alignItems: 'baseline' }}>
+          <span className={cn(isShiny && shinyTextStyles.shinyText)}>{label}:</span>
           <span className={styles.tagsList}>
             {parsed.names.map((name, index) => (
               <span className={styles.tag} key={`${index}-${name}`}>
@@ -94,7 +71,7 @@ export const ToolSearchInspector = memo<BuiltinInspectorProps<ToolSearchArgs>>(
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isShiny && shinyTextStyles.shinyText)}>{label}</span>
+        <span className={cn(isShiny && shinyTextStyles.shinyText)}>{label}</span>
         {parsed && (
           <>
             <span>: </span>

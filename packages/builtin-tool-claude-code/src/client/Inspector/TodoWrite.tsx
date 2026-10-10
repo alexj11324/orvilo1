@@ -3,7 +3,7 @@
 import { TodoInspectorSummary } from '@orvilo/shared-tool-ui/components';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,7 +18,7 @@ export const TodoWriteInspector = memo<BuiltinInspectorProps<TodoWriteArgs>>(
     const label = t(TODO_SUMMARY_LABEL_KEYS[summary.state]);
 
     if (isArgumentsStreaming && summary.total === 0) {
-      return <div className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
+      return <div className={cn(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
     }
 
     return (

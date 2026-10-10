@@ -2,64 +2,23 @@
 
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check, Monitor as MonitorIcon, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ClaudeCodeApiName, type MonitorArgs } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  command: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  description: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  monitorIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
-  statusIcon: css`
-    margin-inline-start: 4px;
-  `,
-  timeout: css`
-    flex-shrink: 0;
-    margin-inline-start: 8px;
-    font-feature-settings: 'tnum';
-    color: ${cssVar.colorTextDescription};
-  `,
-}));
+const styles = {
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
+  command:
+    'overflow-hidden min-w-0 font-mono text-[12px] text-foreground text-ellipsis whitespace-nowrap',
+  description:
+    'overflow-hidden min-w-0 text-[12px] text-foreground text-ellipsis whitespace-nowrap',
+  monitorIcon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  statusIcon: 'ms-1',
+  timeout: "shrink-0 ms-2 [font-feature-settings:'tnum'] text-[var(--ant-color-text-description)]",
+};
 
 const formatTimeout = (ms: number | undefined): string | undefined => {
   if (typeof ms !== 'number' || !Number.isFinite(ms) || ms <= 0) return undefined;
@@ -100,7 +59,7 @@ export const MonitorInspector = memo<BuiltinInspectorProps<MonitorArgs>>(
 
     // Nothing useful to show yet — keep the spinner-y label only.
     if (isArgumentsStreaming && !description && !command) {
-      return <div className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
+      return <div className={cn(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
     }
 
     // Prefer description; fall back to command (rendered monospace).
@@ -114,7 +73,7 @@ export const MonitorInspector = memo<BuiltinInspectorProps<MonitorArgs>>(
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isShiny && shinyTextStyles.shinyText)}>{label}:</span>
+        <span className={cn(isShiny && shinyTextStyles.shinyText)}>{label}:</span>
         {chipText && (
           <span className={styles.chip}>
             <MonitorIcon className={styles.monitorIcon} size={12} />
@@ -123,9 +82,9 @@ export const MonitorInspector = memo<BuiltinInspectorProps<MonitorArgs>>(
         )}
         {timeoutLabel && <span className={styles.timeout}>· {timeoutLabel}</span>}
         {isLoading ? null : isSuccess ? (
-          <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
+          <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
         ) : isError ? (
-          <X className={styles.statusIcon} color={cssVar.colorError} size={14} />
+          <X className={styles.statusIcon} color={'var(--destructive)'} size={14} />
         ) : null}
       </div>
     );

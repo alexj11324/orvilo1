@@ -2,7 +2,7 @@
 
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { GitForkIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -39,55 +39,14 @@ const REMOVE_LABEL_KEYS = {
   loading: 'builtins.orvilo-claude-code.worktree.remove.loading',
 } as const;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: min(420px, 60vw);
-    margin-inline-start: 6px;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  icon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
-  leadingIcon: css`
-    margin-inline-end: 6px;
-  `,
-  risk: css`
-    flex-shrink: 0;
-
-    margin-inline-start: 6px;
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorError};
-
-    background: ${cssVar.colorErrorBg};
-  `,
-  target: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 max-w-[min(420px,60vw)] ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
+  icon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  leadingIcon: 'me-1.5',
+  risk: 'shrink-0 ms-1.5 py-px px-1.5 rounded-[999px] text-[12px] text-destructive bg-[var(--ant-color-error-bg)]',
+  target:
+    'overflow-hidden min-w-0 font-mono text-[12px] text-foreground text-ellipsis whitespace-nowrap',
+};
 
 const resolvePhase = (
   isArgumentsStreaming: boolean | undefined,
@@ -130,7 +89,7 @@ export const EnterWorktreeInspector = memo<BuiltinInspectorProps<EnterWorktreeAr
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {label}
         </span>
         {target && <WorktreeTarget target={target} />}
@@ -156,8 +115,8 @@ export const ExitWorktreeInspector = memo<BuiltinInspectorProps<ExitWorktreeArgs
 
     return (
       <div className={inspectorTextStyles.root}>
-        <GitForkIcon className={cx(styles.icon, styles.leadingIcon)} size={12} />
-        <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+        <GitForkIcon className={cn(styles.icon, styles.leadingIcon)} size={12} />
+        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {label}
         </span>
         {action === 'remove' && discardChanges && (

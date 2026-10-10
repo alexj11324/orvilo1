@@ -2,7 +2,7 @@
 
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,50 +18,14 @@ const RING_STROKE = 2;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUM = 2 * Math.PI * RING_RADIUS;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-    flex-shrink: 1;
-
-    min-width: 0;
-    margin-inline-start: 4px;
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  countChip: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  ring: css`
-    transform: rotate(-90deg);
-    flex-shrink: 0;
-    margin-inline-end: 6px;
-  `,
-  ringProgress: css`
-    transition:
-      stroke-dashoffset 240ms ease,
-      stroke 240ms ease;
-  `,
-  ringTrack: css`
-    stroke: ${cssVar.colorFillSecondary};
-  `,
-}));
+const styles = {
+  chip: 'overflow-hidden shrink min-w-0 ms-1 py-px px-2 rounded-[999px] text-foreground text-ellipsis whitespace-nowrap bg-selected',
+  countChip:
+    'shrink-0 py-px px-1.5 rounded-[999px] font-mono text-[12px] text-muted-foreground bg-accent',
+  ring: '[transform:rotate(-90deg)] shrink-0 me-1.5',
+  ringProgress: 'transition-[stroke-dashoffset,stroke] duration-[240ms] ease-[ease]',
+  ringTrack: 'stroke-selected',
+};
 
 /**
  * Items shape the CC adapter emits on `pluginState.todos` — normalized
@@ -106,7 +70,7 @@ const ProgressRing = memo<ProgressRingProps>(({ stats }) => {
   const { completed, total } = stats;
   const ratio = total > 0 ? completed / total : 0;
   const allDone = total > 0 && completed === total;
-  const color = allDone ? cssVar.colorSuccess : cssVar.colorInfo;
+  const color = allDone ? 'var(--success)' : 'var(--info)';
 
   return (
     <svg className={styles.ring} height={RING_SIZE} width={RING_SIZE}>
@@ -197,7 +161,7 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
             </span>
           )}
           <span
-            className={cx(inFlight && shinyTextStyles.shinyText)}
+            className={cn(inFlight && shinyTextStyles.shinyText)}
             style={{ marginInlineStart: 6 }}
           >
             {text}
@@ -243,7 +207,7 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
               </span>
             )}
             <span
-              className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
+              className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
               style={{ marginInlineStart: stats.total > 0 ? 6 : 0 }}
             >
               {subject ? `${verb}: ${subject}` : verb}
@@ -277,7 +241,7 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
               </span>
             )}
             <span
-              className={cx(inFlight && shinyTextStyles.shinyText)}
+              className={cn(inFlight && shinyTextStyles.shinyText)}
               style={{ marginInlineStart: stats.total > 0 ? 6 : 0 }}
             >
               {`${verb}: ${subject}`}
@@ -311,7 +275,7 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
         );
       })();
       return (
-        <div className={cx(inspectorTextStyles.root, inFlight && shinyTextStyles.shinyText)}>
+        <div className={cn(inspectorTextStyles.root, inFlight && shinyTextStyles.shinyText)}>
           {fallback}
         </div>
       );
@@ -332,7 +296,7 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
     return (
       <div className={inspectorTextStyles.root}>
         <ProgressRing stats={stats} />
-        <span className={cx(isLoading && shinyTextStyles.shinyText)}>{label}</span>
+        <span className={cn(isLoading && shinyTextStyles.shinyText)}>{label}</span>
         {detail && (
           <>
             <span>:</span>

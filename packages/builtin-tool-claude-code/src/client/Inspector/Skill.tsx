@@ -3,43 +3,17 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ClaudeCodeApiName, type SkillArgs } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  skillIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
-  skillName: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
+  skillIcon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  skillName: 'overflow-hidden min-w-0 text-[12px] text-foreground text-ellipsis whitespace-nowrap',
+};
 
 export const SkillInspector = memo<BuiltinInspectorProps<SkillArgs>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading }) => {
@@ -48,12 +22,12 @@ export const SkillInspector = memo<BuiltinInspectorProps<SkillArgs>>(
     const skillName = args?.skill || partialArgs?.skill;
 
     if (isArgumentsStreaming && !skillName) {
-      return <div className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
+      return <div className={cn(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
     }
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {label}
         </span>
         {skillName && (

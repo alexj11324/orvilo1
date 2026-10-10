@@ -2,7 +2,7 @@
 
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspector, BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import {
   Camera,
@@ -25,38 +25,12 @@ import {
   parseBrowserMcpApi,
 } from './browserMcpLabels';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  icon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
-  value: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
+  icon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  value:
+    'overflow-hidden min-w-0 font-mono text-[12px] text-foreground text-ellipsis whitespace-nowrap',
+};
 
 interface BrowserMcpArgs {
   dx?: number;
@@ -142,7 +116,7 @@ const BrowserMcpInspector = memo<BuiltinInspectorProps<BrowserMcpArgs>>(
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isShiny && shinyTextStyles.shinyText)}>
+        <span className={cn(isShiny && shinyTextStyles.shinyText)}>
           {value ? `${label}:` : label}
         </span>
         {value && (

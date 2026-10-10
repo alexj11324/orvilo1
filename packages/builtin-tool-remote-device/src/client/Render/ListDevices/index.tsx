@@ -1,35 +1,18 @@
 'use client';
 
 import { type BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ListOnlineDevicesState } from '../../../types';
 import DeviceCard from '../DeviceCard';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  empty: css`
-    padding-block: 12px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: ${cssVar.fontSize};
-    color: ${cssVar.colorTextDescription};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden w-full border border-sidebar-border rounded-[var(--ant-border-radius)] bg-card',
+  empty:
+    'py-3 ps-3 pe-3 border border-sidebar-border rounded-[var(--ant-border-radius)] text-sm leading-[inherit] text-[var(--ant-color-text-description)] bg-card',
+};
 
 const ListDevices = memo<BuiltinRenderProps<undefined, ListOnlineDevicesState>>(
   ({ pluginState }) => {
@@ -45,7 +28,7 @@ const ListDevices = memo<BuiltinRenderProps<undefined, ListOnlineDevicesState>>(
     }
 
     return (
-      <div className={cx('flex flex-col', styles.card)} role={'list'}>
+      <div className={cn('flex flex-col', styles.card)} role={'list'}>
         {devices.map((device) => (
           <DeviceCard device={device} key={device.deviceId} variant={'listItem'} />
         ))}

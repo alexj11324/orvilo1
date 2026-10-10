@@ -1,101 +1,29 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckCircle2, MonitorIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { DeviceAttachment } from '../../../ExecutionRuntime/types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  activated: css`
-    color: ${cssVar.colorSuccess};
-    background: ${cssVar.colorSuccessBg};
-  `,
-  badge: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-size: 12px;
-    line-height: 16px;
-    white-space: nowrap;
-  `,
-  card: css`
-    padding-block: 12px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  details: css`
-    overflow: hidden;
-
-    max-width: 50%;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM};
-    color: ${cssVar.colorTextDescription};
-    text-align: end;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  hostname: css`
-    overflow: hidden;
-
-    font-size: ${cssVar.fontSize};
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  icon: css`
-    flex: none;
-
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  listItem: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  root: css`
-    width: 100%;
-  `,
-  status: css`
-    display: inline-flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    font-size: ${cssVar.fontSizeSM};
-    color: ${cssVar.colorTextSecondary};
-  `,
-  statusDot: css`
-    width: 7px;
-    height: 7px;
-    border: 1px solid ${cssVar.colorTextQuaternary};
-    border-radius: 50%;
-  `,
-  statusDotOnline: css`
-    border: none;
-    background: ${cssVar.colorSuccess};
-    box-shadow: 0 0 0 3px ${cssVar.colorSuccessBg};
-  `,
-}));
+const styles = {
+  activated: 'text-success bg-[var(--ant-color-success-bg)]',
+  badge:
+    'inline-flex gap-1 items-center py-0.5 ps-2 pe-2 rounded-[var(--ant-border-radius-sm)] text-xs leading-4 whitespace-nowrap',
+  card: 'py-3 ps-3 pe-3 border border-sidebar-border rounded-[var(--ant-border-radius)] bg-card',
+  details:
+    'truncate max-w-1/2 [font-family:var(--ant-font-family-code)] text-xs leading-[inherit] text-[var(--ant-color-text-description)] text-end',
+  hostname: 'truncate text-sm leading-[inherit] font-medium',
+  icon: 'flex-none size-8 rounded-[var(--radius-card)] text-muted-foreground bg-accent',
+  listItem:
+    'py-2.5 ps-3 pe-3 [&:not(:last-child)]:[border-block-end:1px_solid_var(--sidebar-border)]',
+  root: 'w-full',
+  status:
+    'inline-flex flex-none gap-1.5 items-center text-xs leading-[inherit] text-muted-foreground',
+  statusDot: 'size-[7px] border border-[var(--ant-color-text-quaternary)] rounded-full',
+  statusDotOnline: 'border-0 bg-success shadow-[0_0_0_3px_var(--ant-color-success-bg)]',
+};
 
 interface DeviceCardProps {
   /** Render the activated treatment (check badge) instead of the online badge. */
@@ -117,12 +45,12 @@ const DeviceCard = memo<DeviceCardProps>(({ device, activated, variant = 'card' 
   return (
     <div
       role={variant === 'listItem' ? 'listitem' : undefined}
-      className={cx(
+      className={cn(
         'flex flex-row items-center gap-3',
-        cx(styles.root, variant === 'card' ? styles.card : styles.listItem),
+        cn(styles.root, variant === 'card' ? styles.card : styles.listItem),
       )}
     >
-      <div className={cx('flex flex-col items-center justify-center', styles.icon)}>
+      <div className={cn('flex flex-col items-center justify-center', styles.icon)}>
         <span className="anticon" role="img">
           <MonitorIcon fill={'transparent'} height={18} size={18} width={18} />
         </span>
@@ -131,11 +59,7 @@ const DeviceCard = memo<DeviceCardProps>(({ device, activated, variant = 'card' 
         <span className={styles.hostname}>{displayName}</span>
         {!activated && (
           <span className={styles.status}>
-            <span
-              className={[styles.statusDot, device.online ? styles.statusDotOnline : undefined]
-                .filter(Boolean)
-                .join(' ')}
-            />
+            <span className={cn(styles.statusDot, device.online && styles.statusDotOnline)} />
             {t(
               device.online
                 ? 'builtins.orvilo-remote-device.render.online'

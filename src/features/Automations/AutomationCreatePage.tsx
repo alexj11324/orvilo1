@@ -236,7 +236,7 @@ const AutomationCreatePage = memo(() => {
                 }}
               >
                 <AssigneeAvatar agentId={assigneeAgentId} size={20} />
-                <div className="text-[13px]">
+                <div className="text-(length:--text-dense)">
                   {assigneeAgentId && assigneeMeta
                     ? agentDisplayName(assigneeMeta)
                     : t('instructions.agent_placeholder')}
@@ -251,7 +251,9 @@ const AutomationCreatePage = memo(() => {
             onChange={setDraft}
           />
           <div className="flex flex-col gap-2">
-            <div className="text-[13px] font-semibold">{t('instructions.section')}</div>
+            <div className="text-(length:--text-dense) font-semibold">
+              {t('instructions.section')}
+            </div>
             <Textarea
               className="min-h-[calc(4lh+0.75rem)]"
               disabled={configurationLocked}

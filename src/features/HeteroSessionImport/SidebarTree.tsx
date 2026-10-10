@@ -106,7 +106,10 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                   {leading}
                   <div
                     {...clickableProps()}
-                    className={cn('truncate block text-[13px]', CLICKABLE_FOCUS_RING)}
+                    className={cn(
+                      'truncate block text-(length:--text-dense)',
+                      CLICKABLE_FOCUS_RING,
+                    )}
                   >
                     {baseName(group.workingDirectory)}
                   </div>
@@ -193,7 +196,12 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
           )}
           onClick={() => onScopeChange('all')}
         >
-          <div className={cn('text-[13px]', scope === 'all' ? 'font-semibold' : 'font-normal')}>
+          <div
+            className={cn(
+              'text-(length:--text-dense)',
+              scope === 'all' ? 'font-semibold' : 'font-normal',
+            )}
+          >
             {t('heteroImport.allSessions')}
           </div>
           <div className="text-[12px] text-muted-foreground">{totalCount.toLocaleString()}</div>
@@ -221,7 +229,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                 }}
               />
               <Timer size={13} style={{ opacity: 0.55 }} />
-              <div className="text-[13px] font-medium" style={{ flex: 1 }}>
+              <div className="text-(length:--text-dense) font-medium" style={{ flex: 1 }}>
                 {t('heteroImport.watchedGroup')}
               </div>
               <div className="text-[12px] text-muted-foreground">{watched.length}</div>
@@ -267,8 +275,11 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                 />
                 <Brand size={15} />
                 <div
-                  className={cn('text-[13px]', scope === source ? 'font-semibold' : 'font-medium')}
                   style={{ flex: 1 }}
+                  className={cn(
+                    'text-(length:--text-dense)',
+                    scope === source ? 'font-semibold' : 'font-medium',
+                  )}
                 >
                   {AGENT_LABEL[source]}
                 </div>
@@ -321,7 +332,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                           >
                             <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
                               <Brand size={12} style={{ flex: 'none' }} />
-                              <div className="truncate block text-[13px]">
+                              <div className="truncate block text-(length:--text-dense)">
                                 {baseName(group.workingDirectory)}
                               </div>
                             </div>

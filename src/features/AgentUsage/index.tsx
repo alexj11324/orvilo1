@@ -80,7 +80,9 @@ const AgentUsage = memo(() => {
           >
             <div className="flex items-center gap-4 justify-between flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="text-[13px] text-muted-foreground">{t('usageStats.dimension')}</div>
+                <div className="text-(length:--text-dense) text-muted-foreground">
+                  {t('usageStats.dimension')}
+                </div>
                 <ToggleGroup
                   size="sm"
                   value={[granularity]}
@@ -93,7 +95,9 @@ const AgentUsage = memo(() => {
                 </ToggleGroup>
               </div>
               <div className="flex items-center gap-2">
-                <div className="text-[13px] text-muted-foreground">{t('usageStats.range')}</div>
+                <div className="text-(length:--text-dense) text-muted-foreground">
+                  {t('usageStats.range')}
+                </div>
                 <ToggleGroup
                   size="sm"
                   value={[range]}

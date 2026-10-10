@@ -88,7 +88,7 @@ function MemoryCollection({ layer }: Props) {
         }
         right={
           <Button
-            className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
             variant="outline"
             onClick={() =>
               openEditorModal({
@@ -158,14 +158,14 @@ function MemoryCollection({ layer }: Props) {
                 actions={
                   <div className="flex flex-row gap-2">
                     <Button
-                      className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                      className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
                       variant="outline"
                       onClick={() => setSelected(entry.id)}
                     >
                       {t('manager.details')}
                     </Button>
                     <Button
-                      className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                      className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
                       disabled={pending === entry.id}
                       variant="outline"
                       onClick={async () => {
@@ -193,7 +193,7 @@ function MemoryCollection({ layer }: Props) {
                       {t('manager.edit')}
                     </Button>
                     <Button
-                      className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                      className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
                       disabled={pending === entry.id}
                       variant="outline"
                       onClick={() => remove(entry.id)}
@@ -210,7 +210,7 @@ function MemoryCollection({ layer }: Props) {
         </AsyncBoundary>
         <div className="flex flex-row gap-3">
           <Button
-            className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
             disabled={page === 1 || isLoading}
             variant="outline"
             onClick={() => setPage(page - 1)}
@@ -219,7 +219,7 @@ function MemoryCollection({ layer }: Props) {
           </Button>
           <div className="text-foreground">{page}</div>
           <Button
-            className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
             disabled={!data || page * 20 >= data.total || isLoading}
             variant="outline"
             onClick={() => setPage(page + 1)}

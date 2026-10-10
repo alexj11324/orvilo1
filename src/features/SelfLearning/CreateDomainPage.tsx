@@ -508,7 +508,9 @@ const CreateDomainPage = memo(() => {
             {step === 'review' && draft && (
               <div className={cx('flex flex-col', styles.body)}>
                 <div className={cx('flex flex-col gap-2.5', styles.reviewSection)}>
-                  <div className="text-[13px] font-semibold">{t('create.field.brief')}</div>
+                  <div className="text-(length:--text-dense) font-semibold">
+                    {t('create.field.brief')}
+                  </div>
                   <Textarea
                     className={'bg-secondary'}
                     rows={3}
@@ -551,7 +553,7 @@ const CreateDomainPage = memo(() => {
 
                 <div className={cx('flex flex-col gap-2.5', styles.reviewSection)}>
                   <div className="flex flex-row items-center justify-between">
-                    <div className="text-[13px] font-semibold">
+                    <div className="text-(length:--text-dense) font-semibold">
                       {t('create.field.domainFilter')}
                     </div>
                     {renderAdjustmentButton('domainFilter')}
@@ -565,7 +567,9 @@ const CreateDomainPage = memo(() => {
                 </div>
                 <div className={cx('flex flex-col gap-2.5', styles.reviewSection)}>
                   <div className="flex flex-row items-center justify-between">
-                    <div className="text-[13px] font-semibold">{t('create.field.outOfScope')}</div>
+                    <div className="text-(length:--text-dense) font-semibold">
+                      {t('create.field.outOfScope')}
+                    </div>
                     {renderAdjustmentButton('outOfScope')}
                   </div>
                   <Textarea
@@ -589,7 +593,9 @@ const CreateDomainPage = memo(() => {
                           width={16}
                         />
                       </span>
-                      <div className="text-[13px] font-semibold">{t('create.anchor.canon')}</div>
+                      <div className="text-(length:--text-dense) font-semibold">
+                        {t('create.anchor.canon')}
+                      </div>
                       <div className="text-[12px] text-muted-foreground">
                         {t('create.anchor.canonHint')}
                       </div>
@@ -698,7 +704,9 @@ const CreateDomainPage = memo(() => {
                           width={16}
                         />
                       </span>
-                      <div className="text-[13px] font-semibold">{t('create.anchor.layers')}</div>
+                      <div className="text-(length:--text-dense) font-semibold">
+                        {t('create.anchor.layers')}
+                      </div>
                       <div className="text-[12px] text-muted-foreground">
                         {draft.layerSource === 'canonical' && draft.layerCanonRef
                           ? t('create.anchor.layersFrom', { ref: draft.layerCanonRef })

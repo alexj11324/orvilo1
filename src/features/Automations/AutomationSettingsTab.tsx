@@ -20,7 +20,7 @@ import { useCanManageAutomation } from './useCanManageAutomation';
 dayjs.extend(relativeTime);
 
 const styles = {
-  sectionTitle: 'text-[13px] font-semibold text-foreground',
+  sectionTitle: 'text-(length:--text-dense) font-semibold text-foreground',
   triggerCard: 'w-full cursor-pointer hover:bg-accent',
 };
 
@@ -47,7 +47,7 @@ const TriggerCard = memo(() => {
       >
         <TimerIcon color={'var(--ant-color-text-tertiary)'} size={18} />
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-          <div className="truncate min-w-0 text-[13px] font-medium">
+          <div className="truncate min-w-0 text-(length:--text-dense) font-medium">
             {summary || t('trigger.unconfigured')}
           </div>
           {nextRun ? (

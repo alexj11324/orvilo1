@@ -40,7 +40,7 @@ const RunRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
 
   return (
     <div {...clickableProps()} className={cn(styles.row, CLICKABLE_FOCUS_RING)} onClick={open}>
-      <div className="truncate min-w-0 text-[13px] font-medium">
+      <div className="truncate min-w-0 text-(length:--text-dense) font-medium">
         {activity.title || t(`run_source.${runTriggerLabel(activity.trigger)}`)}
       </div>
       <div className="text-[12px] text-muted-foreground">

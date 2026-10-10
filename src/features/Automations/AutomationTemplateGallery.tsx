@@ -17,7 +17,7 @@ import {
 const styles = {
   cardGrid: 'grid grid-cols-[1fr] gap-3 [@media(width>=900px)]:grid-cols-[1fr_1fr]',
   cardSummary: 'line-clamp-2 text-[12px] text-muted-foreground',
-  cardTitle: 'text-[13px] font-medium text-foreground',
+  cardTitle: 'text-(length:--text-dense) font-medium text-foreground',
 };
 
 interface AutomationTemplateGalleryProps {
@@ -66,7 +66,10 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
               <AlarmClockIcon color={'var(--ant-color-text-quaternary)'} size={40} />
             </div>
             <div className="text-[16px] font-semibold">{t('page.empty.title')}</div>
-            <div className="text-[13px] text-muted-foreground" style={{ maxWidth: 480 }}>
+            <div
+              className="text-(length:--text-dense) text-muted-foreground"
+              style={{ maxWidth: 480 }}
+            >
               {t('page.empty.hint')}
             </div>
           </div>

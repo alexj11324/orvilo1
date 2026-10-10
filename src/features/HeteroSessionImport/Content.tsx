@@ -262,7 +262,7 @@ const Content = memo<ContentProps>(({ agentId }) => {
         <FolderSearch size={40} style={{ opacity: 0.4 }} />
         <div className="font-medium">{t('heteroImport.empty.title')}</div>
         <div
-          className="text-[13px] text-muted-foreground"
+          className="text-(length:--text-dense) text-muted-foreground"
           style={{ maxWidth: 380, textAlign: 'center' }}
         >
           {t('heteroImport.empty.desc')}
@@ -282,7 +282,7 @@ const Content = memo<ContentProps>(({ agentId }) => {
         <TriangleAlert size={40} style={{ opacity: 0.5 }} />
         <div className="font-medium">{t('heteroImport.error.title')}</div>
         <div
-          className="text-[13px] text-muted-foreground"
+          className="text-(length:--text-dense) text-muted-foreground"
           style={{ maxWidth: 380, textAlign: 'center' }}
         >
           {t('heteroImport.error.desc')}
@@ -321,13 +321,13 @@ const Content = memo<ContentProps>(({ agentId }) => {
                     indeterminate={!allChecked && someChecked}
                     onCheckedChange={toggleAll}
                   />
-                  <div className="text-[13px] text-muted-foreground">
+                  <div className="text-(length:--text-dense) text-muted-foreground">
                     {t('heteroImport.selectAll')}
                   </div>
                 </label>
                 <label className="flex items-center gap-2">
                   <Checkbox checked={hideImported} onCheckedChange={setHideImported} />
-                  <div className="text-[13px] text-muted-foreground">
+                  <div className="text-(length:--text-dense) text-muted-foreground">
                     {t('heteroImport.hideImported')}
                   </div>
                 </label>
@@ -359,7 +359,7 @@ const Content = memo<ContentProps>(({ agentId }) => {
 
       {phase === 'select' && (
         <div className={cx(styles.footer, 'flex items-center justify-between')}>
-          <div className="text-[13px] text-muted-foreground">
+          <div className="text-(length:--text-dense) text-muted-foreground">
             {selected.size > 0
               ? t('heteroImport.footer.selected', {
                   messages: estMessages.toLocaleString(),
@@ -382,10 +382,10 @@ const Content = memo<ContentProps>(({ agentId }) => {
       {phase === 'importing' && (
         <div className={cx(styles.footer, 'flex flex-col gap-1')} style={{ width: '100%' }}>
           <div className="flex items-center justify-between">
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-(length:--text-dense) text-muted-foreground">
               {t('heteroImport.progress', { done: doneStates.length, total: selectedItems.length })}
             </div>
-            <div className="text-[13px] text-muted-foreground">{pct}%</div>
+            <div className="text-(length:--text-dense) text-muted-foreground">{pct}%</div>
           </div>
           <Progress value={pct} />
         </div>
@@ -402,7 +402,7 @@ const Content = memo<ContentProps>(({ agentId }) => {
                   : 'var(--lobe-color-success, #52c41a)',
               },
             })}
-            <div className="text-[13px]">
+            <div className="text-(length:--text-dense)">
               {t('heteroImport.done.summary', {
                 messages: doneStats.inserted.toLocaleString(),
                 sessions: doneStats.ok,

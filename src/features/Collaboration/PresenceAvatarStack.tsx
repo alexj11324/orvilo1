@@ -89,7 +89,7 @@ export const PresenceAvatarStack = memo<{ room: CollaborationRoom | null }>(({ r
   const overflow = summaries.length - visible.length;
 
   return (
-    <div className={cx(styles.stack, 'flex flex-col items-center gap-[0px]')}>
+    <div className={cx(styles.stack, 'flex flex-col items-center gap-0')}>
       {visible.map((summary) => {
         const isAgent = summary.actor.kind === 'agent';
         return (

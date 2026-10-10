@@ -51,6 +51,7 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
           autoFocus
           placeholder={t('goalProcess.addTask.titlePlaceholder')}
           value={title}
+          visualSize="normal"
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') void submit();

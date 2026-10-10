@@ -52,6 +52,7 @@ const RecordObservationContent = memo<{ goalId: string; metricKey: string; metri
             autoFocus
             placeholder={'42180'}
             value={value}
+            visualSize="normal"
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') void submit();

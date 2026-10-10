@@ -65,6 +65,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
           autoFocus
           placeholder={t('goalProcess.northStar.declare.keyPlaceholder')}
           value={key}
+          visualSize="normal"
           onChange={(e) => setKey(e.target.value)}
         />
       </div>
@@ -75,6 +76,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
         <Input
           placeholder={t('goalProcess.northStar.declare.titlePlaceholder')}
           value={title}
+          visualSize="normal"
           onChange={(e) => setTitle(e.target.value)}
         />
       </div>
@@ -91,7 +93,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
             }))}
             onValueChange={(value) => setOp(value as GoalMetricComparison)}
           >
-            <SelectTrigger>
+            <SelectTrigger size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -110,6 +112,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
           <Input
             placeholder={'10000'}
             value={target}
+            visualSize="normal"
             onChange={(e) => setTarget(e.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') void submit();

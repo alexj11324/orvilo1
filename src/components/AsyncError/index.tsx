@@ -123,7 +123,7 @@ const AsyncError = memo<AsyncErrorProps>(
       return (
         <div className={cn('flex items-center', styles.metric)} style={{ gap: 6 }}>
           {createElement(TriangleAlertIcon, { size: 14 })}
-          <div className="text-[13px]" style={{ color: cssVar.colorTextQuaternary }}>
+          <div className="text-(length:--text-dense)" style={{ color: cssVar.colorTextQuaternary }}>
             {t('asyncState.metricLabel')}
           </div>
           {recoveryAction}
@@ -136,7 +136,7 @@ const AsyncError = memo<AsyncErrorProps>(
       return (
         <div className={cn('inline-flex gap-2 items-center justify-center', styles.inline)}>
           {createElement(TriangleAlertIcon, { size: 14 })}
-          <div className="text-[13px]" style={{ color: cssVar.colorTextSecondary }}>
+          <div className="text-(length:--text-dense)" style={{ color: cssVar.colorTextSecondary }}>
             {heading}
           </div>
           {recoveryAction}
@@ -158,7 +158,7 @@ const AsyncError = memo<AsyncErrorProps>(
             {heading}
           </div>
           <div
-            className="text-center text-[13px]"
+            className="text-center text-(length:--text-dense)"
             style={{ color: cssVar.colorTextTertiary, maxWidth: 360 }}
           >
             {reason}

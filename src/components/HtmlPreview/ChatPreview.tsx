@@ -34,7 +34,7 @@ export function ChatHtmlPreview({ animated, content, previewProps }: ChatHtmlPre
 
   return (
     <>
-      <WebPreview className="my-3 h-[400px] min-w-0 overflow-hidden" data-ai-element="web-preview">
+      <WebPreview className="my-3 h-100 min-w-0 overflow-hidden" data-ai-element="web-preview">
         <WebPreviewNavigation>
           <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{title}</span>
           <WebPreviewNavigationButton

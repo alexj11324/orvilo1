@@ -12,8 +12,8 @@ import { type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
  * see src/components/ui/zIndex.ts) so selects/menus opened from inside a
  * modal paint above it.
  */
-const BACKDROP_Z = 'z-[1200]';
-const POPUP_Z = 'z-[1201]';
+const BACKDROP_Z = 'z-1200';
+const POPUP_Z = 'z-1201';
 
 type ModalPortalProps = React.ComponentProps<typeof Dialog.Portal>;
 const ModalPortal = (props: ModalPortalProps) => <Dialog.Portal {...props} keepMounted />;

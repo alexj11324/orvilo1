@@ -23,7 +23,7 @@ const DetailNotFound = memo(() => {
       <div className="flex flex-col items-center gap-1">
         <div className="text-[16px] font-semibold">{t('detail.notFound.title')}</div>
         <div
-          className="text-center text-[13px]"
+          className="text-center text-(length:--text-dense)"
           style={{ maxWidth: 320, color: cssVar.colorTextTertiary }}
         >
           {t('detail.notFound.desc')}

@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { Pin, PinOff } from 'lucide-react';
 import React, { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -49,15 +49,15 @@ const PageItem = memo<PageItemProps>(({ item, isPinned, onClose }) => {
 
   return (
     <div
-      className={cx(cx(styles.item, isActive && styles.itemActive), 'flex items-center gap-2')}
+      className={cn(cn(styles.item, isActive && styles.itemActive), 'flex items-center gap-2')}
       onClick={handleClick}
     >
       {meta.icon && createElement(meta.icon, { className: styles.icon, size: 16 })}
       <span className={styles.itemTitle}>{meta.title}</span>
       <ActionIcon
-        className={cx('actionIcon', styles.actionIcon)}
+        className={cn('actionIcon', styles.actionIcon)}
         icon={isPinned ? PinOff : Pin}
-        size="small"
+        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
         title={isPinned ? t('navigation.unpin') : t('navigation.pin')}
         onClick={handlePinToggle}
       />

@@ -47,7 +47,8 @@ import {
 } from './tabLayout';
 
 const NEW_TAB_URL = '/';
-const NEW_TAB_BUTTON_WIDTH = 26 + TAB_GAP;
+const NEW_TAB_BUTTON_SIZE = 32;
+const NEW_TAB_BUTTON_WIDTH = NEW_TAB_BUTTON_SIZE + TAB_GAP;
 
 // Tabs only reorder along the horizontal axis, so lock the drag transform to X.
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
@@ -318,8 +319,12 @@ const TabBar = () => {
             className={cx(electronStylish.nodrag, styles.newTabButton)}
             disabled={!canCreate}
             icon={Plus}
-            size="small"
             title={canCreate ? t('tab.newTab') : reason}
+            size={{
+              blockSize: NEW_TAB_BUTTON_SIZE,
+              borderRadius: 'var(--radius-button)',
+              size: 14,
+            }}
             onClick={canCreate ? () => handleNewTab() : undefined}
           />
           {layout.hiddenCount > 0 && (

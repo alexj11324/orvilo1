@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Maximize2Icon, Minimize2Icon, MinusIcon, XIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,30 +11,13 @@ import { electronStylish } from '@/styles/electron';
 
 export const WINDOW_CONTROL_WIDTH = 112;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  closeButton: css`
-    border-radius: 8px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorBgBase};
-      background: ${cssVar.colorError};
-    }
-  `,
-  container: css`
-    width: ${WINDOW_CONTROL_WIDTH}px;
-    min-width: ${WINDOW_CONTROL_WIDTH}px;
-  `,
-  controlButton: css`
-    border-radius: 8px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  closeButton:
+    'rounded-(--radius-button) text-muted-foreground hover:bg-destructive hover:text-destructive-on-fill',
+  container: 'w-28 min-w-28',
+  controlButton:
+    'rounded-(--radius-button) text-muted-foreground hover:text-foreground hover:bg-accent',
+};
 
 const WinControl = memo(() => {
   const { t } = useTranslation('electron');
@@ -84,8 +67,8 @@ const WinControl = memo(() => {
 
   return (
     <div
-      className={cx(
-        cx(styles.container, electronStylish.nodrag),
+      className={cn(
+        cn(styles.container, electronStylish.nodrag),
         'flex items-center gap-1 justify-end',
       )}
     >
@@ -94,7 +77,7 @@ const WinControl = memo(() => {
           className={control.key === 'close' ? styles.closeButton : styles.controlButton}
           icon={control.icon}
           key={control.key}
-          size={{ blockSize: 28, size: 14 }}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
           title={control.label}
           tooltipProps={{ placement: 'bottom' }}
           onClick={control.onClick}

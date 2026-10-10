@@ -1,27 +1,10 @@
 import { createStaticStyles } from 'antd-style';
 
-import { TAB_ICON_SIZE, TAB_INLINE_INSET } from './tabLayout';
+import { TAB_INLINE_INSET } from './tabLayout';
 
 const TAB_HEIGHT = 26;
 
-export const useStyles = createStaticStyles(({ css, cssVar }) => ({
-  // A fixed slot, because the indicator is not one size: a tab with metadata renders a
-  // 16px Avatar and one without falls back to a 14px Icon. resolveTabInset centres on
-  // TAB_ICON_SIZE for both, so the slot has to be that size or the fallback sits a pixel
-  // off centre in a pinned pill. Measured on the desktop app, not inferred.
-  avatarWrapper: css`
-    position: relative;
-
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: ${TAB_ICON_SIZE}px;
-    height: ${TAB_ICON_SIZE}px;
-
-    line-height: 0;
-  `,
+const registeredTabStyles = createStaticStyles(({ css, cssVar }) => ({
   closeIcon: css`
     pointer-events: none;
 
@@ -52,22 +35,6 @@ export const useStyles = createStaticStyles(({ css, cssVar }) => ({
 
     background: ${cssVar.gold};
     box-shadow: 0 0 6px ${cssVar.gold};
-  `,
-  unreadDot: css`
-    position: absolute;
-    inset-block-end: -2px;
-    inset-inline-end: -2px;
-
-    width: 8px;
-    height: 8px;
-    border: 1.5px solid ${cssVar.colorBgLayout};
-    border-radius: 50%;
-
-    background: ${cssVar.colorInfo};
-  `,
-  container: css`
-    flex: 1;
-    min-width: 0;
   `,
   // Tabs are absolutely positioned inside this box so that pinning can spring a tab
   // across to its new slot; a flex reorder could only teleport it. The box tracks the
@@ -195,23 +162,6 @@ export const useStyles = createStaticStyles(({ css, cssVar }) => ({
       background: ${cssVar.colorPrimary};
     }
   `,
-  overflowButton: css`
-    cursor: default;
-
-    flex-shrink: 0;
-    justify-content: center;
-
-    height: 22px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background-color: ${cssVar.colorFillTertiary};
-    }
-  `,
   tabDragging: css`
     cursor: grabbing;
     z-index: 1;
@@ -238,33 +188,6 @@ export const useStyles = createStaticStyles(({ css, cssVar }) => ({
       }
     }
   `,
-  previewCard: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 240px;
-  `,
-  previewImage: css`
-    display: block;
-
-    aspect-ratio: 16 / 10;
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 6px;
-
-    object-fit: cover;
-    object-position: top center;
-  `,
-  previewTitle: css`
-    overflow: hidden;
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  tabIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextSecondary};
-  `,
   tabTitle: css`
     overflow: hidden;
     flex: 1;
@@ -285,25 +208,21 @@ export const useStyles = createStaticStyles(({ css, cssVar }) => ({
        swallow the whole word rather than trailing it off. */
     mask-image: linear-gradient(to right, #000 max(60%, calc(100% - 20px)), transparent);
   `,
-  newTabButton: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 26px;
-    height: 22px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition:
-      background-color 0.15s ${cssVar.motionEaseInOut},
-      color 0.15s ${cssVar.motionEaseInOut};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background-color: ${cssVar.colorFillTertiary};
-    }
-  `,
 }));
+
+export const useStyles = {
+  ...registeredTabStyles,
+  avatarWrapper: 'relative flex flex-none items-center justify-center size-4 leading-0',
+  unreadDot:
+    'absolute -bottom-0.5 -end-0.5 size-2 border-[1.5px] border-background rounded-full bg-info',
+  container: 'flex-1 min-w-0',
+  overflowButton:
+    'cursor-default shrink-0 justify-center h-8 rounded-(--radius-button) text-xs leading-5 text-muted-foreground hover:text-foreground hover:bg-accent',
+  previewCard: 'flex flex-col gap-1.5 w-60',
+  previewImage:
+    'block aspect-[16/10] w-full border border-divider rounded-(--radius-card) object-cover object-top',
+  previewTitle: 'truncate text-xs leading-5',
+  tabIcon: 'shrink-0 text-muted-foreground',
+  newTabButton:
+    'inline-flex shrink-0 items-center justify-center rounded-(--radius-button) text-muted-foreground transition-colors duration-(--orvilo-motion-fast) ease-(--ant-motion-ease-in-out) hover:text-foreground hover:bg-accent motion-reduce:transition-none',
+};

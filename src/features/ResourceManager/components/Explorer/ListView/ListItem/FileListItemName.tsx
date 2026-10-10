@@ -82,6 +82,7 @@ const FileListItemName = ({
         ref={inputRef}
         style={{ flex: 1, maxWidth: 400 }}
         value={renamingValue}
+        visualSize="small"
         onBlur={onRenameConfirm}
         onChange={(e) => onRenamingValueChange(e.target.value)}
         onClick={(event) => event.stopPropagation()}

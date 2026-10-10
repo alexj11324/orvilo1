@@ -32,7 +32,7 @@ const styles = {
   countChip:
     'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground me-2',
   header:
-    'flex items-center gap-2 bg-[var(--ant-color-fill-quaternary)] px-3 py-2.5 [border-block-end:1px_solid_var(--sidebar-border)]',
+    'flex items-center gap-2 bg-(--ant-color-fill-quaternary) px-3 py-2.5 [border-block-end:1px_solid_var(--sidebar-border)]',
   headerCount:
     'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
   headerDetail: 'min-w-0 overflow-hidden text-ellipsis text-foreground',

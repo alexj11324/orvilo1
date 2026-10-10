@@ -11,7 +11,7 @@ import { ClaudeCodeApiName, type SkillArgs } from '../../types';
 
 const styles = {
   chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
-  skillIcon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  skillIcon: 'shrink-0 text-(--ant-color-text-description)',
   skillName: 'overflow-hidden min-w-0 text-[12px] text-foreground text-ellipsis whitespace-nowrap',
 };
 

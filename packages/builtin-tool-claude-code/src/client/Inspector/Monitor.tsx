@@ -15,9 +15,9 @@ const styles = {
     'overflow-hidden min-w-0 font-mono text-[12px] text-foreground text-ellipsis whitespace-nowrap',
   description:
     'overflow-hidden min-w-0 text-[12px] text-foreground text-ellipsis whitespace-nowrap',
-  monitorIcon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  monitorIcon: 'shrink-0 text-(--ant-color-text-description)',
   statusIcon: 'ms-1',
-  timeout: "shrink-0 ms-2 [font-feature-settings:'tnum'] text-[var(--ant-color-text-description)]",
+  timeout: "shrink-0 ms-2 [font-feature-settings:'tnum'] text-(--ant-color-text-description)",
 };
 
 const formatTimeout = (ms: number | undefined): string | undefined => {

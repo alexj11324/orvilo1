@@ -23,7 +23,7 @@ const styles = {
   chips: 'overflow-hidden flex gap-1 items-center min-w-0 ms-1.5',
   /** Never shrinks — the chips absorb the compression and ellipsize instead. */
   label: 'shrink-0',
-  more: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  more: 'shrink-0 text-[12px] text-(--ant-color-text-tertiary)',
 };
 
 export const AskUserQuestionInspector = memo<BuiltinInspectorProps<AskUserQuestionArgs>>(

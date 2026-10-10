@@ -8,11 +8,11 @@ import { ENGINE_ICON_MAP } from '../../../../../const';
 import TitleExtra from './TitleExtra';
 
 const styles = {
-  container: 'flex flex-1 p-2 rounded-[var(--radius-card)] [color:initial] hover:bg-accent',
-  desc: 'line-clamp-2 text-ellipsis text-[var(--ant-color-text-tertiary)]',
-  iframe: 'border border-border rounded-[var(--radius-card)]',
-  title: 'line-clamp-1 text-ellipsis text-base leading-[inherit] text-[var(--ant-color-link)]',
-  url: 'line-clamp-1 text-ellipsis text-[var(--ant-color-text-description)]',
+  container: 'flex flex-1 p-2 rounded-(--radius-card) [color:initial] hover:bg-accent',
+  desc: 'line-clamp-2 text-ellipsis text-(--ant-color-text-tertiary)',
+  iframe: 'border border-border rounded-(--radius-card)',
+  title: 'line-clamp-1 text-ellipsis text-base leading-[inherit] text-(--ant-color-link)',
+  url: 'line-clamp-1 text-ellipsis text-(--ant-color-text-description)',
 };
 
 interface SearchResultProps extends UniformSearchResult {

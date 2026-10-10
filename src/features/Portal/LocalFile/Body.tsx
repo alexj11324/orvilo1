@@ -59,7 +59,7 @@ const ImagePreview = memo<ImagePreviewProps>(({ blob, filename }) => {
 
   return (
     <div
-      className="flex flex-col items-center justify-center h-[100%] w-[100%]"
+      className="flex flex-col items-center justify-center h-full w-full"
       style={{ overflow: 'auto' }}
     >
       <Image
@@ -295,7 +295,7 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
         topicId={activeTopicId}
         workingDirectory={workingDirectory}
       >
-        <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflow: 'hidden' }}>
           <PublishHtmlArtifactLiveBar />
           <PreviewToolbar
             deviceId={deviceId}
@@ -344,10 +344,7 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
               </>
             }
           />
-          <div
-            className="flex flex-col flex-1 h-[100%]"
-            style={{ minHeight: 0, overflow: 'hidden' }}
-          >
+          <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflow: 'hidden' }}>
             {/* The rendered-markdown branch scrolls here; the HTML preview and
                 the code editor each own their scrolling, and the editor needs
                 that so its gutter and status bar stay pinned. */}
@@ -486,7 +483,7 @@ const ActiveFileView = memo<ActiveFileViewProps>(
 
     if (error || !preview) {
       return (
-        <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+        <div className="flex flex-col items-center justify-center h-full w-full">
           <SimpleEmpty
             description={t(
               sandboxTopicId
@@ -522,7 +519,7 @@ const ActiveFileView = memo<ActiveFileViewProps>(
 
     if (preview.type !== 'text') {
       return (
-        <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+        <div className="flex flex-col items-center justify-center h-full w-full">
           <SimpleEmpty description={t('workingPanel.localFile.binary')} />
         </div>
       );
@@ -573,7 +570,7 @@ const Body = memo(() => {
   if (!activeFile) return null;
 
   return (
-    <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflow: 'hidden' }}>
+    <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflow: 'hidden' }}>
       <ActiveFileView
         activeTopicId={activeTopicId}
         allowExternalFilePreview={activeFile.allowExternalFilePreview}

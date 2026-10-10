@@ -44,7 +44,7 @@ const Title = () => {
   const showSwitch = isArtifactTagClosed && artifactType !== ArtifactType.Code;
 
   return (
-    <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
+    <div className="flex flex-row items-center flex-1 gap-3 justify-between w-full">
       <div className="flex flex-row items-center gap-1">
         <ActionIcon
           aria-label={t('back', { ns: 'common' })}

@@ -99,7 +99,7 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
 
   if (events.length === 0)
     return (
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-(length:--text-dense) text-muted-foreground">
         {t('goalProcess.metricDetail.lifecycle.empty')}
       </div>
     );
@@ -119,8 +119,8 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
             >
               {formatAbsoluteDateTime(event.createdAt)}
             </div>
-            <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
-              <div className="text-[13px]">
+            <div className="flex flex-col flex-1 gap-px" style={{ minWidth: 0 }}>
+              <div className="text-(length:--text-dense)">
                 {t(`goalProcess.eventType.${event.eventType}` as const)}
                 {subject ? ` · ${subject}` : ''}
               </div>
@@ -346,7 +346,7 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
 
     if (rows.length === 0)
       return (
-        <div className="text-[13px] text-muted-foreground">
+        <div className="text-(length:--text-dense) text-muted-foreground">
           {t('goalProcess.metricDetail.budget.perTaskEmpty')}
         </div>
       );
@@ -420,7 +420,7 @@ const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-[14px]">
+      <div className="flex flex-col gap-3.5">
         <span className={styles.label}>{t('goalProcess.metricDetail.budget.controlTitle')}</span>
         <BudgetField
           cap={maxTotalCost}
@@ -465,7 +465,7 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
   const works = graph.nodes.filter((view) => view.node.kind === 'task' && view.attempts.length > 0);
 
   return (
-    <div className="flex flex-col gap-[14px]">
+    <div className="flex flex-col gap-3.5">
       {startedAt && (
         <div className="flex flex-col gap-0.5">
           <span className={styles.label}>{t('goalProcess.metricDetail.duration.total')}</span>
@@ -529,7 +529,7 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
   );
 
   return (
-    <div className="flex flex-col gap-[14px]">
+    <div className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-0.5">
         <span className={styles.label}>{t('goalProcess.metricDetail.liveness.latest')}</span>
         <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>

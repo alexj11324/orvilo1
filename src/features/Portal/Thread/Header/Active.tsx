@@ -30,7 +30,7 @@ const Active = memo(() => {
         style={{ color: cssVar.colorTextSecondary, fontSize: 14 }}
       >
         {currentThread.title === LOADING_FLAT ? (
-          <div className="flex flex-col flex-1 h-[30px] justify-center">
+          <div className="flex flex-col flex-1 h-7.5 justify-center">
             <BubblesLoading />
           </div>
         ) : (

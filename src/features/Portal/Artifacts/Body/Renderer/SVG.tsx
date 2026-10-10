@@ -93,7 +93,7 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
 
   return (
     <div
-      className="flex flex-col items-center h-[100%] svg-renderer"
+      className="flex flex-col items-center h-full svg-renderer"
       style={{ position: 'relative' }}
     >
       <div

@@ -272,7 +272,7 @@ const DocumentPreview = memo<DocumentPreviewProps>(
     }
 
     return (
-      <div className="flex flex-col items-center justify-center gap-4 h-[100%] w-[100%]">
+      <div className="flex flex-col items-center justify-center gap-4 h-full w-full">
         <div className={cx('flex flex-col items-center justify-center', styles.fallbackIcon)}>
           <FileIcon fileName={filename} size={40} />
         </div>

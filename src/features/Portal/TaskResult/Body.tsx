@@ -25,13 +25,13 @@ const Body = memo(() => {
   if (!taskId) return null;
   if (error)
     return (
-      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflowY: 'auto' }}>
         <AsyncError error={error} variant={'page'} onRetry={onRetry} />
       </div>
     );
   if (isNotFound)
     return (
-      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflowY: 'auto' }}>
         <NotFound desc={t('taskDetail.notFound.desc')} title={t('taskDetail.notFound.title')} />
       </div>
     );
@@ -41,7 +41,7 @@ const Body = memo(() => {
   // while the run is live, so the panel turns into the report once it settles.
   if (!isInitialLoading && liveRun)
     return (
-      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflow: 'hidden' }}>
         <TopicChatDrawerBody
           agentId={liveRun.agentId}
           key={liveRun.topicId}
@@ -53,7 +53,7 @@ const Body = memo(() => {
 
   return (
     <div
-      className="flex flex-col flex-1 gap-6 h-[100%] py-5 px-4"
+      className="flex flex-col flex-1 gap-6 h-full py-5 px-4"
       style={{ minHeight: 0, overflowY: 'auto' }}
     >
       {isInitialLoading ? (

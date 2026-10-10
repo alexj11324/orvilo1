@@ -294,6 +294,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
               <div className="flex flex-col items-center justify-center py-3">
                 <Button
                   loading={threads.isLoadingMore}
+                  size="compact"
                   variant="ghost"
                   onClick={() => void threads.loadMore()}
                 >

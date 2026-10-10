@@ -109,6 +109,7 @@ const ReviewerApprovalBar = memo(() => {
       {approvedCurrentRound ? (
         <Button
           loading={pending}
+          size="lg"
           style={{ alignSelf: 'flex-end' }}
           onClick={() => void run(() => remove(mine!.id))}
         >
@@ -125,6 +126,7 @@ const ReviewerApprovalBar = memo(() => {
           />
           <Button
             loading={pending}
+            size="lg"
             style={{ alignSelf: 'flex-end' }}
             variant="outline"
             onClick={() => void approve()}

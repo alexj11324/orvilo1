@@ -110,10 +110,10 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
         </dl>
       )}
       <div className="flex gap-2 justify-end">
-        <Button disabled={pending} onClick={close}>
+        <Button disabled={pending} size="lg" onClick={close}>
           {translate('actions.cancel')}
         </Button>
-        <Button loading={pending} variant="destructive" onClick={() => void run()}>
+        <Button loading={pending} size="lg" variant="destructive" onClick={() => void run()}>
           {okLabel}
         </Button>
       </div>

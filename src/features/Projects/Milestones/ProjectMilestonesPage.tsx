@@ -291,6 +291,7 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
               </div>
               {canEdit ? (
                 <Button
+                  size="lg"
                   variant="default"
                   onClick={() => openMilestoneFormModal({ projectId: project.id })}
                 >

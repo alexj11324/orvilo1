@@ -44,7 +44,7 @@ const TeachBox = memo<TeachBoxProps>(({ autoFocus, onSubmit, placeholder }) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void submit();
         }}
       />
-      <Button disabled={!value.trim()} loading={busy} variant="outline" onClick={submit}>
+      <Button disabled={!value.trim()} loading={busy} size="lg" variant="outline" onClick={submit}>
         {t('habit.teach.send')}
       </Button>
     </div>

@@ -461,7 +461,7 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
             </div>
           </div>
           <div className={cn('flex items-center gap-1', styles.importActions)}>
-            <Button loading={isImporting} onClick={handleImportChromeLoginData}>
+            <Button loading={isImporting} size="compact" onClick={handleImportChromeLoginData}>
               <Import /> {t('workingPanel.browser.import.action')}
             </Button>
             <ActionIcon

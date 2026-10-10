@@ -309,7 +309,7 @@ function ExistingDocumentPicker({
       </div>
       {loading && <span>{t('teams.loading')}</span>}
       {items.length < total && (
-        <Button disabled={loading} onClick={() => void load(page + 1)}>
+        <Button disabled={loading} size="compact" onClick={() => void load(page + 1)}>
           {t('teams.resources.loadMore')}
         </Button>
       )}

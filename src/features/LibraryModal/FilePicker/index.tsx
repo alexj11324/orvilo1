@@ -112,7 +112,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
 
   const renderAction = useCallback(
     (file: ResourceItem & { sourceType: 'file'; url: string }) => (
-      <Button variant="default" onClick={() => handleSelect(file)}>
+      <Button size="compact" variant="default" onClick={() => handleSelect(file)}>
         {t('knowledgeBase.library.action.add', { ns: 'chat' })}
       </Button>
     ),
@@ -153,7 +153,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
             <ServerCrash fill={'transparent'} height={80} size={80} width={80} />
           </span>
           {t('networkError', { ns: 'file' })}
-          <Button variant="outline" onClick={() => void mutate()}>
+          <Button size="lg" variant="outline" onClick={() => void mutate()}>
             {t('retry', { ns: 'common' })}
           </Button>
         </div>
@@ -188,7 +188,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
             />
           ))}
           {hasMore && (
-            <Button loading={isValidating} variant="ghost" onClick={loadMore}>
+            <Button loading={isValidating} size="compact" variant="ghost" onClick={loadMore}>
               {t('loadMore', { ns: 'file' })}
             </Button>
           )}

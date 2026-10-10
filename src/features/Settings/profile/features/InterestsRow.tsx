@@ -88,6 +88,7 @@ const InterestsRow = () => {
                 aria-pressed={isSelected}
                 className={isSelected ? 'bg-muted' : undefined}
                 key={item.key}
+                size="compact"
                 type="button"
                 variant="outline"
                 onClick={() => toggleInterest(item.key)}
@@ -102,6 +103,7 @@ const InterestsRow = () => {
             .map((interest) => (
               <Button
                 key={interest}
+                size="compact"
                 type="button"
                 variant="outline"
                 onClick={() => removeCustomInterest(interest)}
@@ -110,6 +112,7 @@ const InterestsRow = () => {
               </Button>
             ))}
           <Button
+            size="compact"
             type="button"
             variant="outline"
             onClick={() => setShowCustomInput(!showCustomInput)}

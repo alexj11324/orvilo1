@@ -348,12 +348,13 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
               data-no-highlight
               aria-label={t('addLibrary')}
               disabled={!canCreate}
+              size="compact"
               title={canCreate ? t('addLibrary') : undefined}
             >
               <Plus data-icon="inline-start" />
             </Button>
           ) : (
-            <Button data-no-highlight disabled={!canCreate} variant="default">
+            <Button data-no-highlight disabled={!canCreate} size="compact" variant="default">
               <Plus data-icon="inline-start" /> {t('addLibrary')}
             </Button>
           )}

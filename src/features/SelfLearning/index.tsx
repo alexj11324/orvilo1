@@ -150,13 +150,13 @@ const SelfLearning = memo(() => {
         right={
           activeAgentId && allDomains.length > 0 ? (
             <div className="flex gap-2">
-              <Button onClick={() => setTeachOpen((v) => !v)}>
+              <Button size="compact" onClick={() => setTeachOpen((v) => !v)}>
                 <PlusIcon data-icon="inline-start" />
                 {t('nav.teach')}
               </Button>
               {/* Starting a new direction belongs to the overview, not to one direction's page. */}
               {!domainId && (
-                <Button variant="ghost" onClick={openCreate}>
+                <Button size="compact" variant="ghost" onClick={openCreate}>
                   {t('nav.newDomain')}
                 </Button>
               )}
@@ -190,7 +190,7 @@ const SelfLearning = memo(() => {
                     <EmptyDescription style={{ fontSize: 13 }}>{t('empty.desc')}</EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
-                    <Button variant="outline" onClick={openCreate}>
+                    <Button size="lg" variant="outline" onClick={openCreate}>
                       <PlusIcon data-icon="inline-start" />
                       {t('nav.newDomain')}
                     </Button>

@@ -528,6 +528,7 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
           <Button
             aria-busy={loadingMore}
             disabled={loadingMore}
+            size="compact"
             variant="outline"
             onClick={() => void loadMore()}
           >

@@ -866,6 +866,7 @@ export const AcceptanceCheckRow = memo<{
             {detailMode && reviewable && !activeReview && hasAnnotatableEvidence(check) && (
               <Button
                 className="-mx-2.5"
+                size="compact"
                 style={{ alignSelf: 'flex-start' }}
                 variant="ghost"
                 onClick={(event) => {
@@ -911,6 +912,7 @@ export const AcceptanceCheckRow = memo<{
                 {canCommentEvidence ? (
                   <Button
                     className="-mx-2.5"
+                    size="compact"
                     variant="ghost"
                     onClick={(event) => {
                       event.stopPropagation();

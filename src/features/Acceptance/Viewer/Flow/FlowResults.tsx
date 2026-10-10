@@ -63,6 +63,7 @@ function AttemptReview({
       ))}
       <AttachmentThumbs attachments={attempt.reviewAttachments} />
       <Button
+        size="lg"
         onClick={() =>
           openCheckRejectModal({
             checkTitle: t('flow.annotate'),
@@ -96,7 +97,7 @@ function AttemptReview({
         {t('flow.annotate')}
       </Button>
       {!editing ? (
-        <Button onClick={() => setEditing(true)}>
+        <Button size="lg" onClick={() => setEditing(true)}>
           {t(attempt.review ? 'flow.editReview' : 'flow.reviewResult')}
         </Button>
       ) : (
@@ -111,6 +112,7 @@ function AttemptReview({
               <Button
                 disabled={saving}
                 key={review}
+                size="lg"
                 onClick={async () => {
                   setSaving(true);
                   try {

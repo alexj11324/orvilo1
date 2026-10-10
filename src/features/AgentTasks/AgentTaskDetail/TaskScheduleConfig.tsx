@@ -361,6 +361,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
               className="w-full"
               disabled={!canEditTask}
               loading={isStartingSchedule}
+              size="lg"
               variant="default"
               onClick={handleStartScheduling}
             >

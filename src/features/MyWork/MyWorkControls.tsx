@@ -512,7 +512,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                 ) : null}
                 {canSaveAs ? (
                   <div className="flex flex-row" style={{ justifyContent: 'flex-end' }}>
-                    <Button variant="outline" onClick={onSaveAs}>
+                    <Button size="compact" variant="outline" onClick={onSaveAs}>
                       {createElement(BookmarkPlusIcon, { className: 'size-4 shrink-0' })}
                       {t('myWork.saveAs')}
                     </Button>

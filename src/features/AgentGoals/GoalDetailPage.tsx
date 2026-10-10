@@ -278,6 +278,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
               {canPause && (
                 <div className="flex items-center gap-2.5" style={{ paddingBlock: '8px 0' }}>
                   <Button
+                    size="compact"
                     variant={paused ? 'default' : 'outline'}
                     onClick={() => void (paused ? resumeGoal(goal.id) : pauseGoal(goal.id))}
                   >

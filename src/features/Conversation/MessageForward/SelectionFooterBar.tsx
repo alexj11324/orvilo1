@@ -76,13 +76,13 @@ const SelectionFooterBar = memo(() => {
         {t('messageForward.bar.selected', { count: selectedCount })}
       </div>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" onClick={exitSelectionMode}>
+        <Button size="compact" variant="ghost" onClick={exitSelectionMode}>
           <X /> {t('messageForward.bar.cancel')}
         </Button>
-        <Button disabled={disabled} variant="destructive" onClick={handleDelete}>
+        <Button disabled={disabled} size="compact" variant="destructive" onClick={handleDelete}>
           <Trash2 /> {t('messageForward.bar.delete')}
         </Button>
-        <Button disabled={disabled} variant="ghost" onClick={handleForward}>
+        <Button disabled={disabled} size="compact" variant="ghost" onClick={handleForward}>
           <Forward /> {t('messageForward.bar.forward')}
         </Button>
       </div>

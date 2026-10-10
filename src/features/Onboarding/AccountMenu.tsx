@@ -41,6 +41,7 @@ const AccountMenu = () => {
           <Button
             aria-label={t('onboarding:setup.accountMenu', { name: label })}
             className="max-w-48 gap-2"
+            size="compact"
             variant="ghost"
           />
         }

@@ -581,6 +581,7 @@ const WorkQueryStatusGroup = memo<{
           <Button
             aria-expanded={!collapsed}
             className="min-w-0 flex-1 justify-start"
+            size="compact"
             variant="ghost"
             onClick={() => setCollapsed((current) => !current)}
           >
@@ -663,7 +664,7 @@ const WorkQueryStatusGroup = memo<{
                   <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
                 ) : hasMore && onLoadMore && loadMoreLabel ? (
                   <div className="flex justify-center">
-                    <Button variant="outline" onClick={() => void onLoadMore()}>
+                    <Button size="compact" variant="outline" onClick={() => void onLoadMore()}>
                       {loadMoreLabel}
                     </Button>
                   </div>
@@ -700,7 +701,7 @@ const WorkQueryStatusGroup = memo<{
                   <AsyncError error={loadMoreError} variant={'inline'} onRetry={onRetryLoadMore} />
                 ) : hasMore && onLoadMore && loadMoreLabel ? (
                   <div className="flex justify-center">
-                    <Button variant="outline" onClick={() => void onLoadMore()}>
+                    <Button size="compact" variant="outline" onClick={() => void onLoadMore()}>
                       {loadMoreLabel}
                     </Button>
                   </div>
@@ -1006,7 +1007,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               <ListTodoIcon aria-hidden className="size-8" />
               <p>{emptyLabel}</p>
               {filtered && onClearFilters ? (
-                <Button variant="outline" onClick={onClearFilters}>
+                <Button size="lg" variant="outline" onClick={onClearFilters}>
                   {t('myWork.clearFilters')}
                 </Button>
               ) : null}
@@ -1057,7 +1058,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
           ) : null}
           {onLoadMore && !pageGroupPaging && workQueryHasMore(tasks.length, total) ? (
             <div className="flex justify-center">
-              <Button variant="outline" onClick={() => void onLoadMore()}>
+              <Button size="compact" variant="outline" onClick={() => void onLoadMore()}>
                 {loadMoreLabel}
               </Button>
             </div>

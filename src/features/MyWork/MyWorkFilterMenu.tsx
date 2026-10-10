@@ -652,7 +652,7 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
                 className="flex flex-row"
                 style={{ justifyContent: 'flex-end', paddingInlineEnd: 4 }}
               >
-                <Button variant="ghost" onClick={onResetFilters}>
+                <Button size="compact" variant="ghost" onClick={onResetFilters}>
                   {t('myWork.filtersReset')}
                 </Button>
               </div>

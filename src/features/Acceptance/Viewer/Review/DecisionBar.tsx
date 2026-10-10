@@ -252,7 +252,7 @@ const DecisionBar = memo<DecisionBarProps>(
             the reviewer may still hand the prompt to another agent. Embedded,
             the composer beside it already receives the draft. */}
           {state === 'live' && hasFeedback && !embedded && (
-            <Button disabled={pending} variant="secondary" onClick={onCopyReview}>
+            <Button disabled={pending} size="compact" variant="secondary" onClick={onCopyReview}>
               {t('acceptance.bar.copyReview')}
             </Button>
           )}
@@ -264,12 +264,22 @@ const DecisionBar = memo<DecisionBarProps>(
               <>
                 {/* Last words before the repair leaves — a global note the next
                   round reads, for what the queued per-check feedback missed. */}
-                <Button disabled={pending} variant="secondary" onClick={onAddComment}>
+                <Button
+                  disabled={pending}
+                  size="compact"
+                  variant="secondary"
+                  onClick={onAddComment}
+                >
                   <MessageSquarePlus />
                   {t('acceptance.bar.addComment')}
                 </Button>
                 {!embedded && (
-                  <Button disabled={pending} variant="outline" onClick={onCopyReview}>
+                  <Button
+                    disabled={pending}
+                    size="compact"
+                    variant="outline"
+                    onClick={onCopyReview}
+                  >
                     {t('acceptance.bar.copyReview')}
                   </Button>
                 )}
@@ -277,6 +287,7 @@ const DecisionBar = memo<DecisionBarProps>(
                   <Button
                     disabled={pending}
                     loading={rerunPending}
+                    size="compact"
                     variant="outline"
                     onClick={onRerun}
                   >
@@ -288,11 +299,12 @@ const DecisionBar = memo<DecisionBarProps>(
               // Clean review — accept carries primary weight only once every
               // check is signed off; before that it stays a quiet option.
               <>
-                <Button disabled={pending} variant="ghost" onClick={onRejectComment}>
+                <Button disabled={pending} size="compact" variant="ghost" onClick={onRejectComment}>
                   {t('acceptance.bar.rejectComment')}
                 </Button>
                 <Button
                   disabled={pending}
+                  size="compact"
                   variant={allConfirmed ? 'default' : 'secondary'}
                   onClick={onAccept}
                 >

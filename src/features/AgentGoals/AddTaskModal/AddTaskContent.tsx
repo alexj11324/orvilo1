@@ -73,10 +73,13 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
         />
       </div>
       <div className="flex gap-2 justify-end">
-        <Button onClick={() => close()}>{t('cancel', { ns: 'common' })}</Button>
+        <Button size="lg" onClick={() => close()}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
         <Button
           disabled={!title.trim()}
           loading={busy}
+          size="lg"
           variant="outline"
           onClick={() => void submit()}
         >

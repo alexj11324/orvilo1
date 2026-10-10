@@ -147,6 +147,7 @@ const ThreadBody = memo(() => {
             <div className="flex flex-col items-center justify-center py-3">
               <Button
                 loading={replies.isLoadingMore}
+                size="compact"
                 variant="ghost"
                 onClick={() => void replies.loadMore()}
               >

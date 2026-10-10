@@ -178,6 +178,7 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
           <TooltipTrigger
             render={
               <Button
+                size="compact"
                 style={{ alignSelf: 'center' }}
                 variant="ghost"
                 onClick={() => openDeclareMetricModal(goalId)}

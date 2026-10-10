@@ -122,6 +122,7 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
         <SimpleTooltip title={t('artifacts.svg.copyAsImage')}>
           <Button
             aria-label={t('artifacts.svg.copyAsImage')}
+            size="compact"
             variant="outline"
             onClick={async () => {
               const dataUrl = await generatePng();

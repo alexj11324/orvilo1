@@ -202,6 +202,7 @@ const TaskDetailRunPauseAction = memo(() => {
             className="rounded-r-none"
             disabled={!canExecuteTask || isCancellingSchedule || isRunningNow}
             loading={isCancellingSchedule || isRunningNow}
+            size="compact"
             title={canEditTask ? undefined : reason}
             variant="default"
             onClick={handleCancelSchedule}
@@ -223,6 +224,7 @@ const TaskDetailRunPauseAction = memo(() => {
             <Button
               className="rounded-l-none border-l-0"
               disabled={!canExecuteTask || isCancellingSchedule || isRunningNow}
+              size="compact"
               variant="default"
             >
               <ChevronDownIcon size={14} />
@@ -251,7 +253,7 @@ const TaskDetailRunPauseAction = memo(() => {
   if (isStarting) {
     const pendingLabel = isRerun ? t('taskDetail.rerunTask') : t('taskDetail.runTask');
     return (
-      <Button disabled loading variant="default">
+      <Button disabled loading size="compact" variant="default">
         {pendingLabel}
       </Button>
     );
@@ -259,7 +261,7 @@ const TaskDetailRunPauseAction = memo(() => {
 
   if (canPause) {
     return (
-      <Button disabled={!canExecuteTask} title={reason} onClick={handleRunOrPause}>
+      <Button disabled={!canExecuteTask} size="compact" title={reason} onClick={handleRunOrPause}>
         <StopLoadingIcon data-icon="inline-start" />
         {t('taskDetail.stopTask')}
       </Button>
@@ -272,6 +274,7 @@ const TaskDetailRunPauseAction = memo(() => {
   return (
     <Button
       disabled={!canExecuteTask || isBlocked}
+      size="compact"
       title={!canEditTask ? reason : isBlocked ? t('taskDetail.prerequisites.blocked') : undefined}
       variant="default"
       onClick={handleRunOrPause}

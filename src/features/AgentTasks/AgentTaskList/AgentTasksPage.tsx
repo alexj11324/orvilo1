@@ -1165,6 +1165,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                     <div className="flex justify-center py-2">
                       <Button
                         disabled={issueListPages.loadingMore}
+                        size="compact"
                         variant="outline"
                         onClick={() => void issueListPages.loadMore()}
                       >

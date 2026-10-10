@@ -1064,7 +1064,7 @@ const WorkInboxPage = memo(() => {
         >
           <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
           <span className="flex-1">{t('inbox.loadFailed')}</span>
-          <Button variant="ghost" onClick={() => void refresh()}>
+          <Button size="compact" variant="ghost" onClick={() => void refresh()}>
             {tCommon('retry')}
           </Button>
         </div>
@@ -1114,7 +1114,12 @@ const WorkInboxPage = memo(() => {
                 <span className="text-sm text-destructive">{t('inbox.loadFailed')}</span>
               ) : null}
               {hasMore ? (
-                <Button disabled={loadingMore} variant="outline" onClick={() => void loadMore()}>
+                <Button
+                  disabled={loadingMore}
+                  size="compact"
+                  variant="outline"
+                  onClick={() => void loadMore()}
+                >
                   {loadingMore ? <Spinner /> : <></>}
                   {t('inbox.loadMore')}
                 </Button>
@@ -1206,6 +1211,7 @@ const WorkInboxPage = memo(() => {
                 {decisionVerbs.includes('approve') ? (
                   <Button
                     disabled={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                    size="lg"
                     variant="default"
                     onClick={() => void decide(selected, 'approve')}
                   >
@@ -1220,6 +1226,7 @@ const WorkInboxPage = memo(() => {
                 {decisionVerbs.includes('decline') ? (
                   <Button
                     disabled={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                    size="lg"
                     variant="outline"
                     onClick={() => void decide(selected, 'decline')}
                   >
@@ -1234,6 +1241,7 @@ const WorkInboxPage = memo(() => {
                 {decisionVerbs.includes('cancel') ? (
                   <Button
                     disabled={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                    size="lg"
                     variant="outline"
                     onClick={() => void decide(selected, 'cancel')}
                   >
@@ -1247,6 +1255,7 @@ const WorkInboxPage = memo(() => {
                 ) : null}
                 {decisionVerbs.includes('submit_input') ? (
                   <Button
+                    size="lg"
                     variant="default"
                     disabled={
                       pendingDecisions.has(`${selected.notificationId}:submit_input`) ||
@@ -1294,7 +1303,11 @@ const WorkInboxPage = memo(() => {
                   {displayOption !== 'archived' &&
                   (selected.availableActions.includes('dismiss') ||
                     selected.availableActions.includes('archive')) ? (
-                    <Button variant="outline" onClick={() => void toggleArchiveCard(selected)}>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => void toggleArchiveCard(selected)}
+                    >
                       {t('inbox.dismiss')}
                     </Button>
                   ) : null}
@@ -1309,6 +1322,7 @@ const WorkInboxPage = memo(() => {
         {surface === 'detail' ? (
           <div className="flex flex-row">
             <Button
+              size="compact"
               variant="outline"
               onClick={() => writeInboxParams({ detail: null, item: null })}
             >
@@ -1340,6 +1354,7 @@ const WorkInboxPage = memo(() => {
             {decisionVerbs.includes('approve') ? (
               <Button
                 disabled={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                size="lg"
                 variant="default"
                 onClick={() => void decide(selected, 'approve')}
               >
@@ -1350,6 +1365,7 @@ const WorkInboxPage = memo(() => {
             {decisionVerbs.includes('decline') ? (
               <Button
                 disabled={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                size="lg"
                 variant="outline"
                 onClick={() => void decide(selected, 'decline')}
               >
@@ -1360,6 +1376,7 @@ const WorkInboxPage = memo(() => {
             {decisionVerbs.includes('cancel') ? (
               <Button
                 disabled={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                size="lg"
                 variant="outline"
                 onClick={() => void decide(selected, 'cancel')}
               >
@@ -1369,6 +1386,7 @@ const WorkInboxPage = memo(() => {
             ) : null}
             {decisionVerbs.includes('submit_input') ? (
               <Button
+                size="lg"
                 variant="default"
                 disabled={
                   pendingDecisions.has(`${selected.notificationId}:submit_input`) ||
@@ -1385,7 +1403,7 @@ const WorkInboxPage = memo(() => {
               </Button>
             ) : null}
             {selectedOpenTarget ? (
-              <Button variant="outline" onClick={() => openTarget(selected)}>
+              <Button size="lg" variant="outline" onClick={() => openTarget(selected)}>
                 {createElement(ExternalLinkIcon, { className: 'size-4 shrink-0' })}
                 {t('inbox.open')}
               </Button>
@@ -1405,7 +1423,11 @@ const WorkInboxPage = memo(() => {
     <div className={styles.detail}>
       {surface === 'detail' ? (
         <div className="flex flex-row">
-          <Button variant="outline" onClick={() => writeInboxParams({ detail: null, item: null })}>
+          <Button
+            size="compact"
+            variant="outline"
+            onClick={() => writeInboxParams({ detail: null, item: null })}
+          >
             {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
             {tCommon('back')}
           </Button>

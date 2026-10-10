@@ -117,13 +117,13 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
         <Button
           className="w-full"
           loading={copyLoading}
-          size="default"
+          size="lg"
           variant="default"
           onClick={() => onCopy()}
         >
           <CopyIcon data-icon="inline-start" /> {t('copy', { ns: 'common' })}
         </Button>
-        <Button className="w-full" loading={loading} size="default" onClick={onDownload}>
+        <Button className="w-full" loading={loading} size="lg" onClick={onDownload}>
           {t('shareModal.download')}
         </Button>
       </>

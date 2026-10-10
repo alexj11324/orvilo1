@@ -51,7 +51,7 @@ const SortDropdown = memo(() => {
 
   return (
     <DropdownMenu items={menuItems}>
-      <ActionIconWithChevron icon={ArrowDownAZ} title={currentSortLabel} />
+      <ActionIconWithChevron icon={ArrowDownAZ} size="compact" title={currentSortLabel} />
     </DropdownMenu>
   );
 });

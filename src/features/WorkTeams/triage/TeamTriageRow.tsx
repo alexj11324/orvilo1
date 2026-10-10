@@ -229,18 +229,19 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
           ) : null}
         </div>
         <div className={cn('flex flex-row items-center gap-1', styles.actions)}>
-          <Button variant="outline" onClick={() => onAction('accept')}>
+          <Button size="compact" variant="outline" onClick={() => onAction('accept')}>
             {t('teams.accept')}
           </Button>
           <Button
             disabled={!TEAM_TRIAGE_SNOOZE_ENABLED}
+            size="compact"
             title={TEAM_TRIAGE_SNOOZE_ENABLED ? undefined : t('teams.snoozeUnavailable')}
             variant="outline"
           >
             <ClockIcon aria-hidden className="size-4" />
             {t('teams.snooze')}
           </Button>
-          <Button variant="outline" onClick={() => onAction('decline')}>
+          <Button size="compact" variant="outline" onClick={() => onAction('decline')}>
             {t('teams.decline')}
           </Button>
           {overflowMenuItems.length > 0 ? (

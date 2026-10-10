@@ -79,7 +79,7 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
   );
 
   const cateButton = (
-    <Button disabled>
+    <Button disabled size="compact">
       {cate?.icon ? <cate.icon size={16} /> : null}
       {cate?.label}
     </Button>

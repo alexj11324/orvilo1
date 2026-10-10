@@ -128,7 +128,7 @@ function NotificationsPanel({ onNavigate }: { onNavigate: () => void }) {
         </TooltipProvider>
       </div>
       <div className="relative flex max-h-full min-h-0">
-        <ScrollArea className="max-h-[360px] min-h-0 grow md:max-h-[420px]">
+        <ScrollArea className="max-h-90 min-h-0 grow md:max-h-105">
           {error ? (
             <div className="px-3 py-2 text-xs text-muted-foreground">
               {t('reuiShell9.notificationsUnavailable')}

@@ -44,7 +44,7 @@ const LibraryLayout: FC = () => {
   return (
     <>
       <Sidebar />
-      <div className={cx('flex flex-col flex-1 h-[100%]', styles.mainContainer)}>
+      <div className={cx('flex flex-col flex-1 h-full', styles.mainContainer)}>
         <Outlet />
       </div>
       <RegisterHotkeys />

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Crosshair, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
@@ -11,48 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 
 import type { DraftAnnotationEntry, RejectableEvidence } from '../Review/rejectDraft';
 
-const styles = createStaticStyles(({ css }) => ({
-  /** The badge that ties a note back to the numbered box on the image. */
-  index: css`
-    flex: none;
-
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 18px;
-    color: #fff;
-    text-align: center;
-
-    background: ${cssVar.colorError};
-  `,
-  /** The phone caption: a link back to the box on the image, not a
-      button-shaped box. The tap target comes from padding around a compact
-      line, so a list of regions does not become a column of 44px slabs. */
-  jump: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 5px;
-    align-items: center;
-    align-self: flex-start;
-
-    padding-block: 7px;
-    padding-inline: 2px;
-    border: none;
-
-    font-size: 13px;
-    color: ${cssVar.colorLink};
-
-    background: none;
-
-    &:active {
-      opacity: 0.6;
-    }
-  `,
-}));
+const styles = {
+  index:
+    'flex-none size-[18px] rounded-[50%] text-[11px] font-semibold leading-[18px] text-white text-center bg-destructive',
+  jump: 'cursor-pointer inline-flex gap-[5px] items-center self-start py-[7px] px-0.5 border-none text-[13px] text-(--ant-color-link) bg-none bg-transparent active:opacity-60',
+};
 
 interface RegionNoteRowProps {
   /** Rendered beside the field — the desktop's number badge. */

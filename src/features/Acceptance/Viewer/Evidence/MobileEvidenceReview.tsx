@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,61 +15,13 @@ import { AttachmentStrip, AttachmentUploadButton } from './attachments';
 import { EvidenceStage } from './EvidenceStage';
 import { MobileRegionNotes } from './RegionNotes';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    min-width: 0;
-    min-height: 0;
-  `,
-  /** The one scroll on the page — image on top, the notes it earns below it. */
-  scroll: css`
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 8px;
-
-    min-height: 0;
-    padding-block-end: 12px;
-  `,
-  /** The image keeps a fixed slice of the screen so the notes under it are
-      reachable without a second screen — but stays tall enough to circle on. */
-  stage: css`
-    display: flex;
-    flex: none;
-    height: 42dvh;
-    min-height: 220px;
-  `,
-  editor: css`
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    gap: 16px;
-
-    padding-block-start: 4px;
-
-    textarea {
-      font-size: 16px;
-    }
-  `,
-  footer: css`
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    gap: 8px;
-
-    padding-block-start: 8px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    > button {
-      min-height: 44px;
-    }
-  `,
-}));
+const styles = {
+  body: 'flex flex-1 flex-col min-w-0 min-h-0',
+  scroll: 'overflow-y-auto overscroll-contain flex flex-1 flex-col gap-2 min-h-0 pb-3',
+  stage: 'flex flex-none h-[42dvh] min-h-[220px]',
+  editor: 'flex flex-none flex-col gap-4 pt-1 [&_textarea]:text-[16px]',
+  footer: 'flex flex-none flex-col gap-2 pt-2 border-t border-sidebar-border [&>button]:min-h-11',
+};
 
 /**
  * Phone review on one page: look at the image, circle what is wrong, and write

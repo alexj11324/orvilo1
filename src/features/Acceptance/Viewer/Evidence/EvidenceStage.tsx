@@ -1,7 +1,6 @@
 'use client';
 
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useEffect, useRef } from 'react';
 
 import type { DraftAnnotation } from './Annotation';
@@ -10,29 +9,11 @@ import { useMeasuredWidth } from './useMeasuredWidth';
 
 type Rect = AcceptanceReviewAnnotation['rect'];
 
-const styles = createStaticStyles(({ css }) => ({
-  /** The zoom stage — its native scrolling doubles as panning. Flex plus the
-      inner frame's `margin: auto` keeps the image centered when it fits, and
-      scrolls from the edges once it grows past it. */
-  viewport: css`
-    overflow: auto;
-    overscroll-behavior: contain;
-    display: flex;
-    flex: 1;
-
-    min-width: 0;
-    min-height: 120px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  /** `margin: auto` absorbs the free space on both axes (centering) and
-      collapses to 0 on overflow. */
-  viewportInner: css`
-    margin: auto;
-  `,
-}));
+const styles = {
+  viewport:
+    'overflow-auto overscroll-contain flex flex-1 min-w-0 min-h-[120px] border border-sidebar-border rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary)',
+  viewportInner: 'm-auto',
+};
 
 const SWIPE_MIN_PX = 60;
 /** A swipe has to be decisively horizontal, or vertical reading steals images. */

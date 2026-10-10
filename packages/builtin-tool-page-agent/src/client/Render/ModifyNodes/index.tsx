@@ -9,7 +9,7 @@ import type { ModifyNodesState } from '../../../types';
 
 const styles = {
   content: 'min-w-0 flex-1 truncate font-mono text-[12px] text-foreground',
-  index: 'w-[18px] shrink-0 text-end text-[12px] text-[var(--ant-color-text-quaternary)]',
+  index: 'w-[18px] shrink-0 text-end text-[12px] text-(--ant-color-text-quaternary)',
   position:
     'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[11px] text-muted-foreground',
   row: 'flex items-center gap-2 px-3 py-2 not-last:[border-block-end:1px_dashed_var(--sidebar-border)]',
@@ -45,7 +45,7 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
     const results = pluginState?.results ?? [];
 
     return (
-      <div className="w-full rounded-[var(--ant-border-radius)] border border-sidebar-border bg-card">
+      <div className="w-full rounded-(--ant-border-radius) border border-sidebar-border bg-card">
         {operations.map((op, index) => {
           const meta = actionMeta[op.action];
           const details = getOperationDetails(op);

@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,22 +12,11 @@ import {
 } from '@/features/ResourceManager/store/selectors';
 import { ResourceSourceFilter } from '@/types/files';
 
-const styles = createStaticStyles(({ css }) => ({
-  option: css`
-    flex: none;
-
-    height: 24px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  optionActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-}));
+const styles = {
+  option:
+    'flex-none h-6 px-2.5 rounded-[999px] text-xs text-[var(--ant-color-text-description)] hover:text-[var(--ant-color-text-description)]',
+  optionActive: 'text-foreground hover:text-foreground bg-selected hover:bg-selected',
+};
 
 const OPTIONS: Array<{ key: ResourceSourceFilter; labelKey: string }> = [
   { key: ResourceSourceFilter.All, labelKey: 'FileManager.source.all' },
@@ -62,7 +51,7 @@ const SourceFilter = memo(() => {
         return (
           <Button
             aria-pressed={isActive}
-            className={cx(styles.option, isActive && styles.optionActive)}
+            className={cn(styles.option, isActive && styles.optionActive)}
             key={option.key}
             size="sm"
             variant="ghost"

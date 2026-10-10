@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { ChevronDownIcon } from 'lucide-react';
 import { type ComponentProps } from 'react';
@@ -28,14 +27,14 @@ const ActionIconWithChevron = memo<ActionIconWithChevronProps>(
               size: 18,
               width: 18,
               height: 18,
-              color: cssVar.colorIcon,
+              color: 'var(--ant-color-icon)',
               fill: 'transparent',
             })}
           </span>
           <span className="anticon" role="img">
             <ChevronDownIcon
               className="size-3.5"
-              color={cssVar.colorIcon}
+              color={'var(--ant-color-icon)'}
               fill={'transparent'}
               height={14}
               size={14}

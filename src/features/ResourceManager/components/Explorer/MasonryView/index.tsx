@@ -1,7 +1,7 @@
 'use client';
 
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type UIEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,33 +25,12 @@ import MasonryItemWrapper from './MasonryItem/MasonryItemWrapper';
 import MasonryViewSkeleton from './Skeleton';
 import { useMasonryViewState } from './useMasonryViewState';
 
-const styles = createStaticStyles(({ css }) => ({
-  selectAllHint: css`
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 53px;
-
-    padding-block: 8px;
-    padding-inline: 4px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  toolbar: css`
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 0;
-
-    padding-block: 12px;
-    padding-inline: 4px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  selectAllHint:
+    'sticky z-1 [inset-block-start:53px] py-2 px-1 [border-block-end:1px_solid_var(--sidebar-border)] text-[12px] text-[var(--ant-color-text-description)] bg-accent',
+  toolbar:
+    'sticky z-1 [inset-block-start:0] py-3 px-1 [border-block-end:1px_solid_var(--sidebar-border)] bg-card',
+};
 
 interface MasonryViewProps {
   isLoading?: boolean;
@@ -215,7 +194,7 @@ const MasonryView = memo(function MasonryView({
       onScroll={handleScroll}
     >
       <div style={{ paddingBlockEnd: 24, paddingBlockStart: 12, paddingInline: 24 }}>
-        <div className={cx('flex flex-row items-center gap-2', styles.toolbar)}>
+        <div className={cn('flex flex-row items-center gap-2', styles.toolbar)}>
           <Checkbox
             checked={allSelected}
             disabled={!hasSelectableItems}
@@ -247,7 +226,7 @@ const MasonryView = memo(function MasonryView({
         </div>
         {showSelectAllHint && (
           <div
-            className={cx(
+            className={cn(
               'flex flex-row items-center gap-1.5 px-1 flex-wrap',
               styles.selectAllHint,
             )}
@@ -295,7 +274,7 @@ const MasonryView = memo(function MasonryView({
           <div
             className="flex flex-col items-center justify-center"
             style={{
-              color: cssVar.colorTextDescription,
+              color: 'var(--ant-color-text-description)',
               fontSize: 14,
               marginBlockStart: 16,
               minHeight: 40,

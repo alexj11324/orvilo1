@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 
@@ -16,7 +15,7 @@ const ItemCard = memo<ItemCardProps>(({ label, icon, href }) => {
   return (
     <a href={href} rel="noreferrer" style={{ color: 'inherit' }} target="_blank">
       <div className="flex cursor-pointer gap-3" style={{ paddingBlock: 12, paddingInline: 18 }}>
-        {icon && createElement(icon, { fill: cssVar.colorText, size: 18 })}
+        {icon && createElement(icon, { fill: 'var(--ant-color-text)', size: 18 })}
         {label}
       </div>
     </a>

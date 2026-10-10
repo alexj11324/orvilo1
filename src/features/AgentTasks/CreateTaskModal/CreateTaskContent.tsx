@@ -2,7 +2,6 @@
 
 import { useEditor } from '@lobehub/editor/react';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { Minimize2, Paperclip, X } from 'lucide-react';
 import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -326,7 +325,10 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
 
         <div
           className="flex items-center justify-between"
-          style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, padding: '8px 16px' }}
+          style={{
+            borderTop: `1px solid ${'var(--ant-color-border-secondary)'}`,
+            padding: '8px 16px',
+          }}
         >
           <div className="flex flex-wrap gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
@@ -353,7 +355,10 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div
+                        className="text-[12px]"
+                        style={{ color: 'var(--ant-color-text-description)' }}
+                      >
                         {t('createTask.member')}
                       </div>
                     </>
@@ -378,7 +383,10 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div
+                        className="text-[12px]"
+                        style={{ color: 'var(--ant-color-text-description)' }}
+                      >
                         {t('createTask.assignee')}
                       </div>
                     </>

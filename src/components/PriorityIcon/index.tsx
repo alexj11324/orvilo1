@@ -1,7 +1,6 @@
 'use client';
 
 import type { IconType } from '@lobehub/icons';
-import { cssVar } from 'antd-style';
 import type { ComponentProps } from 'react';
 import { memo } from 'react';
 
@@ -16,7 +15,7 @@ export const resolvePriorityLevel = (value: null | number | undefined): Priority
   isPriorityLevel(value) ? value : 0;
 
 export const getPriorityIconColor = (priority: null | number | undefined) =>
-  resolvePriorityLevel(priority) === 1 ? cssVar.orange : cssVar.colorTextSecondary;
+  resolvePriorityLevel(priority) === 1 ? 'var(--ant-orange)' : 'var(--ant-color-text-secondary)';
 
 export const PriorityNoneIcon: IconType = memo(({ size = '1em', style, ...rest }) => (
   <svg

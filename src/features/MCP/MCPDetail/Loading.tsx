@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,7 +25,7 @@ const DetailsLoading = memo(() => {
         style={{
           height: 54,
 
-          borderBottom: `1px solid ${cssVar.colorBorder}`,
+          borderBottom: `1px solid ${'var(--ant-color-border)'}`,
         }}
       >
         <Skeleton style={{ height: 36, width: 120 }} />

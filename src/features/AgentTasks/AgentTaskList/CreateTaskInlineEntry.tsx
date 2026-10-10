@@ -3,7 +3,6 @@
 import { useEditor } from '@lobehub/editor/react';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import type { TaskIntentAnalysis } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { $getRoot } from 'lexical';
 import { ChevronDown, ChevronUp, Paperclip } from 'lucide-react';
 import { type KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -567,8 +566,8 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
       <div
         className="relative overflow-hidden rounded-md border"
         style={{
-          borderColor: cssVar.colorBorderSecondary,
-          background: cssVar.colorBgContainer,
+          borderColor: 'var(--ant-color-border-secondary)',
+          background: 'var(--ant-color-bg-container)',
         }}
         onKeyDownCapture={handleKeyDown}
       >
@@ -623,7 +622,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         <div
           className="flex items-center justify-between"
           style={{
-            borderTop: `1px solid ${cssVar.colorBorderSecondary}`,
+            borderTop: `1px solid ${'var(--ant-color-border-secondary)'}`,
             display: isReviewing ? 'none' : undefined,
             paddingBlock: 8,
             paddingInline: '8px 16px',
@@ -654,7 +653,10 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div
+                        className="text-[12px]"
+                        style={{ color: 'var(--ant-color-text-description)' }}
+                      >
                         {t('createTask.member')}
                       </div>
                     </>
@@ -679,7 +681,10 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div
+                        className="text-[12px]"
+                        style={{ color: 'var(--ant-color-text-description)' }}
+                      >
                         {t('createTask.assignee')}
                       </div>
                     </>

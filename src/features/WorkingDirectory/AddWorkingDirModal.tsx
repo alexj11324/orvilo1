@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -97,7 +96,9 @@ const AddWorkingDirContent = ({
             setError(undefined);
           }}
         />
-        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+        {error ? (
+          <div style={{ color: 'var(--ant-color-error)', fontSize: 12 }}>{error}</div>
+        ) : null}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         {deviceId && (

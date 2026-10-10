@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { FileQuestionIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,12 +18,12 @@ const DetailNotFound = memo(() => {
       className="flex flex-col items-center justify-center flex-1 gap-3 p-12"
       style={{ width: '100%' }}
     >
-      <FileQuestionIcon size={32} style={{ color: cssVar.colorTextTertiary }} />
+      <FileQuestionIcon size={32} style={{ color: 'var(--ant-color-text-tertiary)' }} />
       <div className="flex flex-col items-center gap-1">
         <div className="text-[16px] font-semibold">{t('detail.notFound.title')}</div>
         <div
           className="text-center text-[13px]"
-          style={{ maxWidth: 320, color: cssVar.colorTextTertiary }}
+          style={{ maxWidth: 320, color: 'var(--ant-color-text-tertiary)' }}
         >
           {t('detail.notFound.desc')}
         </div>

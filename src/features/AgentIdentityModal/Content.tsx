@@ -2,7 +2,6 @@
 
 import { numberedAgentName } from '@orvilo/const';
 import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { DicesIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback } from 'react';
@@ -104,9 +103,9 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
         <Field label={t('settingAgent.slug.label', { ns: 'setting' })}>
           <div
             className="font-mono rounded bg-muted px-1"
-            style={{ alignSelf: 'flex-start', color: cssVar.colorTextSecondary }}
+            style={{ alignSelf: 'flex-start', color: 'var(--ant-color-text-secondary)' }}
           >
-            <span style={{ color: cssVar.colorTextTertiary }}>@</span>
+            <span style={{ color: 'var(--ant-color-text-tertiary)' }}>@</span>
             {form.slug}
           </div>
         </Field>

@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -47,7 +46,7 @@ const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
           precision: 2,
           prefix: '$',
           value: formatNumber(summary.cacheSavings, 2),
-          valueStyle: { color: cssVar.colorSuccess },
+          valueStyle: { color: 'var(--ant-color-success)' },
         }}
       />
       <StatisticCard

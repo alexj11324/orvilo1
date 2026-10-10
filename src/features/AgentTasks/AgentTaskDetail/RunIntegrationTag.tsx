@@ -2,7 +2,6 @@
 
 import { PreviewCard } from '@base-ui/react/preview-card';
 import type { TaskTopicIntegration } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import {
   CircleCheck,
@@ -39,16 +38,16 @@ const STATE_META: Record<
 > = {
   // Corrective attempts are exhausted or the merge path failed — a person has
   // to look, so this is the one state that gets the error color.
-  blocked: { color: cssVar.colorError, icon: CircleX },
+  blocked: { color: 'var(--ant-color-error)', icon: CircleX },
   // Conflicted, with a corrective run dispatched or in flight — recoverable,
   // so warning rather than error.
-  conflict: { color: cssVar.colorWarning, icon: TriangleAlert },
-  integrated: { color: cssVar.colorSuccess, icon: CircleCheck },
-  merging: { color: cssVar.colorInfo, icon: Loader2, spin: true },
-  pending: { color: cssVar.colorTextTertiary, icon: CircleDashed },
-  publish_failed: { color: cssVar.colorError, icon: CircleX },
-  skipped: { color: cssVar.colorTextTertiary, icon: CircleMinus },
-  verification_pending: { color: cssVar.colorWarning, icon: TriangleAlert },
+  conflict: { color: 'var(--ant-color-warning)', icon: TriangleAlert },
+  integrated: { color: 'var(--ant-color-success)', icon: CircleCheck },
+  merging: { color: 'var(--ant-color-info)', icon: Loader2, spin: true },
+  pending: { color: 'var(--ant-color-text-tertiary)', icon: CircleDashed },
+  publish_failed: { color: 'var(--ant-color-error)', icon: CircleX },
+  skipped: { color: 'var(--ant-color-text-tertiary)', icon: CircleMinus },
+  verification_pending: { color: 'var(--ant-color-warning)', icon: TriangleAlert },
 };
 
 interface RunIntegrationTagProps {
@@ -93,7 +92,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
     <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
       <div
         className="text-[12px] text-muted-foreground"
-        style={{ fontFamily: cssVar.fontFamilyCode }}
+        style={{ fontFamily: 'var(--ant-font-family-code)' }}
       >
         {integration.branch} → {integration.baseBranch}
         {integration.integratedSha ? ` @ ${integration.integratedSha.slice(0, 7)}` : ''}
@@ -122,7 +121,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
         <a
           href={integration.prUrl}
           rel={'noopener noreferrer'}
-          style={{ color: cssVar.colorInfo, fontSize: 12 }}
+          style={{ color: 'var(--ant-color-info)', fontSize: 12 }}
           target={'_blank'}
           onClick={(event) => event.stopPropagation()}
         >

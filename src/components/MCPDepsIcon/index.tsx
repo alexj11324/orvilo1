@@ -18,7 +18,6 @@ import {
   SiRust,
   SiYarn,
 } from '@icons-pack/react-simple-icons';
-import { cssVar } from 'antd-style';
 import { type ComponentType, createElement, type CSSProperties, memo } from 'react';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -73,8 +72,8 @@ const InstallationIcon = memo<{ size?: number; type: string }>(({ type, size = 2
       <TooltipTrigger render={<span />}>
         {createElement(icons[iconType] || Terminal, {
           size,
-          style: { color: cssVar.colorTextDescription },
-          fill: cssVar.colorTextDescription,
+          style: { color: 'var(--ant-color-text-description)' },
+          fill: 'var(--ant-color-text-description)',
         })}
       </TooltipTrigger>
       <TooltipContent>{iconType}</TooltipContent>

@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { RefreshCw } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -45,7 +44,7 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
         CLICKABLE_FOCUS_RING,
       )}
       style={{
-        borderRadius: cssVar.borderRadiusLG,
+        borderRadius: 'var(--ant-border-radius-lg)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.65 : undefined,
       }}
@@ -55,7 +54,10 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
         <div className="truncate block text-[14px]" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+        <div
+          className="line-clamp-2 text-[12px]"
+          style={{ color: 'var(--ant-color-text-tertiary)' }}
+        >
           {prompt}
         </div>
       </div>
@@ -71,7 +73,7 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
 const ChipSkeleton = memo(() => (
   <div
     className="flex flex-col rounded-md border border-border"
-    style={{ borderRadius: cssVar.borderRadiusLG }}
+    style={{ borderRadius: 'var(--ant-border-radius-lg)' }}
   >
     <div className="flex flex-col gap-2" style={{ paddingBlock: 12, paddingInline: 14 }}>
       <Skeleton style={{ height: 14, width: 96 }} />
@@ -160,7 +162,7 @@ const SuggestionChips = memo<SuggestionChipsProps>(
             }}
           >
             <ActionIcon disabled={disabled} icon={RefreshCw} size={'small'} />
-            <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
+            <div className="text-[12px]" style={{ color: 'var(--ant-color-text-secondary)' }}>
               {tCommon('switch')}
             </div>
           </div>

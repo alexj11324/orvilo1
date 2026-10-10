@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { formatCompactSize } from '../memoryFormat';
@@ -17,8 +16,12 @@ interface Series {
 }
 
 const SERIES: Series[] = [
-  { color: cssVar.colorInfo, label: 'private', read: (s) => s.renderer?.privateBytes ?? null },
-  { color: cssVar.colorSuccess, label: 'JS heap', read: (s) => s.jsHeapUsedBytes },
+  {
+    color: 'var(--ant-color-info)',
+    label: 'private',
+    read: (s) => s.renderer?.privateBytes ?? null,
+  },
+  { color: 'var(--ant-color-success)', label: 'JS heap', read: (s) => s.jsHeapUsedBytes },
 ];
 
 const pathFor = (values: (number | null)[], max: number) => {
@@ -40,7 +43,9 @@ const HistoryChart = memo<{ history: MemorySample[] }>(({ history }) => {
   const spanSeconds = history.length > 1 ? (history.at(-1)!.at - history[0].at) / 1000 : 0;
 
   return (
-    <div style={{ borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`, flexShrink: 0 }}>
+    <div
+      style={{ borderBlockEnd: `1px solid ${'var(--ant-color-border-secondary)'}`, flexShrink: 0 }}
+    >
       <svg
         aria-hidden
         height={HEIGHT}

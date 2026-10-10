@@ -2,7 +2,6 @@ import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -192,9 +191,9 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
       className={`relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-3 transition-shadow ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
       id={commentId ? commentAnchorId(commentId) : undefined}
       style={{
-        borderColor: cssVar.colorBorderSecondary,
-        borderRadius: cssVar.borderRadiusLG,
-        background: cssVar.colorBgContainer,
+        borderColor: 'var(--ant-color-border-secondary)',
+        borderRadius: 'var(--ant-border-radius-lg)',
+        background: 'var(--ant-color-bg-container)',
       }}
     >
       <div className="flex items-center gap-2">

@@ -1,7 +1,6 @@
 'use client';
 
 import { agentSecondaryDisplayName } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal, PencilIcon, Share2Icon, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
@@ -130,7 +129,7 @@ const AgentSettingsHeader = memo<AgentSettingsHeaderProps>(({ agentId }) => {
             <div
               className="truncate"
               style={{
-                color: role ? cssVar.colorTextSecondary : cssVar.colorTextTertiary,
+                color: role ? 'var(--ant-color-text-secondary)' : 'var(--ant-color-text-tertiary)',
                 fontSize: 13,
               }}
             >

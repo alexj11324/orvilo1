@@ -15,7 +15,6 @@ import {
   useModalContext,
 } from '@lobehub/ui/base-ui';
 import { Form } from 'antd';
-import { cssVar } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import { BrainIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
@@ -176,7 +175,7 @@ const SettingContent = memo<SettingContentProps>(({ initialValues, id }) => {
       </Form>
       <ModalFooter
         style={{
-          borderBlockStart: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderBlockStart: `1px solid ${'var(--ant-color-border-secondary)'}`,
           marginTop: 16,
           padding: 0,
         }}

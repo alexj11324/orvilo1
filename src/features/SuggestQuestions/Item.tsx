@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useCallback } from 'react';
 
@@ -32,9 +31,9 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
         CLICKABLE_FOCUS_RING,
       )}
       style={{
-        borderColor: cssVar.colorBorderSecondary,
-        background: cssVar.colorBgContainer,
-        borderRadius: cssVar.borderRadiusLG,
+        borderColor: 'var(--ant-color-border-secondary)',
+        background: 'var(--ant-color-bg-container)',
+        borderRadius: 'var(--ant-border-radius-lg)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.65 : undefined,
       }}
@@ -44,7 +43,10 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
         <div className="truncate min-w-0 text-[14px]" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+        <div
+          className="line-clamp-2 text-[12px]"
+          style={{ color: 'var(--ant-color-text-tertiary)' }}
+        >
           {description}
         </div>
       </div>

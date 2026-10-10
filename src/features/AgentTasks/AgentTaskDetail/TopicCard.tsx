@@ -1,6 +1,5 @@
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import {
   ChevronDown,
   ChevronRight,
@@ -311,9 +310,9 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
         primary
           ? undefined
           : {
-              borderColor: cssVar.colorBorderSecondary,
-              borderRadius: cssVar.borderRadiusLG,
-              background: cssVar.colorBgContainer,
+              borderColor: 'var(--ant-color-border-secondary)',
+              borderRadius: 'var(--ant-border-radius-lg)',
+              background: 'var(--ant-color-bg-container)',
             }
       }
     >
@@ -438,7 +437,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           {activity.summary && !(primary && activity.content) && (
             <div
               className="text-sm"
-              style={{ color: cssVar.colorTextDescription, whiteSpace: 'pre-wrap' }}
+              style={{ color: 'var(--ant-color-text-description)', whiteSpace: 'pre-wrap' }}
             >
               {activity.summary}
             </div>

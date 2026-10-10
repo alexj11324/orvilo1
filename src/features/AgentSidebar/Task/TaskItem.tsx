@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo, useCallback } from 'react';
 
 import { useNavigateToTaskDetail } from '@/features/AgentTasks/shared/taskDetailPath';
@@ -30,7 +29,10 @@ const TaskItem = memo<TaskItemProps>(({ task, active }) => {
       title={displayTitle}
       slots={{
         titlePrefix: hasName ? (
-          <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary, flex: 'none' }}>
+          <div
+            className="text-[12px]"
+            style={{ color: 'var(--ant-color-text-tertiary)', flex: 'none' }}
+          >
             {task.identifier}
           </div>
         ) : undefined,

@@ -45,10 +45,10 @@ const InboxSnoozeContent = ({ onConfirm }: { onConfirm: (iso: string) => void })
         onChange={(event) => setTime(event.target.value)}
       />
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={close}>
+        <Button size="lg" variant="outline" onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button disabled={!until} onClick={confirm}>
+        <Button disabled={!until} size="lg" onClick={confirm}>
           {t('inbox.snooze')}
         </Button>
       </div>

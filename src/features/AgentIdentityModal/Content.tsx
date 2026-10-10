@@ -146,12 +146,13 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
         </Field>
       )}
       <div className="flex gap-2 justify-end">
-        <Button disabled={form.saving} onClick={() => close()}>
+        <Button disabled={form.saving} size="lg" onClick={() => close()}>
           {t('cancel', { ns: 'common' })}
         </Button>
         <Button
           disabled={form.saving}
           loading={form.saving}
+          size="lg"
           variant="default"
           onClick={() => {
             void form.save();

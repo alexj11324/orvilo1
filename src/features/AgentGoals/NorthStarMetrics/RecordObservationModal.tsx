@@ -62,6 +62,7 @@ const RecordObservationContent = memo<{ goalId: string; metricKey: string; metri
           <Button
             disabled={!Number.isFinite(Number(value)) || value.trim() === ''}
             loading={busy}
+            size="lg"
             variant="outline"
             onClick={() => void submit()}
           >

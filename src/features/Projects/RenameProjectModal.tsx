@@ -55,12 +55,13 @@ const RenameProjectContent = ({ project }: RenameProjectContentProps) => {
         />
       </div>
       <ModalFooter>
-        <Button variant="outline" onClick={close}>
+        <Button size="lg" variant="outline" onClick={close}>
           {t('cancel', { ns: 'common' })}
         </Button>
         <Button
           aria-busy={loading}
           disabled={!normalizedName || normalizedName === project.name || loading}
+          size="lg"
           variant="default"
           onClick={handleRename}
         >

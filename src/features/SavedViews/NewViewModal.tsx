@@ -161,8 +161,16 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
       width={640}
       footer={
         <div className="flex justify-end gap-2">
-          <Button onClick={onClose}>{t('cancel')}</Button>
-          <Button disabled={!ready} loading={saving} variant="default" onClick={() => void save()}>
+          <Button size="lg" onClick={onClose}>
+            {t('cancel')}
+          </Button>
+          <Button
+            disabled={!ready}
+            loading={saving}
+            size="lg"
+            variant="default"
+            onClick={() => void save()}
+          >
             {t('savedViews.createView')}
           </Button>
         </div>

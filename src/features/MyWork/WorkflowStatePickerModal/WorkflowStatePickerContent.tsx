@@ -135,10 +135,10 @@ export const WorkflowStatePickerContent = ({
         className={cn('flex flex-row', styles.actions)}
         style={{ justifyContent: 'space-between', gap: 8 }}
       >
-        <Button variant="outline" onClick={handleCancel}>
+        <Button size="lg" variant="outline" onClick={handleCancel}>
           {t('cancel')}
         </Button>
-        <Button disabled={!selected} variant="default" onClick={handleConfirm}>
+        <Button disabled={!selected} size="lg" variant="default" onClick={handleConfirm}>
           {t('myWork.pickWorkflowStateConfirm')}
         </Button>
       </div>

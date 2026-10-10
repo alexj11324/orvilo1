@@ -121,6 +121,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
         <Button
           disabled={!key.trim() || !Number.isFinite(Number(target)) || target.trim() === ''}
           loading={busy}
+          size="lg"
           variant="outline"
           onClick={() => void submit()}
         >

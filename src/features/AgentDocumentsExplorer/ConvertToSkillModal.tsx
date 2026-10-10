@@ -256,12 +256,13 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
         </div>
         {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
         <div className="flex gap-2 justify-end">
-          <Button disabled={busy} onClick={close}>
+          <Button disabled={busy} size="lg" onClick={close}>
             {tCommon('cancel')}
           </Button>
           <Button
             disabled={!canSubmit || generating}
             loading={loading}
+            size="lg"
             variant="default"
             onClick={handleSubmit}
           >

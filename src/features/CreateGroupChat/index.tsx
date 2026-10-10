@@ -193,11 +193,12 @@ export const CreateGroupChatContent = ({ groupId, visibility }: CreateGroupChatO
         )}
       </div>
       <ModalFooter>
-        <Button disabled={pending} variant="outline" onClick={close}>
+        <Button disabled={pending} size="lg" variant="outline" onClick={close}>
           {t('cancel', { ns: 'common' })}
         </Button>
         <Button
           loading={pending}
+          size="lg"
           disabled={
             !canCreate ||
             pending ||

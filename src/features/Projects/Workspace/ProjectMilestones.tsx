@@ -273,6 +273,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           aria-label={t('create.milestone.name')}
           placeholder={t('create.milestone.name')}
           value={name}
+          visualSize="small"
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') submit();

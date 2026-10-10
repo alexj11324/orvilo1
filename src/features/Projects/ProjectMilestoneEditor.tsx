@@ -126,6 +126,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             aria-label={t('create.milestone.name')}
             placeholder={t('create.milestone.name')}
             value={draft.name}
+            visualSize="small"
             onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
           />
           <DatePicker

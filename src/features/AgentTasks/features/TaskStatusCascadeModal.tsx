@@ -144,13 +144,14 @@ const TaskStatusCascadeModalContent = ({
         </ScrollArea>
       </div>
       <div className={`flex items-center justify-between gap-2 ${styles.actions}`}>
-        <Button disabled={!!loadingAction} onClick={handleCancel}>
+        <Button disabled={!!loadingAction} size="lg" onClick={handleCancel}>
           {t('taskDetail.statusCascade.cancel')}
         </Button>
         <div className="flex gap-2">
           <Button
             disabled={!!loadingAction}
             loading={loadingAction === 'parent'}
+            size="lg"
             onClick={() => void handleApply(false)}
           >
             {t('taskDetail.statusCascade.parentOnly')}
@@ -158,6 +159,7 @@ const TaskStatusCascadeModalContent = ({
           <Button
             disabled={!!loadingAction}
             loading={loadingAction === 'all'}
+            size="lg"
             variant="default"
             onClick={() => void handleApply(true)}
           >

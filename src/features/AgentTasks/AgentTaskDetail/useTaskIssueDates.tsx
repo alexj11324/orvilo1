@@ -86,6 +86,7 @@ const IssueDateForm = ({ dueDate, kind, onSave }: DateFormProps) => {
             disabled={pending}
             type="time"
             value={time}
+            visualSize="normal"
             onChange={(event) => setTime(event.target.value)}
           />
         </label>
@@ -96,10 +97,10 @@ const IssueDateForm = ({ dueDate, kind, onSave }: DateFormProps) => {
         </p>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button disabled={pending} type="button" variant="outline" onClick={close}>
+        <Button disabled={pending} size="lg" type="button" variant="outline" onClick={close}>
           {t('cancel', { ns: 'common' })}
         </Button>
-        <Button disabled={!date} loading={pending} type="submit">
+        <Button disabled={!date} loading={pending} size="lg" type="submit">
           {t(kind === 'dueDate' ? 'taskDetail.menu.saveDueDate' : 'taskDetail.menu.applyReminder')}
         </Button>
       </div>

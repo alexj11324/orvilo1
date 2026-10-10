@@ -13,8 +13,8 @@ Layouts are plain `<div>` + Tailwind flex utilities. The old lobehub `Flexbox`/`
 | `align="center"`          | `items-center` (`start`→`items-start`, `end`→`items-end`)    |
 | `justify="space-between"` | `justify-between`                                            |
 | `flex={1}`                | `flex-1` (`flex="none"` → `flex-none`)                       |
-| `width={280}`             | `w-[280px]` or keep in `style` if dynamic                    |
-| `height={44}`             | `h-11` / `h-[44px]`                                          |
+| `width={280}`             | `w-70` (px ÷ 4); keep in `style` only if computed at runtime |
+| `height={44}`             | `h-11` (px ÷ 4); `'100%'` → `h-full`                         |
 | `padding`/`paddingInline` | `p-*` / `px-*`                                               |
 | `inline`                  | `inline-flex`                                                |
 | `wrap`                    | `flex-wrap`                                                  |
@@ -26,7 +26,7 @@ Layouts are plain `<div>` + Tailwind flex utilities. The old lobehub `Flexbox`/`
 ```jsx
 // was <Flexbox horizontal height={'100%'} width={'100%'}>
 <div className="flex h-full w-full">
-  <div className="flex w-[260px] flex-col overflow-y-auto border-r">
+  <div className="flex w-65 flex-col overflow-y-auto border-r">
     <SidebarContent />
   </div>
   <div className="flex flex-1 flex-col">

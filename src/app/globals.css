@@ -114,6 +114,11 @@
     --radius-card: 8px;
     --radius-overlay: 12px;
     --radius-chip: 4px;
+    /* Role variables stay out of @theme on purpose: `cn` cannot classify a
+       custom utility name (`text-dense` reads as a colour, `rounded-card` as
+       no radius at all), but it merges the variable forms correctly:
+       `rounded-(--radius-card)`, `text-(length:--text-dense)`. */
+    --text-dense: 13px;
     --sidebar: var(--ant-color-bg-layout, #f8f8f8);
     --destructive-foreground: var(--destructive-text);
     --success-foreground: var(--success-text);

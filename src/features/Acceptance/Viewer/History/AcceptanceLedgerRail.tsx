@@ -1,7 +1,7 @@
 'use client';
 
 import { DraggablePanel } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
+import { cssVar, useResponsive } from 'antd-style';
 import { cn } from 'cn';
 import { PanelRightOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -19,41 +19,6 @@ import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import { canViewAcceptanceHistory } from '../visibility';
 import LedgerPanel, { type AcceptanceRound } from './LedgerPanel';
 import { useAcceptanceRailState } from './useAcceptanceRailState';
-
-const styles = createStaticStyles(({ css }) => ({
-  chipCount: css`
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  /**
-   * Collapsed, the run ledger is a VERTICAL chip hugging the content's right
-   * edge: the rounds are the page's audit trail, not its reading material, so
-   * the affordance keeps the column it would otherwise occupy down to a
-   * thumb-width strip. The icon plus the round count carry it — spelling the
-   * label out sideways would cost the width the collapse just bought back.
-   */
-  toggle: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 10;
-    inset-block-start: 16px;
-    inset-inline-end: 12px;
-
-    padding-block: 8px;
-    padding-inline: 5px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 99px;
-
-    background: ${cssVar.colorBgContainer};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
 
 const AcceptanceLedgerRail = () => {
   const { t } = useTranslation('verify');
@@ -138,13 +103,15 @@ const AcceptanceLedgerRail = () => {
           {...clickableProps()}
           title={t('acceptance.ledger.expand')}
           className={cn(
-            `flex flex-col items-center gap-1.25 ${styles.toggle}`,
+            `flex flex-col items-center gap-1.5 ${'cursor-pointer absolute z-10 inset-bs-4 end-3 min-w-8 py-2 px-2 border border-solid border-divider rounded-full bg-card hover:border-border hover:bg-fill-quaternary'}`,
             CLICKABLE_FOCUS_RING,
           )}
           onClick={() => onExpandChange(true)}
         >
           <PanelRightOpen size={14} />
-          <div className={cn(styles.chipCount)}>{data.rounds.length}</div>
+          <div className={cn('text-xs font-medium leading-5 text-muted-foreground')}>
+            {data.rounds.length}
+          </div>
         </div>
       )}
       {isNarrowViewport ? (
@@ -170,15 +137,8 @@ const AcceptanceLedgerRail = () => {
           style={{ flex: 'none', height: '100%' }}
           onExpandChange={onExpandChange}
         >
-          <div
-            className="flex flex-col"
-            style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
-          >
-            {topic ?? (
-              <div className="flex flex-col" style={{ height: '100%', overflow: 'auto' }}>
-                {ledger}
-              </div>
-            )}
+          <div className="flex flex-col h-full min-h-0 overflow-hidden">
+            {topic ?? <div className="flex flex-col h-full overflow-auto">{ledger}</div>}
           </div>
         </DraggablePanel>
       )}
@@ -195,7 +155,7 @@ const AcceptanceLedgerRail = () => {
         onClose={() => openReport(null)}
       >
         {reportRound && (
-          <div className="flex flex-col" style={{ height: '100%', position: 'relative' }}>
+          <div className="flex flex-col h-full relative">
             <ReportViewer runId={reportRound.run.id} />
           </div>
         )}

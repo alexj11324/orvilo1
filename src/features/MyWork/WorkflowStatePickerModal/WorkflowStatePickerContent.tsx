@@ -1,6 +1,5 @@
 'use client';
 import type { TaskWorkflowCategory, TeamWorkflowStateItem } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,17 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { lambdaClient } from '@/libs/trpc/client';
-
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    padding: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  content: css`
-    padding-block: 20px 16px;
-    padding-inline: 20px;
-  `,
-}));
 
 export interface WorkflowStatePickerContentProps {
   category: TaskWorkflowCategory;
@@ -93,21 +81,17 @@ export const WorkflowStatePickerContent = ({
 
   return (
     <div className="flex flex-col">
-      <div className={cn('flex flex-col', styles.content)} style={{ gap: 8 }}>
+      <div className={cn('flex flex-col', 'pbs-5 pbe-4 px-5', 'gap-2')}>
         <h3 className="text-sm font-semibold">{t('myWork.pickWorkflowState')}</h3>
-        <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
+        <span className="text-sm text-muted-foreground">
           {t('myWork.pickWorkflowStateDescription')}
         </span>
         {loading ? (
-          <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
-            {t('myWork.loading')}
-          </span>
+          <span className="text-sm text-muted-foreground">{t('myWork.loading')}</span>
         ) : failed ? (
-          <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
-            {t('myWork.moveFailed')}
-          </span>
+          <span className="text-sm text-muted-foreground">{t('myWork.moveFailed')}</span>
         ) : options.length === 0 ? (
-          <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
+          <span className="text-sm text-muted-foreground">
             {t('myWork.pickWorkflowStateEmpty')}
           </span>
         ) : (
@@ -132,8 +116,11 @@ export const WorkflowStatePickerContent = ({
         )}
       </div>
       <div
-        className={cn('flex flex-row', styles.actions)}
-        style={{ justifyContent: 'space-between', gap: 8 }}
+        className={cn(
+          'flex flex-row',
+          'p-4 border-bs border-solid border-divider',
+          'justify-between gap-2',
+        )}
       >
         <Button variant="outline" onClick={handleCancel}>
           {t('cancel')}

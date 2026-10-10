@@ -2,7 +2,6 @@
 import { WORK_SEARCH_MAX_PER_TYPE } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { useDebounce } from 'ahooks';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { SearchIcon, SearchXIcon, UsersIcon, XIcon } from 'lucide-react';
@@ -29,48 +28,6 @@ import { workAttentionService } from '@/services/workAttention';
 
 import TeamIdentity from './TeamIdentity';
 
-const styles = createStaticStyles(({ css }) => ({
-  key: css`
-    flex: none;
-
-    min-width: 56px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: end;
-    white-space: nowrap;
-  `,
-  link: css`
-    display: flex;
-    flex: 1;
-    gap: 12px;
-    align-items: center;
-
-    min-width: 0;
-
-    color: inherit;
-  `,
-  meta: css`
-    flex: none;
-    color: ${cssVar.colorTextQuaternary};
-    white-space: nowrap;
-  `,
-  row: css`
-    padding-block: 8px;
-    padding-inline: 8px 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: inherit;
-
-    transition: background ${cssVar.motionDurationFast};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
-
 interface TeamRowData {
   color?: string | null;
   id: string;
@@ -80,8 +37,16 @@ interface TeamRowData {
 }
 
 const TeamRow = memo<{ team: TeamRowData }>(({ team }) => (
-  <div className={cn('flex flex-row items-center', styles.row)}>
-    <WorkspaceLink className={styles.link} to={`/teams/${team.id}`}>
+  <div
+    className={cn(
+      'flex flex-row items-center',
+      'py-2 ps-2 pe-3 rounded-(--radius-card) text-inherit transition-[background-color] duration-(--orvilo-motion-fast) ease-[ease] hover:bg-accent',
+    )}
+  >
+    <WorkspaceLink
+      className="flex flex-1 items-center gap-3 min-w-0 text-inherit"
+      to={`/teams/${team.id}`}
+    >
       <TeamIdentity
         color={team.color}
         id={team.id}
@@ -91,9 +56,19 @@ const TeamRow = memo<{ team: TeamRowData }>(({ team }) => (
       <div className="flex flex-col flex-1 min-w-0">
         <span className="text-sm truncate font-medium">{team.name}</span>
       </div>
-      {team.key ? <span className={styles.key}>{team.key}</span> : null}
+      {team.key ? (
+        <span className="flex-none min-w-14 font-mono text-xs leading-5 text-foreground-tertiary text-end whitespace-nowrap">
+          {team.key}
+        </span>
+      ) : null}
       {team.updatedAt ? (
-        <span className={cn('text-sm', styles.meta)} title={formatAbsoluteDateTime(team.updatedAt)}>
+        <span
+          title={formatAbsoluteDateTime(team.updatedAt)}
+          className={cn(
+            'text-sm',
+            'flex-none text-xs leading-5 text-foreground-tertiary whitespace-nowrap',
+          )}
+        >
           {dayjs(team.updatedAt).fromNow()}
         </span>
       ) : null}
@@ -155,13 +130,7 @@ const TeamsPage = memo(() => {
 
   return (
     <WorkSurface>
-      <NavHeader
-        left={
-          <span className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
-            {t('tab.teams')}
-          </span>
-        }
-      />
+      <NavHeader left={<span className="text-sm font-medium ps-1">{t('tab.teams')}</span>} />
       {!workspaceId ? (
         <SimpleEmpty description={t('teams.personal')} icon={UsersIcon} />
       ) : (
@@ -203,7 +172,7 @@ const TeamsPage = memo(() => {
               icon={searching ? SearchXIcon : UsersIcon}
             />
           ) : (
-            <div className="flex flex-col" style={{ gap: 2 }}>
+            <div className="flex flex-col gap-0.5">
               {teams.map((team) => (
                 <TeamRow key={team.id} team={team} />
               ))}

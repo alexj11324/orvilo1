@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   FilePlus2Icon,
@@ -31,128 +30,6 @@ import {
   openTeamSectionDialog,
 } from './TeamResourceDialogs';
 import { type TeamResource, useTeamResources } from './useTeamResources';
-
-const styles = createStaticStyles(({ css }) => ({
-  action: css`
-    display: inline-flex;
-    gap: 10px;
-    align-items: center;
-
-    min-width: 190px;
-
-    font-size: 13px;
-  `,
-  actions: css`
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    margin-inline-start: auto;
-  `,
-  error: css`
-    margin-block: 8px;
-  `,
-  heading: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    min-height: 28px;
-
-    font-size: 18px;
-    font-weight: 500;
-    line-height: 22px;
-  `,
-  iconButton: css`
-    cursor: pointer;
-
-    display: grid;
-    place-items: center;
-
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 50%;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorBgElevated};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: 2px;
-    }
-  `,
-  menu: css`
-    min-width: 228px;
-    padding: 4px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 10px;
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  menuDivider: css`
-    height: 1px;
-    margin-block: 4px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  muted: css`
-    font-size: 15px;
-    font-weight: 450;
-    line-height: 23px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  resourceLink: css`
-    cursor: pointer;
-
-    overflow: hidden;
-    display: flex;
-    gap: 9px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 4px;
-    border: 0;
-
-    color: ${cssVar.colorText};
-    text-decoration: none;
-
-    background: transparent;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  `,
-  resourceRow: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    min-height: 32px;
-  `,
-  section: css`
-    margin-block-start: 18px;
-  `,
-  sectionHeading: css`
-    display: flex;
-    align-items: center;
-
-    min-height: 30px;
-
-    font-size: 14px;
-    font-weight: 500;
-  `,
-  text: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
 
 interface TeamResourcesProps {
   documentsOnly?: boolean;
@@ -246,29 +123,31 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
   };
   const rows = (items: TeamResource[]) =>
     items.map((resource) => (
-      <div className={styles.resourceRow} key={resource.id}>
+      <div className="flex min-h-8 items-center gap-2" key={resource.id}>
         {resource.kind === 'document' ? (
           <button
-            className={styles.resourceLink}
-            style={{ flex: 1 }}
+            className="cursor-pointer overflow-hidden flex items-center gap-2 min-w-0 py-1 border-0 text-foreground no-underline bg-transparent hover:underline flex-1"
+
             type="button"
             onClick={() => createDocumentModal(resource.document.id, () => void refresh())}
           >
             <FileTextIcon size={16} />
-            <span className={styles.text}>
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">
               {resource.document.title || t('teams.resources.untitled')}
             </span>
           </button>
         ) : (
           <a
-            className={styles.resourceLink}
+            className="cursor-pointer overflow-hidden flex items-center gap-2 min-w-0 py-1 border-0 text-foreground no-underline bg-transparent hover:underline flex-1"
             href={resource.url!}
             rel="noopener noreferrer"
-            style={{ flex: 1 }}
+
             target="_blank"
           >
             <Link2Icon size={16} />
-            <span className={styles.text}>{resource.title || resource.url}</span>
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+              {resource.title || resource.url}
+            </span>
           </a>
         )}
         {canWrite &&
@@ -278,11 +157,16 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
             <DropdownMenu>
               <DropdownMenuTrigger
                 aria-label={t('teams.resources.moreActions')}
-                className={styles.iconButton}
+                className="cursor-pointer grid place-items-center size-8 p-0 border border-solid border-divider rounded-full text-muted-foreground bg-popover hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-2"
               >
                 <MoreHorizontalIcon size={16} />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.menu} side="bottom" sideOffset={4}>
+              <DropdownMenuContent
+                align="end"
+                className="min-w-57 p-1 border border-solid border-divider rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)"
+                side="bottom"
+                sideOffset={4}
+              >
                 {resource.kind === 'link' && (
                   <DropdownMenuItem
                     onClick={() =>
@@ -294,7 +178,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                 )}
                 {!documentsOnly && sections.length > 0 && (
                   <>
-                    <div className={styles.menuDivider} />
+                    <div className="h-px my-1 bg-divider" />
                     {resource.sectionId && (
                       <DropdownMenuItem onClick={() => void moveToSection(resource, null)}>
                         {t('teams.resources.moveToMain')}
@@ -326,22 +210,27 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
 
   return (
     <section aria-label={documentsOnly ? t('teams.homeTabs.documents') : t('teams.resources')}>
-      <div className={styles.heading}>
+      <div className="flex min-h-8 items-center gap-3 text-xl font-semibold leading-7">
         <span>{documentsOnly ? t('teams.homeTabs.documents') : t('teams.resources')}</span>
-        <div className={styles.actions}>
+        <div className="flex items-center gap-1 ms-auto">
           {(canWrite || canCreateDocument) && (
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger
                 aria-label={t('teams.resources.addResources')}
-                className={styles.iconButton}
+                className="cursor-pointer grid place-items-center size-8 p-0 border border-solid border-divider rounded-full text-muted-foreground bg-popover hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-2"
                 disabled={pending}
               >
                 <PlusIcon size={16} />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className={styles.menu} side="bottom" sideOffset={5}>
+              <DropdownMenuContent
+                align="end"
+                className="min-w-57 p-1 border border-solid border-divider rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)"
+                side="bottom"
+                sideOffset={5}
+              >
                 {canCreateDocument && (
                   <DropdownMenuItem onClick={() => void createDocument()}>
-                    <span className={styles.action}>
+                    <span className="inline-flex items-center gap-2.5 min-w-47.5 text-sm leading-5.5">
                       <FilePlus2Icon size={16} />
                       {t('teams.resources.newDocument')}
                     </span>
@@ -353,7 +242,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                       openExistingDocumentPicker({ attachedIds, onChanged: refresh, teamId })
                     }
                   >
-                    <span className={styles.action}>
+                    <span className="inline-flex items-center gap-2.5 min-w-47.5 text-sm leading-5.5">
                       <FileTextIcon size={16} />
                       {t('teams.resources.existingDocuments')}
                     </span>
@@ -361,11 +250,11 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                 )}
                 {canWrite && !documentsOnly && (
                   <>
-                    <div className={styles.menuDivider} />
+                    <div className="h-px my-1 bg-divider" />
                     <DropdownMenuItem
                       onClick={() => openTeamLinkDialog({ onChanged: refresh, teamId })}
                     >
-                      <span className={styles.action}>
+                      <span className="inline-flex items-center gap-2.5 min-w-47.5 text-sm leading-5.5">
                         <Link2Icon size={16} />
                         {t('teams.resources.newLink')}
                       </span>
@@ -378,7 +267,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
           {!documentsOnly && canWrite && (
             <button
               aria-label={t('teams.resources.addSection')}
-              className={styles.iconButton}
+              className="cursor-pointer grid place-items-center size-8 p-0 border border-solid border-divider rounded-full text-muted-foreground bg-popover hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-2"
               type="button"
               onClick={() => openTeamSectionDialog({ onChanged: refresh, teamId })}
             >
@@ -392,12 +281,17 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
         <AsyncError error={error} variant="inline" onRetry={() => void refresh()} />
       ) : null}
       {writeError !== undefined && (
-        <div className={styles.error}>
+        <div className="my-2">
           <AsyncError error={writeError} variant="inline" onRetry={() => void refresh()} />
         </div>
       )}
       {data && visible.length === 0 && (documentsOnly || sections.length === 0) && (
-        <div className={cn('text-muted-foreground', styles.muted)}>
+        <div
+          className={cn(
+            'text-muted-foreground',
+            'text-sm font-normal leading-5.5 text-muted-foreground',
+          )}
+        >
           {t(
             documentsOnly
               ? 'teams.documentsEmpty'
@@ -412,14 +306,14 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
         rows(documentsOnly ? visible : visible.filter((item) => !item.sectionId))}
       {!documentsOnly &&
         sections.map((section) => (
-          <div className={styles.section} key={section.id}>
-            <div className={styles.sectionHeading}>
+          <div className="mbs-4.5" key={section.id}>
+            <div className="flex min-h-7.5 items-center text-sm font-medium leading-5.5">
               <span>{section.name}</span>
-              <div className={styles.actions}>
+              <div className="flex items-center gap-1 ms-auto">
                 {canCreateDocument && (
                   <button
                     aria-label={t('teams.resources.addToSection', { name: section.name })}
-                    className={styles.iconButton}
+                    className="cursor-pointer grid place-items-center size-8 p-0 border border-solid border-divider rounded-full text-muted-foreground bg-popover hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-2"
                     disabled={pending}
                     type="button"
                     onClick={() => void createDocument(section.id)}
@@ -431,13 +325,13 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       aria-label={t('teams.resources.sectionActions', { name: section.name })}
-                      className={styles.iconButton}
+                      className="cursor-pointer grid place-items-center size-8 p-0 border border-solid border-divider rounded-full text-muted-foreground bg-popover hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-2"
                     >
                       <MoreHorizontalIcon size={14} />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className={styles.menu}
+                      className="min-w-57 p-1 border border-solid border-divider rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)"
                       side="bottom"
                       sideOffset={4}
                     >

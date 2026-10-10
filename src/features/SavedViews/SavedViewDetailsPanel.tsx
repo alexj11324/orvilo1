@@ -2,7 +2,7 @@
 
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Columns3Icon, ListIcon, ListTodoIcon } from 'lucide-react';
 import { createElement, memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,81 +19,6 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import { buildSavedViewDetailSummary } from './savedViewDetails';
-
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  cardHeader: css`
-    padding-block: 12px;
-    padding-inline: 14px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  groupRow: css`
-    min-height: 36px;
-    padding-inline: 14px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  metaRow: css`
-    min-height: 38px;
-    padding-inline: 14px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  facetList: css`
-    padding-block-end: 8px;
-    padding-inline: 6px;
-  `,
-  facetRow: css`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 5px;
-    padding-inline: 8px;
-
-    font-size: 13px;
-  `,
-  facetTab: css`
-    cursor: pointer;
-
-    padding-block: 4px;
-    padding-inline: 10px;
-    border: none;
-    border-radius: 9999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  facetTabActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  ownerCell: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-  `,
-  titleIcon: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
 
 /**
  * The reference details pane carries Assignees/Labels/Projects/Teams facet
@@ -118,10 +43,15 @@ interface SavedViewDetailsPanelProps {
 }
 
 const DetailRow = memo<{ label: string; value: ReactNode }>(({ label, value }) => (
-  <div className={cx('flex items-center justify-between gap-4', styles.metaRow)}>
+  <div
+    className={cn(
+      'flex items-center justify-between gap-4',
+      'min-h-9.5 px-3.5 not-last:border-be not-last:border-solid not-last:border-divider',
+    )}
+  >
     <div className="text-xs text-muted-foreground">{label}</div>
     {typeof value === 'string' ? (
-      <div className="truncate block text-(length:--text-dense) font-medium">{value}</div>
+      <div className="truncate block text-sm leading-5.5 font-medium">{value}</div>
     ) : (
       value
     )}
@@ -181,9 +111,19 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
 
     return (
       <div className="flex flex-col gap-2.5">
-        <div className={cx('flex flex-col', styles.card)}>
-          <div className={cx('flex items-center gap-2.5', styles.cardHeader)}>
-            <ListTodoIcon className={styles.titleIcon} size={16} />
+        <div
+          className={cn(
+            'flex flex-col',
+            'overflow-hidden border border-solid border-divider rounded-(--radius-card) bg-card',
+          )}
+        >
+          <div
+            className={cn(
+              'flex items-center gap-2.5',
+              'py-3 px-3.5 border-be border-solid border-divider',
+            )}
+          >
+            <ListTodoIcon className="text-muted-foreground" size={16} />
             <div className="truncate block text-sm font-semibold">{title}</div>
           </div>
           <DetailRow
@@ -201,11 +141,9 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
             label={t('savedViews.column.owner', { ns: 'common' })}
             value={
               owner.name ? (
-                <div className={styles.ownerCell}>
+                <div className="flex items-center gap-2 min-w-0">
                   <Avatar avatar={owner.avatar} name={owner.name} size={20} />
-                  <div className="truncate block text-(length:--text-dense) font-medium">
-                    {owner.name}
-                  </div>
+                  <div className="truncate block text-sm leading-5.5 font-medium">{owner.name}</div>
                 </div>
               ) : (
                 '—'
@@ -243,14 +181,27 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
             not just the loaded page; restricted buckets stay aggregated so
             unreadable names never leak. */}
         {facetsSupported ? (
-          <div className={cx('flex flex-col', styles.card)}>
-            <div className={cx('flex items-center gap-1.5', styles.cardHeader)}>
+          <div
+            className={cn(
+              'flex flex-col',
+              'overflow-hidden border border-solid border-divider rounded-(--radius-card) bg-card',
+            )}
+          >
+            <div
+              className={cn(
+                'flex items-center gap-1.5',
+                'py-3 px-3.5 border-be border-solid border-divider',
+              )}
+            >
               {(['projects', 'teams'] as const).map((tab) => (
                 <button
                   aria-pressed={facetTab === tab}
-                  className={`${styles.facetTab} ${facetTab === tab ? styles.facetTabActive : ''}`}
                   key={tab}
                   type="button"
+                  className={cn(
+                    'cursor-pointer min-h-8 py-1 px-2.5 border-0 rounded-full text-xs font-medium leading-5 text-muted-foreground bg-transparent hover:text-foreground',
+                    facetTab === tab && 'text-foreground bg-selected',
+                  )}
                   onClick={() => setFacetTab(tab)}
                 >
                   {t(tab === 'projects' ? 'savedViews.facetProjects' : 'savedViews.facetTeams', {
@@ -259,22 +210,22 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                 </button>
               ))}
             </div>
-            <div className={styles.facetList}>
+            <div className="pbe-2 px-1.5">
               {facetBuckets.length === 0 && restrictedCount === 0 ? (
-                <div
-                  className="text-xs text-muted-foreground"
-                  style={{ paddingBlock: 4, paddingInline: 8 }}
-                >
+                <div className="text-xs text-muted-foreground py-1 px-2">
                   {t('savedViews.noMatches', { ns: 'common' })}
                 </div>
               ) : (
                 <>
                   {facetBuckets.map((bucket) => (
                     <div
-                      className={cx('flex items-center justify-between', styles.facetRow)}
                       key={bucket.key ?? 'none'}
+                      className={cn(
+                        'flex items-center justify-between',
+                        'flex items-center justify-between py-1.5 px-2 text-sm leading-5.5',
+                      )}
                     >
-                      <div className="truncate block text-(length:--text-dense)">
+                      <div className="truncate block text-sm leading-5.5">
                         {bucket.name ??
                           (bucket.key === null
                             ? t(
@@ -289,8 +240,13 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                     </div>
                   ))}
                   {restrictedCount > 0 ? (
-                    <div className={cx('flex items-center justify-between', styles.facetRow)}>
-                      <div className="text-(length:--text-dense) text-muted-foreground">
+                    <div
+                      className={cn(
+                        'flex items-center justify-between',
+                        'flex items-center justify-between py-1.5 px-2 text-sm leading-5.5',
+                      )}
+                    >
+                      <div className="text-sm leading-5.5 text-muted-foreground">
                         {t('savedViews.facetRestricted', { ns: 'common' })}
                       </div>
                       <div className="text-xs text-muted-foreground">{restrictedCount}</div>
@@ -303,8 +259,15 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
         ) : null}
 
         {summary.groups.length > 0 ? (
-          <div className={cx('flex flex-col', styles.card)}>
-            <div className={cx('flex flex-col', styles.cardHeader)}>
+          <div
+            className={cn(
+              'flex flex-col',
+              'overflow-hidden border border-solid border-divider rounded-(--radius-card) bg-card',
+            )}
+          >
+            <div
+              className={cn('flex flex-col', 'py-3 px-3.5 border-be border-solid border-divider')}
+            >
               <div className="text-xs text-muted-foreground font-medium">
                 {t('savedViews.groupCounts', { ns: 'common' })}
               </div>
@@ -319,15 +282,18 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                     : group.key;
               return (
                 <div
-                  className={cx('flex items-center justify-between', styles.groupRow)}
                   key={group.key}
+                  className={cn(
+                    'flex items-center justify-between',
+                    'min-h-9 px-3.5 not-last:border-be not-last:border-solid not-last:border-divider',
+                  )}
                 >
                   <div className="flex items-center gap-2">
                     {createElement(layout === 'board' ? Columns3Icon : ListIcon, {
-                      color: cssVar.colorTextTertiary,
+                      className: 'text-foreground-tertiary',
                       size: 14,
                     })}
-                    <div className="text-(length:--text-dense)">{groupLabel}</div>
+                    <div className="text-sm leading-5.5">{groupLabel}</div>
                   </div>
                   <div className="text-xs text-muted-foreground">{group.total}</div>
                 </div>

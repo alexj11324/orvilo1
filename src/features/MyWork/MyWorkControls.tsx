@@ -1,6 +1,5 @@
 'use client';
 import type { MyWorkMode, WorkQueryLayout } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   BookmarkPlusIcon,
@@ -39,26 +38,10 @@ import {
 } from './myWorkDisplay';
 import MyWorkFilterMenu from './MyWorkFilterMenu';
 
-const styles = createStaticStyles(({ css }) => ({
-  // Same popover width contract as the saved-view editors.
-  controlPopover: css`
-    width: min(420px, calc(100vw - 32px));
-    padding: 12px;
-  `,
-  optionLabel: css`
-    flex: none;
-    width: 96px;
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
-
 const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, label }) => (
-  <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
-    <span className={styles.optionLabel}>{label}</span>
-    <div className="flex flex-col" style={{ flex: 1, minWidth: 0 }}>
-      {children}
-    </div>
+  <div className="flex flex-row items-center gap-2">
+    <span className="flex-none w-24 text-sm leading-5.5 text-muted-foreground">{label}</span>
+    <div className="flex flex-col flex-1 min-w-0">{children}</div>
   </div>
 ));
 
@@ -70,7 +53,7 @@ const PropertyRow = memo<{
   label: string;
   onChange: (checked: boolean) => void;
 }>(({ checked, label, onChange }) => (
-  <div className="flex flex-row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+  <div className="flex flex-row items-center justify-between">
     <span className="text-sm">{label}</span>
     <Switch aria-label={label} checked={checked} onCheckedChange={onChange} />
   </div>
@@ -178,7 +161,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
     };
 
     return (
-      <div className="flex flex-row" style={{ alignItems: 'center', gap: 6, flex: 'none' }}>
+      <div className="flex flex-row items-center gap-1.5 flex-none">
         <MyWorkFilterMenu
           activeFilterCount={activeFilterCount}
           builder={builder}
@@ -207,7 +190,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
           />
           <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
             {
-              <div className={cn('flex flex-col', styles.controlPopover)} style={{ gap: 12 }}>
+              <div className={cn('flex flex-col', 'w-[min(420px,calc(100vw-32px))] p-3', 'gap-3')}>
                 {canBoard ? (
                   <OptionRow label={t('myWork.displayLayout')}>
                     <Select
@@ -466,7 +449,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                     <span className="text-sm text-muted-foreground">
                       {t('myWork.displayProperties')}
                     </span>
-                    <div className="flex flex-col" style={{ gap: 6 }}>
+                    <div className="flex flex-col gap-1.5">
                       {MY_WORK_ROW_PROPERTIES.map((property) => (
                         <PropertyRow
                           checked={display.properties[property]}
@@ -483,7 +466,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                   </>
                 ) : null}
                 {canSaveAs ? (
-                  <div className="flex flex-row" style={{ justifyContent: 'flex-end' }}>
+                  <div className="flex flex-row justify-end">
                     <Button variant="outline" onClick={onSaveAs}>
                       {createElement(BookmarkPlusIcon, { className: 'size-4 shrink-0' })}
                       {t('myWork.saveAs')}

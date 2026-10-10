@@ -1,7 +1,6 @@
 'use client';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { WorkQueryEntityType } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { FilterIcon, Layers2Icon, LoaderCircleIcon, PlusIcon, Settings2Icon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -58,61 +57,6 @@ import { workAttentionService } from '@/services/workAttention';
 
 import { newTeamViewDraft, teamViewDraftQuery } from './teamViewsDraft';
 import { nextTeamViewsSearch, readTeamViewsSearch } from './teamViewsNavigation';
-
-const styles = createStaticStyles(({ css }) => ({
-  directoryBody: css`
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-  `,
-  editorHeader: css`
-    padding-block: 16px;
-    padding-inline: 24px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  empty: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 18px;
-    align-items: center;
-    justify-content: center;
-
-    max-width: 480px;
-    margin-inline: auto;
-    padding-block: 48px;
-    padding-inline: 20px;
-
-    text-align: center;
-  `,
-  popover: css`
-    width: min(420px, calc(100vw - 32px));
-    padding: 12px;
-  `,
-  resultScroll: css`
-    overflow: auto;
-    flex: 1;
-
-    min-height: 0;
-    padding-block: 12px;
-    padding-inline: 16px;
-  `,
-  viewRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    min-height: 44px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
 
 interface TeamViewsSurfaceProps {
   error?: Error;
@@ -423,11 +367,11 @@ const TeamViewsSurface = ({
       />
       <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
         {creating ? (
-          <div className={cn('flex flex-col', styles.popover)}>
+          <div className={cn('flex flex-col', 'w-[min(420px,calc(100vw-32px))] p-3')}>
             <ViewDefinitionEditor showFilters={false} value={draft} onChange={setDraft} />
           </div>
         ) : (
-          <div className={cn('flex flex-col', styles.popover)} style={{ gap: 10 }}>
+          <div className={cn('flex flex-col', 'w-[min(420px,calc(100vw-32px))] p-3', 'gap-2.5')}>
             <span className="text-sm">{t('savedViews.sortDefault')}</span>
             <Select
               items={sortOptions}
@@ -471,7 +415,13 @@ const TeamViewsSurface = ({
             </span>
           }
         />
-        <div className={cn('flex flex-col', styles.editorHeader)} style={{ gap: 14 }}>
+        <div
+          className={cn(
+            'flex flex-col',
+            'py-4 px-6 border-be border-solid border-divider',
+            'gap-3.5',
+          )}
+        >
           <div className="flex flex-row items-center gap-3 flex-wrap">
             <Input
               aria-label={t('savedViews.name')}
@@ -498,7 +448,7 @@ const TeamViewsSurface = ({
         </div>
         <WorkSurfaceToolbar>
           {entityTabs}
-          <div className="flex flex-row items-center" style={{ gap: 6, marginInlineStart: 'auto' }}>
+          <div className="flex flex-row items-center gap-1.5 ms-auto">
             <Popover
               open={control === 'filters'}
               onOpenChange={(open) => setControl(open ? 'filters' : null)}
@@ -516,7 +466,7 @@ const TeamViewsSurface = ({
                 }
               />
               <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
-                <div className={cn('flex flex-col', styles.popover)}>
+                <div className={cn('flex flex-col', 'w-[min(420px,calc(100vw-32px))] p-3')}>
                   <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
                 </div>
               </PopoverContent>
@@ -524,7 +474,7 @@ const TeamViewsSurface = ({
             {displayControl}
           </div>
         </WorkSurfaceToolbar>
-        <div className={styles.resultScroll}>
+        <div className="overflow-auto flex-1 min-h-0 py-3 px-4">
           {previewError ? (
             <AsyncError error={previewError} onRetry={() => void retryPreview()} />
           ) : draft.entityType === 'project' ? (
@@ -617,11 +567,9 @@ const TeamViewsSurface = ({
       />
       <WorkSurfaceToolbar>
         {entityTabs}
-        <div className="flex flex-col" style={{ marginInlineStart: 'auto' }}>
-          {displayControl}
-        </div>
+        <div className="flex flex-col ms-auto">{displayControl}</div>
       </WorkSurfaceToolbar>
-      <WorkSurfaceCollection className={styles.directoryBody}>
+      <WorkSurfaceCollection className="flex flex-col min-h-full">
         {error && sortedViews.length === 0 ? (
           <AsyncError error={error} onRetry={onRetry} />
         ) : isLoading && sortedViews.length === 0 ? (
@@ -634,7 +582,11 @@ const TeamViewsSurface = ({
           <div className="flex flex-col gap-0">
             {error ? <AsyncError error={error} variant="inline" onRetry={onRetry} /> : null}
             {sortedViews.map((view) => (
-              <WorkspaceLink className={styles.viewRow} key={view.id} to={`/views/${view.id}`}>
+              <WorkspaceLink
+                className="cursor-pointer flex min-h-11 items-center gap-3 px-3 border-be border-solid border-divider hover:bg-accent"
+                key={view.id}
+                to={`/views/${view.id}`}
+              >
                 <Layers2Icon aria-hidden className="size-4 shrink-0" />
                 <span className={cn('flex-1', 'text-sm')}>{view.name}</span>
                 <span className="text-sm text-muted-foreground">
@@ -644,17 +596,9 @@ const TeamViewsSurface = ({
             ))}
           </div>
         ) : (
-          <div className={styles.empty}>
-            {
-              <Layers2Icon
-                aria-hidden
-                className="size-4 shrink-0"
-                style={{ width: 64, height: 64 }}
-              />
-            }
-            <span className="text-sm font-semibold" style={{ fontSize: 20 }}>
-              {t('tab.views')}
-            </span>
+          <div className="flex flex-1 flex-col items-center justify-center gap-4.5 max-w-120 mx-auto py-12 px-5 text-center">
+            {<Layers2Icon aria-hidden className="size-16 shrink-0" />}
+            <span className="text-xl font-semibold leading-7">{t('tab.views')}</span>
             <span className="text-sm text-muted-foreground">
               {t(
                 entityType === 'task'

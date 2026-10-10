@@ -1,6 +1,5 @@
 'use client';
 import type { TaskWorkflowCategory } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { BarChart3Icon, Trash2Icon, UserRoundIcon, XIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo } from 'react';
@@ -19,39 +18,6 @@ import DropdownMenu, {
   type SidebarMenuInfo,
   type SidebarMenuItemData,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
-
-const styles = createStaticStyles(({ css }) => ({
-  /**
-   * Linear's floating bulk bar: pinned to the bottom of the list scrollport
-   * (`position: sticky` as the scroll body's last child), centered on the
-   * column, elevated above the rows it slides over.
-   */
-  bar: css`
-    position: sticky;
-    z-index: 5;
-    inset-block-end: 16px;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    width: fit-content;
-    margin-block-start: 8px;
-    margin-inline: auto;
-    padding-block: 6px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  count: css`
-    flex: none;
-    padding-inline-end: 4px;
-    white-space: nowrap;
-  `,
-}));
 
 interface BulkActionsBarProps {
   /**
@@ -185,8 +151,12 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       // `data-bulk-actions` keeps the click-away handler from clearing the
       // selection when the pointer lands on the bar's own chrome; the
       // `data-row-interactive` marker does the same for row-level guards.
-      <div data-bulk-actions data-row-interactive className={styles.bar}>
-        <span className={cn('text-sm font-medium', styles.count)}>
+      <div
+        data-bulk-actions
+        data-row-interactive
+        className="sticky z-5 inset-be-4 flex w-fit items-center gap-1.5 mbs-2 mx-auto py-1.5 px-3 border border-solid border-divider rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)"
+      >
+        <span className={cn('text-sm font-medium', 'flex-none pe-1 whitespace-nowrap')}>
           {t('myWork.bulk.selected', { count })}
         </span>
         <DropdownMenu items={actionItems} placement={'top'}>
@@ -194,7 +164,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
             {t('myWork.bulk.actions')}
           </Button>
         </DropdownMenu>
-        <div className="flex flex-col" style={{ flex: 'none' }}>
+        <div className="flex flex-col flex-none">
           <Button
             aria-label={t('myWork.bulk.clear')}
             size="icon"

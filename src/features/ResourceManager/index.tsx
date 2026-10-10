@@ -148,7 +148,7 @@ const ResourceManager = memo<ResourceManagerProps>(({ content }) => {
         style={{ height: '100%' }}
         onUploadFiles={handleUploadFiles}
       >
-        <div className={cx('flex flex-col h-[100%]', styles.container)} style={cssVariables}>
+        <div className={cx('flex flex-col h-full', styles.container)} style={cssVariables}>
           {/* Explorer stays mounted to preserve its state, unless the caller
               swaps in its own base content (resource home dashboard) */}
           {content ?? <Explorer />}

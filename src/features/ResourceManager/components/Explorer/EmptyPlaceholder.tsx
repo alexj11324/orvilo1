@@ -92,7 +92,7 @@ const EmptyPlaceholder = () => {
   if (sourceFilter !== ResourceSourceFilter.All) {
     return (
       <div
-        className="flex flex-col items-center justify-center gap-3 h-[100%] w-[100%]"
+        className="flex flex-col items-center justify-center gap-3 h-full w-full"
         style={{ paddingBottom: 100 }}
       >
         <h4>{t('FileManager.emptyStatus.filteredTitle')}</h4>
@@ -106,7 +106,7 @@ const EmptyPlaceholder = () => {
   if (!canCreate) {
     return (
       <div
-        className="flex flex-col items-center justify-center h-[100%] w-[100%]"
+        className="flex flex-col items-center justify-center h-full w-full"
         style={{ paddingBottom: 100 }}
       >
         <h4>{t('FileManager.emptyStatus.title')}</h4>
@@ -116,7 +116,7 @@ const EmptyPlaceholder = () => {
 
   return (
     <div
-      className="flex flex-col items-center justify-center gap-6 h-[100%] w-[100%]"
+      className="flex flex-col items-center justify-center gap-6 h-full w-full"
       style={{ paddingBottom: 100 }}
     >
       <div className="flex flex-col justify-center" style={{ textAlign: 'center' }}>

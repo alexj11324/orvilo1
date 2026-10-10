@@ -1,6 +1,6 @@
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { MessageSquare } from 'lucide-react';
 import { memo } from 'react';
@@ -12,47 +12,12 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import { type MobileTopicRow } from './mobileTopicRows';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  desc: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-    line-height: 1.2;
-    color: ${cssVar.colorTextDescription};
-  `,
-  row: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 16px;
-
-    color: inherit;
-    text-decoration: none;
-
-    transition: background ${cssVar.motionDurationFast};
-
-    &:active {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  time: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextPlaceholder};
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 15px;
-    line-height: 1.3;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  desc: 'flex min-h-5 items-center gap-1.5 text-xs leading-5 text-muted-foreground',
+  row: 'flex items-center gap-3 px-4 py-2.5 text-foreground no-underline transition-[background-color] duration-(--orvilo-motion-fast) ease-[ease] active:bg-accent focus-visible:outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-ring/50',
+  time: 'flex-none text-xs leading-5 text-muted-foreground',
+  title: 'truncate text-sm leading-5.5',
+};
 
 const formatRowTime = (updatedAt: Date | number) => {
   const time = dayjs(updatedAt);
@@ -67,7 +32,7 @@ const StatusMark = ({ status }: { status: MobileTopicRow['status'] }) => {
   if (status === 'running') return <RunningGlyph size={12} />;
   const visual = TOPIC_STATUS_VISUALS[status];
   if (!visual) return null;
-  return <visual.icon color={visual.color} size={12} style={{ flex: 'none' }} />;
+  return <visual.icon className="flex-none" color={visual.color} size={12} />;
 };
 
 /**
@@ -82,24 +47,14 @@ const TopicRow = memo<{ topic: MobileTopicRow }>(({ topic }) => {
   return (
     <WorkspaceLink
       aria-label={topic.title}
-      className={cx(styles.row)}
+      className={styles.row}
       to={AGENT_CHAT_TOPIC_URL(topic.agentId, topic.id, true)}
     >
-      <span
-        className="flex items-center justify-center rounded-full"
-        style={{
-          backgroundColor: cssVar.colorFillSecondary,
-          flex: 'none',
-          height: 40,
-          width: 40,
-        }}
-      >
-        <MessageSquare size={18} style={{ color: cssVar.colorTextDescription }} />
+      <span className="flex size-10 flex-none items-center justify-center rounded-full bg-selected">
+        <MessageSquare className="text-muted-foreground" size={18} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className={styles.title} style={isUnread ? { fontWeight: 600 } : undefined}>
-          {topic.title}
-        </div>
+        <div className={cn(styles.title, isUnread && 'font-semibold')}>{topic.title}</div>
         {topic.status ? (
           <div className={styles.desc}>
             <StatusMark status={topic.status} />

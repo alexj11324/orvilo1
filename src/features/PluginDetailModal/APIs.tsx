@@ -25,7 +25,7 @@ const APIs = memo<{
     );
 
   return (
-    <div className="flex flex-col py-4 w-[100%]">
+    <div className="flex flex-col py-4 w-full">
       <LiteTable
         dataSource={pluginManifest.api}
         rowKey={(api) => api.name}

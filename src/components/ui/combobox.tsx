@@ -6,6 +6,7 @@ import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react';
 import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
+import { type InputVisualSize } from '@/components/ui/input';
 import {
   InputGroup,
   InputGroupAddon,
@@ -194,15 +195,29 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
   );
 }
 
+const comboboxChipsSizeClasses: Record<InputVisualSize, string> = {
+  default: 'min-h-9 text-sm leading-5.5',
+  compact: 'min-h-8 text-sm leading-5.5',
+  small: 'min-h-7 py-0.5 text-sm leading-5.5',
+  normal: 'min-h-9 text-sm leading-5.5',
+  large: 'min-h-10 text-base leading-6',
+};
+
 function ComboboxChips({
   className,
+  visualSize = 'default',
   ...props
-}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> & ComboboxPrimitive.Chips.Props) {
+}: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
+  ComboboxPrimitive.Chips.Props & {
+    /** Minimum field height; selected values can wrap into additional rows. */
+    visualSize?: InputVisualSize;
+  }) {
   return (
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
-        'flex min-h-8 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent bg-clip-padding px-2.5 py-1 text-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:px-1 dark:bg-input/30 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40',
+        'flex flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent bg-clip-padding px-2.5 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:px-1 dark:bg-input/30 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40',
+        comboboxChipsSizeClasses[visualSize],
         className,
       )}
       {...props}

@@ -128,7 +128,23 @@ const Select = <Value extends string | number = string>({
         value={values}
         onValueChange={(v) => onChange?.(v as Value[])}
       >
-        <ComboboxChips aria-label={ariaLabel} className={className} id={id} style={style}>
+        <ComboboxChips
+          aria-label={ariaLabel}
+          className={className}
+          id={id}
+          style={style}
+          visualSize={
+            size === 'small' || size === 'sm'
+              ? 'small'
+              : size === 'compact'
+                ? 'compact'
+                : size === 'large' || size === 'lg'
+                  ? 'large'
+                  : size === 'normal'
+                    ? 'normal'
+                    : 'default'
+          }
+        >
           {values.map((v) => (
             <ComboboxChip key={String(v)}>{labelFor(v)}</ComboboxChip>
           ))}

@@ -14,7 +14,7 @@ import { MetricItem } from './CompletedState';
 import { formatCost, formatDuration } from './utils';
 
 const styles = {
-  separator: 'size-[3px] rounded-[50%] bg-[var(--ant-color-text-quaternary)]',
+  separator: 'size-[3px] rounded-[50%] bg-foreground-quaternary',
 };
 
 interface ErrorStateProps {

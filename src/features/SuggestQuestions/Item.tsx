@@ -28,7 +28,7 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
     <div
       {...clickableProps()}
       className={cn(
-        `flex flex-col border${disabled ? '' : ' hover:bg-[var(--ant-color-fill-tertiary)]'}`,
+        `flex flex-col border${disabled ? '' : ' hover:bg-muted'}`,
         CLICKABLE_FOCUS_RING,
       )}
       style={{

@@ -26,7 +26,7 @@ const getGradeColor = (grade: string): string => {
 
 const styles = {
   colorDot: 'size-2 rounded-[50%]',
-  container: 'p-6 border border-sidebar-border rounded-[12px] bg-(--ant-color-fill-quaternary)',
+  container: 'p-6 border border-sidebar-border rounded-[12px] bg-fill-quaternary',
   description: '[margin-block-start:8px] text-[14px] text-muted-foreground',
   gradeBadge:
     'flex-none size-8 border-2 border-solid border-current rounded-[50%] text-[16px] font-bold',

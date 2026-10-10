@@ -22,11 +22,11 @@ import { useForwardTopic } from '../useForwardTopic';
 const styles = {
   body: '[block-size:460px]',
   context:
-    'flex-1 p-3 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-[var(--ant-color-fill-quaternary)]',
+    'flex-1 p-3 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-fill-quaternary',
   divider: 'self-stretch [inline-size:1px] bg-sidebar-border',
   list: 'flex-1 overflow-y-auto',
   row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--ant-border-radius-lg) hover:bg-accent',
-  selected: 'bg-[var(--ant-color-fill-quaternary)]',
+  selected: 'bg-fill-quaternary',
 };
 
 export interface TopicForwardContentProps {

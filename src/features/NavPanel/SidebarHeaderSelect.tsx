@@ -65,11 +65,8 @@ interface SidebarHeaderSelectTriggerProps extends Omit<ComponentProps<'div'>, 't
 export const SidebarHeaderSelectTrigger = memo<SidebarHeaderSelectTriggerProps>(
   ({ avatar, background, className, name, style, title, ...rest }) => (
     <div
+      className={cx(className, 'flex cursor-pointer items-center gap-2 p-[2px] hover:bg-muted')}
       style={{ borderRadius: 10, minWidth: 32, overflow: 'hidden', ...style }}
-      className={cx(
-        className,
-        'flex cursor-pointer items-center gap-2 p-[2px] hover:bg-[var(--ant-color-fill-tertiary)]',
-      )}
       {...rest}
     >
       <Avatar avatar={avatar} background={background} name={name} shape={'square'} size={28} />

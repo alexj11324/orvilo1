@@ -34,7 +34,7 @@ import { goalSelectors, useGoalStore } from '@/store/goal';
 const styles = {
   attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
   label: 'text-[12px] font-semibold text-muted-foreground',
-  linkRow: 'cursor-pointer rounded-(--ant-border-radius-sm) hover:bg-(--ant-color-fill-quaternary)',
+  linkRow: 'cursor-pointer rounded-(--ant-border-radius-sm) hover:bg-fill-quaternary',
   mono: 'font-mono tabular-nums',
 };
 

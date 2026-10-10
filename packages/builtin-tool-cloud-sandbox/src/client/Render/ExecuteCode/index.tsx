@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import {
@@ -16,12 +16,7 @@ import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/cod
 
 import type { ExecuteCodeState } from '../../../types';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: hidden;
-    padding-inline: 8px 0;
-  `,
-}));
+const styles = { container: 'overflow-hidden ps-2 pe-0' };
 
 interface ExecuteCodeParams {
   code: string;
@@ -33,7 +28,7 @@ const ExecuteCode = memo<BuiltinRenderProps<ExecuteCodeParams, ExecuteCodeState>
     const language = args.language || 'python';
 
     return (
-      <div className={cx('flex flex-col gap-2', styles.container)}>
+      <div className={cn('flex flex-col gap-2', styles.container)}>
         <div className="rounded-md border bg-card flex flex-col" style={{ gap: 8, padding: 8 }}>
           <CodeBlock
             wrap

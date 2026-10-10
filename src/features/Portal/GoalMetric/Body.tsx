@@ -304,6 +304,7 @@ const BudgetField = memo<{
             min={meta.min}
             placeholder={placeholder ?? t('goalProcess.metricDetail.budget.uncapped')}
             prefix={money ? <div className="text-[12px] text-muted-foreground">$</div> : undefined}
+            size="sm"
             style={{ width: 120 }}
             value={draft}
             onChange={setDraft}

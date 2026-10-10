@@ -506,6 +506,7 @@ const SliderField = ({
         disabled={disabled}
         max={unlimitedInput ? undefined : max}
         min={min}
+        size="sm"
         step={step}
         style={{ maxWidth: inputWidth }}
         value={value ?? null}

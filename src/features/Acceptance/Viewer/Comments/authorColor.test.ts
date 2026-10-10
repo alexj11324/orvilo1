@@ -52,8 +52,12 @@ describe('acceptanceAuthorColor', () => {
   });
 
   it('leaves the verdict colours to verdicts', () => {
-    const { cssVar } = require('antd-style');
-    for (const semantic of [cssVar.volcano, cssVar.green, cssVar.colorError, cssVar.colorSuccess]) {
+    for (const semantic of [
+      'var(--ant-volcano)',
+      'var(--ant-green)',
+      'var(--ant-color-error)',
+      'var(--ant-color-success)',
+    ]) {
       expect(ACCEPTANCE_AUTHOR_COLORS).not.toContain(semantic);
     }
   });

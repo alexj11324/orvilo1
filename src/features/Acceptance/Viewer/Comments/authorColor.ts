@@ -1,5 +1,6 @@
-import { cssVar, useThemeMode } from 'antd-style';
 import { useCallback } from 'react';
+
+import { useIsDark } from '@/hooks/useIsDark';
 
 /**
  * Marks drawn on evidence need to say WHO drew them at a glance: two reviewers
@@ -22,26 +23,26 @@ import { useCallback } from 'react';
  * hue is left to say who, not to carry contrast.
  */
 export const ACCEPTANCE_AUTHOR_COLORS = [
-  cssVar.geekblue10,
-  cssVar.magenta10,
-  cssVar.gold10,
-  cssVar.cyan10,
-  cssVar.purple10,
-  cssVar.lime10,
-  cssVar.orange10,
-  cssVar.blue10,
+  'var(--ant-geekblue-10)',
+  'var(--ant-magenta-10)',
+  'var(--ant-gold-10)',
+  'var(--ant-cyan-10)',
+  'var(--ant-purple-10)',
+  'var(--ant-lime-10)',
+  'var(--ant-orange-10)',
+  'var(--ant-blue-10)',
 ] as const;
 
 /** The same hues at the step that is mid-tone on the dark end of the scale. */
 export const ACCEPTANCE_AUTHOR_COLORS_DARK = [
-  cssVar.geekblue7,
-  cssVar.magenta7,
-  cssVar.gold7,
-  cssVar.cyan7,
-  cssVar.purple7,
-  cssVar.lime7,
-  cssVar.orange7,
-  cssVar.blue7,
+  'var(--ant-geekblue-7)',
+  'var(--ant-magenta-7)',
+  'var(--ant-gold-7)',
+  'var(--ant-cyan-7)',
+  'var(--ant-purple-7)',
+  'var(--ant-lime-7)',
+  'var(--ant-orange-7)',
+  'var(--ant-blue-7)',
 ] as const;
 
 /** Deterministic, order-independent: the same author keeps their slot across rounds and reloads. */
@@ -64,7 +65,7 @@ export const acceptanceAuthorColor = (
 
 /** The same mapping, bound to the theme the reader is actually looking at. */
 export const useAcceptanceAuthorColor = () => {
-  const { isDarkMode } = useThemeMode();
+  const isDarkMode = useIsDark();
   return useCallback(
     (authorUserId?: string | null) =>
       acceptanceAuthorColor(authorUserId, isDarkMode ? 'dark' : 'light'),

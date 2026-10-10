@@ -13,10 +13,11 @@ const setWidth = (width: number) =>
 beforeEach(() => {
   media = Object.assign(new EventTarget(), {
     addListener: vi.fn(),
+    matches: false,
     media: '(max-width: 767px)',
     onchange: null,
     removeListener: vi.fn(),
-  }) as MediaQueryList;
+  });
   Object.defineProperty(media, 'matches', { get: () => window.innerWidth < 768 });
   vi.spyOn(window, 'matchMedia').mockReturnValue(media);
 });

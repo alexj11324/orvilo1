@@ -97,7 +97,7 @@ const MobilePortal = () => {
       style={{ overflow: 'hidden', padding: '0 8px' }}
     >
       <div
-        className="flex flex-col h-[100%] w-[calc(100%_+_16px)]"
+        className="flex flex-col h-full w-[calc(100%_+_16px)]"
         style={{ marginInline: -8, overflow: 'hidden', position: 'relative' }}
       >
         {body}

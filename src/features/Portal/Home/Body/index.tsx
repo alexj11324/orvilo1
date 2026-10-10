@@ -3,7 +3,7 @@ import Plugins from './Plugins';
 
 const Home = () => {
   return (
-    <div className="flex flex-col gap-3 h-[100%]">
+    <div className="flex flex-col gap-3 h-full">
       <Files />
       <Plugins />
     </div>

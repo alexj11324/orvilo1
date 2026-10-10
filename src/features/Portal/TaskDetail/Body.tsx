@@ -27,7 +27,7 @@ const Body = memo(() => {
   // resolved not-found (deleted task), which is a terminal 404.
   if (error) {
     return (
-      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflowY: 'auto' }}>
         <AsyncError error={error} variant={'page'} onRetry={onRetry} />
       </div>
     );
@@ -35,7 +35,7 @@ const Body = memo(() => {
 
   if (isNotFound) {
     return (
-      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflowY: 'auto' }}>
         <NotFound desc={t('taskDetail.notFound.desc')} title={t('taskDetail.notFound.title')} />
       </div>
     );
@@ -43,10 +43,7 @@ const Body = memo(() => {
 
   return (
     <TaskDetailScope taskId={taskId}>
-      <div
-        className="flex flex-col flex-1 h-[100%] px-4"
-        style={{ minHeight: 0, overflowY: 'auto' }}
-      >
+      <div className="flex flex-col flex-1 h-full px-4" style={{ minHeight: 0, overflowY: 'auto' }}>
         {isInitialLoading ? <TaskDetailSkeleton chrome={'body'} /> : <TaskDetailSections />}
         <TopicChatDrawer />
       </div>

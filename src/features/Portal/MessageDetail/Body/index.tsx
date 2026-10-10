@@ -31,7 +31,7 @@ const MessageDetailBody = () => {
   }, [message]);
 
   return (
-    <div className="flex flex-col h-[100%] px-2" style={{ paddingBlock: '0 12px' }}>
+    <div className="flex flex-col h-full px-2" style={{ paddingBlock: '0 12px' }}>
       {!!content && (
         <Markdown className={cx(md)} variant={'chat'}>
           {content}

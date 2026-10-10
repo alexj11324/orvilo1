@@ -164,7 +164,7 @@ const CommentCard = memo<CommentCardProps>(
       >
         <div className="flex flex-row items-center gap-2">
           <Avatar avatar={comment.author.avatar || authorName} size={24} />
-          <div className="text-[13px] font-medium">{authorName}</div>
+          <div className="text-(length:--text-dense) font-medium">{authorName}</div>
           {comment.author.status === 'former' && (
             <div className="text-[12px] text-muted-foreground">
               {t('topicComment.author.former')}

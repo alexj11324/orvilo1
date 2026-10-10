@@ -28,7 +28,7 @@ const Title = memo(() => {
           {agentMeta?.title ?? liveRun.activity.author?.name}
         </div>
         <div
-          className={cn('text-[13px]', oneLineEllipsis)}
+          className={cn('text-(length:--text-dense)', oneLineEllipsis)}
           style={{ color: 'var(--muted-foreground)', flex: 1, minWidth: 0 }}
         >
           {liveRun.activity.title}
@@ -41,7 +41,7 @@ const Title = memo(() => {
       <div className="text-[14px] font-medium">{t('goalDetail.taskResult')}</div>
       {(detail?.identifier || detail?.name) && (
         <div
-          className={cn('text-[13px]', oneLineEllipsis)}
+          className={cn('text-(length:--text-dense)', oneLineEllipsis)}
           style={{ color: 'var(--muted-foreground)', flex: 1, minWidth: 0 }}
         >
           {[detail.identifier, detail.name].filter(Boolean).join(' · ')}

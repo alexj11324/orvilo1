@@ -72,7 +72,7 @@ const ArtifactsUI = memo(() => {
 
   return (
     <div
-      className="flex flex-col flex-1 gap-2 h-[100%] px-3 portal-artifact"
+      className="flex flex-col flex-1 gap-2 h-full px-3 portal-artifact"
       style={{ overflow: 'hidden' }}
     >
       {showCode ? (

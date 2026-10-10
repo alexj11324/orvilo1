@@ -69,7 +69,7 @@ const Body = memo(() => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[100%]">
+      <div className="flex flex-col items-center justify-center h-full">
         <NeuralNetworkLoading size={40} />
       </div>
     );
@@ -77,7 +77,7 @@ const Body = memo(() => {
 
   if (error || !data || !check) {
     return (
-      <div className="flex flex-col items-center justify-center h-[100%]">
+      <div className="flex flex-col items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <SimpleEmpty description={t('taskDetail.acceptance.loadError')} />
           <Button variant="outline" onClick={() => void mutate()}>

@@ -100,13 +100,13 @@ const ThreadChatContent = memo<ThreadChatContentProps>(
       <>
         <Suspense
           fallback={
-            <div className="flex flex-col flex-1 h-[100%]">
+            <div className="flex flex-col flex-1 h-full">
               <SkeletonList />
             </div>
           }
         >
           <div
-            className="flex flex-col flex-1 w-[100%]"
+            className="flex flex-col flex-1 w-full"
             style={{ overflowX: 'hidden', overflowY: 'auto', position: 'relative' }}
           >
             <ChatList filterItem={filterItem} itemContent={itemContent} />

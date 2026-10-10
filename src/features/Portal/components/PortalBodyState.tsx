@@ -24,7 +24,7 @@ const PortalBodyState = memo<PortalBodyStateProps>(
   ({ error, isLoading, notFoundDesc, notFoundTitle, onRetry }) => {
     if (error) {
       return (
-        <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
+        <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflowY: 'auto' }}>
           <AsyncError error={error} variant={'page'} onRetry={onRetry} />
         </div>
       );
@@ -43,7 +43,7 @@ const PortalBodyState = memo<PortalBodyStateProps>(
     }
 
     return (
-      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0, overflowY: 'auto' }}>
         <NotFound desc={notFoundDesc} title={notFoundTitle} />
       </div>
     );

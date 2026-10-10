@@ -173,7 +173,7 @@ const Body = () => {
 
   return (
     <div
-      className="flex flex-col gap-4 h-[100%] px-2"
+      className="flex flex-col gap-4 h-full px-2"
       style={{ overflow: 'auto', paddingBlock: '4px 16px' }}
     >
       {ratio !== undefined && (

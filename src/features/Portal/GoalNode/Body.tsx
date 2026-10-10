@@ -185,7 +185,10 @@ const Body = memo(() => {
                 : t('goalProcess.node.description')
             }
           >
-            <div className="text-[13px]" style={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            <div
+              className="text-(length:--text-dense)"
+              style={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}
+            >
               {node.description}
             </div>
           </Section>
@@ -194,7 +197,9 @@ const Body = memo(() => {
       {node.kind === 'decision' && nodeView.decision && (
         <Section title={t('goalProcess.gate.decisionPointLabel')}>
           {/* State the problem itself; the resolution options carry the choices. */}
-          <div className="text-[13px]">{gateReasonText ?? nodeView.decision.question}</div>
+          <div className="text-(length:--text-dense)">
+            {gateReasonText ?? nodeView.decision.question}
+          </div>
         </Section>
       )}
 

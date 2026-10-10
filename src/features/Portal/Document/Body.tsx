@@ -377,7 +377,7 @@ const DocumentBody = memo(() => {
   );
 
   return (
-    <div className="flex flex-col flex-1 h-[100%]" style={{ overflow: 'hidden' }}>
+    <div className="flex flex-col flex-1 h-full" style={{ overflow: 'hidden' }}>
       <div className={fullPage ? styles.contentFull : styles.content}>
         {fullPage ? <WideScreenContainer>{editorContent}</WideScreenContainer> : editorContent}
       </div>

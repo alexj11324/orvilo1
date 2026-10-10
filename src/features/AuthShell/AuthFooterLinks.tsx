@@ -20,7 +20,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const AuthFooterLinks = memo(() => {
   const { t } = useTranslation('auth');
   return (
-    <div className="text-center text-[13px] text-muted-foreground">
+    <div className="text-center text-(length:--text-dense) text-muted-foreground">
       <a className={styles.link} href={TERMS_URL} rel="noopener noreferrer" target="_blank">
         {t('footer.terms')}
       </a>

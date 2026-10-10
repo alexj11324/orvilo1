@@ -40,7 +40,7 @@ import { ALL_TEAM_CYCLES } from './teamWorkQuery';
 
 const styles = {
   controlPopover: 'w-[min(420px,calc(100vw-32px))] p-3',
-  optionLabel: 'flex-none w-24 text-[13px] text-muted-foreground',
+  optionLabel: 'flex-none w-24 text-(length:--text-dense) text-muted-foreground',
   sectionLabel: '[padding-block-start:4px] text-[12px] font-medium text-muted-foreground',
 };
 

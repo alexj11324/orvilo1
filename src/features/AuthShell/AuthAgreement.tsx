@@ -149,7 +149,7 @@ const AuthAgreement = memo<AuthAgreementProps>(({ checked, onChange }) => {
   if (checked === undefined || onChange === undefined) {
     return (
       <div
-        className="text-[13px] text-muted-foreground"
+        className="text-(length:--text-dense) text-muted-foreground"
         style={{ display: 'block', marginBlockStart: 8 }}
       >
         <AgreementText i18nKey={'footer.agreement'} />
@@ -160,7 +160,7 @@ const AuthAgreement = memo<AuthAgreementProps>(({ checked, onChange }) => {
   return (
     <label className="flex items-start gap-2" style={{ marginBlockEnd: 12, width: '100%' }}>
       <Checkbox checked={checked} style={{ marginBlockStart: 2 }} onCheckedChange={onChange} />
-      <span className="text-[13px] text-muted-foreground">
+      <span className="text-(length:--text-dense) text-muted-foreground">
         <AgreementText i18nKey={'agreement.checkbox'} />
       </span>
     </label>

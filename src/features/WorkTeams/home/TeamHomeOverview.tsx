@@ -273,7 +273,7 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
                   'aria-hidden': true,
                   'className': 'size-4 shrink-0',
                 })}
-                <span className="text-[13px]">{t(destinationLabels[key])}</span>
+                <span className="text-(length:--text-dense)">{t(destinationLabels[key])}</span>
               </WorkspaceLink>
             ))}
           </nav>

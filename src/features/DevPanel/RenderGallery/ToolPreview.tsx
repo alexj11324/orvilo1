@@ -109,7 +109,7 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
           )}
         </div>
         {(api.description || activeVariant.description) && (
-          <div className="text-[13px] text-muted-foreground">
+          <div className="text-(length:--text-dense) text-muted-foreground">
             {activeVariant.description ?? api.description}
           </div>
         )}

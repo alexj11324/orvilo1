@@ -247,7 +247,7 @@ const MembersPage = memo(() => {
                 ? row.value.email
                 : null;
           return (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-(length:--text-dense) text-muted-foreground">
               <span className={styles.ellipsis}>{email || '—'}</span>
             </span>
           );
@@ -328,7 +328,7 @@ const MembersPage = memo(() => {
                 ? row.value.projects?.length
                 : undefined;
           return (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-(length:--text-dense) text-muted-foreground">
               {count === undefined ? '—' : t('members.projectCount', { count, ns: 'common' })}
             </span>
           );
@@ -339,7 +339,7 @@ const MembersPage = memo(() => {
       {
         key: 'joined',
         render: (row) => (
-          <span className="text-[13px] text-muted-foreground">
+          <span className="text-(length:--text-dense) text-muted-foreground">
             {formatMemberDate(
               row.kind === 'person'
                 ? row.value.joinedAt

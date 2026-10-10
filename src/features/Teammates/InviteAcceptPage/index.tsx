@@ -136,7 +136,7 @@ const InviteAcceptPage = memo(() => {
         <Avatar avatar={preview.workspace.avatar} name={preview.workspace.name} size={48} />
         <div className="flex flex-col gap-0.5">
           <div className="text-[18px] font-semibold">{preview.workspace.name}</div>
-          <div className="text-[13px] text-muted-foreground">
+          <div className="text-(length:--text-dense) text-muted-foreground">
             {t('workspaceSetting.invite.invitedBy', {
               name: preview.inviter.name ?? t('workspaceSetting.invite.unknownInviter'),
             })}
@@ -145,7 +145,7 @@ const InviteAcceptPage = memo(() => {
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="text-[13px]">
+        <div className="text-(length:--text-dense)">
           {t('workspaceSetting.invite.roleLine', { role: roleLabel })}
           {preview.emailHint ? ` · ${preview.emailHint}` : ''}
         </div>

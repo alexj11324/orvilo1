@@ -201,7 +201,9 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
               </div>
             </div>
             {toolset.toolsetDescription && (
-              <div className="text-[13px] text-muted-foreground">{toolset.toolsetDescription}</div>
+              <div className="text-(length:--text-dense) text-muted-foreground">
+                {toolset.toolsetDescription}
+              </div>
             )}
           </div>
 

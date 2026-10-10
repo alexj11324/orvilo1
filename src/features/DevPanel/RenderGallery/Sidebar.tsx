@@ -73,7 +73,9 @@ interface SidebarProps {
 const Sidebar = memo<SidebarProps>(({ items, selectedKey, onSelect }) => (
   <aside className={styles.sidebar}>
     <div className={devDockPanelStyles.paneHeader}>
-      <div className="text-[13px] text-muted-foreground font-semibold">Builtin Tool Renders</div>
+      <div className="text-(length:--text-dense) text-muted-foreground font-semibold">
+        Builtin Tool Renders
+      </div>
     </div>
     <div className={styles.scroll}>
       <div className={styles.menu} role="menu">

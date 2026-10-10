@@ -74,7 +74,7 @@ function DataGridColumnFilter<TData extends object, TValue>({
           </Button>
         }
       />
-      <PopoverContent align="start" className="w-[200px] p-0">
+      <PopoverContent align="start" className="w-50 p-0">
         <div className="p-2">
           <Input
             className="h-8"
@@ -83,7 +83,7 @@ function DataGridColumnFilter<TData extends object, TValue>({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="max-h-[300px] overflow-y-auto">
+        <div className="max-h-75 overflow-y-auto">
           {filteredOptions.length === 0 ? (
             <div className="text-muted-foreground py-6 text-center text-sm">
               {i18n.labels.filterNoResults}

@@ -693,7 +693,7 @@ function selectDataGridRegion<TData extends object>(
 // (z 30) so the border survives crossing a pinned column; below the
 // sticky header (z-40).
 const dataGridGestureOutlineClasses =
-  'outline-primary pointer-events-none absolute z-[35] outline-1 outline-dashed -outline-offset-1';
+  'outline-primary pointer-events-none absolute z-35 outline-1 outline-dashed -outline-offset-1';
 
 function startDataGridFillSession<TData extends object>(options: {
   table: DataGridTableInstance<TData>;
@@ -2304,7 +2304,7 @@ function DataGridCellEditorOverlay({
   // the overlay covering that box, opening the editor reads as the same
   // border becoming editable.
   const sharedClassName =
-    'text-foreground bg-background outline-primary absolute z-[35] box-border resize-none outline-1 outline-solid -outline-offset-1';
+    'text-foreground bg-background outline-primary absolute z-35 box-border resize-none outline-1 outline-solid -outline-offset-1';
 
   return createPortal(
     session.control === 'textarea' ? (

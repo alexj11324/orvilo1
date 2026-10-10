@@ -12,6 +12,9 @@ sections retain first-of-type border/padding behavior and list-item margins.
 Legacy gold, description/tertiary/quaternary colors and radius aliases remain
 explicit, without new tokens or important modifiers.
 
+Deployment description items and version labels use font-mono classes instead
+of inline font-family references, satisfying the Chinese UI font guard.
+
 Header/nav/link cascade and the description/platform important overrides remain
 separate. Markdown and branded icons remain for the scheduled component phase.
 Scoped checks and independent review are recorded on the PR. 未做真机验证；

@@ -94,12 +94,12 @@ const InstallInstructionsHover = memo<{
           <Descriptions
             rows={1}
             items={Object.entries(dep.installInstructions || {}).map(([system, code]) => ({
+              className: 'font-mono',
               copyable: true,
               icon: getPlatformIcon(system),
               key: system,
               label: <span style={{ fontSize: 13, fontWeight: 500 }}>{system.toUpperCase()}</span>,
               style: {
-                fontFamily: 'var(--font-mono)',
                 fontSize: 12,
               },
               value: code,
@@ -112,11 +112,11 @@ const InstallInstructionsHover = memo<{
                 rows={1}
                 items={[
                   {
+                    className: 'font-mono',
                     copyable: true,
                     key: 'check',
                     label: t('mcp.details.deployment.checkCommand'),
                     style: {
-                      fontFamily: 'var(--font-mono)',
                       fontSize: 12,
                     },
                     value: dep.checkCommand,
@@ -353,8 +353,8 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                         value: (
                           <div className="flex flex-row items-center gap-2">
                             <span
+                              className="font-mono"
                               style={{
-                                fontFamily: 'var(--font-mono)',
                                 fontSize: 12,
                               }}
                             >

@@ -37,10 +37,10 @@ const MasonrySkeleton = memo<MasonrySkeletonProps>(({ columnCount }) => {
     >
       {Array.from({ length: itemCount }).map((_, index) => (
         <div className={styles.card} key={index}>
-          <div className="flex flex-row items-start gap-4 w-[100%]">
+          <div className="flex flex-row items-start gap-4 w-full">
             <Skeleton className="rounded-full" style={{ height: 48, width: 48 }} />
             <div
-              className="flex flex-col gap-4 w-[100%]"
+              className="flex flex-col gap-4 w-full"
               style={{ height: heights[index % heights.length] }}
             >
               <Skeleton style={{ width: '80%' }} />

@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import type { TFunction } from 'i18next';
 import {
   BadgeCheck,
@@ -26,8 +25,8 @@ export const resolveAcceptanceVerdictMeta = (
 ): AcceptanceVerdictMeta => {
   if (status === 'repairing') {
     return {
-      bg: cssVar.colorWarningBg,
-      color: cssVar.colorWarning,
+      bg: 'var(--ant-color-warning-bg)',
+      color: 'var(--warning)',
       icon: RefreshCw,
       label: t('acceptance.status.repairing'),
       spin: true,
@@ -35,8 +34,8 @@ export const resolveAcceptanceVerdictMeta = (
   }
   if (status === 'pending' || status === 'planned' || status === 'verifying') {
     return {
-      bg: cssVar.colorInfoBg,
-      color: cssVar.colorInfo,
+      bg: 'var(--ant-color-info-bg)',
+      color: 'var(--info)',
       icon: Loader2,
       label: t(`acceptance.status.${status}`),
       spin: true,
@@ -44,39 +43,39 @@ export const resolveAcceptanceVerdictMeta = (
   }
   if (status === 'accepted') {
     return {
-      bg: cssVar.colorSuccessBg,
-      color: cssVar.colorSuccess,
+      bg: 'var(--ant-color-success-bg)',
+      color: 'var(--success)',
       icon: BadgeCheck,
       label: t('acceptance.status.accepted'),
     };
   }
   if (status === 'closed') {
     return {
-      bg: cssVar.colorFillSecondary,
-      color: cssVar.colorTextSecondary,
+      bg: 'var(--selected)',
+      color: 'var(--muted-foreground)',
       icon: X,
       label: t('acceptance.status.closed'),
     };
   }
   if (status === 'rejected') {
     return {
-      bg: cssVar.colorErrorBg,
-      color: cssVar.colorError,
+      bg: 'var(--ant-color-error-bg)',
+      color: 'var(--destructive)',
       icon: RotateCcw,
       label: t('acceptance.status.rejected'),
     };
   }
   if (status === 'errored') {
     return {
-      bg: cssVar.colorWarningBg,
-      color: cssVar.colorWarning,
+      bg: 'var(--ant-color-warning-bg)',
+      color: 'var(--warning)',
       icon: HelpCircle,
       label: t('acceptance.status.errored'),
     };
   }
   return {
-    bg: cssVar.colorInfoBg,
-    color: cssVar.colorInfo,
+    bg: 'var(--ant-color-info-bg)',
+    color: 'var(--info)',
     icon: CircleDashed,
     label: t('acceptance.verdict.inProgress'),
   };

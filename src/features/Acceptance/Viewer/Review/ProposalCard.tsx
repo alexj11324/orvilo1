@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -11,54 +10,17 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type { CheckProposal } from './proposal';
 
-const styles = createStaticStyles(({ css }) => ({
-  /* Dashed and untinted: a proposal is a suggestion sitting next to real
-     verdicts, so it must read as provisional rather than as another state the
-     check has already reached. A solid tinted panel competed with the check's
-     own status colour for the same glance. */
-  card: css`
-    padding-block: 8px;
-    padding-inline: 10px;
-    border: 1px dashed ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  head: css`
-    cursor: pointer;
-    user-select: none;
-  `,
-  /* The collapsed line carries the whole claim, so the reviewer can skip the
-     proposal without opening it. */
-  preview: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  /* Quieter than `secondary` — these are provenance labels, not content. */
-  muted: css`
-    font-size: 11px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  regionIndex: css`
-    flex: none;
-
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 16px;
-    color: #fff;
-    text-align: center;
-
-    background: ${cssVar.colorError};
-  `,
-}));
+const styles = {
+  /* Dashed and untinted: provisional suggestions stay distinct from verdicts. */
+  card: 'rounded-(--ant-border-radius-lg) border border-dashed border-border px-2.5 py-2',
+  head: 'cursor-pointer select-none',
+  /* The collapsed line carries the claim without needing to open the card. */
+  preview: 'min-w-0 flex-1 truncate text-[12px]',
+  /* Provenance labels stay quieter than secondary content. */
+  muted: 'text-[11px] text-(--ant-color-text-quaternary)',
+  regionIndex:
+    'size-4 flex-none rounded-full bg-destructive text-center text-[10px] leading-4 font-semibold text-white',
+};
 
 interface ProposalCardProps {
   onAdjudicate: (adjudication: 'misidentified' | 'not-an-issue') => Promise<void> | void;

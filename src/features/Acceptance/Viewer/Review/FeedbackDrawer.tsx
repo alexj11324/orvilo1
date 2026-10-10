@@ -2,7 +2,6 @@
 
 import type { AcceptanceAttachment } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,46 +10,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 
 import { AttachmentThumbs } from '../Evidence/attachments';
 
-const styles = createStaticStyles(({ css }) => ({
-  clickable: css`
-    cursor: pointer;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  meta: css`
-    flex: none;
-    font-size: 11px;
-    color: ${cssVar.colorTextQuaternary};
-    white-space: nowrap;
-  `,
-  /* One feedback event as a list row — hairline-separated, no card chrome.
-     The drawer is an audit trail; rows read as entries in a ledger. Roomy
-     vertical rhythm: cramped rows made the trail read as one dense block. */
-  row: css`
-    padding-block: 20px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  sectionTitle: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-    letter-spacing: 0.04em;
-  `,
-  seq: css`
-    flex: none;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  clickable: 'cursor-pointer hover:bg-(--ant-color-fill-quaternary)',
+  meta: 'flex-none text-[11px] text-(--ant-color-text-quaternary) whitespace-nowrap',
+  /* The drawer is an audit trail: roomy ledger entries separated by hairlines. */
+  row: 'rounded-(--ant-border-radius) border-b border-sidebar-border px-2 py-5 last:border-b-0',
+  sectionTitle: 'text-[12px] font-medium text-(--ant-color-text-tertiary) tracking-[0.04em]',
+  seq: 'flex-none font-mono text-[11px] text-muted-foreground',
+};
 
 /** One feedback event, flattened for the clearing list — check-scoped or group/global. */
 export interface FeedbackListEntry {
@@ -97,7 +64,7 @@ const EntryRow = memo<{
 
   return (
     <div
-      className={`flex flex-col gap-2 ${cx(styles.row, entry.checkId && styles.clickable)}`}
+      className={`flex flex-col gap-2 ${cn(styles.row, entry.checkId && styles.clickable)}`}
       role={entry.checkId ? 'button' : undefined}
       style={{ ...(entry.stale ? { opacity: 0.55 } : undefined) }}
       tabIndex={entry.checkId ? 0 : undefined}

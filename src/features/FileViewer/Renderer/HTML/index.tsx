@@ -29,7 +29,7 @@ const HTMLViewer = memo<HTMLViewerProps>(({ url }) => {
       {!loading && fileData !== null ? (
         <InlineHtmlPreview content={fileData} />
       ) : (
-        <div className="flex flex-col items-center justify-center h-[100%]">
+        <div className="flex flex-col items-center justify-center h-full">
           <NeuralNetworkLoading size={36} />
         </div>
       )}

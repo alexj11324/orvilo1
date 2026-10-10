@@ -31,7 +31,7 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
 
   return (
     <div className={cx('flex flex-col', styles.page)} id="not-support-renderer" style={style}>
-      <div className="flex flex-col items-center justify-center h-[100%]">
+      <div className="flex flex-col items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <span style={{ fontSize: 64, lineHeight: 1 }}>{'👀'}</span>
           <div className="flex flex-col" style={{ textAlign: 'center' }}>

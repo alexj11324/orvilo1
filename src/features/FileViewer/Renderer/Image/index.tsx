@@ -15,7 +15,7 @@ const ImageViewer = memo<ImageViewerProps>(({ url }) => {
   if (!url) return null;
 
   return (
-    <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+    <div className="flex flex-col items-center justify-center h-full w-full">
       {!isLoaded && <NeuralNetworkLoading size={36} />}
       {}
       <img

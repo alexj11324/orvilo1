@@ -34,7 +34,7 @@ const CodeViewer = memo<CodeViewerProps>(({ url, fileName }) => {
           <CodeBlockCopyButton />
         </CodeBlock>
       ) : (
-        <div className="flex flex-col items-center justify-center h-[100%]">
+        <div className="flex flex-col items-center justify-center h-full">
           <NeuralNetworkLoading size={36} />
         </div>
       )}

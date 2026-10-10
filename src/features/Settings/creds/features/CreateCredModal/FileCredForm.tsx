@@ -115,7 +115,7 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
           <p className="ant-upload-hint">{t('creds.form.uploadDesc')}</p>
         </UploadDragger>
         {fileName && (
-          <div className="flex flex-row gap-[4px] items-center" style={{ marginTop: 8 }}>
+          <div className="flex flex-row gap-1 items-center" style={{ marginTop: 8 }}>
             <span>
               {t('creds.form.selectedFile')}: {fileName}
             </span>

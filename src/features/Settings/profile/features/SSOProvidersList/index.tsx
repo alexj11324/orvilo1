@@ -32,7 +32,7 @@ export const SSOProvidersList = memo(() => {
     <div className="flex flex-col gap-2">
       {providers.map((item) => (
         <div
-          className="flex flex-row gap-[6px] items-center"
+          className="flex flex-row gap-1.5 items-center"
           key={[item.provider, item.providerAccountId].join('-')}
           style={{ fontSize: 12 }}
         >

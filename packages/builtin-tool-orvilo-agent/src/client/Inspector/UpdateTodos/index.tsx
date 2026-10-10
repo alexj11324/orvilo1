@@ -2,7 +2,7 @@
 
 import { TodoInspectorSummary } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

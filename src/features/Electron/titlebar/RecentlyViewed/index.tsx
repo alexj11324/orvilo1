@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,6 +1,6 @@
 import { FORM_STYLE } from '@orvilo/const';
 import { exportFile } from '@orvilo/utils/client';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { CopyIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

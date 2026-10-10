@@ -2,7 +2,7 @@
 
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { AGENT_CHAT_URL } from '@orvilo/const';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { MessageSquarePlus } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

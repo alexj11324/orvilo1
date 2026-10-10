@@ -1,6 +1,5 @@
 'use client';
 import type { WorkQueryLayout } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { FilterIcon, PanelRightCloseIcon, PanelRightOpenIcon, Settings2Icon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -39,25 +38,11 @@ import {
 } from './teamIssuesDisplay';
 import { ALL_TEAM_CYCLES } from './teamWorkQuery';
 
-const styles = createStaticStyles(({ css }) => ({
-  // Same popover width contract as the saved-view editors.
-  controlPopover: css`
-    width: min(420px, calc(100vw - 32px));
-    padding: 12px;
-  `,
-  optionLabel: css`
-    flex: none;
-    width: 96px;
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  sectionLabel: css`
-    padding-block-start: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  controlPopover: 'w-[min(420px,calc(100vw-32px))] p-3',
+  optionLabel: 'flex-none w-24 text-[13px] text-muted-foreground',
+  sectionLabel: '[padding-block-start:4px] text-[12px] font-medium text-muted-foreground',
+};
 
 const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, label }) => (
   <div className="flex min-h-10 flex-row items-center gap-2">

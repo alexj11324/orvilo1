@@ -1,7 +1,6 @@
 'use client';
 
 import type { TeamItem, TeamMemberItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 
 import { useSearchParams } from '@/libs/router/navigation';
 
@@ -13,20 +12,10 @@ import TeamHomeOverview from './home/TeamHomeOverview';
 import { resolveTeamHomeSection } from './home/teamHomeSection';
 import TeamHomeTabs from './home/TeamHomeTabs';
 
-const styles = createStaticStyles(({ css }) => ({
-  page: css`
-    width: 100%;
-
-    @container work-surface (max-width: 1000px) {
-      width: 100%;
-    }
-  `,
-  sectionBody: css`
-    width: min(972px, 100%);
-    margin-block-start: 8px;
-    margin-inline: auto;
-  `,
-}));
+const styles = {
+  page: 'w-full',
+  sectionBody: 'w-[min(972px,100%)] [margin-block-start:8px] mx-auto',
+};
 
 interface TeamHomeProps {
   teamData: {

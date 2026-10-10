@@ -37,7 +37,7 @@ const ProgressIcon = memo<ProgressIconProps>(({ showInfo, format, percent }) => 
     return (
       <div className="flex items-center gap-2">
         <div style={{ width: 24 }}>{content}</div>
-        <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
+        <div className="text-xs" style={{ color: cssVar.colorTextSecondary }}>
           {format?.(percent)}
         </div>
       </div>

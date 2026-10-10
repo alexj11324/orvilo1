@@ -1,10 +1,10 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/lib/utils';
 import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { SearchMarketToolsParams, SearchMarketToolsState } from '../../../types';
@@ -34,7 +34,7 @@ export const SearchMarketToolsInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-agent-builder.apiName.searchMarketTools')}:{' '}
       </span>
       {displayText && <span className={highlightTextStyles.primary}>{displayText}</span>}
@@ -42,12 +42,9 @@ export const SearchMarketToolsInspector = memo<
         !isArgumentsStreaming &&
         pluginState?.tools &&
         (hasResults ? (
-          <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
+          <span className="ms-1">({resultCount})</span>
         ) : (
-          <span
-            className="text-[12px]"
-            style={{ marginInlineStart: 4, color: cssVar.colorTextDescription }}
-          >
+          <span className="ms-1 text-[12px] text-[var(--ant-color-text-description)]">
             ({t('builtins.orvilo-agent-builder.inspector.noResults')})
           </span>
         ))}

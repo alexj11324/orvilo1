@@ -1,21 +1,14 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Check } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/lib/utils';
 import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { UpdateAgentConfigParams, UpdateConfigState } from '../../../types';
-
-const styles = createStaticStyles(({ css }) => ({
-  statusIcon: css`
-    margin-block-end: -2px;
-    margin-inline-start: 4px;
-  `,
-}));
 
 export const UpdateConfigInspector = memo<
   BuiltinInspectorProps<UpdateAgentConfigParams, UpdateConfigState>
@@ -73,7 +66,7 @@ export const UpdateConfigInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-agent-builder.apiName.updateConfig')}
       </span>
       {displayText && (
@@ -82,7 +75,7 @@ export const UpdateConfigInspector = memo<
         </>
       )}
       {!isLoading && isSuccess && (
-        <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
+        <Check className="ms-1 [margin-block-end:-2px]" color={'var(--success)'} size={14} />
       )}
     </div>
   );

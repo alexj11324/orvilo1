@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { createTwoFilesPatch } from 'diff';
 import { CheckCircle, FileText } from 'lucide-react';
@@ -19,57 +18,6 @@ const MAX_FALLBACK_LENGTH = 500;
  */
 const withTrailingNewline = (value: string) =>
   value === '' || value.endsWith('\n') ? value : `${value}\n`;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    font-size: 13px;
-  `,
-  diffCard: css`
-    overflow: auto;
-
-    max-height: 400px;
-    margin-inline-start: 12px;
-    border-radius: 8px;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  fileIcon: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  promptCard: css`
-    margin-inline-start: 12px;
-    padding: 12px;
-    border-inline-start: 3px solid ${cssVar.colorSuccess};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  promptContent: css`
-    overflow: auto;
-
-    max-height: 200px;
-    margin-inline: -12px;
-    margin-inline-start: 20px;
-    padding-inline: 12px;
-
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorText};
-    word-break: break-word;
-    white-space: pre-wrap;
-  `,
-  promptLabel: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  statusRow: css`
-    margin-block-end: 6px;
-    margin-inline-start: 9px;
-    color: ${cssVar.colorSuccess};
-  `,
-  statusText: css`
-    font-weight: 500;
-  `,
-}));
 
 export interface PromptDiffViewProps {
   /**
@@ -101,14 +49,21 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
       : 'builtins.orvilo-agent-builder.render.updatePrompt.cleared';
 
   return (
-    <div className={cn('flex', 'flex-col', 'gap-2', styles.container)}>
-      <div className={cn('flex', 'items-center', 'gap-[6px]', styles.statusRow)}>
+    <div className={cn('flex', 'flex-col', 'gap-2', 'text-[13px]')}>
+      <div
+        className={cn(
+          'flex',
+          'items-center',
+          'gap-[6px]',
+          'ms-[9px] [margin-block-end:6px] text-success',
+        )}
+      >
         <CheckCircle size={14} />
-        <span className={styles.statusText}>{t(statusKey)}</span>
+        <span className="font-medium">{t(statusKey)}</span>
       </div>
 
       {hasDiff && (
-        <div className={styles.diffCard}>
+        <div className="ms-3 max-h-[400px] overflow-auto rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)]">
           {parseUnifiedDiff(
             createTwoFilesPatch(
               'a/prompt.md',
@@ -124,16 +79,23 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
 
       {/* Legacy tool results without `previousPrompt`: fall back to a truncated preview */}
       {!hasDiff && !isUnchanged && newPrompt && (
-        <div className={cn('flex', 'flex-col', 'gap-2', styles.promptCard)}>
+        <div
+          className={cn(
+            'flex',
+            'flex-col',
+            'gap-2',
+            'ms-3 border-s-[3px] border-success bg-accent p-3',
+          )}
+        >
           <div className="flex items-center gap-[6px]">
-            <FileText className={styles.fileIcon} size={14} />
-            <span className={styles.promptLabel}>
+            <FileText className="text-[var(--ant-color-text-tertiary)]" size={14} />
+            <span className="text-xs leading-[inherit] font-medium text-muted-foreground">
               {t('builtins.orvilo-agent-builder.render.updatePrompt.newPrompt', {
                 count: newPrompt.length,
               })}
             </span>
           </div>
-          <div className={styles.promptContent}>
+          <div className="ms-5 -me-3 max-h-[200px] overflow-auto ps-3 pe-3 text-[13px] leading-[1.6] text-foreground [word-break:break-word] whitespace-pre-wrap">
             {newPrompt.length > MAX_FALLBACK_LENGTH
               ? newPrompt.slice(0, MAX_FALLBACK_LENGTH) + '...'
               : newPrompt}

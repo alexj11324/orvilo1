@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,48 +15,16 @@ import {
 
 import type { SearchMemoryParams, SearchUserMemoryState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  empty: css`
-    padding: 24px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  item: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  itemContent: css`
-    font-size: 13px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  itemTitle: css`
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  sectionHeader: css`
-    font-size: 12px;
-    font-weight: 500;
-  `,
-  tags: css`
-    padding-block-start: 6px;
-  `,
-}));
+const styles = {
+  container:
+    'overflow-hidden w-full border border-sidebar-border rounded-(--radius-overlay) bg-card',
+  empty: 'p-6 text-(--ant-color-text-tertiary) text-center',
+  item: '[padding-block:10px] [padding-inline:12px] [border-block-end:1px_dashed_var(--sidebar-border)] last:[border-block-end:none]',
+  itemContent: 'text-[13px] leading-[1.5] text-muted-foreground',
+  itemTitle: 'text-sm leading-[inherit] font-medium text-foreground',
+  sectionHeader: 'text-xs leading-[inherit] font-medium',
+  tags: '[padding-block-start:6px]',
+};
 
 interface MemoryItemProps {
   content?: string | null;

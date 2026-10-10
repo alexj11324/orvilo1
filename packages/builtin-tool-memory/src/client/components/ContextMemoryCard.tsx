@@ -1,5 +1,4 @@
 'use client';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -56,7 +55,7 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
     { percent: impact, title: 'Impact' },
     {
       percent: urgency,
-      strokeColor: (urgency ?? 0) >= 70 ? cssVar.colorError : cssVar.colorWarning,
+      strokeColor: (urgency ?? 0) >= 70 ? 'var(--destructive)' : 'var(--warning)',
       title: 'Urgency',
     },
   ].filter((item) => item.percent !== undefined);

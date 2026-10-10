@@ -1,7 +1,6 @@
 'use client';
 
 import type { VerifyInteractionCost } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,216 +24,46 @@ export { formatSeconds, readInteractionCost } from './interactionCostModel';
  * reviewer deciding whether a flow is worth accepting.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  interactionCost: css`
-    --klm-blue-1: color-mix(in srgb, ${cssVar.colorInfo} 70%, ${cssVar.colorBgContainer});
-    --klm-blue-2: ${cssVar.colorInfo};
-    --klm-blue-3: color-mix(in srgb, ${cssVar.colorInfo} 84%, ${cssVar.colorText});
-    --klm-blue-4: color-mix(in srgb, ${cssVar.colorInfo} 68%, ${cssVar.colorText});
-    --klm-blue-5: color-mix(in srgb, ${cssVar.colorInfo} 54%, ${cssVar.colorText});
-    --klm-blue-6: color-mix(in srgb, ${cssVar.colorInfo} 42%, ${cssVar.colorText});
+const operatorColors = String.raw`[--operator-color:var(--muted-foreground)] data-[operator=K]:[--operator-color:var(--klm-blue-1)] data-[operator=P]:[--operator-color:var(--klm-blue-2)] data-[operator=M]:[--operator-color:var(--klm-blue-3)] data-[operator=H]:[--operator-color:var(--klm-blue-4)] data-[operator=T\_chars]:[--operator-color:var(--klm-blue-5)] data-[operator=R\_ms]:[--operator-color:var(--klm-blue-6)]`;
 
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-  `,
-  interactionCostHeader: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 12px;
-    align-items: center;
-    justify-content: flex-end;
-  `,
-  interactionCostModel: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  interactionMetric: css`
-    min-width: 0;
-    padding-block: 9px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusSM};
-  `,
-  interactionMetricLabel: css`
-    display: block;
-    margin-block-end: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  interactionMetricValue: css`
-    font-size: 18px;
-    font-weight: 650;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.2;
-    color: ${cssVar.colorText};
-  `,
-  interactionMetrics: css`
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-
-    @media (width <= 520px) {
-      grid-template-columns: 1fr;
-    }
-  `,
-  operatorChip: css`
-    --operator-color: ${cssVar.colorTextSecondary};
-
-    display: inline-flex;
-    gap: 5px;
-    align-items: baseline;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: color-mix(in srgb, var(--operator-color) 72%, ${cssVar.colorTextSecondary});
-
-    &::before {
-      content: '';
-
-      flex: 0 0 auto;
-
-      width: 6px;
-      height: 6px;
-      margin-block-start: 0.5em;
-      border-radius: 50%;
-
-      background: var(--operator-color);
-    }
-
-    b {
-      font-weight: 650;
-      color: var(--operator-color);
-    }
-
-    &[data-operator='K'] {
-      --operator-color: var(--klm-blue-1);
-    }
-
-    &[data-operator='P'] {
-      --operator-color: var(--klm-blue-2);
-    }
-
-    &[data-operator='M'] {
-      --operator-color: var(--klm-blue-3);
-    }
-
-    &[data-operator='H'] {
-      --operator-color: var(--klm-blue-4);
-    }
-
-    &[data-operator='T_chars'] {
-      --operator-color: var(--klm-blue-5);
-    }
-
-    &[data-operator='R_ms'] {
-      --operator-color: var(--klm-blue-6);
-    }
-  `,
-  operatorList: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 14px;
-  `,
-  /* Secondary to the phase name: it may be a long check title, so it is the part
-     that gives way and truncates rather than squeezing the name out of the row. */
-  phaseCheck: css`
-    overflow: hidden;
-    flex: 1 1 auto;
-
-    min-width: 0;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextQuaternary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  phaseList: css`
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  `,
-  phaseName: css`
-    overflow: hidden;
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-
-    min-width: 0;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  /* The phase is what tells two rows apart, so it never shrinks — a long check
-     title must not collapse it to nothing and leave the rows looking identical. */
-  phaseSlug: css`
-    overflow: hidden;
-    flex: 0 0 auto;
-    max-width: 60%;
-    text-overflow: ellipsis;
-  `,
-  phaseRow: css`
-    display: grid;
-    grid-template-columns: minmax(120px, 1fr) minmax(140px, 1.6fr) auto;
-    gap: 10px;
-    align-items: center;
-
-    @media (width <= 640px) {
-      grid-template-columns: 1fr;
-      gap: 5px;
-    }
-  `,
-  phaseSegment: css`
-    --operator-color: ${cssVar.colorTextSecondary};
-
-    flex: 0 0 auto;
-    min-width: 2px;
-    height: 100%;
-    background: var(--operator-color);
-
-    &[data-operator='K'] {
-      --operator-color: var(--klm-blue-1);
-    }
-
-    &[data-operator='P'] {
-      --operator-color: var(--klm-blue-2);
-    }
-
-    &[data-operator='M'] {
-      --operator-color: var(--klm-blue-3);
-    }
-
-    &[data-operator='H'] {
-      --operator-color: var(--klm-blue-4);
-    }
-
-    &[data-operator='T_chars'] {
-      --operator-color: var(--klm-blue-5);
-    }
-
-    &[data-operator='R_ms'] {
-      --operator-color: var(--klm-blue-6);
-    }
-  `,
-  phaseTrack: css`
-    overflow: hidden;
-    display: flex;
-
-    height: 8px;
-    border-radius: 999px;
-
-    background: transparent;
-    box-shadow: inset 0 0 0 1px ${cssVar.colorBorderSecondary};
-  `,
-  phaseValue: css`
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  interactionCost: [
+    'flex w-full flex-col gap-3',
+    '[--klm-blue-1:color-mix(in_srgb,var(--info)_70%,var(--card))]',
+    '[--klm-blue-2:var(--info)]',
+    '[--klm-blue-3:color-mix(in_srgb,var(--info)_84%,var(--foreground))]',
+    '[--klm-blue-4:color-mix(in_srgb,var(--info)_68%,var(--foreground))]',
+    '[--klm-blue-5:color-mix(in_srgb,var(--info)_54%,var(--foreground))]',
+    '[--klm-blue-6:color-mix(in_srgb,var(--info)_42%,var(--foreground))]',
+  ].join(' '),
+  interactionCostHeader: 'flex flex-wrap items-center justify-end gap-x-3 gap-y-2',
+  interactionCostModel: 'font-mono text-[12px] text-(--ant-color-text-tertiary)',
+  interactionMetric:
+    'min-w-0 rounded-(--ant-border-radius-sm) border border-sidebar-border px-2.5 py-[9px]',
+  interactionMetricLabel: 'mb-1 block text-[12px] text-(--ant-color-text-tertiary)',
+  interactionMetricValue: 'text-[18px] leading-[1.2] font-[650] text-foreground tabular-nums',
+  interactionMetrics: 'grid grid-cols-3 gap-2 [@media(width<=520px)]:grid-cols-[1fr]',
+  operatorChip: [
+    operatorColors,
+    'inline-flex items-baseline gap-[5px] font-mono text-[12px] text-[color:color-mix(in_srgb,var(--operator-color)_72%,var(--muted-foreground))]',
+    "before:mt-[0.5em] before:size-1.5 before:flex-none before:rounded-full before:bg-(--operator-color) before:content-['']",
+    '[&_b]:font-[650] [&_b]:text-(--operator-color)',
+  ].join(' '),
+  operatorList: 'flex flex-wrap gap-x-3.5 gap-y-2',
+  // The check title gives way before the phase name in a crowded row.
+  phaseCheck: 'min-w-0 flex-auto truncate text-[11px] text-(--ant-color-text-quaternary)',
+  phaseList: 'flex flex-col gap-2',
+  phaseName:
+    'flex min-w-0 items-baseline gap-1.5 overflow-hidden text-[12px] whitespace-nowrap text-muted-foreground',
+  // Keep the phase visible even when its check title is long.
+  phaseSlug: 'max-w-[60%] flex-none overflow-hidden text-ellipsis',
+  phaseRow:
+    'grid grid-cols-[minmax(120px,1fr)_minmax(140px,1.6fr)_auto] items-center gap-2.5 [@media(width<=640px)]:grid-cols-[1fr] [@media(width<=640px)]:gap-[5px]',
+  phaseSegment: `${operatorColors} h-full min-w-[2px] flex-none bg-(--operator-color)`,
+  phaseTrack:
+    'flex h-2 overflow-hidden rounded-[999px] bg-transparent shadow-[inset_0_0_0_1px_var(--sidebar-border)]',
+  phaseValue: 'text-[12px] text-(--ant-color-text-tertiary) tabular-nums',
+};
 
 export interface InteractionCostPanelProps {
   /**

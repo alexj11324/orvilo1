@@ -18,7 +18,7 @@ const styles = {
   container: 'relative w-full overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
   content: 'px-4 text-[14px]',
   expandButton:
-    'absolute start-1/2 [inset-block-end:16px] -translate-x-1/2 shadow-[var(--ant-box-shadow)]',
+    'absolute start-1/2 [inset-block-end:16px] -translate-x-1/2 shadow-(--ant-box-shadow)',
   header: 'border-b border-sidebar-border px-3 py-2.5',
   icon: 'text-primary',
   title: 'line-clamp-1 font-medium text-foreground',

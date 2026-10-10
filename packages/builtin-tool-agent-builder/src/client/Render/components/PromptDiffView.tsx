@@ -63,7 +63,7 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
       </div>
 
       {hasDiff && (
-        <div className="ms-3 max-h-[400px] overflow-auto rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)]">
+        <div className="ms-3 max-h-[400px] overflow-auto rounded-(--radius-card) bg-(--ant-color-fill-quaternary)">
           {parseUnifiedDiff(
             createTwoFilesPatch(
               'a/prompt.md',
@@ -88,7 +88,7 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
           )}
         >
           <div className="flex items-center gap-[6px]">
-            <FileText className="text-[var(--ant-color-text-tertiary)]" size={14} />
+            <FileText className="text-(--ant-color-text-tertiary)" size={14} />
             <span className="text-xs leading-[inherit] font-medium text-muted-foreground">
               {t('builtins.orvilo-agent-builder.render.updatePrompt.newPrompt', {
                 count: newPrompt.length,

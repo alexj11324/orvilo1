@@ -1,29 +1,15 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import { highlightTextStyles, shinyTextStyles } from '@/styles';
 
 import type { GetAgentDetailParams, GetAgentDetailState } from '../../../types';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  title: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-}));
 
 export const GetAgentDetailInspector = memo<
   BuiltinInspectorProps<GetAgentDetailParams, GetAgentDetailState>
@@ -38,7 +24,7 @@ export const GetAgentDetailInspector = memo<
 
   if (isArgumentsStreaming && !agentId) {
     return (
-      <div className={styles.root}>
+      <div className="flex items-center gap-2 overflow-hidden">
         <span className={shinyTextStyles.shinyText}>
           {t('builtins.orvilo-agent-management.apiName.getAgentDetail')}
         </span>
@@ -47,8 +33,13 @@ export const GetAgentDetailInspector = memo<
   }
 
   return (
-    <div className={cx('flex flex-row items-center gap-2', styles.root)}>
-      <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
+    <div className="flex flex-row items-center gap-2 overflow-hidden">
+      <span
+        className={cn(
+          'shrink-0 whitespace-nowrap text-muted-foreground',
+          isArgumentsStreaming && shinyTextStyles.shinyText,
+        )}
+      >
         {t('builtins.orvilo-agent-management.inspector.getAgentDetail.title')}
       </span>
       {title ? (

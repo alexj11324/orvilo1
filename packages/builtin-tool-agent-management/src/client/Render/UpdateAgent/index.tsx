@@ -2,34 +2,9 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
 import type { UpdateAgentParams } from '../../../types';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding: 12px;
-    border-radius: 8px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  field: css`
-    margin-block-end: 8px;
-
-    &:last-child {
-      margin-block-end: 0;
-    }
-  `,
-  label: css`
-    margin-block-end: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  value: css`
-    font-size: 13px;
-  `,
-}));
 
 const safeParse = (val: unknown): Record<string, any> | undefined => {
   if (!val) return undefined;
@@ -55,22 +30,28 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
   if (!hasConfig && !hasMeta) return null;
 
   return (
-    <div className={styles.container}>
+    <div className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
       {meta?.title && (
-        <div className={styles.field}>
-          <div className={styles.label}>Title</div>
-          <div className={styles.value}>{meta.title}</div>
+        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+            Title
+          </div>
+          <div className="text-[13px]">{meta.title}</div>
         </div>
       )}
       {meta?.description && (
-        <div className={styles.field}>
-          <div className={styles.label}>Description</div>
-          <div className={styles.value}>{meta.description}</div>
+        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+            Description
+          </div>
+          <div className="text-[13px]">{meta.description}</div>
         </div>
       )}
       {config?.systemRole && (
-        <div className={styles.field}>
-          <div className={styles.label}>System Prompt</div>
+        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+            System Prompt
+          </div>
           <div
             className="rounded-md border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
@@ -82,9 +63,11 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
         </div>
       )}
       {config?.model && (
-        <div className={styles.field}>
-          <div className={styles.label}>Model</div>
-          <div className={styles.value}>{config.model as string}</div>
+        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+            Model
+          </div>
+          <div className="text-[13px]">{config.model as string}</div>
         </div>
       )}
     </div>

@@ -2,35 +2,20 @@
 
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx, useTheme } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { cn } from '@/lib/utils';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { highlightTextStyles, shinyTextStyles } from '@/styles';
 
 import type { CallAgentParams } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  title: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-}));
-
 export const CallAgentInspector = memo<BuiltinInspectorProps<CallAgentParams>>(
   ({ args, partialArgs, isArgumentsStreaming }) => {
     const { t } = useTranslation('plugin');
-    const theme = useTheme();
 
     const agentId = args?.agentId || partialArgs?.agentId;
     const runAsTask = args?.runAsTask || partialArgs?.runAsTask;
@@ -42,7 +27,7 @@ export const CallAgentInspector = memo<BuiltinInspectorProps<CallAgentParams>>(
 
     if (isArgumentsStreaming && !agentId) {
       return (
-        <div className={styles.root}>
+        <div className="flex items-center gap-2 overflow-hidden">
           <span className={shinyTextStyles.shinyText}>
             {t('builtins.orvilo-agent-management.apiName.callAgent')}
           </span>
@@ -57,14 +42,19 @@ export const CallAgentInspector = memo<BuiltinInspectorProps<CallAgentParams>>(
     const agentName = agentMeta?.title || agentId;
 
     return (
-      <div className={cx('flex flex-row items-center gap-2', styles.root)}>
-        <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
+      <div className="flex flex-row items-center gap-2 overflow-hidden">
+        <span
+          className={cn(
+            'shrink-0 whitespace-nowrap text-muted-foreground',
+            isArgumentsStreaming && shinyTextStyles.shinyText,
+          )}
+        >
           {t(titleKey)}
         </span>
         {agentMeta && (
           <Avatar
             avatar={agentMeta.avatar || DEFAULT_AVATAR}
-            background={agentMeta.backgroundColor || theme.colorBgContainer}
+            background={agentMeta.backgroundColor || 'var(--card)'}
             shape={'square'}
             size={24}
             title={agentMeta.title || undefined}

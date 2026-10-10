@@ -17,7 +17,7 @@ const styles = {
   item: 'px-3 py-2.5 not-last:[border-block-end:1px_dashed_var(--sidebar-border)]',
   systemRole:
     'line-clamp-3 text-ellipsis text-[12px] leading-[1.5] text-[var(--ant-color-text-tertiary)]',
-  title: 'truncate text-[13px] font-medium',
+  title: 'truncate text-(length:--text-dense) font-medium',
 };
 
 export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreateAgentsParams>>(

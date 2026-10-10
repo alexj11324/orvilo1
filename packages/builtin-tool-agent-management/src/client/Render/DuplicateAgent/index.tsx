@@ -20,13 +20,13 @@ export const DuplicateAgentRender = memo<
           <span className="text-xs leading-[inherit] font-medium text-muted-foreground">
             {t('builtins.orvilo-agent-management.render.duplicateAgent.sourceId')}
           </span>
-          <span className="text-[13px]">{pluginState.sourceAgentId}</span>
+          <span className="text-(length:--text-dense)">{pluginState.sourceAgentId}</span>
         </div>
         <div className="flex flex-col gap-0.5">
           <span className="text-xs leading-[inherit] font-medium text-muted-foreground">
             {t('builtins.orvilo-agent-management.render.duplicateAgent.newId')}
           </span>
-          <span className="text-[13px]">{pluginState.newAgentId}</span>
+          <span className="text-(length:--text-dense)">{pluginState.newAgentId}</span>
         </div>
       </div>
     </div>

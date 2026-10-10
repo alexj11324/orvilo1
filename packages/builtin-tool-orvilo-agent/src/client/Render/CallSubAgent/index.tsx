@@ -16,7 +16,7 @@ const styles = {
   container: 'py-1',
   label: 'ps-1 text-[12px] text-(--ant-color-text-tertiary)',
   labelRow: 'mb-1',
-  openThread: 'h-[22px] px-1.5 text-[12px] leading-(--text-xs--line-height)',
+  openThread: 'h-5.5 px-1.5 text-[12px] leading-(--text-xs--line-height)',
   promptBox: 'rounded-(--ant-border-radius-lg) bg-accent px-3 py-2',
   resultBox: 'rounded-(--ant-border-radius-lg) bg-card px-3 py-2',
 };

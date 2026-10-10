@@ -44,7 +44,7 @@ export const UpdateGroupPromptInspector = memo<
   const streamingLength = prompt?.length ?? 0;
 
   return (
-    <div className={cn('flex', 'items-center', 'gap-[6px]', styles.root)}>
+    <div className={cn('flex', 'items-center', 'gap-1.5', styles.root)}>
       <span
         className={cn(
           styles.label,

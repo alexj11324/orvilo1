@@ -29,7 +29,7 @@ const styles = {
   container: 'rounded-[var(--ant-border-radius)] py-3',
   deleteButton:
     'cursor-pointer text-[var(--ant-color-text-tertiary)] transition-[color] duration-200 ease-[ease] hover:text-destructive',
-  timeoutInput: 'w-[100px]',
+  timeoutInput: 'w-25',
 };
 
 const DEFAULT_TIMEOUT = 1_800_000; // 30 minutes

@@ -29,7 +29,7 @@ const ConfigDiffView = memo<ConfigDiffViewProps>(({ updatedFields, previousValue
 
   return (
     <div className="flex flex-col gap-2" style={{ fontSize: 13 }}>
-      <div className="flex items-center gap-[6px]" style={{ color: 'var(--lobe-success-6)' }}>
+      <div className="flex items-center gap-1.5" style={{ color: 'var(--lobe-success-6)' }}>
         <CheckCircle size={14} />
         <span style={{ fontWeight: 500 }}>Updated {updatedFields.length} field(s)</span>
       </div>

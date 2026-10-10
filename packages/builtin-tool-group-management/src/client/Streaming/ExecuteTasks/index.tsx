@@ -46,12 +46,12 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
                 shape={'square'}
                 size={20}
               />
-              <span className="text-[13px] font-medium text-foreground">
+              <span className="text-(length:--text-dense) font-medium text-foreground">
                 {task.title || task.agent?.title || 'Task'}
               </span>
             </div>
             {task.instruction && (
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-(length:--text-dense) text-muted-foreground">
                 <Markdown animated variant={'chat'}>
                   {task.instruction}
                 </Markdown>

@@ -23,8 +23,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const PageAction = memo<BuiltinRenderProps<unknown, BrowserPageState, string>>(
   ({ content, pluginState }) => {
     return (
-      <div className={cn('flex', 'flex-col', 'gap-[2px]', styles.container)}>
-        <div className="flex items-center gap-[6px]">
+      <div className={cn('flex', 'flex-col', 'gap-0.5', styles.container)}>
+        <div className="flex items-center gap-1.5">
           <Globe size={14} />
           <div className="truncate">{content || pluginState?.title || 'Browser action'}</div>
         </div>

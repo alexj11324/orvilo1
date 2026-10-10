@@ -94,7 +94,7 @@ const CollabToolRender = memo<
           <div className="flex flex-col gap-2">
             {agents.map((agent, index) => (
               <div className={cn('flex', 'flex-col', 'gap-1', styles.agentRow)} key={agent.id}>
-                <div className={cn('flex', 'items-center', 'gap-[6px]', styles.agentHeader)}>
+                <div className={cn('flex', 'items-center', 'gap-1.5', styles.agentHeader)}>
                   <span
                     className={cx(
                       styles.statusDot,

@@ -33,7 +33,7 @@ const resolveLabel = (t: TFunction<'plugin'>, source: ActivateSkillSource | unde
 };
 
 const styles = {
-  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 max-w-full ms-1.5 py-[3px] ps-2.5 pe-2.5 border border-sidebar-border rounded-full bg-card',
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 max-w-full ms-1.5 py-0.75 ps-2.5 pe-2.5 border border-sidebar-border rounded-full bg-card',
   skillIcon: 'shrink-0 text-(--ant-color-text-description)',
   skillName: 'truncate min-w-0 text-xs leading-[inherit] text-foreground',
 };

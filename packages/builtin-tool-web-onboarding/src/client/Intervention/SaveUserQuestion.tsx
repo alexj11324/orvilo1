@@ -169,7 +169,7 @@ const UserProfileSection = memo<UserProfileSectionProps>(({ fullName }) => {
         <div className="flex flex-col gap-4">
           <div style={detailGridStyle}>
             {fields.map((field) => (
-              <div className="flex flex-col gap-[6px]" key={field.label}>
+              <div className="flex flex-col gap-1.5" key={field.label}>
                 <div className="text-muted-foreground" style={{ fontSize: 12, fontWeight: 600 }}>
                   {field.label}
                 </div>

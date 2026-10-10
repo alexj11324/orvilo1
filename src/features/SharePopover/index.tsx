@@ -300,7 +300,7 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
             value={currentVisibility}
             onValueChange={(v) => handleVisibilityChange(v as Visibility)}
           >
-            <SelectTrigger style={{ width: '100%' }}>
+            <SelectTrigger size="sm" style={{ width: '100%' }}>
               <SelectValue>
                 {(value) => {
                   const option = visibilityOptions.find((o) => o.value === value);

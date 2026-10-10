@@ -247,7 +247,7 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
                 className="flex flex-row items-center gap-1"
               >
                 {Array.from({ length: 3 }, (_, index) => (
-                  <Skeleton className="size-[26px] rounded-full" key={index} />
+                  <Skeleton className="size-6.5 rounded-full" key={index} />
                 ))}
               </div>
             ) : membersError ? (

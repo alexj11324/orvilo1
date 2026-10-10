@@ -205,7 +205,7 @@ const DevModal = memo<DevModalProps>(
               style={{ marginInline: 'auto', maxWidth: mobile ? '100%' : 800, width: '100%' }}
             >
               <div
-                className="flex flex-row gap-0 h-[100%]"
+                className="flex flex-row gap-0 h-full"
                 onClick={(e) => {
                   e.stopPropagation();
                 }}

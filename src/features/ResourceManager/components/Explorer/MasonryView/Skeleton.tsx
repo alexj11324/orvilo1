@@ -1,4 +1,5 @@
 import { createStaticStyles, keyframes } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 const pulse = keyframes`
@@ -12,17 +13,9 @@ const pulse = keyframes`
   }
 `;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
+const styles = createStaticStyles(({ css }) => ({
   card: css`
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
     animation: ${pulse} 1.5s ease-in-out infinite;
-  `,
-  grid: css`
-    display: grid;
-    gap: 16px;
-    padding-block: 12px;
-    padding-inline: 24px;
   `,
 }));
 
@@ -42,14 +35,15 @@ const MasonryViewSkeleton = memo<MasonrySkeletonProps>(({ columnCount }) => {
 
   return (
     <div
-      className={styles.grid}
+      className="grid gap-4 py-3 px-6"
       style={{
         gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
       }}
     >
       {Array.from({ length: itemCount }).map((_, index) => (
         <div
-          className={styles.card}
+          className={cn('rounded-(--radius-card) bg-fill-quaternary', styles.card)}
+          data-slot="resource-masonry-skeleton"
           key={index}
           style={{
             height: heights[index % heights.length],

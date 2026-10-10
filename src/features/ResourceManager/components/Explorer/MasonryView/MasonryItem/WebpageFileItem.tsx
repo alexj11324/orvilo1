@@ -1,81 +1,7 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ExternalLinkIcon, GlobeIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  domain: css`
-    overflow: hidden;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-
-    span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  `,
-  excerpt: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 5;
-
-    font-size: 12px;
-    line-height: 1.7;
-    color: ${cssVar.colorTextSecondary};
-    word-break: break-word;
-  `,
-  excerptWrapper: css`
-    padding: 14px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    /* the reading-card paper feel: a quiet tinted sheet above the fold */
-    background:
-      radial-gradient(
-        140% 100% at 50% 0%,
-        color-mix(in srgb, #fff 10%, transparent) 0%,
-        transparent 60%
-      ),
-      ${cssVar.colorFillQuaternary};
-  `,
-  info: css`
-    padding: 12px;
-  `,
-  openLink: css`
-    cursor: pointer;
-
-    display: grid;
-    flex: none;
-    place-items: center;
-
-    width: 22px;
-    height: 22px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    color: ${cssVar.colorTextQuaternary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 13px;
-    font-weight: ${cssVar.fontWeightStrong};
-    color: ${cssVar.colorText};
-    word-break: break-word;
-  `,
-}));
 
 const hostnameOf = (url?: string): string | null => {
   if (!url) return null;
@@ -123,14 +49,18 @@ const WebpageFileItem = memo<WebpageFileItemProps>(({ contentPreview, name, url 
   return (
     <>
       {contentPreview && (
-        <div className={styles.excerptWrapper}>
-          <div className={styles.excerpt}>{contentPreview}</div>
+        <div className="p-3.5 border-be border-solid border-divider bg-fill-quaternary">
+          <div className="line-clamp-5 text-sm leading-5.5 text-muted-foreground [word-break:break-word]">
+            {contentPreview}
+          </div>
         </div>
       )}
-      <div className={cx('flex flex-col gap-2', styles.info)}>
-        <span className={styles.title}>{title}</span>
+      <div className={cn('flex flex-col gap-2', 'p-3')}>
+        <span className="line-clamp-2 text-sm leading-5.5 font-semibold text-foreground [word-break:break-word]">
+          {title}
+        </span>
         <div className="flex flex-row items-center gap-2 justify-between">
-          <div className={styles.domain}>
+          <div className="overflow-hidden flex items-center gap-1.5 text-xs leading-5 text-muted-foreground [&_span]:truncate">
             <span className="anticon" role="img">
               <GlobeIcon fill={'transparent'} height={13} size={13} width={13} />
             </span>
@@ -139,7 +69,7 @@ const WebpageFileItem = memo<WebpageFileItemProps>(({ contentPreview, name, url 
           {url && (
             <button
               aria-label={t('openSourcePage', { ns: 'common' })}
-              className={styles.openLink}
+              className="cursor-pointer grid flex-none place-items-center size-8 rounded-(--radius-button) text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
               type={'button'}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(e) => {

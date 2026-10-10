@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
@@ -9,27 +8,6 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  folderHeader: css`
-    cursor: pointer;
-
-    padding-block: 4px;
-    padding-inline: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition: background-color 0.2s;
-
-    &:hover {
-      background-color: ${cssVar.colorFillTertiary};
-    }
-  `,
-  folderHeaderActive: css`
-    color: ${cssVar.colorText};
-    background-color: ${cssVar.colorFillSecondary};
-  `,
-}));
 
 export interface FolderTreeItem {
   children?: FolderTreeItem[];
@@ -90,9 +68,12 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
           {...clickableProps()}
           style={{ paddingInlineStart: level * 16 + 8 }}
           className={cn(
-            cx(
+            cn(
               'flex flex-row items-center',
-              cx(styles.folderHeader, isActive && styles.folderHeaderActive),
+              cn(
+                'cursor-pointer py-1 px-2 text-muted-foreground transition-[background-color] duration-200 ease-[ease] hover:bg-accent',
+                isActive && 'text-foreground bg-selected hover:bg-selected',
+              ),
             ),
             CLICKABLE_FOCUS_RING,
           )}
@@ -105,17 +86,14 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
             <ActionIcon
               aria-label={tCommon('toggle')}
               icon={ChevronDown}
-              size={'small'}
+              size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 14 }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggle();
               }}
             />
           </m.div>
-          <div
-            className="flex flex-row items-center flex-1 gap-2"
-            style={{ minHeight: 28, minWidth: 0 }}
-          >
+          <div className="flex flex-row items-center flex-1 gap-2 min-h-7 min-w-0">
             <span className="anticon" role="img">
               {createElement(isExpanded ? FolderOpenIcon : FolderIcon, {
                 size: 16,
@@ -124,26 +102,15 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
                 fill: 'transparent',
               })}
             </span>
-            <span
-              style={{
-                flex: 1,
-                fontSize: 14,
-                lineHeight: '20px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {item.name}
-            </span>
+            <span className="flex-1 truncate text-sm leading-5.5">{item.name}</span>
           </div>
         </div>
 
         {isExpanded && item.children && item.children.length > 0 && (
           <m.div
             animate={{ height: 'auto', opacity: 1 }}
+            className="overflow-hidden"
             initial={{ height: 0, opacity: 0 }}
-            style={{ overflow: 'hidden' }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
           >
             <div className="flex flex-col gap-0.5">

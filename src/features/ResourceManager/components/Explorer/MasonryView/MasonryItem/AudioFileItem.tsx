@@ -1,54 +1,8 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { AudioLinesIcon } from 'lucide-react';
 import { memo } from 'react';
 
 import { formatSize } from '@/utils/format';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  cover: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 100%;
-    padding-block: 28px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    /* subtle top highlight keeps the fill from reading flat */
-    background:
-      radial-gradient(
-        140% 100% at 50% 0%,
-        color-mix(in srgb, #fff 8%, transparent) 0%,
-        transparent 60%
-      ),
-      ${cssVar.colorFillQuaternary};
-  `,
-  info: css`
-    padding: 12px;
-  `,
-  meta: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: ${cssVar.fontWeightStrong};
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  player: css`
-    width: 100%;
-    height: 32px;
-
-    &::-webkit-media-controls-panel {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
 
 interface AudioFileItemProps {
   isInView: boolean;
@@ -60,19 +14,19 @@ interface AudioFileItemProps {
 /** Masonry card for audio files: type cover plus an inline playable control. */
 const AudioFileItem = memo<AudioFileItemProps>(({ isInView, name, size, url }) => (
   <>
-    <div className={styles.cover}>
+    <div className="flex items-center justify-center w-full py-7 text-muted-foreground bg-fill-quaternary">
       <span className="anticon" role="img">
         <AudioLinesIcon fill={'transparent'} height={40} size={40} width={40} />
       </span>
     </div>
-    <div className={cx('flex flex-col gap-2', styles.info)}>
-      <span className={styles.name}>{name}</span>
-      <span className={styles.meta}>{formatSize(size)}</span>
+    <div className={cn('flex flex-col gap-2', 'p-3')}>
+      <span className="truncate text-sm leading-5.5 font-semibold text-foreground">{name}</span>
+      <span className="text-xs leading-5 text-muted-foreground">{formatSize(size)}</span>
       {isInView && url && (
         // controls stay interactive without triggering the card's open action
         <audio
           controls
-          className={styles.player}
+          className="w-full h-8 [&::-webkit-media-controls-panel]:bg-fill-quaternary"
           preload={'metadata'}
           src={url}
           onClick={(event) => event.stopPropagation()}

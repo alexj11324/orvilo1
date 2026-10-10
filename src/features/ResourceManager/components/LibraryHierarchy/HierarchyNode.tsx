@@ -308,7 +308,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
             className={cn(
               cx(
                 'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-(--radius-button) px-1',
-                isActive && 'bg-secondary',
+                isActive && 'bg-selected',
                 styles.treeItem,
                 isOver && styles.fileItemDragOver,
                 isDragging && styles.dragging,
@@ -416,7 +416,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
           className={cn(
             cx(
               'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-(--radius-button) px-1',
-              isActive && 'bg-secondary',
+              isActive && 'bg-selected',
               styles.treeItem,
               isDragging && styles.dragging,
             ),

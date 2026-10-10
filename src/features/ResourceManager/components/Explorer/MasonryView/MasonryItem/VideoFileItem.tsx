@@ -1,65 +1,8 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { PlayIcon } from 'lucide-react';
 import { memo } from 'react';
 
 import { formatSize } from '@/utils/format';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  info: css`
-    padding: 12px;
-  `,
-  meta: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: ${cssVar.fontWeightStrong};
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  playBadge: css`
-    position: absolute;
-    z-index: 1;
-    inset-block-start: 50%;
-    inset-inline-start: 50%;
-    transform: translate(-50%, -50%);
-
-    display: grid;
-    place-items: center;
-
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-
-    color: #fff;
-
-    background: color-mix(in srgb, #000 45%, transparent);
-    backdrop-filter: blur(4px);
-  `,
-  videoWrapper: css`
-    position: relative;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 100%;
-    min-height: 120px;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    video {
-      pointer-events: none;
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-  `,
-}));
 
 interface VideoFileItemProps {
   isInView: boolean;
@@ -71,21 +14,21 @@ interface VideoFileItemProps {
 /** Masonry card for video files: a real first-frame preview with a play badge. */
 const VideoFileItem = memo<VideoFileItemProps>(({ isInView, name, size, url }) => (
   <>
-    <div className={styles.videoWrapper}>
+    <div className="relative flex items-center justify-center w-full min-h-30 bg-fill-quaternary [&_video]:pointer-events-none [&_video]:block [&_video]:w-full [&_video]:h-auto">
       {isInView && url && (
         // The #t=0.001 media fragment forces a seek so the browser actually
         // paints the first frame; bare preload="metadata" may stay blank.
         <video muted playsInline preload={'metadata'} src={`${url}#t=0.001`} />
       )}
-      <div className={styles.playBadge}>
+      <div className="absolute z-1 inset-bs-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center size-11 rounded-full text-(--ant-color-text-light-solid) bg-(--ant-color-bg-mask) backdrop-blur-xs">
         <span className="anticon" role="img">
           <PlayIcon fill={'transparent'} height={20} size={20} width={20} />
         </span>
       </div>
     </div>
-    <div className={cx('flex flex-col gap-1', styles.info)}>
-      <span className={styles.name}>{name}</span>
-      <span className={styles.meta}>{formatSize(size)}</span>
+    <div className={cn('flex flex-col gap-1', 'p-3')}>
+      <span className="truncate text-sm leading-5.5 font-semibold text-foreground">{name}</span>
+      <span className="text-xs leading-5 text-muted-foreground">{formatSize(size)}</span>
     </div>
   </>
 ));

@@ -1,19 +1,14 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import type { ReadReferenceParams, ReadReferenceState } from '../../../types';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: hidden;
-    padding-inline: 8px 0;
-  `,
-}));
+const styles = { container: 'overflow-hidden ps-2 pe-0' };
 
 const getFileExtension = (path: string): string => {
   const parts = path.split('.');
@@ -66,7 +61,7 @@ const ReadReference = memo<BuiltinRenderProps<ReadReferenceParams, ReadReference
     const sizeText = size ? formatSize(size) : '';
 
     return (
-      <div className={cx('flex flex-col gap-2', styles.container)}>
+      <div className={cn('flex flex-col gap-2', styles.container)}>
         <div className="flex flex-row items-center justify-between">
           <span className="font-mono rounded bg-muted px-1 truncate text-[12px]">
             {displayPath}

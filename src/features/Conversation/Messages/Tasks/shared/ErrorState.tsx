@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { Info,MessageSquare, Timer, Wrench } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,28 +13,9 @@ import { ThreadStatus } from '@/types/index';
 import { MetricItem } from './CompletedState';
 import { formatCost, formatDuration } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  separator: css`
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: ${cssVar.colorTextQuaternary};
-  `,
-  statusIcon: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-
-    color: ${cssVar.colorErrorText};
-
-    background: ${cssVar.colorErrorBg};
-  `,
-}));
+const styles = {
+  separator: 'size-[3px] rounded-[50%] bg-[var(--ant-color-text-quaternary)]',
+};
 
 interface ErrorStateProps {
   taskDetail: TaskDetail;

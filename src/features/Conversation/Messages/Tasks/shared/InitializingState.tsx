@@ -1,7 +1,6 @@
 'use client';
 
 
-import { createStaticStyles, keyframes } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,47 +9,9 @@ import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 
 import { formatElapsedTime } from './utils';
 
-const shimmer = keyframes`
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
-`;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 12px;
-  `,
-  progress: css`
-    position: relative;
-
-    overflow: hidden;
-
-    height: 3px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressShimmer: css`
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-
-    width: 100%;
-    height: 100%;
-
-    background: linear-gradient(90deg, transparent, ${cssVar.colorPrimaryBgHover}, transparent);
-
-    animation: ${shimmer} 2s infinite;
-
-    @media (prefers-reduced-motion: reduce) {
-      display: none;
-    }
-  `,
-}));
+const styles = {
+  container: 'py-3',
+};
 
 const InitializingState = memo(() => {
   const { t } = useTranslation('chat');

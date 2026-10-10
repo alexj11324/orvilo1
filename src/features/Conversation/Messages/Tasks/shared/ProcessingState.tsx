@@ -2,7 +2,6 @@
 
 
 import { type TaskDetail } from '@orvilo/types';
-import { createStaticStyles, keyframes } from 'antd-style';
 import { cn } from 'cn';
 import { Footprints, Timer, Wrench } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -14,84 +13,15 @@ import { useChatStore } from '@/store/chat';
 import { MAX_PROGRESS, PROGRESS_INCREMENT, PROGRESS_INTERVAL } from './constants';
 import { formatElapsedTime, formatToolName } from './utils';
 
-const shimmer = keyframes`
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
-`;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  activityRow: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding-block: 8px;
-  `,
-  footer: css`
-    padding-block-start: 8px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  progress: css`
-    position: relative;
-
-    overflow: hidden;
-
-    height: 3px;
-    margin-block: 12px;
-    margin-inline: 8px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressBar: css`
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-
-    height: 100%;
-    border-radius: 2px;
-
-    background: linear-gradient(90deg, ${cssVar.colorPrimary}, ${cssVar.colorPrimaryHover});
-
-    transition: width 0.5s ease-out;
-  `,
-  progressCompact: css`
-    position: relative;
-
-    overflow: hidden;
-
-    height: 3px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressShimmer: css`
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-
-    width: 100%;
-    height: 100%;
-
-    background: linear-gradient(90deg, transparent, ${cssVar.colorPrimaryBgHover}, transparent);
-
-    animation: ${shimmer} 2s infinite;
-
-    @media (prefers-reduced-motion: reduce) {
-      display: none;
-    }
-  `,
-  separator: css`
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  activityRow: 'flex items-center gap-2 py-2',
+  footer: '[padding-block-start:8px] [border-block-start:1px_solid_var(--sidebar-border)]',
+  progress: 'relative mx-2 my-3 h-[3px] overflow-hidden rounded-[2px] bg-selected',
+  progressBar: 'absolute h-full rounded-[2px] [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,var(--primary),var(--primary-hover))] transition-[width] duration-500 ease-out',
+  progressCompact: 'relative h-[3px] overflow-hidden rounded-[2px] bg-selected',
+  progressShimmer: 'absolute size-full [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,transparent,var(--ant-color-primary-bg-hover),transparent)] animate-[text-shiny-sweep-transform_2s_ease_infinite] motion-reduce:hidden',
+  separator: 'size-[3px] rounded-[50%] bg-[var(--ant-color-text-quaternary)]',
+};
 
 export type ProcessingStateVariant = 'detail' | 'compact';
 

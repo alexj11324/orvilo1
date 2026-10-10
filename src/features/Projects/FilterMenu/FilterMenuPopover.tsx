@@ -348,6 +348,7 @@ const FilterMenuPopover = memo<FilterMenuPopoverProps>(
               aria-label={labels.aiPlaceholder}
               placeholder={labels.aiPlaceholder}
               value={aiText}
+              visualSize="normal"
               onChange={(event) => {
                 setAiText(event.target.value);
                 setAiError(false);

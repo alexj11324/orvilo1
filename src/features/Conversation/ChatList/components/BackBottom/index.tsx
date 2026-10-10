@@ -45,7 +45,9 @@ const BackBottom = memo<BackBottomProps>(
           variant={'outlined'}
           className={cn(
             styles.container,
-            visible && '[pointer-events:all] opacity-100 [transform:translateY(0)]',
+            visible
+              ? '[pointer-events:all] opacity-100 [transform:translateY(0)]'
+              : 'pointer-events-none opacity-0 [transform:translateY(16px)]',
           )}
           size={{
             blockSize: 36,

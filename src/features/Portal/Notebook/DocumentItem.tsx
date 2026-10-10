@@ -1,5 +1,4 @@
 import { type NotebookDocument } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { FileTextIcon, Trash2Icon } from 'lucide-react';
 import { type MouseEvent } from 'react';
@@ -12,26 +11,11 @@ import { useChatStore } from '@/store/chat';
 import { useNotebookStore } from '@/store/notebook';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    cursor: pointer;
-    padding: 12px;
-    border-radius: 8px;
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  description: css`
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    font-weight: 500;
-  `,
-}));
+const styles = {
+  container: 'cursor-pointer p-3 rounded-(--radius-card) bg-muted hover:bg-selected',
+  description: 'text-xs leading-5 text-muted-foreground',
+  title: 'text-sm leading-5.5 font-medium',
+};
 
 interface DocumentItemProps {
   document: NotebookDocument;
@@ -69,7 +53,7 @@ const DocumentItem = memo<DocumentItemProps>(({ document, topicId }) => {
   return (
     <div
       {...clickableProps()}
-      className={cn(cx('flex flex-row gap-2', styles.container), CLICKABLE_FOCUS_RING)}
+      className={cn('flex flex-row gap-2', styles.container, CLICKABLE_FOCUS_RING)}
       onClick={handleClick}
     >
       <FileTextIcon size={16} />
@@ -79,7 +63,7 @@ const DocumentItem = memo<DocumentItemProps>(({ document, topicId }) => {
           <ActionIcon
             icon={Trash2Icon}
             loading={deleting}
-            size={'small'}
+            size={{ blockSize: 24, borderRadius: 6, size: 14 }}
             title={t('notebook.delete')}
             onClick={handleDelete}
           />

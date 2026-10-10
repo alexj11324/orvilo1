@@ -1,6 +1,5 @@
 import type { GoalSpend } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, type ReactNode, useMemo, useState } from 'react';
@@ -29,30 +28,12 @@ import { goalSelectors, useGoalStore } from '@/store/goal';
  * lives instead of inventing a value.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  label: css`
-    font-size: 12px;
-    font-weight: 600;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-variant-numeric: tabular-nums;
-  `,
-  row: css`
-    cursor: pointer;
-    padding-block: 6px;
-    padding-inline: 6px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  staticRow: css`
-    padding-block: 4px;
-  `,
-}));
+const styles = {
+  label: 'text-xs leading-5 font-semibold text-muted-foreground',
+  mono: 'font-(family-name:--ant-font-family-code) tabular-nums',
+  row: 'cursor-pointer py-1.5 px-1.5 rounded-(--radius-input) hover:bg-fill-quaternary',
+  staticRow: 'py-1',
+};
 
 const NodeRow = memo<{
   extra?: ReactNode;
@@ -66,7 +47,7 @@ const NodeRow = memo<{
 
   return (
     <div
-      className={cx('flex flex-row items-center gap-2', styles.row)}
+      className={cn('flex flex-row items-center gap-2', styles.row)}
       onClick={() => openGoalNode(goalId, nodeId)}
     >
       {view.seq !== undefined && (
@@ -107,7 +88,7 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
         const subject = graph.byId[event.entityId]?.node.title;
         return (
           <div
-            className={cx('flex flex-row items-baseline gap-2.5', styles.staticRow)}
+            className={cn('flex flex-row items-baseline gap-2.5', styles.staticRow)}
             key={event.id}
           >
             <div
@@ -385,14 +366,14 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
             // carries — still billed, but nothing to open.
             return row.view ? (
               <div
-                className={cx('flex flex-col', styles.row)}
+                className={cn('flex flex-col', styles.row)}
                 key={row.taskId}
                 onClick={() => openGoalNode(goalId, row.view!.node.id)}
               >
                 {body}
               </div>
             ) : (
-              <div className={cx('flex flex-col', styles.staticRow)} key={row.taskId}>
+              <div className={cn('flex flex-col', styles.staticRow)} key={row.taskId}>
                 {body}
               </div>
             );

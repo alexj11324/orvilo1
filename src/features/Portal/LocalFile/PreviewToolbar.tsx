@@ -1,110 +1,24 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type LucideIcon } from 'lucide-react';
 import type { MouseEventHandler, ReactNode } from 'react';
 import { createElement, memo } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 
 import { SimpleTooltip } from '../SimpleTooltip';
 import PathBreadcrumb from './PathBreadcrumb';
 
-const styles = createStaticStyles(({ css }) => ({
-  action: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 12px;
-    line-height: 1;
-    color: ${cssVar.colorTextSecondary};
-
-    background: none;
-
-    /* Icon renders an inline .anticon span whose svg sits on the text
-       baseline, floating icons a few px above center — flex-normalize it. */
-    .anticon {
-      display: inline-flex;
-      align-items: center;
-    }
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-    }
-  `,
-  actionActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  actionLabel: css`
-    white-space: nowrap;
-
-    @container (max-width: 300px) {
-      display: none;
-    }
-  `,
-  actions: css`
-    @container (max-width: 300px) {
-      .toggle-group-item-label {
-        display: none;
-      }
-    }
-  `,
-  bar: css`
-    container-type: inline-size;
-    flex-shrink: 0;
-
-    height: 40px;
-    padding-inline: 12px 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  crumbGroup: css`
-    overflow: hidden;
-
-    /* Ancestors give up their width long before the filename does, so the file
-       being previewed is the last thing to ellipsize. */
-    flex-shrink: 100;
-    min-width: 0;
-
-    &:last-child {
-      flex-shrink: 1;
-    }
-  `,
-  separator: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  path: css`
-    overflow: hidden;
-    min-width: 0;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-
-    /* Yield to the actions only when they actually rendered something —
-       an all-hidden actions slot (e.g. plain code files) keeps the path. */
-    @container (max-width: 440px) {
-      &:has(~ [data-toolbar-actions] > *) {
-        display: none;
-      }
-    }
-  `,
-}));
+const styles = {
+  action:
+    'cursor-pointer gap-1.5 px-2 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed',
+  actionActive: 'bg-selected text-foreground hover:bg-selected',
+  actionLabel: 'whitespace-nowrap [@container(max-width:300px)]:hidden',
+  actions: '[@container(max-width:300px)]:[&_.toggle-group-item-label]:hidden',
+  bar: '@container shrink-0 h-10 ps-3 pe-2 border-b border-divider bg-card',
+  // Hide the path only when the actions slot has actual element children.
+  path: 'overflow-hidden min-w-0 text-xs leading-5 font-(family-name:--ant-font-family-code) [@container(max-width:440px)]:[&:has(~[data-toolbar-actions]>*)]:hidden',
+};
 
 interface ToolbarActionButtonProps {
   active?: boolean;
@@ -119,23 +33,31 @@ interface ToolbarActionButtonProps {
 export const ToolbarActionButton = memo<ToolbarActionButtonProps>(
   ({ active, disabled, icon, label, loading, onClick, title }) => {
     const button = (
-      <button
+      <Button
         aria-label={title ?? (typeof label === 'string' ? label : undefined)}
         aria-pressed={active}
-        className={cx(styles.action, active && styles.actionActive)}
+        className={cn(styles.action, active && styles.actionActive)}
         disabled={disabled || loading}
+        size={'compact'}
         type={'button'}
+        variant={'ghost'}
         onClick={onClick}
       >
-        <span className="anticon" role="img">
+        <span className="inline-flex items-center" role="img">
           {loading ? (
             <Spinner className="size-3.5" />
           ) : (
-            createElement(icon, { size: 14, width: 14, height: 14, fill: 'transparent' })
+            createElement(icon, {
+              className: 'size-3.5',
+              size: 14,
+              width: 14,
+              height: 14,
+              fill: 'transparent',
+            })
           )}
         </span>
         {label && <span className={styles.actionLabel}>{label}</span>}
-      </button>
+      </Button>
     );
 
     return title ? <SimpleTooltip title={title}>{button}</SimpleTooltip> : button;
@@ -154,17 +76,16 @@ interface PreviewToolbarProps {
 }
 
 const PreviewToolbar = memo<PreviewToolbarProps>(({ actions, deviceId, path, rootPath }) => (
-  <div className={cx('flex flex-row items-center gap-2 justify-between', styles.bar)}>
+  <div className={cn('flex flex-row items-center gap-2 justify-between', styles.bar)}>
     <SimpleTooltip title={path}>
-      <div className={cx('flex flex-row items-center flex-1', styles.path)}>
+      <div className={cn('flex flex-row items-center flex-1', styles.path)}>
         <PathBreadcrumb deviceId={deviceId} path={path} rootPath={rootPath} />
       </div>
     </SimpleTooltip>
     {actions && (
       <div
         data-toolbar-actions
-        className={cx('flex flex-row items-center flex-none gap-0.5', styles.actions)}
-        style={{ marginInlineStart: 'auto' }}
+        className={cn('flex flex-row items-center flex-none gap-0.5 ms-auto', styles.actions)}
       >
         {actions}
       </div>

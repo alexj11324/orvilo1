@@ -2,13 +2,14 @@
 
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
 import { confirmModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -37,127 +38,14 @@ const resolveSkillName = (filePath: string): string | null => {
   return match ? match[1] : null;
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  tabIcon: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 14px;
-    height: 14px;
-  `,
-  tabClose: css`
-    cursor: pointer;
-
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-    padding: 0;
-    border: none;
-    border-radius: 3px;
-
-    color: inherit;
-
-    opacity: 0.6;
-    background: transparent;
-
-    .cm-tab-close-x {
-      display: inline-flex;
-    }
-
-    .cm-tab-close-dot {
-      display: none;
-
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-
-      background: ${cssVar.colorPrimary};
-    }
-
-    &[data-dirty='true'] {
-      .cm-tab-close-x {
-        display: none;
-      }
-
-      .cm-tab-close-dot {
-        display: inline-block;
-      }
-    }
-
-    &:hover {
-      opacity: 1;
-      background: ${cssVar.colorFillSecondary};
-
-      .cm-tab-close-x {
-        display: inline-flex;
-      }
-
-      .cm-tab-close-dot {
-        display: none;
-      }
-    }
-  `,
-  tabItem: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: flex;
-    flex-shrink: 0;
-    gap: 4px;
-    align-items: center;
-
-    max-width: 160px;
-    padding-block: 4px;
-    padding-inline: 8px;
-    border-radius: 6px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    transition:
-      color 0.15s,
-      background 0.15s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  tabItemActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  tabLabel: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
-
-const SCROLL_AREA_STYLE = {
-  background: 'transparent',
-  borderRadius: 0,
-  flex: 1,
-  minWidth: 0,
-};
-
-const SCROLL_AREA_CONTENT_STYLE = {
-  alignItems: 'center',
-  display: 'flex',
-  flexDirection: 'row' as const,
-  gap: 4,
-  paddingBlock: 8,
-  paddingInlineStart: 8,
-  width: 'max-content',
+const styles = {
+  tabIcon: 'inline-flex shrink-0 items-center justify-center size-3.5',
+  tabClose:
+    'group/tab-close cursor-pointer p-0 text-inherit opacity-60 hover:bg-selected hover:opacity-100',
+  tabItem:
+    'cursor-pointer select-none flex shrink-0 items-center gap-1 max-w-40 rounded-(--radius-button) px-2 py-1 text-xs leading-5 text-muted-foreground transition-[color,background-color] duration-150 hover:text-foreground',
+  tabItemActive: 'bg-selected text-foreground hover:bg-selected',
+  tabLabel: 'overflow-hidden flex-1 min-w-0 text-ellipsis whitespace-nowrap',
 };
 
 const TabStrip = memo(() => {
@@ -255,8 +143,8 @@ const TabStrip = memo(() => {
   if (openLocalFiles.length === 0) return null;
 
   return (
-    <ScrollArea style={SCROLL_AREA_STYLE}>
-      <div style={SCROLL_AREA_CONTENT_STYLE}>
+    <ScrollArea className="flex-1 min-w-0 rounded-none bg-transparent">
+      <div className="flex w-max flex-row items-center gap-1 py-2 ps-2">
         {openLocalFiles.map((file, index) => {
           const { filePath } = file;
           const id = getLocalFileTabId(file);
@@ -271,7 +159,7 @@ const TabStrip = memo(() => {
                 render={
                   <div
                     aria-selected={isActive}
-                    className={`${styles.tabItem} ${isActive ? styles.tabItemActive : ''}`}
+                    className={cn(styles.tabItem, isActive && styles.tabItemActive)}
                     role="tab"
                     tabIndex={0}
                     title={filePath}
@@ -284,7 +172,7 @@ const TabStrip = memo(() => {
                     }}
                   >
                     {skillName ? (
-                      <span className={cx('anticon', styles.tabIcon)} role="img">
+                      <span className={styles.tabIcon} role="img">
                         <SkillsIcon fill={'transparent'} height={12} size={12} width={12} />
                       </span>
                     ) : (
@@ -293,21 +181,23 @@ const TabStrip = memo(() => {
                       </span>
                     )}
                     <span className={styles.tabLabel}>{label}</span>
-                    <button
+                    <Button
                       aria-label={`Close ${filename}`}
                       className={styles.tabClose}
                       data-dirty={id in dirtyContents ? 'true' : 'false'}
+                      size="icon-xs"
                       type="button"
+                      variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
                         confirmClose(id, filePath, () => closeLocalFileTab(id));
                       }}
                     >
-                      <span className={'cm-tab-close-x'}>
+                      <span className="cm-tab-close-x inline-flex group-data-[dirty=true]/tab-close:hidden group-data-[dirty=true]/tab-close:group-hover/tab-close:inline-flex">
                         <XIcon size={12} />
                       </span>
-                      <span className={'cm-tab-close-dot'} />
-                    </button>
+                      <span className="cm-tab-close-dot hidden size-2 rounded-full bg-primary group-data-[dirty=true]/tab-close:inline-block group-data-[dirty=true]/tab-close:group-hover/tab-close:hidden" />
+                    </Button>
                   </div>
                 }
               />

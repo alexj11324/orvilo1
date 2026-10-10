@@ -1,7 +1,7 @@
 'use client';
 
 import type { ProjectFileIndexEntry } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useMemo } from 'react';
@@ -25,60 +25,16 @@ import {
   toBreadcrumbSegments,
 } from './filePathBreadcrumb';
 
-const styles = createStaticStyles(({ css }) => ({
-  crumb: css`
-    cursor: pointer;
-
-    overflow: hidden;
-
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 4px;
-    border: none;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-family: inherit;
-    font-size: inherit;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  crumbStatic: css`
-    cursor: default;
-
-    &:hover {
-      color: ${cssVar.colorTextTertiary};
-      background: none;
-    }
-  `,
-  /* The previewed file is the crumb a reader always needs in full, so it is the
-     last one to give up width. */
-  group: css`
-    overflow: hidden;
-    flex-shrink: 1;
-    min-width: 0;
-  `,
-  groupLast: css`
-    flex-shrink: 0;
-
-    span {
-      color: ${cssVar.colorText};
-    }
-  `,
-  separator: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  crumb:
+    'overflow-hidden min-w-0 rounded-(--radius-input) border-0 bg-transparent px-1 py-0.5 text-foreground-tertiary [font-family:inherit] [font-size:inherit] text-ellipsis whitespace-nowrap',
+  crumbInteractive: 'cursor-pointer hover:bg-accent hover:text-foreground',
+  crumbStatic: 'cursor-default hover:bg-transparent hover:text-foreground-tertiary',
+  // The previewed file is the last crumb to give up width.
+  group: 'overflow-hidden min-w-0 shrink',
+  groupLast: 'shrink-0 [&_span]:text-foreground',
+  separator: 'flex flex-none items-center text-foreground-quaternary',
+};
 
 interface CrumbMenuItem {
   children?: CrumbMenuItem[];
@@ -204,7 +160,9 @@ const Crumb = memo<{
   // A span rather than a button: the menu's trigger applies its own button
   // semantics, and base-ui rejects a native button as the element it renders.
   const crumb = (
-    <span className={cx(styles.crumb, !canBrowse && styles.crumbStatic)}>{segment.name}</span>
+    <span className={cn(styles.crumb, canBrowse ? styles.crumbInteractive : styles.crumbStatic)}>
+      {segment.name}
+    </span>
   );
 
   if (!canBrowse) return crumb;
@@ -243,14 +201,14 @@ const PathBreadcrumb = memo<PathBreadcrumbProps>(({ deviceId, path, rootPath }) 
         return (
           <div
             key={segment.path}
-            className={cx(
+            className={cn(
               'flex flex-row items-center',
-              cx(styles.group, isLast && styles.groupLast),
+              cn(styles.group, isLast && styles.groupLast),
             )}
           >
             {index > 0 && (
               <span aria-hidden className={styles.separator}>
-                <span className="anticon" role="img">
+                <span className="inline-flex" role="img">
                   <ChevronRightIcon fill={'transparent'} height={12} size={12} width={12} />
                 </span>
               </span>

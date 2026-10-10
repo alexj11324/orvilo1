@@ -1,5 +1,4 @@
 import { type ChatFileItem } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -9,24 +8,10 @@ import { useChatStore } from '@/store/chat';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { formatSize } from '@/utils/format';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    cursor: pointer;
-
-    overflow: hidden;
-
-    max-width: 420px;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: 8px;
-
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
+const styles = {
+  container:
+    'cursor-pointer overflow-hidden max-w-105 py-2 px-3 rounded-(--radius-card) bg-muted hover:bg-selected',
+};
 
 const FileItem = memo<ChatFileItem>(({ name, fileType, size, id }) => {
   const openFilePreview = useChatStore((s) => s.openFilePreview);
@@ -34,7 +19,7 @@ const FileItem = memo<ChatFileItem>(({ name, fileType, size, id }) => {
   return (
     <div
       {...clickableProps()}
-      className={cn(cx('flex flex-row items-center gap-2', styles.container), CLICKABLE_FOCUS_RING)}
+      className={cn('flex flex-row items-center gap-2', styles.container, CLICKABLE_FOCUS_RING)}
       onClick={() => {
         openFilePreview({ fileId: id });
       }}

@@ -1,7 +1,6 @@
 import type { MarkdownProps } from '@lobehub/ui';
 import { Image, Markdown } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CodeIcon, ExternalLinkIcon, EyeIcon, RefreshCwIcon } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
@@ -79,38 +78,12 @@ ImagePreview.displayName = 'ImagePreview';
 
 const MARKDOWN_EXTS = new Set(['md', 'mdx', 'markdown']);
 
-const frontmatterStyles = createStaticStyles(({ css }) => ({
-  card: css`
-    margin-block: 8px 12px;
-    margin-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  key: css`
-    flex-shrink: 0;
-
-    width: 96px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  row: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  value: css`
-    min-width: 0;
-    font-size: 12px;
-    white-space: pre-wrap;
-  `,
-}));
+const frontmatterStyles = {
+  card: '[margin-block:calc(var(--spacing)*2)_calc(var(--spacing)*3)] mx-3 rounded-(--radius-card) border border-divider bg-card',
+  key: 'shrink-0 w-24 font-(family-name:--ant-font-family-code) text-xs leading-5 text-muted-foreground',
+  row: 'py-2 px-3 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-divider',
+  value: 'min-w-0 text-xs leading-5 whitespace-pre-wrap',
+};
 
 interface SkillFrontmatterPreviewCardProps {
   metadata: SkillMarkdownMetadataItem[];
@@ -120,9 +93,9 @@ const SkillFrontmatterPreviewCard = memo<SkillFrontmatterPreviewCardProps>(({ me
   if (metadata.length === 0) return null;
 
   return (
-    <div className={cx('flex flex-col', frontmatterStyles.card)} style={{ flexShrink: 0 }}>
+    <div className={cn('flex flex-col shrink-0', frontmatterStyles.card)}>
       {metadata.map((item) => (
-        <div className={cx('flex flex-row items-start', frontmatterStyles.row)} key={item.key}>
+        <div className={cn('flex flex-row items-start', frontmatterStyles.row)} key={item.key}>
           <div className={cn(frontmatterStyles.key)}>{item.key}</div>
           <div className={cn(frontmatterStyles.value)}>{item.value}</div>
         </div>

@@ -2,7 +2,7 @@
 
 import type { AcceptanceCommentThread } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { cssVar, cx, useResponsive } from 'antd-style';
+import { cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import {
   AudioLines,
@@ -28,6 +28,7 @@ import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
@@ -105,7 +106,7 @@ export const AcceptanceCheckRow = memo<{
     reviewPending,
   }) => {
     const { t } = useTranslation('verify');
-    const { md: desktop = true } = useResponsive();
+    const desktop = !useIsMobile();
     // The judging narrative stays collapsed: level one is title + evidence.
     const [historyOpen, setHistoryOpen] = useState(false);
     const [seqCopied, setSeqCopied] = useState(false);

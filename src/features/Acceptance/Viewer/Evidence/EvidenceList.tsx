@@ -1,10 +1,10 @@
 'use client';
 
 import { Image } from '@lobehub/ui';
-import { useResponsive } from 'antd-style';
 import { memo } from 'react';
 
 import AudioPlayer from '@/features/AudioPlayer';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import {
   EvidenceComparisonCard,
@@ -70,7 +70,7 @@ export const EvidenceList = memo<{
    */
   overlays?: EvidenceOverlayMap;
 }>(({ evidence, overlays, onReviewEvidence }) => {
-  const { md = true } = useResponsive();
+  const md = !useIsMobile();
   const sorted = [...evidence].sort((a, b) => (isVisual(b) ? 1 : 0) - (isVisual(a) ? 1 : 0));
   if (sorted.length === 0) return null;
 

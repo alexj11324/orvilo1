@@ -1,9 +1,9 @@
 'use client';
 
-import { useResponsive } from 'antd-style';
 import { memo } from 'react';
 
 import { createModal } from '@/components/Modal';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import { DesktopEvidenceReview } from '../Evidence/DesktopEvidenceReview';
 import { MobileEvidenceReview } from '../Evidence/MobileEvidenceReview';
@@ -27,7 +27,7 @@ interface CheckRejectModalProps extends RejectReviewInput {
  */
 export const CheckRejectModalContent = memo<CheckRejectModalProps>(
   ({ checkDescription: _checkDescription, checkTitle, ...input }) => {
-    const { md = true } = useResponsive();
+    const md = !useIsMobile();
     const model = useRejectReview(input);
 
     return md ? (

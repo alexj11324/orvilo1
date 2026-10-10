@@ -2,7 +2,6 @@
 
 import { TodoInspectorSummary } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -27,12 +26,12 @@ export const UpdateTodosInspector = memo<
     [pluginState?.todos],
   );
 
-  const shiny = (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText;
+  const shiny = isArgumentsStreaming || isLoading ? shinyTextStyles.shinyText : '';
 
   if (summary.total === 0) {
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(shiny)}>{t('builtins.orvilo-agent.apiName.updateTodos')}</span>
+        <span className={shiny}>{t('builtins.orvilo-agent.apiName.updateTodos')}</span>
       </div>
     );
   }

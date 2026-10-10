@@ -186,6 +186,7 @@ const TreeNode = memo<{
             className={styles.editingInput}
             ref={inputRef}
             value={editingName}
+            visualSize="small"
             onBlur={() => void handleCommitRename()}
             onChange={(e) => setEditingName(e.target.value)}
             onClick={(e) => e.stopPropagation()}

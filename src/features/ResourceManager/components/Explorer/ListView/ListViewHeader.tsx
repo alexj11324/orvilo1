@@ -1,4 +1,4 @@
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -73,9 +73,9 @@ const ListViewHeader = ({
   return (
     <>
       <div
-        className={cx('flex flex-row items-center px-2', styles.header)}
+        className={cn('flex flex-row items-center px-2', styles.header)}
         style={{
-          borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderBlockEnd: `1px solid var(--sidebar-border)`,
           fontSize: 12,
           minWidth: getListViewMinWidth(showUploader),
         }}
@@ -92,7 +92,7 @@ const ListViewHeader = ({
           />
         </div>
         <div
-          className={cx('flex flex-col justify-center', styles.headerItem)}
+          className={cn('flex flex-col justify-center', styles.headerItem)}
           style={{
             flexShrink: 0,
             maxWidth: columnWidths.name,
@@ -118,7 +118,7 @@ const ListViewHeader = ({
           />
         </div>
         <div
-          className={cx('flex flex-col justify-center', styles.headerItem)}
+          className={cn('flex flex-col justify-center', styles.headerItem)}
           style={{
             flexShrink: 0,
             paddingInlineEnd: 16,
@@ -137,7 +137,7 @@ const ListViewHeader = ({
         </div>
         {showUploader && (
           <div
-            className={cx('flex flex-col justify-center', styles.headerItem)}
+            className={cn('flex flex-col justify-center', styles.headerItem)}
             style={{
               flexShrink: 0,
               paddingInlineEnd: 16,
@@ -156,7 +156,7 @@ const ListViewHeader = ({
           </div>
         )}
         <div
-          className={cx('flex flex-col justify-center', styles.headerItem)}
+          className={cn('flex flex-col justify-center', styles.headerItem)}
           style={{
             flexShrink: 0,
             paddingInlineEnd: 16,

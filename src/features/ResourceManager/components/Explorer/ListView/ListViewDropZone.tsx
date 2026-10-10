@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { ReactNode, RefObject } from 'react';
 import type { VirtuosoHandle } from 'react-virtuoso';
 
@@ -11,12 +11,9 @@ interface ListViewDropZoneProps {
   virtuosoRef: RefObject<VirtuosoHandle | null>;
 }
 
-const localStyles = createStaticStyles(({ css }) => ({
-  container: css`
-    position: relative;
-    overflow: hidden;
-  `,
-}));
+const localStyles = {
+  container: 'relative overflow-hidden',
+};
 
 const ListViewDropZone = ({ children, currentFolderId, virtuosoRef }: ListViewDropZoneProps) => {
   const { containerRef, handleDragLeave, handleDragOver, handleDrop, isDropZoneActive } =
@@ -27,7 +24,7 @@ const ListViewDropZone = ({ children, currentFolderId, virtuosoRef }: ListViewDr
       data-drop-target-id={currentFolderId || undefined}
       data-is-folder="true"
       ref={containerRef}
-      className={cx(
+      className={cn(
         localStyles.container,
         'list-view-drop-zone',
         styles.dropZone,

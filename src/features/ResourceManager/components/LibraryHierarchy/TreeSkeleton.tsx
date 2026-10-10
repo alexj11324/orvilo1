@@ -1,22 +1,13 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    height: 32px;
-    padding-block: 4px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadiusSM};
-  `,
-}));
+const styles = {
+  container: 'flex gap-1.5 items-center h-8 py-1 px-2 rounded-(--ant-border-radius-sm)',
+};
 
 interface TreeSkeletonItemProps {
   opacity?: number;
@@ -24,7 +15,7 @@ interface TreeSkeletonItemProps {
 
 const TreeSkeletonItem = memo<TreeSkeletonItemProps>(({ opacity = 1 }) => {
   return (
-    <div className={cx('flex flex-row', styles.container)} style={{ opacity }}>
+    <div className={cn('flex flex-row', styles.container)} style={{ opacity }}>
       <Skeleton
         style={{
           flex: 'none',

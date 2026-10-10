@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ const ListViewSelectAllHint = ({
 
   return (
     <div
-      className={cx('flex flex-row items-center gap-1.5 flex-wrap', styles.selectAllHint)}
+      className={cn('flex flex-row items-center gap-1.5 flex-wrap', styles.selectAllHint)}
       style={{ minWidth: getListViewMinWidth(showUploader) }}
     >
       <span>

@@ -1,43 +1,10 @@
-import { createStaticStyles, cssVar } from 'antd-style';
-
-export const styles = createStaticStyles(({ css }) => ({
-  dropZone: css`
-    position: relative;
-    height: 100%;
-  `,
-  dropZoneActive: css`
-    background: ${cssVar.colorPrimaryBg};
-    outline: 1px dashed ${cssVar.colorPrimaryBorder};
-    outline-offset: -4px;
-  `,
-  header: css`
-    min-width: 1040px;
-    height: 40px;
-    min-height: 40px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  headerItem: css`
-    height: 100%;
-    padding-block: 6px;
-    padding-inline: 0 24px;
-  `,
-  scrollContainer: css`
-    overflow: auto hidden;
-    flex: 1;
-  `,
-  selectAllHint: css`
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 40px;
-
-    min-width: 1040px;
-    padding-block: 8px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+export const styles = {
+  dropZone: 'relative h-full',
+  dropZoneActive:
+    'bg-[var(--ant-color-primary-bg)] [outline:1px_dashed_var(--ant-color-primary-border)] -outline-offset-4',
+  header: 'min-w-[1040px] h-10 min-h-10 text-[var(--ant-color-text-description)]',
+  headerItem: 'h-full py-1.5 ps-0 pe-6',
+  scrollContainer: 'flex-1 overflow-x-auto overflow-y-hidden',
+  selectAllHint:
+    'sticky z-1 [inset-block-start:40px] min-w-[1040px] py-2 px-4 [border-block-end:1px_solid_var(--sidebar-border)] text-[12px] text-[var(--ant-color-text-description)] bg-accent',
+};

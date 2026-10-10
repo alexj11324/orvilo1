@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { Clock } from 'lucide-react';
@@ -18,52 +17,11 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
 import type { ExecuteTaskParams } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  agentCard: css`
-    padding: 4px;
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  agentDescription: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  agentTitle: css`
-    font-size: 14px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  container: css`
-    padding-block: 12px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  header: css`
-    font-size: 14px;
-    font-weight: 600;
-  `,
-  icon: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorPrimary};
-
-    background: ${cssVar.colorPrimaryBg};
-  `,
-  timeoutInput: css`
-    width: 100px;
-  `,
-}));
+const styles = {
+  agentTitle: 'text-[14px] font-semibold text-foreground',
+  container: 'rounded-[var(--ant-border-radius)] py-3',
+  timeoutInput: 'w-[100px]',
+};
 
 const DEFAULT_TIMEOUT = 1_800_000; // 30 minutes
 

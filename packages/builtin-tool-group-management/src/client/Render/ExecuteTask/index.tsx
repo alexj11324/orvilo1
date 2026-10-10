@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Clock } from 'lucide-react';
 import { memo } from 'react';
@@ -9,25 +8,12 @@ import { useTranslation } from 'react-i18next';
 
 import type { ExecuteTaskParams, ExecuteTaskState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  agentTitle: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  container: css`
-    padding-block: 12px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  taskContent: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  timeout: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  agentTitle: 'text-muted-foreground',
+  container: 'rounded-[var(--ant-border-radius)] py-3',
+  taskContent: 'rounded-[var(--ant-border-radius)] bg-accent px-3 py-2',
+  timeout: 'text-[12px] text-[var(--ant-color-text-tertiary)]',
+};
 
 /**
  * ExecuteTask Render component for Group Management tool

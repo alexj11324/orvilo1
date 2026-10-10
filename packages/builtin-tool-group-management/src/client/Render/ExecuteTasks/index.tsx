@@ -3,7 +3,6 @@
 import { Markdown } from '@lobehub/ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,48 +19,14 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
 import type { ExecuteTasksParams } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  assignee: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  container: css`
-    .accordion-action {
-      margin-inline-end: 8px;
-      opacity: 1 !important;
-    }
-  `,
-  index: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  instruction: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  resultBox: css`
-    overflow: hidden;
-  `,
-  resultLabel: css`
-    padding-inline: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-
-  taskTitle: css`
-    overflow: hidden;
-    font-size: 14px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  assignee: 'flex shrink-0 items-center gap-1.5 text-[12px] text-muted-foreground',
+  index: 'shrink-0 text-[12px] text-[var(--ant-color-text-quaternary)]',
+  instruction: 'text-[13px] leading-[1.6] text-muted-foreground',
+  resultBox: 'overflow-hidden',
+  resultLabel: 'px-1 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  taskTitle: 'truncate text-[14px]',
+};
 
 /**
  * ExecuteTasks Render component for Group Management tool
@@ -70,7 +35,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, string>>(
   ({ args, content }) => {
     const { t } = useTranslation('tool');
-    const theme = useTheme();
+
     const { tasks } = args || {};
     const resultContent = typeof content === 'string' ? content.trim() : '';
 
@@ -93,7 +58,7 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
     if (!tasksWithAgents.length && !resultContent) return null;
 
     return (
-      <div className={cn('flex', 'flex-col', 'gap-3', styles.container)}>
+      <div className={cn('flex', 'flex-col', 'gap-3')}>
         {!!tasksWithAgents.length && (
           <Accordion>
             {tasksWithAgents.map((task, index) => (
@@ -108,7 +73,7 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
                   <div className={styles.assignee}>
                     <Avatar
                       avatar={task.agent?.avatar || DEFAULT_AVATAR}
-                      background={task.agent?.backgroundColor || theme.colorBgContainer}
+                      background={task.agent?.backgroundColor || 'var(--card)'}
                       shape={'circle'}
                       size={20}
                     />
@@ -121,8 +86,8 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
                       className="p-3"
                       style={{
                         marginTop: 8,
-                        background: cssVar.colorFillTertiary,
-                        borderRadius: cssVar.borderRadius,
+                        background: 'var(--accent)',
+                        borderRadius: 'var(--ant-border-radius)',
                       }}
                     >
                       <div className={cn(styles.instruction)}>{task.instruction}</div>
@@ -141,7 +106,7 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
             </div>
             <div
               className={cn('p-3', styles.resultBox)}
-              style={{ background: cssVar.colorFillTertiary, borderRadius: cssVar.borderRadius }}
+              style={{ background: 'var(--accent)', borderRadius: 'var(--ant-border-radius)' }}
             >
               <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
                 {resultContent}

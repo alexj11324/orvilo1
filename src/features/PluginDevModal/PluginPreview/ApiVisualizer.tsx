@@ -177,7 +177,7 @@ const ApiVisualizer = memo<ApiVisualizerProps>(({ apis = [] }) => {
   );
 
   return (
-    <div className="flex flex-col gap-2 w-[100%]">
+    <div className="flex flex-col gap-2 w-full">
       <div className={styles.searchWrapper}>
         <SearchBar
           placeholder={t('dev.preview.api.searchPlaceholder')}

@@ -22,7 +22,7 @@ const PluginPreview = memo<{ form: FormInstance }>(({ form }) => {
 
   if (!manifest)
     return (
-      <div className="flex flex-col h-[100%]" style={{ background: cssVar.colorBgLayout, flex: 2 }}>
+      <div className="flex flex-col h-full" style={{ background: cssVar.colorBgLayout, flex: 2 }}>
         <PluginEmptyState />
       </div>
     );

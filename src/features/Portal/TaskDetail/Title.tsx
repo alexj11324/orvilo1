@@ -8,7 +8,7 @@ import { oneLineEllipsis } from '@/styles';
 
 const styles = {
   identifier:
-    'shrink-0 py-px px-1.5 rounded-(--radius-chip) font-mono text-[12px] text-muted-foreground bg-accent',
+    'shrink-0 py-px px-1.5 rounded-(--radius-chip) font-mono text-xs text-muted-foreground bg-accent',
 };
 
 const Title = memo(() => {

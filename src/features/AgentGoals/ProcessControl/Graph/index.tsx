@@ -720,7 +720,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
   };
   const overview = experiments.length > 0 && (
     <div className="flex items-center gap-2 flex-wrap">
-      <div className="text-[12px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t('goalExperiment.overviewCount', {
           count: experiments.length,
           nodes: props.graph.nodes.length,
@@ -747,7 +747,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
         <div className="flex items-center gap-1" key={id}>
           <ChevronRight size={14} />
           {index === navigation.path.length - 1 ? (
-            <div aria-current={'page'} className="text-[12px]">
+            <div aria-current={'page'} className="text-xs">
               {props.graph.byId[id]?.node.title}
             </div>
           ) : (
@@ -761,7 +761,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
   );
   const titleAndViews = (
     <>
-      <div className="text-[16px] font-semibold">{t('goalProcess.graph.title')}</div>
+      <div className="text-base font-semibold">{t('goalProcess.graph.title')}</div>
       {experiments.length === 0 && (
         <ToggleGroup
           size="sm"

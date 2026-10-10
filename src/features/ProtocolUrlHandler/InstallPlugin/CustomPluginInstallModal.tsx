@@ -207,7 +207,7 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
                   {schema.name}
                   <PluginTag type={'customPlugin'} />
                 </div>
-                <span className="text-[12px] text-muted-foreground">{schema.description}</span>
+                <span className="text-xs text-muted-foreground">{schema.description}</span>
               </div>
             </div>
           </div>

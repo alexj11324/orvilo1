@@ -11,9 +11,9 @@ import { TaskResultCard } from '../shared';
 
 const styles = {
   offBadge:
-    'inline-flex shrink-0 items-center gap-1 rounded-[999px] bg-accent px-2 py-0.5 text-[12px] text-(--ant-color-text-tertiary)',
+    'inline-flex shrink-0 items-center gap-1 rounded-[999px] bg-accent px-2 py-0.5 text-xs text-(--ant-color-text-tertiary)',
   onBadge:
-    'inline-flex shrink-0 items-center gap-1 rounded-[999px] bg-(--ant-color-success-bg) px-2 py-0.5 text-[12px] text-success',
+    'inline-flex shrink-0 items-center gap-1 rounded-[999px] bg-(--ant-color-success-bg) px-2 py-0.5 text-xs text-success',
 };
 
 export const SetTaskVerifyRender = memo<

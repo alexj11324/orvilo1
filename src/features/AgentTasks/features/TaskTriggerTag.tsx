@@ -111,10 +111,7 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
           ) : (
             <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
           )}
-          <div
-            className="truncate block text-[12px] text-muted-foreground"
-            style={FLEX_MIN_WIDTH_0}
-          >
+          <div className="truncate block text-xs text-muted-foreground" style={FLEX_MIN_WIDTH_0}>
             {data.primary}
           </div>
         </div>

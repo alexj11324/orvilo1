@@ -180,7 +180,7 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
       <div className={`flex flex-col gap-1.5 ${styles.head}`}>
         <div className="flex items-center gap-1.5">
           <Sparkles color={cssVar.colorTextDescription} size={13} />
-          <div className="text-[12px] text-muted-foreground">{t('taskIntent.reviewStep')}</div>
+          <div className="text-xs text-muted-foreground">{t('taskIntent.reviewStep')}</div>
         </div>
         <input
           className={styles.title}
@@ -227,7 +227,7 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
                 <div className="flex flex-col gap-0.5">
                   <div className="font-semibold">{active.question}</div>
                   {active.impact && (
-                    <div className="text-[12px] text-muted-foreground">{active.impact}</div>
+                    <div className="text-xs text-muted-foreground">{active.impact}</div>
                   )}
                 </div>
 

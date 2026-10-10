@@ -71,7 +71,7 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
             <ActionIcon icon={ExternalLink} size={'small'} />
           </a>
         </div>
-        <div className="line-clamp-2 text-[12px] text-muted-foreground">
+        <div className="line-clamp-2 text-xs text-muted-foreground">
           {description || result.content?.slice(0, 40)}
         </div>
       </div>

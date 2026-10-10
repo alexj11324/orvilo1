@@ -94,7 +94,7 @@ export const CriterionEditor = ({
   return (
     <div className="flex flex-col gap-4" style={{ padding: 16 }}>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[12px] text-muted-foreground">{t('criterion.titleLabel')}</div>
+        <div className="text-xs text-muted-foreground">{t('criterion.titleLabel')}</div>
         <Input
           autoFocus
           placeholder={t('criterion.titlePlaceholder')}
@@ -104,7 +104,7 @@ export const CriterionEditor = ({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="text-[12px] text-muted-foreground">{t('criterion.descriptionLabel')}</div>
+        <div className="text-xs text-muted-foreground">{t('criterion.descriptionLabel')}</div>
         <Textarea
           placeholder={t('criterion.descriptionPlaceholder')}
           rows={2}
@@ -115,7 +115,7 @@ export const CriterionEditor = ({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="text-[12px] text-muted-foreground">{t('criterion.verifierLabel')}</div>
+        <div className="text-xs text-muted-foreground">{t('criterion.verifierLabel')}</div>
         <Select
           items={verifierOptions}
           value={verifierType}
@@ -129,7 +129,7 @@ export const CriterionEditor = ({
               <SelectItem key={option.value} value={option.value}>
                 <div className="flex flex-col gap-0.5">
                   <div>{option.label}</div>
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t(`criterion.verifierTypeDesc.${option.value as VerifierType}` as const)}
                   </div>
                 </div>
@@ -140,7 +140,7 @@ export const CriterionEditor = ({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {isProgram ? t('criterion.scriptLabel') : t('criterion.instructionLabel')}
         </div>
         {isProgram ? (
@@ -153,9 +153,7 @@ export const CriterionEditor = ({
             }
           />
         ) : instructionLinked ? (
-          <div className="text-[12px] text-muted-foreground">
-            {t('criterion.instructionLinked')}
-          </div>
+          <div className="text-xs text-muted-foreground">{t('criterion.instructionLinked')}</div>
         ) : (
           <Textarea
             placeholder={t('criterion.instructionPlaceholder')}

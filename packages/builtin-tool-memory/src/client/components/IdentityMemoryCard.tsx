@@ -84,12 +84,12 @@ export const IdentityMemoryCard = memo<IdentityMemoryCardProps>(
                 {episodicDate && (
                   <div className="flex items-center gap-1.5">
                     <span>📅</span>
-                    <div className="text-[12px] text-muted-foreground">{episodicDate}</div>
+                    <div className="text-xs text-muted-foreground">{episodicDate}</div>
                   </div>
                 )}
                 {confidence !== undefined && (
                   <div className="flex items-center gap-2">
-                    <div className="text-[12px] text-muted-foreground font-medium">Confidence</div>
+                    <div className="text-xs text-muted-foreground font-medium">Confidence</div>
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }, (_, index) => (
                         <div
@@ -104,7 +104,7 @@ export const IdentityMemoryCard = memo<IdentityMemoryCardProps>(
                         />
                       ))}
                     </div>
-                    <div className="text-[12px] text-muted-foreground">{confidence}%</div>
+                    <div className="text-xs text-muted-foreground">{confidence}%</div>
                   </div>
                 )}
               </div>

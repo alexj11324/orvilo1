@@ -255,9 +255,9 @@ const QueueGroup = ({
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
           size={14}
         />
-        <div className="text-[12px] font-medium">{label}</div>
+        <div className="text-xs font-medium">{label}</div>
         {typeof count === 'number' ? (
-          <div className="text-[12px] text-muted-foreground">{count}</div>
+          <div className="text-xs text-muted-foreground">{count}</div>
         ) : null}
       </button>
       <div hidden={collapsed} id={regionId}>
@@ -520,7 +520,7 @@ const ReviewsPage = memo(() => {
               ) : null}
               {queueHasMore || (queueTail?.items.length ?? 0) > 0 ? (
                 <div className="flex flex-row items-center justify-between px-3">
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('reviews.loadedCount', {
                       loaded: allPullRequests.length,
                       total: queueTotal ?? '…',

@@ -20,12 +20,12 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import type { ExecuteTasksParams } from '../../../types';
 
 const styles = {
-  assignee: 'flex shrink-0 items-center gap-1.5 text-[12px] text-muted-foreground',
-  index: 'shrink-0 text-[12px] text-(--ant-color-text-quaternary)',
+  assignee: 'flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground',
+  index: 'shrink-0 text-xs text-(--ant-color-text-quaternary)',
   instruction: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
   resultBox: 'overflow-hidden',
-  resultLabel: 'px-1 text-[12px] text-(--ant-color-text-tertiary)',
-  taskTitle: 'truncate text-[14px]',
+  resultLabel: 'px-1 text-xs text-(--ant-color-text-tertiary)',
+  taskTitle: 'truncate text-sm',
 };
 
 /**

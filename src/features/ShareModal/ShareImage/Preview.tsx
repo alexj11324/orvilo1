@@ -106,7 +106,7 @@ const Preview = memo<PreviewProps>(
             <div className={styles.header}>
               <div className="flex flex-row items-center gap-3">
                 <AssigneeAvatar agentId={displayAgentId} size={28} />
-                <div className="font-semibold text-[16px]">{displayTitle}</div>
+                <div className="font-semibold text-base">{displayTitle}</div>
                 <div className="flex flex-row gap-1">
                   <ModelTag model={displayModel} />
                   {withPluginInfo && displayPlugins?.length > 0 && (

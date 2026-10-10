@@ -41,10 +41,10 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
       onClick={handleClick}
     >
       <div className="flex flex-col gap-1 py-3 px-3.5">
-        <div className="truncate min-w-0 text-[14px]" style={{ fontWeight: 500 }}>
+        <div className="truncate min-w-0 text-sm" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+        <div className="line-clamp-2 text-xs" style={{ color: cssVar.colorTextTertiary }}>
           {description}
         </div>
       </div>

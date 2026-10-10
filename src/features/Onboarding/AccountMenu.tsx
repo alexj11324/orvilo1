@@ -47,7 +47,7 @@ const AccountMenu = () => {
       >
         <Avatar className="size-5">
           {isImageAvatar(avatar) && <AvatarImage alt="" src={avatar} />}
-          <AvatarFallback className="text-[10px]">{label.slice(0, 1).toUpperCase()}</AvatarFallback>
+          <AvatarFallback className="text-xs">{label.slice(0, 1).toUpperCase()}</AvatarFallback>
         </Avatar>
         <span className="hidden truncate sm:inline">{label}</span>
       </DropdownMenuTrigger>

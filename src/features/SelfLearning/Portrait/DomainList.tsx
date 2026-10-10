@@ -24,7 +24,7 @@ const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
   const { t } = useTranslation('selfLearning');
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-[12px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t('domains.title')} {domains.length}
       </div>
       <div

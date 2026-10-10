@@ -18,9 +18,9 @@ import type {
 import { TaskApiName } from '../../../types';
 
 const styles = {
-  chip: 'inline-flex min-w-0 max-w-55 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] font-mono text-muted-foreground ms-1.5',
+  chip: 'inline-flex min-w-0 max-w-55 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-xs font-mono text-muted-foreground ms-1.5',
   contentChip:
-    'inline-flex min-w-0 max-w-65 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground ms-1.5',
+    'inline-flex min-w-0 max-w-65 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-xs text-foreground ms-1.5',
 };
 
 interface TaskCommentInspectorProps extends BuiltinInspectorProps<

@@ -341,7 +341,7 @@ const CreateDomainPage = memo(() => {
           </Button>
         </div>
         {isRefining && (
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {remainingSeconds > 0
               ? t('create.adjust.generatingCountdown', {
                   time: formatRemainingTime(remainingSeconds),
@@ -442,7 +442,7 @@ const CreateDomainPage = memo(() => {
                 )}
                 {step !== 'review' && (
                   <>
-                    <div className="text-[12px] text-muted-foreground">{t('create.briefHelp')}</div>
+                    <div className="text-xs text-muted-foreground">{t('create.briefHelp')}</div>
                     <GeneratingBorder generating={step === 'preparing'}>
                       <Textarea
                         autoFocus
@@ -480,7 +480,7 @@ const CreateDomainPage = memo(() => {
                             </div>
                           </div>
                         </div>
-                        <div className="text-[12px] text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           {remainingSeconds > 0
                             ? t('create.generatingCountdown', {
                                 time: formatRemainingTime(remainingSeconds),
@@ -531,9 +531,7 @@ const CreateDomainPage = memo(() => {
                 <Separator style={{ margin: 0 }} />
                 <div className={cx('flex flex-col gap-3', styles.reviewSection)}>
                   <div className="flex flex-row items-start gap-2 justify-between">
-                    <div className="text-[14px] text-muted-foreground">
-                      {t('create.reviewHelp')}
-                    </div>
+                    <div className="text-sm text-muted-foreground">{t('create.reviewHelp')}</div>
                     <div className="flex flex-col flex-none">
                       {renderAdjustmentButton('rationale')}
                     </div>
@@ -596,7 +594,7 @@ const CreateDomainPage = memo(() => {
                       <div className="text-(length:--text-dense) font-semibold">
                         {t('create.anchor.canon')}
                       </div>
-                      <div className="text-[12px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {t('create.anchor.canonHint')}
                       </div>
                     </div>
@@ -625,7 +623,7 @@ const CreateDomainPage = memo(() => {
                     </div>
                   </div>
                   {draft.canonEntries.length === 0 && (
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('create.anchor.noCanon')}
                     </div>
                   )}
@@ -707,7 +705,7 @@ const CreateDomainPage = memo(() => {
                       <div className="text-(length:--text-dense) font-semibold">
                         {t('create.anchor.layers')}
                       </div>
-                      <div className="text-[12px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {draft.layerSource === 'canonical' && draft.layerCanonRef
                           ? t('create.anchor.layersFrom', { ref: draft.layerCanonRef })
                           : t('create.anchor.layersInvented')}
@@ -737,7 +735,7 @@ const CreateDomainPage = memo(() => {
                     </div>
                   </div>
                   {draft.layers.length === 0 && (
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('create.anchor.noLayers')}
                     </div>
                   )}

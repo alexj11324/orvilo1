@@ -59,11 +59,11 @@ const AcceptContent = memo<AcceptContentProps>(({ exceptions, onConfirm, subject
             {translate('acceptance.accept.exceptionsTitle', { count: exceptions.length })}
           </div>
           {exceptions.map((title) => (
-            <div className="text-[12px] text-muted-foreground" key={title}>
+            <div className="text-xs text-muted-foreground" key={title}>
               · {title}
             </div>
           ))}
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {translate('acceptance.accept.exceptionsHint')}
           </div>
         </div>

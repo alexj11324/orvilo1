@@ -127,7 +127,7 @@ const GroupHeader = memo<GroupHeaderProps>(
         />
       ) : null}
       <div className="text-(length:--text-dense) font-medium">{label}</div>
-      <div className="text-[12px] text-muted-foreground">{count}</div>
+      <div className="text-xs text-muted-foreground">{count}</div>
     </div>
   ),
 );
@@ -139,7 +139,7 @@ GroupHeader.displayName = 'AgentViewAllGroupHeader';
 const SegmentLabel = memo<{ count: number; label: string }>(({ count, label }) => (
   <div className="flex items-center gap-1.5">
     {label}
-    <div className="text-[12px] text-muted-foreground">{count}</div>
+    <div className="text-xs text-muted-foreground">{count}</div>
   </div>
 ));
 

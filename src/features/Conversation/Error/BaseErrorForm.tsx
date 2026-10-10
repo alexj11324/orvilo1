@@ -14,7 +14,7 @@ const BaseErrorForm = memo<BaseErrorFormProps>(({ title, desc, action, avatar })
         {avatar}
         <div className="flex flex-col gap-0.5">
           <div className="font-medium">{title}</div>
-          <div className="text-[12px] text-muted-foreground">{desc}</div>
+          <div className="text-xs text-muted-foreground">{desc}</div>
         </div>
       </div>
       {action}

@@ -18,7 +18,7 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import type { ExecuteTaskParams } from '../../types';
 
 const styles = {
-  agentTitle: 'text-[14px] font-semibold text-foreground',
+  agentTitle: 'text-sm font-semibold text-foreground',
   container: 'rounded-(--ant-border-radius) py-3',
   timeoutInput: 'w-25',
 };

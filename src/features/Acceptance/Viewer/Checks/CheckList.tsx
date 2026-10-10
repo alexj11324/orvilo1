@@ -231,7 +231,7 @@ const CheckList = memo<CheckListProps>(
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('acceptance.group.acceptedRatio', {
                         accepted: acceptedCount,
                         total: groupChecks_.length,
@@ -248,7 +248,7 @@ const CheckList = memo<CheckListProps>(
                       </div>
                     )}
                     {ignoredCount > 0 && (
-                      <div className="text-[12px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {t('acceptance.group.ignoredCount', { count: ignoredCount })}
                       </div>
                     )}
@@ -386,7 +386,7 @@ const CheckList = memo<CheckListProps>(
                           >
                             {t('acceptance.group.feedbackLabel')}
                           </div>
-                          <div className="text-[12px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             {hydrated ? formatAbsoluteDateTime(entry.createdAt) : null}
                           </div>
                         </div>

@@ -38,14 +38,14 @@ export const SSOProvidersList = memo(() => {
         >
           {AuthIcons(item.provider, 16)}
           <span style={providerNameStyle}>{item.provider}</span>
-          {item.email && <span className="text-[11px] text-muted-foreground">· {item.email}</span>}
+          {item.email && <span className="text-xs text-muted-foreground">· {item.email}</span>}
         </div>
       ))}
 
       {providers.length === 0 && <span>--</span>}
 
       <Button
-        className="text-[12px] text-muted-foreground"
+        className="text-xs text-muted-foreground"
         style={{ cursor: 'pointer' }}
         type="button"
         variant="link"

@@ -177,8 +177,8 @@ const AcceptanceResources = () => {
                   </div>
                 )}
                 <div className={`flex flex-col gap-0.5 ${styles.meta}`}>
-                  <div className="truncate min-w-0 text-[12px]">{name}</div>
-                  <div className="truncate min-w-0 text-[11px] text-muted-foreground">
+                  <div className="truncate min-w-0 text-xs">{name}</div>
+                  <div className="truncate min-w-0 text-xs text-muted-foreground">
                     {[check, captured].filter(Boolean).join(' · ')}
                   </div>
                 </div>

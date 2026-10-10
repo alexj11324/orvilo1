@@ -66,7 +66,7 @@ function NotificationItem({
           </div>
           {content && <p className="text-muted-foreground line-clamp-2 text-xs">{content}</p>}
           <div className="flex items-center gap-2 pt-0.5">
-            <p className="text-muted-foreground text-[11px]">{formatAbsoluteDate(createdAt)}</p>
+            <p className="text-muted-foreground text-xs">{formatAbsoluteDate(createdAt)}</p>
           </div>
         </div>
       </Button>

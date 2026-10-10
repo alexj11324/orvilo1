@@ -81,9 +81,7 @@ const RunVerifyDetail = memo<{
           ) : (
             <ChevronRight color={cssVar.colorTextQuaternary} size={12} />
           )}
-          <div className="text-[12px] text-muted-foreground">
-            {t('taskDetail.runVerify.checklist')}
-          </div>
+          <div className="text-xs text-muted-foreground">{t('taskDetail.runVerify.checklist')}</div>
           {extra}
         </div>
       </Button>

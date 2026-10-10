@@ -81,21 +81,19 @@ const ImportState = memo<{ onRetry: () => void; showRetry: boolean; state?: Impo
   ({ state, showRetry, onRetry }) => {
     const { t } = useTranslation('topic');
     if (!state || state === 'pending')
-      return (
-        <div className="text-[12px] text-muted-foreground">{t('heteroImport.state.pending')}</div>
-      );
+      return <div className="text-xs text-muted-foreground">{t('heteroImport.state.pending')}</div>;
     if (state === 'running')
       return (
         <div className="flex items-center gap-1.5">
           <NeuralNetworkLoading size={14} />
-          <div className="text-[12px] text-muted-foreground">{t('heteroImport.state.running')}</div>
+          <div className="text-xs text-muted-foreground">{t('heteroImport.state.running')}</div>
         </div>
       );
     if (state.ok)
       return (
         <div className="flex items-center gap-1">
           <Check size={14} style={{ color: 'var(--lobe-color-success, #52c41a)' }} />
-          <div className="text-[12px] text-success">
+          <div className="text-xs text-success">
             {t('heteroImport.state.inserted', { count: state.inserted })}
           </div>
         </div>
@@ -110,7 +108,7 @@ const ImportState = memo<{ onRetry: () => void; showRetry: boolean; state?: Impo
     return (
       <div className="flex items-center gap-1">
         <X size={14} style={{ color: 'var(--lobe-color-error, #ff4d4f)' }} />
-        <div className="text-[12px] text-destructive">{t('heteroImport.state.failed')}</div>
+        <div className="text-xs text-destructive">{t('heteroImport.state.failed')}</div>
       </div>
     );
   },
@@ -165,25 +163,23 @@ export const SessionRow = memo<SessionRowProps>(
           </div>
           <div className="flex items-center gap-2.5">
             {digest.endAt && (
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {formatAbsoluteDateTime(digest.endAt)}
               </div>
             )}
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('heteroImport.meta.messages', { count: digest.messageCount })}
             </div>
             {digest.tokens ? (
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('heteroImport.meta.tokens', { tokens: fmtTokens(digest.tokens) })}
               </div>
             ) : null}
             {digest.gitBranch && (
-              <div className="truncate block text-[12px] text-muted-foreground">
-                {digest.gitBranch}
-              </div>
+              <div className="truncate block text-xs text-muted-foreground">{digest.gitBranch}</div>
             )}
             {showDir && (
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {baseName(digest.workingDirectory ?? '')}
               </div>
             )}

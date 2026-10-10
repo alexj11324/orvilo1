@@ -51,7 +51,7 @@ export const AnalyzeMediaInspector = memo<
       )}
       {!isArgumentsStreaming && !isLoading && mediaCount > 0 && (
         <span
-          className="text-[12px]"
+          className="text-xs"
           style={{ marginInlineStart: 6, color: cssVar.colorTextDescription }}
         >
           · {t('builtins.orvilo-agent.apiName.analyzeMedia.mediaCount', { count: mediaCount })}

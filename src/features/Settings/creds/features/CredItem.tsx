@@ -129,7 +129,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-[15px] font-medium">{cred.name}</span>
+            <span className="truncate text-sm font-medium">{cred.name}</span>
             <Badge variant="outline">{t(`creds.types.${cred.type}`)}</Badge>
             {/* Only populated by workspace-scoped list responses (workspaceCreds.list) —
                 distinguishes a member's shared personal credential from one the workspace owns directly. */}

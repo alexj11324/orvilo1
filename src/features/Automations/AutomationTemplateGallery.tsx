@@ -16,7 +16,7 @@ import {
 
 const styles = {
   cardGrid: 'grid grid-cols-[1fr] gap-3 [@media(width>=900px)]:grid-cols-[1fr_1fr]',
-  cardSummary: 'line-clamp-2 text-[12px] text-muted-foreground',
+  cardSummary: 'line-clamp-2 text-xs text-muted-foreground',
   cardTitle: 'text-(length:--text-dense) font-medium text-foreground',
 };
 
@@ -52,8 +52,8 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
         {persistent ? (
           <div className="flex items-start gap-4 justify-between">
             <div className="flex flex-col gap-1">
-              <div className="text-[14px] font-semibold">{t('templates.section')}</div>
-              <div className="text-[12px] text-muted-foreground">{t('templates.gallery_cta')}</div>
+              <div className="text-sm font-semibold">{t('templates.section')}</div>
+              <div className="text-xs text-muted-foreground">{t('templates.gallery_cta')}</div>
             </div>
             <Button size="sm" onClick={onStartBlank}>
               <PlusIcon data-icon="inline-start" />
@@ -65,7 +65,7 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
             <div className="flex items-center justify-center h-10 w-10">
               <AlarmClockIcon color={'var(--ant-color-text-quaternary)'} size={40} />
             </div>
-            <div className="text-[16px] font-semibold">{t('page.empty.title')}</div>
+            <div className="text-base font-semibold">{t('page.empty.title')}</div>
             <div
               className="text-(length:--text-dense) text-muted-foreground"
               style={{ maxWidth: 480 }}

@@ -15,7 +15,7 @@ import { ClaudeCodeApiName, type ToolSearchArgs } from '../../types';
 const SELECT_PREFIX = 'select:';
 
 const styles = {
-  tag: 'py-0.5 px-2.5 rounded-[999px] font-mono text-[12px] text-foreground bg-accent',
+  tag: 'py-0.5 px-2.5 rounded-[999px] font-mono text-xs text-foreground bg-accent',
   tagsList: 'inline-flex shrink gap-1 items-center min-w-0 ms-1.5 whitespace-nowrap',
 };
 

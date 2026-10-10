@@ -6,7 +6,7 @@ import { getFlowEdgeLabelLayout } from './flowEdgeLabel';
 // Non-interactive captions retain an opaque surface beneath the translucent wash.
 const styles = {
   label:
-    'pointer-events-none absolute line-clamp-5 max-w-50 max-h-23.5 py-1.25 px-2.5 rounded-[8px] text-[12px] leading-4.5 text-muted-foreground wrap-anywhere whitespace-normal bg-card bg-[linear-gradient(var(--ant-color-fill-quaternary),var(--ant-color-fill-quaternary))]',
+    'pointer-events-none absolute line-clamp-5 max-w-50 max-h-23.5 py-1.25 px-2.5 rounded-[8px] text-xs leading-4.5 text-muted-foreground wrap-anywhere whitespace-normal bg-card bg-[linear-gradient(var(--ant-color-fill-quaternary),var(--ant-color-fill-quaternary))]',
 };
 
 type TransitionEdge = Edge<{ laneOffset?: number }>;

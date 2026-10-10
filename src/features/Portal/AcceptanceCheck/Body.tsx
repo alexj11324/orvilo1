@@ -106,7 +106,7 @@ const Body = memo(() => {
             width={18}
           />
         </span>
-        <div className="text-[16px] font-semibold">
+        <div className="text-base font-semibold">
           C{check.seq} · {check.title}
         </div>
       </div>
@@ -114,7 +114,7 @@ const Body = memo(() => {
         <div className="flex flex-row items-center gap-4 flex-wrap">
           {verifierType && (
             <div className="flex flex-row items-center gap-2">
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('taskDetail.acceptance.verifier')}
               </div>
               <Badge variant="secondary">
@@ -127,7 +127,7 @@ const Body = memo(() => {
           )}
           {requiredEvidence.length > 0 && (
             <div className="flex flex-row items-center gap-2 flex-wrap">
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('taskDetail.acceptance.requiredEvidence')}
               </div>
               {requiredEvidence.map((evidence) => (

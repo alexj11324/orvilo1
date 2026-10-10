@@ -98,25 +98,25 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
             <div className={`flex flex-col ${styles.overview}`}>
               <div className="flex items-center gap-5 justify-between flex-wrap">
                 <div className="flex flex-col gap-0.75">
-                  <div className="text-[20px] font-semibold">{t('goalPage.title')}</div>
+                  <div className="text-xl font-semibold">{t('goalPage.title')}</div>
                   <div className="text-muted-foreground">{t('goalPage.description')}</div>
                 </div>
                 <div className="flex gap-5">
                   <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
-                    <div className="text-[20px] font-semibold">{summary.total}</div>
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xl font-semibold">{summary.total}</div>
+                    <div className="text-xs text-muted-foreground">
                       {t('goalPage.metrics.total')}
                     </div>
                   </div>
                   <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
-                    <div className="text-[20px] font-semibold">{summary.pursuing}</div>
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xl font-semibold">{summary.pursuing}</div>
+                    <div className="text-xs text-muted-foreground">
                       {t('goalPage.metrics.pursuing')}
                     </div>
                   </div>
                   <div className={`flex flex-col gap-0.5 ${styles.metric}`}>
-                    <div className="text-[20px] font-semibold">{summary.delivered}</div>
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xl font-semibold">{summary.delivered}</div>
+                    <div className="text-xs text-muted-foreground">
                       {t('goalPage.metrics.delivered')}
                     </div>
                   </div>
@@ -126,7 +126,7 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="text-[16px] font-semibold">{t('goalPage.listTitle')}</div>
+                  <div className="text-base font-semibold">{t('goalPage.listTitle')}</div>
                   <span className={styles.countBadge}>{visibleGoalCount}</span>
                 </div>
                 <div className="flex items-center gap-2">

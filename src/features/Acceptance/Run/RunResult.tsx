@@ -10,11 +10,11 @@ const styles = {
   body: 'px-4 py-3 text-(length:--text-dense) leading-[1.7] text-muted-foreground',
   card: 'overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
   cardFailed: 'border-(--ant-color-error-border)',
-  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-[12px] text-(--ant-color-text-tertiary)',
+  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-xs text-(--ant-color-text-tertiary)',
   head: 'flex items-start gap-3.5 border-b border-sidebar-border px-4 py-3.5',
   status: 'text-(length:--text-dense) font-semibold',
-  sub: 'mt-1 text-[12px] leading-normal text-(--ant-color-text-tertiary)',
-  title: 'text-[15px] font-bold text-foreground',
+  sub: 'mt-1 text-xs leading-normal text-(--ant-color-text-tertiary)',
+  title: 'text-sm font-bold text-foreground',
 };
 
 interface BadgeMeta {

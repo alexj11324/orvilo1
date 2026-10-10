@@ -101,11 +101,11 @@ const ReviewChecksPanel = memo<{
     <div className={cx('flex flex-col', styles.card)}>
       <div className={cx('flex items-center gap-2', styles.cardHeader)}>
         <div className="font-medium">{t('reviews.checks')}</div>
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {t(visual.labelKey as never, { count: summary.failing })}
         </div>
         <div className="flex-1" />
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {checks.loaded}
           {checks.total !== null ? `/${checks.total}` : ''}
         </div>
@@ -116,12 +116,12 @@ const ReviewChecksPanel = memo<{
           <div className={styles.checkRow} key={`${check.name}-${index}`}>
             {createElement(icon.icon, { color: icon.color, size: 14 })}
             <div className="text-(length:--text-dense)">{check.name}</div>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {check.rawConclusion ?? check.rawStatus ?? ''}
             </div>
             {check.detailsUrl ? (
               <div
-                className="text-[12px] text-muted-foreground"
+                className="text-xs text-muted-foreground"
                 style={{ cursor: 'pointer' }}
                 onClick={() => window.open(check.detailsUrl!, '_blank', 'noopener,noreferrer')}
               >

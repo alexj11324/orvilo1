@@ -117,7 +117,7 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
               <AlertTriangle color={cssVar.colorWarning} size={16} />
               <h5 className="m-0">{t('mcpInstall.dependenciesRequired')}</h5>
             </div>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('mcpInstall.dependenciesDescription')}
             </div>
           </div>
@@ -137,7 +137,7 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{dep.name}</span>
                         {dep.requiredVersion && (
-                          <span className="text-[12px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {t('mcpInstall.dependencyStatus.requiredVersion', {
                               version: dep.requiredVersion,
                             })}
@@ -148,14 +148,14 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                         {dep.meetRequirement ? (
                           <>
                             <CheckCircle color={cssVar.colorSuccess} size={14} />
-                            <span className="text-[12px] text-success-text">
+                            <span className="text-xs text-success-text">
                               {t('mcpInstall.dependencyStatus.installed')}
                             </span>
                           </>
                         ) : (
                           <>
                             <AlertTriangle color={cssVar.colorWarning} size={14} />
-                            <span className="text-[12px] text-warning-text">
+                            <span className="text-xs text-warning-text">
                               {t('mcpInstall.dependencyStatus.notInstalled')}
                             </span>
                           </>
@@ -167,7 +167,7 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                       <div className="flex flex-col gap-3">
                         {dep.installInstructions.current && (
                           <div className="flex flex-col gap-1">
-                            <span className="text-[12px] font-semibold">
+                            <span className="text-xs font-semibold">
                               <Terminal size={12} style={{ marginRight: 4 }} />
                               {t('mcpInstall.installMethods.recommended')}
                             </span>
@@ -177,7 +177,7 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
 
                         {dep.installInstructions.manual && (
                           <div className="flex flex-col gap-1">
-                            <span className="text-[12px] font-semibold">
+                            <span className="text-xs font-semibold">
                               <ExternalLink size={12} style={{ marginRight: 4 }} />
                               {t('mcpInstall.installMethods.manual')}
                             </span>

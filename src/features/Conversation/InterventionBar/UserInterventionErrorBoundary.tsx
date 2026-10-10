@@ -108,7 +108,7 @@ const UserInterventionFallback = memo<UserInterventionFallbackProps>(
             {t('tool.intervention.renderFallback.description')}
           </span>
         </div>
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {identifier} / {apiName} · {t('tool.intervention.renderFallback.rawJson')}
         </div>
         <CodeBlock wrap code={json} language="json" variant="ghost" />

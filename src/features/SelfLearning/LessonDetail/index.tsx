@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 26px title geometry pending a design-scale choice; no matching role is approved.
 
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -105,7 +106,7 @@ const LessonDetail = memo(() => {
             {data && (
               <div className="flex flex-col gap-5" style={{ paddingBlock: '14px 64px' }}>
                 <div className="flex flex-col gap-2.5">
-                  <div className="text-[12px] text-muted-foreground font-semibold">
+                  <div className="text-xs text-muted-foreground font-semibold">
                     {t('rules.detail.eyebrow', { code: data.lesson.code })}
                   </div>
                   <div
@@ -132,11 +133,11 @@ const LessonDetail = memo(() => {
                     {/* The real revision counter, not an invented version number — S60 forbids
                         faking one, and this table has the chain to back it up. */}
                     {data.lesson.currentRevision > 1 && (
-                      <div className="text-[12px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {t('rules.detail.revision', { revision: data.lesson.currentRevision })}
                       </div>
                     )}
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('rules.detail.updatedAt', {
                         time: dayjs(data.lesson.updatedAt).fromNow(),
                       })}
@@ -166,10 +167,10 @@ const LessonDetail = memo(() => {
                 >
                   {sections?.map((section) => (
                     <div className={styles.sectionItem} key={section.key}>
-                      <div className="text-[12px] text-muted-foreground font-semibold">
+                      <div className="text-xs text-muted-foreground font-semibold">
                         <SectionLabel sectionKey={section.key} />
                       </div>
-                      <div className="text-[14px]" style={{ lineHeight: 1.65 }}>
+                      <div className="text-sm" style={{ lineHeight: 1.65 }}>
                         {section.body}
                       </div>
                     </div>
@@ -177,7 +178,7 @@ const LessonDetail = memo(() => {
                 </div>
 
                 <div className="flex flex-col gap-2.5">
-                  <div className="text-[15px] font-semibold">{t('rules.detail.examples')}</div>
+                  <div className="text-sm font-semibold">{t('rules.detail.examples')}</div>
                   {data.hits.length === 0 ? (
                     <Empty>
                       <EmptyHeader>
@@ -203,19 +204,19 @@ const LessonDetail = memo(() => {
                           </Badge>
                         </div>
                         {hit.note && (
-                          <div className="text-[12px] text-muted-foreground">{hit.note}</div>
+                          <div className="text-xs text-muted-foreground">{hit.note}</div>
                         )}
                         {hit.subjectType === 'topic' && activeAgentId ? (
                           <Link to={urlJoin('/agent', activeAgentId, hit.subjectId)}>
                             <div className="flex items-center gap-1.25">
                               <MessagesSquare className="text-muted-foreground" size={13} />
-                              <div className="text-[12px] text-muted-foreground">
+                              <div className="text-xs text-muted-foreground">
                                 {hit.runTitle ?? `#${hit.runIndex}`}
                               </div>
                             </div>
                           </Link>
                         ) : (
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             {hit.runTitle ?? `#${hit.runIndex}`}
                           </div>
                         )}

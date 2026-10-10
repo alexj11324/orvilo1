@@ -171,7 +171,7 @@ const CreatedByLabel = memo(() => {
   const meta = useUserDisplayMeta(createdByUserId);
   if (!createdByUserId) return null;
   return (
-    <div className="text-[12px] text-muted-foreground">
+    <div className="text-xs text-muted-foreground">
       {t('detail.created_by', { name: meta?.title ?? '' })}
     </div>
   );

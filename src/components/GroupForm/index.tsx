@@ -128,7 +128,7 @@ const FormGroupItems = ({
                 <span className="font-medium">{label}</span>
                 {tag}
               </div>
-              {desc ? <div className="text-[12px] text-muted-foreground">{desc}</div> : null}
+              {desc ? <div className="text-xs text-muted-foreground">{desc}</div> : null}
             </div>
             {hasBinding || typeof children === 'function' ? (
               <AntdForm.Item className={itemClassName} style={{ marginBottom: 0 }} {...binding}>

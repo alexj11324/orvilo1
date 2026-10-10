@@ -174,7 +174,7 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
               </div>
             )}
             <div
-              className={cn('text-[12px]', styles.updatedAt)}
+              className={cn('text-xs', styles.updatedAt)}
               title={updatedAt ? formatAbsoluteDateTime(updatedAt) : undefined}
             >
               {updatedAt ? formatUpdatedAt(updatedAt) : '–'}

@@ -53,7 +53,7 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
         label: (
           <div className="flex flex-col gap-1" onMouseEnter={() => preloadLang('auto')}>
             <div style={{ lineHeight: 1.2 }}>{t('settingCommon.lang.autoMode')}</div>
-            <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.2 }}>
+            <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.2 }}>
               {t(`lang.auto` as any, { ns: 'common' })}
             </div>
           </div>
@@ -77,7 +77,7 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
             onMouseEnter={() => preloadLang(item.value)}
           >
             <div style={{ lineHeight: 1.2 }}>{item.label}</div>
-            <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.2 }}>
+            <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.2 }}>
               {t(`lang.${item.value}` as any, { ns: 'common' })}
             </div>
           </div>

@@ -84,7 +84,7 @@ export const RecommendationCard = memo<RecommendationCardProps>(
             style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
           >
             {renderIcon(RECOMMENDATION_ICON_SIZE.regular)}
-            <div className="truncate min-w-0 text-[16px] font-medium">{title}</div>
+            <div className="truncate min-w-0 text-base font-medium">{title}</div>
           </div>
         </div>
         <Separator className="border-dashed" style={{ marginBlock: 0 }} />

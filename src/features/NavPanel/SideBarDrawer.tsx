@@ -91,7 +91,7 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
                 left={
                   typeof title === 'string' ? (
                     <div
-                      className="truncate text-[14px] font-[400]"
+                      className="truncate text-sm font-[400]"
                       style={{ fontWeight: 600, paddingLeft: 8 }}
                     >
                       {title}

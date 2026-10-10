@@ -79,7 +79,7 @@ const HowItWorksContent = memo(() => {
       </Stepper>
       <div className={`flex items-start gap-2 ${styles.loopBack}`}>
         <RotateCcwIcon className={styles.loopIcon} size={13} />
-        <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.6 }}>
+        <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.6 }}>
           {t('goalEmpty.loop')}
         </div>
       </div>

@@ -11,7 +11,7 @@ import type { DeleteTaskParams, DeleteTaskState } from '../../../types';
 
 const styles = {
   identifierChip:
-    'shrink-0 rounded-[999px] border border-dashed border-(--ant-color-error-border) bg-transparent px-2 py-0.5 font-mono text-[12px] text-destructive line-through ms-1.5',
+    'shrink-0 rounded-[999px] border border-dashed border-(--ant-color-error-border) bg-transparent px-2 py-0.5 font-mono text-xs text-destructive line-through ms-1.5',
 };
 
 export const DeleteTaskInspector = memo<BuiltinInspectorProps<DeleteTaskParams, DeleteTaskState>>(

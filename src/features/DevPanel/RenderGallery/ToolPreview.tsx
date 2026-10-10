@@ -89,7 +89,7 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
     <div className={cx(styles.card, 'flex flex-col')} id={toApiAnchor(api.apiName)}>
       <div className={cx(styles.cardHeader, 'flex flex-col')}>
         <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-          <div className="text-[18px] font-semibold">{api.apiName}</div>
+          <div className="text-lg font-semibold">{api.apiName}</div>
           <Tag>{api.identifier}</Tag>
           {variants.length > 1 && (
             <Tabs
@@ -118,7 +118,7 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
       <div className={cx(styles.cardBody, 'flex flex-col')}>
         <div className={cx(styles.previewSection, 'flex flex-col')}>
           <div className={cx(styles.sectionLabel, 'flex')}>
-            <div className="text-[12px] text-muted-foreground font-semibold">Inspector</div>
+            <div className="text-xs text-muted-foreground font-semibold">Inspector</div>
           </div>
           <div className={styles.previewShell}>
             <ToolInspectorSlot
@@ -132,7 +132,7 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
 
         <div className={cx(styles.previewSection, 'flex flex-col')}>
           <div className={cx(styles.sectionLabel, 'flex')}>
-            <div className="text-[12px] text-muted-foreground font-semibold">Body</div>
+            <div className="text-xs text-muted-foreground font-semibold">Body</div>
             <Tag>{bodyKindForMode(mode)}</Tag>
           </div>
           <div className={styles.previewShell}>

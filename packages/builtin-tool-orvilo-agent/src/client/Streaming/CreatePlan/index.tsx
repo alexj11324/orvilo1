@@ -11,9 +11,9 @@ import type { CreatePlanParams } from '../../../types';
 
 const styles = {
   container: 'overflow-hidden rounded-(--radius-card) border border-border p-3',
-  description: 'text-[14px] text-muted-foreground',
+  description: 'text-sm text-muted-foreground',
   header: 'flex items-center gap-2 py-1',
-  title: 'truncate text-[16px] font-medium text-foreground',
+  title: 'truncate text-base font-medium text-foreground',
 };
 
 export const CreatePlanStreaming = memo<BuiltinStreamingProps<CreatePlanParams>>(({ args }) => {

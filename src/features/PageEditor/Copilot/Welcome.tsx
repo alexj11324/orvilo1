@@ -23,7 +23,7 @@ const AgentBuilderWelcome = memo(() => {
         }}
       >
         <AssigneeAvatar agentId={agentId} size={78} />
-        <div className="text-[24px] font-bold">{t('pageCopilot.title')}</div>
+        <div className="text-2xl font-bold">{t('pageCopilot.title')}</div>
         <SuggestQuestions count={3} mode="write" />
       </div>
     </>

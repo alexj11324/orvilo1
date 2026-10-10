@@ -317,7 +317,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
         {activity?.title || drawerTitle || t('taskDetail.topicDrawer.untitled')}
       </div>
       {activity?.seq != null && (
-        <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
+        <div className="text-xs text-muted-foreground" style={{ flex: 'none' }}>
           #{activity.seq}
         </div>
       )}

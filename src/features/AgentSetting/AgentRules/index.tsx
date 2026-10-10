@@ -79,7 +79,7 @@ const AgentRules = memo(() => {
                   <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
                     <div className="font-medium">{domain.title}</div>
                     {/* Scope and size, in counts — the same facts the rules page leads with. */}
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('agentRules.domainMeta', {
                         habits: domain.lessons.length,
                         runs: domain.runCount,
@@ -109,7 +109,7 @@ const AgentRules = memo(() => {
           </div>
         </AsyncBoundary>
         <div className="flex items-center gap-2 justify-between flex-wrap">
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {t('agentRules.summary', { count: ruleCount })}
           </div>
           {openPath && (

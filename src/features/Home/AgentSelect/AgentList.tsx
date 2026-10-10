@@ -60,7 +60,7 @@ interface AgentListProps {
 // Same spec as the agent-detail SwitchPanel's section header.
 const SectionHeader = memo<{ children: ReactNode }>(({ children }) => (
   <div className={cx(styles.sectionHeader, 'flex flex-col')}>
-    <div className="text-[12px] text-muted-foreground font-medium">{children}</div>
+    <div className="text-xs text-muted-foreground font-medium">{children}</div>
   </div>
 ));
 

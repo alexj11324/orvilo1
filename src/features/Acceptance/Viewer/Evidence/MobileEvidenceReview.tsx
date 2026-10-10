@@ -19,7 +19,7 @@ const styles = {
   body: 'flex flex-1 flex-col min-w-0 min-h-0',
   scroll: 'overflow-y-auto overscroll-contain flex flex-1 flex-col gap-2 min-h-0 pb-3',
   stage: 'flex flex-none h-[42dvh] min-h-55',
-  editor: 'flex flex-none flex-col gap-4 pt-1 [&_textarea]:text-[16px]',
+  editor: 'flex flex-none flex-col gap-4 pt-1 [&_textarea]:text-base',
   footer: 'flex flex-none flex-col gap-2 pt-2 border-t border-sidebar-border [&>button]:min-h-11',
 };
 
@@ -112,7 +112,7 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
                 size={{ blockSize: 44, size: 20 }}
                 onClick={() => model.stepZoom(-1)}
               />
-              <div className="text-[12px]">{Math.round(zoom * 100)}%</div>
+              <div className="text-xs">{Math.round(zoom * 100)}%</div>
               <ActionIcon
                 aria-label={t('acceptance.review.zoomIn')}
                 disabled={zoom >= ZOOM_STEPS.at(-1)!}
@@ -123,7 +123,7 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
             </div>
             {/* The hint is the region's receipt: it says the box landed AND
                 that it is still editable, right above the note it belongs to. */}
-            <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
+            <div className="text-xs text-muted-foreground" style={{ flex: 'none' }}>
               {drawing && activeAnnotations.length > 0
                 ? t('acceptance.review.mobileDrawnHint', { count: activeAnnotations.length })
                 : t(
@@ -164,9 +164,7 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
             uploading={uploading}
             onRemove={model.removeAttachment}
           />
-          <div className="text-[12px] text-muted-foreground">
-            {t('acceptance.review.draftSaved')}
-          </div>
+          <div className="text-xs text-muted-foreground">{t('acceptance.review.draftSaved')}</div>
         </div>
       </div>
       <div className={styles.footer}>

@@ -444,7 +444,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 title={t('createGoal.back')}
                 onClick={() => setStep('describe')}
               />
-              <div className="text-[12px] text-muted-foreground">{t('createGoal.reviewStep')}</div>
+              <div className="text-xs text-muted-foreground">{t('createGoal.reviewStep')}</div>
             </div>
           )}
           {step === 'review' ? (
@@ -495,7 +495,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                       </div>
                     </div>
                   </div>
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {remainingSeconds > 0
                       ? t('createGoal.generatingCountdown', {
                           time: formatGoalGenerationRemainingTime(remainingSeconds),
@@ -541,7 +541,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 <div className="text-(length:--text-dense) font-semibold">
                   {t('createGoal.criteriaTitle')}
                 </div>
-                <div className={cn('text-[12px]', styles.sectionHint)}>
+                <div className={cn('text-xs', styles.sectionHint)}>
                   {t('createGoal.criteriaHint')}
                 </div>
               </div>
@@ -601,7 +601,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
             </div>
             <div className="flex flex-col gap-3">
               <div className={styles.budgetField}>
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('createGoal.roundBudgetLabel')}
                 </div>
                 <NumberField
@@ -623,13 +623,13 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                     </span>
                   </NumberFieldGroup>
                 </NumberField>
-                <div className={cn('text-[12px]', styles.sectionHint)}>
+                <div className={cn('text-xs', styles.sectionHint)}>
                   {t('createGoal.roundBudgetHint')}
                 </div>
               </div>
 
               <div className={styles.budgetField}>
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('createGoal.costBudgetLabel')}
                 </div>
                 <NumberField
@@ -647,13 +647,13 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                     <NumberFieldInput placeholder={t('createGoal.costBudgetPlaceholder')} />
                   </NumberFieldGroup>
                 </NumberField>
-                <div className={cn('text-[12px]', styles.sectionHint)}>
+                <div className={cn('text-xs', styles.sectionHint)}>
                   {t('createGoal.costBudgetHint')}
                 </div>
               </div>
 
               <div className={styles.budgetField}>
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('createGoal.parallelismLabel')}
                 </div>
                 <NumberField
@@ -676,7 +676,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                     </span>
                   </NumberFieldGroup>
                 </NumberField>
-                <div className={cn('text-[12px]', styles.sectionHint)}>
+                <div className={cn('text-xs', styles.sectionHint)}>
                   {t('createGoal.parallelismHint')}
                 </div>
               </div>

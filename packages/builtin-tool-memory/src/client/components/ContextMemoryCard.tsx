@@ -101,7 +101,7 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
             >
               {scoreItems.map((item) => (
                 <div className="flex items-center gap-2" key={item.title}>
-                  <div className="text-[12px] text-muted-foreground font-medium">{item.title}</div>
+                  <div className="text-xs text-muted-foreground font-medium">{item.title}</div>
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }, (_, index) => (
                       <div
@@ -116,7 +116,7 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
                       />
                     ))}
                   </div>
-                  <div className="text-[12px] text-muted-foreground">{item.percent}%</div>
+                  <div className="text-xs text-muted-foreground">{item.percent}%</div>
                 </div>
               ))}
             </div>

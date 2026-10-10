@@ -538,9 +538,7 @@ const TaskVerifyConfig = memo(() => {
         {savedCount > 0 ? (
           <Tag>{t('verifyConfig.criteriaCount', { count: savedCount })}</Tag>
         ) : showRequirement ? null : (
-          <div className={cn('text-[12px]', styles.subtitle)}>
-            {t('verifyConfig.collapsedHint')}
-          </div>
+          <div className={cn('text-xs', styles.subtitle)}>{t('verifyConfig.collapsedHint')}</div>
         )}
       </div>
     );
@@ -548,7 +546,9 @@ const TaskVerifyConfig = memo(() => {
     return (
       <div className="flex flex-col gap-0.5">
         {trigger}
-        <div className={cn('text-[14px]', styles.collapsedRequirement)}>{requirementPreview}</div>
+        <div className={cn('text-sm leading-normal', styles.collapsedRequirement)}>
+          {requirementPreview}
+        </div>
       </div>
     );
   }
@@ -722,9 +722,7 @@ const TaskVerifyConfig = memo(() => {
         )}
 
         <div className="flex flex-col gap-1.5">
-          <div className={cn('text-[12px]', styles.subtitle)}>
-            {t('taskDetail.acceptance.goal')}
-          </div>
+          <div className={cn('text-xs', styles.subtitle)}>{t('taskDetail.acceptance.goal')}</div>
           <div className={cn(requirementText ? undefined : 'text-muted-foreground')}>
             {requirementText || t('verifyConfig.requirementEmpty')}
           </div>

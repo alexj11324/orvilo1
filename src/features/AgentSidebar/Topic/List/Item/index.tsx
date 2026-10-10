@@ -326,7 +326,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     const workingDirectoryNode = workingDirectoryDisplay ? (
       <div className="flex items-center gap-1" style={{ overflow: 'hidden' }}>
         <DirIcon repoType={workingDirectoryDisplay.repoType} size={13} />
-        <div className="truncate text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+        <div className="truncate text-xs" style={{ color: cssVar.colorTextDescription }}>
           {workingDirectoryDisplay.label}
         </div>
       </div>
@@ -356,7 +356,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     const draftKey = useMemo(() => (id ? topicDraftKey(id) : newTopicDraftKey), [id]);
     const hasDraft = useHasDraft(draftKey);
     const draftPrefix = hasDraft ? (
-      <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
+      <div className="text-xs" style={{ color: cssVar.colorError, flex: 'none' }}>
         {t('draft')}
       </div>
     ) : undefined;

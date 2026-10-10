@@ -135,7 +135,7 @@ const InviteAcceptPage = memo(() => {
       <div className="flex items-center gap-3">
         <Avatar avatar={preview.workspace.avatar} name={preview.workspace.name} size={48} />
         <div className="flex flex-col gap-0.5">
-          <div className="text-[18px] font-semibold">{preview.workspace.name}</div>
+          <div className="text-lg font-semibold">{preview.workspace.name}</div>
           <div className="text-(length:--text-dense) text-muted-foreground">
             {t('workspaceSetting.invite.invitedBy', {
               name: preview.inviter.name ?? t('workspaceSetting.invite.unknownInviter'),
@@ -151,7 +151,7 @@ const InviteAcceptPage = memo(() => {
         </div>
         {preview.projects.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('workspaceSetting.invite.projectAccess')}
             </div>
             {preview.projects.map((project) => (

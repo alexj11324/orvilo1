@@ -20,15 +20,13 @@ const UpdateIdentityMemoryRender = memo<
       {/* An update only sends the fields it writes, so naming them is the whole story */}
       {changedFields.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="text-[12px] text-muted-foreground">Updated</div>
+          <div className="text-xs text-muted-foreground">Updated</div>
           {changedFields.map((field) => (
             <Badge key={field} size="sm">
               {field}
             </Badge>
           ))}
-          {mergeStrategy && (
-            <div className="text-[12px] text-muted-foreground">· {mergeStrategy}</div>
-          )}
+          {mergeStrategy && <div className="text-xs text-muted-foreground">· {mergeStrategy}</div>}
         </div>
       )}
       <IdentityMemoryCard data={identity} fallbackTitle={'Updated Identity'} />

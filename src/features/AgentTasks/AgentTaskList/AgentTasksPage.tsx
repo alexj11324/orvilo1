@@ -851,7 +851,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
         <div className="flex items-center gap-1">
           {milestoneFilterName && (
             <div className="flex items-center gap-0.5">
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('taskList.milestoneFilter', { name: milestoneFilterName })}
               </div>
               <ActionIcon

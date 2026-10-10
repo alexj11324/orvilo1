@@ -207,7 +207,7 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
           {installed.length > 0 ? (
             <>
               <div
-                className={'text-[12px] text-muted-foreground font-medium'}
+                className={'text-xs text-muted-foreground font-medium'}
                 style={{ paddingBlock: 4, paddingInline: 8 }}
               >
                 {t('localHarness.title')}

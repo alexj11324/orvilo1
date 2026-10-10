@@ -42,7 +42,7 @@ export const UpdatePlanInspector = memo<BuiltinInspectorProps<UpdatePlanParams, 
         </span>
         {completed && (
           <span
-            className="font-mono rounded bg-muted px-1 text-[12px]"
+            className="font-mono rounded bg-muted px-1 text-xs"
             style={{ color: cssVar.colorSuccess }}
           >
             <CheckCircle size={12} />
@@ -51,7 +51,7 @@ export const UpdatePlanInspector = memo<BuiltinInspectorProps<UpdatePlanParams, 
         )}
         {hasUpdates && !completed && (
           <span
-            className="font-mono rounded bg-muted px-1 text-[12px]"
+            className="font-mono rounded bg-muted px-1 text-xs"
             style={{ color: cssVar.colorWarning }}
           >
             <DiffIcon size={12} />

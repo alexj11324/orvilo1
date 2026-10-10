@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = {
   container: 'rounded-(--ant-border-radius-lg) border border-sidebar-border p-2',
-  meta: 'text-[12px]',
+  meta: 'text-xs',
 };
 
 const ReadFileSkeleton = memo(() => {

@@ -58,7 +58,7 @@ const AgentInfo = memo(() => {
   return (
     <div className="flex flex-col gap-3">
       <AgentRuntimeIcon size={64} type={runtimeType} />
-      <div className="text-[24px] font-bold">{displayTitle}</div>
+      <div className="text-2xl font-bold">{displayTitle}</div>
       <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
         <Markdown fontSize={fontSize} variant={'chat'}>
           {message}

@@ -64,7 +64,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
           <Accordion>
             <AccordionItem className="border-b-0" value="details">
               <AccordionTrigger>
-                <div className="text-[12px] text-muted-foreground font-medium">
+                <div className="text-xs text-muted-foreground font-medium">
                   {t('workingPanel.localFile.publish.details', { ns: 'chat' })}
                 </div>
               </AccordionTrigger>
@@ -74,7 +74,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
                     <div className="flex flex-col gap-0.5" key={item.absolutePath}>
                       <div>{item.hrefs.join(', ')}</div>
                       {item.source && (
-                        <div className="text-[12px] text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           {t(
                             `workingPanel.localFile.publish.outsideWorkspace.source.${item.source}`,
                             { ns: 'chat' },
@@ -117,7 +117,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
       <div className="flex flex-col" style={{ paddingBlock: '8px 4px', paddingInline: 16 }}>
         <div className="flex items-center gap-2">
           <Checkbox checked={force} onCheckedChange={handleForceChange} />
-          <div className="text-[12px]">
+          <div className="text-xs">
             {t('workingPanel.localFile.publish.outsideWorkspace.forceLabel', { ns: 'chat' })}
           </div>
         </div>

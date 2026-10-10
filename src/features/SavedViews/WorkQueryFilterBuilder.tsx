@@ -549,7 +549,7 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
               onRemove={() => removeRow(row.id)}
             />
             {isRowComplete(row) ? null : (
-              <span className="text-[12px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {t('savedViews.filters.incomplete')}
               </span>
             )}
@@ -596,7 +596,7 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
         {value.rows.length === 0 &&
         !value.slots.some((slot) => slot.type === 'node') &&
         value.any.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground">{t('savedViews.filters.empty')}</div>
+          <div className="text-xs text-muted-foreground">{t('savedViews.filters.empty')}</div>
         ) : null}
       </div>
     );

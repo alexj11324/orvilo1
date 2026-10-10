@@ -229,9 +229,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
 
         {workspaces.length === 0 ? (
           <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 24 }}>
-            <div className="text-[12px] text-muted-foreground">
-              {tSetting('devices.share.empty')}
-            </div>
+            <div className="text-xs text-muted-foreground">{tSetting('devices.share.empty')}</div>
           </div>
         ) : (
           <>

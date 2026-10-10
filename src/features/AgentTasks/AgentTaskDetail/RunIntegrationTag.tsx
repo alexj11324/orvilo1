@@ -91,30 +91,25 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
 
   const tooltip = (
     <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
-      <div
-        className="text-[12px] text-muted-foreground"
-        style={{ fontFamily: cssVar.fontFamilyCode }}
-      >
+      <div className="text-xs text-muted-foreground" style={{ fontFamily: cssVar.fontFamilyCode }}>
         {integration.branch} → {integration.baseBranch}
         {integration.integratedSha ? ` @ ${integration.integratedSha.slice(0, 7)}` : ''}
       </div>
       {integration.role === 'integrate' && (
-        <div className="text-[12px] text-muted-foreground">
-          {t('taskDetail.integration.mergeRun')}
-        </div>
+        <div className="text-xs text-muted-foreground">{t('taskDetail.integration.mergeRun')}</div>
       )}
       {integration.attempts > 0 && (
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {t('taskDetail.integration.attempts', { count: integration.attempts })}
         </div>
       )}
       {!!integration.conflicts?.length && (
-        <div className="text-[12px] text-muted-foreground" style={{ wordBreak: 'break-all' }}>
+        <div className="text-xs text-muted-foreground" style={{ wordBreak: 'break-all' }}>
           {t('taskDetail.integration.conflicts', { files: integration.conflicts.join(', ') })}
         </div>
       )}
       {integration.lastError && (
-        <div className="text-[12px] text-destructive" style={{ wordBreak: 'break-all' }}>
+        <div className="text-xs text-destructive" style={{ wordBreak: 'break-all' }}>
           {integration.lastError}
         </div>
       )}

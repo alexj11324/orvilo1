@@ -53,7 +53,7 @@ const Members = memo<MembersProps>(({ itemKey }) => {
       <div className="flex items-center">
         <div className="min-w-0 flex-1">
           <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-            <div className="truncate text-[12px] text-muted-foreground font-medium">
+            <div className="truncate text-xs text-muted-foreground font-medium">
               {`${t('groupSidebar.tabs.members')} ${membersCount}`}
             </div>
           </AccordionTrigger>

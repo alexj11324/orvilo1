@@ -7,7 +7,7 @@ import React, { memo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = {
-  query: 'rounded-[8px] px-2 py-1 text-[12px] text-muted-foreground hover:bg-accent',
+  query: 'rounded-[8px] px-2 py-1 text-xs text-muted-foreground hover:bg-accent',
 };
 
 const SearchFiles = memo<BuiltinPlaceholderProps<LocalSearchFilesParams>>(({ args = {} }) => {

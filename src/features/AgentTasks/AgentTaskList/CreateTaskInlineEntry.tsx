@@ -633,7 +633,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             <TaskPriorityTag priority={priority} onChange={setPriority}>
               <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
-                <div className="text-[12px]">
+                <div className="text-xs">
                   {priority === 0
                     ? t('taskDetail.priority.none')
                     : t(
@@ -649,12 +649,12 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
-                      <div className="text-[12px]">{memberMeta?.title}</div>
+                      <div className="text-xs">{memberMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div className="text-xs" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.member')}
                       </div>
                     </>
@@ -666,7 +666,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             {lockAssignee ? (
               <div className="flex h-6 items-center gap-1.5 rounded-md px-2 py-0.75">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                <div className="text-[12px]">{assigneeMeta?.title}</div>
+                <div className="text-xs">{assigneeMeta?.title}</div>
               </div>
             ) : (
               <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
@@ -674,12 +674,12 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                      <div className="text-[12px]">{assigneeMeta?.title}</div>
+                      <div className="text-xs">{assigneeMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div className="text-xs" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.assignee')}
                       </div>
                     </>

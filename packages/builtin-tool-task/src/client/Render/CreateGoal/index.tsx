@@ -173,12 +173,12 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
             <div className="flex items-center justify-between">
               <div className="text-(length:--text-dense)">{phaseLabel(t, phase)}</div>
               {!meta.settled && (
-                <div className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground">
+                <div className="font-mono rounded bg-muted px-1 text-xs text-muted-foreground">
                   {formatElapsed(now - new Date(pluginState.startedAt ?? Date.now()).getTime())}
                 </div>
               )}
             </div>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {meta.settled
                 ? t('builtins.orvilo-task.goal.settledHint')
                 : t('builtins.orvilo-task.goal.runningHint', {

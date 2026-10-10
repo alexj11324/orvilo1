@@ -52,10 +52,10 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
       onClick={handleClick}
     >
       <div className="flex flex-col gap-1" style={{ paddingBlock: 12, paddingInline: 14 }}>
-        <div className="truncate block text-[14px]" style={{ fontWeight: 500 }}>
+        <div className="truncate block text-sm" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+        <div className="line-clamp-2 text-xs" style={{ color: cssVar.colorTextTertiary }}>
           {prompt}
         </div>
       </div>
@@ -160,7 +160,7 @@ const SuggestionChips = memo<SuggestionChipsProps>(
             }}
           >
             <ActionIcon disabled={disabled} icon={RefreshCw} size={'small'} />
-            <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
+            <div className="text-xs" style={{ color: cssVar.colorTextSecondary }}>
               {tCommon('switch')}
             </div>
           </div>

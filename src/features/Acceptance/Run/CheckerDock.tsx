@@ -41,12 +41,12 @@ const styles = {
   chevron: 'flex-none text-(--ant-color-text-quaternary)',
   clickable:
     'cursor-pointer transition-[background] duration-150 ease-(--ant-motion-ease-out) hover:bg-(--ant-color-fill-quaternary)',
-  desc: 'mt-0.75 text-[12px] leading-[1.45] text-(--ant-color-text-tertiary)',
+  desc: 'mt-0.75 text-xs leading-[1.45] text-(--ant-color-text-tertiary)',
   dock: 'overflow-hidden rounded-[16px] border border-border bg-popover',
   head: 'flex cursor-pointer items-center justify-between gap-3 px-3 py-2.75',
   inputPanel:
     'mt-2.5 rounded-[12px] border border-sidebar-border bg-(--ant-color-fill-quaternary) p-2.5',
-  sub: 'truncate text-[12px] text-(--ant-color-text-tertiary)',
+  sub: 'truncate text-xs text-(--ant-color-text-tertiary)',
   title: 'text-(length:--text-dense) font-bold text-foreground',
 };
 

@@ -44,7 +44,7 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {tv('acceptance.tray.editModal.nameLabel')}
         </div>
         <Input
@@ -55,7 +55,7 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {tv('acceptance.tray.editModal.methodLabel')}
         </div>
         <Textarea

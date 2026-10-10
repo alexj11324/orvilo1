@@ -216,7 +216,7 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
                 </Badge>
               )}
             </div>
-            <div className="truncate min-w-0 text-[12px] text-muted-foreground">
+            <div className="truncate min-w-0 text-xs text-muted-foreground">
               {isRecipient
                 ? t('transferRequest.itemIncoming', { name: counterpartLabel })
                 : t('transferRequest.itemOutgoing', { name: counterpartLabel })}
@@ -244,7 +244,7 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
           />
         )}
         <div className="flex flex-row items-center gap-2 justify-between">
-          <div className="text-[12px] text-muted-foreground" style={{ marginInlineStart: 44 }}>
+          <div className="text-xs text-muted-foreground" style={{ marginInlineStart: 44 }}>
             {formatNotificationRelativeTime(request.createdAt, dateLocale)}
           </div>
           <div className="flex flex-row gap-2">

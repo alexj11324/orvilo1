@@ -44,7 +44,7 @@ export const SearchMarketToolsInspector = memo<
         (hasResults ? (
           <span className="ms-1">({resultCount})</span>
         ) : (
-          <span className="ms-1 text-[12px] text-(--ant-color-text-description)">
+          <span className="ms-1 text-xs text-(--ant-color-text-description)">
             ({t('builtins.orvilo-agent-builder.inspector.noResults')})
           </span>
         ))}

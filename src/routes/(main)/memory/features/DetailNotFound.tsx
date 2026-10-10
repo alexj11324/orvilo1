@@ -21,7 +21,7 @@ const DetailNotFound = memo(() => {
     >
       <FileQuestionIcon size={32} style={{ color: cssVar.colorTextTertiary }} />
       <div className="flex flex-col items-center gap-1">
-        <div className="text-[16px] font-semibold">{t('detail.notFound.title')}</div>
+        <div className="text-base font-semibold">{t('detail.notFound.title')}</div>
         <div
           className="text-center text-(length:--text-dense)"
           style={{ maxWidth: 320, color: cssVar.colorTextTertiary }}

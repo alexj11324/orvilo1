@@ -64,17 +64,17 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
         plan.blockedExternally.length > 0) && (
         <div className="flex flex-col gap-1">
           {plan.alreadyDone.length > 0 && (
-            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-xs" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.alreadyDone', { count: plan.alreadyDone.length })}
             </div>
           )}
           {plan.ineligible.length > 0 && (
-            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-xs" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.ineligible', { count: plan.ineligible.length })}
             </div>
           )}
           {plan.blockedExternally.length > 0 && (
-            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-xs" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.blockedExternally', {
                 count: plan.blockedExternally.length,
               })}
@@ -88,7 +88,7 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
           className="rounded-md border border-border"
           style={{ paddingBlock: 8, paddingInline: 12 }}
         >
-          <div className="text-[12px]" style={{ color: cssVar.colorWarning }}>
+          <div className="text-xs" style={{ color: cssVar.colorWarning }}>
             {t('taskDetail.runAll.cycleWarning', {
               members: [...plan.cycles, ...plan.blockedByCycle].join(', '),
             })}

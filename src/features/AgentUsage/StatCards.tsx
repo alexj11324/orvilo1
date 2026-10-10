@@ -14,7 +14,7 @@ interface StatCardsProps {
   summary: AgentUsageStats['summary'];
 }
 
-const desc = (text: string) => <div className="text-[12px] text-muted-foreground">{text}</div>;
+const desc = (text: string) => <div className="text-xs text-muted-foreground">{text}</div>;
 
 const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
   const { t } = useTranslation('spend');

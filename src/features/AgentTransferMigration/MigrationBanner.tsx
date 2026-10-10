@@ -85,7 +85,7 @@ export const TopicMigrationPlaceholder = memo<MigrationBannerProps>(
           )}
         </div>
         <div
-          className="text-[12px] text-muted-foreground"
+          className="text-xs text-muted-foreground"
           style={{ maxWidth: 420, textAlign: 'center' }}
         >
           {t('transferMigration.topicPending.desc')}

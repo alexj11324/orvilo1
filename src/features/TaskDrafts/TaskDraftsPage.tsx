@@ -380,7 +380,7 @@ const TaskDraftsPage = () => {
                         <div className={styles.cardHeading}>
                           <div className={styles.cardTitle}>{title}</div>
                           <div
-                            className="text-[12px] text-muted-foreground"
+                            className="text-xs text-muted-foreground"
                             title={dayjs(draft.updatedAt).toString()}
                           >
                             {formatInboxAge(draft.updatedAt, { locale: i18n.language })}
@@ -440,7 +440,7 @@ const TaskDraftsPage = () => {
                         <div className={styles.cardHeading}>
                           <div className={styles.cardTitle}>{title}</div>
                           <div
-                            className="text-[12px] text-muted-foreground"
+                            className="text-xs text-muted-foreground"
                             title={String(draft.updatedAt)}
                           >
                             {formatInboxAge(draft.updatedAt, { locale: i18n.language })}

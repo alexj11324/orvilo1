@@ -43,12 +43,12 @@ export const SearchAgentRender = memo<BuiltinRenderProps<SearchAgentParams, Sear
                   {agent.title || agent.id}
                 </span>
                 {agent.heteroType && (
-                  <span className="rounded-(--radius-chip) bg-selected py-0.5 ps-1.5 pe-1.5 text-[10px] text-muted-foreground">
+                  <span className="rounded-(--radius-chip) bg-selected py-0.5 ps-1.5 pe-1.5 text-xs text-muted-foreground">
                     {HETEROGENEOUS_TYPE_LABELS[agent.heteroType] ?? agent.heteroType}
                   </span>
                 )}
                 {agent.isMarket && (
-                  <span className="rounded-(--radius-chip) bg-(--ant-color-primary-bg) py-0.5 ps-1.5 pe-1.5 text-[10px] text-(--ant-color-primary)">
+                  <span className="rounded-(--radius-chip) bg-(--ant-color-primary-bg) py-0.5 ps-1.5 pe-1.5 text-xs text-(--ant-color-primary)">
                     Market
                   </span>
                 )}

@@ -6,7 +6,7 @@ import { memo } from 'react';
 const styles = {
   icon: 'text-(--ant-color-text-quaternary)',
   item: 'rounded-(--ant-border-radius) px-3 py-1 transition-[background-color] duration-200 ease-[ease] hover:bg-(--ant-color-fill-quaternary)',
-  path: 'font-mono text-[12px] break-all',
+  path: 'font-mono text-xs break-all',
 };
 
 interface MoveFileItemProps {

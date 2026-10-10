@@ -52,7 +52,7 @@ const SwitcherRow = memo<SwitcherRowProps>(({ active, item, onSelect, privateLab
       )}
     </div>
     {item.private && privateLabel && (
-      <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+      <div className="text-xs" style={{ color: cssVar.colorTextTertiary }}>
         {privateLabel}
       </div>
     )}

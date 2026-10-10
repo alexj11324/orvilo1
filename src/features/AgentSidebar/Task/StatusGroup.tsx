@@ -40,7 +40,7 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
           <div className="truncate text-sm" style={{ color: cssVar.colorTextSecondary, flex: 1 }}>
             {t(meta.titleKey as 'taskList.kanban.backlog')}
           </div>
-          <div className="text-[11px] text-muted-foreground">{group.tasks.length}</div>
+          <div className="text-xs text-muted-foreground">{group.tasks.length}</div>
         </div>
       </AccordionTrigger>
       <AccordionContent className="p-0">

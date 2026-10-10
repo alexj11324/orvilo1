@@ -18,11 +18,10 @@ import {
 } from '../shared';
 
 const styles = {
-  addChip:
-    'rounded-[999px] bg-(--ant-color-success-bg) px-2 py-px font-mono text-[12px] text-success',
+  addChip: 'rounded-[999px] bg-(--ant-color-success-bg) px-2 py-px font-mono text-xs text-success',
   deps: 'inline-flex flex-wrap items-center gap-1',
   removeChip:
-    'rounded-[999px] border border-dashed border-(--ant-color-error-border) px-2 py-px font-mono text-[12px] text-destructive line-through',
+    'rounded-[999px] border border-dashed border-(--ant-color-error-border) px-2 py-px font-mono text-xs text-destructive line-through',
 };
 
 export const EditTaskRender = memo<BuiltinRenderProps<EditTaskParams, EditTaskState>>(

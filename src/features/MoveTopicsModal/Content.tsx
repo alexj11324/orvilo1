@@ -136,7 +136,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
           <SkeletonList rows={6} />
         ) : filteredAgents.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6">
-            <span className="text-[12px] text-muted-foreground">{t('moveModal.empty')}</span>
+            <span className="text-xs text-muted-foreground">{t('moveModal.empty')}</span>
           </div>
         ) : (
           <div

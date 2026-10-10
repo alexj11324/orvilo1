@@ -95,7 +95,7 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
     <div className="flex items-center gap-2">
       <AnchorIcon color={cssVar.colorTextTertiary} size={15} />
       <div className="font-semibold">{t('anchor.title')}</div>
-      <div className="text-[12px] text-muted-foreground">{t('anchor.subtitle')}</div>
+      <div className="text-xs text-muted-foreground">{t('anchor.subtitle')}</div>
     </div>
   );
 
@@ -150,7 +150,7 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-baseline gap-2">
                     <span className={styles.sectionLabel}>{t('create.anchor.canon')}</span>
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {domain.canonEntries.length > 0
                         ? t('create.anchor.canonHint')
                         : t('anchor.noCanon')}
@@ -184,7 +184,7 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-baseline gap-2">
                     <span className={styles.sectionLabel}>{t('create.anchor.layers')}</span>
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {domain.layers.length === 0
                         ? t('anchor.noLayers')
                         : canonRef

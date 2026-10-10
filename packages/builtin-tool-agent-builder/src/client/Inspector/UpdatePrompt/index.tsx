@@ -52,7 +52,7 @@ export const UpdatePromptInspector = memo<
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
         <span
           className={cn(
-            'ms-1 font-mono rounded bg-muted px-1 text-[12px]',
+            'ms-1 font-mono rounded bg-muted px-1 text-xs',
             lengthDiff >= 0 ? 'text-success' : 'text-destructive',
           )}
         >
@@ -63,7 +63,7 @@ export const UpdatePromptInspector = memo<
       )}
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
-        <span className="ms-1 font-mono rounded bg-muted px-1 text-[12px] text-(--ant-color-text-description)">
+        <span className="ms-1 font-mono rounded bg-muted px-1 text-xs text-(--ant-color-text-description)">
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})
         </span>

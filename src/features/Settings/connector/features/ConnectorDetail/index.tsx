@@ -294,9 +294,9 @@ const ConnectorDetailBody = memo<ConnectorDetailProps>(
 
     if (noManifest || !connector) {
       return (
-        <div className={'p-6 text-[14px] text-(--ant-color-text-tertiary)'}>
+        <div className={'p-6 text-sm text-(--ant-color-text-tertiary)'}>
           <div className={'mbe-2 flex items-center justify-between gap-3'}>
-            <div className={'text-[16px] font-semibold text-foreground'}>
+            <div className={'text-base font-semibold text-foreground'}>
               {type === 'orvilo-connector' ? orviloLabel : noPermissionsTitle}
             </div>
             {canMigrateLegacy ? (

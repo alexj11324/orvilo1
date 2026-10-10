@@ -244,7 +244,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
   );
   const hasDraft = useHasDraft(draftKey);
   const draftPrefix = hasDraft ? (
-    <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
+    <div className="text-xs" style={{ color: cssVar.colorError, flex: 'none' }}>
       {t('draft')}
     </div>
   ) : undefined;

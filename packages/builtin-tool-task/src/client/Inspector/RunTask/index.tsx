@@ -12,9 +12,9 @@ import type { RunTaskParams, RunTaskState } from '../../../types';
 
 const styles = {
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
+    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
   promptChip:
-    'inline-flex min-w-0 max-w-60 shrink items-center truncate rounded-[999px] bg-accent px-2 py-0.5 text-[12px] text-foreground',
+    'inline-flex min-w-0 max-w-60 shrink items-center truncate rounded-[999px] bg-accent px-2 py-0.5 text-xs text-foreground',
   separator: 'shrink-0 text-(--ant-color-text-quaternary)',
 };
 

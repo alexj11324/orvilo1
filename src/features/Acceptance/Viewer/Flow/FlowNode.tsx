@@ -59,9 +59,9 @@ const styles = {
   glyph:
     'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius) text-muted-foreground bg-accent',
   title: 'line-clamp-2 text-(length:--text-dense) font-medium leading-[1.4]',
-  subtitle: 'line-clamp-2 text-[11px] leading-4 text-(--ant-color-text-tertiary)',
+  subtitle: 'line-clamp-2 text-xs leading-4 text-(--ant-color-text-tertiary)',
   footer:
-    'mt-auto py-1.75 px-3 border-t border-dashed border-sidebar-border text-[11px] text-(--ant-color-text-tertiary)',
+    'mt-auto py-1.75 px-3 border-t border-dashed border-sidebar-border text-xs text-(--ant-color-text-tertiary)',
 };
 
 /** Same status/head/summary hierarchy as Goal's exploration cards. */

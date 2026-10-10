@@ -163,9 +163,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                     </>
                   )}
                 </span>
-                <div className="tree-count text-[12px] text-muted-foreground">
-                  {group.sessionCount}
-                </div>
+                <div className="tree-count text-xs text-muted-foreground">{group.sessionCount}</div>
               </div>
             }
           />
@@ -204,7 +202,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
           >
             {t('heteroImport.allSessions')}
           </div>
-          <div className="text-[12px] text-muted-foreground">{totalCount.toLocaleString()}</div>
+          <div className="text-xs text-muted-foreground">{totalCount.toLocaleString()}</div>
         </div>
 
         {watched.length > 0 && (
@@ -232,7 +230,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
               <div className="text-(length:--text-dense) font-medium" style={{ flex: 1 }}>
                 {t('heteroImport.watchedGroup')}
               </div>
-              <div className="text-[12px] text-muted-foreground">{watched.length}</div>
+              <div className="text-xs text-muted-foreground">{watched.length}</div>
             </div>
             {!collapsed.has('watched') &&
               watched.map((group) => {
@@ -283,7 +281,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                 >
                   {AGENT_LABEL[source]}
                 </div>
-                <div className="text-[12px] text-muted-foreground">{count}</div>
+                <div className="text-xs text-muted-foreground">{count}</div>
               </div>
               {open &&
                 dirs.map((group) =>
@@ -313,7 +311,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                   transition: 'transform .15s',
                 }}
               />
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('heteroImport.ignoredGroup', { count: ignored.length })}
               </div>
             </div>

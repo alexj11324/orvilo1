@@ -173,7 +173,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
                 <ProjectFolderIcon color={cssVar.colorTextTertiary} size={15} strokeWidth={1.5} />
               </div>
               <div
-                className="truncate text-[12px] text-muted-foreground font-medium"
+                className="truncate text-xs text-muted-foreground font-medium"
                 style={{ flex: 1 }}
               >
                 {title}

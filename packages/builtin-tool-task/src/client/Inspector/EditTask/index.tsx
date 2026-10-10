@@ -17,18 +17,18 @@ import type { EditTaskParams, EditTaskState } from '../../../types';
 
 const styles = {
   addChip:
-    'shrink-0 rounded-[999px] bg-(--ant-color-success-bg) px-2 py-px font-mono text-[12px] text-success',
+    'shrink-0 rounded-[999px] bg-(--ant-color-success-bg) px-2 py-px font-mono text-xs text-success',
   assigneeAvatar: 'shrink-0',
   assigneeChip:
-    'inline-flex min-w-0 max-w-55 shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent py-px ps-1 pe-2 text-[12px] text-foreground',
+    'inline-flex min-w-0 max-w-55 shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent py-px ps-1 pe-2 text-xs text-foreground',
   assigneeName: 'truncate',
-  chip: 'inline-flex min-w-0 max-w-50 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground',
+  chip: 'inline-flex min-w-0 max-w-50 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-xs text-foreground',
   group: 'inline-flex flex-wrap items-center gap-1',
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground',
-  label: 'shrink-0 text-[12px] text-(--ant-color-text-tertiary)',
+    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-xs text-muted-foreground',
+  label: 'shrink-0 text-xs text-(--ant-color-text-tertiary)',
   removeChip:
-    'shrink-0 rounded-[999px] border border-dashed border-(--ant-color-error-border) bg-transparent px-2 py-px font-mono text-[12px] text-destructive line-through',
+    'shrink-0 rounded-[999px] border border-dashed border-(--ant-color-error-border) bg-transparent px-2 py-px font-mono text-xs text-destructive line-through',
 };
 
 const AssigneeChip = memo<{ agentId: string }>(({ agentId }) => {

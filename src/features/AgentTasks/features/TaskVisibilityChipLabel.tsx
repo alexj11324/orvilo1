@@ -60,7 +60,7 @@ const TaskVisibilityChipLabel = memo<TaskVisibilityChipLabelProps>(
         {variant === 'tag' ? (
           <div className="font-medium">{label}</div>
         ) : (
-          <div className="text-[12px]">{label}</div>
+          <div className="text-xs">{label}</div>
         )}
       </div>
     );

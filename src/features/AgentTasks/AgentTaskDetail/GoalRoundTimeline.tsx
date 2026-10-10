@@ -144,7 +144,7 @@ const GoalRoundTimeline = memo<{ rounds?: GoalRound[] }>(({ rounds = [] }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-[12px] text-muted-foreground">{t('taskDetail.goalTimeline.title')}</div>
+      <div className="text-xs text-muted-foreground">{t('taskDetail.goalTimeline.title')}</div>
       <div className={styles.rail}>
         {rounds.map(({ report, run, usage }, index) => (
           <GoalRoundPopover

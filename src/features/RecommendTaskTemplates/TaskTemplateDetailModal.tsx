@@ -59,7 +59,7 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
           <div className="flex flex-row items-center gap-3" style={{ flex: 1, minWidth: 0 }}>
             <TemplateBriefIcon spec={iconSpec} tileSize={36} />
             <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
-              <span className="truncate text-[18px] font-semibold">{title}</span>
+              <span className="truncate text-lg font-semibold">{title}</span>
               <div className="flex flex-row items-center gap-1">
                 <span className="anticon" role="img">
                   <Clock
@@ -70,7 +70,7 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
                     width={12}
                   />
                 </span>
-                <span className="text-[12px] text-muted-foreground">{scheduleText}</span>
+                <span className="text-xs text-muted-foreground">{scheduleText}</span>
               </div>
             </div>
           </div>

@@ -12,12 +12,12 @@ import type { RunTasksParams, RunTasksState } from '../../../types';
 
 const styles = {
   countBadge:
-    'shrink-0 rounded-[999px] bg-(--ant-color-warning-bg) px-2 py-px text-[12px] font-medium text-warning',
+    'shrink-0 rounded-[999px] bg-(--ant-color-warning-bg) px-2 py-px text-xs font-medium text-warning',
   failedBadge:
-    'shrink-0 rounded-[999px] bg-(--ant-color-error-bg) px-2 py-px text-[12px] text-destructive',
+    'shrink-0 rounded-[999px] bg-(--ant-color-error-bg) px-2 py-px text-xs text-destructive',
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground',
-  moreBadge: 'shrink-0 text-[12px] text-(--ant-color-text-tertiary)',
+    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-xs text-muted-foreground',
+  moreBadge: 'shrink-0 text-xs text-(--ant-color-text-tertiary)',
   separator: 'shrink-0 text-(--ant-color-text-quaternary)',
 };
 

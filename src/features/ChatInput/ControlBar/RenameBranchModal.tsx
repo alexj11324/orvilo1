@@ -65,7 +65,7 @@ const RenameBranchContent = memo<RenameBranchContentProps>(({ currentName, onSub
             if (e.key === 'Enter') handleSubmit();
           }}
         />
-        {error ? <div className="text-[12px] text-destructive">{error}</div> : null}
+        {error ? <div className="text-xs text-destructive">{error}</div> : null}
       </div>
       <div className="flex flex-row gap-2 justify-end">
         <Button disabled={loading} onClick={close}>

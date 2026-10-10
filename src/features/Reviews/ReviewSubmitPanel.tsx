@@ -53,13 +53,13 @@ const ReviewSubmitPanel = memo<{
       {pendingReviewId ? (
         <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'status'}>
           <GitPullRequestDraftIcon color={cssVar.colorWarning} size={14} />
-          <div className="text-[12px]">{t('reviews.pendingDraftBanner')}</div>
+          <div className="text-xs">{t('reviews.pendingDraftBanner')}</div>
         </div>
       ) : null}
       {unknownIntent ? (
         <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
           <RefreshCwIcon color={cssVar.colorWarning} size={14} />
-          <div className="text-[12px]">{t('reviews.outcomeUnknown')}</div>
+          <div className="text-xs">{t('reviews.outcomeUnknown')}</div>
           <div className="flex-1" />
           <Button loading={verifying} size="sm" onClick={() => void composer.verifyAndRetry()}>
             {t('reviews.outcomeUnknownAction')}
@@ -68,7 +68,7 @@ const ReviewSubmitPanel = memo<{
       ) : null}
       {stale ? (
         <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
-          <div className="text-[12px]">{t('reviews.headDrifted')}</div>
+          <div className="text-xs">{t('reviews.headDrifted')}</div>
         </div>
       ) : null}
       <Textarea

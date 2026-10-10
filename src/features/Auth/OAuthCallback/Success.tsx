@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
 
 import { CircleCheckIcon } from 'lucide-react';
 import React, { memo, useEffect, useState } from 'react';
@@ -59,7 +60,7 @@ const SuccessPage = memo(() => {
         <EmptyTitle>{<div className="text-[32px] font-bold">{t('success.title')}</div>}</EmptyTitle>
         <EmptyDescription>
           {
-            <div className="text-[16px] text-muted-foreground">
+            <div className="text-base text-muted-foreground">
               {provider
                 ? t('success.subTitleWithCountdown', {
                     countdown,

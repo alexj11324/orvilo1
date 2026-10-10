@@ -129,7 +129,7 @@ const AvailableAgentList = memo<AvailableAgentListProps>(({ agents, isLoading })
               const row = rows[index];
               if (row.type === 'header') {
                 return (
-                  <div className={cn('text-[12px] text-muted-foreground', styles.sectionHeader)}>
+                  <div className={cn('text-xs text-muted-foreground', styles.sectionHeader)}>
                     {row.label}
                   </div>
                 );

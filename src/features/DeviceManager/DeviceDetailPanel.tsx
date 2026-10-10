@@ -78,7 +78,7 @@ const styles = createStaticStyles(({ css }) => ({
 // Section label — one consistent treatment for every field heading in the panel.
 const FieldLabel = memo<{ children: ReactNode; extra?: ReactNode }>(({ children, extra }) => (
   <div className="flex items-center justify-between">
-    <div className="text-[12px] text-muted-foreground font-medium">{children}</div>
+    <div className="text-xs text-muted-foreground font-medium">{children}</div>
     {extra}
   </div>
 ));
@@ -287,7 +287,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
       {!canEdit && (
         <div className="flex items-center gap-2">
           <LockIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {t('workspaceSetting.devices.readonlyHint')}
           </div>
         </div>
@@ -341,7 +341,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
             <div className="flex items-center gap-2" key={`${channel.connectedAt}-${index}`}>
               <span className={styles.dot} style={{ background: cssVar.colorSuccess }} />
               {channel.channel && <Tag size="sm">{channel.channel}</Tag>}
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('devices.channel.connected', { time: dayjs(channel.connectedAt).fromNow() })}
               </div>
             </div>
@@ -349,7 +349,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
         ) : (
           <div className="flex items-center gap-2">
             <span className={styles.dot} style={{ background: cssVar.colorTextQuaternary }} />
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('devices.status.offline')} ·{' '}
               {t('devices.lastSeen', { time: dayjs(device.lastSeen).fromNow() })}
             </div>
@@ -426,7 +426,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           {t('devices.detail.recentDirs')}
         </FieldLabel>
         {device.workingDirs.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground">{t('devices.detail.noRecent')}</div>
+          <div className="text-xs text-muted-foreground">{t('devices.detail.noRecent')}</div>
         ) : canEdit ? (
           <Sortable
             getItemValue={(item: { id: string }) => item.id}

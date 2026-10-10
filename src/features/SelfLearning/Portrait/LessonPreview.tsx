@@ -97,7 +97,7 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
     <div className={cx(styles.root, 'flex flex-col gap-2.5 p-1')}>
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-3 justify-between">
-          <div className="text-[12px] text-muted-foreground font-semibold">
+          <div className="text-xs text-muted-foreground font-semibold">
             {t('rules.detail.eyebrow', { code })}
           </div>
           {/* The row underneath is no longer under the pointer once it moves in here. */}
@@ -112,11 +112,11 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
             {t('preview.open')}
           </Link>
         </div>
-        <div className={cn('text-[15px] font-semibold', styles.title)} style={{ lineHeight: 1.45 }}>
+        <div className={cn('text-sm font-semibold', styles.title)} style={{ lineHeight: 1.45 }}>
           {title}
         </div>
         <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {data
               ? t('rules.detail.meta', {
                   hits: data.lesson.hitCount,
@@ -145,7 +145,7 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
       {/* Without this the card sits on "loading…" forever: SWR clears isLoading on failure. */}
       {!!error && !data && (
         <Button
-          className={cn('h-auto p-0 text-[12px] text-info', styles.retry)}
+          className={cn('h-auto p-0 text-xs text-info', styles.retry)}
           size="sm"
           type="button"
           variant="link"
@@ -161,7 +161,7 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
           <div className="flex flex-col gap-2">
             {sections.map(({ label, ...section }) => (
               <div className={styles.section} key={section.key}>
-                <div className="text-[12px] text-muted-foreground font-semibold">
+                <div className="text-xs text-muted-foreground font-semibold">
                   {label ? t(label) : section.key}
                 </div>
                 <div className="line-clamp-3" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
@@ -177,7 +177,7 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
         <>
           <div className={styles.separator} />
           <div className="flex flex-col gap-1.5">
-            <div className="text-[12px] text-muted-foreground font-semibold">
+            <div className="text-xs text-muted-foreground font-semibold">
               {t('rules.detail.examples')}
             </div>
             {evidence.map((hit, index) => (
@@ -185,17 +185,17 @@ const LessonPreview = memo<LessonPreviewProps>(({ code, layer, lessonId, lessonP
                 <div
                   style={{ flex: 'none' }}
                   className={cn(
-                    'text-[12px]',
+                    'text-xs',
                     hit.outcome === 'pass' ? 'text-muted-foreground' : 'text-warning',
                   )}
                 >
                   {t(`rules.detail.outcome.${hit.outcome}`)}
                 </div>
-                <div className="text-[12px] line-clamp-2 text-muted-foreground">{hit.example}</div>
+                <div className="text-xs line-clamp-2 text-muted-foreground">{hit.example}</div>
               </div>
             ))}
             {data && data.hits.length > MAX_EVIDENCE && (
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('preview.moreEvidence', { count: data.hits.length - MAX_EVIDENCE })}
               </div>
             )}

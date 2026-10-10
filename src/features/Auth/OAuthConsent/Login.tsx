@@ -86,7 +86,7 @@ const LoginConfirmClient = memo<LoginConfirmProps>(({ uid, clientMetadata }) => 
           {isUserStateInit ? (
             <div className="flex items-center gap-4">
               <Avatar alt={nickName || ''} avatar={avatar} shape={'square'} size={40} />
-              <div className="text-[18px] font-medium">{nickName}</div>
+              <div className="text-lg font-medium">{nickName}</div>
             </div>
           ) : (
             <div className="flex gap-4">

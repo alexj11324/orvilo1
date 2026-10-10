@@ -36,10 +36,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
               <statusIcon.icon color={statusIcon.color} size={13} />
             </div>
           )}
-          <div
-            className="truncate text-[12px] text-muted-foreground font-medium"
-            style={{ flex: 1 }}
-          >
+          <div className="truncate text-xs text-muted-foreground font-medium" style={{ flex: 1 }}>
             {title}
           </div>
         </div>

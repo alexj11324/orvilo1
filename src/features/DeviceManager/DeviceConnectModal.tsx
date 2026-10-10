@@ -286,7 +286,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
 
           <div className={`flex items-center gap-2 ${styles.footer}`}>
             <ShieldCheckIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
-            <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+            <div className="text-xs" style={{ color: cssVar.colorTextTertiary }}>
               {t('devices.connectWizard.footer')}
             </div>
           </div>

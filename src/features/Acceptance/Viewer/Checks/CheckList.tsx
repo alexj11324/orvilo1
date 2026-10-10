@@ -2,7 +2,6 @@
 
 import type { AcceptanceGroupFeedback } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   BadgeCheck,
@@ -124,9 +123,9 @@ const CheckList = memo<CheckListProps>(
         <div className={`flex flex-col items-center gap-3 justify-center ${styles.emptyCard}`}>
           {allAccepted ? (
             <>
-              <PartyPopper className={styles.celebrateIcon} color={cssVar.colorSuccess} size={40} />
+              <PartyPopper className={styles.celebrateIcon} color={'var(--success)'} size={40} />
               <div className="flex flex-col items-center gap-1">
-                <div className="font-semibold" style={{ color: cssVar.colorSuccess, fontSize: 15 }}>
+                <div className="font-semibold" style={{ color: 'var(--success)', fontSize: 15 }}>
                   {t('acceptance.checks.allAccepted.title')}
                 </div>
                 <div className="text-[13px] text-muted-foreground">
@@ -215,8 +214,7 @@ const CheckList = memo<CheckListProps>(
                   CLICKABLE_FOCUS_RING,
                 )}
                 style={{
-                  borderBlockStart:
-                    groupIndex > 0 ? `1px solid ${cssVar.colorBorderSecondary}` : 'none',
+                  borderBlockStart: groupIndex > 0 ? `1px solid var(--sidebar-border)` : 'none',
                 }}
                 onClick={() => onToggleGroup(key)}
               >
@@ -226,7 +224,7 @@ const CheckList = memo<CheckListProps>(
                 {allVerified ? (
                   <div
                     className="flex items-center gap-1"
-                    style={{ color: cssVar.colorSuccess, fontSize: 12 }}
+                    style={{ color: 'var(--success)', fontSize: 12 }}
                   >
                     <BadgeCheck size={13} />
                     {t('acceptance.group.allVerified', { passed, total: groupChecks_.length })}
@@ -240,12 +238,12 @@ const CheckList = memo<CheckListProps>(
                       })}
                     </div>
                     {exceptionCount > 0 && (
-                      <div style={{ color: cssVar.colorError, fontSize: 12 }}>
+                      <div style={{ color: 'var(--destructive)', fontSize: 12 }}>
                         {t('acceptance.group.failedCount', { count: exceptionCount })}
                       </div>
                     )}
                     {rejectedCount > 0 && (
-                      <div style={{ color: cssVar.colorError, fontSize: 12 }}>
+                      <div style={{ color: 'var(--destructive)', fontSize: 12 }}>
                         {t('acceptance.group.rejectedCount', { count: rejectedCount })}
                       </div>
                     )}
@@ -289,7 +287,7 @@ const CheckList = memo<CheckListProps>(
                     // receipt that can't fold into the ratio text.
                     <div
                       className="flex items-center gap-1"
-                      style={{ color: cssVar.colorSuccess, fontSize: 12 }}
+                      style={{ color: 'var(--success)', fontSize: 12 }}
                     >
                       <BadgeCheck size={13} />
                       {t('acceptance.review.acceptAllDone')}
@@ -348,7 +346,7 @@ const CheckList = memo<CheckListProps>(
                   />
                 )}
                 <ChevronRight
-                  color={cssVar.colorTextQuaternary}
+                  color={'var(--ant-color-text-quaternary)'}
                   size={14}
                   style={{
                     transform: collapsed ? 'none' : 'rotate(90deg)',
@@ -373,12 +371,16 @@ const CheckList = memo<CheckListProps>(
                       >
                         <div className="flex items-center gap-1.5">
                           <MessageSquareText
-                            color={stale ? cssVar.colorTextQuaternary : cssVar.colorError}
                             size={13}
+                            color={
+                              stale ? 'var(--ant-color-text-quaternary)' : 'var(--destructive)'
+                            }
                           />
                           <div
                             style={{
-                              color: stale ? cssVar.colorTextTertiary : cssVar.colorError,
+                              color: stale
+                                ? 'var(--ant-color-text-tertiary)'
+                                : 'var(--destructive)',
                               fontSize: 12,
                             }}
                           >

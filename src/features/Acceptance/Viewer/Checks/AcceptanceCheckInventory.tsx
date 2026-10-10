@@ -1,7 +1,6 @@
 'use client';
 
 import { isDraftVerifyRun } from '@orvilo/const/verify';
-import { createStaticStyles } from 'antd-style';
 import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
@@ -39,27 +38,12 @@ import {
 } from './checkState';
 import { EMPTY_ID_SET, setAggregateEntry } from './expandState';
 
-const styles = createStaticStyles(({ css }) => ({
-  filters: css`
-    @media (width <= 767px) {
-      width: 100%;
-    }
-  `,
-  filterSelect: css`
-    width: 118px;
-
-    @media (width <= 767px) {
-      flex: 1;
-      width: 0;
-      min-width: 0;
-    }
-  `,
-  toolbarHeading: css`
-    @media (width <= 767px) {
-      flex-basis: 100%;
-    }
-  `,
-}));
+const styles = {
+  filters: '[@media(width<=767px)]:w-full',
+  filterSelect:
+    'w-[118px] [@media(width<=767px)]:flex-1 [@media(width<=767px)]:w-0 [@media(width<=767px)]:min-w-0',
+  toolbarHeading: '[@media(width<=767px)]:basis-full',
+};
 
 interface AcceptanceCheckInventoryProps {
   children?: ReactNode;

@@ -1,7 +1,6 @@
 'use client';
 
 import type { AcceptanceChecklistItem } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { Check, CircleDashed, Plus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -173,15 +172,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
           )}
         </div>
       )}
-      <div
-        className="flex flex-col gap-1.5"
-        style={{
-          padding: 12,
-          background: cssVar.colorFillQuaternary,
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: 8,
-        }}
-      >
+      <div className="flex flex-col gap-1.5 rounded-(--radius-card) border border-sidebar-border bg-(--ant-color-fill-quaternary) p-3">
         <div className="flex items-center gap-1.5">
           <CircleDashed size={14} />
           <div className="text-[12px] text-muted-foreground">

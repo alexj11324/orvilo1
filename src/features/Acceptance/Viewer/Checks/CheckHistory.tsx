@@ -3,7 +3,6 @@
 import { Image } from '@lobehub/ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { BadgeCheck, Ban, MessageSquareX } from 'lucide-react';
 import { memo } from 'react';
@@ -30,7 +29,7 @@ export const AcceptedNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revi
   const hydrated = useIsHydrated();
   return (
     <div className="flex items-center gap-1.5">
-      <BadgeCheck color={cssVar.colorTextQuaternary} size={13} />
+      <BadgeCheck color={'var(--ant-color-text-quaternary)'} size={13} />
       <div className="text-[12px] text-muted-foreground">
         {t('acceptance.review.acceptedNote', {
           time: hydrated ? formatAbsoluteDateTime(review.createdAt) : '',
@@ -45,7 +44,7 @@ export const IgnoredNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revie
   const hydrated = useIsHydrated();
   return (
     <div className="flex items-center gap-1.5">
-      <Ban color={cssVar.colorTextQuaternary} size={13} />
+      <Ban color={'var(--ant-color-text-quaternary)'} size={13} />
       <div className="text-[12px] text-muted-foreground">
         {t('acceptance.review.ignoredNote', {
           time: hydrated ? formatAbsoluteDateTime(review.createdAt) : '',
@@ -82,8 +81,8 @@ export const FeedbackCard = memo<{
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
-        <MessageSquareX color={cssVar.colorError} size={13} />
-        <div style={{ color: cssVar.colorError, fontSize: 12 }}>
+        <MessageSquareX color={'var(--destructive)'} size={13} />
+        <div style={{ color: 'var(--destructive)', fontSize: 12 }}>
           {t('acceptance.review.feedbackLabel')}
         </div>
         <div className="text-[12px] text-muted-foreground">
@@ -189,10 +188,10 @@ export const IterationTimeline = memo<{
                   style={{
                     borderColor:
                       entry.review.action === 'accept'
-                        ? cssVar.colorSuccess
+                        ? 'var(--success)'
                         : entry.review.action === 'ignore'
-                          ? cssVar.colorTextQuaternary
-                          : cssVar.colorError,
+                          ? 'var(--ant-color-text-quaternary)'
+                          : 'var(--destructive)',
                   }}
                 />
                 {!isLast && <div className={styles.stepRail} />}
@@ -209,10 +208,10 @@ export const IterationTimeline = memo<{
         const { step } = entry;
         const stateColor =
           {
-            failed: cssVar.colorError,
-            passed: cssVar.colorSuccess,
-            uncertain: cssVar.colorWarning,
-          }[step.state as string] ?? cssVar.colorTextQuaternary;
+            failed: 'var(--destructive)',
+            passed: 'var(--success)',
+            uncertain: 'var(--warning)',
+          }[step.state as string] ?? 'var(--ant-color-text-quaternary)';
 
         return (
           <div className="flex gap-3" key={entry.key}>
@@ -220,8 +219,8 @@ export const IterationTimeline = memo<{
               <span
                 className={styles.stepDot}
                 style={{
-                  background: isCurrent ? stateColor : cssVar.colorBgContainer,
-                  borderColor: isCurrent ? stateColor : cssVar.colorTextQuaternary,
+                  background: isCurrent ? stateColor : 'var(--card)',
+                  borderColor: isCurrent ? stateColor : 'var(--ant-color-text-quaternary)',
                 }}
               />
               {!isLast && <div className={styles.stepRail} />}

@@ -1,92 +1,23 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo } from 'react';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  // Card sits inline with the chat — no surrounding panel chrome. Hover
-  // tints the row so the stack reads as clickable; selection swaps to a
-  // neutral filled row so the pick is visually weighty. We use `colorFill*`
-  // rather than `colorPrimaryBg` because Orvilo's default primary is a
-  // near-black neutral, which makes `colorPrimaryBg` render as a muddy black
-  // block; the selection signal instead rides the filled row + the checkmark.
-  option: css`
-    cursor: pointer;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-radius: 8px;
-
-    transition: background 0.12s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  optionCheck: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorPrimary};
-  `,
-  optionDescription: css`
-    font-size: 12px;
-    line-height: 1.45;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  // Neutral 1/2/3/4 chip — stays the same colour whether selected or not so
-  // the selection signal lives on the filled background + checkmark.
-  optionIndex: css`
-    flex-shrink: 0;
-
-    box-sizing: border-box;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 22px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  // Keyboard cursor — a ring instead of a fill so it stays legible when
-  // stacked on the hover tint or the selected fill.
-  optionHighlighted: css`
-    box-shadow: inset 0 0 0 1px ${cssVar.colorBorder};
-  `,
-  optionLabel: css`
-    font-weight: 500;
-  `,
-  // One step above the hover tint is enough — the checkmark carries the
-  // selection signal, so a heavy fill just reads as a muddy block. The hover
-  // override repeats the same fill: it must outrank `.option:hover` (which
-  // would otherwise drop the row to the lighter unselected tint), and no
-  // darkening keeps the selected row flat — it's already "on".
-  optionSelected: css`
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  recommendedBadge: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 11px;
-    line-height: 18px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-}));
+// Selection keeps the same fill on hover; the inset border marks the keyboard cursor.
+const styles = {
+  option:
+    'cursor-pointer rounded-[8px] px-3 py-2.5 transition-[background] duration-[120ms] ease-[ease] hover:bg-[var(--ant-color-fill-quaternary)]',
+  optionCheck: 'shrink-0 text-primary',
+  optionDescription: 'text-[12px] leading-[1.45] text-muted-foreground',
+  optionIndex:
+    'box-border size-[22px] shrink-0 rounded-[6px] bg-accent font-mono text-[12px] font-semibold leading-[22px] text-muted-foreground text-center',
+  optionHighlighted: '[box-shadow:inset_0_0_0_1px_var(--border)]',
+  optionLabel: 'font-medium',
+  optionSelected: 'bg-accent hover:bg-accent',
+  recommendedBadge:
+    'shrink-0 rounded-[999px] bg-selected px-2 py-px text-[11px] leading-[18px] text-muted-foreground',
+};
 
 export interface OptionCardProps {
   description?: string;
@@ -120,11 +51,9 @@ export const OptionCard = memo<OptionCardProps>(
         'flex',
         'items-center',
         'gap-3',
-        cx(
-          styles.option,
-          selected && styles.optionSelected,
-          highlighted && styles.optionHighlighted,
-        ),
+        styles.option,
+        selected && styles.optionSelected,
+        highlighted && styles.optionHighlighted,
       )}
       onClick={() => {
         if (!disabled) onToggle();

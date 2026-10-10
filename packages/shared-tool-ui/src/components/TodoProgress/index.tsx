@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleArrowRight, CircleCheckBig, ListTodo } from 'lucide-react';
 import { createElement, memo } from 'react';
 
@@ -28,87 +28,21 @@ const RING_STROKE = 2;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUM = 2 * Math.PI * RING_RADIUS;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  countChip: css`
-    flex-shrink: 0;
-
-    margin-inline-end: 8px;
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  header: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  headerCount: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  headerDetail: css`
-    overflow: hidden;
-    min-width: 0;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-  `,
-  headerLabel: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    gap: 0;
-    align-items: center;
-
-    min-width: 0;
-
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  ring: css`
-    transform: rotate(-90deg);
-    flex-shrink: 0;
-    margin-inline-end: 6px;
-  `,
-  ringProgress: css`
-    transition:
-      stroke-dashoffset 240ms ease,
-      stroke 240ms ease;
-  `,
-  ringTrack: css`
-    stroke: ${cssVar.colorFillSecondary};
-  `,
-  summaryDetail: css`
-    color: ${cssVar.colorText};
-  `,
-  summaryText: css`
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  countChip:
+    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground me-2',
+  header:
+    'flex items-center gap-2 bg-[var(--ant-color-fill-quaternary)] px-3 py-2.5 [border-block-end:1px_solid_var(--sidebar-border)]',
+  headerCount:
+    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
+  headerDetail: 'min-w-0 overflow-hidden text-ellipsis text-foreground',
+  headerLabel: 'flex min-w-0 flex-1 items-center gap-0 truncate text-muted-foreground',
+  ring: 'shrink-0 [transform:rotate(-90deg)] me-1.5',
+  ringProgress: 'transition-[stroke-dashoffset,stroke] duration-[240ms] ease-[ease]',
+  ringTrack: 'stroke-selected',
+  summaryDetail: 'text-foreground',
+  summaryText: 'min-w-0 truncate',
+};
 
 const STATE_ICONS = {
   allDone: CircleCheckBig,
@@ -120,13 +54,13 @@ const STATE_ICONS = {
 const stateColor = (state: TodoSummaryState) => {
   switch (state) {
     case 'inProgress': {
-      return cssVar.colorInfo;
+      return 'var(--info)';
     }
     case 'idle': {
-      return cssVar.colorTextSecondary;
+      return 'var(--muted-foreground)';
     }
     default: {
-      return cssVar.colorSuccess;
+      return 'var(--success)';
     }
   }
 };
@@ -139,7 +73,7 @@ interface TodoProgressRingProps {
 export const TodoProgressRing = memo<TodoProgressRingProps>(({ completed, total }) => {
   const ratio = total > 0 ? completed / total : 0;
   const allDone = total > 0 && completed === total;
-  const color = allDone ? cssVar.colorSuccess : cssVar.colorInfo;
+  const color = allDone ? 'var(--success)' : 'var(--info)';
 
   return (
     <svg className={styles.ring} height={RING_SIZE} width={RING_SIZE}>
@@ -191,7 +125,7 @@ export const TodoInspectorSummary = memo<TodoSummaryContentProps>(({ label, shin
         </span>
       )}
       <span className={styles.summaryText}>
-        <span className={cx(shiny && shinyTextStyles.shinyText)}>{label}</span>
+        <span className={cn(shiny && shinyTextStyles.shinyText)}>{label}</span>
         {detail && (
           <>
             {': '}

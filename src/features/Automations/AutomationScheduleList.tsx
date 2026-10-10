@@ -1,5 +1,4 @@
 import type { TaskListItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -55,70 +54,15 @@ import { useAutomationActions } from './useAutomationActions';
 
 dayjs.extend(relativeTime);
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  batchBar: css`
-    position: sticky;
-    inset-block-end: 16px;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: fit-content;
-    margin-inline: auto;
-    padding-block: 8px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  headerRow: css`
-    display: grid;
-    grid-template-columns: 28px minmax(0, 2fr) 130px 110px minmax(0, 1.4fr) 110px 40px;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  row: css`
-    cursor: pointer;
-
-    display: grid;
-    grid-template-columns: 28px minmax(0, 2fr) 130px 110px minmax(0, 1.4fr) 110px 40px;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 8px;
-    border-radius: 8px;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  titleCell: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-  `,
-  titleText: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  batchBar:
+    'sticky bottom-4 mx-auto flex w-fit items-center gap-2 rounded-[12px] border border-sidebar-border bg-popover px-4 py-2 shadow-(--shadow-popover)',
+  headerRow:
+    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-(--ant-color-text-tertiary) grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
+  row: 'grid cursor-pointer items-center gap-3 rounded-(--radius-card) p-2 hover:bg-accent grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
+  titleCell: 'flex min-w-0 items-center gap-2',
+  titleText: 'truncate text-[13px] font-medium',
+};
 
 const CreatedByCell = memo<{ userId: string | null }>(({ userId }) => {
   const meta = useUserDisplayMeta(userId);

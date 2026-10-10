@@ -1,14 +1,13 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { normalizeRunStatus } from './shared';
 
 const RUN_STYLE: Record<string, { background: string; color: string }> = {
-  completed: { background: cssVar.colorSuccessBg, color: cssVar.colorSuccess },
-  failed: { background: cssVar.colorErrorBg, color: cssVar.colorError },
-  running: { background: cssVar.colorInfoBg, color: cssVar.colorInfo },
-  skipped: { background: cssVar.colorFillTertiary, color: cssVar.colorTextSecondary },
+  completed: { background: 'var(--ant-color-success-bg)', color: 'var(--success)' },
+  failed: { background: 'var(--ant-color-error-bg)', color: 'var(--destructive)' },
+  running: { background: 'var(--ant-color-info-bg)', color: 'var(--info)' },
+  skipped: { background: 'var(--accent)', color: 'var(--muted-foreground)' },
 };
 
 interface RunStatusBadgeProps {

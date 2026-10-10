@@ -1,5 +1,4 @@
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarDays, Clock, RefreshCw } from 'lucide-react';
@@ -42,18 +41,10 @@ export interface TriggerDraft {
   timezone?: string | null;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  fieldLabel: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  preview: css`
-    padding-block: 12px;
-    padding-inline: 14px;
-    border-radius: 12px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  fieldLabel: 'text-[12px] text-muted-foreground',
+  preview: 'rounded-[12px] bg-(--ant-color-fill-quaternary) px-3.5 py-3',
+};
 
 interface AutomationTriggerDraftProps {
   disabled?: boolean;
@@ -176,8 +167,8 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>((props) => {
       </div>
 
       {enabled && nextRun && (
-        <div className={cx(styles.preview, 'flex items-center gap-2.5')}>
-          <Clock color={cssVar.colorTextDescription} size={16} />
+        <div className={cn(styles.preview, 'flex items-center gap-2.5')}>
+          <Clock color={'var(--ant-color-text-description)'} size={16} />
           <div className="text-muted-foreground">{t('taskSchedule.nextRun', { ns: 'chat' })}</div>
           <div className="font-medium" style={{ flex: 1, textAlign: 'right' }}>
             {formatAbsoluteDateTime(nextRun.toDate())}

@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { AlarmClockIcon, PlusIcon } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -15,31 +14,11 @@ import {
   type TemplateCategoryId,
 } from './automationTemplates';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  cardGrid: css`
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-
-    @media (width >= 900px) {
-      grid-template-columns: 1fr 1fr;
-    }
-  `,
-  cardSummary: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  cardTitle: css`
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  cardGrid: 'grid grid-cols-[1fr] gap-3 [@media(width>=900px)]:grid-cols-[1fr_1fr]',
+  cardSummary: 'line-clamp-2 text-[12px] text-muted-foreground',
+  cardTitle: 'text-[13px] font-medium text-foreground',
+};
 
 interface AutomationTemplateGalleryProps {
   onStartBlank: () => void;
@@ -84,7 +63,7 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
         ) : (
           <div className="flex flex-col items-center gap-1" style={{ textAlign: 'center' }}>
             <div className="flex items-center justify-center h-[40px] w-[40px]">
-              <AlarmClockIcon color={cssVar.colorTextQuaternary} size={40} />
+              <AlarmClockIcon color={'var(--ant-color-text-quaternary)'} size={40} />
             </div>
             <div className="text-[16px] font-semibold">{t('page.empty.title')}</div>
             <div className="text-[13px] text-muted-foreground" style={{ maxWidth: 480 }}>
@@ -120,8 +99,8 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
                     CLICKABLE_FOCUS_RING,
                   )}
                   style={{
-                    borderColor: cssVar.colorBorderSecondary,
-                    background: cssVar.colorBgContainer,
+                    borderColor: 'var(--sidebar-border)',
+                    background: 'var(--card)',
                   }}
                   onClick={() => selectTemplate(id)}
                 >

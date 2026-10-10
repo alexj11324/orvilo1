@@ -265,6 +265,7 @@ export const AttachmentUploadButton = memo<AttachmentUploadButtonProps>(({ disab
     >
       <Button
         disabled={disabled}
+        size="compact"
         style={{ alignSelf: 'flex-start', minHeight: md ? undefined : 44 }}
         variant="ghost"
       >

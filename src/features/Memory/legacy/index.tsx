@@ -1,9 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, confirmModal, Text } from '@lobehub/ui/base-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { confirmModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { useScopedMemoryEditor } from '@/features/Memory/useScopedMemoryEditor';
 import NavHeader from '@/features/NavHeader';
 import FilterBar from '@/routes/(main)/memory/features/FilterBar';
@@ -69,10 +69,10 @@ function MemoryCollection({ layer }: Props) {
     });
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1 h-full">
       <NavHeader
         left={
-          <Text weight={'bold'}>
+          <div className="font-bold text-foreground">
             {t(
               (
                 {
@@ -84,10 +84,12 @@ function MemoryCollection({ layer }: Props) {
                 } as const
               )[layer],
             )}
-          </Text>
+          </div>
         }
         right={
           <Button
+            className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            variant="outline"
             onClick={() =>
               openEditorModal({
                 value: '',
@@ -101,7 +103,7 @@ function MemoryCollection({ layer }: Props) {
           </Button>
         }
       />
-      <Flexbox gap={20} padding={24} style={{ overflowY: 'auto' }}>
+      <div className="flex flex-col gap-5 p-6 overflow-y-auto">
         <FilterBar
           searchValue={q}
           onSearch={(value) => {
@@ -112,7 +114,11 @@ function MemoryCollection({ layer }: Props) {
         {selected && (
           <MemoryDetail id={selected} layer={layer} onClose={() => setSelected(undefined)} />
         )}
-        {feedback && <Text role={'alert'}>{feedback}</Text>}
+        {feedback && (
+          <div className="text-foreground" role={'alert'}>
+            {feedback}
+          </div>
+        )}
         <AsyncBoundary
           data={data}
           empty={<MemoryEmpty search={Boolean(q)} />}
@@ -150,10 +156,18 @@ function MemoryCollection({ layer }: Props) {
                 key={entry.id}
                 title={row.memory.title}
                 actions={
-                  <Flexbox horizontal gap={8}>
-                    <Button onClick={() => setSelected(entry.id)}>{t('manager.details')}</Button>
+                  <div className="flex flex-row gap-2">
                     <Button
+                      className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                      variant="outline"
+                      onClick={() => setSelected(entry.id)}
+                    >
+                      {t('manager.details')}
+                    </Button>
+                    <Button
+                      className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
                       disabled={pending === entry.id}
+                      variant="outline"
                       onClick={async () => {
                         setPending(entry.id);
                         try {
@@ -178,10 +192,15 @@ function MemoryCollection({ layer }: Props) {
                     >
                       {t('manager.edit')}
                     </Button>
-                    <Button disabled={pending === entry.id} onClick={() => remove(entry.id)}>
+                    <Button
+                      className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                      disabled={pending === entry.id}
+                      variant="outline"
+                      onClick={() => remove(entry.id)}
+                    >
                       {t('manager.delete')}
                     </Button>
-                  </Flexbox>
+                  </div>
                 }
               >
                 <HighlightedContent>{content || ''}</HighlightedContent>
@@ -189,19 +208,26 @@ function MemoryCollection({ layer }: Props) {
             );
           })}
         </AsyncBoundary>
-        <Flexbox horizontal gap={12}>
-          <Button disabled={page === 1 || isLoading} onClick={() => setPage(page - 1)}>
+        <div className="flex flex-row gap-3">
+          <Button
+            className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            disabled={page === 1 || isLoading}
+            variant="outline"
+            onClick={() => setPage(page - 1)}
+          >
             {t('manager.previous')}
           </Button>
-          <Text>{page}</Text>
+          <div className="text-foreground">{page}</div>
           <Button
+            className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
             disabled={!data || page * 20 >= data.total || isLoading}
+            variant="outline"
             onClick={() => setPage(page + 1)}
           >
             {t('manager.next')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 }

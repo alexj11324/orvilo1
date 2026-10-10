@@ -1,5 +1,4 @@
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
@@ -11,18 +10,18 @@ export default function MemoryHome() {
   const persona = useUserMemoryStore((s) => s.useFetchPersona)();
   const tags = useUserMemoryStore((s) => s.useFetchTags)();
   return (
-    <Flexbox flex={1} height={'100%'}>
-      <NavHeader left={<Text weight={'bold'}>{t('tab.home')}</Text>} />
-      <Flexbox gap={20} padding={24} style={{ overflowY: 'auto' }}>
+    <div className="flex flex-col flex-1 h-full">
+      <NavHeader left={<div className="font-bold text-foreground">{t('tab.home')}</div>} />
+      <div className="flex flex-col gap-5 p-6 overflow-y-auto">
         <AsyncBoundary
           data={persona.data}
-          empty={<Text>{t('empty.title')}</Text>}
+          empty={<div className="text-foreground">{t('empty.title')}</div>}
           error={persona.error}
           isEmpty={!persona.data}
           isLoading={persona.isLoading}
           onRetry={() => void persona.mutate()}
         >
-          {persona.data?.summary && <Text>{persona.data.summary}</Text>}
+          {persona.data?.summary && <div className="text-foreground">{persona.data.summary}</div>}
           {persona.data?.content && <Markdown>{persona.data.content}</Markdown>}
         </AsyncBoundary>
         <AsyncBoundary
@@ -31,15 +30,15 @@ export default function MemoryHome() {
           isLoading={tags.isLoading}
           onRetry={() => void tags.mutate()}
         >
-          <Flexbox horizontal gap={12} wrap={'wrap'}>
+          <div className="flex flex-row flex-wrap gap-3">
             {tags.data?.roles.map((role) => (
-              <Text key={role.role}>
+              <div className="text-foreground" key={role.role}>
                 {role.role} ({role.count})
-              </Text>
+              </div>
             ))}
-          </Flexbox>
+          </div>
         </AsyncBoundary>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 }

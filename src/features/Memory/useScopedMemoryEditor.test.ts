@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { toast } from '@/components/toast';
 import * as editor from '@/features/EditorModal';
 import { userMemoryService } from '@/services/userMemory';
 import { useUserStore } from '@/store/user';
@@ -43,5 +44,28 @@ it('closes a private dialog on account change and fences its retained confirm ca
   expect(close).toHaveBeenCalled();
   await oldConfirm?.('Changed Alice text');
   expect(confirm).not.toHaveBeenCalled();
+  unmount();
+});
+
+it('reports a failed save through the local toast and keeps the rejection for the editor', async () => {
+  const failure = new Error('save failed');
+  const notify = vi.spyOn(toast, 'error').mockReturnValue({
+    id: 'notification',
+    close: vi.fn(),
+    update: vi.fn(),
+  });
+  const modal = vi.spyOn(editor, 'openEditorModal').mockReturnValue({ close: vi.fn() } as never);
+  const { result, unmount } = renderHook(useScopedMemoryEditor);
+  act(() =>
+    result.current({
+      value: 'Draft',
+      onConfirm: async () => {
+        throw failure;
+      },
+    }),
+  );
+
+  await expect(modal.mock.calls[0][0].onConfirm?.('Draft')).rejects.toBe(failure);
+  expect(notify).toHaveBeenCalledWith(expect.any(String));
   unmount();
 });

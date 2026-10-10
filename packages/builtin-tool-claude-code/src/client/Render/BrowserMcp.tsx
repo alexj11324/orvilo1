@@ -92,7 +92,7 @@ const Screenshot = memo<BrowserMcpRenderProps>(({ content, pluginState }) => {
             // any padding reads as a mat around the screenshot rather than a frame.
             // `display: flex` also kills the inline-image baseline gap, which would
             // otherwise leave a sliver of background under the picture.
-            className="rounded-lg border"
+            className="rounded-(--radius-card) border"
             key={image.fileId || image.url || index}
             style={{ alignSelf: 'flex-start', display: 'flex', overflow: 'hidden', padding: 0 }}
           >

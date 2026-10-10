@@ -33,7 +33,7 @@ export type QueueItemProps = ComponentProps<'li'>;
 export const QueueItem = ({ className, ...props }: QueueItemProps) => (
   <li
     className={cn(
-      'group flex flex-col gap-1 rounded-md px-3 py-1 text-sm transition-colors hover:bg-muted',
+      'group flex flex-col gap-1 rounded-(--radius-card) px-3 py-1 text-sm transition-colors hover:bg-muted',
       className,
     )}
     {...props}

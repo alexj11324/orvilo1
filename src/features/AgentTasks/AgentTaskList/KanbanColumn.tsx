@@ -54,7 +54,7 @@ const SortableTaskCard = memo<{
       data-board-card
       ref={setNodeRef}
       className={cx(
-        'rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50',
+        'rounded-(--radius-card) outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50',
         isDragging && cardStyles.dragging,
       )}
       style={{

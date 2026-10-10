@@ -379,7 +379,11 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
           />
         );
         return (
-          <AccordionItem className="rounded-md border" key={String(index)} value={String(index)}>
+          <AccordionItem
+            className="rounded-(--radius-card) border"
+            key={String(index)}
+            value={String(index)}
+          >
             <AccordionTrigger className="px-4">{title}</AccordionTrigger>
             <AccordionContent className="p-[12px_16px]">{content}</AccordionContent>
           </AccordionItem>

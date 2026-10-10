@@ -83,11 +83,11 @@ const SearchGrounding = memo<GroundingSearch>(
             <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2">
               {imageResults.map((item, index) => (
                 <div
-                  className="flex flex-col gap-1 overflow-hidden rounded-lg"
+                  className="flex flex-col gap-1 overflow-hidden rounded-(--radius-card)"
                   key={`${item.imageUri}-${index}`}
                 >
                   <a
-                    className="block overflow-hidden rounded-md hover:opacity-75"
+                    className="block overflow-hidden rounded-(--radius-card) hover:opacity-75"
                     href={item.imageUri}
                     rel="noopener noreferrer"
                     target="_blank"

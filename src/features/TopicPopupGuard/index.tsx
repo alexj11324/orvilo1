@@ -55,7 +55,7 @@ const TopicInPopupGuard = memo<TopicInPopupGuardProps>(({ popup }) => {
     >
       <h2 className={styles.title}>{t('inPopup.title')}</h2>
       <p className={styles.description}>{t('inPopup.description')}</p>
-      <Button onClick={handleFocus}>
+      <Button size="lg" onClick={handleFocus}>
         <ExternalLinkIcon data-icon="inline-start" />
         {t('inPopup.focus')}
       </Button>

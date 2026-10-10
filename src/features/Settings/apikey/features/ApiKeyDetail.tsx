@@ -68,6 +68,7 @@ const ApiKeyScopeEditor: FC<ApiKeyScopeEditorProps> = ({ apiKey, canEdit, onUpda
         />
         <div className="flex justify-end gap-2">
           <Button
+            size="lg"
             type="button"
             variant="ghost"
             onClick={() => {
@@ -81,6 +82,7 @@ const ApiKeyScopeEditor: FC<ApiKeyScopeEditorProps> = ({ apiKey, canEdit, onUpda
           <Button
             disabled={saving || scopeMissing}
             loading={saving}
+            size="lg"
             type="button"
             variant="default"
             onClick={async () => {
@@ -121,7 +123,7 @@ const ApiKeyScopeEditor: FC<ApiKeyScopeEditorProps> = ({ apiKey, canEdit, onUpda
       )}
       {canEdit && (
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={() => setEditing(true)}>
+          <Button size="lg" type="button" variant="ghost" onClick={() => setEditing(true)}>
             <Pencil />
             {t('apikey.detail.permissions.edit')}
           </Button>

@@ -848,6 +848,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                         </p>
                         <Button
                           disabled={busy || loading}
+                          size="lg"
                           variant="outline"
                           onClick={() => void refresh(installationId || undefined)}
                         >

@@ -295,10 +295,10 @@ function GithubWebhookSetup({
         <Input readOnly value={callbackUrl} />
       </label>
       <div className={'flex flex-wrap gap-2'}>
-        <Button disabled={pending} variant={'outline'} onClick={() => void copy(false)}>
+        <Button disabled={pending} size="lg" variant={'outline'} onClick={() => void copy(false)}>
           {t('events.github.copyUrl')}
         </Button>
-        <Button disabled={pending} variant={'outline'} onClick={() => void copy(true)}>
+        <Button disabled={pending} size="lg" variant={'outline'} onClick={() => void copy(true)}>
           {t('events.github.copySecret')}
         </Button>
       </div>
@@ -410,18 +410,23 @@ function SavedEventTrigger({ taskId }: { taskId: string }) {
               {observed?.reasons.map((reason) => (
                 <span key={reason}>{t(`events.reason.${reason}`)}</span>
               ))}
-              <Button disabled={pending || actionPending} onClick={() => void act('check')}>
+              <Button
+                disabled={pending || actionPending}
+                size="lg"
+                onClick={() => void act('check')}
+              >
                 {t('events.checkReadiness')}
               </Button>
               <Button
                 disabled={pending || actionPending || (!trigger.enabled && !observed?.canEnable)}
+                size="lg"
                 onClick={() => void act(trigger.enabled ? 'pause' : 'enable')}
               >
                 {t(trigger.enabled ? 'events.pause' : 'events.enable')}
               </Button>
             </div>
           )}
-          <Button disabled={pending || actionPending} onClick={() => void stop()}>
+          <Button disabled={pending || actionPending} size="lg" onClick={() => void stop()}>
             {t('events.stop')}
           </Button>
           {isGithub && (

@@ -190,7 +190,7 @@ const SelfLearning = memo(() => {
                     <EmptyDescription style={{ fontSize: 13 }}>{t('empty.desc')}</EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
-                    <Button variant="outline" onClick={openCreate}>
+                    <Button size="lg" variant="outline" onClick={openCreate}>
                       <PlusIcon data-icon="inline-start" />
                       {t('nav.newDomain')}
                     </Button>

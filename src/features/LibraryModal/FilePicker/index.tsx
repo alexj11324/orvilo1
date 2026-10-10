@@ -153,7 +153,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
             <ServerCrash fill={'transparent'} height={80} size={80} width={80} />
           </span>
           {t('networkError', { ns: 'file' })}
-          <Button variant="outline" onClick={() => void mutate()}>
+          <Button size="lg" variant="outline" onClick={() => void mutate()}>
             {t('retry', { ns: 'common' })}
           </Button>
         </div>

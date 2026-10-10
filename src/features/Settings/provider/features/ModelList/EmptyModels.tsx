@@ -48,6 +48,7 @@ const EmptyState = memo<{ provider: string }>(({ provider }) => {
         {withReason(
           <Button
             disabled={!canManageProvider}
+            size="lg"
             variant="outline"
             onClick={() => {
               if (!canManageProvider) return;
@@ -67,6 +68,7 @@ const EmptyState = memo<{ provider: string }>(({ provider }) => {
           <Button
             disabled={!canManageProvider}
             loading={fetchRemoteModelsLoading}
+            size="lg"
             onClick={async () => {
               if (!canManageProvider) return;
               setFetchRemoteModelsLoading(true);

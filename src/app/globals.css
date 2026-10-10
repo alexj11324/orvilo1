@@ -14,6 +14,9 @@
 @custom-variant dark (&:is(.dark *, [data-theme='dark'] *));
 
 @theme inline {
+    /* DESIGN.md metadata and body line boxes; font sizes remain 0.75/0.875rem. */
+    --text-xs--line-height: calc(1.25 / 0.75);
+    --text-sm--line-height: calc(1.375 / 0.875);
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
             'Helvetica Neue', Arial, 'Noto Sans', sans-serif);

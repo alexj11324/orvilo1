@@ -12,7 +12,7 @@ import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
 
 const styles = {
   actions:
-    'cursor-pointer text-[var(--ant-color-text-tertiary)] opacity-0 transition-opacity duration-200 ease-[var(--ant-motion-ease-in-out)] group-hover/local-file:opacity-100',
+    'cursor-pointer text-(--ant-color-text-tertiary) opacity-0 transition-opacity duration-200 ease-(--ant-motion-ease-in-out) group-hover/local-file:opacity-100',
   container: 'group/local-file justify-between',
   fileName: 'ms-2 flex-1 text-muted-foreground hover:text-foreground',
   header: 'cursor-pointer',

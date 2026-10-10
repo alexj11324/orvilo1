@@ -14,7 +14,7 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 import type { CreateTaskParams, CreateTaskState } from '../../../types';
 
 const styles = {
-  description: 'line-clamp-3 text-[12px] leading-[1.5] text-[var(--ant-color-text-tertiary)]',
+  description: 'line-clamp-3 text-[12px] leading-[1.5] text-(--ant-color-text-tertiary)',
   identifier:
     'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
   // Fade the model-facing markdown preview; the detail panel contains the full content.

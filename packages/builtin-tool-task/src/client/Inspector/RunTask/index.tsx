@@ -15,7 +15,7 @@ const styles = {
     'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
   promptChip:
     'inline-flex min-w-0 max-w-[240px] shrink items-center truncate rounded-[999px] bg-accent px-2 py-0.5 text-[12px] text-foreground',
-  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
+  separator: 'shrink-0 text-(--ant-color-text-quaternary)',
 };
 
 export const RunTaskInspector = memo<BuiltinInspectorProps<RunTaskParams, RunTaskState>>(

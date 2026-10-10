@@ -6,8 +6,8 @@ import { useElectronStore } from '@/store/electron';
 import { desktopStateSelectors } from '@/store/electron/selectors';
 
 const styles = {
-  icon: 'text-[var(--ant-color-text-quaternary)]',
-  item: 'rounded-[var(--ant-border-radius)] px-3 py-1 transition-[background-color] duration-200 ease-[ease] hover:bg-[var(--ant-color-fill-quaternary)]',
+  icon: 'text-(--ant-color-text-quaternary)',
+  item: 'rounded-(--ant-border-radius) px-3 py-1 transition-[background-color] duration-200 ease-[ease] hover:bg-(--ant-color-fill-quaternary)',
   path: 'font-mono text-[12px] break-all',
 };
 

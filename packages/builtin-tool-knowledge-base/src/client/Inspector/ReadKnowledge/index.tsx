@@ -10,7 +10,7 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 import type { ReadKnowledgeArgs, ReadKnowledgeState } from '../../..';
 
 const styles = {
-  moreFiles: 'ms-1 text-[var(--ant-color-text-tertiary)]',
+  moreFiles: 'ms-1 text-(--ant-color-text-tertiary)',
 };
 
 export const ReadKnowledgeInspector = memo<

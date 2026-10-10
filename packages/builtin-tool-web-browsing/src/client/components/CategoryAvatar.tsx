@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
@@ -18,7 +17,7 @@ export const CategoryAvatar = memo<CategoryAvatarProps>(({ category }) => {
       avatar={<IconComponent />}
       style={{
         backgroundColor: 'transparent',
-        color: cssVar.colorTextSecondary,
+        color: 'var(--muted-foreground)',
         height: 16,
         width: 16,
       }}

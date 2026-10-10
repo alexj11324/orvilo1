@@ -1,24 +1,16 @@
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import type { UniformSearchResult } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { CSSProperties, MouseEvent } from 'react';
 import { memo } from 'react';
 
 import WebFavicon from '@/components/WebFavicon';
 import { useGlobalStore } from '@/store/global';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    cursor: pointer;
-
-    height: 100%;
-    padding: 8px;
-
-    font-size: 12px;
-    color: initial;
-  `,
-}));
+const styles = {
+  container: 'cursor-pointer h-full p-2 text-xs leading-[inherit] [color:initial]',
+};
 
 const SearchResultItem = memo<UniformSearchResult & { style?: CSSProperties }>(
   ({ url, title, style }) => {
@@ -47,7 +39,7 @@ const SearchResultItem = memo<UniformSearchResult & { style?: CSSProperties }>(
       >
         <div
           style={style}
-          className={cx(
+          className={cn(
             styles.container,
             'flex flex-col gap-0.5 justify-between rounded-md border bg-card cursor-pointer',
           )}

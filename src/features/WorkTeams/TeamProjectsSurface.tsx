@@ -493,7 +493,11 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                 }
               >
                 {filters.length === 0 ? (
-                  <Button variant="outline" onClick={() => openCreateProjectModal({ teamId })}>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => openCreateProjectModal({ teamId })}
+                  >
                     <PlusIcon aria-hidden className="size-4" />
                     {t('create.title', { ns: 'project' })}
                   </Button>

@@ -20,18 +20,14 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     gap: 10px;
 
     padding: 16px;
-    border: 1px solid ${cssVar.colorFillSecondary};
+    border-style: solid;
+    border-width: 1px;
     border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
+    border-image: none;
 
     transition:
       border-color ${cssVar.motionDurationMid},
       background ${cssVar.motionDurationMid};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimaryHover};
-    }
 
     &:focus-visible {
       outline: 2px solid ${cssVar.colorPrimary};
@@ -93,19 +89,11 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     border-radius: ${cssVar.borderRadius};
 
     font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
     white-space: nowrap;
-
-    background: transparent;
 
     transition:
       background ${cssVar.motionDurationMid},
       color ${cssVar.motionDurationMid};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
 
     &:focus-visible {
       outline: 2px solid ${cssVar.colorPrimary};

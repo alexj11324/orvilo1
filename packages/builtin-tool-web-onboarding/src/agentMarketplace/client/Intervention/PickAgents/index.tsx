@@ -184,7 +184,9 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
                     type="button"
                     className={cn(
                       styles.categoryItem,
-                      isActive && 'font-medium text-foreground bg-selected',
+                      isActive
+                        ? 'font-medium text-foreground [background:var(--selected)]'
+                        : 'text-muted-foreground [background:transparent] [&:hover]:text-foreground [&:hover]:[background:var(--accent)]',
                     )}
                     onClick={() => setActiveCategory(category)}
                   >
@@ -206,10 +208,15 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
                       <div
                         aria-disabled={disabled}
                         aria-pressed={isSelected}
-                        className={cn(styles.card, isSelected && 'border-primary bg-primary-wash')}
                         key={tpl.id}
                         role="button"
                         tabIndex={disabled ? -1 : 0}
+                        className={cn(
+                          styles.card,
+                          isSelected
+                            ? 'border-primary [background:var(--primary-wash)]'
+                            : 'border-[color:var(--ant-color-fill-secondary)] [background:var(--ant-color-bg-elevated)] [&:hover]:border-[color:var(--ant-color-primary-hover)]',
+                        )}
                         onClick={() => toggle(tpl.id)}
                         onKeyDown={(event) => handleCardKeyDown(event, tpl.id)}
                       >

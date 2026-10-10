@@ -1,7 +1,6 @@
 'use client';
 
 import { Freeze } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
 import { AnimatePresence, useIsPresent } from 'motion/react';
 import * as m from 'motion/react-m';
 import { type ReactNode } from 'react';
@@ -24,33 +23,11 @@ import HistoryPanel from '../History';
 import { selectors, usePageEditorStore } from '../store';
 import { usePageAgentPanelControl } from './OverrideContext';
 
-const styles = createStaticStyles(({ css }) => ({
-  inner: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-  `,
-  layer: css`
-    will-change: opacity, transform;
-
-    position: absolute;
-    inset: 0;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    min-height: 100%;
-    max-height: 100%;
-  `,
-}));
+const styles = {
+  inner: 'relative flex h-full w-full min-h-0 flex-1 flex-col overflow-hidden',
+  layer:
+    'absolute inset-0 flex min-h-full max-h-full flex-col overflow-hidden will-change-[opacity,transform]',
+};
 
 const ExitingFrozenContent = memo<{ children: ReactNode }>(({ children }) => {
   const isPresent = useIsPresent();

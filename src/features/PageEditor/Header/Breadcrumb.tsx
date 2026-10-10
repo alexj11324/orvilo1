@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,28 +7,13 @@ import { knowledgeBaseSelectors, useKnowledgeBaseStore } from '@/store/library';
 
 import { usePageEditorStore } from '../store';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  breadcrumb: css`
-    font-size: 14px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  breadcrumbItem: css`
-    cursor: pointer;
-    transition: color ${cssVar.motionDurationSlow};
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  currentItem: css`
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  separator: css`
-    margin-inline: 8px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  breadcrumb: 'text-sm leading-5.5 text-muted-foreground',
+  breadcrumbItem:
+    'cursor-pointer transition-colors duration-(--ant-motion-duration-slow) hover:text-foreground',
+  currentItem: 'font-medium text-foreground',
+  separator: 'mx-2 text-foreground-quaternary',
+};
 
 interface FolderCrumb {
   id: string;
@@ -68,7 +52,7 @@ const Breadcrumb = memo(() => {
       {/* Knowledge Base (root) */}
       {knowledgeBaseId && (
         <>
-          <span className={styles.breadcrumbItem} style={{ cursor: 'default' }}>
+          <span className={cn(styles.breadcrumbItem, 'cursor-default')}>
             {knowledgeBaseName || 'Knowledge Base'}
           </span>
           <span className={styles.separator}>/</span>
@@ -78,15 +62,13 @@ const Breadcrumb = memo(() => {
       {/* Folder chain */}
       {folderChain.map((folder: FolderCrumb) => (
         <div className="flex items-center gap-0" key={folder.id}>
-          <span className={styles.breadcrumbItem} style={{ cursor: 'default' }}>
-            {folder.name}
-          </span>
+          <span className={cn(styles.breadcrumbItem, 'cursor-default')}>{folder.name}</span>
           <span className={styles.separator}>/</span>
         </div>
       ))}
 
       {/* Current document title */}
-      <span className={cx(styles.breadcrumbItem, styles.currentItem)} style={{ cursor: 'default' }}>
+      <span className={cn(styles.breadcrumbItem, styles.currentItem, 'cursor-default')}>
         {documentTitle}
       </span>
     </div>

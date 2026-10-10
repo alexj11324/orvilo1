@@ -1,7 +1,6 @@
 'use client';
 
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { ArrowLeftIcon, Clock3Icon } from 'lucide-react';
@@ -41,47 +40,15 @@ interface HistoryDayGroup {
   label: string;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  empty: css`
-    height: 100%;
-    padding: 24px;
-  `,
-  groupHeader: css`
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 0;
-
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-
-    padding-block: 14px 6px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorSplit};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  groupTitle: css`
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    color: ${cssVar.colorText};
-  `,
-  groupCount: css`
-    font-size: 11px;
-    line-height: 1;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  headerButton: css`
-    padding-inline: 8px;
-  `,
-  list: css`
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-    padding-block: 0 20px;
-  `,
-}));
+const styles = {
+  empty: 'h-full p-6',
+  groupHeader:
+    'sticky top-0 z-1 flex items-baseline gap-2 border-b border-divider bg-card pt-3.5 pb-1.5 px-4',
+  groupTitle: 'text-xs leading-5 font-bold text-foreground',
+  groupCount: 'text-xs leading-5 text-foreground-tertiary',
+  headerButton: 'px-2',
+  list: 'min-h-0 flex-1 overflow-y-auto pt-0 pb-5',
+};
 
 const HistoryPanel = memo(() => {
   const { t } = useTranslation(['common', 'file']);
@@ -220,22 +187,19 @@ const HistoryPanel = memo(() => {
   if (!documentId) return null;
 
   return (
-    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
+    <div className="flex h-full flex-1 flex-col">
       <NavHeader
         showTogglePanelButton={false}
         left={
-          <div
-            className="truncate min-w-0 text-muted-foreground"
-            style={{ fontSize: 13, fontWeight: 500, marginLeft: 8 }}
-          >
+          <div className="ms-2 min-w-0 truncate text-sm leading-5.5 font-medium text-muted-foreground">
             {t('pageEditor.history.title', { ns: 'file' })}
           </div>
         }
         right={
           <>
             <Button
-              className={cn(styles.headerButton)}
-              size="sm"
+              className={cn(styles.headerButton, 'text-sm leading-5.5')}
+              size="compact"
               variant="ghost"
               onClick={() => setRightPanelMode('copilot')}
             >

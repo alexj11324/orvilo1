@@ -1,7 +1,7 @@
 'use client';
 
 import { DEFAULT_BLOCK_ANCHOR_PADDING, EditorProvider } from '@lobehub/editor/react';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import type { CSSProperties, FC, ReactNode, UIEvent } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
@@ -16,7 +16,6 @@ import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { usePageStore } from '@/store/page';
-import { StyleSheet } from '@/utils/styles';
 
 import DocumentComments from './DocumentComments';
 import DocumentLikes from './DocumentLikes';
@@ -63,26 +62,11 @@ const shouldRestoreEditorScroll = ({
   maxScrollTop >= previousScrollTop &&
   !isUserInteractingWithEditor;
 
-const styles = StyleSheet.create({
-  contentWrapper: {
-    containerType: 'inline-size',
-    display: 'flex',
-    flex: 1,
-    minHeight: 0,
-    overflowY: 'auto',
-    position: 'relative',
-  },
-  editorContainer: {
-    minHeight: 0,
-    minWidth: 0,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  editorContent: {
-    paddingInline: DEFAULT_BLOCK_ANCHOR_PADDING,
-    position: 'relative',
-  },
-});
+const styles = {
+  contentWrapper:
+    'relative flex h-full w-full min-h-0 flex-1 overflow-y-auto [container-type:inline-size]',
+  editorContainer: 'relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+};
 
 const overrideStyles = createStaticStyles(({ css }) => ({
   editorContent: css`
@@ -160,7 +144,7 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
     ? `${TABLE_BASE_BLEED}px`
     : `calc(${TABLE_BASE_BLEED}px + max((100cqi - ${CONVERSATION_MIN_WIDTH}px) / 2, 0px))`;
   const editorContentStyle = {
-    ...styles.editorContent,
+    'paddingInline': DEFAULT_BLOCK_ANCHOR_PADDING,
     '--orvilo-pageeditor-table-bleed-inline': tableBleedInline,
   } as CSSProperties;
   const resizeFrameRef = useRef<number | undefined>(undefined);
@@ -278,9 +262,8 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
 
   const editorPane = (
     <div
-      className="flex flex-col flex-1"
+      className={styles.editorContainer}
       ref={editorPaneRef}
-      style={{ height: '100%', ...styles.editorContainer }}
       onPointerEnter={() => {
         isPointerInsideEditorPaneRef.current = true;
       }}
@@ -289,12 +272,7 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
       }}
     >
       {!fullWidthHeader && headerSlot}
-      <div
-        className="flex"
-        ref={contentWrapperRef}
-        style={{ height: '100%', width: '100%', ...styles.contentWrapper }}
-        onScroll={handleEditorScroll}
-      >
+      <div className={styles.contentWrapper} ref={contentWrapperRef} onScroll={handleEditorScroll}>
         <WideScreenContainer
           wrapperStyle={{ cursor: editable ? 'text' : 'default' }}
           onChange={notifyEditorLayoutChange}
@@ -305,7 +283,7 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
           }}
         >
           <div
-            className={cn('flex flex-col flex-1', overrideStyles.editorContent)}
+            className={cn('relative flex flex-col flex-1', overrideStyles.editorContent)}
             style={editorContentStyle}
           >
             <TitleSection />
@@ -328,12 +306,9 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
 
   if (fullWidthHeader) {
     return (
-      <div
-        className="flex flex-col"
-        style={{ height: '100%', width: '100%', backgroundColor: cssVar.colorBgContainer }}
-      >
+      <div className="flex h-full w-full flex-col bg-card">
         {headerSlot}
-        <div className="flex flex-1" style={{ width: '100%', minHeight: 0 }}>
+        <div className="flex w-full min-h-0 flex-1">
           {editorPane}
           {showRightPanel && <RightPanel />}
         </div>
@@ -342,10 +317,7 @@ const PageEditorCanvas = memo<PageEditorCanvasProps>((props) => {
   }
 
   return (
-    <div
-      className="flex"
-      style={{ height: '100%', width: '100%', backgroundColor: cssVar.colorBgContainer }}
-    >
+    <div className="flex h-full w-full bg-card">
       {editorPane}
       {showRightPanel && <RightPanel />}
     </div>

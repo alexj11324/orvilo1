@@ -1,7 +1,6 @@
 'use client';
 
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, useCallback, useMemo } from 'react';
@@ -17,123 +16,25 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { formatHistoryRowTime } from '../formatHistoryDate';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow-y: auto;
-    flex-shrink: 0;
-
-    width: 232px;
-    padding-block: 4px 12px;
-    padding-inline: 8px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  dot: css`
-    position: absolute;
-    inset-block-start: 9px;
-    inset-inline-start: 5px;
-
-    width: 8px;
-    height: 8px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 999px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: 0 0 0 2px ${cssVar.colorBgContainer};
-  `,
-  dotCurrent: css`
-    border-color: ${cssVar.colorSuccess};
-    background: ${cssVar.colorSuccess};
-  `,
-  dotSelected: css`
-    border-color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorPrimary};
-  `,
-  group: css`
-    position: relative;
-  `,
-  groupHeader: css`
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 0;
-
-    padding-block: 10px 6px;
-    padding-inline-start: 24px;
-
-    font-size: 11px;
-    font-weight: 500;
-    line-height: 1.2;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  item: css`
-    cursor: pointer;
-
-    padding-block: 4px;
-    padding-inline: 8px;
-    border-radius: 6px;
-
-    transition: background ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  itemCurrent: css`
-    cursor: default;
-  `,
-  itemSelected: css`
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  source: css`
-    overflow: hidden;
-
-    margin-inline-start: auto;
-    padding-inline-start: 8px;
-
-    font-size: 11px;
-    line-height: 1.3;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  meta: css`
-    overflow: hidden;
-
-    font-size: 11px;
-    line-height: 1.3;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  rail: css`
-    position: absolute;
-    inset-block: 2px;
-    inset-inline-start: 8px;
-
-    width: 1px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  row: css`
-    position: relative;
-    padding-inline-start: 24px;
-  `,
-  tag: css`
-    height: 16px;
-    padding-inline: 4px;
-    font-size: 10px;
-  `,
-  time: css`
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1.3;
-  `,
-}));
+const styles = {
+  container: 'w-58 shrink-0 overflow-y-auto border-s border-divider bg-card pt-1 pb-3 px-2',
+  // Centre the 8px marker on the rail (8px + half its 1px stroke) and
+  // the first body line (4px item inset + half its 22px line box).
+  dot: 'absolute top-[calc(0.25rem_+_1.375rem/2_-_0.5rem/2)] start-[calc(0.5rem_+_1px/2_-_0.5rem/2)] size-2 rounded-full border border-border bg-card shadow-[0_0_0_2px_var(--card)]',
+  dotCurrent: 'border-success bg-success',
+  dotSelected: 'border-primary bg-primary',
+  group: 'relative',
+  groupHeader: 'sticky top-0 z-1 bg-card pt-2.5 pb-1.5 ps-6 text-xs leading-5 font-medium',
+  item: 'cursor-pointer rounded-(--radius-button) py-1 px-2 transition-[background-color] duration-(--ant-motion-duration-mid) ease-(--ant-motion-ease-in-out) hover:bg-fill-quaternary',
+  itemCurrent: 'cursor-default',
+  itemSelected: 'bg-selected hover:bg-selected',
+  source: 'ms-auto truncate ps-2 text-xs leading-5 text-foreground-tertiary',
+  meta: 'truncate text-xs leading-5',
+  rail: 'absolute inset-y-0.5 start-2 w-px bg-secondary',
+  row: 'relative ps-6',
+  tag: 'h-5 py-0 px-1 text-xs leading-5',
+  time: 'text-sm leading-5.5 font-semibold',
+};
 
 interface HistoryDayGroup {
   items: DocumentHistoryListItem[];
@@ -182,7 +83,7 @@ const HistorySidebarRow = memo<HistorySidebarRowProps>(
     return (
       <div className={styles.row}>
         <div
-          className={cx(
+          className={cn(
             styles.dot,
             item.isCurrent && styles.dotCurrent,
             !item.isCurrent && isSelected && styles.dotSelected,
@@ -191,11 +92,9 @@ const HistorySidebarRow = memo<HistorySidebarRowProps>(
         <div
           {...clickableProps()}
           className={cn(
-            cx(
-              styles.item,
-              item.isCurrent && styles.itemCurrent,
-              !item.isCurrent && isSelected && styles.itemSelected,
-            ),
+            styles.item,
+            item.isCurrent && styles.itemCurrent,
+            !item.isCurrent && isSelected && styles.itemSelected,
             CLICKABLE_FOCUS_RING,
           )}
           onClick={() => {

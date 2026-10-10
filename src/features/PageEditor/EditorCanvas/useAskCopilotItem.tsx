@@ -4,7 +4,6 @@ import { type IEditor } from '@lobehub/editor';
 import { HIDE_TOOLBAR_COMMAND } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
 import { nanoid } from '@orvilo/utils';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,16 +17,10 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { usePageAgentPanelControl } from '../RightPanel/OverrideContext';
 import { usePageEditorStore } from '../store';
 
-const styles = createStaticStyles(({ css }) => ({
-  askCopilot: css`
-    border-radius: 6px;
-    color: ${cssVar.colorTextDescription};
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-}));
+const styles = {
+  askCopilot:
+    'cursor-pointer h-8 rounded-(--radius-button) text-sm leading-5.5 text-foreground-description hover:text-muted-foreground',
+};
 
 export const useAskCopilotItem = (
   editor: IEditor | undefined,
@@ -51,11 +44,7 @@ export const useAskCopilotItem = (
         children: (
           <div
             {...clickableProps()}
-            style={{ cursor: 'pointer' }}
-            className={cn(
-              cn('flex items-center gap-2 py-1.5 px-3', styles.askCopilot),
-              CLICKABLE_FOCUS_RING,
-            )}
+            className={cn('flex items-center gap-2 px-3', styles.askCopilot, CLICKABLE_FOCUS_RING)}
             onClick={() => {
               const xml = (editor.getSelectionDocument?.('litexml') as string) || '';
               const plainText = (editor.getSelectionDocument?.('text') as string) || '';

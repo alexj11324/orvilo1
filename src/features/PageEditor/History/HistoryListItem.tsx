@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { ArrowLeftRightIcon, RotateCcwIcon } from 'lucide-react';
@@ -21,116 +20,26 @@ import { historyItemSelectors, useHistoryItemsStore } from './HistoryItemsProvid
 
 const SOURCE_TAG_CLASS: Record<DocumentHistorySaveSource, string> = {
   autosave: 'text-muted-foreground',
-  llm_call: 'text-primary',
-  manual: 'text-success',
-  restore: 'text-info',
-  system: 'text-warning',
+  llm_call: 'text-primary-text',
+  manual: 'text-success-text',
+  restore: 'text-info-text',
+  system: 'text-warning-text',
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  description: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    line-height: 1.2;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  rowMain: css`
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  `,
-  actions: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block: 50%;
-    inset-inline-end: 10px;
-    transform: translateY(-50%);
-
-    display: flex;
-    gap: 2px;
-    align-items: center;
-
-    opacity: 0;
-
-    transition: opacity ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
-  `,
-  currentBadge: css`
-    flex-shrink: 0;
-    margin: 0;
-  `,
-  row: css`
-    cursor: pointer;
-
-    position: relative;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 16px;
-
-    transition: background ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
-
-    &:hover,
-    &:focus-within {
-      background: ${cssVar.colorFillQuaternary};
-
-      .history-source-tag {
-        opacity: 0;
-      }
-
-      .history-actions {
-        pointer-events: auto;
-        opacity: 1;
-      }
-    }
-  `,
-  rowCurrent: css`
-    cursor: default;
-
-    &:hover,
-    &:focus-within {
-      background: transparent;
-
-      .history-source-tag {
-        opacity: 1;
-      }
-    }
-  `,
-  rowRight: css`
-    position: relative;
-
-    display: flex;
-    flex-shrink: 0;
-    gap: 8px;
-    align-items: center;
-
-    margin-inline-start: auto;
-  `,
-  rowTime: css`
-    flex-shrink: 0;
-
-    font-size: 13px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-    color: ${cssVar.colorText};
-  `,
-  rowTimeCurrent: css`
-    font-size: 14px;
-    color: ${cssVar.colorPrimary};
-  `,
-  sourceTag: css`
-    flex-shrink: 0;
-    margin: 0;
-    transition: opacity ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
-  `,
-}));
+const styles = {
+  description: 'truncate text-xs leading-5 text-foreground-tertiary',
+  rowMain: 'min-w-0 flex-1 overflow-hidden',
+  actions:
+    'pointer-events-none absolute inset-y-1/2 end-2.5 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity duration-(--ant-motion-duration-mid) ease-(--ant-motion-ease-in-out) group-hover/history-row:pointer-events-auto group-focus-within/history-row:pointer-events-auto group-hover/history-row:opacity-100 group-focus-within/history-row:opacity-100',
+  currentBadge: 'm-0 h-5 shrink-0 py-0 text-xs leading-5',
+  row: 'group/history-row relative flex cursor-pointer items-center gap-2 py-2 px-4 transition-[background-color] duration-(--ant-motion-duration-mid) ease-(--ant-motion-ease-in-out) hover:bg-fill-quaternary focus-within:bg-fill-quaternary',
+  rowCurrent: 'cursor-default hover:bg-transparent focus-within:bg-transparent',
+  rowRight: 'relative ms-auto flex shrink-0 items-center gap-2',
+  rowTime: 'shrink-0 text-sm leading-5.5 font-semibold tabular-nums text-foreground',
+  rowTimeCurrent: 'text-primary-text',
+  sourceTag:
+    'm-0 h-5 shrink-0 py-0 text-xs leading-5 transition-opacity duration-(--ant-motion-duration-mid) ease-(--ant-motion-ease-in-out) group-hover/history-row:opacity-0 group-focus-within/history-row:opacity-0',
+};
 
 export interface HistoryListItemProps {
   historyId: string;
@@ -164,7 +73,7 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
   return (
     <div
       {...clickableProps(!item.isCurrent)}
-      className={cn(cx(styles.row, item.isCurrent && styles.rowCurrent), CLICKABLE_FOCUS_RING)}
+      className={cn(styles.row, item.isCurrent && styles.rowCurrent, CLICKABLE_FOCUS_RING)}
       onClick={item.isCurrent ? undefined : handleCompare}
     >
       <div className={cn('flex flex-col items-start gap-1', styles.rowMain)}>
@@ -172,8 +81,8 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
           <Tooltip>
             <TooltipTrigger
               render={
-                <span style={{ display: 'inline-flex' }}>
-                  <span className={cx(styles.rowTime, item.isCurrent && styles.rowTimeCurrent)}>
+                <span className="inline-flex">
+                  <span className={cn(styles.rowTime, item.isCurrent && styles.rowTimeCurrent)}>
                     {timeLabel}
                   </span>
                 </span>
@@ -191,7 +100,7 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
       <div className={styles.rowRight}>
         {item.isCurrent && (
           <Badge
-            className={cn(styles.currentBadge, 'bg-transparent text-info')}
+            className={cn(styles.currentBadge, 'bg-transparent text-info-text')}
             size="sm"
             variant="secondary"
           >
@@ -214,20 +123,17 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
           </Badge>
         )}
         {!item.isCurrent && (
-          <div
-            className={cn('flex items-center gap-0.5', cx(styles.actions, 'history-actions'))}
-            onClick={handleStopPropagation}
-          >
+          <div className={cn(styles.actions, 'history-actions')} onClick={handleStopPropagation}>
             <ActionIcon
               icon={ArrowLeftRightIcon}
-              size={{ blockSize: 26, borderRadius: '50%', size: 14 }}
+              size={{ blockSize: 32, borderRadius: '50%', size: 14 }}
               title={t('pageEditor.history.compare', { ns: 'file' })}
               onClick={handleCompare}
             />
             <ActionIcon
               icon={RotateCcwIcon}
               loading={isRestoring}
-              size={{ blockSize: 26, borderRadius: '50%', size: 14 }}
+              size={{ blockSize: 32, borderRadius: '50%', size: 14 }}
               title={t('pageEditor.history.restore', { ns: 'file' })}
               onClick={handleRestore}
             />

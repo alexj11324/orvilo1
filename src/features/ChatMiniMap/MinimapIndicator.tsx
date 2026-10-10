@@ -24,7 +24,14 @@ export const MinimapIndicator = memo<MinimapIndicatorProps>(
         style={{ width }}
         onClick={() => onJump(virtuosoIndex)}
       >
-        <div className={cn(styles.indicatorContent, isActive && 'bg-primary')} />
+        <div
+          className={cn(
+            styles.indicatorContent,
+            isActive
+              ? '[background:var(--primary)]'
+              : '[background:var(--ant-color-fill-secondary)]',
+          )}
+        />
       </div>
     );
   },

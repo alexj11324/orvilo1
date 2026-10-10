@@ -69,7 +69,9 @@ const ChatMinimap = memo(() => {
           aria-hidden={!hovered}
           className={cn(
             styles.previewPanel,
-            hovered && 'pointer-events-auto opacity-100 [transform:translateY(-50%)_scale(1)]',
+            hovered
+              ? 'pointer-events-auto opacity-100 [transform:translateY(-50%)_scale(1)]'
+              : 'pointer-events-none opacity-0 [transform:translateY(-50%)_scale(0.96)]',
           )}
         >
           <MinimapPreview

@@ -24,13 +24,10 @@ export const minimapStyles = createStaticStyles(({ css, cssVar }) => ({
     align-items: end;
   `,
   previewPanel: css`
-    pointer-events: none;
-
     position: absolute;
     inset-block-start: 50%;
     inset-inline-end: 0;
     transform-origin: 100% 50%;
-    transform: translateY(-50%) scale(0.96);
 
     overflow: hidden;
     display: flex;
@@ -40,7 +37,6 @@ export const minimapStyles = createStaticStyles(({ css, cssVar }) => ({
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: 8px;
 
-    opacity: 0;
     background: ${cssVar.colorBgElevated};
     box-shadow:
       0 6px 16px 0 rgb(0 0 0 / 8%),
@@ -74,7 +70,7 @@ export const minimapStyles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-export const indicatorStyles = createStaticStyles(({ css, cssVar }) => ({
+export const indicatorStyles = createStaticStyles(({ css }) => ({
   indicator: css`
     cursor: pointer;
 
@@ -88,7 +84,6 @@ export const indicatorStyles = createStaticStyles(({ css, cssVar }) => ({
     width: 100%;
     height: 100%;
     border-radius: 2px;
-    background: ${cssVar.colorFillSecondary};
   `,
 }));
 
@@ -97,7 +92,6 @@ export const previewStyles = createStaticStyles(({ css, cssVar }) => ({
     flex-shrink: 0;
     height: 2px;
     border-radius: 2px;
-    background: ${cssVar.colorFillSecondary};
   `,
   item: css`
     cursor: pointer;
@@ -106,12 +100,9 @@ export const previewStyles = createStaticStyles(({ css, cssVar }) => ({
     padding-inline: 12px;
     border-radius: 6px;
 
-    color: ${cssVar.colorTextSecondary};
-
     transition: background-color ${cssVar.motionDurationFast} ease;
 
     &:hover {
-      color: ${cssVar.colorText};
       background: ${cssVar.colorFillTertiary};
     }
   `,

@@ -32,7 +32,8 @@ export const MinimapPreview = memo<MinimapPreviewProps>(
               className={cn(
                 styles.item,
                 'flex items-center gap-2.5 justify-end',
-                isActive && 'text-primary [&:hover]:text-foreground',
+                '[&:hover]:text-foreground',
+                isActive ? 'text-primary' : 'text-(--ant-color-text-secondary)',
                 CLICKABLE_FOCUS_RING,
               )}
               onClick={() => onJump(virtuosoIndex)}
@@ -40,7 +41,15 @@ export const MinimapPreview = memo<MinimapPreviewProps>(
               <span className={cn(styles.label, isActive && 'font-medium text-primary')}>
                 {label}
               </span>
-              <div className={cn(styles.dash, isActive && 'bg-primary')} style={{ width }} />
+              <div
+                style={{ width }}
+                className={cn(
+                  styles.dash,
+                  isActive
+                    ? '[background:var(--primary)]'
+                    : '[background:var(--ant-color-fill-secondary)]',
+                )}
+              />
             </div>
           );
         })}

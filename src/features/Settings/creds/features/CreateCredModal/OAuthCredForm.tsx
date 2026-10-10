@@ -96,7 +96,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
           {t('creds.oauth.noConnections')}
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onBack}>
+          <Button size="lg" type="button" variant="outline" onClick={onBack}>
             {t('creds.form.back')}
           </Button>
         </div>
@@ -154,12 +154,13 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
       </Form.Item>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>
+        <Button size="lg" type="button" variant="outline" onClick={onBack}>
           {t('creds.form.back')}
         </Button>
         <Button
           disabled={createMutation.isPending || disabled}
           loading={createMutation.isPending}
+          size="lg"
           type="submit"
           variant="default"
         >

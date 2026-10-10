@@ -129,6 +129,7 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
               <Button
                 className="w-full"
                 disabled={disabled}
+                size="lg"
                 type="button"
                 variant="outline"
                 onClick={() => add({ key: '', value: '' })}
@@ -150,12 +151,13 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
       </Form.Item>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>
+        <Button size="lg" type="button" variant="outline" onClick={onBack}>
           {t('creds.form.back')}
         </Button>
         <Button
           disabled={createMutation.isPending || disabled}
           loading={createMutation.isPending}
+          size="lg"
           type="submit"
           variant="default"
         >

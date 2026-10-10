@@ -284,6 +284,7 @@ const ApiKeyDetail: FC<ApiKeyDetailProps> = ({
                   render={
                     <Button
                       disabled={!canDelete}
+                      size="lg"
                       title={canDelete ? t('apikey.list.actions.delete') : manageTooltip}
                       type="button"
                       variant="destructive"

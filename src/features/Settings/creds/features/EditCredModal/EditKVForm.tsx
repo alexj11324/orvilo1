@@ -121,6 +121,7 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
               <Button
                 className="w-full"
                 disabled={!canManageCredentials}
+                size="lg"
                 type="button"
                 variant="outline"
                 onClick={() => add({ key: '', value: '' })}
@@ -142,12 +143,13 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
       </Form.Item>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button size="lg" type="button" variant="outline" onClick={onCancel}>
           {t('creds.form.cancel')}
         </Button>
         <Button
           disabled={updateMutation.isPending || !canManageCredentials || !ready}
           loading={updateMutation.isPending}
+          size="lg"
           type="submit"
           variant="default"
         >

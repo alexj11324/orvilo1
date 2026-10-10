@@ -59,6 +59,7 @@ const CreateWorktreeContent = memo<CreateWorktreeContentProps>(({ onSubmit, reso
           placeholder={tDevice('workingDirectory.newBranchPlaceholder')}
           ref={inputRef}
           value={value}
+          visualSize="normal"
           onChange={(e) => {
             setValue(e.target.value);
             setError(undefined);
@@ -75,10 +76,16 @@ const CreateWorktreeContent = memo<CreateWorktreeContentProps>(({ onSubmit, reso
         {error ? <div className="text-xs text-destructive">{error}</div> : null}
       </div>
       <div className="flex flex-row gap-2 justify-end">
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button disabled={!trimmed} loading={loading} variant="default" onClick={handleSubmit}>
+        <Button
+          disabled={!trimmed}
+          loading={loading}
+          size="lg"
+          variant="default"
+          onClick={handleSubmit}
+        >
           {tDevice('workingDirectory.createWorktreeSubmit')}
         </Button>
       </div>

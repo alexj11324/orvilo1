@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { t as translate } from 'i18next';
 import { BookOpen, LibraryBigIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useState } from 'react';
@@ -15,21 +14,9 @@ import { projectService } from '@/services/project';
 import { useKnowledgeBaseStore } from '@/store/library';
 import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
 
-const styles = createStaticStyles(({ css }) => ({
-  row: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-radius: 10px;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
+const styles = {
+  row: 'flex items-center gap-3 rounded-[10px] px-3 py-2.5 hover:bg-[var(--ant-color-fill-quaternary)]', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
+};
 
 interface AddResourceContentProps {
   /** Libraries the project already references — shown as taken, not hidden. */

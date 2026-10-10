@@ -564,6 +564,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                     <Button
                       aria-busy={loadingMore}
                       disabled={loadingMore}
+                      size="compact"
                       variant="outline"
                       onClick={() => runLoadMore(loadMore)}
                     >

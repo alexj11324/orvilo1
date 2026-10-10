@@ -40,6 +40,7 @@ export default function MemoryDetail({
         <div className="font-bold text-foreground">{data?.title || t('manager.details')}</div>
         <Button
           className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+          size="compact"
           variant="outline"
           onClick={onClose}
         >

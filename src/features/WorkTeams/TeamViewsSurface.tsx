@@ -608,7 +608,11 @@ const TeamViewsSurface = ({
         right={
           <div className="flex flex-row items-center gap-2">
             <WorkFavoriteButton targetId={teamId} targetType="team" />
-            <Button variant="outline" onClick={() => changeLocation({ creating: true })}>
+            <Button
+              size="compact"
+              variant="outline"
+              onClick={() => changeLocation({ creating: true })}
+            >
               <PlusIcon aria-hidden className="size-4" />
               {t('savedViews.newView')}
             </Button>

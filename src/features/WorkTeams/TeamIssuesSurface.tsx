@@ -724,7 +724,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               </Tabs>
               {/* "Add new view" opens the shared view builder scoped to this
                   team — same contract as the Projects tab's button. */}
-              <Button variant="ghost" onClick={() => setViewBuilderOpen(true)}>
+              <Button size="compact" variant="ghost" onClick={() => setViewBuilderOpen(true)}>
                 <PlusIcon aria-hidden className="size-4" />
                 {t('savedViews.newView')}
               </Button>

@@ -89,6 +89,7 @@ function MemoryCollection({ layer }: Props) {
         right={
           <Button
             className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            size="compact"
             variant="outline"
             onClick={() =>
               openEditorModal({
@@ -159,6 +160,7 @@ function MemoryCollection({ layer }: Props) {
                   <div className="flex flex-row gap-2">
                     <Button
                       className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                      size="compact"
                       variant="outline"
                       onClick={() => setSelected(entry.id)}
                     >
@@ -167,6 +169,7 @@ function MemoryCollection({ layer }: Props) {
                     <Button
                       className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
                       disabled={pending === entry.id}
+                      size="compact"
                       variant="outline"
                       onClick={async () => {
                         setPending(entry.id);
@@ -195,6 +198,7 @@ function MemoryCollection({ layer }: Props) {
                     <Button
                       className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
                       disabled={pending === entry.id}
+                      size="compact"
                       variant="outline"
                       onClick={() => remove(entry.id)}
                     >
@@ -212,6 +216,7 @@ function MemoryCollection({ layer }: Props) {
           <Button
             className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
             disabled={page === 1 || isLoading}
+            size="compact"
             variant="outline"
             onClick={() => setPage(page - 1)}
           >
@@ -221,6 +226,7 @@ function MemoryCollection({ layer }: Props) {
           <Button
             className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
             disabled={!data || page * 20 >= data.total || isLoading}
+            size="compact"
             variant="outline"
             onClick={() => setPage(page + 1)}
           >

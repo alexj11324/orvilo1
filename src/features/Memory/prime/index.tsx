@@ -39,6 +39,7 @@ function ExperienceManager() {
         right={
           <Button
             className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            size="compact"
             variant="outline"
             onClick={() => edit()}
           >
@@ -78,6 +79,7 @@ function ExperienceManager() {
                   <Button
                     className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
                     disabled={pending === entry.id}
+                    size="compact"
                     variant="outline"
                     onClick={() => edit(entry)}
                   >
@@ -86,6 +88,7 @@ function ExperienceManager() {
                   <Button
                     className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
                     disabled={pending === entry.id}
+                    size="compact"
                     variant="outline"
                     onClick={() =>
                       confirmModal({
@@ -123,6 +126,7 @@ function ExperienceManager() {
             <Button
               className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
               disabled={page === 1 || memory.isLoading}
+              size="compact"
               variant="outline"
               onClick={() => setPage(page - 1)}
             >
@@ -131,6 +135,7 @@ function ExperienceManager() {
             <div className="text-foreground">{page}</div>
             <Button
               className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+              size="compact"
               variant="outline"
               disabled={
                 !memory.data ||

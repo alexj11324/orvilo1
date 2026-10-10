@@ -213,7 +213,7 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
               />
               {activeFilterCount > 0 ? (
                 <div className="flex flex-row justify-end">
-                  <Button variant="ghost" onClick={onResetFilters}>
+                  <Button size="compact" variant="ghost" onClick={onResetFilters}>
                     {t('myWork.filtersReset')}
                   </Button>
                 </div>
@@ -395,7 +395,7 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                 />
               </OptionRow>
               <div className="flex flex-row justify-end">
-                <Button variant="ghost" onClick={onResetDisplay}>
+                <Button size="compact" variant="ghost" onClick={onResetDisplay}>
                   {t('myWork.filtersReset')}
                 </Button>
               </div>

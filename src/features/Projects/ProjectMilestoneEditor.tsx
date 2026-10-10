@@ -126,6 +126,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             aria-label={t('create.milestone.name')}
             placeholder={t('create.milestone.name')}
             value={draft.name}
+            visualSize="normal"
             onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
           />
           <DatePicker
@@ -133,7 +134,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             format="YYYY/MM/DD"
             placeholder={t('create.milestone.date')}
             prefix={<CalendarIcon size={13} />}
-            size="small"
+            size="normal"
             suffixIcon={null}
             value={draft.date ? dayjs(draft.date) : null}
             onChange={(date) =>
@@ -157,7 +158,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             style={{ justifyContent: 'end', gap: 8 }}
           >
             <Button
-              size="sm"
+              size="lg"
               variant="outline"
               onClick={() => {
                 setDraft(createEmptyMilestone());
@@ -168,7 +169,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             </Button>
             <Button
               disabled={!draft.name.trim()}
-              size="sm"
+              size="lg"
               variant="default"
               onClick={addMilestone}
             >

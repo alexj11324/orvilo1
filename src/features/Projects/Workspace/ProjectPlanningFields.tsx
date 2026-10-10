@@ -420,6 +420,7 @@ export function ProjectDatePill({
       picker={getProjectDatePickerMode(precision)}
       placeholder={t(isStart ? 'create.start' : 'create.target')}
       prefix={<CalendarIcon aria-hidden size={16} />}
+      size="small"
       suffixIcon={null}
       tooltip={t(value.date ? `create.change.${kind}` : `create.add.${kind}`)}
       value={value.date ? dayjs(value.date) : null}

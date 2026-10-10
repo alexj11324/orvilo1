@@ -73,6 +73,7 @@ const StatsSetting = memo<StatsSettingProps>(
                 className="w-36 flex-none"
                 format="YYYY/MM"
                 picker="month"
+                size="compact"
                 value={dateRange}
                 onChange={handleDateChange}
               />

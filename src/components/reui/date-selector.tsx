@@ -605,7 +605,7 @@ function DateSelectorPeriodTabs({
 
             return (
               <Button
-                className="size-8.5"
+                size="icon"
                 title={i18n.today}
                 variant="ghost"
                 onClick={() => onMonthChange(new Date())}
@@ -615,14 +615,14 @@ function DateSelectorPeriodTabs({
             );
           })()}
           <Button
-            className="size-8.5"
+            size="icon"
             variant="ghost"
             onClick={() => onMonthChange(subMonths(calendarMonth, 1))}
           >
             <ChevronLeftIcon className="size-4" />
           </Button>
           <Button
-            className="size-8.5"
+            size="icon"
             variant="ghost"
             onClick={() => onMonthChange(addMonths(calendarMonth, 1))}
           >
@@ -1107,6 +1107,7 @@ export function DateSelector({
               readOnly={!inputHint}
               type="text"
               value={inputHint ? inputValue : displayValue}
+              visualSize="normal"
               onBlur={handleInputBlur}
               onChange={handleInputChange}
               onFocus={() => setIsInputFocused(true)}

@@ -273,6 +273,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           aria-label={t('create.milestone.name')}
           placeholder={t('create.milestone.name')}
           value={name}
+          visualSize="normal"
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') submit();
@@ -285,7 +286,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           format="YYYY/MM/DD"
           placeholder={t('create.milestone.date')}
           prefix={<CalendarIcon size={13} />}
-          size="small"
+          size="normal"
           suffixIcon={null}
           value={date ? dayjs(date) : null}
           onChange={(value) => {
@@ -301,13 +302,13 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           onChange={(event) => setDescription(event.target.value)}
         />
         <div className="flex flex-row" style={{ justifyContent: 'end', gap: 8 }}>
-          <Button size="sm" variant="outline" onClick={onCancel}>
+          <Button size="lg" variant="outline" onClick={onCancel}>
             {t('common:cancel')}
           </Button>
           <Button
             aria-busy={saving}
             disabled={!name.trim() || saving}
-            size="sm"
+            size="lg"
             variant="default"
             onClick={submit}
           >
@@ -360,6 +361,7 @@ function MilestoneDateControl({
       open={open}
       placeholder={t('overview.milestoneSetDate')}
       prefix={<CalendarIcon aria-hidden size={16} />}
+      size="small"
       suffixIcon={null}
       value={value ? dayjs(value) : null}
       variant="ghost"
@@ -797,7 +799,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
           />
         ) : (
           <Button
-            size="sm"
+            size="lg"
             variant="ghost"
             onClick={() => {
               setEditingId(null);

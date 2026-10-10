@@ -284,8 +284,13 @@ describe('controls removed because nothing read them (2026/10/09) stay removed',
 describe('the chat-era service-model features (2026/10/09) stay retired', () => {
   // Same shape as above: the failure mode is a file or a registration coming
   // back through a rebase, so these read the repository rather than run it.
-  it('ships no text-to-speech route, hook or message player', () => {
-    expect(exists('src/app/(backend)/webapi/tts'), 'the TTS route is back').toBe(false);
+  it('ships no text-to-speech synthesis, hook or message player', () => {
+    // The route file stays as a 410 answer for clients released before the
+    // retirement; it must not synthesize speech again.
+    expect(
+      read('src/app/(backend)/webapi/tts/openai/route.ts'),
+      'the TTS route synthesizes speech again',
+    ).not.toContain('@lobehub/tts');
     expect(exists('src/hooks/useTTS.ts'), 'the TTS hook is back').toBe(false);
     expect(exists('src/features/Settings/tts'), 'the TTS settings block is back').toBe(false);
     expect(

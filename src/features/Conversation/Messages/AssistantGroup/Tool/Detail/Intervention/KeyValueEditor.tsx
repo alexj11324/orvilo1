@@ -149,7 +149,11 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                     },
                   ]}
                 >
-                  <Input className={styles.input} placeholder={t('updateArgs.form.key')} />
+                  <Input
+                    className={styles.input}
+                    placeholder={t('updateArgs.form.key')}
+                    visualSize="small"
+                  />
                 </Form.Item>
                 <Form.Item
                   {...restField}
@@ -157,7 +161,11 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                   name={[name, 'value']}
                   style={{ flex: 4 }}
                 >
-                  <Input className={styles.input} placeholder={t('updateArgs.form.value')} />
+                  <Input
+                    className={styles.input}
+                    placeholder={t('updateArgs.form.value')}
+                    visualSize="small"
+                  />
                 </Form.Item>
                 <ActionIcon
                   icon={LucideTrash}

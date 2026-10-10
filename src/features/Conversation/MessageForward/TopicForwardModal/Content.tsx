@@ -143,8 +143,15 @@ export const TopicForwardContent = ({
           onChange={(event) => setNote(event.target.value)}
         />
         <div className="flex gap-2 justify-end">
-          <Button onClick={close}>{t('messageForward.bar.cancel')}</Button>
-          <Button disabled={selectedIds.length === 0} variant="default" onClick={handleForward}>
+          <Button size="lg" onClick={close}>
+            {t('messageForward.bar.cancel')}
+          </Button>
+          <Button
+            disabled={selectedIds.length === 0}
+            size="lg"
+            variant="default"
+            onClick={handleForward}
+          >
             {selectedIds.length > 0
               ? t('messageForward.modal.sendCount', { count: selectedIds.length })
               : t('messageForward.bar.forward')}

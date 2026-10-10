@@ -53,6 +53,7 @@ const CreateBranchContent = memo<CreateBranchContentProps>(({ onSubmit }) => {
           placeholder={tDevice('workingDirectory.newBranchPlaceholder')}
           ref={inputRef}
           value={value}
+          visualSize="normal"
           onChange={(e) => {
             setValue(e.target.value);
             setError(undefined);
@@ -64,10 +65,16 @@ const CreateBranchContent = memo<CreateBranchContentProps>(({ onSubmit }) => {
         {error ? <div className="text-[12px] text-destructive">{error}</div> : null}
       </div>
       <div className="flex flex-row gap-2 justify-end">
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button disabled={!value.trim()} loading={loading} variant="default" onClick={handleSubmit}>
+        <Button
+          disabled={!value.trim()}
+          loading={loading}
+          size="lg"
+          variant="default"
+          onClick={handleSubmit}
+        >
           {tDevice('workingDirectory.checkoutAction')}
         </Button>
       </div>

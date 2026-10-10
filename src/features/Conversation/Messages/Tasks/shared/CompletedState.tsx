@@ -13,7 +13,7 @@ import Markdown from '../../../Markdown';
 import { formatCost, formatDuration } from './utils';
 
 const styles = {
-  collapseContent: 'px-0 py-2 text-[13px] leading-[1.6]',
+  collapseContent: 'px-0 py-2 text-(length:--text-dense) leading-[1.6]',
   separator: 'size-[3px] rounded-[50%] bg-[var(--ant-color-text-quaternary)]',
 };
 

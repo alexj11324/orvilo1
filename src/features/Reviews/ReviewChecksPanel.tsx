@@ -115,7 +115,7 @@ const ReviewChecksPanel = memo<{
         return (
           <div className={styles.checkRow} key={`${check.name}-${index}`}>
             {createElement(icon.icon, { color: icon.color, size: 14 })}
-            <div className="text-[13px]">{check.name}</div>
+            <div className="text-(length:--text-dense)">{check.name}</div>
             <div className="text-[12px] text-muted-foreground">
               {check.rawConclusion ?? check.rawStatus ?? ''}
             </div>

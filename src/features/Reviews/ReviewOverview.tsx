@@ -213,7 +213,7 @@ const ReviewOverview = memo<{
                 width={14}
               />
             </span>
-            <div className="text-[13px]">{t(state.key as never)}</div>
+            <div className="text-(length:--text-dense)">{t(state.key as never)}</div>
           </div>
         </section>
         <section>
@@ -229,14 +229,14 @@ const ReviewOverview = memo<{
                 { size: 14, width: 14, height: 14, color: checks.color, fill: 'transparent' },
               )}
             </span>
-            <div className="text-[13px]">
+            <div className="text-(length:--text-dense)">
               {t(checks.labelKey as never, { count: pullRequest.checks.summary.failing })}
             </div>
           </div>
         </section>
         <section>
           <div className={styles.railLabel}>{t('reviews.branch')}</div>
-          <div className={cn('text-[13px]', styles.railValue)}>{branchLabel}</div>
+          <div className={cn('text-(length:--text-dense)', styles.railValue)}>{branchLabel}</div>
         </section>
         <section>
           <div className={styles.railLabel}>

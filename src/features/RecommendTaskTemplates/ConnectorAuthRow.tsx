@@ -56,7 +56,7 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
             />
           </span>
         )}
-        <span className="truncate text-[13px]">{meta.label}</span>
+        <span className="truncate text-(length:--text-dense)">{meta.label}</span>
       </div>
       <Button
         disabled={disabled}

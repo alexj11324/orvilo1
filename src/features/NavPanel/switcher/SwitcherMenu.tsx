@@ -138,7 +138,7 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
           loading={<SkeletonList rows={4} />}
           empty={
             <div className="flex flex-col items-center p-4">
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-(length:--text-dense) text-muted-foreground">
                 {t('navPanel.searchResultEmpty')}
               </div>
             </div>

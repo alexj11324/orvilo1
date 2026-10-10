@@ -163,7 +163,7 @@ const viewIcon = (view: SavedViewItem) =>
 const renderDateCell = (value: Date | string | null | undefined) =>
   value ? (
     <div
-      className="text-[13px] text-muted-foreground" // linear-token-override: retain the existing dense date-cell typography.
+      className="text-(length:--text-dense) text-muted-foreground" // linear-token-override: retain the existing dense date-cell typography.
       title={formatAbsoluteDateTime(value)}
     >
       {dayjs(value).fromNow()}
@@ -345,7 +345,7 @@ const SavedViewsPage = memo(() => {
           return (
             <div className={styles.ownerCell}>
               <Avatar avatar={owner.avatar} name={owner.name} size={20} />
-              <div className="truncate block text-[13px]">{owner.name}</div>
+              <div className="truncate block text-(length:--text-dense)">{owner.name}</div>
             </div>
           );
         },
@@ -420,7 +420,7 @@ const SavedViewsPage = memo(() => {
             ] as const
           ).map(([key, labelKey]) => (
             <div className="flex flex-row items-center justify-between" key={key}>
-              <div className="text-[13px]">{t(labelKey)}</div>
+              <div className="text-(length:--text-dense)">{t(labelKey)}</div>
               <Switch
                 checked={prefs[key]}
                 onCheckedChange={(checked) => updatePrefs({ [key]: checked })}
@@ -516,7 +516,7 @@ const SavedViewsPage = memo(() => {
                   />
                 </span>
                 <div className="text-[15px] font-semibold">{t('tab.views')}</div>
-                <div className="text-[13px] text-muted-foreground">
+                <div className="text-(length:--text-dense) text-muted-foreground">
                   {t(
                     entityType === 'project'
                       ? 'teams.viewDirectoryDescriptionProjects'

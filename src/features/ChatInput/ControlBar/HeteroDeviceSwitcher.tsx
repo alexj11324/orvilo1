@@ -81,8 +81,8 @@ const styles = {
   optionMeta: 'flex flex-1 flex-col gap-[1px] min-w-0',
   reconnectButton: 'min-h-4.5 py-0 px-0.5 text-[11px] leading-(--text-xs--line-height)',
   optionTitle:
-    'overflow-hidden text-[13px] font-medium text-foreground text-ellipsis whitespace-nowrap',
-  tag: 'flex-none py-0 px-[5px] rounded-(--radius-chip) text-[10px] leading-[16px] text-muted-foreground bg-selected bg-none',
+    'overflow-hidden text-(length:--text-dense) font-medium text-foreground text-ellipsis whitespace-nowrap',
+  tag: 'flex-none py-0 px-[5px] rounded-(--radius-chip) text-[10px] leading-4 text-muted-foreground bg-selected bg-none',
   header: 'flex gap-1.5 items-center justify-between py-1 px-2',
   headerInfo:
     'cursor-help text-[var(--ant-color-text-quaternary)] [transition:color_0.2s] hover:text-muted-foreground',

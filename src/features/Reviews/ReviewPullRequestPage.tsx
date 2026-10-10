@@ -592,7 +592,13 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
               />
             </span>
             <div
-              className={cn('truncate', 'block', 'text-[13px]', 'font-medium', styles.headerTitle)}
+              className={cn(
+                'truncate',
+                'block',
+                'text-(length:--text-dense)',
+                'font-medium',
+                styles.headerTitle,
+              )}
             >
               {pullRequest?.title ?? t('tab.reviews')}
             </div>
@@ -690,7 +696,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
             <>
               {stale ? (
                 <div className={cx('flex flex-col', styles.staleBanner)} role={'alert'}>
-                  <div className="text-[13px]">{t('reviews.staleBanner')}</div>
+                  <div className="text-(length:--text-dense)">{t('reviews.staleBanner')}</div>
                   <Button size="sm" onClick={() => void refresh()}>
                     {t('reviews.staleAction')}
                   </Button>

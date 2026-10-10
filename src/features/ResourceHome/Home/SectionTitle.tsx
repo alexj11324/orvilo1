@@ -8,7 +8,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 const styles = {
   title: 'm-0 text-[15px] font-semibold text-foreground',
   viewAll:
-    'cursor-pointer border-none text-[13px] text-muted-foreground [background:none] hover:text-foreground',
+    'cursor-pointer border-none text-(length:--text-dense) text-muted-foreground [background:none] hover:text-foreground',
 };
 
 interface SectionTitleProps {

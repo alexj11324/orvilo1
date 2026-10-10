@@ -105,7 +105,7 @@ const PlanLimitCard = memo<PlanLimitCardProps>(({ errorBody, errorType, onRetry 
           <div className="flex w-full flex-col gap-2">
             {facts.map((fact) => (
               <div
-                className={'flex w-full justify-between text-[13px] leading-[1.4]'}
+                className={'flex w-full justify-between text-(length:--text-dense) leading-[1.4]'}
                 key={fact.label}
               >
                 <span className={'text-(--ant-color-text-tertiary)'}>{fact.label}</span>

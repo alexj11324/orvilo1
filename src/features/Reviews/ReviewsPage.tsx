@@ -187,7 +187,7 @@ const PullRequestRow = memo<{
         <GitPullRequestIcon fill={'transparent'} height={14} size={14} width={14} />
       </span>
       <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-        <div className="truncate block text-[13px] font-medium">{item.title}</div>
+        <div className="truncate block text-(length:--text-dense) font-medium">{item.title}</div>
       </div>
       {item.isDraft ? (
         <span
@@ -430,7 +430,10 @@ const ReviewsPage = memo(() => {
       <div className={styles.listChrome}>
         <NavHeader
           left={
-            <div className="text-[13px] font-medium" style={{ paddingInlineStart: 4 }}>
+            <div
+              className="text-(length:--text-dense) font-medium"
+              style={{ paddingInlineStart: 4 }}
+            >
               {t('tab.reviews')}
             </div>
           }
@@ -593,7 +596,7 @@ const ReviewsPage = memo(() => {
       <span className="anticon" role="img">
         <GitPullRequestIcon fill={'transparent'} height={44} size={44} width={44} />
       </span>
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-(length:--text-dense) text-muted-foreground">
         {t('reviews.detailEmpty', { count: queueTotal ?? allPullRequests.length })}
       </div>
     </div>

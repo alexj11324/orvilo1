@@ -38,7 +38,7 @@ function ExperienceManager() {
         left={<div className="font-bold text-foreground">{t('prime.title')}</div>}
         right={
           <Button
-            className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
             variant="outline"
             onClick={() => edit()}
           >
@@ -76,7 +76,7 @@ function ExperienceManager() {
               ) : (
                 <div className="flex flex-row gap-2">
                   <Button
-                    className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                    className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
                     disabled={pending === entry.id}
                     variant="outline"
                     onClick={() => edit(entry)}
@@ -84,7 +84,7 @@ function ExperienceManager() {
                     {t('manager.edit')}
                   </Button>
                   <Button
-                    className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                    className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
                     disabled={pending === entry.id}
                     variant="outline"
                     onClick={() =>
@@ -121,7 +121,7 @@ function ExperienceManager() {
         {!query && (
           <div className="flex flex-row gap-3">
             <Button
-              className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+              className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
               disabled={page === 1 || memory.isLoading}
               variant="outline"
               onClick={() => setPage(page - 1)}
@@ -130,7 +130,7 @@ function ExperienceManager() {
             </Button>
             <div className="text-foreground">{page}</div>
             <Button
-              className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+              className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
               variant="outline"
               disabled={
                 !memory.data ||

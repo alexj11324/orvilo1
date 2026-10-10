@@ -126,7 +126,7 @@ const GroupHeader = memo<GroupHeaderProps>(
           }}
         />
       ) : null}
-      <div className="text-[13px] font-medium">{label}</div>
+      <div className="text-(length:--text-dense) font-medium">{label}</div>
       <div className="text-[12px] text-muted-foreground">{count}</div>
     </div>
   ),

@@ -122,7 +122,7 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
                           <CircleCheckIcon color={cssVar.colorSuccess} size={13} />
                           {t('anchor.filter')}
                         </div>
-                        <div className="text-[13px]" style={{ lineHeight: 1.7 }}>
+                        <div className="text-(length:--text-dense)" style={{ lineHeight: 1.7 }}>
                           {domainFilter}
                         </div>
                       </>
@@ -137,7 +137,7 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
                           {t('anchor.outOfScope')}
                         </div>
                         <div
-                          className="text-[13px] text-muted-foreground"
+                          className="text-(length:--text-dense) text-muted-foreground"
                           style={{ lineHeight: 1.7 }}
                         >
                           {outOfScope}

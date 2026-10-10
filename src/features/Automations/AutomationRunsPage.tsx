@@ -249,7 +249,7 @@ const AutomationRunsPage = memo(() => {
                     </WorkspaceLink>
                   </div>
                 ) : (
-                  <div className="truncate min-w-0 text-[13px] font-medium">
+                  <div className="truncate min-w-0 text-(length:--text-dense) font-medium">
                     {run.sourceTaskName ?? run.title ?? '—'}
                   </div>
                 )}

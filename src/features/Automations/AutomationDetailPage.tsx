@@ -154,7 +154,7 @@ const AgentChip = memo(() => {
         }}
       >
         <AssigneeAvatar agentId={agentId ?? undefined} size={20} />
-        <div className="text-[13px]">
+        <div className="text-(length:--text-dense)">
           {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
         </div>
         <ChevronRightIcon color={'var(--ant-color-text-tertiary)'} size={14} />

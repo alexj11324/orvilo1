@@ -193,7 +193,7 @@ const LessonDetail = memo(() => {
                       >
                         <div className="flex items-start gap-3 justify-between">
                           <div
-                            className={cn('text-[13px]', styles.hitTitle)}
+                            className={cn('text-(length:--text-dense)', styles.hitTitle)}
                             style={{ lineHeight: 1.65 }}
                           >
                             {hit.example}

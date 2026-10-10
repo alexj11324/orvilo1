@@ -39,7 +39,7 @@ export default function MemoryDetail({
       <div className="flex flex-row justify-between w-full">
         <div className="font-bold text-foreground">{data?.title || t('manager.details')}</div>
         <Button
-          className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+          className="px-3.5 rounded-(--radius-input) text-(length:--text-dense) leading-none"
           variant="outline"
           onClick={onClose}
         >

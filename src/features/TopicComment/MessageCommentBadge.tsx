@@ -43,7 +43,7 @@ const MessageCommentBadge = memo<MessageCommentBadgeProps>(({ count, messageId, 
   const label = t('topicComment.openMessageComments', { count });
 
   return (
-    <div className={cx(styles.container, 'flex items-center flex-none p-[2px]')}>
+    <div className={cx(styles.container, 'flex items-center flex-none p-0.5')}>
       <Button
         aria-label={label}
         className={styles.button}

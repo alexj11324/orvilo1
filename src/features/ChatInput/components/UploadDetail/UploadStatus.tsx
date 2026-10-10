@@ -87,7 +87,7 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
           <span className="anticon text-destructive" role="img">
             <CircleAlertIcon fill={'transparent'} height={12} size={12} width={12} />
           </span>
-          <div className="truncate text-destructive text-[12px] max-w-[110px]" title={error}>
+          <div className="truncate text-destructive text-[12px] max-w-27.5" title={error}>
             {error || t('upload.preview.status.error')}
           </div>
         </div>

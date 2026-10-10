@@ -212,12 +212,7 @@ const AgentMode = memo(() => {
         )}
         onClick={() => handleSelect('agent')}
       >
-        <div
-          className={cx(
-            'flex flex-col items-center h-[32px] justify-center w-[32px]',
-            styles.optionIcon,
-          )}
-        >
+        <div className={cx('flex flex-col items-center h-8 justify-center w-8', styles.optionIcon)}>
           <span className="anticon" role="img">
             <InfinityIcon fill={'transparent'} height={16} size={16} width={16} />
           </span>
@@ -239,12 +234,7 @@ const AgentMode = memo(() => {
         )}
         onClick={() => handleSelect('chat')}
       >
-        <div
-          className={cx(
-            'flex flex-col items-center h-[32px] justify-center w-[32px]',
-            styles.optionIcon,
-          )}
-        >
+        <div className={cx('flex flex-col items-center h-8 justify-center w-8', styles.optionIcon)}>
           <span className="anticon" role="img">
             <MessageCircleIcon fill={'transparent'} height={16} size={16} width={16} />
           </span>

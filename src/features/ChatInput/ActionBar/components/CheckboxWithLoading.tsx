@@ -91,7 +91,7 @@ const CheckboxItem = memo<CheckboxItemProps>(
           {typeof labelContent === 'string' ? <MiddleEllipsis text={labelContent} /> : labelContent}
         </span>
         {loading ? (
-          <div className="flex flex-col items-center justify-center w-[18px]">
+          <div className="flex flex-col items-center justify-center w-4.5">
             <Spinner className="size-[1em]" />
           </div>
         ) : (

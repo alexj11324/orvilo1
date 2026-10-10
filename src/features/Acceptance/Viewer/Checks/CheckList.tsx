@@ -128,7 +128,7 @@ const CheckList = memo<CheckListProps>(
                 <div className="font-semibold" style={{ color: 'var(--success)', fontSize: 15 }}>
                   {t('acceptance.checks.allAccepted.title')}
                 </div>
-                <div className="text-[13px] text-muted-foreground">
+                <div className="text-(length:--text-dense) text-muted-foreground">
                   {t('acceptance.checks.allAccepted.desc')}
                 </div>
               </div>

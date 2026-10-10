@@ -327,7 +327,7 @@ const MetricComparisonRenderer = memo<{
                   ['after', after, styles.barAfter],
                 ] as const
               ).map(([role, value, barClass]) => (
-                <div className="flex flex-col gap-[5px]" key={role}>
+                <div className="flex flex-col gap-1.25" key={role}>
                   <span className={styles.valueText}>
                     <span>{t(`report.visualization.${role}`)}</span>
                     <strong>{formatValue(value, unit)}</strong>

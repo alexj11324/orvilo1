@@ -53,15 +53,15 @@ export const flowHandleStyle = {
 };
 
 const styles = {
-  card: 'overflow-hidden flex flex-col w-[260px] h-full border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card transition-[border-color,box-shadow] duration-150 ease-[ease] hover:border-(--ant-color-primary-border)',
+  card: 'overflow-hidden flex flex-col w-65 h-full border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card transition-[border-color,box-shadow] duration-150 ease-[ease] hover:border-(--ant-color-primary-border)',
   selected: 'border-(--ant-color-primary-border) shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
   head: 'p-3',
   glyph:
     'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius) text-muted-foreground bg-accent',
-  title: 'line-clamp-2 text-[13px] font-medium leading-[1.4]',
+  title: 'line-clamp-2 text-(length:--text-dense) font-medium leading-[1.4]',
   subtitle: 'line-clamp-2 text-[11px] leading-4 text-(--ant-color-text-tertiary)',
   footer:
-    'mt-auto py-[7px] px-3 border-t border-dashed border-sidebar-border text-[11px] text-(--ant-color-text-tertiary)',
+    'mt-auto py-1.75 px-3 border-t border-dashed border-sidebar-border text-[11px] text-(--ant-color-text-tertiary)',
 };
 
 /** Same status/head/summary hierarchy as Goal's exploration cards. */
@@ -95,7 +95,7 @@ export function FlowNode({ data }: { data: FlowNodeData }) {
           >
             {createElement(statusIcon, { size: 24 })}
           </div>
-          <div className="flex flex-col gap-[3px]" style={{ minWidth: 0 }}>
+          <div className="flex flex-col gap-0.75" style={{ minWidth: 0 }}>
             <span className={styles.title}>{data.title}</span>
             <span className={styles.subtitle}>{data.expected}</span>
           </div>

@@ -173,7 +173,7 @@ const AcceptanceResources = () => {
                     ) : (
                       <FileText size={16} style={{ color: cssVar.colorTextTertiary }} />
                     )}
-                    <div className="truncate min-w-0 text-[13px]">{name}</div>
+                    <div className="truncate min-w-0 text-(length:--text-dense)">{name}</div>
                   </div>
                 )}
                 <div className={`flex flex-col gap-0.5 ${styles.meta}`}>

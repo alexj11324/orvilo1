@@ -806,11 +806,11 @@ const EvidenceItem = memo<{
       className="flex flex-col gap-1.5"
       style={{ ...(isDocument ? { flex: 1, minHeight: 0 } : undefined) }}
     >
-      {!hideLabel && <div className="font-semibold text-[13px]">{label}</div>}
+      {!hideLabel && <div className="font-semibold text-(length:--text-dense)">{label}</div>}
       {description && !flat && !isInlineProse && (
         // Inline prose is excluded: its authored description becomes the fold
         // row's title below, so a standalone line here would say it twice.
-        <div className="text-[13px] text-muted-foreground">{description}</div>
+        <div className="text-(length:--text-dense) text-muted-foreground">{description}</div>
       )}
       {e.fileUrl && imageEvidenceTypes.has(e.type) ? (
         <div

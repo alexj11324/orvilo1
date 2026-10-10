@@ -20,9 +20,9 @@ type Rect = AcceptanceReviewAnnotation['rect'];
 
 const styles = {
   badge:
-    'absolute -top-[9px] -start-[9px] inline-flex items-center justify-center size-[18px] rounded-[50%] text-[11px] font-semibold leading-none text-(--ant-color-text-light-solid) bg-destructive',
+    'absolute -top-2.25 -start-2.25 inline-flex items-center justify-center size-4.5 rounded-[50%] text-[11px] font-semibold leading-none text-(--ant-color-text-light-solid) bg-destructive',
   badgeDelete:
-    'cursor-pointer absolute -top-[9px] -end-[9px] inline-flex items-center justify-center size-[18px] border-none rounded-[50%] text-(--ant-color-text-light-solid) bg-destructive hover:brightness-[1.15] [@media(pointer:coarse)]:-top-3 [@media(pointer:coarse)]:-end-3 [@media(pointer:coarse)]:size-6',
+    'cursor-pointer absolute -top-2.25 -end-2.25 inline-flex items-center justify-center size-4.5 border-none rounded-[50%] text-(--ant-color-text-light-solid) bg-destructive hover:brightness-[1.15] [@media(pointer:coarse)]:-top-3 [@media(pointer:coarse)]:-end-3 [@media(pointer:coarse)]:size-6',
   canvas: 'cursor-crosshair select-none',
   editableRect: 'pointer-events-auto cursor-move',
   frame:

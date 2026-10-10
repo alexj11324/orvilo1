@@ -12,26 +12,26 @@ export const styles = {
   attachments: 'pt-2.5',
   composerBlock: 'relative p-3 border border-sidebar-border rounded-(--ant-border-radius) bg-card',
   deleted: 'italic text-(--ant-color-text-tertiary)',
-  event: 'py-0.5 text-[13px] text-muted-foreground',
+  event: 'py-0.5 text-(length:--text-dense) text-muted-foreground',
   eventDot:
     'relative inline-flex flex-none items-center justify-center size-5 border border-sidebar-border rounded-[50%] text-(--ant-color-text-tertiary) bg-popover',
   meta: 'flex-none text-[12px] text-(--ant-color-text-tertiary)',
   timeLink:
     'cursor-pointer p-0 border-none bg-none bg-transparent transition-colors duration-(--ant-motion-duration-fast) ease-[ease] hover:text-foreground hover:underline',
-  panelBody: 'pt-1.5 text-[13px] leading-[1.65] wrap-anywhere whitespace-pre-wrap',
+  panelBody: 'pt-1.5 text-(length:--text-dense) leading-[1.65] wrap-anywhere whitespace-pre-wrap',
   panelActions: '-mb-1 pt-2.5',
   panelReply: 'pt-2.5',
   resolvedSummary:
-    'cursor-pointer w-full p-0 border-none text-[13px] text-(--ant-color-text-tertiary) text-start bg-none bg-transparent hover:text-muted-foreground',
+    'cursor-pointer w-full p-0 border-none text-(length:--text-dense) text-(--ant-color-text-tertiary) text-start bg-none bg-transparent hover:text-muted-foreground',
   resolvedThread: 'text-(--ant-color-text-tertiary)',
-  authorName: 'truncate flex-none max-w-[180px]',
+  authorName: 'truncate flex-none max-w-45',
   headline: 'min-w-0',
   rowActions:
     'flex-none ms-auto opacity-0 transition-opacity duration-(--ant-motion-duration-fast) ease-[ease] [@media(hover:none)]:opacity-100',
   nodelessEntry: 'ps-11',
-  eventEntry: 'ps-[53px]',
+  eventEntry: 'ps-13.25',
   tailEntry: '[&&&]:before:[inset-block:0_14px] [&&&]:before:h-auto',
   timelineEntry:
-    "relative pb-3.5 before:content-[''] before:absolute before:inset-y-0 before:start-[62px] before:w-0.5 before:bg-sidebar-border [&:hover_[data-comment-actions]]:opacity-100 first-of-type:before:top-2.5 last-of-type:before:bottom-auto last-of-type:before:h-2.5",
+    "relative pb-3.5 before:content-[''] before:absolute before:inset-y-0 before:start-15.5 before:w-0.5 before:bg-sidebar-border [&:hover_[data-comment-actions]]:opacity-100 first-of-type:before:top-2.5 last-of-type:before:bottom-auto last-of-type:before:h-2.5",
   timelineNode: 'flex flex-none justify-center w-8 leading-[0]',
 };

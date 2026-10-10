@@ -18,7 +18,7 @@ import { MobileRegionNotes } from './RegionNotes';
 const styles = {
   body: 'flex flex-1 flex-col min-w-0 min-h-0',
   scroll: 'overflow-y-auto overscroll-contain flex flex-1 flex-col gap-2 min-h-0 pb-3',
-  stage: 'flex flex-none h-[42dvh] min-h-[220px]',
+  stage: 'flex flex-none h-[42dvh] min-h-55',
   editor: 'flex flex-none flex-col gap-4 pt-1 [&_textarea]:text-[16px]',
   footer: 'flex flex-none flex-col gap-2 pt-2 border-t border-sidebar-border [&>button]:min-h-11',
 };

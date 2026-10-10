@@ -2,6 +2,7 @@ import { cleanup, renderHook } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { useWorkspaceContextStore } from '@/business/client/workspaceContextStore';
 import { mapFeatureFlagsEnvToState } from '@/config/featureFlags';
 import { SettingsTabs } from '@/store/global/initialState';
 import { initServerConfigStore, Provider } from '@/store/serverConfig/store';
@@ -60,6 +61,7 @@ afterEach(() => {
   cleanup();
   navigate.mockReset();
   useUserStore.setState(initialUserStoreState, true);
+  useWorkspaceContextStore.getState().setActiveWorkspace(null);
 });
 
 describe('mobile settings useCategory', () => {
@@ -176,5 +178,30 @@ describe('mobile settings useCategory', () => {
 
     expect(keys).toContain(SettingsTabs.APIKey);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  // The desktop sidebar gained a Workspace group when the second settings
+  // navigation was removed; the mobile list is the same capability registry and
+  // must offer the same pages, or a phone has no way to reach them.
+  it('lists the workspace pages inside a workspace and nowhere else', () => {
+    const groupKeys = () =>
+      renderHook(() => useCategory(), { wrapper: createWrapper(true) }).result.current.map(
+        (group) => group.key,
+      );
+
+    expect(groupKeys()).not.toContain(SettingsGroupKey.Workspace);
+
+    useWorkspaceContextStore.getState().setActiveWorkspace({ id: 'ws-1', slug: 'acme' });
+    const { result } = renderHook(() => useCategory(), { wrapper: createWrapper(true) });
+    const workspace = result.current.find((group) => group.key === SettingsGroupKey.Workspace);
+
+    expect(workspace?.items.map((item) => item.to)).toEqual([
+      '/settings/general',
+      '/settings/members',
+    ]);
+
+    workspace?.items[0].onClick?.();
+    // The real workspace-aware helper adds the prefix.
+    expect(navigate).toHaveBeenCalledWith('/acme/settings/general');
   });
 });

@@ -1,6 +1,5 @@
 'use client';
 import { MaterialFileTypeIcon } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ImageIcon } from 'lucide-react';
 import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
@@ -22,16 +21,10 @@ const IMAGE_EXTENSIONS = new Set([
   '.webp',
 ]);
 
-const styles = createStaticStyles(({ css }) => ({
-  icon: css`
-    flex-shrink: 0;
-    margin-inline-end: 4px;
-  `,
-  text: css`
-    padding-block: 1px;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  icon: 'shrink-0 me-1',
+  text: 'py-px text-foreground',
+};
 
 interface FilePathDisplayProps {
   filePath: string;

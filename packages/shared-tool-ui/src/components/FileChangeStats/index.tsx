@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 /**
@@ -13,40 +13,16 @@ import { memo } from 'react';
 /** Change kind shared by the codex file-change and edited-files renderers. */
 export type FileChangeKind = 'added' | 'deleted' | 'modified' | 'renamed';
 
-const styles = createStaticStyles(({ css }) => ({
-  kindAdded: css`
-    background: ${cssVar.colorSuccess};
-  `,
-  kindDeleted: css`
-    background: ${cssVar.colorError};
-  `,
-  kindDot: css`
-    flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-  `,
-  kindModified: css`
-    background: ${cssVar.colorInfo};
-  `,
-  kindRenamed: css`
-    background: ${cssVar.colorWarning};
-  `,
-  lineAdded: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  lineDeleted: css`
-    color: ${cssVar.colorError};
-  `,
-  lineStats: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-  `,
-}));
+const styles = {
+  kindAdded: 'bg-success',
+  kindDeleted: 'bg-destructive',
+  kindDot: 'size-2 shrink-0 rounded-[999px]',
+  kindModified: 'bg-info',
+  kindRenamed: 'bg-warning',
+  lineAdded: 'text-success',
+  lineDeleted: 'text-destructive',
+  lineStats: 'inline-flex shrink-0 items-center gap-1.5 text-[12px]',
+};
 
 const KIND_CLASS: Record<FileChangeKind, string> = {
   added: styles.kindAdded,
@@ -57,7 +33,7 @@ const KIND_CLASS: Record<FileChangeKind, string> = {
 
 /** A small color-coded dot indicating a file's change kind. */
 export const KindDot = memo<{ className?: string; kind: FileChangeKind }>(({ className, kind }) => (
-  <span className={cx(styles.kindDot, KIND_CLASS[kind], className)} />
+  <span className={cn(styles.kindDot, KIND_CLASS[kind], className)} />
 ));
 KindDot.displayName = 'FileChangeKindDot';
 
@@ -81,7 +57,7 @@ export const LineStats = memo<LineStatsProps>(
     const showDeleted = !hideZeroDeltas || linesDeleted > 0;
 
     return (
-      <span className={cx(styles.lineStats, className)}>
+      <span className={cn(styles.lineStats, className)}>
         {showAdded && <span className={styles.lineAdded}>+{linesAdded}</span>}
         {showDeleted && <span className={styles.lineDeleted}>-{linesDeleted}</span>}
       </span>

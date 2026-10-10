@@ -1,5 +1,4 @@
 import type { SearchQuery } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,12 +15,9 @@ import { CATEGORY_ICON_MAP, ENGINE_ICON_MAP } from '../../const';
 import { CategoryAvatar } from './CategoryAvatar';
 import { EngineAvatar } from './EngineAvatar';
 
-const styles = createStaticStyles(({ css }) => ({
-  textHeader: css`
-    flex: none;
-    width: 120px;
-  `,
-}));
+const styles = {
+  textHeader: 'flex-none w-[120px]',
+};
 
 interface SearchBarProps {
   aiSummary?: boolean;

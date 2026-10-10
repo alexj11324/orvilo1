@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,7 +29,7 @@ export const CrawlSinglePageInspector = memo<BuiltinInspectorProps<CrawlSinglePa
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isArgumentsStreaming && shinyTextStyles.shinyText)}>
+        <span className={cn(isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-web-browsing.apiName.crawlSinglePage')}:{'\u00A0'}
         </span>
         {url && <span className={highlightTextStyles.gold}>{url}</span>}

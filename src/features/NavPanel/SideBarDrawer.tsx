@@ -116,7 +116,7 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
               <div className={styles.body}>
                 <Suspense
                   fallback={
-                    <div className="flex flex-col gap-[1px] py-[1px] px-1">
+                    <div className="flex flex-col gap-px py-px px-1">
                       <SkeletonList rows={3} />
                     </div>
                   }

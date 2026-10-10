@@ -37,7 +37,7 @@ const SwitcherRow = memo<SwitcherRowProps>(({ active, item, onSelect, privateLab
   <div
     className={cx(
       active ? `${styles.row} ${styles.current}` : styles.row,
-      'flex h-[36px] flex-none cursor-pointer items-center gap-2',
+      'flex h-9 flex-none cursor-pointer items-center gap-2',
     )}
     onClick={() => onSelect(item.id)}
   >

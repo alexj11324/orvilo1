@@ -89,7 +89,7 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
         )}
       </div>
     ) : (
-      <div className="flex flex-col flex-1 px-[6px]">
+      <div className="flex flex-col flex-1 px-1.5">
         <Breadcrumb className={styles.breadcrumb}>
           <BreadcrumbList>
             {[homeCrumb, ...breadcrumb].map((item, index, all) => (

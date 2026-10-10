@@ -68,7 +68,7 @@ export const SidebarHeaderSelectTrigger = memo<SidebarHeaderSelectTriggerProps>(
       style={{ borderRadius: 10, minWidth: 32, overflow: 'hidden', ...style }}
       className={cx(
         className,
-        'flex cursor-pointer items-center gap-2 p-[2px] hover:bg-(--ant-color-fill-tertiary)',
+        'flex cursor-pointer items-center gap-2 p-0.5 hover:bg-(--ant-color-fill-tertiary)',
       )}
       {...rest}
     >

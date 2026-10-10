@@ -15,12 +15,12 @@ const EmptyNavItem = memo<EmptyStatusProps>(({ title, onClick, className, disabl
       style={{ ...(disabled ? { cursor: 'not-allowed', opacity: 0.5 } : undefined) }}
       className={cx(
         className,
-        'flex items-center gap-2 h-[32px] px-[2px]',
+        'flex items-center gap-2 h-8 px-0.5',
         !disabled && 'cursor-pointer hover:bg-(--ant-color-fill-tertiary)',
       )}
       onClick={disabled ? undefined : onClick}
     >
-      <div className="flex flex-col items-center justify-center flex-none h-[28px] w-[28px]">
+      <div className="flex flex-col items-center justify-center flex-none h-7 w-7">
         <PlusIcon size={16} />
       </div>
       <div className="text-center text-muted-foreground">{title}</div>

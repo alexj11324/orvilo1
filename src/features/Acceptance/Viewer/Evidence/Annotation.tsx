@@ -1,7 +1,6 @@
 'use client';
 
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,125 +18,20 @@ import { useAnnotationGesture } from './useAnnotationGesture';
 
 type Rect = AcceptanceReviewAnnotation['rect'];
 
-const styles = createStaticStyles(({ css }) => ({
-  badge: css`
-    position: absolute;
-    inset-block-start: -9px;
-    inset-inline-start: -9px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    color: ${cssVar.colorTextLightSolid};
-
-    background: ${cssVar.colorError};
-  `,
-  /* Delete mirrors the index badge on the opposite corner — the same pink
-     disc, so which region the action removes reads at a glance. Touch keeps
-     it: a phone reviewer who mis-drags a box has no keyboard escape, and the
-     only other way out used to be leaving the image entirely. */
-  badgeDelete: css`
-    cursor: pointer;
-
-    position: absolute;
-    inset-block-start: -9px;
-    inset-inline-end: -9px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 18px;
-    height: 18px;
-    border: none;
-    border-radius: 50%;
-
-    color: ${cssVar.colorTextLightSolid};
-
-    background: ${cssVar.colorError};
-
-    &:hover {
-      filter: brightness(1.15);
-    }
-
-    @media (pointer: coarse) {
-      inset-block-start: -12px;
-      inset-inline-end: -12px;
-      width: 24px;
-      height: 24px;
-    }
-  `,
-  canvas: css`
-    cursor: crosshair;
-    user-select: none;
-  `,
-  /* Drawn regions are draggable as a whole; the corner handle resizes. */
-  editableRect: css`
-    pointer-events: auto;
-    cursor: move;
-  `,
-  frame: css`
-    position: relative;
-
-    overflow: hidden;
-    display: inline-block;
-
-    /* Shrink-wrap the image exactly — a stretched frame skews every rect. */
-    align-self: flex-start;
-
-    width: fit-content;
-    max-width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  image: css`
-    display: block;
-    max-width: 100%;
-  `,
-  rect: css`
-    position: absolute;
-    border: 2px solid ${cssVar.colorError};
-    border-radius: 4px;
-
-    /*
-     * Two rings instead of one: the dark outside separates the box from a white
-     * screenshot, the light inside separates it from a dark one. The evidence
-     * image can be either, and neither the hue nor the reader's theme can tell
-     * us which — so the box carries its own contrast.
-     */
-    box-shadow:
-      0 0 0 1px rgb(0 0 0 / 45%),
-      inset 0 0 0 1px rgb(255 255 255 / 45%);
-  `,
-  resizeHandle: css`
-    cursor: nwse-resize;
-
-    position: absolute;
-    inset-block-end: -6px;
-    inset-inline-end: -6px;
-
-    width: 12px;
-    height: 12px;
-    border: 2px solid ${cssVar.colorError};
-    border-radius: 50%;
-
-    background: ${cssVar.colorBgContainer};
-
-    &::after {
-      content: '';
-      position: absolute;
-      inset: -16px;
-    }
-  `,
-}));
+const styles = {
+  badge:
+    'absolute -top-[9px] -start-[9px] inline-flex items-center justify-center size-[18px] rounded-[50%] text-[11px] font-semibold leading-none text-(--ant-color-text-light-solid) bg-destructive',
+  badgeDelete:
+    'cursor-pointer absolute -top-[9px] -end-[9px] inline-flex items-center justify-center size-[18px] border-none rounded-[50%] text-(--ant-color-text-light-solid) bg-destructive hover:brightness-[1.15] [@media(pointer:coarse)]:-top-3 [@media(pointer:coarse)]:-end-3 [@media(pointer:coarse)]:size-6',
+  canvas: 'cursor-crosshair select-none',
+  editableRect: 'pointer-events-auto cursor-move',
+  frame:
+    'relative overflow-hidden inline-block self-start w-fit max-w-full border border-sidebar-border rounded-(--ant-border-radius-lg)',
+  image: 'block max-w-full',
+  rect: 'absolute border-2 border-destructive rounded-[4px] shadow-[0_0_0_1px] shadow-black/45 inset-shadow-[0_0_0_1px] inset-shadow-white/45',
+  resizeHandle:
+    "cursor-nwse-resize absolute -bottom-1.5 -end-1.5 size-3 border-2 border-destructive rounded-[50%] bg-card after:content-[''] after:absolute after:-inset-4",
+};
 
 const rectStyle = (rect: Rect) => ({
   height: `${rect.height * 100}%`,
@@ -177,13 +71,13 @@ export const AnnotatedImage = memo<AnnotatedImageProps>(
               key={index}
               style={{
                 ...rectStyle(annotation.rect),
-                borderColor: annotation.color ?? cssVar.colorError,
+                borderColor: annotation.color ?? 'var(--destructive)',
               }}
             >
               {numbered && (
                 <span
                   className={styles.badge}
-                  style={{ background: annotation.color ?? cssVar.colorError }}
+                  style={{ background: annotation.color ?? 'var(--destructive)' }}
                 >
                   {annotation.label ?? index + 1}
                 </span>

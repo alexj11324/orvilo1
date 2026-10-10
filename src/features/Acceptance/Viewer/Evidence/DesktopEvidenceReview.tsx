@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,88 +15,18 @@ import { AttachmentStrip, AttachmentUploadButton } from './attachments';
 import { EvidenceStage } from './EvidenceStage';
 import { RegionNotes } from './RegionNotes';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    min-height: 0;
-  `,
-  footer: css`
-    flex: none;
-    padding-block-start: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  /** Stage and notes side by side — the pointer that circles a region is the
-      same one that types about it, so neither should scroll the other away. */
-  stageRow: css`
-    display: flex;
-    flex: 1;
-    gap: 16px;
-    min-height: 0;
-  `,
-  notes: css`
-    overflow-y: auto;
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    gap: 12px;
-
-    width: 320px;
-    min-width: 0;
-  `,
-  thumb: css`
-    cursor: pointer;
-
-    overflow: hidden;
-
-    width: 72px;
-    height: 48px;
-    border: 2px solid transparent;
-    border-radius: ${cssVar.borderRadius};
-
-    img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  `,
-  thumbActive: css`
-    border-color: ${cssVar.colorPrimary};
-  `,
-  /** The zoom pill floats bottom-center over the stage — controls live with
-      the thing they control, not in a detached toolbar row. */
-  zoomBar: css`
-    position: absolute;
-    z-index: 5;
-    inset-block-end: 16px;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 4px;
-    padding-inline: 8px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 99px;
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  zoomLabel: css`
-    min-width: 44px;
-
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-  `,
-}));
+const styles = {
+  body: 'overflow-hidden flex flex-1 flex-col min-h-0',
+  footer: 'flex-none pt-3 border-t border-sidebar-border',
+  stageRow: 'flex flex-1 gap-4 min-h-0',
+  notes: 'overflow-y-auto flex flex-none flex-col gap-3 w-80 min-w-0',
+  thumb:
+    'cursor-pointer overflow-hidden w-18 h-12 border-2 border-transparent rounded-(--ant-border-radius) [&_img]:block [&_img]:w-full [&_img]:h-full [&_img]:object-cover',
+  thumbActive: 'border-primary',
+  zoomBar:
+    'absolute z-5 bottom-4 start-1/2 -translate-x-1/2 flex gap-1 items-center py-1 px-2 border border-sidebar-border rounded-[99px] bg-popover shadow-(--shadow-popover)',
+  zoomLabel: 'min-w-11 text-[12px] tabular-nums text-muted-foreground text-center',
+};
 
 interface DesktopEvidenceReviewProps {
   /** Names the check in the text-only reject, which has no evidence to point at. */
@@ -144,7 +74,7 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                       current: index + 1,
                       total: evidence.length,
                     })}
-                    className={cx(
+                    className={cn(
                       styles.thumb,
                       item.id === activeEvidence.id && styles.thumbActive,
                     )}

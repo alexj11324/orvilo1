@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,44 +14,16 @@ export const formatGoalDuration = (milliseconds: number) => {
 
 export const formatGoalCost = (cost: number) => (cost > 0 ? `$${cost.toFixed(2)}` : '—');
 
-const styles = createStaticStyles(({ css }) => ({
-  acceptance: css`
-    min-width: 0;
-  `,
-  metric: css`
-    justify-self: end;
-    white-space: nowrap;
-  `,
-  metrics: css`
-    display: grid;
-    grid-template-columns: minmax(178px, 1fr) 72px 48px 64px;
-    column-gap: 12px;
-    align-items: center;
-
-    width: min(100%, 390px);
-    min-width: 390px;
-  `,
-  needsYou: css`
-    justify-self: end;
-    color: ${cssVar.colorWarning};
-    white-space: nowrap;
-  `,
-  progress: css`
-    overflow: hidden;
-
-    width: 64px;
-    height: 4px;
-    border-radius: ${cssVar.borderRadiusXS};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressValue: css`
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorSuccess};
-    transition: width 0.2s ${cssVar.motionEaseOut};
-  `,
-}));
+const styles = {
+  acceptance: 'min-w-0',
+  metric: 'justify-self-end whitespace-nowrap',
+  metrics:
+    'grid grid-cols-[minmax(178px,1fr)_72px_48px_64px] gap-x-3 items-center w-[min(100%,390px)] min-w-[390px]',
+  needsYou: 'justify-self-end text-warning whitespace-nowrap',
+  progress: 'overflow-hidden w-16 h-1 rounded-(--ant-border-radius-xs) bg-selected',
+  progressValue:
+    'h-full rounded-[inherit] bg-success [transition:width_0.2s_var(--ant-motion-ease-out)]',
+};
 
 export interface GoalProgressProps {
   findingCount: number;
@@ -82,13 +53,16 @@ export const GoalProgress = memo<GoalProgressProps>(
             </div>
             <div
               className="truncate min-w-0 text-[12px]"
-              style={{ color: cssVar.colorTextTertiary }}
+              style={{ color: 'var(--ant-color-text-tertiary)' }}
             >
               {t('goalList.taskProgress', { done: taskDone, total: taskTotal })}
             </div>
           </div>
         ) : (
-          <div className="truncate min-w-0 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+          <div
+            className="truncate min-w-0 text-[12px]"
+            style={{ color: 'var(--ant-color-text-tertiary)' }}
+          >
             {t('goalList.noTasks')}
           </div>
         )}
@@ -99,20 +73,20 @@ export const GoalProgress = memo<GoalProgressProps>(
         ) : (
           <div
             className={cn('text-[12px]', styles.metric)}
-            style={{ color: cssVar.colorTextTertiary }}
+            style={{ color: 'var(--ant-color-text-tertiary)' }}
           >
             {t('goalList.findings', { count: findingCount })}
           </div>
         )}
         <div
           className={cn('text-[12px]', styles.metric)}
-          style={{ color: cssVar.colorTextTertiary }}
+          style={{ color: 'var(--ant-color-text-tertiary)' }}
         >
           {formatGoalDuration(totalRunDuration)}
         </div>
         <div
           className={cn('text-[12px]', styles.metric)}
-          style={{ color: cssVar.colorTextTertiary }}
+          style={{ color: 'var(--ant-color-text-tertiary)' }}
         >
           {formatGoalCost(totalRunCost)}
         </div>

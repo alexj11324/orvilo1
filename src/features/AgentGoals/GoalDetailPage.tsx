@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { EyeIcon, PauseIcon, PlayIcon } from 'lucide-react';
 import { memo, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,30 +50,12 @@ import { useGoalChatPanel } from './useGoalChatPanel';
  * (node → task → topic conversation).
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  header: css`
-    padding-block: 8px 4px;
-  `,
-  metric: css`
-    cursor: pointer;
-
-    min-width: 112px;
-    padding-block: 4px;
-    padding-inline: 10px;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  metrics: css`
-    /* Negative inline offset keeps the metric text aligned with the title while
-       the hover background still gets breathing room. */
-    margin-inline-start: -10px;
-  `,
-}));
+const styles = {
+  header: '[padding-block:8px_4px]',
+  metric:
+    'cursor-pointer min-w-28 [padding-block:4px] [padding-inline:10px] rounded-(--ant-border-radius) [transition:background_0.15s] hover:bg-(--ant-color-fill-quaternary)',
+  metrics: '-ms-2.5',
+};
 
 const Metric = memo<{
   label: string;

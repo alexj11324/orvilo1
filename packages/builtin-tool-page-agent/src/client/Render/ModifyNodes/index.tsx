@@ -2,66 +2,23 @@
 
 import type { ModifyNodesArgs, ModifyOperation } from '@orvilo/editor-runtime';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Check, DiffIcon, Minus, Plus, X } from 'lucide-react';
 import { createElement, memo } from 'react';
 
 import type { ModifyNodesState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  content: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  index: css`
-    flex-shrink: 0;
-
-    width: 18px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-    text-align: end;
-  `,
-  position: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  row: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-}));
+const styles = {
+  content: 'min-w-0 flex-1 truncate font-mono text-[12px] text-foreground',
+  index: 'w-[18px] shrink-0 text-end text-[12px] text-[var(--ant-color-text-quaternary)]',
+  position:
+    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[11px] text-muted-foreground',
+  row: 'flex items-center gap-2 px-3 py-2 not-last:[border-block-end:1px_dashed_var(--sidebar-border)]',
+};
 
 const actionMeta = {
-  insert: { color: cssVar.colorSuccess, icon: Plus },
-  modify: { color: cssVar.colorWarning, icon: DiffIcon },
-  remove: { color: cssVar.colorError, icon: Minus },
+  insert: { color: 'var(--success)', icon: Plus },
+  modify: { color: 'var(--warning)', icon: DiffIcon },
+  remove: { color: 'var(--destructive)', icon: Minus },
 } as const;
 
 const getOperationDetails = (op: ModifyOperation) => {
@@ -88,14 +45,7 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
     const results = pluginState?.results ?? [];
 
     return (
-      <div
-        style={{
-          background: cssVar.colorBgContainer,
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: cssVar.borderRadius,
-          width: '100%',
-        }}
-      >
+      <div className="w-full rounded-[var(--ant-border-radius)] border border-sidebar-border bg-card">
         {operations.map((op, index) => {
           const meta = actionMeta[op.action];
           const details = getOperationDetails(op);
@@ -112,10 +62,10 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
               })}
               {details.position && <span className={styles.position}>{details.position}</span>}
               {details.content && <span className={styles.content}>{details.content}</span>}
-              {success && <Check size={14} style={{ color: cssVar.colorSuccess, flexShrink: 0 }} />}
+              {success && <Check size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />}
               {failed && (
                 <>
-                  <X size={14} style={{ color: cssVar.colorError, flexShrink: 0 }} />
+                  <X size={14} style={{ color: 'var(--destructive)', flexShrink: 0 }} />
                   {result?.error && (
                     <span className="text-[11px] text-destructive">{result.error}</span>
                   )}

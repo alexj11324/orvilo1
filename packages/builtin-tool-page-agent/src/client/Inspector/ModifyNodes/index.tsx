@@ -2,7 +2,7 @@
 
 import type { ModifyNodesArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { DiffIcon, Minus, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useMemo } from 'react';
@@ -12,16 +12,10 @@ import { oneLineEllipsis, shinyTextStyles } from '@/styles';
 
 import type { ModifyNodesState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  separator: css`
-    margin-inline: 2px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  title: css`
-    margin-inline-end: 8px;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  separator: 'mx-0.5 text-[var(--ant-color-text-quaternary)]',
+  title: 'me-2 text-foreground',
+};
 
 export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, ModifyNodesState>>(
   ({ args, partialArgs, isArgumentsStreaming }) => {
@@ -78,7 +72,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
           key="insert"
-          style={{ color: cssVar.colorSuccess }}
+          style={{ color: 'var(--success)' }}
         >
           <Plus size={12} />
           {counts.insert}
@@ -90,7 +84,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
           key="modify"
-          style={{ color: cssVar.colorWarning }}
+          style={{ color: 'var(--warning)' }}
         >
           <DiffIcon size={12} />
           {counts.modify}
@@ -102,7 +96,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
           key="remove"
-          style={{ color: cssVar.colorError }}
+          style={{ color: 'var(--destructive)' }}
         >
           <Minus size={12} />
           {counts.remove}
@@ -112,7 +106,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
 
     return (
       <div className={oneLineEllipsis}>
-        <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
+        <span className={cn(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-page-agent.apiName.modifyNodes')}
         </span>
         {statsParts.length > 0 && (

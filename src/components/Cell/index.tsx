@@ -7,7 +7,7 @@ import { memo } from 'react';
 import Divider from './Divider';
 
 const styles = {
-  container: 'relative rounded-none text-[15px] [&:active]:[background:var(--accent)]',
+  container: 'relative rounded-none text-sm [&:active]:[background:var(--accent)]',
 };
 
 export interface CellProps {

@@ -2,7 +2,6 @@
 
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,20 +12,6 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { shinyTextStyles } from '@/styles';
 
 import type { BroadcastParams } from '../../../types';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  title: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-}));
 
 export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
   ({ args, partialArgs, isArgumentsStreaming }) => {
@@ -39,7 +24,6 @@ export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
     const groupAgents = useAgentGroupStore((s) =>
       activeGroupId ? agentGroupSelectors.getGroupAgents(activeGroupId)(s) : [],
     );
-    const theme = useTheme();
 
     // Get agent details for the broadcast targets
     const agents = useMemo(() => {
@@ -54,7 +38,7 @@ export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
       () =>
         agents.map((agent) => ({
           avatar: agent.avatar || DEFAULT_AVATAR,
-          background: agent.backgroundColor || theme.colorBgContainer,
+          background: agent.backgroundColor || 'var(--card)',
           key: agent.id,
           title: agent.title || undefined,
         })),
@@ -63,7 +47,7 @@ export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
 
     if (isArgumentsStreaming && agents.length === 0) {
       return (
-        <div className={styles.root}>
+        <div className="flex items-center gap-2 overflow-hidden">
           <span className={shinyTextStyles.shinyText}>
             {t('builtins.orvilo-group-management.apiName.broadcast')}
           </span>
@@ -72,8 +56,13 @@ export const BroadcastInspector = memo<BuiltinInspectorProps<BroadcastParams>>(
     }
 
     return (
-      <div className={cn('flex', 'items-center', 'gap-2', styles.root)}>
-        <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
+      <div className="flex items-center gap-2 overflow-hidden">
+        <span
+          className={cn(
+            'shrink-0 whitespace-nowrap text-muted-foreground',
+            isArgumentsStreaming && shinyTextStyles.shinyText,
+          )}
+        >
           {t('builtins.orvilo-group-management.inspector.broadcast.title')}
         </span>
         {avatarItems.length > 0 && <AvatarGroup items={avatarItems} shape={'circle'} size={24} />}

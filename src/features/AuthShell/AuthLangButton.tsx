@@ -37,7 +37,7 @@ const AuthLangButton = memo(() => {
               paddingInline: 8,
             }}
           >
-            <div className="text-[12px]">{currentLabel}</div>
+            <div className="text-xs">{currentLabel}</div>
             <GlobeIcon data-icon="inline-end" />
           </Button>
         }

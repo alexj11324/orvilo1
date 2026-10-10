@@ -51,7 +51,7 @@ const TriggerCard = memo(() => {
             {summary || t('trigger.unconfigured')}
           </div>
           {nextRun ? (
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('trigger.next_run', { time: dayjs(nextRun.toDate()).fromNow() })}
             </div>
           ) : null}

@@ -31,7 +31,7 @@ const styles = {
   bar: '[container:runtimebar_/_inline-size] flex-none h-7 py-0 px-1',
   fullAccessLabel: '[@container_runtimebar_(width_<_600px)]:hidden',
   sdkRuntime:
-    'cursor-default flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-[12px] text-info whitespace-nowrap bg-[color-mix(in_srgb,_var(--ant-color-info-bg)_55%,_transparent)] bg-none',
+    'cursor-default flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-xs text-info whitespace-nowrap bg-[color-mix(in_srgb,_var(--ant-color-info-bg)_55%,_transparent)] bg-none',
   sdkRuntimeClosing:
     'text-[var(--ant-color-text-description)] bg-[var(--ant-color-fill-quaternary)] bg-none',
   sdkRuntimeError:

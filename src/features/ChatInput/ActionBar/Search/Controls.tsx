@@ -18,12 +18,12 @@ import ModelBuiltinSearch from './ModelBuiltinSearch';
 
 const styles = {
   active: 'bg-accent',
-  description: 'text-[12px] text-(--ant-color-text-description)',
+  description: 'text-xs text-(--ant-color-text-description)',
   icon: 'border border-accent rounded-(--ant-border-radius) bg-popover',
   option:
     'cursor-pointer w-full p-2 rounded-(--ant-border-radius) transition-[background-color] duration-200 ease-[ease] hover:bg-accent',
-  title: 'text-[14px] font-medium text-foreground',
-  check: 'ms-3 text-[16px] text-primary',
+  title: 'text-sm font-medium text-foreground',
+  check: 'ms-3 text-base text-primary',
 };
 
 interface NetworkOption {

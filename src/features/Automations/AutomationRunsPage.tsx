@@ -1,3 +1,4 @@
+// #691: Preserve the existing 22px title geometry pending a design-scale choice; no matching role is approved.
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -45,7 +46,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 const styles = {
   headerRow:
-    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-(--ant-color-text-tertiary) grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
+    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-xs font-medium text-(--ant-color-text-tertiary) grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
   row: 'grid cursor-pointer items-center gap-3 rounded-(--radius-card) p-2 hover:bg-accent grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
   statCard: 'min-w-[140px] flex-1',
 };
@@ -75,7 +76,7 @@ const StatCard = memo<{
   >
     <div className="flex items-center gap-2">
       {createElement(icon, { color: danger ? 'var(--destructive)' : 'var(--success)', size: 16 })}
-      <div className="text-[12px] text-muted-foreground">{label}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
     <div className="text-[22px] font-semibold">{value}</div>
   </div>
@@ -253,17 +254,17 @@ const AutomationRunsPage = memo(() => {
                     {run.sourceTaskName ?? run.title ?? '—'}
                   </div>
                 )}
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t(`run_source.${runTriggerLabel(run.trigger)}`)}
                 </div>
                 <div
-                  className="truncate min-w-0 text-[12px] text-muted-foreground"
+                  className="truncate min-w-0 text-xs text-muted-foreground"
                   title={run.createdAt ? formatAbsoluteDateTime(run.createdAt) : undefined}
                 >
                   {run.createdAt ? dayjs(run.createdAt).fromNow() : '—'}
                 </div>
                 <RunStatusBadge status={run.status} />
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {runDuration(
                     run.createdAt ? String(run.createdAt) : null,
                     run.completedAt ? String(run.completedAt) : null,

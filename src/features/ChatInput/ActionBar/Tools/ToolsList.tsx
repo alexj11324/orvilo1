@@ -141,7 +141,7 @@ const GroupItem = memo<{
   item: ToolItemData;
 }>(({ detailPopoverDisabled, item, index }) => (
   <Fragment key={item.key || `group-${index}`}>
-    <div className={cn('text-[12px] text-muted-foreground', toolsListStyles.groupLabel)}>
+    <div className={cn('text-xs text-muted-foreground', toolsListStyles.groupLabel)}>
       {item.label}
     </div>
     {item.children?.map((child, childIndex) => (

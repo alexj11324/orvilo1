@@ -1,41 +1,18 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { useTranslation } from 'react-i18next';
 
 import type { ProjectDetail } from '@/store/project';
 
 import { projectIssueProgress } from '../projectIssueProgress';
 
-const styles = createStaticStyles(({ css }) => ({
-  metric: css`
-    flex: 1;
-    margin: 0;
-    font-size: 12px;
-    line-height: 20px;
-
-    dt {
-      display: flex;
-      gap: 5px;
-      align-items: center;
-      color: ${cssVar.colorTextSecondary};
-    }
-
-    dd {
-      margin: 0;
-      padding-inline-start: 11px;
-      color: ${cssVar.colorText};
-    }
-  `,
-  marker: css`
-    width: 6px;
-    height: 6px;
-    border-radius: 1px;
-  `,
-}));
+const styles = {
+  metric: 'm-0 flex-1 text-[12px] leading-5',
+  marker: 'size-1.5 rounded-[1px]',
+};
 
 const colors = {
-  scope: cssVar.colorTextTertiary,
-  started: cssVar.colorWarning,
-  completed: cssVar.colorPrimary,
+  scope: 'var(--ant-color-text-tertiary)',
+  started: 'var(--warning)',
+  completed: 'var(--primary)',
 };
 
 export function ProjectIssueProgress({ issues }: { issues: ProjectDetail['tasks'] }) {
@@ -46,11 +23,11 @@ export function ProjectIssueProgress({ issues }: { issues: ProjectDetail['tasks'
     <div className="flex flex-row" style={{ gap: 8 }}>
       {(['scope', 'started', 'completed'] as const).map((key) => (
         <dl className={styles.metric} key={key}>
-          <dt>
+          <dt className="flex items-center gap-[5px] text-muted-foreground">
             <span aria-hidden className={styles.marker} style={{ background: colors[key] }} />
             {t(`overview.progress.${key}`)}
           </dt>
-          <dd>{progress[key]}</dd>
+          <dd className="m-0 ps-[11px] text-foreground">{progress[key]}</dd>
         </dl>
       ))}
     </div>

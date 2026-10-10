@@ -1,5 +1,3 @@
-import { cssVar } from 'antd-style';
-
 /**
  * The one de-emphasised tone for a label that names a project section.
  *
@@ -39,7 +37,7 @@ import { cssVar } from 'antd-style';
  * the token keeps the label right in dark mode where a frozen hex would not.
  * Revisit only with a dark-mode reference measurement in hand.
  */
-export const MUTED_LABEL_COLOR = cssVar.colorTextSecondary;
+export const MUTED_LABEL_COLOR = 'var(--muted-foreground)';
 
 /**
  * Full spec for a section label at the reference's third text step:

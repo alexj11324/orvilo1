@@ -1,5 +1,4 @@
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 
@@ -12,31 +11,12 @@ import { ProjectIcon } from '../ProjectIcon';
  * Compact inline row matching the activity feed's measured reference spec:
  * 16px glyph without a circular backing, 12px/450 text, 12px icon-text gap.
  */
-const styles = createStaticStyles(({ css }) => ({
-  event: css`
-    font-size: 12px;
-    font-weight: 450;
-    line-height: 17px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  glyph: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 17px;
-
-    color: ${cssVar.colorTextTertiary};
-  `,
-  row: css`
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    padding-block: 3px;
-  `,
-}));
+const styles = {
+  event: 'text-[12px] font-[450] leading-[17px] text-muted-foreground',
+  glyph:
+    'flex h-[17px] w-4 flex-none items-center justify-center text-[var(--ant-color-text-tertiary)]',
+  row: 'flex items-start gap-3 py-[3px]',
+};
 
 /** Creation is an immutable audit fact, not the project's current owner or current viewer. */
 export function ProjectCreationActivity({ project }: { project: ProjectDetail['project'] }) {

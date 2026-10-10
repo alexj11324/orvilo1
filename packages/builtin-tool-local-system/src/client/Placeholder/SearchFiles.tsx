@@ -1,31 +1,20 @@
 import type { LocalSearchFilesParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinPlaceholderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { SearchIcon } from 'lucide-react';
 import React, { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  query: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-    border-radius: 8px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  query: 'rounded-[8px] px-2 py-1 text-[12px] text-muted-foreground hover:bg-accent',
+};
 
 const SearchFiles = memo<BuiltinPlaceholderProps<LocalSearchFilesParams>>(({ args = {} }) => {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex flex-row items-center justify-between gap-10 h-[26px]">
-        <div className={cx('flex flex-row items-center gap-2', styles.query)}>
+        <div className={cn('flex flex-row items-center gap-2', styles.query)}>
           <span className="anticon" role="img">
             <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
           </span>

@@ -3,7 +3,7 @@
 import { MaterialFileTypeIcon } from '@lobehub/ui';
 import type { RenameLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,12 +12,9 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 
 import type { LocalRenameFileState } from '../../..';
 
-const styles = createStaticStyles(({ css }) => ({
-  icon: css`
-    flex-shrink: 0;
-    margin-inline-end: 4px;
-  `,
-}));
+const styles = {
+  icon: 'me-1 shrink-0',
+};
 
 export const RenameLocalFileInspector = memo<
   BuiltinInspectorProps<RenameLocalFileParams, LocalRenameFileState>
@@ -32,7 +29,7 @@ export const RenameLocalFileInspector = memo<
 
   return (
     <div
-      className={cx(inspectorTextStyles.root, isArgumentsStreaming && shinyTextStyles.shinyText)}
+      className={cn(inspectorTextStyles.root, isArgumentsStreaming && shinyTextStyles.shinyText)}
     >
       {oldName && newName ? (
         <>

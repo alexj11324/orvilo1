@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { DnaIcon, MoreHorizontalIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -35,13 +34,6 @@ import AnchorCard from './Portrait/AnchorCard';
 import DomainList from './Portrait/DomainList';
 import HabitList from './Portrait/HabitList';
 import TeachBox from './Portrait/TeachBox';
-
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow-y: auto;
-    display: flex;
-  `,
-}));
 
 /**
  * 规则与经验 —— 一个 Agent 从实践里学到、或由人直接教给它的规则。
@@ -177,7 +169,7 @@ const SelfLearning = memo(() => {
           ) : null
         }
       />
-      <div className={cx(styles.body, 'flex flex-col flex-1 w-full')}>
+      <div className="flex flex-col flex-1 w-full overflow-y-auto">
         <WideScreenContainer>
           <AsyncBoundary
             data={data}
@@ -216,13 +208,7 @@ const SelfLearning = memo(() => {
               </div>
 
               {teachOpen && (
-                <div
-                  className="flex flex-col p-3 border"
-                  style={{
-                    borderColor: cssVar.colorBorderSecondary,
-                    background: cssVar.colorBgContainer,
-                  }}
-                >
+                <div className="flex flex-col p-3 border border-sidebar-border bg-card">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
                       <div className="text-[12px] text-muted-foreground">{t('teachNew.help')}</div>

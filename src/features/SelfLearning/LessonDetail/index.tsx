@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -28,35 +27,14 @@ import { useExpertiseDomain, useExpertiseLesson } from '../hooks';
 // `AgentDocumentsGroup.tsx` do. `dayjs.extend` is idempotent.
 dayjs.extend(relativeTime);
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow-y: auto;
-    display: flex;
-  `,
-  sections: css`
-    overflow: hidden;
-    width: min(100%, 760px);
-  `,
-  sectionItem: css`
-    display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
-    gap: 16px;
-
-    padding-block: 14px;
-    padding-inline: 16px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  title: css`
-    max-width: 880px;
-    text-wrap: balance;
-  `,
-  hitTitle: css`
-    min-width: 0;
-  `,
-}));
+const styles = {
+  body: 'flex overflow-y-auto',
+  sections: 'overflow-hidden w-[min(100%,760px)]',
+  sectionItem:
+    'grid grid-cols-[72px_minmax(0,1fr)] gap-4 py-3.5 px-4 [&+&]:[border-block-start:1px_solid_var(--sidebar-border)]',
+  title: 'max-w-[880px] text-balance',
+  hitTitle: 'min-w-0',
+};
 
 /** Labels a lesson section, falling back to the raw key when no polarity declares it. */
 const SectionLabel = memo<{ sectionKey: string }>(({ sectionKey }) => {
@@ -106,7 +84,7 @@ const LessonDetail = memo(() => {
           ) : null
         }
       />
-      <div className={cx(styles.body, 'flex flex-col flex-1 w-full')}>
+      <div className={cn(styles.body, 'flex flex-col flex-1 w-full')}>
         <WideScreenContainer>
           <AsyncBoundary
             data={data}
@@ -181,11 +159,10 @@ const LessonDetail = memo(() => {
                 </div>
 
                 <div
-                  className={cx(styles.sections, 'flex flex-col p-0 border')}
-                  style={{
-                    borderColor: cssVar.colorBorderSecondary,
-                    background: cssVar.colorBgContainer,
-                  }}
+                  className={cn(
+                    styles.sections,
+                    'flex flex-col p-0 border border-sidebar-border bg-card',
+                  )}
                 >
                   {sections?.map((section) => (
                     <div className={styles.sectionItem} key={section.key}>
@@ -211,12 +188,8 @@ const LessonDetail = memo(() => {
                   ) : (
                     data.hits.map((hit, index) => (
                       <div
-                        className="flex flex-col gap-1.5 p-[14px] border"
+                        className="flex flex-col gap-1.5 p-[14px] border border-sidebar-border bg-card"
                         key={`${hit.createdAt}-${index}`}
-                        style={{
-                          borderColor: cssVar.colorBorderSecondary,
-                          background: cssVar.colorBgContainer,
-                        }}
                       >
                         <div className="flex items-start gap-3 justify-between">
                           <div
@@ -235,10 +208,7 @@ const LessonDetail = memo(() => {
                         {hit.subjectType === 'topic' && activeAgentId ? (
                           <Link to={urlJoin('/agent', activeAgentId, hit.subjectId)}>
                             <div className="flex items-center gap-[5px]">
-                              <MessagesSquare
-                                size={13}
-                                style={{ color: cssVar.colorTextSecondary }}
-                              />
+                              <MessagesSquare className="text-muted-foreground" size={13} />
                               <div className="text-[12px] text-muted-foreground">
                                 {hit.runTitle ?? `#${hit.runIndex}`}
                               </div>

@@ -3,7 +3,7 @@
 import { FilePathDisplay } from '@orvilo/shared-tool-ui/components';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +23,7 @@ export const ExportFileInspector = memo<BuiltinInspectorProps<ExportFileArgs, Ex
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(showShiny && shinyTextStyles.shinyText)} style={{ marginInlineEnd: 6 }}>
+        <span className={cn(showShiny && shinyTextStyles.shinyText)} style={{ marginInlineEnd: 6 }}>
           {t('builtins.orvilo-cloud-sandbox.apiName.exportFile')}:
         </span>
         {filePath && <FilePathDisplay filePath={filePath} />}
@@ -32,7 +32,7 @@ export const ExportFileInspector = memo<BuiltinInspectorProps<ExportFileArgs, Ex
             {pluginState.success ? (
               <span className="anticon" role="img">
                 <Check
-                  color={cssVar.colorSuccess}
+                  color={'var(--success)'}
                   fill={'transparent'}
                   height={14}
                   size={14}
@@ -42,7 +42,7 @@ export const ExportFileInspector = memo<BuiltinInspectorProps<ExportFileArgs, Ex
             ) : (
               <span className="anticon" role="img">
                 <X
-                  color={cssVar.colorError}
+                  color={'var(--destructive)'}
                   fill={'transparent'}
                   height={14}
                   size={14}

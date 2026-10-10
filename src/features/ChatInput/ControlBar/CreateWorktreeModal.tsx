@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -69,11 +68,11 @@ const CreateWorktreeContent = memo<CreateWorktreeContentProps>(({ onSubmit, reso
           }}
         />
         {previewPath ? (
-          <div style={{ color: cssVar.colorTextTertiary, fontSize: 12, wordBreak: 'break-all' }}>
+          <div className="text-[12px] text-(--ant-color-text-tertiary) break-all">
             {tDevice('workingDirectory.newWorktreeLocation', { path: previewPath })}
           </div>
         ) : null}
-        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+        {error ? <div className="text-[12px] text-destructive">{error}</div> : null}
       </div>
       <div className="flex flex-row gap-2 justify-end">
         <Button disabled={loading} onClick={close}>

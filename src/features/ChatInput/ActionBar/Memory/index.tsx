@@ -1,5 +1,4 @@
 import { BrainOffIcon } from '@lobehub/ui/icons';
-import { cssVar } from 'antd-style';
 import { Brain } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +25,7 @@ const Memory = memo(() => {
 
   return (
     <ChatInputAction
-      color={isEnabled ? cssVar.colorInfo : undefined}
+      color={isEnabled ? 'var(--info)' : undefined}
       icon={isEnabled ? Brain : BrainOffIcon}
       showTooltip={false}
       title={t('memory.title')}

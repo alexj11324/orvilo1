@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { Globe, GlobeOff } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +27,7 @@ const Search = memo(() => {
 
   return (
     <ChatInputAction
-      color={isAgentEnableSearch ? cssVar.colorInfo : undefined}
+      color={isAgentEnableSearch ? 'var(--info)' : undefined}
       icon={isAgentEnableSearch ? Globe : GlobeOff}
       showTooltip={false}
       title={t('search.title')}

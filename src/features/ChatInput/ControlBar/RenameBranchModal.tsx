@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -66,7 +65,7 @@ const RenameBranchContent = memo<RenameBranchContentProps>(({ currentName, onSub
             if (e.key === 'Enter') handleSubmit();
           }}
         />
-        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+        {error ? <div className="text-[12px] text-destructive">{error}</div> : null}
       </div>
       <div className="flex flex-row gap-2 justify-end">
         <Button disabled={loading} onClick={close}>

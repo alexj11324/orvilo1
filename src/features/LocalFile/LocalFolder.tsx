@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import path from 'path-browserify-esm';
 import React from 'react';
@@ -7,31 +6,11 @@ import FileIcon from '@/components/FileIcon';
 import { localFileService } from '@/services/electron/localFileService';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    cursor: pointer;
-
-    padding-block: 2px;
-    padding-inline: 4px 8px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    :hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  title: css`
-    overflow: hidden;
-    display: block;
-
-    line-height: 20px;
-    color: inherit;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  container:
+    'cursor-pointer py-0.5 ps-1 pe-2 rounded-(--radius-chip) text-muted-foreground [&:hover]:text-foreground [&:hover]:bg-accent',
+  title: 'overflow-hidden block leading-5 text-inherit text-ellipsis whitespace-nowrap',
+};
 
 interface LocalFolderProps {
   path: string;
@@ -50,7 +29,7 @@ export const LocalFolder = ({ path: pathname, size = 22 }: LocalFolderProps) => 
   return (
     <div
       {...clickableProps()}
-      className={cn(cx('flex flex-row items-center gap-1', styles.container), CLICKABLE_FOCUS_RING)}
+      className={cn('flex flex-row items-center gap-1', styles.container, CLICKABLE_FOCUS_RING)}
       style={{ display: 'inline-flex', verticalAlign: 'middle' }}
       onClick={handleClick}
     >

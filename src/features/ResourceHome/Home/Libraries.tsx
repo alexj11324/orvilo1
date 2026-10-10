@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { PlusIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,75 +19,13 @@ import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
 
 import SectionTitle from './SectionTitle';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 14px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    text-align: start;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    transition: all 0.2s ${cssVar.motionEaseInOut};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  createChip: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-
-    padding-block: 14px;
-    padding-inline: 16px;
-    border: 1px dashed ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    transition: all 0.2s ${cssVar.motionEaseInOut};
-
-    &:hover {
-      border-color: ${cssVar.colorTextQuaternary};
-      color: ${cssVar.colorText};
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-  `,
-  grid: css`
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  chip: 'cursor-pointer flex gap-2.5 items-center min-w-0 py-3.5 px-4 border border-sidebar-border rounded-(--radius-overlay) text-start bg-(--ant-color-fill-quaternary) [transition:border-color_0.2s_var(--ant-motion-ease-in-out),background-color_0.2s_var(--ant-motion-ease-in-out)] hover:border-border hover:bg-accent',
+  createChip:
+    'cursor-pointer flex gap-2 items-center justify-center py-3.5 px-4 border border-dashed border-border rounded-(--radius-overlay) text-muted-foreground bg-transparent [transition:border-color_0.2s_var(--ant-motion-ease-in-out),color_0.2s_var(--ant-motion-ease-in-out)] hover:border-(--ant-color-text-quaternary) hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50',
+  grid: 'grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3',
+  name: 'truncate text-[13px] font-medium text-foreground',
+};
 
 /**
  * How many libraries the quick-access row shows. The list is ordered by last

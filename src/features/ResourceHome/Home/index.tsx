@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,19 +11,10 @@ import Libraries from './Libraries';
 import RecentFiles from './RecentFiles';
 import RecentWorks from './RecentWorks';
 
-const styles = createStaticStyles(({ css }) => ({
-  content: css`
-    width: 100%;
-    max-width: 1080px;
-    margin-inline: auto;
-    padding-block: 32px 64px;
-    padding-inline: 32px;
-  `,
-  scroll: css`
-    overflow: hidden auto;
-    flex: 1;
-  `,
-}));
+const styles = {
+  content: 'w-full max-w-[1080px] mx-auto pt-8 pb-16 px-8',
+  scroll: 'overflow-x-hidden overflow-y-auto flex-1',
+};
 
 /**
  * The library-style landing page of /resource: libraries (once — the sidebar
@@ -37,7 +28,7 @@ const ResourceHomeDashboard = memo(() => {
     <div className="flex flex-col h-[100%]">
       <NavHeader
         right={<AddButton />}
-        style={{ borderBottom: `1px solid ${cssVar.colorBorderSecondary}` }}
+        style={{ borderBottom: '1px solid var(--sidebar-border)' }}
         left={
           <div className="flex flex-col" style={{ marginLeft: 8 }}>
             {t('resource')}
@@ -45,7 +36,7 @@ const ResourceHomeDashboard = memo(() => {
         }
       />
       <div className={styles.scroll}>
-        <div className={cx('flex flex-col gap-10', styles.content)}>
+        <div className={cn('flex flex-col gap-10', styles.content)}>
           <Libraries />
           <RecentWorks />
           <RecentFiles />

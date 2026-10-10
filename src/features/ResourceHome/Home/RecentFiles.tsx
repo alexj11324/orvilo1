@@ -1,7 +1,6 @@
 'use client';
 
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,64 +22,15 @@ import { FilesTabs } from '@/types/files';
 
 import SectionTitle from './SectionTitle';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    cursor: pointer;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    padding: 0;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    text-align: start;
-
-    background: ${cssVar.colorBgContainer};
-
-    transition: all 0.2s ${cssVar.motionEaseInOut};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      box-shadow: ${cssVar.boxShadowTertiary};
-    }
-  `,
-  grid: css`
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
-  `,
-  meta: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  preview: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    aspect-ratio: 16 / 10;
-    width: 100%;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  thumbnail: css`
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  `,
-}));
+const styles = {
+  card: 'cursor-pointer overflow-hidden flex flex-col p-0 border border-sidebar-border rounded-(--radius-overlay) text-start bg-card [transition:border-color_0.2s_var(--ant-motion-ease-in-out),box-shadow_0.2s_var(--ant-motion-ease-in-out)] hover:border-border hover:shadow-(--ant-box-shadow-tertiary)',
+  grid: 'grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3',
+  meta: 'text-[12px] text-(--ant-color-text-quaternary)',
+  name: 'truncate text-[13px] font-medium text-foreground',
+  preview:
+    'flex items-center justify-center aspect-[16/10] w-full [border-block-end:1px_solid_var(--sidebar-border)] bg-(--ant-color-fill-quaternary)',
+  thumbnail: 'w-full h-full object-cover',
+};
 
 const formatTime = (date: Date | string) =>
   dayjs().diff(dayjs(date), 'd') < 7 ? dayjs(date).fromNow() : formatAbsoluteDate(date);

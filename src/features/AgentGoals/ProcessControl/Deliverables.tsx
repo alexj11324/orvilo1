@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ExternalLink, FileDown, FileText, Link2 } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -34,46 +33,13 @@ import { KindDot } from './shared';
  * reading. Only a resource that genuinely lives outside the product leaves.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  producer: css`
-    flex: none;
-    justify-content: flex-end;
-    max-width: 40%;
-  `,
-  /**
-   * A fixed slot for the timestamp. Without it the attribution column ends
-   * wherever the relative time happens to start, so a list mixing "几秒前" with
-   * "8 小时前" loses the very alignment this row is built for.
-   */
-  time: css`
-    flex: none;
-    min-width: 60px;
-    text-align: end;
-  `,
-  row: css`
-    width: 100%;
-    padding-block: 8px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    text-align: start;
-
-    background: none;
-  `,
-  rowOpenable: css`
-    cursor: pointer;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-  `,
-}));
+const styles = {
+  producer: 'flex-none justify-end max-w-[40%]',
+  time: 'flex-none min-w-15 text-end',
+  row: 'w-full p-2 border-none rounded-(--ant-border-radius-sm) text-start bg-transparent bg-none',
+  rowOpenable:
+    'cursor-pointer hover:bg-[var(--ant-color-fill-quaternary)] focus-visible:[outline:2px_solid_var(--primary)] focus-visible:-outline-offset-2',
+};
 
 /**
  * Where a row actually goes, or `undefined` when it goes nowhere: an external
@@ -109,10 +75,10 @@ const DeliverableRow = memo<{
 
   return (
     <RowTag
-      className={cx(styles.row, openable && styles.rowOpenable)}
+      className={cn(styles.row, openable && styles.rowOpenable)}
       {...(openable ? { onClick: () => onOpen(artifact), type: 'button' as const } : {})}
     >
-      {createElement(icon, { color: cssVar.colorTextQuaternary, size: 14 })}
+      {createElement(icon, { color: 'var(--ant-color-text-quaternary)', size: 14 })}
       {/* The title takes the slack so the attribution and the timestamp form
           right-aligned columns; letting the title size itself left every row's
           attribution starting at a different x. */}
@@ -158,7 +124,7 @@ const Deliverables = memo<{ graph: GoalGraphView }>(({ graph }) => {
   if (graph.artifacts.length === 0)
     return (
       <div className="flex items-center gap-1.5">
-        <Link2 color={cssVar.colorTextQuaternary} size={14} />
+        <Link2 color={'var(--ant-color-text-quaternary)'} size={14} />
         <div className="text-[13px] text-muted-foreground">
           {t('goalProcess.deliverables.empty')}
         </div>

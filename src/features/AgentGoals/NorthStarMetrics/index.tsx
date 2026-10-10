@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { Check, Plus, Target } from 'lucide-react';
@@ -28,32 +27,12 @@ import Sparkline from './Sparkline';
  * about what is being tracked.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    flex: 1;
-
-    min-width: 236px;
-    max-width: 340px;
-    padding-block: 10px;
-    padding-inline: 14px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  metValue: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  stale: css`
-    color: ${cssVar.colorWarning};
-  `,
-  track: css`
-    overflow: hidden;
-    height: 4px;
-    border-radius: 2px;
-    background: ${cssVar.colorFillSecondary};
-  `,
-}));
+const styles = {
+  card: 'flex-1 min-w-59 max-w-85 py-2.5 px-3.5 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card',
+  metValue: 'text-success',
+  stale: 'text-warning',
+  track: 'overflow-hidden h-1 rounded-[2px] bg-selected',
+};
 
 const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string }>(
   ({ canEdit, card, goalId }) => {
@@ -110,7 +89,7 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
         <div className={styles.track}>
           <div
             style={{
-              background: card.met ? cssVar.colorSuccess : cssVar.colorInfo,
+              background: card.met ? 'var(--success)' : 'var(--info)',
               borderRadius: 2,
               height: '100%',
               width: `${card.percent}%`,
@@ -155,7 +134,7 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
   if (!criteria?.length)
     return (
       <div className="flex items-center gap-3" style={{ paddingBlock: 4 }}>
-        <Target color={cssVar.colorTextQuaternary} size={16} />
+        <Target color={'var(--ant-color-text-quaternary)'} size={16} />
         <div className="text-[13px] text-muted-foreground">
           {t('goalProcess.northStar.emptyHint')}
         </div>

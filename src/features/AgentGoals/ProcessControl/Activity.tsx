@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { BotMessageSquare, ChevronRight } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -24,45 +23,16 @@ import { useElapsed } from './useElapsed';
  * per-attempt ledger folded underneath.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  arrow: css`
-    flex: none;
-    color: ${cssVar.colorTextQuaternary};
-    transition: transform 0.2s;
-  `,
-  arrowOpen: css`
-    transform: rotate(90deg);
-  `,
-  attempt: css`
-    padding-block: 6px;
-
-    & + & {
-      border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-    }
-  `,
-  body: css`
-    padding-block: 0 10px;
-    padding-inline: 42px 9px;
-  `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-variant-numeric: tabular-nums;
-  `,
-  row: css`
-    cursor: pointer;
-    padding-block: 6px;
-    padding-inline: 9px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  time: css`
-    flex: none;
-    margin-inline-start: auto;
-  `,
-}));
+const styles = {
+  arrow:
+    'flex-none text-[var(--ant-color-text-quaternary)] transition-[transform] duration-200 ease-[ease]',
+  arrowOpen: '[transform:rotate(90deg)]',
+  attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
+  body: 'pt-0 pb-2.5 ps-10.5 pe-2.25',
+  mono: 'font-mono tabular-nums',
+  row: 'cursor-pointer py-1.5 px-2.25 rounded-(--ant-border-radius-sm) hover:bg-[var(--ant-color-fill-quaternary)]',
+  time: 'flex-none ms-auto',
+};
 
 const lastTouch = (view: GoalNodeView): Date =>
   [
@@ -135,7 +105,7 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
           onClick={() => (hasDetail ? setOpen(!open) : onSelect(view.node.id))}
         >
           <ChevronRight
-            className={cx(styles.arrow, open && styles.arrowOpen)}
+            className={cn(styles.arrow, open && styles.arrowOpen)}
             size={14}
             style={{ opacity: hasDetail ? 1 : 0 }}
           />
@@ -151,7 +121,7 @@ const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeVie
           </div>
           {view.startedAt && <RunningClock startedAt={view.startedAt} />}
           <div
-            className={cn('text-[12px] text-muted-foreground', cx(styles.time, styles.mono))}
+            className={cn('text-[12px] text-muted-foreground', cn(styles.time, styles.mono))}
             title={title}
           >
             {text}

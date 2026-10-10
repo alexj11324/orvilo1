@@ -1,5 +1,4 @@
 import { Handle, type NodeProps, Position } from '@xyflow/react';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, FlaskConical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,31 +14,13 @@ export interface ExperimentGroupData extends GraphNodeData {
   onToggle: () => void;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  frame: css`
-    box-sizing: border-box;
-    width: 100%;
-    height: 100%;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 12px;
-
-    background: color-mix(in srgb, ${cssVar.colorInfo} 3%, transparent);
-  `,
-  header: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px 12px 0 0;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  title: css`
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  frame:
+    'box-border size-full border border-border rounded-[12px] bg-[color-mix(in_srgb,var(--info)_3%,transparent)]',
+  header:
+    'py-3 px-4 [border-block-end:1px_solid_var(--sidebar-border)] rounded-t-[12px] rounded-b-none bg-card',
+  title: 'min-w-0 truncate',
+};
 
 /** An expanded answer encloses its work without replacing the surrounding map. */
 const ExperimentGroup = ({ data }: NodeProps) => {

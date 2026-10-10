@@ -1,7 +1,6 @@
 'use client';
 
 import type { AcceptanceStatus, GoalDecisionOption } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { createElement, Fragment, memo, useState } from 'react';
@@ -38,80 +37,19 @@ import { useElapsed } from './useElapsed';
  * the rows carry.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  attempt: css`
-    padding-block: 6px;
-
-    & + & {
-      border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-    }
-  `,
-  blockedHead: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  body: css`
-    /* Aligned with the row title (glyph + gap), not floated on its own indent. */
-    padding-block: 8px 14px;
-    padding-inline: 26px 12px;
-  `,
-  deps: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  dim: css`
-    opacity: 0.55;
-    transition: opacity 0.15s;
-
-    &:hover {
-      opacity: 1;
-    }
-  `,
-  label: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  list: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorBgContainer};
-  `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-variant-numeric: tabular-nums;
-  `,
-  num: css`
-    flex: none;
-
-    min-width: 22px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  option: css`
-    display: grid;
-    grid-template-columns: 128px 1fr;
-    gap: 8px;
-    align-items: baseline;
-  `,
-}));
+const styles = {
+  attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
+  blockedHead:
+    'cursor-pointer select-none flex gap-1.5 items-center py-2 px-3 text-[12px] text-[var(--ant-color-text-tertiary)] hover:text-muted-foreground',
+  body: 'pt-2 pb-3.5 ps-6.5 pe-3',
+  deps: 'font-mono text-[12px] text-[var(--ant-color-text-quaternary)]',
+  dim: 'opacity-55 transition-opacity duration-150 ease-[ease] hover:opacity-100',
+  label: 'text-[12px] text-muted-foreground',
+  list: 'overflow-hidden border border-sidebar-border rounded-(--ant-border-radius) bg-card',
+  mono: 'font-mono tabular-nums',
+  num: 'flex-none min-w-5.5 font-mono text-[12px] text-[var(--ant-color-text-quaternary)]',
+  option: 'grid grid-cols-[128px_1fr] gap-2 items-baseline',
+};
 
 export interface FrontierActions {
   addTask: (title: string, description?: string) => Promise<void>;

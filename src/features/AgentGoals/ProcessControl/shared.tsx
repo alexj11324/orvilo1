@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   CircleHelp,
@@ -23,11 +22,11 @@ export const KIND_COLOR: Record<GoalGraphNodeKind, { line: string; soft: string 
   // primary-strength band sits at x9–x10, and x6/x7 resolve to near-pastel
   // tints (light-mode blue-7 is #93c8ff). x3/x10 gives the glyph a visible
   // tinted tile with a saturated line in both themes.
-  decision: { line: cssVar.orange10, soft: cssVar.orange3 },
-  experiment: { line: cssVar.cyan10, soft: cssVar.cyan3 },
-  finding: { line: cssVar.green10, soft: cssVar.green3 },
-  problem: { line: cssVar.purple10, soft: cssVar.purple3 },
-  task: { line: cssVar.blue10, soft: cssVar.blue3 },
+  decision: { line: 'var(--ant-orange-10)', soft: 'var(--ant-orange-3)' },
+  experiment: { line: 'var(--ant-cyan-10)', soft: 'var(--ant-cyan-3)' },
+  finding: { line: 'var(--ant-green-10)', soft: 'var(--ant-green-3)' },
+  problem: { line: 'var(--ant-purple-10)', soft: 'var(--ant-purple-3)' },
+  task: { line: 'var(--ant-blue-10)', soft: 'var(--ant-blue-3)' },
 };
 
 export const KIND_ICON: Record<GoalGraphNodeKind, LucideIcon> = {
@@ -38,20 +37,10 @@ export const KIND_ICON: Record<GoalGraphNodeKind, LucideIcon> = {
   task: ListChecks,
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  dot: css`
-    display: inline-block;
-    flex: none;
-
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-  `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-variant-numeric: tabular-nums;
-  `,
-}));
+const styles = {
+  dot: 'inline-block flex-none size-2 rounded-[2px]',
+  mono: 'font-mono tabular-nums',
+};
 
 export const monoClass = styles.mono;
 

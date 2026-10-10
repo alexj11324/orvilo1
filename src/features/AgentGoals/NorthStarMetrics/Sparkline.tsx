@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 /**
@@ -23,12 +22,7 @@ const Sparkline = memo<{ met?: boolean; values: number[] }>(({ met, values }) =>
 
   return (
     <svg aria-hidden height={height} width={width}>
-      <path
-        d={d}
-        fill={'none'}
-        stroke={met ? cssVar.colorSuccess : cssVar.colorInfo}
-        strokeWidth={1.5}
-      />
+      <path d={d} fill={'none'} stroke={met ? 'var(--success)' : 'var(--info)'} strokeWidth={1.5} />
     </svg>
   );
 });

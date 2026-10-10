@@ -1,7 +1,6 @@
 'use client';
 
 import { experimentOwner } from '@orvilo/utils/goalGraph';
-import { createStaticStyles } from 'antd-style';
 import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -34,11 +33,9 @@ import Graph from './Graph';
  * a plain task-carried goal has no nodes and keeps the page it always had.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  section: css`
-    padding-block: 8px;
-  `,
-}));
+const styles = {
+  section: 'py-2',
+};
 
 interface ProcessControlProps {
   /** The `goals` row id — not the carrier task's identifier. */

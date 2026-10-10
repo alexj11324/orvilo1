@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { MessagesSquare } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,24 +8,9 @@ import { useAcceptanceScope } from '../AcceptanceScope';
 import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import { useOriginConversation } from './originConversation';
 
-const styles = createStaticStyles(({ css }) => ({
-  chip: css`
-    cursor: pointer;
-
-    padding: 0;
-    border: 0;
-
-    font: inherit;
-    color: ${cssVar.colorTextSecondary};
-
-    background: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      text-decoration: underline;
-    }
-  `,
-}));
+const styles = {
+  chip: 'cursor-pointer border-0 bg-none bg-transparent p-0 text-muted-foreground hover:text-foreground hover:underline',
+};
 
 const AcceptanceOriginTopic = () => {
   const { t } = useTranslation('verify');
@@ -45,7 +29,8 @@ const AcceptanceOriginTopic = () => {
 
   return (
     <button
-      className={cx(styles.chip)}
+      className={styles.chip}
+      style={{ font: 'inherit' }}
       title={t('acceptance.origin.openTopic')}
       type={'button'}
       onClick={openTopic}

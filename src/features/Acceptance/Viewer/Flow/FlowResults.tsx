@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ClipboardCheck, History, X } from 'lucide-react';
 import { useState } from 'react';
@@ -27,45 +26,14 @@ import { flowStateColor } from './FlowNode';
 type FlowVersion = AcceptanceBundle['flows'][number]['versions'][number];
 type FlowAttempt = FlowVersion['runs'][number]['attempts'][number];
 
-const styles = createStaticStyles(({ css }) => ({
-  panel: css`
-    overflow: hidden;
-
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  header: css`
-    padding: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  body: css`
-    overflow: auto;
-    min-height: 0;
-    padding: 16px;
-  `,
-  plan: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    summary {
-      cursor: pointer;
-      padding-block: 6px;
-    }
-  `,
-  observation: css`
-    line-height: 1.7;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
-  `,
-  review: css`
-    padding-block-start: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  panel: 'overflow-hidden w-full h-full min-h-0 border-s border-sidebar-border bg-card',
+  header: 'p-4 border-b border-sidebar-border',
+  body: 'overflow-auto min-h-0 p-4',
+  plan: 'text-[12px] text-muted-foreground [&_summary]:cursor-pointer [&_summary]:py-1.5',
+  observation: 'leading-[1.7] wrap-anywhere whitespace-pre-wrap',
+  review: 'pt-4 border-t border-sidebar-border',
+};
 
 function AttemptReview({
   acceptanceId,

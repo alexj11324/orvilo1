@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -8,28 +8,11 @@ import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 
 import { resolveAcceptanceVerdictMeta } from '../verdict';
 
-const styles = createStaticStyles(({ css }) => ({
-  pill: css`
-    display: inline-flex;
-    gap: 5px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 99px;
-
-    font-size: 12px;
-    font-weight: 500;
-  `,
-  interactive: css`
-    cursor: pointer;
-    transition: filter ${cssVar.motionDurationMid};
-
-    &:hover {
-      filter: brightness(1.08);
-    }
-  `,
-}));
+const styles = {
+  pill: 'inline-flex items-center gap-[5px] py-0.5 px-2.5 rounded-[99px] text-[12px] font-medium',
+  interactive:
+    'cursor-pointer transition-[filter] duration-(--ant-motion-duration-mid) ease-[ease] hover:brightness-[1.08]',
+};
 
 interface AcceptanceStatusPillProps {
   menu?: DropdownItem[];
@@ -43,7 +26,7 @@ const AcceptanceStatusPill = ({ menu, pending, size = 13, status }: AcceptanceSt
   const verdictMeta = resolveAcceptanceVerdictMeta(status, t);
   const pill = (
     <span
-      className={menu ? cx(styles.pill, styles.interactive) : styles.pill}
+      className={menu ? cn(styles.pill, styles.interactive) : styles.pill}
       title={menu ? t('acceptance.workspace.actions.status') : undefined}
       style={{
         background: verdictMeta.bg,

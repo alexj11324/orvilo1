@@ -5,7 +5,7 @@ import * as React from 'react';
 type InputVisualSize = 'default' | 'compact' | 'small' | 'normal' | 'large';
 
 const inputVisualSizeClasses: Record<InputVisualSize, string> = {
-  default: 'h-8',
+  default: 'h-9',
   compact: 'h-8',
   small: 'h-7',
   normal: 'h-9',

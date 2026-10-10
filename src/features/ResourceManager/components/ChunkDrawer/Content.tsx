@@ -17,7 +17,7 @@ const Content = memo(() => {
   if (!fileId) return;
 
   return (
-    <div className="flex flex-col gap-2 h-[100%]" style={{ paddingBlock: '16px 0' }}>
+    <div className="flex flex-col gap-2 h-full" style={{ paddingBlock: '16px 0' }}>
       <div className="flex flex-col px-3">
         <SearchBar
           onChange={(text) => {

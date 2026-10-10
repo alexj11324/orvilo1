@@ -80,8 +80,8 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
   const fileDetail = fromStore ?? fromFetch;
 
   return (
-    <div className="flex flex-row h-[100%] w-[100%]" style={{ minHeight: 0 }}>
-      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0 }}>
+    <div className="flex flex-row h-full w-full" style={{ minHeight: 0 }}>
+      <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0 }}>
         <NavHeader
           left={
             <div

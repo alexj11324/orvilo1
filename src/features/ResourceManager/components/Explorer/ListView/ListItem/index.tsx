@@ -287,7 +287,7 @@ const FileListItem = ({
         draggable={!!resourceManagerState.libraryId}
         className={cn(
           cx(
-            'flex flex-row items-center h-[48px] px-2',
+            'flex flex-row items-center h-12 px-2',
             cx(
               styles.container,
               'file-list-item-group',
@@ -312,7 +312,7 @@ const FileListItem = ({
         onDrop={handleDrop}
       >
         <div
-          className={'flex flex-col items-center justify-center h-[40px]'}
+          className={'flex flex-col items-center justify-center h-10'}
           style={{ cursor: selectable ? 'pointer' : 'not-allowed', paddingInline: 4 }}
           title={selectable ? undefined : t('FileManager.selection.onlyOwn')}
           onClick={handleCheckboxClick}

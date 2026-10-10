@@ -36,7 +36,7 @@ const GroupItem = memo<GroupItemProps>(({ item, style, className, onNavigate }) 
 
   // Group conversations show a "群组" tag so they stand out from single agents.
   const titleNode = (
-    <div className="flex items-center gap-[4px]">
+    <div className="flex items-center gap-1">
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {displayTitle}
       </span>

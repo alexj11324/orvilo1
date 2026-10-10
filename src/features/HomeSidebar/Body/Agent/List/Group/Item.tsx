@@ -56,7 +56,7 @@ const GroupItem = memo<SidebarGroup>(({ items, id, name, visibility }) => {
           <div className="flex items-center">
             <div className="min-w-0 flex-1">
               <AccordionTrigger>
-                <div className="flex items-center gap-[6px]" style={{ overflow: 'hidden' }}>
+                <div className="flex items-center gap-1.5" style={{ overflow: 'hidden' }}>
                   {groupIcon}
                   <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                     {name}

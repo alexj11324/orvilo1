@@ -14,7 +14,7 @@ const Actions = memo<ActionsProps>(({ dropdownMenu }) => {
   const { t } = useTranslation('common');
 
   return (
-    <div className="flex gap-[2px]">
+    <div className="flex gap-0.5">
       <SidebarDropdownMenu items={dropdownMenu}>
         <Button
           aria-label={t('more', { ns: 'common' })}

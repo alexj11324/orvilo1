@@ -39,9 +39,7 @@ const ManifestRow = ({ icon, text, warning }: Omit<RenderRow, 'id'>) => (
         fill: 'transparent',
       })}
     </span>
-    <div className={warning ? 'text-[12px] text-warning' : 'text-[12px] text-muted-foreground'}>
-      {text}
-    </div>
+    <div className={warning ? 'text-xs text-warning' : 'text-xs text-muted-foreground'}>{text}</div>
   </div>
 );
 
@@ -150,7 +148,7 @@ const TransferManifestList = ({
 
   return (
     <div className="flex flex-col gap-2 p-3 rounded-lg bg-secondary" style={style}>
-      <div className="text-[12px] text-muted-foreground font-medium">
+      <div className="text-xs text-muted-foreground font-medium">
         {t('transferRequest.manifestTitle')}
       </div>
       {list}

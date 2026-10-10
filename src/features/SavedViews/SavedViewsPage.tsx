@@ -376,7 +376,7 @@ const SavedViewsPage = memo(() => {
     <Popover>
       <PopoverContent align="end" side="bottom">
         <div className={cx('flex flex-col gap-2.5', styles.displayPopover)}>
-          <div className="text-[12px] text-muted-foreground font-medium">
+          <div className="text-xs text-muted-foreground font-medium">
             {t('savedViews.ordering')}
           </div>
           <Select
@@ -409,7 +409,7 @@ const SavedViewsPage = memo(() => {
               if (value === 'asc' || value === 'desc') updatePrefs({ direction: value });
             }}
           />
-          <div className="text-[12px] text-muted-foreground font-medium">
+          <div className="text-xs text-muted-foreground font-medium">
             {t('savedViews.displayProperties')}
           </div>
           {(
@@ -515,7 +515,7 @@ const SavedViewsPage = memo(() => {
                     width={56}
                   />
                 </span>
-                <div className="text-[15px] font-semibold">{t('tab.views')}</div>
+                <div className="text-sm font-semibold">{t('tab.views')}</div>
                 <div className="text-[13px] text-muted-foreground">
                   {t(
                     entityType === 'project'

@@ -140,7 +140,7 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 justify-between">
-        <div className={cn('text-[12px]', styles.subtitle)}>{t('recommendations.subtitle')}</div>
+        <div className={cn('text-xs', styles.subtitle)}>{t('recommendations.subtitle')}</div>
         {taskTemplatesState.mode === 'cards' && (
           <Button size="sm" variant="ghost" onClick={taskTemplatesState.onRefresh}>
             <RefreshCw data-icon="inline-start" size={12} />

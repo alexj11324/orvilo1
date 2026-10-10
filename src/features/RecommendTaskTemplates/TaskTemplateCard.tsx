@@ -138,7 +138,7 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
               className="flex flex-row items-center flex-1 gap-1.5"
               style={{ minWidth: 0, overflow: 'hidden' }}
             >
-              <span className="truncate text-[16px] font-medium">{title}</span>
+              <span className="truncate text-base font-medium">{title}</span>
               <ActionIcon
                 icon={Clock}
                 size={12}

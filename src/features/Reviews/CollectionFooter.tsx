@@ -43,7 +43,7 @@ const CollectionFooter = memo<{
         <AsyncError error={error} variant={'inline'} onRetry={onRetry} />
       ) : (
         <>
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {stale
               ? t('reviews.staleBanner')
               : t('reviews.loadedCount', { loaded, total: total ?? '…' })}

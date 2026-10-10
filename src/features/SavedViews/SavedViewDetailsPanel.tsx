@@ -119,7 +119,7 @@ interface SavedViewDetailsPanelProps {
 
 const DetailRow = memo<{ label: string; value: ReactNode }>(({ label, value }) => (
   <div className={cx('flex items-center justify-between gap-4', styles.metaRow)}>
-    <div className="text-[12px] text-muted-foreground">{label}</div>
+    <div className="text-xs text-muted-foreground">{label}</div>
     {typeof value === 'string' ? (
       <div className="truncate block text-[13px] font-medium">{value}</div>
     ) : (
@@ -184,7 +184,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
         <div className={cx('flex flex-col', styles.card)}>
           <div className={cx('flex items-center gap-2.5', styles.cardHeader)}>
             <ListTodoIcon className={styles.titleIcon} size={16} />
-            <div className="truncate block text-[14px] font-semibold">{title}</div>
+            <div className="truncate block text-sm font-semibold">{title}</div>
           </div>
           <DetailRow
             label={t('savedViews.visibility', { ns: 'common' })}
@@ -260,7 +260,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
             <div className={styles.facetList}>
               {facetBuckets.length === 0 && restrictedCount === 0 ? (
                 <div
-                  className="text-[12px] text-muted-foreground"
+                  className="text-xs text-muted-foreground"
                   style={{ paddingBlock: 4, paddingInline: 8 }}
                 >
                   {t('savedViews.noMatches', { ns: 'common' })}
@@ -283,7 +283,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                               )
                             : t('savedViews.facetRestricted', { ns: 'common' }))}
                       </div>
-                      <div className="text-[12px] text-muted-foreground">{bucket.count}</div>
+                      <div className="text-xs text-muted-foreground">{bucket.count}</div>
                     </div>
                   ))}
                   {restrictedCount > 0 ? (
@@ -291,7 +291,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                       <div className="text-[13px] text-muted-foreground">
                         {t('savedViews.facetRestricted', { ns: 'common' })}
                       </div>
-                      <div className="text-[12px] text-muted-foreground">{restrictedCount}</div>
+                      <div className="text-xs text-muted-foreground">{restrictedCount}</div>
                     </div>
                   ) : null}
                 </>
@@ -303,7 +303,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
         {summary.groups.length > 0 ? (
           <div className={cx('flex flex-col', styles.card)}>
             <div className={cx('flex flex-col', styles.cardHeader)}>
-              <div className="text-[12px] text-muted-foreground font-medium">
+              <div className="text-xs text-muted-foreground font-medium">
                 {t('savedViews.groupCounts', { ns: 'common' })}
               </div>
             </div>
@@ -327,7 +327,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                     })}
                     <div className="text-[13px]">{groupLabel}</div>
                   </div>
-                  <div className="text-[12px] text-muted-foreground">{group.total}</div>
+                  <div className="text-xs text-muted-foreground">{group.total}</div>
                 </div>
               );
             })}

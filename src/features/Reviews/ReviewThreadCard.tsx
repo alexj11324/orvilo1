@@ -51,16 +51,16 @@ const ThreadComment = memo<{ comment: ReviewThreadComment }>(({ comment }) => {
     <div className="flex flex-col gap-1 p-3">
       <div className="flex flex-row items-center gap-2">
         <Avatar avatar={comment.authorAvatar ?? undefined} name={comment.author ?? '?'} size={20} />
-        <div className="text-[12px] font-medium">{comment.author}</div>
+        <div className="text-xs font-medium">{comment.author}</div>
         {comment.outdated ? <Tag>{t('reviews.threadOutdated')}</Tag> : null}
         {comment.side ? (
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {comment.side === 'LEFT' ? t('reviews.commentSideLeft') : t('reviews.commentSideRight')}
           </div>
         ) : null}
         {comment.createdAt ? (
           <div
-            className="text-[12px] text-muted-foreground"
+            className="text-xs text-muted-foreground"
             title={formatAbsoluteDateTime(comment.createdAt)}
           >
             {dayjs(comment.createdAt).fromNow()}
@@ -147,7 +147,7 @@ const ReviewThreadCard = memo<{
             }}
           />
         ) : thread.viewerCanReply === false ? (
-          <div className="text-[12px] text-muted-foreground">{t('reviews.cannotReply')}</div>
+          <div className="text-xs text-muted-foreground">{t('reviews.cannotReply')}</div>
         ) : (
           <Button
             disabled={writeDisabled || stale}

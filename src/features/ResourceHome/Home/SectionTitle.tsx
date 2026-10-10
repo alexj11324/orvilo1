@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 const styles = {
-  title: 'm-0 text-[15px] font-semibold text-foreground',
+  title: 'm-0 text-sm font-semibold text-foreground',
   viewAll:
     'cursor-pointer border-none text-[13px] text-muted-foreground [background:none] hover:text-foreground',
 };

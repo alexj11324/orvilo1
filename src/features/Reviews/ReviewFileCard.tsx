@@ -90,7 +90,7 @@ const ReviewFileCard = memo<{
             : file.filename}
         </div>
         <div className="flex flex-col flex-1" />
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           +{file.additions} −{file.deletions}
         </div>
       </div>
@@ -142,7 +142,7 @@ const ReviewFileCard = memo<{
         </>
       ) : (
         <div className="flex flex-col p-3">
-          <div className="text-[12px] text-muted-foreground">{t('reviews.diffUnavailable')}</div>
+          <div className="text-xs text-muted-foreground">{t('reviews.diffUnavailable')}</div>
         </div>
       )}
     </div>

@@ -102,7 +102,7 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
             <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
               <div className="truncate min-w-0 font-medium">{name}</div>
               {email && email !== name ? (
-                <div className="truncate min-w-0 text-[12px] text-muted-foreground">{email}</div>
+                <div className="truncate min-w-0 text-xs text-muted-foreground">{email}</div>
               ) : null}
             </div>
             {resourceType !== 'agent' && levelLabel ? (

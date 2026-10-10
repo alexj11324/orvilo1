@@ -578,10 +578,10 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                 }
               </Button>
             ) : null}
-            <div className={cn('text-[12px]', 'text-muted-foreground', styles.headerCrumb)}>
+            <div className={cn('text-xs', 'text-muted-foreground', styles.headerCrumb)}>
               {t('tab.reviews')}
             </div>
-            <div className={cn('text-[12px]', 'text-muted-foreground', styles.headerCrumb)}>›</div>
+            <div className={cn('text-xs', 'text-muted-foreground', styles.headerCrumb)}>›</div>
             <span className="anticon" role="img">
               <GitPullRequestIcon
                 color={cssVar.colorSuccess}
@@ -602,13 +602,13 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
           pullRequest ? (
             <div className="flex flex-row items-center gap-2">
               <div
-                className={cn('text-[12px]', styles.headerCounter)}
+                className={cn('text-xs', styles.headerCounter)}
                 style={{ color: cssVar.colorSuccess }}
               >
                 +{pullRequest.additions}
               </div>
               <div
-                className={cn('text-[12px]', styles.headerCounter)}
+                className={cn('text-xs', styles.headerCounter)}
                 style={{ color: cssVar.colorError }}
               >
                 −{pullRequest.deletions}
@@ -746,13 +746,13 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                                   width={14}
                                 />
                               </span>
-                              <div className="text-[12px] font-medium">{review.author}</div>
-                              <div className="text-[12px] text-muted-foreground">
+                              <div className="text-xs font-medium">{review.author}</div>
+                              <div className="text-xs text-muted-foreground">
                                 {t(visual.labelKey as never)}
                               </div>
                               {review.submittedAt ? (
                                 <div
-                                  className="text-[12px] text-muted-foreground"
+                                  className="text-xs text-muted-foreground"
                                   title={formatAbsoluteDateTime(review.submittedAt)}
                                 >
                                   {dayjs(review.submittedAt).fromNow()}

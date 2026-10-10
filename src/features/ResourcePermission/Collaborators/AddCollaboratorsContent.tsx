@@ -137,7 +137,7 @@ const MemberRow = memo<{
       <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
         <div className="truncate min-w-0 font-medium">{name}</div>
         {email && email !== name ? (
-          <div className="truncate min-w-0 text-[12px] text-muted-foreground">{email}</div>
+          <div className="truncate min-w-0 text-xs text-muted-foreground">{email}</div>
         ) : null}
       </div>
       {/* Select-option style: the selected state reads as a primary check on

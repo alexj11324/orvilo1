@@ -184,8 +184,8 @@ const ReviewOverview = memo<{
             name={pullRequest.author ?? '?'}
             size={20}
           />
-          <div className={cn('text-[12px]', styles.authorName)}>{pullRequest.author}</div>
-          <div className="text-[12px] text-muted-foreground">·</div>
+          <div className={cn('text-xs', styles.authorName)}>{pullRequest.author}</div>
+          <div className="text-xs text-muted-foreground">·</div>
           <span className={styles.branch} title={branchLabel}>
             {pullRequest.baseRef} ← {pullRequest.headRef}
           </span>

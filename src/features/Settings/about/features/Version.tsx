@@ -204,7 +204,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       >
         <a href={OFFICIAL_SITE} rel="noreferrer" target="_blank">
           <div
-            className={`flex flex-col cursor-pointer items-center h-[64px] justify-center w-[64px] ${styles.logo}`}
+            className={`flex flex-col cursor-pointer items-center h-16 justify-center w-16 ${styles.logo}`}
           >
             <ProductLogo size={52} />
           </div>

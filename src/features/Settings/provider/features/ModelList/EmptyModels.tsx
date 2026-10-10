@@ -39,7 +39,7 @@ const EmptyState = memo<{ provider: string }>(({ provider }) => {
       </div>
       <div className="flex flex-col items-center gap-2">
         <div className="text-base font-medium">{t('providerModels.list.empty.title')}</div>
-        <div className="max-w-[280px] text-center text-sm text-balance text-muted-foreground">
+        <div className="max-w-70 text-center text-sm text-balance text-muted-foreground">
           {t('providerModels.list.empty.desc')}
         </div>
       </div>

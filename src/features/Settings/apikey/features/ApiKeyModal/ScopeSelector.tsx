@@ -80,7 +80,7 @@ export const ScopeOverview: FC<ScopeOverviewProps> = ({ scopes }) => {
     <div className="flex flex-col rounded-lg border border-border px-3 py-1">
       {grants.map((grant) => (
         <div
-          className={`flex flex-row gap-[10px] items-center ${'border-b border-border py-3 last:border-b-0'}`}
+          className={`flex flex-row gap-2.5 items-center ${'border-b border-border py-3 last:border-b-0'}`}
           key={grant.key}
         >
           <Check className="shrink-0 text-emerald-600" size={16} />

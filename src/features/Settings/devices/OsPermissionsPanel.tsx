@@ -192,7 +192,7 @@ const OsPermissionsPanel = memo(() => {
           }}
           onClick={() => !permission.granted && handlePermissionRequest(permission.id)}
         >
-          <div className="flex flex-col items-center h-[40px] justify-center rounded-md border border-border w-[40px]">
+          <div className="flex flex-col items-center h-10 justify-center rounded-md border border-border w-10">
             {createElement(permission.icon, { color: cssVar.colorTextDescription, size: 20 })}
           </div>
           <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 2, flex: 1 }}>

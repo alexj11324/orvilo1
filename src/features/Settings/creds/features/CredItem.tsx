@@ -122,11 +122,8 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
   };
 
   return (
-    <div className={`flex flex-row gap-[16px] items-center justify-between ${'py-3'}`}>
-      <div
-        className="flex flex-row gap-[16px] items-center"
-        style={{ flex: 1, overflow: 'hidden' }}
-      >
+    <div className={`flex flex-row gap-4 items-center justify-between ${'py-3'}`}>
+      <div className="flex flex-row gap-4 items-center" style={{ flex: 1, overflow: 'hidden' }}>
         <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted">
           {renderAvatar()}
         </div>
@@ -153,7 +150,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
           </div>
         </div>
       </div>
-      <div className="flex flex-row gap-[8px] items-center" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-row gap-2 items-center" onClick={(e) => e.stopPropagation()}>
         {extra}
         {menuItems.length > 0 && (
           <DropdownMenu>

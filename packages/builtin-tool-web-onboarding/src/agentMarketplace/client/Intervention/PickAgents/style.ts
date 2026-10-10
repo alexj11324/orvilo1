@@ -20,18 +20,14 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     gap: 10px;
 
     padding: 16px;
-    border: 1px solid ${cssVar.colorFillSecondary};
+    border-style: solid;
+    border-width: 1px;
     border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
+    border-image: none;
 
     transition:
       border-color ${cssVar.motionDurationMid},
       background ${cssVar.motionDurationMid};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimaryHover};
-    }
 
     &:focus-visible {
       outline: 2px solid ${cssVar.colorPrimary};
@@ -53,14 +49,6 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     font-size: 12px;
     line-height: 1.6;
     color: ${cssVar.colorTextSecondary};
-  `,
-  cardSelected: css`
-    border-color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorPrimaryBg};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimary};
-    }
   `,
   cardTitle: css`
     overflow: hidden;
@@ -101,32 +89,15 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     border-radius: ${cssVar.borderRadius};
 
     font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
     white-space: nowrap;
-
-    background: transparent;
 
     transition:
       background ${cssVar.motionDurationMid},
       color ${cssVar.motionDurationMid};
 
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
     &:focus-visible {
       outline: 2px solid ${cssVar.colorPrimary};
       outline-offset: 2px;
-    }
-  `,
-  categoryItemActive: css`
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
     }
   `,
   empty: css`

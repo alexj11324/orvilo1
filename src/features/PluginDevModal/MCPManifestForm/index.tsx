@@ -1,10 +1,9 @@
-import { type FormInstance } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { CircleAlert, XIcon } from 'lucide-react';
 import { type ComponentProps, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Form from '@/components/GroupForm';
+import Form, { type FormProps } from '@/components/GroupForm';
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -30,7 +29,7 @@ interface MCPManifestFormProps {
    * the plain custom-plugin DevModal callers (editing plugins, agent tools, …).
    */
   enableOAuth?: boolean;
-  form: FormInstance;
+  form: NonNullable<FormProps['form']>;
   isEditMode?: boolean;
   /**
    * Run the connector OAuth authorize flow. Called instead of the token-less

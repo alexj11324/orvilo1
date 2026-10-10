@@ -2,41 +2,21 @@
 
 import { Markdown } from '@lobehub/ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import type { ActivateSkillParams, ActivateSkillState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  content: css`
-    padding-block: 8px;
-    padding-inline: 16px;
-    font-size: 14px;
-  `,
-  description: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  header: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  name: css`
-    font-weight: 500;
-  `,
-}));
+const styles = {
+  container:
+    'overflow-hidden w-full border border-sidebar-border rounded-[var(--radius-overlay)] bg-card',
+  content: 'py-2 ps-4 pe-4 text-sm leading-[inherit]',
+  description: 'text-xs leading-[inherit] text-muted-foreground',
+  header: 'py-2 ps-3 pe-3 [border-block-end:1px_solid_var(--sidebar-border)]',
+  name: 'font-medium',
+};
 
 const RunSkill = memo<BuiltinRenderProps<ActivateSkillParams, ActivateSkillState>>(
   ({ content, pluginState }) => {
@@ -46,8 +26,8 @@ const RunSkill = memo<BuiltinRenderProps<ActivateSkillParams, ActivateSkillState
     if (!displayName) return null;
 
     return (
-      <div className={cx('flex flex-col', styles.container)}>
-        <div className={cx('flex flex-col gap-1', styles.header)}>
+      <div className={cn('flex flex-col', styles.container)}>
+        <div className={cn('flex flex-col gap-1', styles.header)}>
           <span className={styles.name}>{displayName}</span>
           {description && <span className={styles.description}>{description}</span>}
         </div>

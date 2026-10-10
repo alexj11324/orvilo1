@@ -1,7 +1,7 @@
 'use client';
 
 import type { CrawlErrorResult, CrawlSuccessResult } from '@orvilo/web-crawler';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleAlert, ExternalLink } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,51 +12,12 @@ import { useChatStore } from '@/store/chat';
 
 import { WebBrowsingManifest } from '../../../manifest';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    container: css`
-      overflow: hidden;
-      min-width: 360px;
-      max-width: 360px;
-    `,
-
-    detailsSection: css`
-      padding-block: ${cssVar.paddingSM};
-    `,
-    externalLink: css`
-      color: ${cssVar.colorTextQuaternary};
-
-      :hover {
-        color: ${cssVar.colorText};
-      }
-    `,
-    footer: css`
-      padding-block: 4px;
-      padding-inline: 12px;
-      background-color: ${cssVar.colorFillQuaternary};
-    `,
-    footerText: css`
-      font-size: 12px !important;
-      color: ${cssVar.colorTextTertiary} !important;
-    `,
-    metaInfo: css`
-      display: flex;
-      align-items: center;
-      color: ${cssVar.colorTextSecondary};
-    `,
-    title: css`
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 1;
-
-      margin-block-end: 0;
-    `,
-    titleRow: css`
-      overflow: hidden;
-    `,
-  };
-});
+const styles = {
+  container: 'overflow-hidden min-w-[360px] max-w-[360px]',
+  footer: 'py-1 ps-3 pe-3 bg-[var(--ant-color-fill-quaternary)]',
+  footerText: 'text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)]',
+  titleRow: 'overflow-hidden',
+};
 
 interface CrawlerData {
   crawler: string;
@@ -71,7 +32,7 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
 
   if ('errorType' in result) {
     return (
-      <div className={cx('flex flex-col gap-2', styles.footer)}>
+      <div className={cn('flex flex-col gap-2', styles.footer)}>
         <Alert className="border-transparent bg-transparent" variant="destructive">
           <CircleAlert />
           <AlertTitle>
@@ -80,7 +41,7 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
         </Alert>
         <div>
           <div className="flex flex-col">
-            <div className={cx('flex gap-1', styles.footerText)}>
+            <div className={cn('flex gap-1', styles.footerText)}>
               <span>{t('search.crawPages.meta.crawler')}</span>
               <span>{crawler}</span>
             </div>
@@ -94,7 +55,7 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
 
   return (
     <div
-      className={cx(
+      className={cn(
         styles.container,
         'flex flex-col justify-between rounded-md border bg-card cursor-pointer',
       )}
@@ -104,7 +65,7 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
       }}
     >
       <div className="flex flex-col gap-2 py-2 px-3">
-        <div className={cx('flex flex-row items-center justify-between', styles.titleRow)}>
+        <div className={cn('flex flex-row items-center justify-between', styles.titleRow)}>
           <div className="truncate">{title || originalUrl}</div>
           <a href={url} target={'_blank'} onClick={(event) => event.stopPropagation()}>
             <ActionIcon icon={ExternalLink} size={'small'} />
@@ -114,13 +75,13 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
           {description || result.content?.slice(0, 40)}
         </div>
       </div>
-      <div className={cx('flex flex-col', styles.footer)}>
+      <div className={cn('flex flex-col', styles.footer)}>
         <div className="flex gap-6">
-          <div className={cx('flex gap-1', styles.footerText)}>
+          <div className={cn('flex gap-1', styles.footerText)}>
             <span>{t('search.crawPages.meta.words')}</span>
             <span>{result.content?.length}</span>
           </div>
-          <div className={cx('flex gap-1', styles.footerText)}>
+          <div className={cn('flex gap-1', styles.footerText)}>
             <span>{t('search.crawPages.meta.crawler')}</span>
             <span>{crawler}</span>
           </div>

@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
@@ -25,7 +24,7 @@ export const EngineAvatarGroup = memo<EngineAvatarGroupProps>(({ engines }) => {
       size={14}
       items={engines.map((engine) => ({
         avatar: ENGINE_ICON_MAP[engine],
-        background: cssVar.colorBgLayout,
+        background: 'var(--background)',
         key: engine,
         title: engine,
       }))}

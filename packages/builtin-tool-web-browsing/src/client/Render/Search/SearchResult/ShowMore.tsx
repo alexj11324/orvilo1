@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { CSSProperties } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,14 +8,9 @@ import { useChatStore } from '@/store/chat';
 import { WebBrowsingManifest } from '../../../../manifest';
 import { EngineAvatarGroup } from '../../../components/EngineAvatar';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    cursor: pointer;
-    padding: 8px;
-    font-size: 12px;
-    color: initial;
-  `,
-}));
+const styles = {
+  container: 'cursor-pointer p-2 text-xs leading-[inherit] [color:initial]',
+};
 
 interface ShowMoreProps {
   engines: string[];
@@ -31,7 +26,7 @@ const ShowMore = memo<ShowMoreProps>(({ style, messageId, engines, resultsNumber
   return (
     <div
       style={style}
-      className={cx(
+      className={cn(
         styles.container,
         'flex flex-col gap-0.5 justify-between rounded-md border bg-card cursor-pointer',
       )}

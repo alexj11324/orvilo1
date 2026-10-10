@@ -1,5 +1,3 @@
-import { createStaticStyles } from 'antd-style';
-
 /**
  * Shared chip styles used by every Agent Documents inspector.
  *
@@ -7,53 +5,17 @@ import { createStaticStyles } from 'antd-style';
  * touches 9 files; keeping one source of truth keeps the toolset coherent
  * (e.g. the doc-id chip should look the same whether you Read or Rename).
  */
-export const inspectorChipStyles = createStaticStyles(({ css, cssVar }) => ({
+export const inspectorChipStyles = {
   /** Highlighted chip for the primary subject (title, new title, etc.) */
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 280px;
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
+  chip: 'inline-flex shrink min-w-0 max-w-[280px] items-center truncate rounded-full bg-accent py-0.5 ps-2 pe-2 text-xs leading-[inherit] text-foreground',
   /** Compact, code-styled chip for raw identifiers */
-  idChip: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
+  idChip:
+    'shrink-0 rounded-full bg-accent py-0.5 ps-2 pe-2 [font-family:var(--ant-font-family-code)] text-xs leading-[inherit] text-muted-foreground',
   /** Inline middot used between segments */
-  separator: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextQuaternary};
-  `,
+  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
   /** Secondary, lower-contrast chip for metadata (counts, target scope, …) */
-  subdued: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+  subdued: 'shrink-0 text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)]',
+};
 
 const UUID_LIKE = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 

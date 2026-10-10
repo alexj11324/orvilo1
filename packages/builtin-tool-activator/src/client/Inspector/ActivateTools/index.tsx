@@ -1,7 +1,6 @@
 'use client';
 
 import { type BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { AlertTriangle } from 'lucide-react';
 import { memo } from 'react';
@@ -13,46 +12,12 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { ActivatedToolInfo, ActivateToolsParams, ActivateToolsState } from '../../../types';
 
-const styles = createStaticStyles(({ css }) => ({
-  notFoundHint: css`
-    flex-shrink: 0;
-    max-width: 100%;
-    font-size: 12px;
-    color: ${cssVar.colorWarning};
-  `,
-  tool: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  toolName: css`
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  tools: css`
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-
-    margin-inline-start: 4px;
-  `,
-}));
+const styles = {
+  notFoundHint: 'shrink-0 max-w-full text-xs leading-[inherit] text-warning',
+  tool: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 py-0.5 ps-2.5 pe-2.5 border border-sidebar-border rounded-full text-xs leading-[inherit] text-foreground bg-accent',
+  toolName: 'truncate min-w-0',
+  tools: 'inline-flex flex-wrap gap-1 items-center ms-1',
+};
 
 export const ActivateToolsInspector = memo<
   BuiltinInspectorProps<ActivateToolsParams, ActivateToolsState>
@@ -99,7 +64,7 @@ export const ActivateToolsInspector = memo<
           <TooltipTrigger
             render={
               <div className={cn('flex', 'gap-1', styles.notFoundHint)}>
-                <AlertTriangle style={{ color: cssVar.colorWarning }} />
+                <AlertTriangle style={{ color: 'var(--warning)' }} />
                 <span>
                   {t('builtins.orvilo-activator.inspector.activateTools.notFoundCount', {
                     count: notFoundList.length,

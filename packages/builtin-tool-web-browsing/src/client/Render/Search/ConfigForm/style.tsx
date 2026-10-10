@@ -1,24 +1,14 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { ComponentProps, ReactNode } from 'react';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    border-radius: 8px;
-    color: ${cssVar.colorText};
-  `,
-  desc: css`
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  form: css`
-    width: 100%;
-    max-width: 300px;
-    padding-block: 12px;
-  `,
-}));
+export const styles = {
+  container: 'rounded-(--radius-card) text-foreground',
+  desc: 'text-(--ant-color-text-tertiary) text-center',
+  form: 'w-full max-w-[300px] [padding-block:12px]',
+};
 
 export const FormAction = memo<
   {
@@ -43,14 +33,14 @@ export const FormAction = memo<
   }) => {
     return (
       <div
-        className={cx('flex flex-col items-center justify-center', cx(styles.form, className))}
+        className={cn('flex flex-col items-center justify-center', cn(styles.form, className))}
         style={{ gap }}
         {...rest}
       >
         <Avatar
           animation={animation}
           avatar={avatar}
-          background={background ?? cssVar.colorFillContent}
+          background={background ?? 'var(--ant-color-fill-content)'}
           size={80}
         />
         <div className="flex flex-col gap-2 w-[100%]">
@@ -60,7 +50,7 @@ export const FormAction = memo<
           >
             {title}
           </div>
-          <div className={cx('flex flex-col', styles.desc)}>{description}</div>
+          <div className={cn('flex flex-col', styles.desc)}>{description}</div>
         </div>
         {children}
       </div>

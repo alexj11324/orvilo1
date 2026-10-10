@@ -1,32 +1,14 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/lib/utils';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { RemoveDocumentArgs, RemoveDocumentState } from '../../../types';
 import { formatDocumentId } from '../_styles';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  removeChip: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border: 1px dashed ${cssVar.colorErrorBorder};
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorError};
-    text-decoration: line-through;
-
-    background: transparent;
-  `,
-}));
 
 export const RemoveDocumentInspector = memo<
   BuiltinInspectorProps<RemoveDocumentArgs, RemoveDocumentState>
@@ -38,12 +20,16 @@ export const RemoveDocumentInspector = memo<
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
       <span
-        className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
-        style={{ color: cssVar.colorError }}
+        className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
+        style={{ color: 'var(--destructive)' }}
       >
         {t('builtins.orvilo-agent-documents.apiName.removeDocument')}
       </span>
-      {id && <span className={styles.removeChip}>{formatDocumentId(id)}</span>}
+      {id && (
+        <span className="shrink-0 rounded-full border border-dashed border-[var(--ant-color-error-border)] bg-transparent py-0.5 ps-2 pe-2 [font-family:var(--ant-font-family-code)] text-xs leading-[inherit] text-destructive line-through">
+          {formatDocumentId(id)}
+        </span>
+      )}
     </div>
   );
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleCheck, CircleX, Download } from 'lucide-react';
 import { memo, useCallback } from 'react';
 
@@ -9,15 +9,7 @@ import ActionIcon from '@/components/ActionIcon';
 
 import type { ExportFileState } from '../../../types';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: hidden;
-    padding-inline: 8px 0;
-  `,
-  statusIcon: css`
-    font-size: 12px;
-  `,
-}));
+const styles = { container: 'overflow-hidden ps-2 pe-0', statusIcon: 'text-xs leading-[inherit]' };
 
 interface ExportFileParams {
   path: string;
@@ -53,12 +45,12 @@ const ExportFile = memo<BuiltinRenderProps<ExportFileParams, ExportFileState>>(
     }, [pluginState?.downloadUrl, pluginState?.filename]);
 
     return (
-      <div className={cx('flex flex-col gap-2', styles.container)}>
+      <div className={cn('flex flex-col gap-2', styles.container)}>
         <div className="flex flex-row items-center gap-2">
           {pluginState === undefined ? null : isSuccess ? (
-            <CircleCheck className={styles.statusIcon} style={{ color: cssVar.colorSuccess }} />
+            <CircleCheck className={styles.statusIcon} style={{ color: 'var(--success)' }} />
           ) : (
-            <CircleX className={styles.statusIcon} style={{ color: cssVar.colorError }} />
+            <CircleX className={styles.statusIcon} style={{ color: 'var(--destructive)' }} />
           )}
           <span className="font-mono rounded bg-muted px-1 text-[12px]">
             {isSuccess

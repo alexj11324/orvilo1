@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import {
   LucideAtom,
   LucideClapperboard,
@@ -59,10 +58,10 @@ const CategoryAvatar = memo<CategoryAvatarProps>(({ category, size = 24 }) => {
 
   return (
     <Avatar
-      background={cssVar.colorFillTertiary}
+      background={'var(--accent)'}
       size={size}
       avatar={
-        <span className="anticon" role="img" style={{ color: cssVar.colorTextSecondary }}>
+        <span className="anticon" role="img" style={{ color: 'var(--muted-foreground)' }}>
           {createElement(categoryIcon, {
             size: '1em',
             width: '1em',

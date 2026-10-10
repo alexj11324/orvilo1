@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -41,7 +41,7 @@ export const CrawlMultiPagesInspector = memo<BuiltinInspectorProps<CrawlMultiPag
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isArgumentsStreaming && shinyTextStyles.shinyText)}>
+        <span className={cn(isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-web-browsing.apiName.crawlMultiPages')}:{'\u00A0'}
         </span>
         {displayText && <span className={highlightTextStyles.gold}>{displayText}</span>}

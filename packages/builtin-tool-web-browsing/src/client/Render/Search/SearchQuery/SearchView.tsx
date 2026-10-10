@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -8,14 +8,9 @@ import { shinyTextStyles } from '@/styles';
 
 import { EngineAvatarGroup } from '../../../components/EngineAvatar';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  query: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  query: '[padding-block:4px] [padding-inline:8px] text-xs leading-[inherit] text-muted-foreground',
+};
 
 interface SearchBarProps {
   defaultEngines: string[];
@@ -38,7 +33,7 @@ const SearchBar = memo<SearchBarProps>(
         }}
       >
         <div
-          className={cx(styles.query, 'flex flex-row items-center gap-2 cursor-pointer')}
+          className={cn(styles.query, 'flex flex-row items-center gap-2 cursor-pointer')}
           onClick={() => {
             onEditingChange(true);
           }}
@@ -46,7 +41,7 @@ const SearchBar = memo<SearchBarProps>(
           <span className="anticon" role="img">
             <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
           </span>
-          <span className={cx(searching && shinyTextStyles.shinyText)}>{defaultQuery}</span>
+          <span className={cn(searching && shinyTextStyles.shinyText)}>{defaultQuery}</span>
         </div>
 
         {searching ? (

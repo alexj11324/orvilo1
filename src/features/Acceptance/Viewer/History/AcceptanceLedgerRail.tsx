@@ -138,7 +138,7 @@ const AcceptanceLedgerRail = () => {
           {...clickableProps()}
           title={t('acceptance.ledger.expand')}
           className={cn(
-            `flex flex-col items-center gap-[5px] ${styles.toggle}`,
+            `flex flex-col items-center gap-1.25 ${styles.toggle}`,
             CLICKABLE_FOCUS_RING,
           )}
           onClick={() => onExpandChange(true)}

@@ -3,5 +3,5 @@ export const styles = {
   evidenceImage:
     'overflow-hidden w-fit max-w-full border border-sidebar-border rounded-(--ant-border-radius-lg)',
   evidenceText:
-    'overflow-auto max-h-[200px] py-2 px-3 rounded-(--ant-border-radius) font-mono text-[12px] whitespace-pre-wrap bg-(--ant-color-fill-quaternary)',
+    'overflow-auto max-h-50 py-2 px-3 rounded-(--ant-border-radius) font-mono text-[12px] whitespace-pre-wrap bg-(--ant-color-fill-quaternary)',
 };

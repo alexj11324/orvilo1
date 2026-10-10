@@ -114,7 +114,7 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
               </div>
               <div className={styles.notes}>
                 <div className="flex flex-col gap-0.5">
-                  <div className="font-semibold text-[13px]">
+                  <div className="font-semibold text-(length:--text-dense)">
                     {t('acceptance.review.regionComments')}
                   </div>
                   <div className="text-[12px] text-muted-foreground">

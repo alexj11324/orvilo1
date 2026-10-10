@@ -30,7 +30,7 @@ export interface RoundReview {
 
 const styles = {
   countBadge:
-    'py-px px-[7px] rounded-[99px] text-[12px] tabular-nums text-muted-foreground bg-accent',
+    'py-px px-1.75 rounded-[99px] text-[12px] tabular-nums text-muted-foreground bg-accent',
   round:
     'py-2.5 px-3 border border-sidebar-border rounded-(--ant-border-radius) transition-[box-shadow,border-color] duration-200 ease-[ease]',
   roundActive: 'border-primary shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',

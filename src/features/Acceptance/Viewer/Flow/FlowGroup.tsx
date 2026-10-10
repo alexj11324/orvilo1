@@ -26,7 +26,7 @@ const styles = {
   header: 'h-9 px-4 bg-transparent',
   collapsed: 'cursor-pointer h-full p-3',
   glyph: 'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius)',
-  title: 'line-clamp-2 text-[13px] font-medium leading-[1.4]',
+  title: 'line-clamp-2 text-(length:--text-dense) font-medium leading-[1.4]',
   summary: 'text-[11px] leading-4 text-(--ant-color-text-tertiary)',
 };
 
@@ -73,7 +73,7 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
             >
               {createElement(statusIcon, { size: 24 })}
             </div>
-            <div className="flex flex-col flex-1 gap-[3px]" style={{ minWidth: 0 }}>
+            <div className="flex flex-col flex-1 gap-0.75" style={{ minWidth: 0 }}>
               <span className={styles.title}>{data.title}</span>
               <span className={styles.summary}>
                 {`${data.passed}/${data.total} · ${t(`flow.state.${data.state ?? 'pending'}`)}`}
@@ -123,7 +123,7 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
               </Button>
             )}
             {createElement(statusIcon, { size: 18, style: { color: flowStateColor(data.state) } })}
-            <div className="truncate min-w-0 text-[13px]" style={{ flex: 1 }}>
+            <div className="truncate min-w-0 text-(length:--text-dense)" style={{ flex: 1 }}>
               {data.title}
             </div>
             <div className="text-[12px] text-muted-foreground">

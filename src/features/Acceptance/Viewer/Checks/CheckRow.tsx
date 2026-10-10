@@ -524,7 +524,7 @@ export const AcceptanceCheckRow = memo<{
                       render={
                         <span>
                           <div
-                            className="flex items-center gap-[3px]"
+                            className="flex items-center gap-0.75"
                             style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}
                           >
                             {createElement(icon, { size: 13 })}
@@ -543,7 +543,7 @@ export const AcceptanceCheckRow = memo<{
                     render={
                       <span>
                         <div
-                          className="flex items-center gap-[3px]"
+                          className="flex items-center gap-0.75"
                           style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}
                         >
                           <MessageSquare size={13} />
@@ -616,7 +616,7 @@ export const AcceptanceCheckRow = memo<{
                 </Tooltip>
               )}
             </div>
-            <div className={`flex flex-col items-center h-[22px] ${styles.rowChevron}`}>
+            <div className={`flex flex-col items-center h-5.5 ${styles.rowChevron}`}>
               <ChevronRight
                 color={cssVar.colorTextQuaternary}
                 size={14}

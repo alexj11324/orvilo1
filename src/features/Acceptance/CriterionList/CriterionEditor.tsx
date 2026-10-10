@@ -173,7 +173,7 @@ export const CriterionEditor = ({
           size="sm"
           onCheckedChange={(checked) => patch({ required: checked })}
         />
-        <div className="text-[13px]">{t('criterion.requiredHint')}</div>
+        <div className="text-(length:--text-dense)">{t('criterion.requiredHint')}</div>
       </div>
 
       <div className="flex items-center justify-between">

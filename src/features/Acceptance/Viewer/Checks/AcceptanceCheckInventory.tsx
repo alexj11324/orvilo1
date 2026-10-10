@@ -41,7 +41,7 @@ import { EMPTY_ID_SET, setAggregateEntry } from './expandState';
 const styles = {
   filters: '[@media(width<=767px)]:w-full',
   filterSelect:
-    'w-[118px] [@media(width<=767px)]:flex-1 [@media(width<=767px)]:w-0 [@media(width<=767px)]:min-w-0',
+    'w-29.5 [@media(width<=767px)]:flex-1 [@media(width<=767px)]:w-0 [@media(width<=767px)]:min-w-0',
   toolbarHeading: '[@media(width<=767px)]:basis-full',
 };
 

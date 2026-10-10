@@ -12,8 +12,8 @@ import type { DraftAnnotationEntry, RejectableEvidence } from '../Review/rejectD
 
 const styles = {
   index:
-    'flex-none size-[18px] rounded-[50%] text-[11px] font-semibold leading-[18px] text-white text-center bg-destructive',
-  jump: 'cursor-pointer inline-flex gap-[5px] items-center self-start py-[7px] px-0.5 border-none text-[13px] text-(--ant-color-link) bg-none bg-transparent active:opacity-60',
+    'flex-none size-4.5 rounded-[50%] text-[11px] font-semibold leading-4.5 text-white text-center bg-destructive',
+  jump: 'cursor-pointer inline-flex gap-1.25 items-center self-start py-1.75 px-0.5 border-none text-(length:--text-dense) text-(--ant-color-link) bg-none bg-transparent active:opacity-60',
 };
 
 interface RegionNoteRowProps {

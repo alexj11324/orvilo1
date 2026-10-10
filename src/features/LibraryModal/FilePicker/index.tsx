@@ -138,7 +138,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
   }, [hasMore, isValidating, setSize]);
 
   return (
-    <div className="flex flex-col h-[500px] w-[100%]">
+    <div className="flex flex-col h-125 w-full">
       <div className="flex flex-row items-center justify-end" style={{ paddingBlockEnd: 12 }}>
         <ViewSwitcher
           view={viewMode}

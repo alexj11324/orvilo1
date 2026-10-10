@@ -1,6 +1,5 @@
 import { SiApple, SiLinux } from '@icons-pack/react-simple-icons';
 import { Microsoft } from '@lobehub/icons';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { startCase } from 'es-toolkit/compat';
 import {
   CheckIcon,
@@ -46,13 +45,9 @@ import { useDetailContext } from '../DetailProvider';
 import Title from '../Title';
 import Platform from './Platform';
 
-const styles = createStaticStyles(({ css }) => {
-  return {
-    code: css`
-      font-family: ${cssVar.fontFamilyCode};
-    `,
-  };
-});
+const styles = {
+  code: 'font-mono',
+};
 
 interface InstallInstructionsDep {
   checkCommand?: string;
@@ -83,7 +78,7 @@ const InstallInstructionsHover = memo<{
           <span onMouseEnter={scheduleOpen} onMouseLeave={scheduleClose}>
             <ActionIcon
               aria-label={t('download', { ns: 'common' })}
-              color={cssVar.colorTextDescription}
+              color={'var(--ant-color-text-description)'}
               icon={DownloadIcon}
               size={'small'}
             />
@@ -99,12 +94,12 @@ const InstallInstructionsHover = memo<{
           <Descriptions
             rows={1}
             items={Object.entries(dep.installInstructions || {}).map(([system, code]) => ({
+              className: 'font-mono',
               copyable: true,
               icon: getPlatformIcon(system),
               key: system,
               label: <span style={{ fontSize: 13, fontWeight: 500 }}>{system.toUpperCase()}</span>,
               style: {
-                fontFamily: cssVar.fontFamilyCode,
                 fontSize: 12,
               },
               value: code,
@@ -117,11 +112,11 @@ const InstallInstructionsHover = memo<{
                 rows={1}
                 items={[
                   {
+                    className: 'font-mono',
                     copyable: true,
                     key: 'check',
                     label: t('mcp.details.deployment.checkCommand'),
                     style: {
-                      fontFamily: cssVar.fontFamilyCode,
                       fontSize: 12,
                     },
                     value: dep.checkCommand,
@@ -176,19 +171,19 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
   const getPlatformIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'macos': {
-        return <SiApple color={cssVar.colorTextDescription} size={16} />;
+        return <SiApple color={'var(--ant-color-text-description)'} size={16} />;
       }
       case 'windows': {
-        return <Microsoft color={cssVar.colorTextDescription} size={16} />;
+        return <Microsoft color={'var(--ant-color-text-description)'} size={16} />;
       }
       case 'linux_debian': {
-        return <SiLinux color={cssVar.colorTextDescription} size={16} />;
+        return <SiLinux color={'var(--ant-color-text-description)'} size={16} />;
       }
       case 'manual': {
-        return <CodeIcon color={cssVar.colorTextDescription} size={16} />;
+        return <CodeIcon color={'var(--ant-color-text-description)'} size={16} />;
       }
       default: {
-        return <CodeIcon color={cssVar.colorTextDescription} size={16} />;
+        return <CodeIcon color={'var(--ant-color-text-description)'} size={16} />;
       }
     }
   };
@@ -272,7 +267,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                               <StepperTrigger>
                                 <StepperIndicator />
                                 <StepperTitle>
-                                  <p style={{ color: cssVar.colorText, margin: 0 }}>{i}</p>
+                                  <p style={{ color: 'var(--foreground)', margin: 0 }}>{i}</p>
                                 </StepperTitle>
                               </StepperTrigger>
                               {index < setupSteps.length - 1 && <StepperSeparator />}
@@ -302,7 +297,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                           <span
                             className={styles.code}
                             style={{
-                              color: cssVar.gold,
+                              color: 'var(--ant-gold)',
                             }}
                           >
                             {record.name}
@@ -328,8 +323,8 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                               width: '1em',
                               height: '1em',
                               color: record.required
-                                ? cssVar.colorSuccess
-                                : cssVar.colorTextDescription,
+                                ? 'var(--success)'
+                                : 'var(--ant-color-text-description)',
                               fill: 'transparent',
                             })}
                           </span>
@@ -358,8 +353,8 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                         value: (
                           <div className="flex flex-row items-center gap-2">
                             <span
+                              className="font-mono"
                               style={{
-                                fontFamily: cssVar.fontFamilyCode,
                                 fontSize: 12,
                               }}
                             >

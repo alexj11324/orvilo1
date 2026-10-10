@@ -1,28 +1,20 @@
-import { Flexbox, SortableList } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { SortableList } from '@lobehub/ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { type AiProviderListItem } from '@/types/aiProvider';
 
 import GroupItem from './GroupItem';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    height: 36px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-    transition: background 0.2s ease-in-out;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  container:
+    'h-9 rounded-(--radius-button) px-2 text-sm leading-5.5 transition-[background] duration-200 ease-in-out hover:bg-accent',
+};
 
 interface ConfigGroupModalProps {
   defaultItems: AiProviderListItem[];
@@ -45,7 +37,7 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel, defaultI
       width={400}
       onCancel={onCancel}
     >
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         <SortableList
           items={items}
           renderItem={(item: AiProviderListItem) => (
@@ -67,11 +59,12 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel, defaultI
           }}
         />
         <Button
-          block
+          className="sticky bottom-0 w-full leading-5.5"
           disabled={!canManageProvider}
           loading={loading}
-          style={{ bottom: 0, position: 'sticky' }}
-          type={'primary'}
+          size="lg"
+          type="button"
+          variant="default"
           onClick={async () => {
             if (!canManageProvider) return;
 
@@ -88,7 +81,7 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel, defaultI
         >
           {t('sortModal.update')}
         </Button>
-      </Flexbox>
+      </div>
     </ImperativeModal>
   );
 });

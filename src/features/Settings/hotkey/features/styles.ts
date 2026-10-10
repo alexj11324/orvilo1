@@ -1,10 +1,3 @@
-import { createStaticStyles } from 'antd-style';
-
-export const hotkeyFormStyles = createStaticStyles(({ css }) => ({
-  item: css`
-    .ant-form-item-label > label {
-      align-items: center;
-      min-block-size: 36px;
-    }
-  `,
-}));
+export const hotkeyFormStyles = {
+  item: '[&_.ant-form-item-label>label]:min-h-9 [&_.ant-form-item-label>label]:items-center',
+};

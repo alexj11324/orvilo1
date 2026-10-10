@@ -6,7 +6,6 @@ import {
   confirmModal,
   createModal,
   Input,
-  ModalFooter,
   type ModalInstance,
   Select,
   Text,
@@ -15,12 +14,12 @@ import {
   useModalContext,
 } from '@lobehub/ui/base-ui';
 import { Form } from 'antd';
-import { cssVar } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import { BrainIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ModalFooter } from '@/components/Modal';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAiInfraStore } from '@/store/aiInfra/store';
@@ -174,13 +173,7 @@ const SettingContent = memo<SettingContentProps>(({ initialValues, id }) => {
           </Form.Item>
         </Flexbox>
       </Form>
-      <ModalFooter
-        style={{
-          borderBlockStart: `1px solid ${cssVar.colorBorderSecondary}`,
-          marginTop: 16,
-          padding: 0,
-        }}
-      >
+      <ModalFooter className="mt-4 border-t border-divider p-0">
         <Button danger disabled={loading} type={'primary'} onClick={handleDelete}>
           {t('delete', { ns: 'common' })}
         </Button>

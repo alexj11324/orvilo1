@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { MaximizeIcon } from 'lucide-react';
 import { createElement, memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -71,9 +70,6 @@ const ActiveModels = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveU
 
   const renderIcon = (item: string, i: number) => {
     const baseStyle = {
-      border: `2px solid ${cssVar.colorBgContainer}`,
-      boxSizing: 'content-box' as const,
-      marginRight: -8,
       zIndex: i + 1,
     };
     if (groupBy === GroupBy.User) {
@@ -81,7 +77,8 @@ const ActiveModels = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveU
       return (
         <Avatar
           avatar={remoteAvatarSrc(display?.avatar || display?.name || item) || undefined}
-          background={cssVar.colorFillSecondary}
+          background="var(--selected)"
+          className="box-content -mr-2 border-2 border-card"
           key={item}
           name={display?.name || item}
           shape={'circle'}
@@ -92,9 +89,21 @@ const ActiveModels = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveU
       );
     }
     return groupBy === GroupBy.Provider ? (
-      <ProviderIcon key={item} provider={item} size={18} style={baseStyle} />
+      <span
+        className="inline-flex shrink-0 rounded-full box-content -mr-2 border-2 border-card"
+        key={item}
+        style={baseStyle}
+      >
+        <ProviderIcon provider={item} size={18} />
+      </span>
     ) : (
-      <ModelIcon key={item} model={item} size={18} style={baseStyle} />
+      <span
+        className="inline-flex shrink-0 rounded-full box-content -mr-2 border-2 border-card"
+        key={item}
+        style={baseStyle}
+      >
+        <ModelIcon model={item} size={18} />
+      </span>
     );
   };
 
@@ -117,7 +126,7 @@ const ActiveModels = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveU
         }
         statistic={{
           description: (
-            <div className={'flex min-w-0'} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            <div className="flex min-w-0 flex-wrap">
               {iconList.map((item, i) => {
                 if (!item) return null;
                 return renderIcon(item, i);

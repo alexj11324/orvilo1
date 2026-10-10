@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -36,12 +35,9 @@ interface SortState {
   order: 'ascend' | 'descend';
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  // Line the footer up with InlineTable's first/last cells.
-  pagination: css`
-    padding-inline: 24px;
-  `,
-}));
+const styles = {
+  pagination: 'px-6',
+};
 
 const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
   const { t } = useTranslation('auth');
@@ -94,10 +90,12 @@ const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
     {
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (value) => <span style={{ textWrap: 'nowrap' }}>{formatSpendTime(value)}</span>,
+      render: (value) => (
+        <span className="whitespace-nowrap text-xs leading-5">{formatSpendTime(value)}</span>
+      ),
       sorter: true,
       sortOrder: sort?.field === 'createdAt' ? sort.order : null,
-      title: tSpend('table.columns.time'),
+      title: <span className="text-xs leading-5">{tSpend('table.columns.time')}</span>,
       width: 150,
     },
     {
@@ -106,31 +104,24 @@ const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
       render: (value: SpendTypeValue) => (
         <SpendType type={value}>{tSpend(`table.columns.type.enums.${value}`)}</SpendType>
       ),
-      title: tSpend('table.columns.type.title'),
+      title: <span className="text-xs leading-5">{tSpend('table.columns.type.title')}</span>,
       width: 80,
     },
     {
       dataIndex: 'model',
       key: 'model',
       render: (value, record) => (
-        <div
-          className={'flex min-w-0'}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}
-        >
-          <ProviderIcon
-            provider={record.provider}
-            size={18}
-            style={{
-              border: `2px solid ${cssVar.colorBgContainer}`,
-              boxSizing: 'content-box',
-              marginRight: -8,
-            }}
-          />
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="inline-flex shrink-0 rounded-full box-content -mr-2 border-2 border-card">
+            <ProviderIcon provider={record.provider} size={18} />
+          </span>
           <Tooltip>
             <TooltipTrigger
               render={
                 <span className="inline-flex min-w-0">
-                  <span>{value?.length > 12 ? `${value.slice(0, 12)}...` : value}</span>
+                  <span className="text-sm leading-5.5">
+                    {value?.length > 12 ? `${value.slice(0, 12)}...` : value}
+                  </span>
                 </span>
               }
             />
@@ -138,7 +129,7 @@ const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
           </Tooltip>
         </div>
       ),
-      title: tSpend('table.columns.model'),
+      title: <span className="text-xs leading-5">{tSpend('table.columns.model')}</span>,
     },
     {
       dataIndex: 'totalTokens',
@@ -152,7 +143,7 @@ const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
       ),
       sorter: true,
       sortOrder: sort?.field === 'totalTokens' ? sort.order : null,
-      title: tSpend('table.columns.totalTokens'),
+      title: <span className="text-xs leading-5">{tSpend('table.columns.totalTokens')}</span>,
       width: 180,
     },
     {
@@ -160,24 +151,34 @@ const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
       dataIndex: 'spend',
       key: 'spend',
       // Kept in dollars, unlike the workspace breakdown's credits column.
-      render: (value) => `$${formatNumber(value, 6)}`,
+      render: (value) => (
+        <span className="text-sm leading-5.5 tabular-nums">{`$${formatNumber(value, 6)}`}</span>
+      ),
       sorter: true,
       sortOrder: sort?.field === 'spend' ? sort.order : null,
-      title: t('usage.table.spend'),
+      title: <span className="text-xs leading-5">{t('usage.table.spend')}</span>,
     },
     {
       align: 'end',
       dataIndex: 'tps',
       key: 'tps',
-      render: (value) => (value ? formatNumber(value, 2) : '--'),
-      title: t('usage.table.tps'),
+      render: (value) => (
+        <span className="text-sm leading-5.5 tabular-nums">
+          {value ? formatNumber(value, 2) : '--'}
+        </span>
+      ),
+      title: <span className="text-xs leading-5">{t('usage.table.tps')}</span>,
     },
     {
       align: 'end',
       dataIndex: 'ttft',
       key: 'ttft',
-      render: (value) => (value ? formatNumber(value / 1000, 2) : '--'),
-      title: t('usage.table.ttft'),
+      render: (value) => (
+        <span className="text-sm leading-5.5 tabular-nums">
+          {value ? formatNumber(value / 1000, 2) : '--'}
+        </span>
+      ),
+      title: <span className="text-xs leading-5">{t('usage.table.ttft')}</span>,
     },
   ];
 

@@ -2,7 +2,6 @@
 
 import { SiDiscord, SiGithub, SiX, SiYoutube } from '@icons-pack/react-simple-icons';
 import { BRANDING_EMAIL, BRANDING_NAME, SOCIAL_URL } from '@orvilo/business-const';
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,13 +15,9 @@ import ItemCard from './ItemCard';
 import ItemLink from './ItemLink';
 import Version from './Version';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  title: css`
-    font-size: 14px;
-    font-weight: bold;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  title: 'text-base leading-6 font-semibold text-muted-foreground',
+};
 
 const About = memo<{ mobile?: boolean }>(({ mobile }) => {
   const { t } = useTranslation('common');
@@ -31,18 +26,15 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   return (
     <Form.Group
+      className="w-full max-w-256"
       collapsible={false}
       gap={16}
-      style={{ maxWidth: '1024px', width: '100%' }}
       title={`${t('about')} ${BRANDING_NAME}`}
       variant={'filled'}
     >
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'column', gap: 20, width: '100%', paddingBlock: 20 }}
-      >
+      <div className="flex w-full min-w-0 flex-col gap-5 py-5">
         <Version mobile={mobile} />
-        <Separator style={{ marginBlock: 0 }} />
+        <Separator className="my-0" />
         <AboutList
           grid
           ItemRender={ItemCard}
@@ -74,7 +66,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
             },
           ]}
         />
-        <Separator style={{ marginBlock: 0 }} />
+        <Separator className="my-0" />
         {!inDesktopApp && (
           <>
             <div className={styles.title}>{t('getApp')}</div>
@@ -88,7 +80,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
                 },
               ]}
             />
-            <Separator style={{ marginBlock: 0 }} />
+            <Separator className="my-0" />
           </>
         )}
         <div className={styles.title}>{t('contact')}</div>

@@ -3,7 +3,6 @@
 import { Markdown } from '@lobehub/ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles, useTheme } from 'antd-style';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
@@ -12,26 +11,8 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
 import type { ExecuteTaskParams } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  agentTitle: css`
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  container: css`
-    padding: 12px;
-    border-radius: 8px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  task: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
-
 export const ExecuteTaskStreaming = memo<BuiltinStreamingProps<ExecuteTaskParams>>(({ args }) => {
   const { agentId, instruction } = args || {};
-  const theme = useTheme();
 
   // Get active group ID and agent from store
   const activeGroupId = useAgentGroupStore(agentGroupSelectors.activeGroupId);
@@ -44,18 +25,20 @@ export const ExecuteTaskStreaming = memo<BuiltinStreamingProps<ExecuteTaskParams
   if (!instruction) return null;
 
   return (
-    <div className={styles.container}>
+    <div className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Avatar
             avatar={agent?.avatar || DEFAULT_AVATAR}
-            background={agent?.backgroundColor || theme.colorBgContainer}
+            background={agent?.backgroundColor || 'var(--card)'}
             shape={'square'}
             size={24}
           />
-          <span className={styles.agentTitle}>{agent?.title || 'Agent'}</span>
+          <span className="text-sm leading-[inherit] font-medium text-foreground">
+            {agent?.title || 'Agent'}
+          </span>
         </div>
-        <div className={styles.task}>
+        <div className="text-[13px] text-muted-foreground">
           <Markdown animated variant={'chat'}>
             {instruction}
           </Markdown>

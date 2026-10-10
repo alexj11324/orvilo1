@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -12,32 +11,13 @@ import { shinyTextStyles } from '@/styles';
 
 import type { BatchCreateAgentsParams, BatchCreateAgentsState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar: cv }) => ({
-  avatarGroup: css`
-    display: flex;
-    gap: 2px;
-    align-items: center;
-  `,
-  count: css`
-    font-size: 12px;
-    color: ${cv.colorTextSecondary};
-  `,
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  statusIcon: css`
-    flex-shrink: 0;
-    margin-block-end: -2px;
-  `,
-  title: css`
-    flex-shrink: 0;
-    color: ${cv.colorTextSecondary};
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  avatarGroup: 'flex items-center gap-0.5',
+  count: 'text-[12px] text-muted-foreground',
+  root: 'flex items-center gap-2 overflow-hidden',
+  statusIcon: 'shrink-0 [margin-block-end:-2px]',
+  title: 'shrink-0 whitespace-nowrap text-muted-foreground',
+};
 
 export const BatchCreateAgentsInspector = memo<
   BuiltinInspectorProps<BatchCreateAgentsParams, BatchCreateAgentsState>
@@ -74,7 +54,7 @@ export const BatchCreateAgentsInspector = memo<
   return (
     <div className={cn('flex', 'items-center', 'gap-2', styles.root)}>
       <span
-        className={cx(
+        className={cn(
           styles.title,
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
@@ -102,7 +82,7 @@ export const BatchCreateAgentsInspector = memo<
         </>
       )}
       {!isLoading && isSuccess && (
-        <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
+        <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
       )}
     </div>
   );

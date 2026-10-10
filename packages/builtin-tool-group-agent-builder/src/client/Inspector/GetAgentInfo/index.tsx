@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,19 +15,10 @@ interface GetAgentInfoState {
   title?: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar: cv }) => ({
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  title: css`
-    flex-shrink: 0;
-    color: ${cv.colorTextSecondary};
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  root: 'flex items-center gap-2 overflow-hidden',
+  title: 'shrink-0 whitespace-nowrap text-muted-foreground',
+};
 
 export const GetAgentInfoInspector = memo<
   BuiltinInspectorProps<GetAgentInfoParams, GetAgentInfoState>
@@ -52,10 +42,10 @@ export const GetAgentInfoInspector = memo<
 
   return (
     <div
-      className={cn('flex', 'items-center', 'gap-2', cx(styles.root, shinyGroupStyles.shinyGroup))}
+      className={cn('flex', 'items-center', 'gap-2', cn(styles.root, shinyGroupStyles.shinyGroup))}
     >
       <span
-        className={cx(
+        className={cn(
           styles.title,
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
@@ -63,7 +53,7 @@ export const GetAgentInfoInspector = memo<
         {t('builtins.orvilo-group-agent-builder.apiName.getAgentInfo')}:
       </span>
       {avatar && <Avatar avatar={avatar} shape={'square'} size={20} title={title || undefined} />}
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {title || agentId}
       </span>
     </div>

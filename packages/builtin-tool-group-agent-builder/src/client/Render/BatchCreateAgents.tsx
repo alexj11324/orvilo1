@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Users } from 'lucide-react';
 import { memo } from 'react';
@@ -12,44 +11,14 @@ import ToolTag from '@/features/ToolTag';
 
 import type { BatchCreateAgentsParams, BatchCreateAgentsState } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 4px;
-    padding-inline: 16px;
-    border-radius: 8px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextDescription};
-    text-overflow: ellipsis;
-  `,
-  empty: css`
-    padding: 16px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  item: css`
-    padding-block: 12px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  container: 'rounded-[8px] bg-[var(--ant-color-fill-quaternary)] px-4 py-1',
+  description:
+    'line-clamp-1 text-ellipsis text-[12px] leading-[1.5] text-[var(--ant-color-text-description)]',
+  empty: 'p-4 text-[var(--ant-color-text-tertiary)]',
+  item: 'py-3 not-last:[border-block-end:1px_solid_var(--sidebar-border)]',
+  title: 'truncate text-[13px] font-medium',
+};
 
 interface AgentItemProps {
   agent: {

@@ -2,7 +2,6 @@
 
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { createStaticStyles, useTheme } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Clock, Trash2 } from 'lucide-react';
 import type { ChangeEvent } from 'react';
@@ -25,46 +24,13 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
 import type { ExecuteTasksParams, TaskItem } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  assignee: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  container: css`
-    padding-block: 12px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  deleteButton: css`
-    cursor: pointer;
-    color: ${cssVar.colorTextTertiary};
-    transition: color 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorError};
-    }
-  `,
-  index: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  taskTitle: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  timeoutInput: css`
-    width: 100px;
-  `,
-}));
+const styles = {
+  assignee: 'flex shrink-0 items-center gap-1.5 text-[12px] text-muted-foreground',
+  container: 'rounded-[var(--ant-border-radius)] py-3',
+  deleteButton:
+    'cursor-pointer text-[var(--ant-color-text-tertiary)] transition-[color] duration-200 ease-[ease] hover:text-destructive',
+  timeoutInput: 'w-[100px]',
+};
 
 const DEFAULT_TIMEOUT = 1_800_000; // 30 minutes
 
@@ -77,7 +43,6 @@ interface TaskEditorProps {
 
 const TaskEditor = memo<TaskEditorProps>(({ task, index, onChange, onDelete }) => {
   const { t } = useTranslation('tool');
-  const theme = useTheme();
 
   // Get agent info from store
   const activeGroupId = useAgentGroupStore(agentGroupSelectors.activeGroupId);
@@ -121,7 +86,7 @@ const TaskEditor = memo<TaskEditorProps>(({ task, index, onChange, onDelete }) =
           <div className={styles.assignee}>
             <Avatar
               avatar={agent?.avatar || DEFAULT_AVATAR}
-              background={agent?.backgroundColor || theme.colorBgContainer}
+              background={agent?.backgroundColor || 'var(--card)'}
               shape={'circle'}
               size={20}
             />

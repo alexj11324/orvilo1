@@ -24,6 +24,23 @@ const workflow = parse(
 };
 
 describe('gated Vercel Preview workflow', () => {
+  it.each(['test.yml', 'e2e.yml'])(
+    'keeps canonical push verification running in %s',
+    (filename) => {
+      const verification = parse(
+        readFileSync(path.resolve(import.meta.dirname, '../.github/workflows', filename), 'utf8'),
+      );
+      const duplicateCheck = verification.jobs['check-duplicate-run'].steps.find(
+        (step: { id?: string }) => step.id === 'skip_check',
+      );
+
+      // The deployment gate requires an executed push run, even when a PR
+      // sibling starts first or has already completed on the same commit.
+      expect(JSON.parse(duplicateCheck.with.do_not_skip)).toContain('push');
+      expect(duplicateCheck.with.cancel_others).toBe('false');
+    },
+  );
+
   it('runs the privileged gate from the base revision on PR changes', () => {
     expect(workflow.on.pull_request_target.types).toEqual([
       'opened',

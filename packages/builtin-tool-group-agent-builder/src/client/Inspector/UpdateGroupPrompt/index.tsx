@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,28 +9,10 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { UpdateGroupPromptParams, UpdateGroupPromptState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar: cv }) => ({
-  groupName: css`
-    overflow: hidden;
-
-    max-width: 120px;
-
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  label: css`
-    flex-shrink: 0;
-    color: ${cv.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  `,
-}));
+const styles = {
+  label: 'shrink-0 whitespace-nowrap text-muted-foreground',
+  root: 'flex items-center gap-1.5 overflow-hidden',
+};
 
 export const UpdateGroupPromptInspector = memo<
   BuiltinInspectorProps<UpdateGroupPromptParams, UpdateGroupPromptState>
@@ -65,7 +46,7 @@ export const UpdateGroupPromptInspector = memo<
   return (
     <div className={cn('flex', 'items-center', 'gap-[6px]', styles.root)}>
       <span
-        className={cx(
+        className={cn(
           styles.label,
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
@@ -76,7 +57,7 @@ export const UpdateGroupPromptInspector = memo<
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
-          style={{ color: lengthDiff >= 0 ? cssVar.colorSuccess : cssVar.colorError }}
+          style={{ color: lengthDiff >= 0 ? 'var(--success)' : 'var(--destructive)' }}
         >
           {lengthDiff >= 0 ? '+' : ''}
           {lengthDiff}
@@ -87,7 +68,7 @@ export const UpdateGroupPromptInspector = memo<
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
-          style={{ color: cssVar.colorTextDescription }}
+          style={{ color: 'var(--ant-color-text-description)' }}
         >
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})

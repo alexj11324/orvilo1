@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,12 +10,9 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 
 import type { UpdateGroupParams, UpdateGroupState } from '../../../types';
 
-const styles = createStaticStyles(({ css }) => ({
-  statusIcon: css`
-    margin-block-end: -2px;
-    margin-inline-start: 4px;
-  `,
-}));
+const styles = {
+  statusIcon: 'ms-1 [margin-block-end:-2px]',
+};
 
 export const UpdateGroupInspector = memo<
   BuiltinInspectorProps<UpdateGroupParams, UpdateGroupState>
@@ -66,7 +63,7 @@ export const UpdateGroupInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-group-agent-builder.apiName.updateGroup')}
       </span>
       {displayText && (
@@ -75,7 +72,7 @@ export const UpdateGroupInspector = memo<
         </>
       )}
       {!isLoading && isSuccess && (
-        <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
+        <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
       )}
     </div>
   );

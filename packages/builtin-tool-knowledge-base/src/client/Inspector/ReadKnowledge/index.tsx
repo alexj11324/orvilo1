@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,12 +9,9 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 
 import type { ReadKnowledgeArgs, ReadKnowledgeState } from '../../..';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  moreFiles: css`
-    margin-inline-start: 4px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  moreFiles: 'ms-1 text-[var(--ant-color-text-tertiary)]',
+};
 
 export const ReadKnowledgeInspector = memo<
   BuiltinInspectorProps<ReadKnowledgeArgs, ReadKnowledgeState>
@@ -81,7 +78,7 @@ export const ReadKnowledgeInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span style={{ marginInlineStart: 2 }}>
-        <span className={cx(isLoading && shinyTextStyles.shinyText)}>
+        <span className={cn(isLoading && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-knowledge-base.apiName.readKnowledge')}:{' '}
         </span>
         {renderFileInfo()}

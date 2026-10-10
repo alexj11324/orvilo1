@@ -1,21 +1,14 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Check, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/lib/utils';
 import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { InstallPluginParams, InstallPluginState } from '../../../types';
-
-const styles = createStaticStyles(({ css }) => ({
-  statusIcon: css`
-    margin-block-end: -2px;
-    margin-inline-start: 4px;
-  `,
-}));
 
 export const InstallPluginInspector = memo<
   BuiltinInspectorProps<InstallPluginParams, InstallPluginState>
@@ -42,16 +35,16 @@ export const InstallPluginInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-agent-builder.apiName.installPlugin')}:{' '}
       </span>
       {displayName && <span className={highlightTextStyles.primary}>{displayName}</span>}
       {!isLoading &&
         hasResult &&
         (isSuccess ? (
-          <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
+          <Check className="ms-1 [margin-block-end:-2px]" color={'var(--success)'} size={14} />
         ) : (
-          <X className={styles.statusIcon} color={cssVar.colorError} size={14} />
+          <X className="ms-1 [margin-block-end:-2px]" color={'var(--destructive)'} size={14} />
         ))}
     </div>
   );

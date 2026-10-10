@@ -1,59 +1,7 @@
-import { createStaticStyles } from 'antd-style';
-
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  badge: css`
-    padding-block: 4px;
-    padding-inline: 6px;
-    border-radius: 2222px;
-
-    font-size: 12px;
-    line-height: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-
-  container: css`
-    cursor: pointer;
-
-    width: fit-content;
-    padding-block: 6px;
-    padding-inline: 8px;
-    padding-inline-end: 12px;
-    border-radius: 8px;
-
-    color: ${cssVar.colorText};
-
-    background: color-mix(in srgb, ${cssVar.colorBgElevated} 90%, white);
-    box-shadow: ${cssVar.boxShadowTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      box-shadow: ${cssVar.boxShadowSecondary};
-    }
-  `,
-  containerDark: css`
-    &:hover {
-      background: color-mix(in srgb, ${cssVar.colorBgElevated} 85%, white);
-    }
-  `,
-  containerLight: css`
-    &:hover {
-      background: color-mix(in srgb, ${cssVar.colorBgElevated} 90%, white);
-    }
-  `,
-  filename: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-size: 12px;
-    text-overflow: ellipsis;
-  `,
-
-  mobile: css`
-    width: 100%;
-  `,
-}));
+export const styles = {
+  badge: 'py-1 ps-1.5 pe-1.5 rounded-full text-xs leading-3 text-muted-foreground bg-selected',
+  container:
+    'cursor-pointer w-fit py-1.5 ps-2 pe-3 rounded-[var(--radius-card)] text-foreground bg-[color-mix(in_srgb,var(--ant-color-bg-elevated)_90%,white)] shadow-[var(--ant-box-shadow-tertiary)] [transition:all_0.2s] hover:shadow-[var(--ant-box-shadow-secondary)]',
+  containerDark: 'hover:bg-[color-mix(in_srgb,var(--ant-color-bg-elevated)_85%,white)]',
+  containerLight: 'hover:bg-[color-mix(in_srgb,var(--ant-color-bg-elevated)_90%,white)]',
+};

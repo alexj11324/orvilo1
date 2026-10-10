@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -26,8 +25,8 @@ const AgentItem = memo<AgentItemProps>(
       <div
         className={cn('flex items-center gap-3 py-3 px-3', styles.container)}
         style={{
-          border: `1px solid ${cssVar.colorBorder}`,
-          borderRadius: cssVar.borderRadiusLG,
+          border: `1px solid var(--border)`,
+          borderRadius: 'var(--ant-border-radius-lg)',
           height: '100%',
         }}
       >

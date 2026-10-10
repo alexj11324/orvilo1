@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,8 +20,8 @@ const Resources = memo<{ mode?: ModeType }>(({ mode }) => {
     <div
       className="flex flex-col"
       style={{
-        border: `1px solid ${cssVar.colorBorder}`,
-        borderRadius: cssVar.borderRadiusLG,
+        border: `1px solid var(--border)`,
+        borderRadius: 'var(--ant-border-radius-lg)',
         overflow: 'hidden',
       }}
     >
@@ -35,7 +34,7 @@ const Resources = memo<{ mode?: ModeType }>(({ mode }) => {
             dataIndex: 'name',
             key: 'name',
             render: (text) => (
-              <span className={styles.code} style={{ color: cssVar.gold }}>
+              <span className={styles.code} style={{ color: 'var(--ant-gold)' }}>
                 {text}
               </span>
             ),

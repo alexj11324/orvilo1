@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { BanIcon, CircleCheckBigIcon, CircleDashedIcon } from 'lucide-react';
 import { createElement, type ReactNode } from 'react';
 import { memo } from 'react';
@@ -19,14 +18,14 @@ const ScoreItem = memo<ScoreItemProps>(({ required, check, desc, title }) => {
       {createElement(check ? CircleCheckBigIcon : required ? BanIcon : CircleDashedIcon, {
         size: 24,
         color: check
-          ? cssVar.colorSuccess
+          ? 'var(--success)'
           : required
-            ? cssVar.colorError
-            : cssVar.colorTextQuaternary,
+            ? 'var(--destructive)'
+            : 'var(--ant-color-text-quaternary)',
       })}
       <div className="flex flex-col gap-1">
         <Title level={3}>{title}</Title>
-        <p style={{ color: cssVar.colorTextSecondary, margin: 0 }}>{desc}</p>
+        <p style={{ color: 'var(--muted-foreground)', margin: 0 }}>{desc}</p>
       </div>
     </div>
   );

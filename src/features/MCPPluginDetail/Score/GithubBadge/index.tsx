@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
@@ -71,7 +70,7 @@ const GithubBadge = memo(() => {
       />
       <div className="flex flex-row items-center gap-2">
         <Separator className="flex-1" />
-        <span style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>OR</span>
+        <span style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}>OR</span>
         <Separator className="flex-1" />
       </div>
       <div className="flex items-center gap-2">

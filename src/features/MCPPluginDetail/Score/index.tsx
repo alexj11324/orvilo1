@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -77,8 +76,8 @@ const Score = memo(() => {
           <div
             className="flex flex-col"
             style={{
-              border: `1px solid ${cssVar.colorBorder}`,
-              borderRadius: cssVar.borderRadiusLG,
+              border: `1px solid var(--border)`,
+              borderRadius: 'var(--ant-border-radius-lg)',
             }}
           >
             <ScoreList items={sortedScoreListItems} />
@@ -89,8 +88,8 @@ const Score = memo(() => {
           <div
             className="flex flex-col gap-4 p-4"
             style={{
-              border: `1px solid ${cssVar.colorBorder}`,
-              borderRadius: cssVar.borderRadiusLG,
+              border: `1px solid var(--border)`,
+              borderRadius: 'var(--ant-border-radius-lg)',
             }}
           >
             <GithubBadge />

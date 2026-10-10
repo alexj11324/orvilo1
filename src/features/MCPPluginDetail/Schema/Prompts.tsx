@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
 import { CheckIcon, MinusIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -48,7 +47,7 @@ const Prompts = memo<PromptsProps>(({ mode, activeKey = [], setActiveKey }) => {
                   {
                     dataIndex: 'name',
                     render: (_, record) => (
-                      <span className={styles.code} style={{ color: cssVar.gold }}>
+                      <span className={styles.code} style={{ color: 'var(--ant-gold)' }}>
                         {record.name}
                       </span>
                     ),
@@ -63,8 +62,8 @@ const Prompts = memo<PromptsProps>(({ mode, activeKey = [], setActiveKey }) => {
                           width: '1em',
                           height: '1em',
                           color: record.required
-                            ? cssVar.colorSuccess
-                            : cssVar.colorTextDescription,
+                            ? 'var(--success)'
+                            : 'var(--ant-color-text-description)',
                           fill: 'transparent',
                         })}
                       </span>

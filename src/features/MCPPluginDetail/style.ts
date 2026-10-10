@@ -1,43 +1,10 @@
-import { createStaticStyles, responsive } from 'antd-style';
+export const agentListStyles = {
+  item: 'w-[calc(50%-6px)] [@media(max-width:575.98px)]:w-full',
+  list: 'flex flex-wrap gap-3 [padding-block-end:16px]',
+};
 
-export const agentListStyles = createStaticStyles(({ css }) => ({
-  item: css`
-    width: calc(50% - 6px);
-
-    ${responsive.sm} {
-      width: 100%;
-    }
-  `,
-  list: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding-block-end: 16px;
-  `,
-}));
-
-export const itemStyles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    position: relative;
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  `,
-  description: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+export const itemStyles = {
+  container: 'relative overflow-hidden flex-1 min-w-0',
+  description: 'overflow-hidden text-[12px] text-muted-foreground text-ellipsis whitespace-nowrap',
+  title: 'overflow-hidden text-[14px] font-medium text-foreground text-ellipsis whitespace-nowrap',
+};

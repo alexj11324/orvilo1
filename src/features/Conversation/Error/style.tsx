@@ -6,7 +6,7 @@ import Avatar from '@/components/Avatar';
 
 export const styles = {
   container: 'rounded-(--radius-card) border border-(--ant-color-split) bg-card text-foreground',
-  desc: 'text-center text-(--ant-color-text-tertiary)',
+  desc: 'text-center text-foreground-tertiary',
   form: 'w-full max-w-90 [@media(width<=768px)]:max-w-[90%]',
 };
 

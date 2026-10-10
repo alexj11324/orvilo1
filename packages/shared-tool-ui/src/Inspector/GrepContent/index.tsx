@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
 const styles = {
-  separator: 'mx-0.5 text-(--ant-color-text-quaternary)',
+  separator: 'mx-0.5 text-foreground-quaternary',
   tag: 'rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-[12px] text-foreground',
   tagsList: 'inline-flex min-w-0 shrink items-center gap-1 whitespace-nowrap ms-1.5',
 };

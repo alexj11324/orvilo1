@@ -32,10 +32,10 @@ const styles = {
   fullAccessLabel: '[@container_runtimebar_(width_<_600px)]:hidden',
   sdkRuntime:
     'cursor-default flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-xs text-info whitespace-nowrap bg-[color-mix(in_srgb,_var(--ant-color-info-bg)_55%,_transparent)] bg-none',
-  sdkRuntimeClosing: 'text-(--ant-color-text-description) bg-(--ant-color-fill-quaternary) bg-none',
+  sdkRuntimeClosing: 'text-foreground-description bg-fill-quaternary bg-none',
   sdkRuntimeError:
     'text-destructive bg-[color-mix(in_srgb,_var(--ant-color-error-bg)_55%,_transparent)] bg-none',
-  sdkRuntimeIdle: 'text-muted-foreground bg-(--ant-color-fill-quaternary) bg-none',
+  sdkRuntimeIdle: 'text-muted-foreground bg-fill-quaternary bg-none',
   sdkRuntimeMonitoring:
     'text-warning bg-[color-mix(in_srgb,_var(--ant-color-warning-bg)_55%,_transparent)] bg-none',
   sdkRuntimeStale:

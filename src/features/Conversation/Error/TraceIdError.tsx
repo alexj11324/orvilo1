@@ -77,6 +77,7 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
             target="_blank"
             style={{
               alignItems: 'center',
+              // Discord keeps its brand hue; the other report link follows the app theme.
               color: hasDiscord ? '#5865F2' : 'var(--ant-color-link)',
               display: 'inline-flex',
               gap: 2,

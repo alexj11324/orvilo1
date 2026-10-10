@@ -53,15 +53,15 @@ export const flowHandleStyle = {
 };
 
 const styles = {
-  card: 'overflow-hidden flex flex-col w-65 h-full border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card transition-[border-color,box-shadow] duration-150 ease-[ease] hover:border-(--ant-color-primary-border)',
-  selected: 'border-(--ant-color-primary-border) shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
+  card: 'overflow-hidden flex flex-col w-65 h-full border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card transition-[border-color,box-shadow] duration-150 ease-[ease] hover:border-primary-border',
+  selected: 'border-primary-border shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
   head: 'p-3',
   glyph:
     'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius) text-muted-foreground bg-accent',
   title: 'line-clamp-2 text-(length:--text-dense) font-medium leading-[1.4]',
-  subtitle: 'line-clamp-2 text-xs leading-4 text-(--ant-color-text-tertiary)',
+  subtitle: 'line-clamp-2 text-xs leading-4 text-foreground-tertiary',
   footer:
-    'mt-auto py-1.75 px-3 border-t border-dashed border-sidebar-border text-xs text-(--ant-color-text-tertiary)',
+    'mt-auto py-1.75 px-3 border-t border-dashed border-sidebar-border text-xs text-foreground-tertiary',
 };
 
 /** Same status/head/summary hierarchy as Goal's exploration cards. */

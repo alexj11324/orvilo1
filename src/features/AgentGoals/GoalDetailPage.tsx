@@ -54,7 +54,7 @@ import { useGoalChatPanel } from './useGoalChatPanel';
 const styles = {
   header: '[padding-block:8px_4px]',
   metric:
-    'cursor-pointer min-w-28 [padding-block:4px] [padding-inline:10px] rounded-(--ant-border-radius) [transition:background_0.15s] hover:bg-(--ant-color-fill-quaternary)',
+    'cursor-pointer min-w-28 [padding-block:4px] [padding-inline:10px] rounded-(--ant-border-radius) [transition:background_0.15s] hover:bg-fill-quaternary',
   metrics: '-ms-2.5',
 };
 

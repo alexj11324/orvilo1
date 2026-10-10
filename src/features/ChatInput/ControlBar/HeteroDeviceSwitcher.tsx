@@ -64,15 +64,15 @@ const styles = {
   buttonLabel: 'overflow-hidden max-w-30 text-ellipsis whitespace-nowrap',
   buttonOpen: 'text-foreground bg-muted bg-none hover:text-foreground hover:bg-muted hover:bg-none',
   buttonWarning:
-    'text-(--ant-color-warning-text) hover:text-(--ant-color-warning-text) hover:bg-(--ant-color-warning-bg) hover:bg-none',
+    'text-(--ant-color-warning-text) hover:text-(--ant-color-warning-text) hover:bg-warning-wash hover:bg-none',
   buttonReadonly: 'cursor-default hover:text-muted-foreground hover:bg-transparent hover:bg-none',
   check: 'flex-none ms-auto text-primary',
-  desc: 'flex gap-1.5 items-center text-xs text-(--ant-color-text-description)',
+  desc: 'flex gap-1.5 items-center text-xs text-foreground-description',
   extra: 'flex flex-none gap-1 items-center ms-auto opacity-100',
   extraInfo:
-    'cursor-help flex items-center text-(--ant-color-text-quaternary) [transition:color_0.2s] hover:text-muted-foreground',
+    'cursor-help flex items-center text-foreground-quaternary [transition:color_0.2s] hover:text-muted-foreground',
   deviceList: 'overflow-y-auto max-h-60 -me-1 pe-1',
-  empty: 'py-2 px-2 text-xs text-(--ant-color-text-quaternary)',
+  empty: 'py-2 px-2 text-xs text-foreground-quaternary',
   option:
     "cursor-pointer flex gap-2.5 items-center py-2 px-2 rounded-[calc(var(--radius)_-_2px)] [transition:background-color_0.2s] [&[aria-current='true']]:bg-muted [&[aria-current='true']]:bg-none [&[aria-current='true']:hover]:bg-muted [&[aria-current='true']:hover]:bg-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:-outline-offset-2 hover:bg-accent hover:bg-none",
   optionDisabled: 'cursor-not-allowed hover:bg-transparent hover:bg-none',
@@ -85,12 +85,12 @@ const styles = {
   tag: 'flex-none py-0 px-1.25 rounded-(--radius-chip) text-xs leading-4 text-muted-foreground bg-selected bg-none',
   header: 'flex gap-1.5 items-center justify-between py-1 px-2',
   headerInfo:
-    'cursor-help text-(--ant-color-text-quaternary) [transition:color_0.2s] hover:text-muted-foreground',
-  headerTitle: 'text-xs font-medium text-(--ant-color-text-tertiary)',
+    'cursor-help text-foreground-quaternary [transition:color_0.2s] hover:text-muted-foreground',
+  headerTitle: 'text-xs font-medium text-foreground-tertiary',
   manageButton:
-    'cursor-pointer flex gap-0.75 items-center p-0 border-0 text-xs text-(--ant-color-text-quaternary) bg-transparent bg-none [transition:color_0.2s] hover:text-primary',
+    'cursor-pointer flex gap-0.75 items-center p-0 border-0 text-xs text-foreground-quaternary bg-transparent bg-none [transition:color_0.2s] hover:text-primary',
   groupLabel:
-    'py-1 px-2 text-xs font-medium text-(--ant-color-text-quaternary) uppercase [letter-spacing:0.04em]',
+    'py-1 px-2 text-xs font-medium text-foreground-quaternary uppercase [letter-spacing:0.04em]',
 };
 
 interface OptionRowProps {

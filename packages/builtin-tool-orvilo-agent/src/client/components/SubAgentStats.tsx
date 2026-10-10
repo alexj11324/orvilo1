@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { SubAgentRunStats } from '../../types';
 
 const styles = {
-  root: 'shrink-0 truncate text-xs text-(--ant-color-text-tertiary)',
+  root: 'shrink-0 truncate text-xs text-foreground-tertiary',
 };
 
 const formatTokens = (n: number): string => {

@@ -330,7 +330,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
         >
           <div className="flex flex-wrap gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
-              <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
+              <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-muted">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
                 <div className="text-xs">
                   {priority === 0
@@ -344,7 +344,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
 
             {activeWorkspaceId && (
               <AssigneeMemberSelector currentUserId={assigneeUserId} onChange={handleMemberChange}>
-                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
+                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-muted">
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
@@ -369,7 +369,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
               </div>
             ) : (
               <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
-                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
+                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-muted">
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />

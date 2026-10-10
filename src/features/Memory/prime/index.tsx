@@ -72,7 +72,7 @@ function ExperienceManager() {
             <div className="flex flex-col gap-3" key={entry.id}>
               <HighlightedContent>{entry.content}</HighlightedContent>
               {entry.source === 'legacy' ? (
-                <div className="text-(--ant-color-text-description)">{t('prime.legacy')}</div>
+                <div className="text-foreground-description">{t('prime.legacy')}</div>
               ) : (
                 <div className="flex flex-row gap-2">
                   <Button

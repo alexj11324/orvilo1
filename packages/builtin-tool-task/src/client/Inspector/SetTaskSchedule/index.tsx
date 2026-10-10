@@ -12,8 +12,8 @@ import type { SetTaskScheduleParams, SetTaskScheduleState } from '../../../types
 const styles = {
   identifierChip:
     'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
-  modeChip: 'shrink-0 rounded-[999px] bg-(--ant-color-info-bg) px-2 py-0.5 text-xs text-info',
-  separator: 'shrink-0 text-(--ant-color-text-quaternary)',
+  modeChip: 'shrink-0 rounded-[999px] bg-info-wash px-2 py-0.5 text-xs text-info',
+  separator: 'shrink-0 text-foreground-quaternary',
 };
 
 export const SetTaskScheduleInspector = memo<

@@ -42,7 +42,7 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
       <div
         className={cx(
           styles.trigger,
-          'flex cursor-pointer items-center gap-2 py-0.5 hover:bg-(--ant-color-fill-tertiary)',
+          'flex cursor-pointer items-center gap-2 py-0.5 hover:bg-muted',
         )}
         style={{
           borderRadius: 10,

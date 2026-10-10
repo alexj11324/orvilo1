@@ -13,9 +13,9 @@ import { getRunCommandDisplayCommand } from '../../utils/runCommand';
 const styles = {
   chip: 'inline-flex min-w-0 shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent px-2.5 py-0.5 ms-1.5',
   command: 'min-w-0 truncate font-mono text-[12px] text-foreground',
-  leadingIcon: 'shrink-0 text-(--ant-color-text-description) me-1.5',
+  leadingIcon: 'shrink-0 text-foreground-description me-1.5',
   statusIcon: 'shrink-0 ms-1',
-  terminalIcon: 'shrink-0 text-(--ant-color-text-description)',
+  terminalIcon: 'shrink-0 text-foreground-description',
 };
 
 interface RunCommandArgs {

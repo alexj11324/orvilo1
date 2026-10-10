@@ -15,7 +15,7 @@ import type { TeamHomeMember } from './teamHomeMembersModel';
 
 const styles = {
   email: 'overflow-hidden text-xs text-muted-foreground text-ellipsis whitespace-nowrap',
-  joined: 'flex-none text-xs leading-(--text-sm--line-height) text-(--ant-color-text-tertiary)',
+  joined: 'flex-none text-xs leading-(--text-sm--line-height) text-foreground-tertiary',
   list: 'flex flex-col [@container_work-surface_(max-width:1000px)]:px-1.5',
   memberCell: 'flex flex-1 gap-2.5 items-center min-w-0',
   name: 'overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap',

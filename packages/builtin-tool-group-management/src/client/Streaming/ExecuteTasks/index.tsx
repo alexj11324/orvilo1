@@ -34,10 +34,7 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
   return (
     <div className="flex flex-col gap-3">
       {tasksWithAgents.map((task, index) => (
-        <div
-          className="rounded-(--radius-card) bg-(--ant-color-fill-quaternary) p-3"
-          key={task.agentId || index}
-        >
+        <div className="rounded-(--radius-card) bg-fill-quaternary p-3" key={task.agentId || index}>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Avatar

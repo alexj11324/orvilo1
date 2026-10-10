@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { shinyTextStyles } from '@/styles';
 
 const styles = {
-  font: 'text-xs text-(--ant-color-text-tertiary)',
+  font: 'text-xs text-foreground-tertiary',
   query: 'rounded-[8px] px-2 py-1 text-xs text-muted-foreground',
 };
 

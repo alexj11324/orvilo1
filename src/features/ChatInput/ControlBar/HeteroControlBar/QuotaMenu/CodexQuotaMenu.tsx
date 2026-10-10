@@ -41,12 +41,12 @@ const styles = {
     'min-w-0 py-2 px-2.5 [&:not(:last-child)]:[border-block-end:1px_solid_var(--ant-color-border-secondary)]',
   creditCollapse: 'w-full',
   creditExpiry: 'flex-none text-end whitespace-nowrap',
-  creditIndex: '[flex:0_0_20px] tabular-nums text-(--ant-color-text-tertiary) text-center',
+  creditIndex: '[flex:0_0_20px] tabular-nums text-foreground-tertiary text-center',
   creditList:
-    'overflow-hidden border border-solid border-sidebar-border rounded-(--radius-card) bg-(--ant-color-fill-quaternary) bg-none',
+    'overflow-hidden border border-solid border-sidebar-border rounded-(--radius-card) bg-fill-quaternary bg-none',
   creditTitle: 'overflow-hidden flex-1 min-w-0 text-ellipsis whitespace-nowrap',
   feedback:
-    "p-2 border border-solid border-(--ant-color-info-border) rounded-(--radius-card) text-(--ant-color-info-text) bg-(--ant-color-info-bg) bg-none [&[data-kind='error']]:border-(--ant-color-error-border) [&[data-kind='error']]:text-(--ant-color-error-text) [&[data-kind='error']]:bg-(--ant-color-error-bg) [&[data-kind='error']]:bg-none [&[data-kind='success']]:border-(--ant-color-success-border) [&[data-kind='success']]:text-(--ant-color-success-text) [&[data-kind='success']]:bg-(--ant-color-success-bg) [&[data-kind='success']]:bg-none",
+    "p-2 border border-solid border-info-border rounded-(--radius-card) text-(--ant-color-info-text) bg-info-wash bg-none [&[data-kind='error']]:border-destructive-border [&[data-kind='error']]:text-(--ant-color-error-text) [&[data-kind='error']]:bg-destructive-wash [&[data-kind='error']]:bg-none [&[data-kind='success']]:border-success-border [&[data-kind='success']]:text-(--ant-color-success-text) [&[data-kind='success']]:bg-success-wash [&[data-kind='success']]:bg-none",
   resetCredits: 'pbs-2 [border-block-start:1px_solid_var(--ant-color-border-secondary)]',
 };
 

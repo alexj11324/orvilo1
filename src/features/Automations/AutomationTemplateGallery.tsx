@@ -98,7 +98,7 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
                   {...clickableProps()}
                   key={id}
                   className={cn(
-                    'flex flex-col gap-1 p-4 border cursor-pointer hover:bg-(--ant-color-fill-tertiary)',
+                    'flex flex-col gap-1 p-4 border cursor-pointer hover:bg-muted',
                     CLICKABLE_FOCUS_RING,
                   )}
                   style={{

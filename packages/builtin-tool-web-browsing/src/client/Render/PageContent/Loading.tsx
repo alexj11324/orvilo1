@@ -14,8 +14,7 @@ const styles = {
   cardBody: 'ps-3 pe-3 [padding-block-start:12px]',
   container:
     'overflow-hidden justify-between min-w-90 max-w-90 h-34 border border-sidebar-border rounded-(--radius-overlay)',
-  footer:
-    'py-2 ps-3 pe-3 text-xs leading-[inherit] text-(--ant-color-text-tertiary) bg-(--ant-color-fill-quaternary)',
+  footer: 'py-2 ps-3 pe-3 text-xs leading-[inherit] text-foreground-tertiary bg-fill-quaternary',
   text: cn('line-clamp-2 text-ellipsis', shinyTextStyles.shinyText),
 };
 

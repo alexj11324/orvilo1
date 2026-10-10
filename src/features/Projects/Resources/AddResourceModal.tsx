@@ -15,7 +15,7 @@ import { useKnowledgeBaseStore } from '@/store/library';
 import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
 
 const styles = {
-  row: 'flex items-center gap-3 rounded-[10px] px-3 py-2.5 hover:bg-(--ant-color-fill-quaternary)', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
+  row: 'flex items-center gap-3 rounded-[10px] px-3 py-2.5 hover:bg-fill-quaternary', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
 };
 
 interface AddResourceContentProps {

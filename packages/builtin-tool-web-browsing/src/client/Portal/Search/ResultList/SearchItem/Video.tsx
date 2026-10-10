@@ -9,10 +9,10 @@ import TitleExtra from './TitleExtra';
 
 const styles = {
   container: 'flex flex-1 p-2 rounded-(--radius-card) [color:initial] hover:bg-accent',
-  desc: 'line-clamp-2 text-ellipsis text-(--ant-color-text-tertiary)',
+  desc: 'line-clamp-2 text-ellipsis text-foreground-tertiary',
   iframe: 'border border-border rounded-(--radius-card)',
   title: 'line-clamp-1 text-ellipsis text-base leading-[inherit] text-(--ant-color-link)',
-  url: 'line-clamp-1 text-ellipsis text-(--ant-color-text-description)',
+  url: 'line-clamp-1 text-ellipsis text-foreground-description',
 };
 
 interface SearchResultProps extends UniformSearchResult {

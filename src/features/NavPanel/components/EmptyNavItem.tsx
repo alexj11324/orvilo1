@@ -16,7 +16,7 @@ const EmptyNavItem = memo<EmptyStatusProps>(({ title, onClick, className, disabl
       className={cx(
         className,
         'flex items-center gap-2 h-8 px-0.5',
-        !disabled && 'cursor-pointer hover:bg-(--ant-color-fill-tertiary)',
+        !disabled && 'cursor-pointer hover:bg-muted',
       )}
       onClick={disabled ? undefined : onClick}
     >

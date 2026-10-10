@@ -12,7 +12,7 @@ const styles = {
   agentTitle: 'text-muted-foreground',
   container: 'rounded-(--ant-border-radius) py-3',
   taskContent: 'rounded-(--ant-border-radius) bg-accent px-3 py-2',
-  timeout: 'text-xs text-(--ant-color-text-tertiary)',
+  timeout: 'text-xs text-foreground-tertiary',
 };
 
 /**

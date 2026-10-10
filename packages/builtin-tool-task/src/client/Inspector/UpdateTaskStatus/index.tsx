@@ -22,7 +22,7 @@ const STATUS_TONE: Partial<Record<TaskStatus, { bg: string; fg: string }>> = {
 const styles = {
   identifierChip:
     'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
-  separator: 'shrink-0 text-(--ant-color-text-quaternary)',
+  separator: 'shrink-0 text-foreground-quaternary',
   statusChip: 'shrink-0 rounded-[999px] px-2 py-0.5 text-xs',
 };
 

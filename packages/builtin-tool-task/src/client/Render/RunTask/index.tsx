@@ -11,7 +11,7 @@ import { InlineField, monoChipClassName, SectionField, TaskResultCard } from '..
 
 const styles = {
   topicChip:
-    'inline-flex items-center gap-1 self-start rounded-[999px] bg-(--ant-color-info-bg) px-2 py-0.5 text-xs text-info',
+    'inline-flex items-center gap-1 self-start rounded-[999px] bg-info-wash px-2 py-0.5 text-xs text-info',
 };
 
 export const RunTaskRender = memo<BuiltinRenderProps<RunTaskParams, RunTaskState>>(

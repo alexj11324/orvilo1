@@ -12,7 +12,7 @@ import { FilePathDisplay } from '../../components/FilePathDisplay';
 import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
 const styles = {
-  separator: 'mx-0.5 text-(--ant-color-text-quaternary)',
+  separator: 'mx-0.5 text-foreground-quaternary',
 };
 
 interface EditFileArgs {

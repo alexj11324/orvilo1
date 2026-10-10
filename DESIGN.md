@@ -134,6 +134,19 @@ Local primitives read these Tailwind roles. [themeRoles.ts](src/styles/themeRole
 | `--ring`                             | `colorText`             | `#080808` / `#ffffff`                       | Focus indicator, used at 50% by primitives                                   |
 | `--invert` / `--invert-foreground`   | `colorText` / container | `#080808` on `#ffffff` / reversed           | Inverse badge and alert                                                      |
 
+Exact engine aliases also live on the document theme host, so body portals inherit resolved values:
+
+| Tailwind role                                         | Engine role                                                     | Use                                                                        |
+| ----------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `--foreground-tertiary` / `--foreground-quaternary`   | `colorTextTertiary` / `colorTextQuaternary`                     | Subdued supporting / disabled content                                      |
+| `--foreground-description`                            | `colorTextDescription`                                          | Preserve existing description text; this is not necessarily secondary text |
+| `--fill-quaternary`                                   | `colorFillQuaternary`                                           | Faintest neutral wash                                                      |
+| `--divider`                                           | `colorBorderSecondary`                                          | Everyday divider outside the sidebar                                       |
+| `--{primary,success,warning,info,destructive}-wash`   | Corresponding `color{Primary,Success,Warning,Info,Error}Bg`     | Exact existing status background                                           |
+| `--{primary,success,warning,info,destructive}-border` | Corresponding `color{Primary,Success,Warning,Info,Error}Border` | Exact existing status edge                                                 |
+
+The `*-wash` aliases preserve engine backgrounds; existing `*-subtle` roles remain their computed 10% mixes. Do not substitute one for the other by appearance. Description text likewise keeps its exact alias: the current dark engine description is `#6f6f6f`, while secondary text is `#aaaaaa`. These aliases require the existing top-level theme host; they do not introduce a separate fallback palette.
+
 These fills are translucent washes, not surfaces: they stay visible on the page canvas, panels, and popovers alike. `colorBgContainerSecondary` remains an engine surface role and is no longer what `bg-muted` or `bg-secondary` paint. A sticky cell that must hide scrolling content keeps an opaque base and layers the wash as an image with the `wash-*` utility (`bg-background wash-muted`); never use a wash as the only paint there. Status colors used as text or icons take the `*-text` roles (`text-destructive-text`), not the fill roles. The mapping, consumer audit, and follow-ups are recorded in [semantic token roles](docs/development/semantic-token-roles.md).
 
 The local [Tooltip](src/components/ui/tooltip.tsx) uses the existing inverse **`bg-foreground` / `text-background`** pair, including its arrow. Preserve that tooltip contract. `colorBgSpotlight` remains a retained engine role; neither spotlight nor elevated is an instruction to recolor local tooltips.

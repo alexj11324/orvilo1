@@ -27,7 +27,7 @@ const styles = {
   collapsed: 'cursor-pointer h-full p-3',
   glyph: 'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius)',
   title: 'line-clamp-2 text-(length:--text-dense) font-medium leading-[1.4]',
-  summary: 'text-xs leading-4 text-(--ant-color-text-tertiary)',
+  summary: 'text-xs leading-4 text-foreground-tertiary',
 };
 
 export function FlowGroup({ data }: { data: FlowGraphData }) {

@@ -25,10 +25,10 @@ import SectionTitle from './SectionTitle';
 const styles = {
   card: 'cursor-pointer overflow-hidden flex flex-col p-0 border border-sidebar-border rounded-(--radius-overlay) text-start bg-card [transition:border-color_0.2s_var(--ant-motion-ease-in-out),box-shadow_0.2s_var(--ant-motion-ease-in-out)] hover:border-border hover:shadow-(--ant-box-shadow-tertiary)',
   grid: 'grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3',
-  meta: 'text-xs text-(--ant-color-text-quaternary)',
+  meta: 'text-xs text-foreground-quaternary',
   name: 'truncate text-(length:--text-dense) font-medium text-foreground',
   preview:
-    'flex items-center justify-center aspect-[16/10] w-full [border-block-end:1px_solid_var(--sidebar-border)] bg-(--ant-color-fill-quaternary)',
+    'flex items-center justify-center aspect-[16/10] w-full [border-block-end:1px_solid_var(--sidebar-border)] bg-fill-quaternary',
   thumbnail: 'w-full h-full object-cover',
 };
 

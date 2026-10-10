@@ -40,14 +40,14 @@ import { useElapsed } from './useElapsed';
 const styles = {
   attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
   blockedHead:
-    'cursor-pointer select-none flex gap-1.5 items-center py-2 px-3 text-xs text-(--ant-color-text-tertiary) hover:text-muted-foreground',
+    'cursor-pointer select-none flex gap-1.5 items-center py-2 px-3 text-xs text-foreground-tertiary hover:text-muted-foreground',
   body: 'pt-2 pb-3.5 ps-6.5 pe-3',
-  deps: 'font-mono text-xs text-(--ant-color-text-quaternary)',
+  deps: 'font-mono text-xs text-foreground-quaternary',
   dim: 'opacity-55 transition-opacity duration-150 ease-[ease] hover:opacity-100',
   label: 'text-xs text-muted-foreground',
   list: 'overflow-hidden border border-sidebar-border rounded-(--ant-border-radius) bg-card',
   mono: 'font-mono tabular-nums',
-  num: 'flex-none min-w-5.5 font-mono text-xs text-(--ant-color-text-quaternary)',
+  num: 'flex-none min-w-5.5 font-mono text-xs text-foreground-quaternary',
   option: 'grid grid-cols-[128px_1fr] gap-2 items-baseline',
 };
 

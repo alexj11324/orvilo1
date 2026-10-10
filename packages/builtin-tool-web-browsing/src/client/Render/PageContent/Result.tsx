@@ -14,8 +14,8 @@ import { WebBrowsingManifest } from '../../../manifest';
 
 const styles = {
   container: 'overflow-hidden min-w-90 max-w-90',
-  footer: 'py-1 ps-3 pe-3 bg-(--ant-color-fill-quaternary)',
-  footerText: 'text-xs leading-[inherit] text-(--ant-color-text-tertiary)',
+  footer: 'py-1 ps-3 pe-3 bg-fill-quaternary',
+  footerText: 'text-xs leading-[inherit] text-foreground-tertiary',
   titleRow: 'overflow-hidden',
 };
 

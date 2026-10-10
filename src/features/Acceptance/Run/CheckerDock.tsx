@@ -38,15 +38,14 @@ const styles = {
   bodyEmbedded: 'border-t-0',
   checkRow:
     'grid grid-cols-[20px_minmax(0,1fr)_auto] items-start gap-2 py-3 not-last:border-b not-last:border-sidebar-border',
-  chevron: 'flex-none text-(--ant-color-text-quaternary)',
+  chevron: 'flex-none text-foreground-quaternary',
   clickable:
-    'cursor-pointer transition-[background] duration-150 ease-(--ant-motion-ease-out) hover:bg-(--ant-color-fill-quaternary)',
-  desc: 'mt-0.75 text-xs leading-[1.45] text-(--ant-color-text-tertiary)',
+    'cursor-pointer transition-[background] duration-150 ease-(--ant-motion-ease-out) hover:bg-fill-quaternary',
+  desc: 'mt-0.75 text-xs leading-[1.45] text-foreground-tertiary',
   dock: 'overflow-hidden rounded-[16px] border border-border bg-popover',
   head: 'flex cursor-pointer items-center justify-between gap-3 px-3 py-2.75',
-  inputPanel:
-    'mt-2.5 rounded-[12px] border border-sidebar-border bg-(--ant-color-fill-quaternary) p-2.5',
-  sub: 'truncate text-xs text-(--ant-color-text-tertiary)',
+  inputPanel: 'mt-2.5 rounded-[12px] border border-sidebar-border bg-fill-quaternary p-2.5',
+  sub: 'truncate text-xs text-foreground-tertiary',
   title: 'text-(length:--text-dense) font-bold text-foreground',
 };
 

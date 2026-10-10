@@ -172,7 +172,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
           )}
         </div>
       )}
-      <div className="flex flex-col gap-1.5 rounded-(--radius-card) border border-sidebar-border bg-(--ant-color-fill-quaternary) p-3">
+      <div className="flex flex-col gap-1.5 rounded-(--radius-card) border border-sidebar-border bg-fill-quaternary p-3">
         <div className="flex items-center gap-1.5">
           <CircleDashed size={14} />
           <div className="text-xs text-muted-foreground">

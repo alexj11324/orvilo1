@@ -17,7 +17,7 @@ const styles = {
   container: 'w-full overflow-hidden rounded-(--radius-card) border border-sidebar-border bg-card',
   header: 'px-3 py-2.5 [border-block-end:1px_solid_var(--sidebar-border)]',
   icon: 'text-primary',
-  meta: 'text-(--ant-color-text-description)',
+  meta: 'text-foreground-description',
   preview: 'max-h-90 overflow-auto px-3 py-2',
   title: 'line-clamp-1 font-medium text-foreground',
 };

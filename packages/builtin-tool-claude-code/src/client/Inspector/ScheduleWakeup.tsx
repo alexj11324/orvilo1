@@ -10,7 +10,7 @@ import { ClaudeCodeApiName, type ScheduleWakeupArgs } from '../../types';
 
 const styles = {
   chip: 'overflow-hidden inline-flex shrink items-center min-w-0 ms-1.5 py-px px-2 rounded-[999px] text-xs text-foreground text-ellipsis whitespace-nowrap bg-accent',
-  delay: 'shrink-0 ms-2 text-(--ant-color-text-description)',
+  delay: 'shrink-0 ms-2 text-foreground-description',
 };
 
 const formatDelay = (seconds: number): string => {

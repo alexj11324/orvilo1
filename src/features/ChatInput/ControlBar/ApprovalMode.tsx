@@ -21,7 +21,7 @@ import { type ApprovalMode } from '@/store/user/slices/settings/selectors';
 import { SimpleTooltip } from '../SimpleTooltip';
 
 const styles = {
-  desc: 'text-xs leading-[1.4] text-(--ant-color-text-description)',
+  desc: 'text-xs leading-[1.4] text-foreground-description',
   icon: 'border border-solid border-accent rounded-(--radius-card) bg-popover bg-none',
   modeButton: 'text-xs text-muted-foreground',
   selectedItem:

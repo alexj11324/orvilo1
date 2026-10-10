@@ -16,8 +16,7 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 import type { EditTaskParams, EditTaskState } from '../../../types';
 
 const styles = {
-  addChip:
-    'shrink-0 rounded-[999px] bg-(--ant-color-success-bg) px-2 py-px font-mono text-xs text-success',
+  addChip: 'shrink-0 rounded-[999px] bg-success-wash px-2 py-px font-mono text-xs text-success',
   assigneeAvatar: 'shrink-0',
   assigneeChip:
     'inline-flex min-w-0 max-w-55 shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent py-px ps-1 pe-2 text-xs text-foreground',
@@ -26,9 +25,9 @@ const styles = {
   group: 'inline-flex flex-wrap items-center gap-1',
   identifierChip:
     'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-xs text-muted-foreground',
-  label: 'shrink-0 text-xs text-(--ant-color-text-tertiary)',
+  label: 'shrink-0 text-xs text-foreground-tertiary',
   removeChip:
-    'shrink-0 rounded-[999px] border border-dashed border-(--ant-color-error-border) bg-transparent px-2 py-px font-mono text-xs text-destructive line-through',
+    'shrink-0 rounded-[999px] border border-dashed border-destructive-border bg-transparent px-2 py-px font-mono text-xs text-destructive line-through',
 };
 
 const AssigneeChip = memo<{ agentId: string }>(({ agentId }) => {

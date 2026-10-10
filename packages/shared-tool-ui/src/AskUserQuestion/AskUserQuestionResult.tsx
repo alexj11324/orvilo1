@@ -7,19 +7,19 @@ import type { AskUserQuestionItem } from './types';
 
 const styles = {
   // Preserve the tertiary answer tone separately from the secondary badge tone.
-  answer: 'text-sm leading-[1.5] text-(--ant-color-text-tertiary) [overflow-wrap:anywhere]',
+  answer: 'text-sm leading-[1.5] text-foreground-tertiary [overflow-wrap:anywhere]',
   container: '[padding-block:8px_4px]',
   divider: 'self-stretch h-px [margin-block:4px] bg-selected',
   header:
-    'shrink-0 [padding-inline:8px] rounded-(--radius-chip) text-xs font-normal leading-5 text-(--ant-color-text-tertiary) whitespace-nowrap bg-(--ant-color-fill-quaternary)',
+    'shrink-0 [padding-inline:8px] rounded-(--radius-chip) text-xs font-normal leading-5 text-foreground-tertiary whitespace-nowrap bg-fill-quaternary',
   ordinal:
-    'shrink-0 box-border w-7 h-5 rounded-(--radius-chip) font-mono text-xs tabular-nums leading-5 text-(--ant-color-text-tertiary) text-center bg-(--ant-color-fill-quaternary)',
+    'shrink-0 box-border w-7 h-5 rounded-(--radius-chip) font-mono text-xs tabular-nums leading-5 text-foreground-tertiary text-center bg-fill-quaternary',
   question: 'text-sm font-normal leading-[1.5] text-foreground [overflow-wrap:anywhere]',
   questionContent: 'min-w-0',
   recommendedBadge:
     'shrink-0 [padding-block:1px] [padding-inline:8px] rounded-[999px] text-[11px] leading-4.5 text-muted-foreground bg-selected',
   titleRow: 'flex flex-wrap gap-2 items-baseline',
-  unanswered: 'text-sm leading-[1.5] text-(--ant-color-text-quaternary)',
+  unanswered: 'text-sm leading-[1.5] text-foreground-quaternary',
 };
 
 export interface AskUserQuestionResultLabels {

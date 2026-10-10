@@ -11,7 +11,7 @@ import DeviceCard from '../DeviceCard';
 const styles = {
   card: 'overflow-hidden w-full border border-sidebar-border rounded-(--ant-border-radius) bg-card',
   empty:
-    'py-3 ps-3 pe-3 border border-sidebar-border rounded-(--ant-border-radius) text-sm leading-[inherit] text-(--ant-color-text-description) bg-card',
+    'py-3 ps-3 pe-3 border border-sidebar-border rounded-(--ant-border-radius) text-sm leading-[inherit] text-foreground-description bg-card',
 };
 
 const ListDevices = memo<BuiltinRenderProps<undefined, ListOnlineDevicesState>>(

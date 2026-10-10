@@ -10,7 +10,7 @@ import { pickNextMilestone } from './displayOptions';
 
 const styles = {
   chip: 'inline-flex max-w-55 flex-none items-center gap-1 rounded-(--radius-chip) border border-sidebar-border px-1.5 py-px text-xs text-muted-foreground whitespace-nowrap', // #691: metadata follows the 12px minimum; the chip keeps its existing shape.
-  date: 'flex-none text-(--ant-color-text-quaternary)', // linear-token-override: existing quaternary theme role has no exact local semantic alias yet.
+  date: 'flex-none text-foreground-quaternary', // linear-token-override: existing quaternary theme role has no exact local semantic alias yet.
   name: 'overflow-hidden text-ellipsis',
 };
 

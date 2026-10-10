@@ -25,7 +25,7 @@ const styles = {
     'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-muted-foreground',
   inlineRow: 'flex min-w-0 items-center gap-2',
   inlineValue: 'min-w-0 flex-1 overflow-hidden text-(length:--text-dense) text-foreground',
-  label: 'shrink-0 text-xs text-(--ant-color-text-tertiary)',
+  label: 'shrink-0 text-xs text-foreground-tertiary',
   mono: 'font-mono text-xs text-muted-foreground',
   section: 'flex min-w-0 flex-col gap-1',
   sectionValue:

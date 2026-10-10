@@ -390,7 +390,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
               />
             </div>
           ) : (
-            <div className={'text-sm text-(--ant-color-text-tertiary)'}>
+            <div className={'text-sm text-foreground-tertiary'}>
               {t('connector.noTools', 'No tool permissions to configure.')}
             </div>
           )}

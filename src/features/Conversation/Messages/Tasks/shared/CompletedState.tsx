@@ -14,7 +14,7 @@ import { formatCost, formatDuration } from './utils';
 
 const styles = {
   collapseContent: 'px-0 py-2 text-(length:--text-dense) leading-[1.6]',
-  separator: 'size-0.75 rounded-[50%] bg-(--ant-color-text-quaternary)',
+  separator: 'size-0.75 rounded-[50%] bg-foreground-quaternary',
 };
 
 export type CompletedStateVariant = 'detail' | 'compact';

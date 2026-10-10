@@ -16,7 +16,7 @@ const styles = {
   identifierChip:
     'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
   subtaskTag:
-    'inline-flex shrink-0 items-center gap-1 rounded-[999px] border border-sidebar-border bg-transparent px-1.5 py-px font-mono text-xs text-(--ant-color-text-tertiary)',
+    'inline-flex shrink-0 items-center gap-1 rounded-[999px] border border-sidebar-border bg-transparent px-1.5 py-px font-mono text-xs text-foreground-tertiary',
 };
 
 export const CreateTaskInspector = memo<BuiltinInspectorProps<CreateTaskParams, CreateTaskState>>(

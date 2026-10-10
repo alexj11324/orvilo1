@@ -37,7 +37,7 @@ const styles = {
   section: 'p-1 [border-block-start:1px_solid_var(--sidebar-border)]',
   stepContent: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground whitespace-pre-wrap',
   suggestion:
-    '[padding-block:8px] [padding-inline:12px] rounded-(--radius-card) text-(length:--text-dense) leading-[1.5] text-muted-foreground bg-(--ant-color-fill-quaternary)',
+    '[padding-block:8px] [padding-inline:12px] rounded-(--radius-card) text-(length:--text-dense) leading-[1.5] text-muted-foreground bg-fill-quaternary',
   summary: 'text-sm leading-[inherit] font-medium text-muted-foreground',
   tags: '[padding-block-start:8px] [border-block-start:1px_dashed_var(--sidebar-border)]',
   title: 'line-clamp-1 font-medium text-foreground',

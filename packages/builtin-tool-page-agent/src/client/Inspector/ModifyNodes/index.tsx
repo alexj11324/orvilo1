@@ -13,7 +13,7 @@ import { oneLineEllipsis, shinyTextStyles } from '@/styles';
 import type { ModifyNodesState } from '../../../types';
 
 const styles = {
-  separator: 'mx-0.5 text-(--ant-color-text-quaternary)',
+  separator: 'mx-0.5 text-foreground-quaternary',
   title: 'me-2 text-foreground',
 };
 

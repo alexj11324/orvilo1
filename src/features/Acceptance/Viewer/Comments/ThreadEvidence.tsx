@@ -11,7 +11,7 @@ import { useAcceptanceAuthorColor } from './authorColor';
 const THUMBNAIL_WIDTH = 220;
 
 const styles = {
-  caption: 'text-xs text-(--ant-color-text-tertiary)',
+  caption: 'text-xs text-foreground-tertiary',
   wrapper: 'self-start',
 };
 

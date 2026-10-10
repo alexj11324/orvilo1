@@ -7,7 +7,7 @@ import { memo } from 'react';
 import type { CallSubAgentParams } from '../../../types';
 
 const styles = {
-  container: 'rounded-(--radius-card) bg-(--ant-color-fill-quaternary) p-3',
+  container: 'rounded-(--radius-card) bg-fill-quaternary p-3',
   description: 'mb-2 font-medium text-foreground',
   instruction: 'text-(length:--text-dense) text-muted-foreground',
 };

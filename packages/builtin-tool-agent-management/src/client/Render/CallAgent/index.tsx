@@ -12,7 +12,7 @@ export const CallAgentRender = memo<BuiltinRenderProps<CallAgentParams>>(({ args
   if (!instruction) return null;
 
   return (
-    <div className="rounded-(--radius-card) bg-(--ant-color-fill-quaternary) p-3">
+    <div className="rounded-(--radius-card) bg-fill-quaternary p-3">
       <div className="text-(length:--text-dense) text-muted-foreground">
         <Markdown variant={'chat'}>{instruction}</Markdown>
       </div>

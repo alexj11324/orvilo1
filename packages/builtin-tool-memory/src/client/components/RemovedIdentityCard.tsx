@@ -9,7 +9,7 @@ import { getRemoveIdentityViewModel } from './identityMemoryViewModel';
 import { memoryCardStyles as styles } from './MemoryCardParts';
 
 const localStyles = {
-  id: 'font-mono text-xs leading-[inherit] text-(--ant-color-text-quaternary)',
+  id: 'font-mono text-xs leading-[inherit] text-foreground-quaternary',
   reason: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
 };
 

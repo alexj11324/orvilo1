@@ -2,43 +2,17 @@
 
 import type { GrepContentState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Fragment, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  baseline: css`
-    align-items: baseline;
-  `,
-  separator: css`
-    margin-inline: 2px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  tag: css`
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  tagsList: css`
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  separator: 'mx-0.5 text-[var(--ant-color-text-quaternary)]',
+  tag: 'rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-foreground',
+  tagsList: 'inline-flex min-w-0 shrink items-center gap-1 whitespace-nowrap ms-1.5',
+};
 
 const splitPattern = (pattern: string): string[] =>
   pattern
@@ -93,7 +67,7 @@ export const createGrepContentInspector = ({
           );
 
         return (
-          <div className={cx(inspectorTextStyles.root, styles.baseline)}>
+          <div className={inspectorTextStyles.root} style={{ alignItems: 'baseline' }}>
             <span className={shinyTextStyles.shinyText}>{t(translationKey as any)}:</span>
             <PatternTags pattern={pattern} />
           </div>
@@ -104,8 +78,8 @@ export const createGrepContentInspector = ({
       const hasResults = resultCount > 0;
 
       return (
-        <div className={cx(inspectorTextStyles.root, styles.baseline)}>
-          <span className={cx(isLoading && shinyTextStyles.shinyText)}>
+        <div className={inspectorTextStyles.root} style={{ alignItems: 'baseline' }}>
+          <span className={cn(isLoading && shinyTextStyles.shinyText)}>
             {t(translationKey as any)}:
           </span>
           {pattern && <PatternTags pattern={pattern} />}
@@ -116,7 +90,7 @@ export const createGrepContentInspector = ({
             ) : (
               <span
                 className="text-[12px]"
-                style={{ marginInlineStart: 4, color: cssVar.colorTextDescription }}
+                style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
               >
                 ({t(noResultsKey as any)})
               </span>

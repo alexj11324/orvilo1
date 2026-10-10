@@ -2,7 +2,7 @@
 
 import type { ReadFileState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -80,7 +80,7 @@ export const createReadLocalFileInspector = (
       return (
         <div className={inspectorTextStyles.root}>
           <span
-            className={cx(isLoading && shinyTextStyles.shinyText)}
+            className={cn(isLoading && shinyTextStyles.shinyText)}
             style={{ marginInlineEnd: 6 }}
           >
             {t(label as any)}:

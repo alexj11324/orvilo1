@@ -2,7 +2,7 @@
 
 import type { MoveFilesState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,7 +32,7 @@ export const createMoveLocalFilesInspector = (translationKey: string) => {
       return (
         <div className={inspectorTextStyles.root}>
           <span
-            className={cx(showShiny && shinyTextStyles.shinyText)}
+            className={cn(showShiny && shinyTextStyles.shinyText)}
             style={{ marginInlineEnd: 6 }}
           >
             {t(translationKey as any)}
@@ -45,9 +45,9 @@ export const createMoveLocalFilesInspector = (translationKey: string) => {
           {!isLoading && successCount !== undefined && (
             <span style={{ marginInlineStart: 4 }}>
               {allSucceeded ? (
-                <Check size={14} style={{ color: cssVar.colorSuccess }} />
+                <Check size={14} style={{ color: 'var(--success)' }} />
               ) : (
-                <X size={14} style={{ color: cssVar.colorError }} />
+                <X size={14} style={{ color: 'var(--destructive)' }} />
               )}
             </span>
           )}

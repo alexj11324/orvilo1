@@ -1,7 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
-
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
@@ -22,12 +20,12 @@ const GoalDetailContentSkeleton = () => (
         </div>
       ))}
     </div>
-    <SkeletonBar height={96} radius={cssVar.borderRadiusLG} />
+    <SkeletonBar height={96} radius={'var(--ant-border-radius-lg)'} />
     <div className={'flex flex-col gap-3'}>
       <SkeletonBar height={18} width={128} />
-      <SkeletonBar height={42} radius={cssVar.borderRadiusLG} />
-      <SkeletonBar height={42} radius={cssVar.borderRadiusLG} />
-      <SkeletonBar height={42} radius={cssVar.borderRadiusLG} />
+      <SkeletonBar height={42} radius={'var(--ant-border-radius-lg)'} />
+      <SkeletonBar height={42} radius={'var(--ant-border-radius-lg)'} />
+      <SkeletonBar height={42} radius={'var(--ant-border-radius-lg)'} />
     </div>
   </div>
 );

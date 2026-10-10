@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { isUndefined } from 'es-toolkit/compat';
 import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,31 +17,12 @@ import { useServerConfigStore } from '@/store/serverConfig';
 import { formatShortenNumber } from '@/utils/format';
 import { today } from '@/utils/time';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  count: css`
-    font-size: 16px;
-    font-weight: bold;
-    line-height: 1.2;
-  `,
-  title: css`
-    font-size: 12px;
-    line-height: 1.2;
-    color: ${cssVar.colorTextDescription};
-  `,
-  today: css`
-    font-size: 12px;
-  `,
-}));
+const styles = {
+  card: 'py-1.5 px-2 rounded-(--radius-card) bg-fill-quaternary hover:bg-accent',
+  count: 'text-base leading-6 font-semibold',
+  title: 'text-xs leading-5 text-foreground-description',
+  today: 'text-xs leading-5',
+};
 
 const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, ...rest }) => {
   const mobile = useServerConfigStore((s) => s.isMobile);
@@ -89,17 +70,13 @@ const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, .
   ];
 
   return (
-    <div
-      className="flex items-center gap-1 px-2 w-full"
-      style={{ marginBottom: 8, ...style }}
-      {...rest}
-    >
+    <div className="flex items-center gap-1 px-2 w-full mb-2" style={style} {...rest}>
       {items.map((item) => {
         if (item.key === 'messages') {
           const showBadge = Boolean(item.countToady && item.countToady > 0);
           return (
             <div
-              className={cx(styles.card, 'flex items-center gap-1 justify-between')}
+              className={cn(styles.card, 'flex items-center gap-1 justify-between')}
               key={item.key}
               style={{ flex: showBadge && !mobile ? 2 : 1 }}
             >
@@ -113,13 +90,7 @@ const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, .
                     <TooltipTrigger
                       render={
                         <span className="inline-flex">
-                          <Badge
-                            style={{
-                              background: cssVar.colorSuccess,
-                              color: cssVar.colorSuccessBg,
-                              cursor: 'pointer',
-                            }}
-                          >
+                          <Badge className="cursor-pointer text-xs leading-5" variant="success">
                             {`+${item.countToady}`}
                           </Badge>
                         </span>
@@ -134,7 +105,7 @@ const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, .
         }
 
         return (
-          <div className={cx(styles.card, 'flex flex-col flex-1 gap-0.5')} key={item.key}>
+          <div className={cn(styles.card, 'flex flex-col flex-1 gap-0.5')} key={item.key}>
             <div className="flex">
               <div className={styles.count}>{formatShortenNumber(item.count)}</div>
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import {
   AlertTriangleIcon,
   CheckIcon,
@@ -97,50 +97,16 @@ const CONFIG: Record<VisibilityConfirmVariant, VariantConfig> = {
   },
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  list: css`
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    margin: 0;
-    padding: 12px;
-    border-radius: 8px;
-
-    list-style: none;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  row: css`
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-
-    font-size: 13px;
-    line-height: 1.55;
-    color: ${cssVar.colorText};
-  `,
-  rowIcon: css`
-    flex: none;
-    margin-block-start: 3px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  rowIconDanger: css`
-    color: ${cssVar.colorError};
-  `,
-  rowIconOk: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  rowIconInfo: css`
-    color: ${cssVar.colorInfo};
-  `,
-  emphasis: css`
-    font-weight: 500;
-  `,
-  suffix: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  list: 'flex flex-col gap-2 m-0 p-3 rounded-(--radius-card) list-none bg-fill-quaternary',
+  row: 'flex gap-2.5 items-start text-sm leading-5.5 text-foreground',
+  rowIcon: 'flex-none mt-1 text-foreground-tertiary',
+  rowIconDanger: 'text-destructive-text',
+  rowIconOk: 'text-success-text',
+  rowIconInfo: 'text-info-text',
+  emphasis: 'font-medium',
+  suffix: 'text-foreground-tertiary',
+};
 
 const rowIconClass = (tone: Tone) => {
   if (tone === 'danger') return styles.rowIconDanger;
@@ -183,7 +149,7 @@ const VisibilityConfirmContent = memo<VisibilityConfirmContentProps>(({ inLibrar
         const ItemIcon = item.icon;
         return (
           <li className={styles.row} key={item.key}>
-            <span className={`${styles.rowIcon} ${rowIconClass(item.tone)}`}>
+            <span className={cn(styles.rowIcon, rowIconClass(item.tone))}>
               <ItemIcon size={14} />
             </span>
             <span className={item.emphasis ? styles.emphasis : undefined}>

@@ -16,7 +16,6 @@ import Form, { type FormItemProps } from '@/components/GroupForm';
 import Select from '@/components/Select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 import type { AgentGroupBy, AgentListViewOptions, AgentOrderBy } from './listViewOptions';
@@ -36,7 +35,8 @@ const styles = createStaticStyles(({ css, cssVar }) => {
   return {
     form: css`
       label {
-        font-size: 13px !important;
+        font-size: ${cssVar.fontSize} !important;
+        line-height: 22px;
         color: ${cssVar.colorTextSecondary} !important;
       }
     `,
@@ -73,9 +73,9 @@ const ListConfig = memo<ListConfigProps>(
       {
         children: (
           <Select
+            className="w-37.5 text-sm leading-5.5"
             options={groupingOptions}
             size={'small'}
-            style={{ width: 150 }}
             value={options.groupBy}
             onChange={(value) => {
               if (Array.isArray(value) || value == null) return;
@@ -91,7 +91,7 @@ const ListConfig = memo<ListConfigProps>(
             <ActionIcon
               aria-label={t('sort')}
               icon={options.orderDirection === 'asc' ? ArrowUpNarrowWide : ArrowDownWideNarrow}
-              size={'small'}
+              size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
               onClick={() => {
                 setOptions((prev) => ({
                   ...prev,
@@ -100,9 +100,9 @@ const ListConfig = memo<ListConfigProps>(
               }}
             />
             <Select
+              className="w-28 text-sm leading-5.5"
               options={orderOptions}
               size={'small'}
-              style={{ width: 112 }}
               value={options.orderBy}
               onChange={(value) => {
                 if (Array.isArray(value) || value == null) return;
@@ -116,7 +116,7 @@ const ListConfig = memo<ListConfigProps>(
     ];
 
     const panelContent = (
-      <div className="flex flex-col gap-3" style={{ width: 280 }}>
+      <div className="flex flex-col gap-3 w-70">
         {/* The list table cannot fit a mobile viewport — the page forces the
             card grid there, so the picker stays desktop-only. */}
         {!isMobile && (
@@ -126,12 +126,18 @@ const ListConfig = memo<ListConfigProps>(
               if (typeof key === 'string') setViewMode(key as ViewMode);
             }}
           >
-            <TabsList style={{ display: 'flex', width: '100%' }}>
-              <TabsTrigger style={{ flex: 1 }} value="list">
+            <TabsList className="flex w-full rounded-(--radius-button)">
+              <TabsTrigger
+                className="flex-1 rounded-(--radius-input) text-sm leading-5.5"
+                value="list"
+              >
                 <LayoutList />
                 {t('agentViewAll.view.list')}
               </TabsTrigger>
-              <TabsTrigger style={{ flex: 1 }} value="card">
+              <TabsTrigger
+                className="flex-1 rounded-(--radius-input) text-sm leading-5.5"
+                value="card"
+              >
                 <LayoutGrid />
                 {t('agentViewAll.view.card')}
               </TabsTrigger>
@@ -155,11 +161,11 @@ const ListConfig = memo<ListConfigProps>(
             <ActionIcon
               aria-label={t('settings')}
               icon={Settings2Icon}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             />
           }
         />
-        <PopoverContent align="end" side="bottom" style={{ padding: 12 }}>
+        <PopoverContent align="end" className="p-3" side="bottom">
           {panelContent}
         </PopoverContent>
       </Popover>

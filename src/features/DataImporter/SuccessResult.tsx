@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { CheckCircle } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,13 +22,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    zeroCell: css`
-      color: ${cssVar.colorTextQuaternary};
-    `,
-  };
-});
+const styles = {
+  zeroCell: 'text-foreground-quaternary',
+};
 
 interface SuccessResultProps {
   dataSource?: {
@@ -50,19 +45,19 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
     return text || <span className={styles.zeroCell}>0</span>;
   };
   return (
-    <Empty style={{ paddingBlock: 24, paddingInline: 0 }}>
+    <Empty className="py-6 px-0 rounded-(--radius-card)">
       <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <CheckCircle className="text-success" />
+        <EmptyMedia className="rounded-(--radius-card)" variant="icon">
+          <CheckCircle className="text-success-text" />
         </EmptyMedia>
         <EmptyTitle>{t('importModal.finish.title')}</EmptyTitle>
-        <EmptyDescription>
+        <EmptyDescription className="text-sm leading-5.5">
           {
             // if there is no importData, means it's only import the settings
             !dataSource ? (
               t('importModal.finish.onlySettings')
             ) : (
-              <div className="flex flex-col gap-4" style={{ width: 500 }}>
+              <div className="flex flex-col gap-4 w-125">
                 {t('importModal.finish.subTitle', { duration: (duration / 1000).toFixed(2) })}
                 <Table className="border-collapse border">
                   <TableHeader>
@@ -92,7 +87,7 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button size="lg" variant="default" onClick={onClickFinish}>
+        <Button className="leading-5.5" size="lg" variant="default" onClick={onClickFinish}>
           {t('importModal.finish.start')}
         </Button>
       </EmptyContent>

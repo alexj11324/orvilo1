@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Info } from 'lucide-react';
 import { useState } from 'react';
@@ -37,57 +36,19 @@ const getTotalRecords = (tables: { count: number; name: string }[]): number => {
   return tables.reduce((sum, table) => sum + table.count, 0);
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    duplicateAlert: css`
-      margin-block-start: ${cssVar.marginMD};
-      padding: ${cssVar.paddingMD};
-      border: 1px solid ${cssVar.colorWarningBorder};
-      border-radius: ${cssVar.borderRadiusLG};
-
-      background-color: ${cssVar.colorWarningBg};
-    `,
-    duplicateDescription: css`
-      margin-block-start: ${cssVar.marginXS};
-      font-size: ${cssVar.fontSizeSM};
-      color: ${cssVar.colorTextSecondary};
-    `,
-    duplicateOptions: css`
-      margin-block-start: ${cssVar.marginSM};
-    `,
-    duplicateTag: css`
-      border-color: ${cssVar.colorWarningBorder};
-      color: ${cssVar.colorWarning};
-      background-color: ${cssVar.colorWarningBg};
-    `,
-    hash: css`
-      font-family: ${cssVar.fontFamilyCode};
-      font-size: 12px;
-      color: ${cssVar.colorTextTertiary};
-    `,
-    infoIcon: css`
-      color: ${cssVar.colorTextSecondary};
-    `,
-    modalContent: css`
-      padding-block: ${cssVar.paddingMD};
-      padding-inline: 0;
-    `,
-    successIcon: css`
-      color: ${cssVar.colorSuccess};
-    `,
-    tableContainer: css`
-      overflow: hidden;
-      border: 1px solid ${cssVar.colorBorderSecondary};
-      border-radius: ${cssVar.borderRadiusLG};
-    `,
-    tableName: css`
-      font-family: ${cssVar.fontFamilyCode};
-    `,
-    warningIcon: css`
-      color: ${cssVar.colorWarning};
-    `,
-  };
-});
+const styles = {
+  duplicateAlert: 'mt-4 p-4 border border-warning-border rounded-(--radius-card) bg-warning-wash',
+  duplicateDescription: 'mt-2 text-xs leading-5 text-muted-foreground',
+  duplicateOptions: 'mt-3',
+  duplicateTag: 'border-warning-border text-warning-text bg-warning-wash',
+  hash: 'font-mono text-xs leading-5 text-foreground-tertiary',
+  infoIcon: 'text-muted-foreground',
+  modalContent: 'py-4 px-0',
+  successIcon: 'text-success-text',
+  tableContainer: 'overflow-hidden border border-divider rounded-(--radius-card)',
+  tableName: 'font-mono',
+  warningIcon: 'text-warning-text',
+};
 
 interface ImportPreviewModalProps {
   importData: ImportPgDataStructure;
@@ -121,7 +82,9 @@ const ImportPreviewModal = ({
       width={700}
       footer={[
         <Button
+          className="leading-5.5"
           key="cancel"
+          size="lg"
           onClick={() => {
             onOpenChange(false);
             onCancel();
@@ -129,7 +92,13 @@ const ImportPreviewModal = ({
         >
           {t('cancel')}
         </Button>,
-        <Button key="confirm" variant="default" onClick={handleConfirm}>
+        <Button
+          className="leading-5.5"
+          key="confirm"
+          size="lg"
+          variant="default"
+          onClick={handleConfirm}
+        >
           {t('importPreview.confirmImport')}
         </Button>,
       ]}
@@ -138,15 +107,15 @@ const ImportPreviewModal = ({
       <div className={styles.modalContent}>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between" style={{ width: '100%' }}>
+            <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-2">
                 <Info className={styles.infoIcon} size={16} />
-                <div className="font-semibold">
+                <div className="text-sm leading-5.5 font-semibold">
                   {t('importPreview.totalRecords', { count: totalRecords })}
                 </div>
               </div>
               <div className="flex">
-                <div className="text-muted-foreground">
+                <div className="text-xs leading-5 text-muted-foreground">
                   {t('importPreview.totalTables', { count: tables.length })}
                 </div>
               </div>
@@ -157,7 +126,7 @@ const ImportPreviewModal = ({
           </div>
 
           <div className={styles.tableContainer}>
-            <div style={{ maxHeight: 350, overflowY: 'auto' }}>
+            <div className="max-h-87.5 overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

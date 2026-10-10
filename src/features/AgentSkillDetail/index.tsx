@@ -2,7 +2,6 @@
 
 import { Github } from '@lobehub/icons';
 import { type SkillResourceTreeNode } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { DotIcon, ExternalLinkIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -17,46 +16,15 @@ import { useToolStore } from '@/store/tool';
 
 import ContentViewer from './ContentViewer';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  description: css`
-    overflow: hidden;
-
-    margin: 0;
-
-    font-size: 13px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  divider: css`
-    flex-shrink: 0;
-    width: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  left: css`
-    overflow-y: auto;
-    flex-shrink: 0;
-    width: 240px;
-    padding: 8px;
-  `,
-  meta: css`
-    flex-shrink: 0;
-    padding: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  name: css`
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-  `,
-  right: css`
-    container-type: size;
-    overflow: auto;
-    flex: 1;
-  `,
-}));
+const styles = {
+  description: 'truncate m-0 text-sm leading-5.5 text-muted-foreground',
+  divider: 'shrink-0 w-px bg-divider',
+  left: 'overflow-y-auto shrink-0 w-60 p-2',
+  meta: 'shrink-0 p-4 border-b border-divider',
+  metadata: 'truncate m-0 text-xs leading-5 text-muted-foreground',
+  name: 'text-base leading-6 font-medium text-foreground',
+  right: '[container-type:size] overflow-auto flex-1',
+};
 
 interface AgentSkillDetailProps {
   skillId: string;
@@ -88,17 +56,17 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col" style={{ height: '100%', overflow: 'hidden' }}>
+      <div className="flex flex-col h-full overflow-hidden">
         <div className={styles.meta}>
-          <ArticleSkeleton rows={1} style={{ margin: 0 }} title={220} />
+          <ArticleSkeleton className="m-0" rows={1} title={220} />
         </div>
-        <div className="flex" style={{ flex: 1, overflow: 'hidden' }}>
+        <div className="flex flex-1 overflow-hidden">
           <div className={styles.left}>
             <FileTreeSkeleton rows={9} />
           </div>
           <div className={styles.divider} />
           <div className={styles.right}>
-            <ArticleSkeleton rows={8} style={{ padding: 16 }} />
+            <ArticleSkeleton className="p-4" rows={8} />
           </div>
         </div>
       </div>
@@ -111,14 +79,14 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
   const sourceUrl = skillDetail?.manifest?.sourceUrl;
 
   return (
-    <div className="flex flex-col" style={{ height: '100%', overflow: 'hidden' }}>
+    <div className="flex flex-col h-full overflow-hidden">
       {skillDetail && (
         <div className={styles.meta}>
           <div className="flex items-center gap-3">
             <SkillAvatar size={40} />
-            <div className="flex flex-col flex-1 gap-1" style={{ overflow: 'hidden' }}>
+            <div className="flex flex-col flex-1 gap-1 overflow-hidden">
               <div className="flex items-center gap-2 justify-between">
-                <div className={`flex items-center gap-1 ${styles.description}`}>
+                <div className={cn('flex items-center gap-1', styles.metadata)}>
                   <span className={styles.name}>{skillDetail.name}</span>
                   {version && (
                     <>
@@ -134,7 +102,7 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
                   />
                 </div>
                 {(repository || sourceUrl) && (
-                  <div className="flex items-center gap-0.5" style={{ flexShrink: 0 }}>
+                  <div className="flex items-center gap-0.5 shrink-0">
                     {repository && (
                       <a
                         aria-label={t('agentSkillDetail.repository')}
@@ -143,11 +111,11 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
                         target={'_blank'}
                         title={t('agentSkillDetail.repository')}
                         className={cn(
-                          buttonVariants({ size: 'icon-xs', variant: 'ghost' }),
+                          buttonVariants({ size: 'icon', variant: 'ghost' }),
                           'text-muted-foreground',
                         )}
                       >
-                        <Github fill={cssVar.colorTextDescription} size={14} />
+                        <Github className="size-3.5 text-foreground-description" size={14} />
                       </a>
                     )}
                     {sourceUrl && (
@@ -158,11 +126,11 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
                         target={'_blank'}
                         title={t('agentSkillDetail.sourceUrl')}
                         className={cn(
-                          buttonVariants({ size: 'icon-xs', variant: 'ghost' }),
+                          buttonVariants({ size: 'icon', variant: 'ghost' }),
                           'text-muted-foreground',
                         )}
                       >
-                        <ExternalLinkIcon size={14} />
+                        <ExternalLinkIcon className="size-3.5" size={14} />
                       </a>
                     )}
                   </div>
@@ -173,7 +141,7 @@ const AgentSkillDetail = memo<AgentSkillDetailProps>(({ skillId }) => {
           </div>
         </div>
       )}
-      <div className="flex" style={{ flex: 1, overflow: 'hidden' }}>
+      <div className="flex flex-1 overflow-hidden">
         <div className={styles.left}>
           <FileTree
             resourceTree={resourceTree || []}

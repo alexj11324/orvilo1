@@ -112,7 +112,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
 
   const renderAction = useCallback(
     (file: ResourceItem & { sourceType: 'file'; url: string }) => (
-      <Button variant="default" onClick={() => handleSelect(file)}>
+      <Button size="compact" variant="default" onClick={() => handleSelect(file)}>
         {t('knowledgeBase.library.action.add', { ns: 'chat' })}
       </Button>
     ),
@@ -188,7 +188,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
             />
           ))}
           {hasMore && (
-            <Button loading={isValidating} variant="ghost" onClick={loadMore}>
+            <Button loading={isValidating} size="compact" variant="ghost" onClick={loadMore}>
               {t('loadMore', { ns: 'file' })}
             </Button>
           )}

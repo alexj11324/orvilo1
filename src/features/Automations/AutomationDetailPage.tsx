@@ -208,6 +208,7 @@ const DetailHeaderActions = memo(() => {
     <div className="flex items-center gap-1.5">
       {automationMode === 'event' ? (
         <Button
+          size="compact"
           variant="outline"
           onClick={() => taskId && navigate(`/automations/${taskId}?tab=settings`)}
         >

@@ -95,7 +95,7 @@ const ProjectResources = memo<ProjectResourcesProps>(({ detail, onRefresh, proje
           </span>
           <span className="text-sm text-muted-foreground">{t('resources.description')}</span>
         </div>
-        <Button variant="default" onClick={handleAdd}>
+        <Button size="compact" variant="default" onClick={handleAdd}>
           {createElement(Plus, { 'size': 16, 'aria-hidden': true })}
           {t('resources.add')}
         </Button>

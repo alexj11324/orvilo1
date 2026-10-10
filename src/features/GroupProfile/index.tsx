@@ -76,6 +76,7 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
               <AgentRuntimeIcon size={24} type={member.heterogeneousType} />
               <Button
                 className="min-w-0 justify-start"
+                size="compact"
                 variant="ghost"
                 onClick={() => navigate(`/agent/${member.id}`)}
               >

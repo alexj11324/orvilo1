@@ -370,7 +370,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
           <span onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger render={<span />}>
-                <Button aria-label={tCommon('more')}>
+                <Button aria-label={tCommon('more')} size="compact">
                   <MoreHorizontalIcon data-icon="inline-start" />
                 </Button>
               </DropdownMenuTrigger>

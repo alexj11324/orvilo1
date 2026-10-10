@@ -173,6 +173,7 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
               aria-current={topic.id === activeTopicId ? 'true' : undefined}
               className={styles.item}
               key={topic.id}
+              size="compact"
               title={topic.title}
               type={'button'}
               variant="ghost"

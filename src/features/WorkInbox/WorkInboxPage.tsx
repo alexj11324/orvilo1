@@ -1064,7 +1064,7 @@ const WorkInboxPage = memo(() => {
         >
           <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
           <span className="flex-1">{t('inbox.loadFailed')}</span>
-          <Button variant="ghost" onClick={() => void refresh()}>
+          <Button size="compact" variant="ghost" onClick={() => void refresh()}>
             {tCommon('retry')}
           </Button>
         </div>
@@ -1114,7 +1114,12 @@ const WorkInboxPage = memo(() => {
                 <span className="text-sm text-destructive">{t('inbox.loadFailed')}</span>
               ) : null}
               {hasMore ? (
-                <Button disabled={loadingMore} variant="outline" onClick={() => void loadMore()}>
+                <Button
+                  disabled={loadingMore}
+                  size="compact"
+                  variant="outline"
+                  onClick={() => void loadMore()}
+                >
                   {loadingMore ? <Spinner /> : <></>}
                   {t('inbox.loadMore')}
                 </Button>
@@ -1308,6 +1313,7 @@ const WorkInboxPage = memo(() => {
         {surface === 'detail' ? (
           <div className="flex flex-row">
             <Button
+              size="compact"
               variant="outline"
               onClick={() => writeInboxParams({ detail: null, item: null })}
             >
@@ -1403,7 +1409,11 @@ const WorkInboxPage = memo(() => {
     <div className={styles.detail}>
       {surface === 'detail' ? (
         <div className="flex flex-row">
-          <Button variant="outline" onClick={() => writeInboxParams({ detail: null, item: null })}>
+          <Button
+            size="compact"
+            variant="outline"
+            onClick={() => writeInboxParams({ detail: null, item: null })}
+          >
             {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
             {tCommon('back')}
           </Button>

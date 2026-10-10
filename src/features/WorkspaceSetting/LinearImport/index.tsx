@@ -324,7 +324,13 @@ function SearchPicker({
           )}
         </ComboboxList>
         {hasMore && (
-          <Button className="w-full" disabled={loadingMore} variant="outline" onClick={onLoadMore}>
+          <Button
+            className="w-full"
+            disabled={loadingMore}
+            size="compact"
+            variant="outline"
+            onClick={onLoadMore}
+          >
             {loadingMore
               ? t('workspaceSetting.import.loading')
               : t('workspaceSetting.import.loadMore')}
@@ -755,7 +761,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                     </p>
                     {job.lastError && <p className={styles.error}>{job.lastError}</p>}
                     {job.status === 'failed' && (
-                      <Button disabled={busy} variant="outline" onClick={resume}>
+                      <Button disabled={busy} size="compact" variant="outline" onClick={resume}>
                         <RefreshCw aria-hidden size={16} />
                         {t('workspaceSetting.import.resume')}
                       </Button>
@@ -763,6 +769,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                     {job.status !== 'completed' && (
                       <Button
                         disabled={busy}
+                        size="compact"
                         variant="outline"
                         onClick={() => void pollJob(job.id)}
                       >

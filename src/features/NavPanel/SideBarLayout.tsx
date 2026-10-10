@@ -112,7 +112,7 @@ const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => 
   }, [navKey]);
 
   return (
-    <div className="flex flex-col gap-[1px]" style={{ height: '100%', overflow: 'hidden' }}>
+    <div className="flex flex-col gap-px" style={{ height: '100%', overflow: 'hidden' }}>
       <ScrollFadeProperties />
       <Suspense fallback={<SideBarHeaderSkeleton />}>{header}</Suspense>
       <ScrollAreaPrimitive.Root

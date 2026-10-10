@@ -1,7 +1,7 @@
 'use client';
 
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckCircle2,
   ChevronRight,
@@ -28,58 +28,22 @@ export interface RoundReview {
   total: number;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  countBadge: css`
-    padding-block: 1px;
-    padding-inline: 7px;
-    border-radius: 99px;
-
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  round: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    transition:
-      box-shadow 0.2s ease,
-      border-color 0.2s ease;
-  `,
-  roundActive: css`
-    border-color: ${cssVar.colorPrimary};
-    box-shadow: 0 0 0 2px ${cssVar.colorPrimaryBg};
-  `,
-  /* The whole card is the report affordance — no inner button. */
-  roundClickable: css`
-    cursor: pointer;
-
-    .acceptance-round-open-hint {
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillQuaternary};
-
-      .acceptance-round-open-hint {
-        opacity: 1;
-      }
-    }
-  `,
-}));
+const styles = {
+  countBadge:
+    'py-px px-[7px] rounded-[99px] text-[12px] tabular-nums text-muted-foreground bg-accent',
+  round:
+    'py-2.5 px-3 border border-sidebar-border rounded-(--ant-border-radius) transition-[box-shadow,border-color] duration-200 ease-[ease]',
+  roundActive: 'border-primary shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
+  roundClickable:
+    'cursor-pointer [&_.acceptance-round-open-hint]:opacity-0 [&_.acceptance-round-open-hint]:transition-opacity [&_.acceptance-round-open-hint]:duration-200 [&_.acceptance-round-open-hint]:ease-[ease] hover:border-border hover:bg-(--ant-color-fill-quaternary) [&:hover_.acceptance-round-open-hint]:opacity-100',
+};
 
 /** Only the still-running states keep a machine indicator; a settled round is
     reframed as an ACCEPTANCE state (已验收 / 待验收), not a verification verdict. */
 const RUNNING_META: Record<string, { color: string; icon: typeof CheckCircle2 }> = {
-  errored: { color: cssVar.colorWarning, icon: CircleAlert },
-  repairing: { color: cssVar.colorWarning, icon: RefreshCw },
-  verifying: { color: cssVar.colorInfo, icon: Loader2 },
+  errored: { color: 'var(--warning)', icon: CircleAlert },
+  repairing: { color: 'var(--warning)', icon: RefreshCw },
+  verifying: { color: 'var(--info)', icon: Loader2 },
 };
 
 /** Is the round still executing (so it has no settled result to accept yet)? */
@@ -117,7 +81,7 @@ const LedgerPanel = memo<LedgerPanelProps>(
     return (
       <div className="flex flex-col gap-3" style={{ padding: 16 }}>
         <div className="flex items-center gap-2">
-          <FileClock color={cssVar.colorTextSecondary} size={16} />
+          <FileClock color={'var(--muted-foreground)'} size={16} />
           <div className="font-semibold" style={{ fontSize: 13 }}>
             {t('acceptance.ledger.title')}
           </div>
@@ -150,10 +114,10 @@ const LedgerPanel = memo<LedgerPanelProps>(
           const stateColor = runningMeta
             ? runningMeta.color
             : rejected
-              ? cssVar.colorError
+              ? 'var(--destructive)'
               : allAccepted
-                ? cssVar.colorSuccess
-                : cssVar.colorTextTertiary;
+                ? 'var(--success)'
+                : 'var(--ant-color-text-tertiary)';
           const stateIcon = runningMeta
             ? runningMeta.icon
             : rejected
@@ -189,7 +153,7 @@ const LedgerPanel = memo<LedgerPanelProps>(
               aria-label={openable ? t('acceptance.ledger.viewReport') : undefined}
               key={round.run.id}
               role={openable ? 'button' : undefined}
-              className={`flex flex-col gap-1.5 ${cx(
+              className={`flex flex-col gap-1.5 ${cn(
                 styles.round,
                 openable && styles.roundClickable,
                 highlight === round.run.roundIndex && styles.roundActive,
@@ -219,7 +183,7 @@ const LedgerPanel = memo<LedgerPanelProps>(
                 {openable && (
                   <ChevronRight
                     className="'acceptance-round-open-hint'"
-                    color={cssVar.colorTextTertiary}
+                    color={'var(--ant-color-text-tertiary)'}
                     size={14}
                   />
                 )}

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { useState } from 'react';
 import { useParams } from 'react-router';
 
@@ -11,41 +10,11 @@ import { FlowPanelHostContext } from './Flow/FlowPanelHost';
 import AcceptanceLedgerRail from './History/AcceptanceLedgerRail';
 import { acceptanceScrollLayout } from './layout';
 
-const styles = createStaticStyles(({ css }) => ({
-  contentFrame: css`
-    overflow: ${acceptanceScrollLayout.frameOverflow};
-  `,
-  flowPanel: css`
-    flex: none;
-    width: min(440px, 42%);
-    height: 100%;
-    min-height: 0;
-
-    &:empty {
-      display: none;
-    }
-
-    @media (width <= 767px) {
-      width: 100%;
-      height: 50%;
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  page: css`
-    position: relative;
-
-    overflow: hidden;
-
-    width: 100%;
-    height: 100%;
-
-    background: ${cssVar.colorBgContainer};
-
-    @media (width <= 767px) {
-      flex-direction: column;
-    }
-  `,
-}));
+const styles = {
+  flowPanel:
+    'flex-none w-[min(440px,42%)] h-full min-h-0 empty:hidden [@media(width<=767px)]:w-full [@media(width<=767px)]:h-1/2 [@media(width<=767px)]:border-t [@media(width<=767px)]:border-sidebar-border',
+  page: 'relative overflow-hidden w-full h-full bg-card [@media(width<=767px)]:flex-col',
+};
 interface AcceptancePageProps {
   acceptanceId?: string;
   onDraftToComposer?: (text: string) => boolean;
@@ -81,8 +50,8 @@ const AcceptancePage = ({
               style={{ minHeight: 0, minWidth: 0, position: 'relative' }}
             >
               <div
-                className={`flex flex-col flex-1 ${styles.contentFrame}`}
-                style={{ minWidth: 0 }}
+                className="flex flex-col flex-1"
+                style={{ minWidth: 0, overflow: acceptanceScrollLayout.frameOverflow }}
               >
                 <div className="flex flex-col gap-4" style={{ width: '100%' }}>
                   <AcceptanceOverview onDraftToComposer={onDraftToComposer} />

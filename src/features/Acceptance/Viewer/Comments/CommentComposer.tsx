@@ -1,7 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
-import type { CSSProperties } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,19 +12,6 @@ import {
   AttachmentUploadButton,
   useFeedbackAttachments,
 } from '../Evidence/attachments';
-
-/**
- * `autoSize` writes its own inline height onto the textarea, so a floor has to
- * reach the element itself — a `style` on the component lands on the wrapper.
- */
-const styles = createStaticStyles(({ css }) => ({
-  tall: css`
-    & textarea {
-      /* The control ships its own min-height; this floor has to outrank it. */
-      min-height: var(--acceptance-composer-min-height) !important;
-    }
-  `,
-}));
 
 /** Room for a couple of screenshots without turning a remark into an album. */
 const MAX_COMMENT_ATTACHMENTS = 4;
@@ -85,19 +70,12 @@ const CommentComposer = memo<CommentComposerProps>(
     };
 
     return (
-      <div
-        className={`flex flex-col gap-2 ${minHeight ? styles.tall : undefined}`}
-        style={{
-          ...(minHeight
-            ? ({ '--acceptance-composer-min-height': `${minHeight}px` } as CSSProperties)
-            : undefined),
-        }}
-      >
+      <div className="flex flex-col gap-2">
         <Textarea
           autoFocus={autoFocus}
           placeholder={placeholder}
           rows={compact ? 1 : 2}
-          style={{ maxHeight: '20lh' }}
+          style={{ maxHeight: '20lh', minHeight: minHeight || undefined }}
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onPaste={handlePaste}

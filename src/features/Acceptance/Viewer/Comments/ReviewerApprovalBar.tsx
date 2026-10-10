@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { BadgeCheck } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { memo, useState } from 'react';
@@ -17,20 +16,10 @@ import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import { canReviewAcceptance } from '../visibility';
 import { useAcceptanceComments } from './hooks';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    padding-block: 14px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  description: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  card: 'py-3.5 px-4 border border-sidebar-border rounded-[12px] bg-card',
+  description: 'text-[12px] text-(--ant-color-text-tertiary)',
+};
 
 /**
  * The reviewer's counterpart of the decision bar. A teammate who can review
@@ -103,7 +92,7 @@ const ReviewerApprovalBar = memo(() => {
   return (
     <div className={`flex flex-col gap-2.5 ${styles.card}`}>
       <div className="flex items-center gap-2">
-        <BadgeCheck color={approvedCurrentRound ? cssVar.colorSuccess : undefined} size={18} />
+        <BadgeCheck color={approvedCurrentRound ? 'var(--success)' : undefined} size={18} />
         <div className="font-semibold">
           {mine
             ? mine.contextRoundIndex === null

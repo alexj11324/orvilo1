@@ -1,7 +1,7 @@
 'use client';
 
 import type { AcceptanceCommentThread } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckCircle2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -88,7 +88,7 @@ const CommentThread = memo<CommentThreadProps>(
     );
 
     return (
-      <div className={`flex flex-col ${cx(resolved && styles.resolvedThread)}`}>
+      <div className={`flex flex-col ${cn(resolved && styles.resolvedThread)}`}>
         <CommentCard badges={badges} comment={root} variant={'plain'} onDelete={onDelete} />
         {replies.map((reply) => (
           <div className={styles.panelReply} key={reply.id}>

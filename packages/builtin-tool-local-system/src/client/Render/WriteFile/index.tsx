@@ -1,7 +1,7 @@
 import { Markdown } from '@lobehub/ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
@@ -11,16 +11,10 @@ import { CodeBlock } from '@/components/ui/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LocalFile, LocalFolder } from '@/features/LocalFile';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 4px;
-  `,
-  previewBox: css`
-    overflow: hidden;
-    border-radius: 8px;
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  container: 'py-1',
+  previewBox: 'overflow-hidden rounded-[8px] bg-accent',
+};
 
 type WriteFileArgs = WriteLocalFileParams & {
   file_path?: string;
@@ -61,7 +55,7 @@ const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
   }
 
   return (
-    <div className={cx('flex flex-col gap-3', styles.container)}>
+    <div className={cn('flex flex-col gap-3', styles.container)}>
       <div className="flex flex-row items-center">
         <LocalFolder path={dir} />
         <span className="anticon" role="img">
@@ -72,7 +66,7 @@ const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
 
       {args.content && (
         <div
-          className={cx('flex flex-col', styles.previewBox)}
+          className={cn('flex flex-col', styles.previewBox)}
           style={{ height: isHtml ? 260 : undefined }}
         >
           {isHtml ? (

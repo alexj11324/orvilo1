@@ -1,5 +1,5 @@
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { FolderOpen } from 'lucide-react';
 import nodePath from 'path-browserify-esm';
@@ -10,55 +10,13 @@ import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
 import { formatSize } from '@/utils/format';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    border-radius: 4px;
-    color: ${cssVar.colorTextSecondary};
-
-    :hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  dir: css`
-    overflow: hidden;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    line-height: 1.3;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  size: css`
-    flex-shrink: 0;
-
-    min-width: 56px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: end;
-  `,
-  time: css`
-    overflow: hidden;
-
-    font-size: 11px;
-    line-height: 1;
-    color: ${cssVar.colorTextDescription};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  title: css`
-    overflow: hidden;
-    display: block;
-
-    line-height: 1.3;
-    color: inherit;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  container: 'rounded-[4px] text-muted-foreground [&_:hover]:bg-accent [&_:hover]:text-foreground',
+  dir: 'truncate font-mono text-[11px] leading-[1.3] text-[var(--ant-color-text-tertiary)]',
+  size: 'min-w-[56px] shrink-0 text-end font-mono text-[11px] text-[var(--ant-color-text-tertiary)]',
+  time: 'truncate text-[11px] leading-none text-[var(--ant-color-text-description)]',
+  title: 'block truncate leading-[1.3] text-inherit',
+};
 
 interface FileItemProps {
   createdTime?: Date | string;
@@ -100,7 +58,7 @@ const FileItem = memo<FileItemProps>(
 
     return (
       <div
-        className={cx('flex flex-row items-center gap-3', styles.container)}
+        className={cn('flex flex-row items-center gap-3', styles.container)}
         style={{
           cursor: openFile || openFolder ? 'pointer' : 'default',
           fontSize: 12,

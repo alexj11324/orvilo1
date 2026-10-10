@@ -1,29 +1,13 @@
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowRight } from 'lucide-react';
 import { memo } from 'react';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  icon: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  item: css`
-    padding-block: 4px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadius};
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  path: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    word-break: break-all;
-  `,
-}));
+const styles = {
+  icon: 'text-[var(--ant-color-text-quaternary)]',
+  item: 'rounded-[var(--ant-border-radius)] px-3 py-1 transition-[background-color] duration-200 ease-[ease] hover:bg-[var(--ant-color-fill-quaternary)]',
+  path: 'font-mono text-[12px] break-all',
+};
 
 interface MoveFileItemProps {
   newPath: string;
@@ -36,11 +20,11 @@ const MoveFileItem = memo<MoveFileItemProps>(({ oldPath, newPath }) => {
   const displayNewPath = displayRelativePath ? displayRelativePath(newPath) : newPath;
 
   return (
-    <div className={cx('flex flex-row items-center gap-2 w-[100%]', styles.item)}>
+    <div className={cn('flex flex-row items-center gap-2 w-[100%]', styles.item)}>
       <div className="flex flex-col flex-1">
         <div className={cn('text-muted-foreground', styles.path)}>{displayOldPath}</div>
       </div>
-      <span className={cx('anticon', styles.icon)} role="img">
+      <span className={cn('anticon', styles.icon)} role="img">
         <ArrowRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
       </span>
       <div className="flex flex-col" style={{ flex: 2 }}>

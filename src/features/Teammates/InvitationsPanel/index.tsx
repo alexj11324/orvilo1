@@ -1,7 +1,7 @@
 'use client';
 
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Ban, Mail } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,51 +17,20 @@ import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownM
 import type { WorkspaceInvitationSummary } from '../api/contract';
 import { useTeammateActions, useWorkspaceInvitationsQuery } from '../api/hooks';
 
-const styles = createStaticStyles(({ css }) => ({
-  email: css`
-    overflow: hidden;
-    flex: 1;
+const styles = {
+  email: 'overflow-hidden flex-1 text-sm leading-5.5 text-ellipsis whitespace-nowrap',
+  headerCell: 'text-xs leading-5 font-medium text-foreground-tertiary uppercase tracking-normal',
+  meta: 'text-xs leading-5 text-muted-foreground',
+  row: 'grid grid-cols-[minmax(0,1fr)_120px_130px_110px_40px] gap-3 items-center py-2.5 px-1 border-b border-divider',
+  table: 'min-w-160',
+  tableScroll: 'overflow-x-auto',
+};
 
-    font-size: 14px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  headerCell: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  `,
-  meta: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  row: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 120px 130px 110px 40px;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 4px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  table: css`
-    /* Fixed columns + gaps floor at ~640px; below that the wrapper scrolls
-       horizontally instead of crushing cells or overflowing the page. */
-    min-width: 640px;
-  `,
-  tableScroll: css`
-    overflow-x: auto;
-  `,
-}));
-
-const STATUS_COLOR: Record<string, string> = {
-  accepted: 'green',
-  expired: 'default',
-  pending: 'orange',
-  revoked: 'red',
+const STATUS_CLASSES: Record<string, string> = {
+  accepted: 'border-success-border bg-success-wash text-success-text',
+  expired: 'border-divider bg-fill-quaternary text-muted-foreground',
+  pending: 'border-warning-border bg-warning-wash text-warning-text',
+  revoked: 'border-destructive-border bg-destructive-wash text-destructive-text',
 };
 
 const STATUS_KEY = {
@@ -116,7 +85,11 @@ const InvitationRow = memo<InvitationRowProps>(({ canManage, invitation }) => {
         </div>
       </div>
       <div>
-        <Tag style={{ color: STATUS_COLOR[invitation.status] ?? 'default' }}>
+        <Tag
+          className={cn('py-0 text-xs leading-5', STATUS_CLASSES[invitation.status])}
+          size="xl"
+          variant="secondary"
+        >
           {t(STATUS_KEY[invitation.status])}
         </Tag>
       </div>
@@ -163,12 +136,12 @@ export const InvitationsPanel = memo(() => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4" style={{ paddingBlock: 8 }}>
+      <div className="flex flex-col gap-4 py-2">
         {Array.from({ length: 3 }).map((_, i) => (
           <div className="flex items-center gap-2.5" key={i}>
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '45%' }} />
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '20%' }} />
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '20%' }} />
+            <Skeleton className="mb-0 h-3 w-9/20" />
+            <Skeleton className="mb-0 h-3 w-1/5" />
+            <Skeleton className="mb-0 h-3 w-1/5" />
           </div>
         ))}
       </div>
@@ -176,11 +149,13 @@ export const InvitationsPanel = memo(() => {
   }
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>{t('workspaceSetting.invitations.loadFailed')}</AlertTitle>
+      <Alert className="rounded-(--radius-card) text-sm leading-5.5" variant="destructive">
+        <AlertTitle className="line-clamp-none text-sm leading-5.5 tracking-normal">
+          {t('workspaceSetting.invitations.loadFailed')}
+        </AlertTitle>
         <AlertAction>
           {
-            <Button size="sm" onClick={() => void mutate()}>
+            <Button size="lg" onClick={() => void mutate()}>
               {t('retry', { ns: 'common' })}
             </Button>
           }
@@ -218,9 +193,11 @@ export const InvitationsPanel = memo(() => {
         </div>
       </div>
       {invitations.length === 0 && (
-        <Empty style={{ paddingBlock: 32 }}>
+        <Empty className="py-8">
           <EmptyHeader>
-            <EmptyDescription>{t('workspaceSetting.invitations.empty')}</EmptyDescription>
+            <EmptyDescription className="text-sm leading-5.5">
+              {t('workspaceSetting.invitations.empty')}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}

@@ -36,6 +36,7 @@ const ExceededContextWindowError = memo<ExceededContextWindowErrorProps>(({ id }
         <Button
           disabled={!canCreate || !context.topicId || disabled}
           loading={loading}
+          size="lg"
           variant="default"
           onClick={handleCompact}
         >

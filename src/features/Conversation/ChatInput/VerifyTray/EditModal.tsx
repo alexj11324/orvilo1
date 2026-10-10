@@ -50,6 +50,7 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
         <Input
           placeholder={tv('acceptance.tray.editModal.namePlaceholder')}
           value={name}
+          visualSize="normal"
           onChange={(e) => setName(e.target.value)}
         />
       </div>
@@ -70,6 +71,7 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
       <div className="flex items-center justify-between">
         {onRemove ? (
           <Button
+            size="lg"
             variant="destructive"
             onClick={() => {
               onRemove();
@@ -82,12 +84,13 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
           <span />
         )}
         <div className="flex gap-2">
-          <Button disabled={saving} onClick={close}>
+          <Button disabled={saving} size="lg" onClick={close}>
             {tv('acceptance.actions.cancel')}
           </Button>
           <Button
             disabled={!name.trim() || saving}
             loading={saving}
+            size="lg"
             variant="default"
             onClick={handleSave}
           >

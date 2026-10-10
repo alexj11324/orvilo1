@@ -313,6 +313,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
               placeholder={t('tool.intervention.rejectReasonPlaceholder')}
               ref={rejectInputRef}
               value={reason}
+              visualSize="normal"
               onChange={(e) => setReason(e.target.value)}
               onFocus={() => setChoice('reject')}
               onKeyDown={handleRejectInputKeyDown}

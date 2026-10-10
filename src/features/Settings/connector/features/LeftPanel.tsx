@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { Grid2x2Plus } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,35 +9,6 @@ import { Button } from '@/components/ui/button';
 import ConnectorList from './ConnectorList';
 import { type ConnectorDetailType } from './connectorSelection';
 import { type ConnectorPresetActions } from './useConnectorPresetActions';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  body: css`
-    overflow-y: auto;
-    flex: 1;
-    padding-block: 4px;
-    padding-inline: 8px;
-  `,
-  header: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    height: 42px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  root: css`
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-
-    width: 300px;
-    min-width: 260px;
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
 
 interface LeftPanelProps {
   onSelect: (identifier: string, type: ConnectorDetailType) => void;
@@ -50,8 +20,12 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, presetActions, selectedIdent
   const { t } = useTranslation('setting');
 
   return (
-    <div className={styles.root}>
-      <div className={styles.header}>
+    <div className={'flex w-75 min-w-65 flex-col overflow-y-auto border-e border-sidebar-border'}>
+      <div
+        className={
+          'flex h-10.5 shrink-0 items-center justify-between gap-2 border-be border-sidebar-border px-4'
+        }
+      >
         <span className="text-sm font-semibold">{t('skillView.connectors', 'Connectors')}</span>
 
         <div className="flex min-w-0 flex-row gap-1.5">
@@ -74,7 +48,7 @@ const LeftPanel = memo<LeftPanelProps>(({ onSelect, presetActions, selectedIdent
         </div>
       </div>
 
-      <div className={styles.body}>
+      <div className={'flex-1 overflow-y-auto px-2 py-1'}>
         <ConnectorList
           githubCapability={presetActions.githubCapability}
           githubConnecting={presetActions.githubConnecting}

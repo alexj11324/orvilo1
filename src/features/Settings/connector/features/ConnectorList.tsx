@@ -8,7 +8,6 @@ import {
   RecommendedSkillType,
   resolveConnectorCatalogItem,
 } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
@@ -43,33 +42,6 @@ import McpSkillItem from './McpSkillItem';
 import OrviloSkillItem from './OrviloSkillItem';
 import { useScopeAwareConnectorFetch } from './useScopeAwareConnectorFetch';
 import { visibleMcpPresets } from './visibleMcpPresets';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  `,
-  sectionHeader: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 12px 4px;
-    padding-inline: 4px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-}));
 
 interface ConnectorListProps {
   githubCapability?: 'pat_available' | 'not_configurable';
@@ -299,7 +271,10 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
       <>
         <div
           {...clickableProps()}
-          className={cn(styles.sectionHeader, CLICKABLE_FOCUS_RING)}
+          className={cn(
+            'flex cursor-pointer items-center gap-1 px-1 pbs-3 pbe-1 text-[12px] font-medium text-muted-foreground select-none hover:text-foreground',
+            CLICKABLE_FOCUS_RING,
+          )}
           onClick={() => toggleSection(key)}
         >
           {isCollapsed ? <ChevronRightIcon size={10} /> : <ChevronDownIcon size={10} />}
@@ -318,7 +293,7 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
   const hasAgentConnectors = agentBoundConnectors.length > 0;
 
   return (
-    <div className={styles.container}>
+    <div className={'flex flex-col gap-0.5'}>
       {hasCommunityConnectors &&
         renderSection(
           'communityConnectors',

@@ -2,7 +2,6 @@
 
 import { McpIcon } from '@lobehub/ui/icons';
 import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { createElement, memo } from 'react';
 
 import Avatar from '@/components/Avatar';
@@ -35,7 +34,7 @@ const AgentConnectorItem = memo<{
     if (brand) {
       const { icon, label } = brand;
       if (typeof icon === 'string') return <Avatar alt={label} avatar={icon} size={18} />;
-      return createElement(icon, { fill: cssVar.colorText, size: 18 });
+      return createElement(icon, { fill: 'var(--foreground)', size: 18 });
     }
     return createElement(McpIcon, { size: 18 });
   };

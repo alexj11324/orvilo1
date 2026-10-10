@@ -5,7 +5,6 @@ import {
   getOrviloSkillProviderById,
   matchMcpPresetByConnector,
 } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback, useEffect, useState } from 'react';
 
@@ -32,19 +31,6 @@ import { useConnectorPresetActions } from './features/useConnectorPresetActions'
 import { visibleMcpPresets } from './features/visibleMcpPresets';
 
 export type { SelectedConnector } from './features/connectorSelection';
-
-const styles = createStaticStyles(({ css }) => ({
-  detail: css`
-    overflow-y: auto;
-    flex: 1;
-  `,
-  root: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    height: 100%;
-  `,
-}));
 
 /**
  * The Connector settings master-detail surface.
@@ -159,7 +145,7 @@ export const ConnectorSettings = memo(() => {
   return (
     <>
       <NavHeader />
-      <div className={styles.root}>
+      <div className={'flex h-full flex-1 overflow-hidden'}>
         <LeftPanel
           presetActions={presetActions}
           selectedIdentifier={selected?.identifier}
@@ -167,7 +153,7 @@ export const ConnectorSettings = memo(() => {
         />
 
         {selected && (
-          <div className={styles.detail}>
+          <div className={'flex-1 overflow-y-auto'}>
             <ConnectorDetailPanel
               identifier={selected.identifier}
               presetActions={presetActions}

@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon, MoreHorizontalIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,33 +8,6 @@ import { ConnectorToolPermission } from '@/database/schemas';
 import type { ConnectorTool } from '@/store/tool/slices/connector';
 
 import ToolPermissionRow from './ToolPermissionRow';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  badge: css`
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  groupHeader: css`
-    user-select: none;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 0;
-  `,
-}));
 
 interface ToolPermissionGroupProps {
   /** Read-only mode — the caller lacks the manage permission for this connector. */
@@ -75,7 +47,7 @@ const ToolPermissionGroup = memo<ToolPermissionGroupProps>(
 
     return (
       <div>
-        <div className={styles.groupHeader}>
+        <div className={'flex items-center gap-2 px-0 py-2.5 select-none'}>
           <Button
             aria-expanded={expanded}
             className="h-auto flex-1 justify-start gap-1.5 rounded-sm p-0 text-start text-sm font-medium hover:bg-transparent"
@@ -85,7 +57,13 @@ const ToolPermissionGroup = memo<ToolPermissionGroupProps>(
           >
             {expanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
             {label}
-            <span className={styles.badge}>{tools.length}</span>
+            <span
+              className={
+                'inline-flex items-center justify-center rounded-(--radius-chip) bg-selected px-1.5 py-px text-[12px] text-muted-foreground'
+              }
+            >
+              {tools.length}
+            </span>
           </Button>
 
           {!disabled && (

@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -32,7 +32,7 @@ export const SearchAgentInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-group-agent-builder.apiName.searchAgent')}
       </span>
       {query && (
@@ -48,7 +48,7 @@ export const SearchAgentInspector = memo<
         ) : (
           <span
             className="text-[12px]"
-            style={{ marginInlineStart: 4, color: cssVar.colorTextDescription }}
+            style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
           >
             ({t('builtins.orvilo-group-agent-builder.inspector.noResults')})
           </span>

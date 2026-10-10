@@ -2,7 +2,6 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -12,50 +11,14 @@ import ToolTag from '@/features/ToolTag';
 
 import type { BatchCreateAgentsParams } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    line-height: 1.5;
-    color: ${cssVar.colorTextDescription};
-    text-overflow: ellipsis;
-  `,
-  index: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  item: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-
-    &:not(:last-child) {
-      border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-    }
-  `,
-  systemRole: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  description: 'line-clamp-1 text-ellipsis leading-[1.5] text-[var(--ant-color-text-description)]',
+  index: 'shrink-0 text-[12px] text-[var(--ant-color-text-quaternary)]',
+  item: 'px-3 py-2.5 not-last:[border-block-end:1px_dashed_var(--sidebar-border)]',
+  systemRole:
+    'line-clamp-3 text-ellipsis text-[12px] leading-[1.5] text-[var(--ant-color-text-tertiary)]',
+  title: 'truncate text-[13px] font-medium',
+};
 
 export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreateAgentsParams>>(
   ({ args }) => {
@@ -64,14 +27,7 @@ export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreate
     if (!agents || agents.length === 0) return null;
 
     return (
-      <div
-        style={{
-          background: cssVar.colorBgContainer,
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: cssVar.borderRadius,
-          width: '100%',
-        }}
-      >
+      <div className="w-full rounded-[var(--ant-border-radius)] border border-sidebar-border bg-card">
         {agents.map((agent, index) => (
           <div className={cn('flex', 'items-start', 'gap-2', styles.item)} key={index}>
             <div className={styles.index}>{index + 1}.</div>

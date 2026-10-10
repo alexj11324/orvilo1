@@ -13,9 +13,9 @@ import Video from './Video';
 
 const styles = {
   container: 'flex flex-1 p-2 rounded-[var(--radius-card)] [color:initial] hover:bg-accent',
-  desc: 'line-clamp-2 text-ellipsis text-[var(--ant-color-text-tertiary)]',
+  desc: 'line-clamp-2 text-ellipsis text-foreground-tertiary',
   title: 'text-base leading-[inherit] text-[var(--ant-color-link)]',
-  url: 'line-clamp-1 text-ellipsis text-[var(--ant-color-text-description)]',
+  url: 'line-clamp-1 text-ellipsis text-foreground-description',
 };
 
 interface SearchResultProps extends UniformSearchResult {

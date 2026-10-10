@@ -2,7 +2,6 @@
 
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,20 +12,6 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { highlightTextStyles, shinyTextStyles } from '@/styles';
 
 import type { SpeakParams } from '../../../types';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  title: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-}));
 
 export const SpeakInspector = memo<BuiltinInspectorProps<SpeakParams>>(
   ({ args, partialArgs, isArgumentsStreaming }) => {
@@ -41,11 +26,10 @@ export const SpeakInspector = memo<BuiltinInspectorProps<SpeakParams>>(
         ? agentGroupSelectors.getAgentByIdFromGroup(activeGroupId, agentId)(s)
         : undefined,
     );
-    const theme = useTheme();
 
     if (isArgumentsStreaming && !agent) {
       return (
-        <div className={styles.root}>
+        <div className="flex items-center gap-2 overflow-hidden">
           <span className={shinyTextStyles.shinyText}>
             {t('builtins.orvilo-group-management.apiName.speak')}
           </span>
@@ -56,14 +40,19 @@ export const SpeakInspector = memo<BuiltinInspectorProps<SpeakParams>>(
     const agentName = agent?.title || agentId;
 
     return (
-      <div className={cn('flex', 'items-center', 'gap-2', styles.root)}>
-        <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
+      <div className="flex items-center gap-2 overflow-hidden">
+        <span
+          className={cn(
+            'shrink-0 whitespace-nowrap text-muted-foreground',
+            isArgumentsStreaming && shinyTextStyles.shinyText,
+          )}
+        >
           {t('builtins.orvilo-group-management.inspector.speak.title')}
         </span>
         {agent && (
           <Avatar
             avatar={agent.avatar || DEFAULT_AVATAR}
-            background={agent.backgroundColor || theme.colorBgContainer}
+            background={agent.backgroundColor || 'var(--card)'}
             shape={'square'}
             size={24}
             title={agent.title || undefined}

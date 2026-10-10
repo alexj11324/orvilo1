@@ -3,7 +3,6 @@
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinInspectorProps } from '@orvilo/types';
 import { safeParsePartialJSON } from '@orvilo/utils';
-import { createStaticStyles, cx, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,20 +13,6 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { shinyTextStyles } from '@/styles';
 
 import type { ExecuteTasksParams, TaskItem } from '../../../types';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  title: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-}));
 
 export const ExecuteAgentTasksInspector = memo<BuiltinInspectorProps<ExecuteTasksParams>>(
   ({ args, partialArgs, isArgumentsStreaming }) => {
@@ -52,7 +37,6 @@ export const ExecuteAgentTasksInspector = memo<BuiltinInspectorProps<ExecuteTask
     const groupAgents = useAgentGroupStore((s) =>
       activeGroupId ? agentGroupSelectors.getGroupAgents(activeGroupId)(s) : [],
     );
-    const theme = useTheme();
 
     // Get agent details for the task targets
     const agents = useMemo(() => {
@@ -67,16 +51,16 @@ export const ExecuteAgentTasksInspector = memo<BuiltinInspectorProps<ExecuteTask
       () =>
         agents.map((agent) => ({
           avatar: agent.avatar || DEFAULT_AVATAR,
-          background: agent.backgroundColor || theme.colorBgContainer,
+          background: agent.backgroundColor || 'var(--card)',
           key: agent.id,
           title: agent.title || undefined,
         })),
-      [agents, theme.colorBgContainer],
+      [agents],
     );
 
     if (isArgumentsStreaming && agents.length === 0) {
       return (
-        <div className={styles.root}>
+        <div className="flex items-center gap-2 overflow-hidden">
           <span className={shinyTextStyles.shinyText}>
             {t('builtins.orvilo-group-management.apiName.executeAgentTasks')}
           </span>
@@ -85,8 +69,13 @@ export const ExecuteAgentTasksInspector = memo<BuiltinInspectorProps<ExecuteTask
     }
 
     return (
-      <div className={cn('flex', 'items-center', 'gap-2', styles.root)}>
-        <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
+      <div className="flex items-center gap-2 overflow-hidden">
+        <span
+          className={cn(
+            'shrink-0 whitespace-nowrap text-muted-foreground',
+            isArgumentsStreaming && shinyTextStyles.shinyText,
+          )}
+        >
           {t('builtins.orvilo-group-management.inspector.executeAgentTasks.title')}
         </span>
         {avatarItems.length > 0 && <AvatarGroup items={avatarItems} shape={'circle'} size={24} />}

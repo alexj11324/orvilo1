@@ -1,6 +1,5 @@
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { createModal, DropdownMenu } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
 import { t } from 'i18next';
 import { ChevronDownIcon, ChevronUpIcon, InfoIcon, PlusIcon, XIcon } from 'lucide-react';
 import type { ModelRating } from 'model-bank';
@@ -18,159 +17,32 @@ import CompareRadar, { COMPARE_SERIES_COLORS, MAX_COMPARE_MODELS } from './Compa
 
 const RULE_KEYS = ['relative', 'sources', 'speed', 'price', 'missing'] as const;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  addButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border: 1px dashed ${cssVar.colorBorder};
-    border-radius: 16px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimary};
-      color: ${cssVar.colorPrimary};
-    }
-  `,
-  addButtonDisabled: css`
-    cursor: not-allowed;
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  bestPill: css`
-    display: inline-block;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 10px;
-
-    font-weight: 600;
-  `,
-  cell: css`
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-align: center;
-  `,
-  cellMissing: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  chip: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    max-width: 200px;
-    padding-block: 2px;
-    padding-inline: 8px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-  `,
-  chipName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  chipRemove: css`
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    color: ${cssVar.colorTextTertiary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  colorDot: css`
-    flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  `,
-  headerCell: css`
-    overflow: hidden;
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  headerName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  ruleItem: css`
-    font-size: 12px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  rulesList: css`
-    margin: 0;
-    padding-inline-start: 16px;
-  `,
-  rulesToggle: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-    align-self: flex-start;
-
-    padding: 0;
-    border: none;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: none;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  sourceLink: css`
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorPrimary};
-    }
-  `,
-  table: css`
-    display: grid;
-    row-gap: 4px;
-  `,
-  tableDivider: css`
-    grid-column: 1 / -1;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  tableHeader: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-  `,
-  tableRowLabel: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-  `,
-}));
+const styles = {
+  addButton:
+    'inline-flex min-h-9 cursor-pointer items-center gap-1 rounded-(--radius-button) border border-dashed border-border px-2 py-1 text-sm leading-5.5 text-muted-foreground hover:border-primary-text hover:text-primary-text focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  addButtonDisabled:
+    'disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground',
+  bestPill: 'inline-block rounded-(--radius-chip) px-2 py-px font-semibold',
+  cell: 'text-xs leading-5 text-foreground text-center',
+  cellMissing: 'text-muted-foreground',
+  chip: 'inline-flex max-w-50 items-center gap-1.5 rounded-(--radius-chip) border border-divider px-2 py-0.5 text-sm leading-5.5 text-foreground',
+  chipName: 'min-w-0 truncate',
+  chipRemove:
+    'inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-(--radius-input) text-muted-foreground hover:text-foreground hover:bg-accent',
+  colorDot: 'size-2 shrink-0 rounded-full',
+  headerCell:
+    'inline-flex items-center justify-center gap-1.5 overflow-hidden text-sm leading-5.5 font-medium text-muted-foreground',
+  headerName: 'min-w-0 truncate',
+  ruleItem: 'text-sm leading-5.5 text-muted-foreground',
+  rulesList: 'm-0 ps-4',
+  rulesToggle:
+    'inline-flex min-h-9 cursor-pointer items-center self-start gap-1 rounded-(--radius-button) border-0 bg-transparent px-2 py-1 text-sm leading-5.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  sourceLink: 'text-muted-foreground hover:text-primary-text',
+  table: 'grid gap-y-1',
+  tableDivider: 'col-span-full border-t border-divider',
+  tableHeader: 'text-sm leading-5.5 font-medium text-muted-foreground text-center',
+  tableRowLabel: 'text-sm leading-5.5 text-muted-foreground text-start',
+};
 
 interface RatedModel {
   displayName: string;
@@ -364,7 +236,7 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
         </div>
       ) : (
         selected[0] && (
-          <div className={styles.table} style={{ gridTemplateColumns: '88px 1fr 1fr 1.4fr 1fr' }}>
+          <div className={`${styles.table} grid-cols-[88px_1fr_1fr_1.4fr_1fr]`}>
             {(['dimension', 'score', 'raw', 'source', 'updatedAt'] as const).map((column) => (
               <span
                 key={column}
@@ -400,7 +272,7 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
                 <span className={styles.tableRowLabel} key={`${key}-label`}>
                   {dimensions[dimensionIndex].label}
                 </span>,
-                <span className={styles.cell} key={`${key}-score`} style={{ fontWeight: 600 }}>
+                <span className={`${styles.cell} font-semibold`} key={`${key}-score`}>
                   {score.score}
                 </span>,
                 <span className={styles.cell} key={`${key}-raw`}>

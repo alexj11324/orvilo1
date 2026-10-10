@@ -8,7 +8,6 @@ import {
   Tag,
   Text,
 } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
 import { ArrowDownToDot, ArrowUpFromDot, CircleFadingArrowUp } from 'lucide-react';
 import type { FC } from 'react';
 import { memo } from 'react';
@@ -30,66 +29,19 @@ import ModelRatingRadar, {
 
 export type { PricingMode } from '../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  actionText: css`
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  container: css`
-    padding-block-end: 8px;
-  `,
-  description: css`
-    margin: 0;
-    padding-block: 8px;
-    padding-inline: 8px;
-
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
-  `,
-  radarClickable: css`
-    cursor: pointer;
-    border-radius: 8px;
-    transition: background 0.2s ${cssVar.motionEaseInOut};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  ratingScoreLink: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    font-weight: 600;
-    color: ${cssVar.colorText};
-
-    &:hover {
-      color: ${cssVar.colorPrimary};
-    }
-  `,
-  row: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  originalPriceText: css`
-    color: ${cssVar.colorTextTertiary};
-    text-decoration: line-through;
-  `,
-  priceValue: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: baseline;
-  `,
-  titleText: css`
-    font-size: 14px;
-    font-weight: 400;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  actionText: 'text-sm leading-5.5 font-medium text-foreground',
+  container: 'pb-2',
+  description: 'm-0 px-2 py-2 wrap-anywhere whitespace-pre-wrap',
+  radarClickable:
+    'cursor-pointer rounded-(--radius-card) transition-[background] duration-200 ease-[var(--ant-motion-ease-in-out)] hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:transition-none',
+  ratingScoreLink:
+    'inline-flex items-center gap-1 font-semibold text-foreground hover:text-primary-text',
+  row: 'px-2 py-1 text-sm leading-5.5 text-muted-foreground',
+  originalPriceText: 'text-muted-foreground line-through',
+  priceValue: 'inline-flex items-baseline gap-1',
+  titleText: 'text-sm leading-5.5 font-normal text-muted-foreground',
+};
 
 interface PriceValueProps {
   prefix?: string;
@@ -189,7 +141,13 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
     return (
       <Flexbox className={styles.container}>
         {description && (
-          <Text as={'p'} className={styles.description} fontSize={12} type={'secondary'}>
+          <Text
+            as={'p'}
+            className={styles.description}
+            fontSize={14}
+            lineHeight={'22px'}
+            type={'secondary'}
+          >
             {description}
           </Text>
         )}
@@ -207,15 +165,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                 <AccordionHeader>
                   <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
                     <Flexbox horizontal align={'center'} gap={8}>
-                      <div
-                        style={{
-                          background: '#eb2f96',
-                          borderRadius: 2,
-                          flexShrink: 0,
-                          height: 14,
-                          width: 3,
-                        }}
-                      />
+                      <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.rating')}
                       </span>
@@ -276,15 +226,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
               <AccordionItem disabled value="context">
                 <AccordionHeader style={{ paddingBlock: 6, paddingInline: 8 }}>
                   <Flexbox horizontal align={'center'} flex={1} gap={8}>
-                    <div
-                      style={{
-                        background: '#1677ff',
-                        borderRadius: 2,
-                        flexShrink: 0,
-                        height: 14,
-                        width: 3,
-                      }}
-                    />
+                    <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                     <span className={styles.titleText}>{t('ModelSwitchPanel.detail.context')}</span>
                   </Flexbox>
                   <span className={styles.actionText}>{contextWindowLabel}</span>
@@ -298,15 +240,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                 <AccordionHeader>
                   <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
                     <Flexbox horizontal align={'center'} gap={8}>
-                      <div
-                        style={{
-                          background: '#722ed1',
-                          borderRadius: 2,
-                          flexShrink: 0,
-                          height: 14,
-                          width: 3,
-                        }}
-                      />
+                      <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.abilities')}
                       </span>
@@ -342,7 +276,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                             {t(`ModelSwitchPanel.detail.abilities.${ability.key}` as any)}
                           </span>
                         </Flexbox>
-                        <span style={{ color: 'var(--ant-color-text-tertiary)', fontSize: 11 }}>
+                        <span className="text-xs leading-5 text-muted-foreground">
                           {t(
                             `ModelSelect.featureTag.${ability.key === 'files' ? 'file' : ability.key}` as any,
                           )}
@@ -360,15 +294,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                 <AccordionHeader>
                   <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
                     <Flexbox horizontal align={'center'} gap={8}>
-                      <div
-                        style={{
-                          background: '#fa8c16',
-                          borderRadius: 2,
-                          flexShrink: 0,
-                          height: 14,
-                          width: 3,
-                        }}
-                      />
+                      <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.pricing')}
                       </span>
@@ -410,14 +336,14 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                 <AccordionPanel>
                   <Flexbox gap={8}>
                     {approximatePriceLabel && (
-                      <Flexbox className={styles.row} style={{ fontWeight: 500 }}>
+                      <Flexbox className={`${styles.row} font-medium`}>
                         {approximatePriceLabel}
                       </Flexbox>
                     )}
                     {pricingGroups.map(({ group, units }) => (
                       <Flexbox gap={4} key={group}>
                         {pricingGroups.length > 1 && (
-                          <Flexbox className={styles.row} style={{ fontWeight: 500 }}>
+                          <Flexbox className={`${styles.row} font-medium`}>
                             {t(`ModelSwitchPanel.detail.pricing.group.${group}` as any)}
                           </Flexbox>
                         )}

@@ -17,7 +17,7 @@ export const NewModelBadge = memo<NewModelBadgeProps>(({ releasedAt, label }) =>
   if (!releasedAt || !isNewReleaseDate(releasedAt)) return null;
 
   return (
-    <Badge size="sm" variant="info">
+    <Badge className="h-auto min-h-5 text-xs leading-5" size="sm" variant="info">
       {label}
     </Badge>
   );

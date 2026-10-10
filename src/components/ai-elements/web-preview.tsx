@@ -63,7 +63,7 @@ export const WebPreview = ({
   return (
     <WebPreviewContext value={contextValue}>
       <div
-        className={cn('flex size-full flex-col rounded-lg border bg-card', className)}
+        className={cn('flex size-full flex-col rounded-(--radius-card) border bg-card', className)}
         {...props}
       >
         {children}

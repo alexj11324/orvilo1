@@ -77,7 +77,7 @@ export const ScopeOverview: FC<ScopeOverviewProps> = ({ scopes }) => {
   if (grants.length === 0) return <span>{t('apikey.scopes.none')}</span>;
 
   return (
-    <div className="flex flex-col rounded-lg border border-border px-3 py-1">
+    <div className="flex flex-col rounded-(--radius-card) border border-border px-3 py-1">
       {grants.map((grant) => (
         <div
           className={`flex flex-row gap-2.5 items-center ${'border-b border-border py-3 last:border-b-0'}`}

@@ -176,7 +176,7 @@ const OsPermissionsPanel = memo(() => {
 
   return (
     <div
-      className="flex flex-col gap-3 rounded-md border border-border"
+      className="flex flex-col gap-3 rounded-(--radius-card) border border-border"
       style={{ padding: 4, width: '100%' }}
     >
       {permissions.map((permission) => (

@@ -55,7 +55,7 @@ export interface DatePickerProps {
   'variant'?: 'field' | 'ghost';
 }
 
-const cellButtonClass = 'w-full rounded-lg hover:bg-accent';
+const cellButtonClass = 'w-full rounded-(--radius-button) hover:bg-accent';
 const cellVariant = (selected: boolean) => (selected ? 'default' : 'ghost');
 
 const PeriodGrid = ({
@@ -322,7 +322,7 @@ const DatePicker = memo<DatePickerProps>(
           variant="outline"
           {...triggerProps}
           className={cn(
-            'w-full justify-start gap-1.5 rounded-lg border-input bg-transparent font-normal hover:bg-accent',
+            'w-full justify-start gap-1.5 rounded-(--radius-input) border-input bg-transparent font-normal hover:bg-accent',
             size === 'small' && 'h-7 text-(length:--text-dense)',
             className,
           )}

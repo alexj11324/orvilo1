@@ -50,7 +50,7 @@ const ToolPermissionGroup = memo<ToolPermissionGroupProps>(
         <div className={'flex items-center gap-2 px-0 py-2.5 select-none'}>
           <Button
             aria-expanded={expanded}
-            className="h-auto flex-1 justify-start gap-1.5 rounded-sm p-0 text-start text-sm font-medium hover:bg-transparent"
+            className="h-auto flex-1 justify-start gap-1.5 rounded-(--radius-button) p-0 text-start text-sm font-medium hover:bg-transparent"
             type="button"
             variant="ghost"
             onClick={() => setExpanded((e) => !e)}

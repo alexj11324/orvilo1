@@ -53,8 +53,8 @@ export interface FormGroupItemType {
 
 const variantClassName: Record<FormVariant, string> = {
   borderless: '',
-  filled: 'bg-secondary rounded-2xl',
-  outlined: 'border border-border rounded-2xl',
+  filled: 'bg-secondary rounded-(--radius-card)',
+  outlined: 'border border-border rounded-(--radius-card)',
 };
 
 const isFormItemArray = (children: FormItemProps[] | ReactNode): children is FormItemProps[] =>

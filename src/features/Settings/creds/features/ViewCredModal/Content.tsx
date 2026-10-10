@@ -29,17 +29,17 @@ const KVRow: FC<KVRowProps> = ({ keyName, value }) => {
   const [visible, setVisible] = useState(false);
 
   return (
-    <div className="mb-2 flex items-stretch rounded-lg border border-border last:mb-0">
+    <div className="mb-2 flex items-stretch rounded-(--radius-card) border border-border last:mb-0">
       <div
         className={
-          'min-w-35 rounded-l-lg bg-muted/50 px-3 py-2 font-mono text-(length:--text-dense) text-muted-foreground'
+          'min-w-35 rounded-l-(--radius-card) bg-muted/50 px-3 py-2 font-mono text-(length:--text-dense) text-muted-foreground'
         }
       >
         {keyName}
       </div>
       <div
         className={
-          'flex flex-1 items-center justify-between gap-2 rounded-r-lg bg-card px-3 py-2 font-mono text-(length:--text-dense)'
+          'flex flex-1 items-center justify-between gap-2 rounded-r-(--radius-card) bg-card px-3 py-2 font-mono text-(length:--text-dense)'
         }
       >
         <span
@@ -116,7 +116,7 @@ const ViewCredModalContent: FC<ViewCredModalContentProps> = ({ cred, credsApi })
         <TriangleAlert />
         <AlertDescription>{t('creds.view.warning')}</AlertDescription>
       </Alert>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 rounded-lg border border-border p-3 text-sm">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 rounded-(--radius-card) border border-border p-3 text-sm">
         <dt className="text-muted-foreground">{t('creds.table.name')}</dt>
         <dd>{cred.name}</dd>
         <dt className="text-muted-foreground">{t('creds.table.key')}</dt>

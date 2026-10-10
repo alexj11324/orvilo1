@@ -565,7 +565,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     // second boundary the composer does not otherwise have.
     <GeneratingBorder generating={isAnalyzing || isSynthesizing}>
       <div
-        className="relative overflow-hidden rounded-md border"
+        className="relative overflow-hidden rounded-(--radius-card) border"
         style={{
           borderColor: cssVar.colorBorderSecondary,
           background: cssVar.colorBgContainer,

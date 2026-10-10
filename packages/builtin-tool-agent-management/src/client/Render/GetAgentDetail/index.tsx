@@ -80,7 +80,7 @@ export const GetAgentDetailRender = memo<
             System Prompt
           </div>
           <div
-            className="rounded-md border bg-card"
+            className="rounded-(--radius-card) border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
           >
             <Markdown fontSize={13} variant={'chat'}>

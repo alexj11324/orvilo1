@@ -109,7 +109,9 @@ interface CriterionListProps {
 
 /** Outlined container that gives `CriterionRow` children their between-row borders. */
 export const CriterionList = ({ children, className }: CriterionListProps) => (
-  <div className={`flex flex-col rounded-md border border-border ${cn(styles.list, className)}`}>
+  <div
+    className={`flex flex-col rounded-(--radius-card) border border-border ${cn(styles.list, className)}`}
+  >
     {children}
   </div>
 );

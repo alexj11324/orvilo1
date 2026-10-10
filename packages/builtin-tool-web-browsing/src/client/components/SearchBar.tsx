@@ -86,7 +86,10 @@ const SearchBar = memo<SearchBarProps>(
           )}
           {searchAddon}
         </div>
-        <div className="rounded-md border bg-card flex flex-col" style={{ gap: 24, padding: 12 }}>
+        <div
+          className="rounded-(--radius-card) border bg-card flex flex-col"
+          style={{ gap: 24, padding: 12 }}
+        >
           {isMobile ? (
             <div className="flex flex-row flex-wrap gap-3">
               {Object.keys(ENGINE_ICON_MAP).map((item) => (

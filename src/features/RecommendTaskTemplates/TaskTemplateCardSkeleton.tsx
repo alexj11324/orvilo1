@@ -36,11 +36,10 @@ export const TaskTemplateCardSkeleton = memo<TaskTemplateCardSkeletonProps>(
     return (
       <div
         data-testid={'task-template-card-skeleton'}
-        style={{ borderRadius: cssVar.borderRadiusLG }}
         className={cx(
           briefStyles.card,
           styles.card,
-          'rounded-md border bg-card flex flex-col gap-3 p-3',
+          'rounded-(--radius-card) border bg-card flex flex-col gap-3 p-3',
         )}
       >
         <div className="flex flex-row items-center gap-4 justify-between">

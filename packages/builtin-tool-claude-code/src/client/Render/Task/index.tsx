@@ -285,7 +285,7 @@ const Task = memo<BuiltinRenderProps<TaskUpdateArgs | undefined, TaskPluginState
     if (!items || items.length === 0) return null;
 
     return (
-      <div className="rounded-md border bg-card" style={{ width: '100%' }}>
+      <div className="rounded-(--radius-card) border bg-card" style={{ width: '100%' }}>
         <TaskHeader
           completed={stats.completed}
           inProgress={stats.inProgress}

@@ -32,7 +32,7 @@ const PluginPreview = memo<{ form: FormInstance }>(({ form }) => {
       className="flex flex-col gap-6 p-3"
       style={{ background: cssVar.colorBgLayout, overflowY: 'auto', flex: 2 }}
     >
-      <div className="rounded-md border bg-card flex flex-col">
+      <div className="rounded-(--radius-card) border bg-card flex flex-col">
         <div className="px-4 py-2 font-medium">{t('dev.preview.card')}</div>
         <div className="flex flex-row gap-4 justify-between p-4">
           <div className="flex flex-row gap-4">

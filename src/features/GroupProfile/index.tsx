@@ -72,7 +72,10 @@ const GroupSettings = ({ groupId }: { groupId: string }) => {
             <p className="text-sm text-muted-foreground">{t('group.create.noParticipants')}</p>
           )}
           {members.map((member) => (
-            <div className="flex items-center gap-3 rounded-lg border p-3" key={member.id}>
+            <div
+              className="flex items-center gap-3 rounded-(--radius-card) border p-3"
+              key={member.id}
+            >
               <AgentRuntimeIcon size={24} type={member.heterogeneousType} />
               <Button
                 className="min-w-0 justify-start"

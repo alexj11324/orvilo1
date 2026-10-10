@@ -556,7 +556,7 @@ const TaskVerifyConfig = memo(() => {
   // ---- B. generating ----
   if (generating) {
     return (
-      <div className={`rounded-md border border-border ${styles.section}`}>
+      <div className={`rounded-(--radius-card) border border-border ${styles.section}`}>
         <div className="flex items-center gap-3">
           <NeuralNetworkLoading size={20} />
           <div className={cn(styles.subtitle)}>{t('verifyConfig.generating')}</div>
@@ -585,7 +585,7 @@ const TaskVerifyConfig = memo(() => {
       },
     ];
     return (
-      <div className={`rounded-md border border-border ${styles.section}`}>
+      <div className={`rounded-(--radius-card) border border-border ${styles.section}`}>
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

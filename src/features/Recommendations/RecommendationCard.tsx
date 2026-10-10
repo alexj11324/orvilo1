@@ -1,4 +1,4 @@
-import { cssVar, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { memo, type ReactNode, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -71,11 +71,10 @@ export const RecommendationCard = memo<RecommendationCardProps>(
 
     return (
       <div
-        style={{ borderRadius: cssVar.borderRadiusLG }}
         className={cx(
           briefStyles.card,
           styles.card,
-          'rounded-md border bg-card flex flex-col gap-3 p-3',
+          'rounded-(--radius-card) border bg-card flex flex-col gap-3 p-3',
         )}
       >
         <div className="flex flex-row items-center gap-4 justify-between">

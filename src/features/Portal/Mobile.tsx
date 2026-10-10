@@ -65,7 +65,7 @@ const MobilePortalContent = ({
 
   return (
     <SheetContent
-      className={cx('gap-0 rounded-t-2xl p-0', isPortalThread && styles.container)}
+      className={cx('gap-0 rounded-t-(--radius-overlay) p-0', isPortalThread && styles.container)}
       showCloseButton={false}
       side={'bottom'}
       style={{ height: fullscreen ? '100%' : '95%' }}

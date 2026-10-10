@@ -207,7 +207,7 @@ export const AgentSettingsList = ({
         {rows.length ? (
           rows.map((row) => <AgentSettingsListRow key={row.id} row={row} onSelect={onSelect} />)
         ) : (
-          <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-(--radius-card) border p-8 text-center text-sm text-muted-foreground">
             {t(query ? 'settingAgent.list.noResults' : 'settingAgent.list.empty')}
           </div>
         )}

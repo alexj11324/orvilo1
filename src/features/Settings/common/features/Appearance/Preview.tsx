@@ -215,7 +215,7 @@ const Preview = memo(() => {
   );
 
   return (
-    <div className={`flex rounded-md border border-border ${styles.container}`}>
+    <div className={`flex rounded-(--radius-card) border border-border ${styles.container}`}>
       {nav}
       {sidebar}
       <div

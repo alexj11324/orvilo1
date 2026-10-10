@@ -102,7 +102,7 @@ const TaskIssueResources = () => {
           const Icon = resource.kind === 'pull_request' ? GitPullRequestIcon : LinkIcon;
           return (
             <div
-              className="flex items-center gap-2 rounded-md border border-border px-3 py-2"
+              className="flex items-center gap-2 rounded-(--radius-card) border border-border px-3 py-2"
               key={resource.id}
             >
               <Icon className="shrink-0 text-muted-foreground" size={16} />

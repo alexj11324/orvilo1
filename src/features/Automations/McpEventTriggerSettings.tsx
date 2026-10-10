@@ -286,7 +286,7 @@ function GithubWebhookSetup({
     }
   };
   return (
-    <div className={'flex flex-col gap-3 rounded-md border p-4'}>
+    <div className={'flex flex-col gap-3 rounded-(--radius-card) border p-4'}>
       <span className={'font-medium'}>{t('events.github.setup')}</span>
       <span className={'text-muted-foreground'}>{t('events.github.setupHint')}</span>
       <span>{t('events.github.repositoryValue', { repository })}</span>

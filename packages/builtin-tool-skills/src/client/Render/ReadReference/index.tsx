@@ -72,17 +72,17 @@ const ReadReference = memo<BuiltinRenderProps<ReadReferenceParams, ReadReference
         </div>
 
         {isBinary ? (
-          <div className="rounded-md border bg-card" style={{ padding: 12 }}>
+          <div className="rounded-(--radius-card) border bg-card" style={{ padding: 12 }}>
             <div className="text-xs text-muted-foreground">Binary file ({sizeText})</div>
           </div>
         ) : isMarkdown ? (
-          <div className="rounded-md border bg-card" style={{ padding: 12 }}>
+          <div className="rounded-(--radius-card) border bg-card" style={{ padding: 12 }}>
             <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
               {content}
             </Markdown>
           </div>
         ) : (
-          <div className="rounded-md border bg-card" style={{ padding: 8 }}>
+          <div className="rounded-(--radius-card) border bg-card" style={{ padding: 8 }}>
             <CodeBlock
               wrap
               code={content}

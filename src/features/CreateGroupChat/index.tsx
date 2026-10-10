@@ -135,7 +135,10 @@ export const CreateGroupChatContent = ({ groupId, visibility }: CreateGroupChatO
           ) : (
             <div className="flex max-h-64 flex-col gap-2 overflow-auto">
               {agents.map((agent) => (
-                <div className="flex items-center gap-3 rounded-lg border p-3" key={agent.id}>
+                <div
+                  className="flex items-center gap-3 rounded-(--radius-card) border p-3"
+                  key={agent.id}
+                >
                   <Checkbox
                     aria-label={agent.name || agent.title || agent.id}
                     checked={selected.includes(agent.id)}

@@ -34,7 +34,7 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
 
   return (
     <div
-      className={`flex flex-col cursor-pointer gap-3 rounded-md border border-border ${styles.card}`}
+      className={`flex flex-col cursor-pointer gap-3 rounded-(--radius-card) border border-border ${styles.card}`}
       role={'link'}
       style={{ padding: 16 }}
       tabIndex={0}

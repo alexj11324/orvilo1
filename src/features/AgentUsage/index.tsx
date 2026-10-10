@@ -75,7 +75,7 @@ const AgentUsage = memo(() => {
       <WorkSurfaceDocument>
         <div className="flex flex-col gap-4">
           <div
-            className="flex flex-col gap-4 rounded-md border border-border"
+            className="flex flex-col gap-4 rounded-(--radius-card) border border-border"
             style={{ padding: 20 }}
           >
             <div className="flex items-center gap-4 justify-between flex-wrap">
@@ -134,13 +134,13 @@ const AgentUsage = memo(() => {
           {!showError && (
             <>
               <div
-                className="flex flex-col rounded-md border border-border"
+                className="flex flex-col rounded-(--radius-card) border border-border"
                 style={{ padding: 20 }}
               >
                 <UsageTrendChart buckets={data?.buckets} isLoading={isLoading} />
               </div>
               <div
-                className="flex flex-col rounded-md border border-border"
+                className="flex flex-col rounded-(--radius-card) border border-border"
                 style={{ padding: 20 }}
               >
                 <ModelBreakdown isLoading={isLoading} rows={data?.byModel ?? []} />

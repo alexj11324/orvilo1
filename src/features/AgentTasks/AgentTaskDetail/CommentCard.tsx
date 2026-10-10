@@ -189,11 +189,10 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
 
   return (
     <div
-      className={`relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-3 transition-shadow ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
+      className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-shadow ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
       id={commentId ? commentAnchorId(commentId) : undefined}
       style={{
         borderColor: cssVar.colorBorderSecondary,
-        borderRadius: cssVar.borderRadiusLG,
         background: cssVar.colorBgContainer,
       }}
     >

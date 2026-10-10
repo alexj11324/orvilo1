@@ -1,5 +1,5 @@
 import type { TaskTemplate } from '@orvilo/const';
-import { cssVar, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { Clock, X } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
@@ -121,9 +121,13 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
     return (
       <div
         {...clickableProps()}
-        style={{ borderRadius: cssVar.borderRadiusLG, cursor: 'pointer' }}
+        style={{ cursor: 'pointer' }}
         className={cn(
-          cx(briefStyles.card, styles.card, 'rounded-md border bg-card flex flex-col gap-3 p-3'),
+          cx(
+            briefStyles.card,
+            styles.card,
+            'rounded-(--radius-card) border bg-card flex flex-col gap-3 p-3',
+          ),
           CLICKABLE_FOCUS_RING,
         )}
         onClick={handleOpenDetail}

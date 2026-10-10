@@ -105,7 +105,7 @@ export const TaskBlockedNotice = () => {
     <div
       role="status"
       className={cn(
-        'rounded-md px-3 py-1.5 text-xs',
+        'rounded-(--radius-card) px-3 py-1.5 text-xs',
         statusKey === 'blocked'
           ? 'bg-destructive/10 text-destructive'
           : 'bg-muted text-muted-foreground',
@@ -286,7 +286,7 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
               )}
             </div>
             {picker === kind && allowed && (
-              <div className="overflow-hidden rounded-md border">
+              <div className="overflow-hidden rounded-(--radius-card) border">
                 <div className="flex items-center gap-2 border-b px-2">
                   <Search aria-hidden className="text-muted-foreground" size={14} />
                   <Input

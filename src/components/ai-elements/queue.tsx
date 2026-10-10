@@ -33,7 +33,7 @@ export type QueueItemProps = ComponentProps<'li'>;
 export const QueueItem = ({ className, ...props }: QueueItemProps) => (
   <li
     className={cn(
-      'group flex flex-col gap-1 rounded-md px-3 py-1 text-sm transition-colors hover:bg-muted',
+      'group flex flex-col gap-1 rounded-(--radius-card) px-3 py-1 text-sm transition-colors hover:bg-muted',
       className,
     )}
     {...props}
@@ -181,7 +181,7 @@ export const QueueSectionTrigger = ({
         type="button"
         variant="ghost"
         className={cn(
-          'group flex w-full items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-left font-medium text-muted-foreground text-sm transition-colors hover:bg-muted',
+          'group flex w-full items-center justify-between rounded-(--radius-button) bg-muted/40 px-3 py-2 text-left font-medium text-muted-foreground text-sm transition-colors hover:bg-muted',
           className,
         )}
         {...props}
@@ -227,7 +227,7 @@ export type QueueProps = ComponentProps<'div'>;
 export const Queue = ({ className, ...props }: QueueProps) => (
   <div
     className={cn(
-      'flex flex-col gap-2 rounded-xl border border-border bg-background px-3 pt-2 pb-2 shadow-xs',
+      'flex flex-col gap-2 rounded-(--radius-card) border border-border bg-background px-3 pt-2 pb-2 shadow-xs',
       className,
     )}
     {...props}

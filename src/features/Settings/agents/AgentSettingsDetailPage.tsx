@@ -121,7 +121,7 @@ const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId })
             {/* Remote platforms carry no local model rows — model/effort is a
                 local-CLI concept. */}
             {externalAgent && isRemoteHetero ? null : <AgentModelSettings agentId={agentId} />}
-            <details className="mt-5 rounded-lg border px-4 py-3">
+            <details className="mt-5 rounded-(--radius-card) border px-4 py-3">
               <summary className="cursor-pointer text-sm font-medium">
                 {t('settingAgent.executionSettings.title')}
               </summary>

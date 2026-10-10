@@ -40,7 +40,7 @@ const GroupItem = memo<GroupItemProps>(({ item, style, className, onNavigate }) 
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {displayTitle}
       </span>
-      <span className="shrink-0 rounded-md bg-muted px-1.5 text-xs text-muted-foreground">
+      <span className="shrink-0 rounded-(--radius-chip) bg-muted px-1.5 text-xs text-muted-foreground">
         {t('group.title')}
       </span>
     </div>

@@ -38,8 +38,8 @@ const ConnectorRow = memo<ConnectorRowProps>(
         size="sm"
         variant="ghost"
         className={cn(
-          'h-full min-w-0 flex-1 justify-start gap-2 rounded-md px-0 text-left font-medium hover:bg-transparent',
-          'after:absolute after:inset-0 after:rounded-md after:content-[""]',
+          'h-full min-w-0 flex-1 justify-start gap-2 rounded-(--radius-button) px-0 text-left font-medium hover:bg-transparent',
+          'after:absolute after:inset-0 after:rounded-(--radius-button) after:content-[""]',
         )}
         onClick={onSelect}
       >

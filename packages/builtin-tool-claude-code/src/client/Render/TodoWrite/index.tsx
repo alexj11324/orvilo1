@@ -91,7 +91,7 @@ const TodoWrite = memo<BuiltinRenderProps<TodoWriteArgs>>(({ args }) => {
   if (!todos || todos.length === 0) return null;
 
   return (
-    <div className="rounded-md border bg-card" style={{ width: '100%' }}>
+    <div className="rounded-(--radius-card) border bg-card" style={{ width: '100%' }}>
       <TodoPanelHeader label={t(TODO_SUMMARY_LABEL_KEYS[summary.state])} summary={summary} />
       {todos.map((item, index) => (
         <TodoRow item={item} key={index} />

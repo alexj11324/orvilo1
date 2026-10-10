@@ -184,7 +184,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
             <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
               <PreviewCard.Popup
                 className={
-                  'w-auto overflow-hidden rounded-xl bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
+                  'w-auto overflow-hidden rounded-(--radius-overlay) bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
                 }
               >
                 {content}
@@ -197,7 +197,10 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger render={<span className={styles.trigger}>{children}</span>} />
-        <PopoverContent className={'w-auto overflow-hidden rounded-xl p-0'} side={'right'}>
+        <PopoverContent
+          className={'w-auto overflow-hidden rounded-(--radius-overlay) p-0'}
+          side={'right'}
+        >
           {content}
         </PopoverContent>
       </Popover>

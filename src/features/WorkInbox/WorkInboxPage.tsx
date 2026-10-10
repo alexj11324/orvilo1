@@ -1050,7 +1050,7 @@ const WorkInboxPage = memo(() => {
       ) : null}
       {partial ? (
         <div
-          className="m-2 flex items-center gap-2 rounded-lg border border-border bg-muted p-3 text-sm"
+          className="m-2 flex items-center gap-2 rounded-(--radius-card) border border-border bg-muted p-3 text-sm"
           role="status"
         >
           <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
@@ -1059,7 +1059,7 @@ const WorkInboxPage = memo(() => {
       ) : null}
       {error ? (
         <div
-          className="m-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+          className="m-2 flex items-center gap-2 rounded-(--radius-card) border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
           role="alert"
         >
           <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />

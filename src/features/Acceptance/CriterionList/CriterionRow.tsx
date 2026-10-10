@@ -1,38 +1,17 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
 
-const styles = createStaticStyles(({ css }) => ({
-  list: css`
-    overflow: hidden;
-    width: 100%;
-    padding: 0;
-  `,
-  row: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  rowClickable: css`
-    cursor: pointer;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  seq: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  list: 'w-full overflow-hidden p-0',
+  row: 'acceptance-criterion-row px-3 py-2.5 [&+.acceptance-criterion-row]:border-t [&+.acceptance-criterion-row]:border-sidebar-border',
+  rowClickable: 'cursor-pointer hover:bg-(--ant-color-fill-quaternary)',
+  seq: 'flex-none text-[12px] text-(--ant-color-text-tertiary)',
+};
 
 interface CriterionRequiredChipProps {
   /** When set, the chip becomes the required/optional toggle. */
@@ -106,7 +85,7 @@ export const CriterionRow = ({
   ...rest
 }: CriterionRowProps) => (
   <div
-    className={`flex items-center gap-2.5 ${cx(styles.row, onOpen && styles.rowClickable, className)}`}
+    className={`flex items-center gap-2.5 ${cn(styles.row, onOpen && styles.rowClickable, className)}`}
     role={onOpen ? 'button' : undefined}
     tabIndex={onOpen ? 0 : undefined}
     onClick={onOpen}
@@ -130,7 +109,7 @@ interface CriterionListProps {
 
 /** Outlined container that gives `CriterionRow` children their between-row borders. */
 export const CriterionList = ({ children, className }: CriterionListProps) => (
-  <div className={`flex flex-col rounded-md border border-border ${cx(styles.list, className)}`}>
+  <div className={`flex flex-col rounded-md border border-border ${cn(styles.list, className)}`}>
     {children}
   </div>
 );

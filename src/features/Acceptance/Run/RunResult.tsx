@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Info, Shield, ShieldAlert, ShieldCheck, ShieldX } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,61 +6,16 @@ import { useTranslation } from 'react-i18next';
 import { useVerifyResults, useVerifyState } from '../hooks';
 import { countResults, type DockPhase, phaseFromStatus } from '../utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  body: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-
-    font-size: 13px;
-    line-height: 1.7;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-    background: ${cssVar.colorBgContainer};
-  `,
-  cardFailed: css`
-    border-color: ${cssVar.colorErrorBorder};
-  `,
-  foot: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  head: css`
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-
-    padding-block: 14px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  status: css`
-    font-size: 13px;
-    font-weight: 600;
-  `,
-  sub: css`
-    margin-block-start: 4px;
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  title: css`
-    font-size: 15px;
-    font-weight: 700;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  body: 'px-4 py-3 text-[13px] leading-[1.7] text-muted-foreground',
+  card: 'overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
+  cardFailed: 'border-(--ant-color-error-border)',
+  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-[12px] text-(--ant-color-text-tertiary)',
+  head: 'flex items-start gap-3.5 border-b border-sidebar-border px-4 py-3.5',
+  status: 'text-[13px] font-semibold',
+  sub: 'mt-1 text-[12px] leading-normal text-(--ant-color-text-tertiary)',
+  title: 'text-[15px] font-bold text-foreground',
+};
 
 interface BadgeMeta {
   color: 'default' | 'success' | 'error' | 'warning';
@@ -126,17 +81,17 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
 
   const counts = countResults(results ?? []);
   const badgeColorMap = {
-    default: cssVar.colorTextTertiary,
-    error: cssVar.colorError,
-    success: cssVar.colorSuccess,
-    warning: cssVar.colorWarning,
+    default: 'var(--ant-color-text-tertiary)',
+    error: 'var(--destructive)',
+    success: 'var(--success)',
+    warning: 'var(--warning)',
   } as const;
   // Deeper, more readable text color over the tinted badge fill.
   const badgeTextMap = {
-    default: cssVar.colorTextSecondary,
-    error: cssVar.colorErrorTextActive,
-    success: cssVar.colorSuccessTextActive,
-    warning: cssVar.colorWarningTextActive,
+    default: 'var(--muted-foreground)',
+    error: 'var(--ant-color-error-text-active)',
+    success: 'var(--ant-color-success-text-active)',
+    warning: 'var(--ant-color-warning-text-active)',
   } as const;
 
   // The verdict lives IN the title: the shield changes form and colour with the
@@ -167,7 +122,7 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
   if (embedded) return header;
 
   return (
-    <div className={cx(styles.card, phase === 'failed' && styles.cardFailed)}>
+    <div className={cn(styles.card, phase === 'failed' && styles.cardFailed)}>
       {header}
       <div className={styles.body}>
         <div className="flex flex-col gap-1">

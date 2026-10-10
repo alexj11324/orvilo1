@@ -54,7 +54,7 @@ export const CreateAgentStreaming = memo<BuiltinStreamingProps<CreateAgentParams
             System Prompt
           </div>
           <div
-            className="rounded-md border bg-card"
+            className="rounded-(--radius-card) border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
           >
             <Markdown animated variant={'chat'}>

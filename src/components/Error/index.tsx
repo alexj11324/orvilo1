@@ -61,8 +61,8 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
         <div
           className={
             expandedKeys.includes('stack')
-              ? 'rounded-lg border border-border'
-              : 'rounded-lg bg-secondary'
+              ? 'rounded-(--radius-card) border border-border'
+              : 'rounded-(--radius-card) bg-secondary'
           }
           style={{
             marginBottom: '1em',

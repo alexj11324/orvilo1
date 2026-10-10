@@ -28,7 +28,7 @@ const ShowMore = memo<ShowMoreProps>(({ style, messageId, engines, resultsNumber
       style={style}
       className={cn(
         styles.container,
-        'flex flex-col gap-0.5 justify-between rounded-md border bg-card cursor-pointer',
+        'flex flex-col gap-0.5 justify-between rounded-(--radius-card) border bg-card cursor-pointer',
       )}
       onClick={() => {
         openToolUI(messageId, WebBrowsingManifest.identifier);

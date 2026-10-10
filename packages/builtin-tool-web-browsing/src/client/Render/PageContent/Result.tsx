@@ -57,7 +57,7 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
     <div
       className={cn(
         styles.container,
-        'flex flex-col justify-between rounded-md border bg-card cursor-pointer',
+        'flex flex-col justify-between rounded-(--radius-card) border bg-card cursor-pointer',
       )}
       onClick={() => {
         openToolUI(messageId, WebBrowsingManifest.identifier);

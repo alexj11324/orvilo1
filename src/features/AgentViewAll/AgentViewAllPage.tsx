@@ -444,7 +444,11 @@ const AgentViewAllPage = memo(() => {
             )}
             {canCreate ? (
               <SidebarDropdownMenu items={createMenuItems}>
-                <Button aria-label={t('agentViewAll.createAgent')} loading={isMutatingAgent}>
+                <Button
+                  aria-label={t('agentViewAll.createAgent')}
+                  loading={isMutatingAgent}
+                  size="compact"
+                >
                   <PlusIcon data-icon="inline-start" />
                   <ChevronDownIcon size={14} />
                 </Button>
@@ -455,7 +459,7 @@ const AgentViewAllPage = memo(() => {
                   <TooltipTrigger
                     render={
                       <span style={{ display: 'inline-flex' }}>
-                        <Button disabled aria-label={t('agentViewAll.createAgent')}>
+                        <Button disabled aria-label={t('agentViewAll.createAgent')} size="compact">
                           <PlusIcon data-icon="inline-start" />
                           <ChevronDownIcon size={14} />
                         </Button>

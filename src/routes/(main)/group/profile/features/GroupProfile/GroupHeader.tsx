@@ -207,9 +207,11 @@ const GroupHeader = memo(() => {
           disabled={!canEdit}
           placeholder={t('name.placeholder')}
           value={localTitle}
+          visualSize="large"
           style={{
-            fontSize: 36,
+            fontSize: 30,
             fontWeight: 600,
+            lineHeight: '36px',
             padding: 0,
             width: '100%',
           }}

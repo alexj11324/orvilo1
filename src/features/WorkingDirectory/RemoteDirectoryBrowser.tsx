@@ -69,10 +69,15 @@ export const RemoteDirectoryBrowser = ({
           placeholder={t('workingDirectory.placeholder')}
           style={{ flex: 1, minWidth: 0 }}
           value={displayedPath}
+          visualSize="compact"
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && navigate(displayedPath.trim() || undefined)}
         />
-        <Button disabled={loading} onClick={() => navigate(displayedPath.trim() || undefined)}>
+        <Button
+          disabled={loading}
+          size="compact"
+          onClick={() => navigate(displayedPath.trim() || undefined)}
+        >
           {t('workingDirectory.openPath')}
         </Button>
       </div>

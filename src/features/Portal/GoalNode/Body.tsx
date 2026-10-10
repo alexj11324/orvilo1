@@ -1,6 +1,5 @@
 import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
@@ -32,32 +31,12 @@ import { goalSelectors, useGoalStore } from '@/store/goal';
  * node → task → topic conversation).
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  attempt: css`
-    padding-block: 6px;
-
-    & + & {
-      border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-    }
-  `,
-  label: css`
-    font-size: 12px;
-    font-weight: 600;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  linkRow: css`
-    cursor: pointer;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-variant-numeric: tabular-nums;
-  `,
-}));
+const styles = {
+  attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
+  label: 'text-[12px] font-semibold text-muted-foreground',
+  linkRow: 'cursor-pointer rounded-(--ant-border-radius-sm) hover:bg-(--ant-color-fill-quaternary)',
+  mono: 'font-mono tabular-nums',
+};
 
 const Section = memo<{ children: ReactNode; title: string }>(({ children, title }) => (
   <div className="flex flex-col gap-1.5">
@@ -78,7 +57,7 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
       <div className="flex flex-col gap-0">
         {view.attempts.map((attempt) => (
           <div
-            className={cx('flex flex-row items-baseline gap-2.5', styles.attempt)}
+            className={cn('flex flex-row items-baseline gap-2.5', styles.attempt)}
             key={attempt.index}
           >
             <div
@@ -118,7 +97,7 @@ AttemptLedger.displayName = 'GoalNodePortalAttempts';
 const NodeLinkRow = memo<{ onClick: () => void; text: string; view: GoalNodeView }>(
   ({ onClick, text, view }) => (
     <div
-      className={cx('flex flex-row items-center gap-1.5 py-1 px-1', styles.linkRow)}
+      className={cn('flex flex-row items-center gap-1.5 py-1 px-1', styles.linkRow)}
       onClick={onClick}
     >
       <KindDot kind={view.node.kind} />

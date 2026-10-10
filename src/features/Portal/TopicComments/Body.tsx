@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { MessageCircle } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -47,19 +47,19 @@ const Body = memo(() => {
   if (!view) return null;
   if (isInitialError) {
     return (
-      <div className={cx('flex flex-col', styles.body)}>
+      <div className={cn('flex flex-col', styles.body)}>
         <AsyncError error={error} variant={'page'} onRetry={() => void reload()} />
       </div>
     );
   }
 
   return (
-    <div className={cx('flex flex-col', styles.body)}>
-      <div className={cx('flex flex-col', styles.list)}>
+    <div className={cn('flex flex-col', styles.body)}>
+      <div className={cn('flex flex-col', styles.list)}>
         {isLoadingInitial ? (
           <SurfaceSkeleton header={false} variant={'list'} />
         ) : items.length === 0 ? (
-          <div className={cx('flex flex-col items-center justify-center', styles.empty)}>
+          <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
             <SimpleEmpty description={t('topicComment.empty')} icon={MessageCircle} />
           </div>
         ) : (

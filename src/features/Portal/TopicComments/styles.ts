@@ -1,101 +1,17 @@
-import { createStaticStyles, cssVar } from 'antd-style';
-
-export const styles = createStaticStyles(({ css }) => ({
-  anchor: css`
-    cursor: pointer;
-
-    padding-block: 8px;
-    padding-inline: 10px;
-    border-inline-start: 2px solid ${cssVar.colorBorder};
-    border-radius: 0 ${cssVar.borderRadius} ${cssVar.borderRadius} 0;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &[aria-disabled='true'] {
-      cursor: default;
-
-      &:hover {
-        color: ${cssVar.colorTextSecondary};
-        background: ${cssVar.colorFillQuaternary};
-      }
-    }
-  `,
-  body: css`
-    overflow: hidden;
-    flex: 1;
-    min-height: 0;
-  `,
-  card: css`
-    position: relative;
-    padding-block: 14px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:hover .topic-comment-actions {
-      opacity: 1;
-    }
-  `,
-  cardActions: css`
-    position: absolute;
-    inset-block-start: 8px;
-    inset-inline-end: 0;
-
-    opacity: 1;
-
-    transition: opacity ${cssVar.motionDurationFast};
-
-    @media (hover: hover) {
-      opacity: 0;
-    }
-  `,
-  composer: css`
-    flex-shrink: 0;
-    margin-block: 12px 16px;
-    margin-inline: 16px;
-  `,
-  deleted: css`
-    font-style: italic;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  editEditor: css`
-    padding-block: 8px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorBgContainer};
-
-    &:focus-within {
-      border-color: ${cssVar.colorPrimary};
-    }
-  `,
-  edited: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  empty: css`
-    flex: 1;
-    min-height: 240px;
-  `,
-  list: css`
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    flex: 1;
-
-    min-height: 0;
-    padding-inline: 16px;
-  `,
-  moderatedContent: css`
-    opacity: 0.62;
-  `,
-  reply: css`
-    margin-inline-start: 20px;
-    padding-inline-start: 12px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+export const styles = {
+  anchor:
+    'cursor-pointer py-2 px-2.5 border-s-2 border-border rounded-[0_var(--ant-border-radius)_var(--ant-border-radius)_0] text-muted-foreground bg-(--ant-color-fill-quaternary) hover:text-foreground hover:bg-accent aria-disabled:cursor-default aria-disabled:hover:text-muted-foreground aria-disabled:hover:bg-(--ant-color-fill-quaternary)',
+  body: 'overflow-hidden flex-1 min-h-0',
+  card: 'relative py-3.5 [border-block-end:1px_solid_var(--sidebar-border)] [&:hover_.topic-comment-actions]:opacity-100',
+  cardActions:
+    'absolute [inset-block-start:8px] end-0 opacity-100 transition-opacity duration-(--ant-motion-duration-fast) ease-[ease] [@media(hover:hover)]:opacity-0',
+  composer: 'shrink-0 [margin-block:12px_16px] mx-4',
+  deleted: 'italic text-(--ant-color-text-tertiary)',
+  editEditor:
+    'py-2 px-2.5 border border-border rounded-(--ant-border-radius) bg-card focus-within:border-primary',
+  edited: 'text-(--ant-color-text-tertiary)',
+  empty: 'flex-1 min-h-60',
+  list: 'overflow-y-auto overscroll-contain flex-1 min-h-0 px-4',
+  moderatedContent: 'opacity-[0.62]',
+  reply: 'ms-5 ps-3 border-s border-sidebar-border',
+};

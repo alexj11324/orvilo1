@@ -1,5 +1,5 @@
 import type { TopicCommentItem } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { MessageSquareText } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +44,7 @@ const AnchorPreview = memo<{ comment: TopicCommentItem }>(({ comment }) => {
   return (
     <div
       aria-disabled={canLocateMessage ? undefined : true}
-      className={cx('flex flex-col gap-1', styles.anchor)}
+      className={cn('flex flex-col gap-1', styles.anchor)}
       role={canLocateMessage ? 'button' : undefined}
       tabIndex={canLocateMessage ? 0 : undefined}
       onClick={locateMessage}

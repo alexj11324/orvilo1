@@ -1,7 +1,6 @@
 import { Markdown } from '@lobehub/ui';
 import type { TopicCommentItem } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
@@ -160,7 +159,7 @@ const CommentCard = memo<CommentCardProps>(
 
     return (
       <div
-        className={cx('flex flex-col gap-2', `${styles.card} ${replyStyle ? styles.reply : ''}`)}
+        className={cn('flex flex-col gap-2', `${styles.card} ${replyStyle ? styles.reply : ''}`)}
         data-topic-comment-id={comment.id}
       >
         <div className="flex flex-row items-center gap-2">

@@ -1,5 +1,5 @@
 import { ChatInput, ChatInputActionBar, SendButton } from '@lobehub/editor/react';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -69,7 +69,7 @@ const Composer = memo<ComposerProps>(
     if (!workspaceId || !canUseResource) return null;
 
     return (
-      <div className={cx('flex flex-col', styles.composer)}>
+      <div className={cn('flex flex-col', styles.composer)}>
         <ChatInput
           resize={false}
           styles={{ body: { padding: 8 } }}

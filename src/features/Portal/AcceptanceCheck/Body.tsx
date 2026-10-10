@@ -1,7 +1,7 @@
 'use client';
 
 import type { VerifyAgentPlanConfig } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,17 +23,9 @@ import { useTaskStore } from '@/store/task';
 
 import SimpleEmpty from '../SimpleEmpty';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow-y: auto;
-    flex: 1;
-
-    height: 100%;
-    min-height: 0;
-    padding-block: 0 24px;
-    padding-inline: 24px;
-  `,
-}));
+const styles = {
+  body: 'overflow-y-auto flex-1 h-full min-h-0 [padding-block:0_24px] px-6',
+};
 
 const Body = memo(() => {
   const { t } = useTranslation(['chat', 'verify']);
@@ -103,7 +95,7 @@ const Body = memo(() => {
   const usesMultimodalLlm = requiredEvidence.some((evidence) => evidence.type === 'screenshot');
 
   return (
-    <div className={cx('flex flex-col gap-4', styles.body)}>
+    <div className={cn('flex flex-col gap-4', styles.body)}>
       <div className="flex flex-row items-center gap-2.5">
         <span className="anticon" role="img" style={{ flex: 'none' }}>
           <checkMeta.icon

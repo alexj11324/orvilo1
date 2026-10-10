@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowLeft } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,19 +12,10 @@ import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 import Body from './Body';
 import ThreadBody from './ThreadBody';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: hidden;
-    flex: 1;
-    min-height: 0;
-  `,
-  subheader: css`
-    flex-shrink: 0;
-    height: 40px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  container: 'overflow-hidden flex-1 min-h-0',
+  subheader: 'shrink-0 h-10 px-2 [border-block-end:1px_solid_var(--sidebar-border)]',
+};
 
 const TopicCommentsSidebar = memo(() => {
   const { t } = useTranslation('chat');
@@ -44,8 +35,8 @@ const TopicCommentsSidebar = memo(() => {
   const isThread = view.type === PortalViewType.TopicCommentThread;
 
   return (
-    <div className={cx('flex flex-col', styles.container)}>
-      <div className={cx('flex flex-row items-center gap-1', styles.subheader)}>
+    <div className={cn('flex flex-col', styles.container)}>
+      <div className={cn('flex flex-row items-center gap-1', styles.subheader)}>
         <ActionIcon
           aria-label={t('back', { ns: 'common' })}
           icon={ArrowLeft}

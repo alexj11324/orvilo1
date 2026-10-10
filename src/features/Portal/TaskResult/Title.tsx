@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +29,7 @@ const Title = memo(() => {
         </div>
         <div
           className={cn('text-[13px]', oneLineEllipsis)}
-          style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}
+          style={{ color: 'var(--muted-foreground)', flex: 1, minWidth: 0 }}
         >
           {liveRun.activity.title}
         </div>
@@ -43,7 +42,7 @@ const Title = memo(() => {
       {(detail?.identifier || detail?.name) && (
         <div
           className={cn('text-[13px]', oneLineEllipsis)}
-          style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}
+          style={{ color: 'var(--muted-foreground)', flex: 1, minWidth: 0 }}
         >
           {[detail.identifier, detail.name].filter(Boolean).join(' · ')}
         </div>

@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { MessageCircle } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -92,14 +92,14 @@ const ThreadBody = memo(() => {
   if (state === 'hidden') return null;
   if (state === 'notFound') {
     return (
-      <div className={cx('flex flex-col items-center justify-center', styles.empty)}>
+      <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
         <SimpleEmpty description={t('topicComment.notFound')} icon={MessageCircle} />
       </div>
     );
   }
   if (state === 'error') {
     return (
-      <div className={cx('flex flex-col', styles.body)}>
+      <div className={cn('flex flex-col', styles.body)}>
         <AsyncError error={root.error} variant={'page'} onRetry={() => void root.mutate()} />
       </div>
     );
@@ -110,8 +110,8 @@ const ThreadBody = memo(() => {
   if (!root.data) return null;
 
   return (
-    <div className={cx('flex flex-col', styles.body)}>
-      <div className={cx('flex flex-col', styles.list)} ref={listRef}>
+    <div className={cn('flex flex-col', styles.body)}>
+      <div className={cn('flex flex-col', styles.list)} ref={listRef}>
         <CommentCard
           comment={root.data}
           replyCount={replyCount}

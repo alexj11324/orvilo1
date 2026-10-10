@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -7,21 +6,10 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useTaskStore } from '@/store/task';
 import { oneLineEllipsis } from '@/styles';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  identifier: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  identifier:
+    'shrink-0 py-px px-1.5 rounded-[4px] font-mono text-[12px] text-muted-foreground bg-accent',
+};
 
 const Title = memo(() => {
   const taskId = useChatStore(chatPortalSelectors.taskDetailId);
@@ -35,7 +23,7 @@ const Title = memo(() => {
       {name && (
         <div
           className={cn(oneLineEllipsis)}
-          style={{ color: cssVar.colorText, flex: 1, fontSize: 14, minWidth: 0 }}
+          style={{ color: 'var(--foreground)', flex: 1, fontSize: 14, minWidth: 0 }}
         >
           {name}
         </div>

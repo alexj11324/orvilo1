@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,23 +9,10 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { ActivateDeviceParams, ActivateDeviceState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  device: css`
-    overflow: hidden;
-
-    max-width: 240px;
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  device:
+    'truncate max-w-60 py-0.5 ps-2 pe-2 rounded-[var(--ant-border-radius-sm)] font-medium text-foreground bg-accent',
+};
 
 export const ActivateDeviceInspector = memo<
   BuiltinInspectorProps<ActivateDeviceParams, ActivateDeviceState>
@@ -40,7 +27,7 @@ export const ActivateDeviceInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-remote-device.apiName.activateDevice')}
       </span>
       {deviceLabel && <span className={styles.device}>{deviceLabel}</span>}

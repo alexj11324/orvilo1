@@ -9,11 +9,11 @@ import { countResults, type DockPhase, phaseFromStatus } from '../utils';
 const styles = {
   body: 'px-4 py-3 text-[13px] leading-[1.7] text-muted-foreground',
   card: 'overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
-  cardFailed: 'border-(--ant-color-error-border)',
-  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-[12px] text-(--ant-color-text-tertiary)',
+  cardFailed: 'border-destructive-border',
+  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-[12px] text-foreground-tertiary',
   head: 'flex items-start gap-3.5 border-b border-sidebar-border px-4 py-3.5',
   status: 'text-[13px] font-semibold',
-  sub: 'mt-1 text-[12px] leading-normal text-(--ant-color-text-tertiary)',
+  sub: 'mt-1 text-[12px] leading-normal text-foreground-tertiary',
   title: 'text-[15px] font-bold text-foreground',
 };
 

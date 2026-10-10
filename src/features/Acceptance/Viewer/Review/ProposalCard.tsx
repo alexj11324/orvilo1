@@ -17,7 +17,7 @@ const styles = {
   /* The collapsed line carries the claim without needing to open the card. */
   preview: 'min-w-0 flex-1 truncate text-[12px]',
   /* Provenance labels stay quieter than secondary content. */
-  muted: 'text-[11px] text-(--ant-color-text-quaternary)',
+  muted: 'text-[11px] text-foreground-quaternary',
   regionIndex:
     'size-4 flex-none rounded-full bg-destructive text-center text-[10px] leading-4 font-semibold text-white',
 };

@@ -21,17 +21,17 @@ const QUICK_REACTIONS = ['👍', '👎', '😄', '🎉', '😕', '❤️', '🚀
 
 const styles = {
   bar: 'pt-2.5',
-  chip: 'inline-flex h-6 cursor-pointer items-center gap-[5px] rounded-[999px] border border-sidebar-border bg-(--ant-color-fill-quaternary) px-2 py-0 text-[13px] leading-none hover:border-border',
+  chip: 'inline-flex h-6 cursor-pointer items-center gap-[5px] rounded-[999px] border border-sidebar-border bg-fill-quaternary px-2 py-0 text-[13px] leading-none hover:border-border',
   chipMine:
-    'border-(--ant-color-info-border) bg-[color-mix(in_srgb,var(--info)_10%,transparent)] text-(--ant-color-info-text)',
+    'border-info-border bg-[color-mix(in_srgb,var(--info)_10%,transparent)] text-(--ant-color-info-text)',
   count: 'text-[12px] text-muted-foreground',
   emojiButton:
     'flex size-[30px] cursor-pointer items-center justify-center rounded-(--ant-border-radius) text-[17px] hover:bg-selected',
   moreButton:
-    'flex size-[30px] cursor-pointer items-center justify-center rounded-(--ant-border-radius) text-(--ant-color-text-tertiary) hover:bg-selected hover:text-foreground',
+    'flex size-[30px] cursor-pointer items-center justify-center rounded-(--ant-border-radius) text-foreground-tertiary hover:bg-selected hover:text-foreground',
   // Always discoverable; the open picker keeps the same emphasis as hover.
   trigger:
-    'inline-flex size-6 cursor-pointer items-center justify-center rounded-[999px] border border-sidebar-border text-(--ant-color-text-tertiary) transition-[color] duration-(--ant-motion-duration-fast) ease-[ease] hover:bg-(--ant-color-fill-quaternary) hover:text-foreground data-[open]:bg-(--ant-color-fill-quaternary) data-[open]:text-foreground',
+    'inline-flex size-6 cursor-pointer items-center justify-center rounded-[999px] border border-sidebar-border text-foreground-tertiary transition-[color] duration-(--ant-motion-duration-fast) ease-[ease] hover:bg-fill-quaternary hover:text-foreground data-[open]:bg-fill-quaternary data-[open]:text-foreground',
 };
 
 interface CommentReactionsProps {

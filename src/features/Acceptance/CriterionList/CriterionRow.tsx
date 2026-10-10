@@ -9,8 +9,8 @@ import { Badge } from '@/components/reui/badge';
 const styles = {
   list: 'w-full overflow-hidden p-0',
   row: 'acceptance-criterion-row px-3 py-2.5 [&+.acceptance-criterion-row]:border-t [&+.acceptance-criterion-row]:border-sidebar-border',
-  rowClickable: 'cursor-pointer hover:bg-(--ant-color-fill-quaternary)',
-  seq: 'flex-none text-[12px] text-(--ant-color-text-tertiary)',
+  rowClickable: 'cursor-pointer hover:bg-fill-quaternary',
+  seq: 'flex-none text-[12px] text-foreground-tertiary',
 };
 
 interface CriterionRequiredChipProps {

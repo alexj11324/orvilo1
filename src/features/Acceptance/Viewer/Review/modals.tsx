@@ -16,7 +16,7 @@ import {
 } from '../Evidence/attachments';
 
 const styles = {
-  warning: 'rounded-(--ant-border-radius-lg) bg-(--ant-color-warning-bg) px-3.5 py-2.5',
+  warning: 'rounded-(--ant-border-radius-lg) bg-warning-wash px-3.5 py-2.5',
 };
 
 /**

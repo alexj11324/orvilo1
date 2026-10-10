@@ -25,7 +25,7 @@ const styles = {
   item: 'w-full h-auto min-h-9 py-1.5 px-3 text-start whitespace-normal',
   branch:
     'justify-start w-fit max-w-full h-auto min-h-6 py-0.5 px-3 text-[12px] leading-[18px] text-start whitespace-normal',
-  branchContent: 'text-(--ant-color-text-tertiary)',
+  branchContent: 'text-foreground-tertiary',
   nested: 'ms-[18px] ps-2 border-s border-sidebar-border',
 };
 

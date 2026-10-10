@@ -18,7 +18,7 @@ import { useAcceptanceComments } from './hooks';
 
 const styles = {
   card: 'py-3.5 px-4 border border-sidebar-border rounded-[12px] bg-card',
-  description: 'text-[12px] text-(--ant-color-text-tertiary)',
+  description: 'text-[12px] text-foreground-tertiary',
 };
 
 /**

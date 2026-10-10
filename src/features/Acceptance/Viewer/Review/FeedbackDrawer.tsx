@@ -11,11 +11,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { AttachmentThumbs } from '../Evidence/attachments';
 
 const styles = {
-  clickable: 'cursor-pointer hover:bg-(--ant-color-fill-quaternary)',
-  meta: 'flex-none text-[11px] text-(--ant-color-text-quaternary) whitespace-nowrap',
+  clickable: 'cursor-pointer hover:bg-fill-quaternary',
+  meta: 'flex-none text-[11px] text-foreground-quaternary whitespace-nowrap',
   /* The drawer is an audit trail: roomy ledger entries separated by hairlines. */
   row: 'rounded-(--ant-border-radius) border-b border-sidebar-border px-2 py-5 last:border-b-0',
-  sectionTitle: 'text-[12px] font-medium text-(--ant-color-text-tertiary) tracking-[0.04em]',
+  sectionTitle: 'text-[12px] font-medium text-foreground-tertiary tracking-[0.04em]',
   seq: 'flex-none font-mono text-[11px] text-muted-foreground',
 };
 

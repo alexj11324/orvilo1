@@ -35,7 +35,7 @@ const styles = {
     'py-2.5 px-3 border border-sidebar-border rounded-(--ant-border-radius) transition-[box-shadow,border-color] duration-200 ease-[ease]',
   roundActive: 'border-primary shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
   roundClickable:
-    'cursor-pointer [&_.acceptance-round-open-hint]:opacity-0 [&_.acceptance-round-open-hint]:transition-opacity [&_.acceptance-round-open-hint]:duration-200 [&_.acceptance-round-open-hint]:ease-[ease] hover:border-border hover:bg-(--ant-color-fill-quaternary) [&:hover_.acceptance-round-open-hint]:opacity-100',
+    'cursor-pointer [&_.acceptance-round-open-hint]:opacity-0 [&_.acceptance-round-open-hint]:transition-opacity [&_.acceptance-round-open-hint]:duration-200 [&_.acceptance-round-open-hint]:ease-[ease] hover:border-border hover:bg-fill-quaternary [&:hover_.acceptance-round-open-hint]:opacity-100',
 };
 
 /** Only the still-running states keep a machine indicator; a settled round is

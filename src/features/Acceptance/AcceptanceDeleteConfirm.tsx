@@ -21,7 +21,7 @@ const PREVIEW_BATCH_LIMIT = 20;
 
 const styles = {
   facts:
-    'm-0 grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1 rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary) px-3 py-2.5 text-[13px] tabular-nums [&_dt]:m-0 [&_dt]:text-(--ant-color-text-tertiary) [&_dd]:m-0 [&_dd]:text-foreground',
+    'm-0 grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1 rounded-(--ant-border-radius-lg) bg-fill-quaternary px-3 py-2.5 text-[13px] tabular-nums [&_dt]:m-0 [&_dt]:text-foreground-tertiary [&_dd]:m-0 [&_dd]:text-foreground',
 };
 
 interface DeleteConfirmProps {

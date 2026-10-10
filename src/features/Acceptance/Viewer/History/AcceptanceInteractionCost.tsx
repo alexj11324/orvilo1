@@ -29,7 +29,7 @@ import { buildCheckLabels, selectPricedRound } from './interactionCost';
 const styles = {
   body: 'pb-1 ps-6',
   chevron: 'transition-transform duration-150 ease-[ease] data-[open=true]:rotate-90',
-  total: 'ms-1.5 tabular-nums text-(--ant-color-text-tertiary)',
+  total: 'ms-1.5 tabular-nums text-foreground-tertiary',
 };
 
 interface AcceptanceInteractionCostProps {

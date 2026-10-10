@@ -368,10 +368,14 @@ When('用户右键点击一个对话', async function (this: CustomWorld) {
     )
     .toBeGreaterThanOrEqual(1);
 
-  // Store the topic text for later verification
-  const topicText = await sidebarTopics.first().textContent();
-  this.testContext.deletedTopicTitle = topicText?.slice(0, 30);
-  await sidebarTopics.first().click({ button: 'right' });
+  // Titles can repeat or change while streaming; keep the identity of the row
+  // whose context menu we open for the deletion assertions.
+  const topicId = await sidebarTopics.first().getAttribute('data-topic-id');
+  expect(topicId).toBeTruthy();
+  this.testContext.deletedTopicId = topicId;
+  const topic = this.page.locator(`[data-testid="topic-item"][data-topic-id="${topicId}"]`);
+  const topicText = await topic.textContent();
+  await topic.click({ button: 'right' });
   console.log(`   ✅ 已右键点击对话: "${topicText?.slice(0, 30)}..."`);
 
   await this.page.waitForTimeout(500);
@@ -758,22 +762,11 @@ Then('该对话应该被删除', async function (this: CustomWorld) {
 Then('对话列表中不再显示该对话', async function (this: CustomWorld) {
   console.log('   📍 Step: 验证对话列表中不再显示该对话...');
 
-  // Wait for UI to update
-  await this.page.waitForTimeout(500);
-
-  // The deleted topic should not be in the list
-  if (this.testContext.deletedTopicTitle) {
-    // Topic rows render inside [data-testid="topic-item"] wrappers (the title
-    // text sits in the NavItem row within).
-    const deletedTopic = this.page.locator(
-      `[data-testid="topic-item"]:has-text("${this.testContext.deletedTopicTitle}")`,
-    );
-    const count = await deletedTopic.count();
-    expect(count).toBe(0);
-    console.log(`   ✅ 对话 "${this.testContext.deletedTopicTitle}" 已从列表中移除`);
-  } else {
-    console.log('   ✅ 对话已从列表中移除');
-  }
+  const topicId = this.testContext.deletedTopicId;
+  expect(topicId).toBeTruthy();
+  const deletedTopic = this.page.locator(`[data-testid="topic-item"][data-topic-id="${topicId}"]`);
+  await expect(deletedTopic).toHaveCount(0, { timeout: 10_000 });
+  console.log(`   ✅ 对话 ${topicId} 已从列表中移除`);
 });
 
 Then('应该显示包含 {string} 的对话', async function (this: CustomWorld, searchText: string) {

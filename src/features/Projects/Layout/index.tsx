@@ -3,10 +3,7 @@
 import { memo, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 
-import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import { projectPathSection } from './navigation';
 import { ProjectPanelSuppressContext } from './ProjectPanelPeekContext';
@@ -38,7 +35,6 @@ const usePanelViewport = () => {
 };
 
 const ProjectLayout = memo(() => {
-  const enabled = useUserStore(labPreferSelectors.enableProjects);
   const { projectId } = useActiveRouteParams<{ projectId: string }>();
   const { pathname } = useLocation();
   const panelViewport = usePanelViewport();
@@ -46,8 +42,6 @@ const ProjectLayout = memo(() => {
   // The Issues peek takes the panel's place while it is open.
   const [panelSuppressed, setPanelSuppressed] = useState(false);
   const showPanel = panelViewport && PANEL_SECTIONS.has(projectPathSection(pathname) ?? '');
-
-  if (!enabled) return <ProjectDisabled />;
 
   return (
     <ProjectToolbarContext value={toolbar}>

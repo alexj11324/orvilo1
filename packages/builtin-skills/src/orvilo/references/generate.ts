@@ -7,7 +7,6 @@ Generate text, images, videos, and audio. Alias: \`orvilo generate\`.
 - \`orvilo gen text <prompt> [-m <model>] [-p <provider>] [--stream] [--temperature <t>]\` - Generate text
 - \`orvilo gen image <prompt> [-m <model>] [-n <count>] [--width <w>] [--height <h>]\` - Generate image
 - \`orvilo gen video <prompt> -m <model> -p <provider> [--aspect-ratio <r>] [--duration <d>] [--resolution <res>]\` - Generate video
-- \`orvilo gen tts <text> [-o <output>] [--voice <v>] [--speed <s>]\` - Text-to-speech
 - \`orvilo gen asr <audioFile> [--model <m>] [--language <l>]\` - Speech-to-text
 - \`orvilo gen status <generationId> <asyncTaskId>\` - Check generation task status
 - \`orvilo gen download <generationId> <asyncTaskId> [-o <output>]\` - Wait and download result

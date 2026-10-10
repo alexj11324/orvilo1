@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import React from 'react';
 import { createMemoryRouter, Outlet, RouterProvider, useParams } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -84,13 +84,6 @@ beforeEach(() => {
   window.localStorage.clear();
   resetTabRouterManager();
   setStore([], null);
-  useUserStore.setState({
-    isUserStateInit: true,
-    preference: {
-      ...initialUserState.preference,
-      lab: { ...initialUserState.preference.lab, enableDesktopSplitView: true },
-    },
-  });
 });
 
 afterEach(() => {
@@ -229,30 +222,6 @@ describe('TabHost', () => {
     });
 
     expect(useElectronStore.getState().activeTabId).toBe('b');
-  });
-
-  it('collapses a persisted split when the alpha lab is disabled', async () => {
-    useUserStore.setState({
-      preference: {
-        ...initialUserState.preference,
-        lab: { ...initialUserState.preference.lab, enableDesktopSplitView: false },
-      },
-    });
-    useElectronStore.setState({
-      ...initialState,
-      activeTabId: 'a',
-      splitView: { primaryTabId: 'a', ratio: 0.5, secondaryTabId: 'b' },
-      tabs: [
-        { id: 'a', lastVisited: 2, url: '/item/a' },
-        { id: 'b', lastVisited: 1, url: '/item/b' },
-      ],
-    });
-
-    renderHost();
-
-    expect(await screen.findByTestId('param-a')).toBeVisible();
-    expect(screen.queryByTestId('param-b')).not.toBeInTheDocument();
-    await waitFor(() => expect(useElectronStore.getState().splitView).toBeNull());
   });
 
   it('disposes a router evicted past the LRU cap and recreates it fresh when reactivated', async () => {

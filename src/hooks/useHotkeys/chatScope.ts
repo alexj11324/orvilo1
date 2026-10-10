@@ -31,18 +31,6 @@ export const useToggleTerminalPanelHotkey = () => {
   });
 };
 
-export const useAddUserMessageHotkey = (send: () => void) => {
-  return useHotkeyById(
-    HotkeyEnum.AddUserMessage,
-    () => {
-      send();
-    },
-    {
-      enableOnContentEditable: true,
-    },
-  );
-};
-
 // Register aggregate
 
 export const useRegisterChatHotkeys = () => {

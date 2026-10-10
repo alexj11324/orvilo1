@@ -31,7 +31,6 @@ export enum SidebarTabKey {
 export enum ChatSettingsTabs {
   Connector = 'connector',
   Graph = 'graph',
-  Opening = 'opening',
   Plugin = 'plugin',
   Rules = 'rules',
   SelfIteration = 'selfIteration',
@@ -236,7 +235,7 @@ export interface SystemStatus {
    * Display options of the agent view-all page (grouping / ordering)
    */
   agentListViewOptions?: {
-    groupBy: 'author' | 'label' | 'none';
+    groupBy: 'author' | 'none';
     orderBy: 'author' | 'title' | 'updatedAt';
     orderDirection: 'asc' | 'desc';
   };
@@ -462,7 +461,7 @@ export interface SystemStatus {
    */
   showTaskAgentPanel?: boolean;
   /**
-   * Visibility of the chat bottom terminal panel (desktop-only, Labs gated).
+   * Visibility of the chat bottom terminal panel (desktop-only).
    */
   showTerminalPanel?: boolean;
   /**

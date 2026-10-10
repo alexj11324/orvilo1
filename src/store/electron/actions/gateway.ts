@@ -1,5 +1,5 @@
 import { isDesktop } from '@orvilo/const';
-import type { GatewayConnectionStatus } from '@orvilo/electron-client-ipc';
+import type { GatewayConnectionStatus, GatewayLocalState } from '@orvilo/electron-client-ipc';
 import { useEffect } from 'react';
 import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
@@ -58,6 +58,10 @@ export class ElectronGatewayActionImpl {
     this.#set({ gatewayConnectionStatus: status }, false, 'setGatewayConnectionStatus');
   };
 
+  setGatewayLocalState = (localState: GatewayLocalState | undefined): void => {
+    this.#set({ gatewayLocalState: localState }, false, 'setGatewayLocalState');
+  };
+
   useFetchGatewayDeviceInfo = (): SWRResponse<GatewayDeviceInfo> => {
     const ownerId = useUserStore((state) => state.user?.id);
     const response = useSWR<GatewayDeviceInfo>(
@@ -80,13 +84,17 @@ export class ElectronGatewayActionImpl {
     return response;
   };
 
-  useFetchGatewayStatus = (): SWRResponse<{ status: GatewayConnectionStatus }> => {
-    return useSWR<{ status: GatewayConnectionStatus }>(
+  useFetchGatewayStatus = (): SWRResponse<{
+    localState?: GatewayLocalState;
+    status: GatewayConnectionStatus;
+  }> => {
+    return useSWR<{ localState?: GatewayLocalState; status: GatewayConnectionStatus }>(
       isDesktop ? 'electron:getGatewayConnectionStatus' : null,
       async () => gatewayConnectionService.getConnectionStatus(),
       {
         onSuccess: (data) => {
           this.#set({ gatewayConnectionStatus: data.status }, false, 'setGatewayConnectionStatus');
+          this.#set({ gatewayLocalState: data.localState }, false, 'setGatewayLocalState');
         },
       },
     );

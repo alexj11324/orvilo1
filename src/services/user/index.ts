@@ -38,14 +38,6 @@ export class UserService {
     return lambdaClient.user.getUserActivitySummary.query();
   };
 
-  getUserRegistrationDuration = async (): Promise<{
-    createdAt: string;
-    duration: number;
-    updatedAt: string;
-  }> => {
-    return lambdaClient.user.getUserRegistrationDuration.query();
-  };
-
   getUserState = async (): Promise<UserInitializationState> => {
     return lambdaClient.user.getUserState.query();
   };

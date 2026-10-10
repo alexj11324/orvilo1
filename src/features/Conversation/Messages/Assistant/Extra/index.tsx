@@ -5,18 +5,11 @@ import { memo } from 'react';
 
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
-import { authSelectors } from '@/store/user/slices/auth/selectors';
 
-import { messageStateSelectors, useConversationStore } from '../../../store';
-import ExtraContainer from '../../components/Extras/ExtraContainer';
-import Translate from '../../components/Extras/Translate';
-import TTS from '../../components/Extras/TTS';
 import Usage from '../../components/Extras/Usage';
 
 interface AssistantMessageExtraProps {
   content: string;
-  extra?: any;
-  id: string;
   model?: string;
   performance?: ModelPerformance;
   provider?: string;
@@ -25,9 +18,7 @@ interface AssistantMessageExtraProps {
 }
 
 export const AssistantMessageExtra = memo<AssistantMessageExtraProps>(
-  ({ extra, id, content, performance, usage, tools, provider, model }) => {
-    const loading = useConversationStore(messageStateSelectors.isMessageGenerating(id));
-    const isLogin = useUserStore(authSelectors.isLogin);
+  ({ content, performance, usage, tools, provider, model }) => {
     const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
 
     // Local CLI hetero agents (claude-code, codex) only report `model` after
@@ -40,26 +31,12 @@ export const AssistantMessageExtra = memo<AssistantMessageExtraProps>(
       isDevMode &&
       content !== LOADING_FLAT &&
       (!!model || (!!provider && isRemoteHeterogeneousType(provider)));
-    const showTts = isLogin && !!extra?.tts;
-    const showTranslate = isLogin && !!extra?.translate;
 
-    if (!showUsage && !showTts && !showTranslate) return null;
+    if (!showUsage) return null;
 
     return (
       <div className="flex flex-col gap-2" style={{ marginTop: !!tools?.length ? 8 : 4 }}>
-        {showUsage && (
-          <Usage model={model!} performance={performance} provider={provider!} usage={usage} />
-        )}
-        {showTts && (
-          <ExtraContainer>
-            <TTS content={content} id={id} loading={loading} {...extra?.tts} />
-          </ExtraContainer>
-        )}
-        {showTranslate && (
-          <ExtraContainer>
-            <Translate id={id} loading={loading} {...extra?.translate} />
-          </ExtraContainer>
-        )}
+        <Usage model={model!} performance={performance} provider={provider!} usage={usage} />
       </div>
     );
   },

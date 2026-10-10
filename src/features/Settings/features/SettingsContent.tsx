@@ -3,8 +3,13 @@
 import { Fragment, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import NotFound from '@/components/404';
-import { isSettingsTabAvailable, resolveSettingsCapability } from '@/config/routes/settings';
+import {
+  isSettingsTabAvailable,
+  resolveSettingsCapability,
+  resolveWorkspaceSettingsUrl,
+} from '@/config/routes/settings';
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { useSettingsAnchorScroll } from '@/features/SettingsSearch/anchor';
@@ -23,8 +28,6 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Credits,
   SettingsTabs.Devices,
   SettingsTabs.Hotkey,
-  SettingsTabs.Labels,
-  SettingsTabs.Labs,
   SettingsTabs.Memory,
   SettingsTabs.Notification,
   SettingsTabs.Orchestrator,
@@ -53,7 +56,7 @@ interface SettingsContentProps {
 }
 
 const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
-  const { t } = useTranslation(['auth', 'labs', 'setting', 'subscription']);
+  const { t } = useTranslation(['auth', 'setting', 'subscription']);
   const navigate = useWorkspaceAwareNavigate();
   const capabilityContext = useSettingsCapabilityContext();
   const { enableBusinessFeatures } = capabilityContext;
@@ -66,9 +69,6 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     [SettingsTabs.Credits]: t('subscription:tab.credits'),
     [SettingsTabs.Devices]: t('setting:devices.title'),
     [SettingsTabs.Hotkey]: t('setting:tab.hotkey'),
-    [SettingsTabs.Labels]: t('setting:tab.labels'),
-    // Labs has no `setting:tab.*` entry — the nav label comes from the labs namespace.
-    [SettingsTabs.Labs]: t('labs:title'),
     [SettingsTabs.Memory]: t('setting:tab.memory'),
     [SettingsTabs.Notification]: t('setting:tab.notification'),
     [SettingsTabs.Orchestrator]: t('setting:tab.orchestrator'),
@@ -96,6 +96,15 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     }
   }, [navigate, redirectTo]);
 
+  const slug = useActiveWorkspaceSlug();
+  // Devices, statistics and credentials have one page per workspace; the
+  // personal URL only renders when there is no workspace to own it.
+  const workspaceUrl = resolveWorkspaceSettingsUrl(activeTab, slug);
+
+  useEffect(() => {
+    if (workspaceUrl) navigate(workspaceUrl, { escape: true, replace: true });
+  }, [navigate, workspaceUrl]);
+
   const renderComponent = (tab: string) => {
     const Component = componentMap[tab as keyof typeof componentMap];
     // A tab the registry calls `enabled` without a component is a wiring bug,
@@ -115,7 +124,6 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
         SettingsTabs.Stats,
         SettingsTabs.Usage,
         SettingsTabs.Creds,
-        SettingsTabs.Security,
         ...(enableBusinessFeatures
           ? [SettingsTabs.Plans, SettingsTabs.Credits, SettingsTabs.Billing]
           : []),
@@ -127,7 +135,7 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     return <Component {...componentProps} />;
   };
 
-  if (redirectTo) return null;
+  if (redirectTo || workspaceUrl) return null;
 
   if (activeTab && !isSettingsTabAvailable(activeTab, capabilityContext)) {
     // Unknown ids, withdrawn surfaces, and tabs whose gate is closed in this

@@ -1,11 +1,28 @@
 export default {
+  'settingAgent.modelSettings.unavailable.disabled':
+    'Provider is disabled. Enable it in AI provider settings first.',
+  'notification.events.task_assigned': 'Issue assigned to me',
+  'notification.events.task_review': 'Review or acceptance requested',
+  'notification.events.task_status_changed': 'Issue status changed',
+  'notification.events.agent_run_completed': 'Agent run completed',
+  'notification.events.agent_run_failed': 'Agent run failed',
+  'notification.events.acp_permission': 'Agent needs approval',
+
+  'settingAgent.modelSettings.unavailable.local':
+    'This route is local-only and cannot be used by the built-in agent in the cloud.',
+  'settingAgent.modelSettings.unavailable.endpoint': 'Set an API endpoint in AI provider settings.',
+  'settingAgent.modelSettings.unavailable.protocol':
+    'The built-in agent does not support this API protocol yet. Use an OpenAI-compatible endpoint.',
+  'settingAgent.modelSettings.unavailable.unverified':
+    'Connection is not verified. Check the key, endpoint and model access, then retry.',
+  'settingAgent.modelSettings.verifyBinding': 'Verify connection',
   'tab.orchestrator': 'Orchestrator',
   'orchestrator.description':
-    'Choose a configured Agent to coordinate new groups and projects. Existing conversations keep their current coordinator.',
-  'orchestrator.workspaceScope': 'Applies to your new groups and projects in this Workspace.',
-  'orchestrator.personalScope': 'Applies to your new personal groups and projects.',
+    'Choose a configured Agent to coordinate new projects. Existing projects keep their current coordinator.',
+  'orchestrator.workspaceScope': 'Applies to your new projects in this Workspace.',
+  'orchestrator.personalScope': 'Applies to your new personal projects.',
   'orchestrator.select': 'Choose Orchestrator Agent',
-  'orchestrator.unsupported': 'This engine cannot coordinate groups. Choose a supported Agent.',
+  'orchestrator.unsupported': 'This engine cannot coordinate projects. Choose a supported Agent.',
   'orchestrator.empty': 'Create and configure an Agent to choose an Orchestrator.',
   'orchestrator.selectionUnavailable':
     'The selected Agent is unavailable. Configure it or choose another Agent.',
@@ -344,7 +361,6 @@ export default {
   'agentConnectors.toolCount_other': '{{count}} tools',
   'agentTab.connector': 'Connectors',
   'agentTab.graph': 'Graph Runtime',
-  'agentTab.opening': 'Opening Settings',
   'agentTab.plugin': 'Skill Settings',
   'agentTab.rules': 'Rules & experience',
   'agentTab.selfIteration': 'Self-Iteration',
@@ -471,6 +487,7 @@ export default {
   'permission.saveNoEditPermission':
     'You have view-only access to this page, so your changes were not saved',
   'permission.updateError': 'Failed to update permission',
+  'permission.actionDenied': 'You do not have permission to perform this action.',
   'permission.viewOnlySendTip': 'You have view-only access and cannot send messages',
   'agentDocuments.createSuccess': 'Documents created from template',
   'agentDocuments.createWithTemplate': 'Create with this template',
@@ -745,6 +762,19 @@ export default {
   'devices.fallbackTooltip':
     "This device couldn't be identified by its machine ID, so reinstalling the app may create a duplicate entry.",
   'devices.lastSeen': 'Last connected {{time}}',
+  'devices.local.phase.disabled': 'Device connection is turned off.',
+  'devices.local.phase.notConfigured': 'No server is set up for this app.',
+  'devices.local.phase.signInRequired':
+    'Sign-in required. Your session has expired or you are signed out.',
+  'devices.local.phase.registering': 'Registering this device…',
+  'devices.local.phase.registerFailed':
+    'Connected, but the server did not register this device, so it is not in the list.',
+  'devices.local.phase.connecting': 'Connecting…',
+  'devices.local.phase.connected': 'Connected.',
+  'devices.local.phase.gatewayUnreachable': 'Cannot reach the device gateway.',
+  'devices.local.reason': 'Reason: {{reason}}',
+  'devices.local.retry': 'Retry',
+  'devices.local.signIn': 'Sign in again',
   'devices.osPermissions.actions.grant': 'Grant Access',
   'devices.osPermissions.actions.granted': 'Access Granted',
   'devices.osPermissions.actions.openSettings': 'Open Settings',
@@ -812,9 +842,10 @@ export default {
   'danger.reset.desc': "Restore all settings to defaults. Your data won't be deleted.",
   'danger.reset.success': 'All settings have been reset',
   'danger.reset.title': 'Reset All Settings',
+  'defaultAgent.desc': 'Used by agents whose model is set to Default.',
   'defaultAgent.model.desc': 'Model used when creating new agents',
   'defaultAgent.model.title': 'Model',
-  'defaultAgent.title': 'New Agent',
+  'defaultAgent.title': 'Default model',
   'group.aiConfig': 'Agent & runtime',
   'group.channels': 'Notifications & channels',
   'group.data': 'Data',
@@ -919,7 +950,7 @@ export default {
   'memory.effort.medium': 'Medium — Balanced behavior',
   'memory.effort.title': 'Aggressiveness',
   'memory.enabled.desc':
-    'Allow Orvilo to extract preferences and info from conversations and use them later. You can view, edit, or clear memory anytime.',
+    'Extract memories from conversations with all agents. Saved memories are injected only into the built-in Orvilo agent; CLI agents do not receive them.',
   'memory.enabled.title': 'Enable Memory',
   'memory.manageEntry': 'Manage memories',
   'memory.title': 'Memory Settings',
@@ -934,6 +965,12 @@ export default {
   'notification.email.title': 'Email Notifications',
   'notification.inbox.desc': 'Show notifications in the in-app inbox',
   'notification.inbox.title': 'Inbox Notifications',
+  'notification.matrix.all': 'All notifications',
+  'notification.matrix.cell': '{{channel}}: {{event}}',
+  'notification.matrix.event': 'Event',
+  'notification.matrix.inbox': 'Inbox',
+  'notification.matrix.push': 'Desktop & mobile',
+  'notification.matrix.title': 'Event notifications',
   'notification.push.desc':
     'Send push notifications to your mobile devices (Orvilo mobile app required)',
   'notification.push.title': 'Mobile Push Notifications',
@@ -1118,9 +1155,8 @@ export default {
   'settingAgent.accessSettings.title': 'Access',
   'settingAgent.advancedSettings.diagnosticsAction': 'View diagnostics',
   'settingAgent.advancedSettings.diagnosticsLabel': 'Diagnostics',
-  'settingAgent.advancedSettings.title': 'Advanced',
   'settingAgent.devicePolicy.selectTarget': 'Select target',
-  'settingAgent.devicePolicy.title': 'Device switching',
+  'settingAgent.devicePolicy.title': 'Member device switching',
   'settingAgent.deviceSettings.bindingInvalidDesc':
     'The bound device is gone or no longer selectable. Choose a replacement to repair this agent.',
   'settingAgent.deviceSettings.bindingInvalidTitle': 'Device no longer available',
@@ -1136,12 +1172,11 @@ export default {
   'settingAgent.deviceSettings.zeroDeviceTitle': 'No device available',
   'settingAgent.generalSettings.legacyDesc':
     'This agent still uses its existing chat runtime. Its execution path will not change until you migrate it.',
-  'settingAgent.generalSettings.legacyLabel': 'Runtime',
   'settingAgent.generalSettings.legacyMigrate': 'Migrate to Orvilo',
   'settingAgent.generalSettings.legacyName': 'Legacy chat runtime',
   'settingAgent.generalSettings.name': 'Name',
   'settingAgent.generalSettings.title': 'Basic configuration',
-  'settingAgent.modelPolicy.title': 'Model',
+  'settingAgent.modelPolicy.title': 'Member model switching',
   'settingAgent.modelSettings.bindAction': 'Bind a provider',
   'settingAgent.modelSettings.catalogError': 'Could not load models from the selected device.',
   'settingAgent.modelSettings.catalogPending':
@@ -1150,8 +1185,8 @@ export default {
   'settingAgent.modelSettings.modeLabel': 'Mode',
   'settingAgent.modelSettings.modelLabel': 'Model',
   'settingAgent.modelSettings.noBindingDesc':
-    'This agent has no model to run on yet — bind an Orvilo provider first.',
-  'settingAgent.modelSettings.noBindingTitle': 'No provider bound',
+    'Configure a provider and verify its model connection before running this Agent.',
+  'settingAgent.modelSettings.noBindingTitle': 'No verified model available',
   'settingAgent.modelSettings.primeHint':
     'Model routes come from your enabled Orvilo provider bindings.',
   'settingAgent.modelSettings.speedLabel': 'Speed',
@@ -1183,7 +1218,8 @@ export default {
   'settingAppearance.animationMode.elegant': 'Elegant',
   'settingAppearance.animationMode.title': 'Response Animation',
   'settingAppearance.contextMenuMode.default': 'Default',
-  'settingAppearance.contextMenuMode.desc': 'Enable the right-click menu for some list items.',
+  'settingAppearance.contextMenuMode.desc':
+    'Enable the right-click menu on messages in conversations.',
   'settingAppearance.contextMenuMode.disabled': 'Disabled',
   'settingAppearance.contextMenuMode.title': 'Right-Click Menu Mode',
   'settingAppearance.collaboration.showInCollaboration.desc':
@@ -1235,11 +1271,6 @@ export default {
   'settingChat.enableAutoScrollOnStreaming.desc': 'Override global setting for this agent',
   'settingChat.enableAutoScrollOnStreaming.title': 'Auto-scroll During AI Response',
   'settingChat.enableCompressHistory.title': 'Enable auto context compression',
-  'settingChat.enableFollowUpChips.desc':
-    'After each reply, show one-click follow-up reply chips below the message. Requires the global Follow-up model to be configured.',
-  'settingChat.enableFollowUpChips.notConfiguredHint':
-    'Configure the global Follow-up model first to enable this.',
-  'settingChat.enableFollowUpChips.title': 'Follow-up Suggestions',
   'settingChat.enableHistoryCount.alias': 'Unlimited',
   'settingChat.enableHistoryCount.limited': 'Include only {{number}} conversation messages',
   'settingChat.enableHistoryCount.setlimited': 'Set limited history messages',
@@ -1262,9 +1293,9 @@ export default {
   'settingChatAppearance.autoScrollOnStreaming.title': 'Auto-scroll During AI Response',
   'settingChatAppearance.chatBehavior.title': 'Chat Behavior',
   'settingChatAppearance.workflowStreamingExpand.title': 'Expand Tool Steps While Running',
-  'settingChatAppearance.fontSize.desc': 'Font size of messages',
+  'settingChatAppearance.fontSize.desc': 'Size of the message text in conversations',
   'settingChatAppearance.fontSize.marks.normal': 'Standard',
-  'settingChatAppearance.fontSize.title': 'Font Size',
+  'settingChatAppearance.fontSize.title': 'Message font size',
   'settingChatAppearance.highlighterTheme.title': 'Code Highlight Theme',
   'settingChatAppearance.linkIcon.desc': "Turn this off if you don't need it.",
   'settingChatAppearance.linkIcon.previewMessage':
@@ -1280,8 +1311,8 @@ export default {
   'settingChatAppearance.transitionMode.options.smooth': 'Smooth',
   'settingChatAppearance.transitionMode.title': 'Transition Animation',
   'settingCommon.devMode.desc':
-    'Show technical details and manual controls for chats, models, and local tools. This does not change model responses.',
-  'settingCommon.devMode.title': 'Advanced tools',
+    'Show technical details and manual controls: token usage in the message input, message IDs, branching and debug actions, model info tags, the CLI agent connection test in System tools, and the API Key page. This does not change model responses.',
+  'settingCommon.devMode.title': 'Developer mode',
   'settingCommon.lang.autoMode': 'Follow System',
   'settingCommon.lang.title': 'Language',
   'settingCommon.liteMode.desc': 'Simplify the interface and hide advanced features',
@@ -1407,19 +1438,6 @@ export default {
   'settingModel.topP.desc':
     'How many possibilities to consider; a higher value accepts more potential answers, while a lower value tends to choose the most likely answer. It is not recommended to change this alongside the creativity level.',
   'settingModel.topP.title': 'Openness to Ideas',
-  'settingOpening.openingMessage.desc':
-    "The opening message displayed when the conversation starts, used to introduce the agent's features",
-  'settingOpening.openingMessage.placeholder':
-    'Hello, I am your Custom Agent. You can start chatting with me right away, or go to Agent Settings to complete my information.',
-  'settingOpening.openingMessage.title': 'Opening Message',
-  'settingOpening.openingQuestions.desc':
-    'Guiding questions displayed at the beginning of the conversation',
-  'settingOpening.openingQuestions.empty':
-    'Add opening questions to help users start the conversation quickly',
-  'settingOpening.openingQuestions.placeholder': 'Please enter a question',
-  'settingOpening.openingQuestions.repeat': 'Question already exists',
-  'settingOpening.openingQuestions.title': 'Opening Questions',
-  'settingOpening.title': 'Opening Settings',
   'settingPlugin.title': 'Skill List',
   'settingGraphRuntime.enabled.desc':
     'Route this agent through the graph runtime using the snapshot stored below.',
@@ -1454,8 +1472,6 @@ export default {
   'settingsSearch.tabKeywords.creds': 'credentials, secrets, oauth',
   'settingsSearch.tabKeywords.devices': 'devices, sessions, logged in devices',
   'settingsSearch.tabKeywords.hotkey': 'hotkey, shortcut, keyboard',
-  'settingsSearch.tabKeywords.labels': 'labels, tags, grouping',
-  'settingsSearch.tabKeywords.labs': 'labs, experiment, beta, preview, developer',
   'settingsSearch.tabKeywords.messenger':
     'messenger, chat platform, bot, telegram, slack, discord, wechat',
   'settingsSearch.tabKeywords.memory': 'memory, memories, personalization',
@@ -1470,7 +1486,7 @@ export default {
   'settingsSearch.tabKeywords.proxy': 'proxy, network, connection, proxy settings',
   'settingsSearch.tabKeywords.referral': 'referral, invite, rewards, bonus',
   'settingsSearch.tabKeywords.serviceModel':
-    'service model, model assignment, topic naming, translation, tts, tts settings, voice, speech, image, image generation, embedding, prompt rewrite, suggestion, search, search model',
+    'service model, model assignment, topic naming, image, image generation, embedding, prompt rewrite, search, search model',
   'settingsSearch.tabKeywords.skill': 'skills, plugins, tools',
   'settingsSearch.tabKeywords.stats': 'analytics, statistics, stats',
   'settingsSearch.tabKeywords.storage':
@@ -1490,9 +1506,6 @@ export default {
   'serviceModel.modelAssignments.title': 'General',
   'serviceModel.contextLimit.placeholder': 'Context limit',
   'serviceModel.memoryModels.title': 'Memory',
-  'serviceModel.optionalFeatures.title': 'Optional Features',
-  'serviceModel.topicAutoSummary.desc':
-    'Summarizes topics created in the rolling 24-hour window after one hour without message activity.',
   'settingSystemTools.appEnvironment.chromium.desc': 'Chromium browser engine version',
   'settingSystemTools.appEnvironment.desc': 'Built-in runtime versions in the desktop app',
   'settingSystemTools.appEnvironment.electron.desc': 'Electron framework version',
@@ -1537,6 +1550,7 @@ export default {
   'settingSystemTools.tools.grep.desc': 'GNU grep - standard text search tool',
   'settingSystemTools.tools.kimi.desc': 'Kimi Code - Moonshot AI agentic coding CLI',
   'settingSystemTools.tools.mdfind.desc': 'macOS Spotlight search (fast indexed search)',
+  'settingSystemTools.tools.opencode.desc': 'OpenCode - Open source agentic coding CLI',
   'settingSystemTools.tools.orvilo.desc': 'Orvilo CLI - manage and connect to Orvilo services',
   'settingSystemTools.tools.bun.desc': 'Bun - fast JavaScript runtime and package manager',
   'settingSystemTools.tools.bunx.desc': 'bunx - Bun package runner for executing npm packages',
@@ -1547,32 +1561,6 @@ export default {
   'settingSystemTools.tools.qwen.desc': 'Qwen Code - Alibaba Qwen agentic coding CLI',
   'settingSystemTools.tools.rg.desc': 'ripgrep - extremely fast text search tool',
   'settingSystemTools.tools.uv.desc': 'uv - extremely fast Python package manager',
-  'settingTTS.openai.sttModel': 'OpenAI Speech-to-Text Model',
-  'settingTTS.openai.title': 'OpenAI',
-  'settingTTS.openai.ttsModel': 'OpenAI Text-to-Speech Model',
-  'settingTTS.showAllLocaleVoice.desc':
-    'If closed, only voices in the current language will be displayed',
-  'settingTTS.showAllLocaleVoice.title': 'Show All Locale Voices',
-  'settingTTS.stt': 'Speech Recognition Settings',
-  'settingTTS.sttAutoStop.desc':
-    'When closed, speech recognition will not end automatically and requires manual click to stop',
-  'settingTTS.sttAutoStop.title': 'Auto Stop Speech Recognition',
-  'settingTTS.sttLocale.desc':
-    'The language of the speech input, this option can improve the accuracy of speech recognition',
-  'settingTTS.sttLocale.title': 'Speech Recognition Language',
-  'settingTTS.sttService.desc':
-    "Where 'browser' is the native speech recognition service of the browser",
-  'settingTTS.sttService.title': 'Speech Recognition Service',
-  'settingTTS.submit': 'Update Voice Service',
-  'settingTTS.title': 'Speech Service',
-  'settingTTS.tts': 'Text-to-Speech Settings',
-  'settingTTS.ttsService.desc':
-    'If using OpenAI text-to-speech service, make sure the OpenAI model service is enabled',
-  'settingTTS.ttsService.title': 'Text-to-Speech Service',
-  'settingTTS.voice.desc':
-    'Select a voice for the current agent, different TTS services support different voices',
-  'settingTTS.voice.preview': 'Voice Preview',
-  'settingTTS.voice.title': 'Text-to-Speech Voice',
   'skillGroup.agentConnectors': 'Agent Connectors',
   'skillGroup.builtinSkills': 'Built-in Skills',
   'skillGroup.builtinTools': 'Built-in Tools',
@@ -1611,8 +1599,6 @@ export default {
   'storage.actions.export.exportType.allAgentWithMessage': 'Export All Agents and Messages',
   'storage.actions.export.exportType.globalSetting': 'Export Global Settings',
   'storage.actions.export.title': 'Export Data',
-  'storage.actions.import.button': 'Import',
-  'storage.actions.import.title': 'Import Data',
   'storage.actions.title': 'Advanced Operations',
   'storage.desc': 'Current storage usage in the browser',
   'storage.embeddings.used': 'Vector Storage',
@@ -1693,37 +1679,19 @@ export default {
   'sync.webrtc.signaling.placeholder': 'Enter signaling server address',
   'sync.webrtc.signaling.title': 'Signaling Server',
   'sync.webrtc.title': 'WebRTC Sync',
-  'systemAgent.agentMeta.label': 'Model',
-  'systemAgent.agentMeta.modelDesc':
-    'Model used to generate names, descriptions, avatars, and tags',
-  'systemAgent.agentMeta.title': 'Profile Generation',
   'systemAgent.expertise.modelDesc':
-    'Model used to draft expertise domains and extract reusable experience from conversations.',
+    'Last fallback for self-evolution when the owning built-in agent has no model. CLI agents are not supported for these flows.',
   'systemAgent.expertise.title': 'Agent Self-Evolution',
   'systemAgent.goal.modelDesc':
-    'Model used to turn a persistent goal into its standing acceptance criteria.',
-  'systemAgent.goal.title': 'Goal Creation',
+    'Last fallback for planning and acceptance when the owning built-in agent has no model. CLI agents are not supported for these flows.',
+  'systemAgent.goal.title': 'Planning & acceptance',
   'systemAgent.customPrompt.addPrompt': 'Add Custom Prompt',
   'systemAgent.customPrompt.desc':
     'Once filled out, the system agent will use the custom prompt when generating content',
   'systemAgent.customPrompt.placeholder': 'Please enter custom prompt',
   'systemAgent.customPrompt.title': 'Custom Prompt',
-  'systemAgent.generationTopic.label': 'Model',
-  'systemAgent.generationTopic.modelDesc': 'Model used to name AI image topics',
-  'systemAgent.generationTopic.title': 'AI Image Topic Naming',
-  'systemAgent.followUpAction.label': 'Follow-up Suggestions Model',
-  'systemAgent.followUpAction.modelDesc':
-    'Model used to suggest one-click follow-up replies under each agent message',
-  'systemAgent.followUpAction.title': 'Follow-up Suggestions',
   'systemAgent.helpInfo':
     'When creating a new agent, the default agent settings will be used as preset values.',
-  'systemAgent.historyCompress.label': 'Model',
-  'systemAgent.historyCompress.modelDesc': 'Model used to compress conversation history',
-  'systemAgent.historyCompress.title': 'Auto context compression',
-  'systemAgent.inputCompletion.label': 'Model',
-  'systemAgent.inputCompletion.modelDesc':
-    'Suggests text while you type. When enabled, this model generates the suggestions.',
-  'systemAgent.inputCompletion.title': 'Input Suggestions',
   'systemAgent.userMemoryEmbedding.label': 'Model',
   'systemAgent.userMemoryEmbedding.modelDesc':
     'Model used to embed memory content for retrieval. The context limit caps each embedding input.',
@@ -1736,30 +1704,15 @@ export default {
   'systemAgent.userMemoryPersonaWriter.modelDesc':
     'Model used to write persona-oriented memory summaries.',
   'systemAgent.userMemoryPersonaWriter.title': 'Memory Persona Writer',
-  'systemAgent.promptRewrite.label': 'Model',
-  'systemAgent.promptRewrite.modelDesc':
-    'Improves prompts before generation. When enabled, this model rewrites the prompt.',
-  'systemAgent.promptRewrite.title': 'Prompt Rewriting',
   'systemAgent.thread.label': 'Model',
   'systemAgent.thread.modelDesc': 'Model used to rename subtopics',
   'systemAgent.thread.title': 'Subtopic Auto-Naming',
   'systemAgent.title': 'System Tasks',
-  'systemAgent.topic.label': 'Model',
-  'systemAgent.topic.modelDesc': 'Model used to rename topics',
-  'systemAgent.topic.title': 'Topic Auto-Naming',
-  'systemAgent.topicAutoSummary.modelDesc':
-    'Writes a short description and a reusable conversation summary after a topic becomes inactive.',
-  'systemAgent.topicAutoSummary.promptPlaceholder':
-    'Optional custom instructions. The conversation and required JSON output schema are added automatically.',
-  'systemAgent.topicAutoSummary.title': 'Automatic Topic Summary',
-  'systemAgent.translation.label': 'Model',
-  'systemAgent.translation.modelDesc': 'Model used to translate messages',
-  'systemAgent.translation.title': 'Message Translation',
   'tab.about': 'About',
   'tab.advanced': 'Advanced',
   'tab.advanced.appUpdates.title': 'App updates',
   'tab.advanced.gatewayMode.desc':
-    'Run supported agent tasks through the cloud Gateway by default. Individual agents can override this from the chat menu.',
+    'Run the built-in Orvilo agent through the cloud Gateway by default. This applies to the built-in agent only; CLI agents on a device are not affected. Individual agents can override this from the chat menu.',
   'tab.advanced.gatewayMode.title': 'Gateway Mode',
   'tab.advanced.toolsAndDiagnostics.title': 'Tools and diagnostics',
   'tab.addAgentSkill': 'Add Agent Skill',
@@ -1795,7 +1748,6 @@ export default {
   'tab.importFromGithub.desc': 'Import from a public GitHub repository',
   'tab.importFromUrl': 'Import from URL',
   'tab.importFromUrl.desc': 'Import via a direct link to SKILL.md',
-  'tab.labels': 'Labels',
   'tab.llm': 'Language Model',
   'tab.manualFill': 'Manually Fill In',
   'tab.manualFill.desc': 'Configure a custom MCP skill manually',
@@ -3697,49 +3649,7 @@ export default {
   'workspaceSetting.linear.operations.kind.inbox': 'Inbox',
   'workspaceSetting.linear.operations.kind.outbox': 'Outbox',
   'workspaceSetting.linear.operations.kind.planning': 'Planning',
-  'workspaceSetting.labels.actions.archive': 'Archive',
-  'workspaceSetting.labels.actions.create': 'New label',
-  'workspaceSetting.labels.actions.unarchive': 'Restore',
-  'workspaceSetting.labels.archive.desc':
-    'This label will no longer be available to apply to agents. Agents with the label already applied will remain unchanged.',
-  'workspaceSetting.labels.archive.success': 'Label archived',
-  'workspaceSetting.labels.archive.title': 'Archive "{{name}}"?',
-  'workspaceSetting.labels.archivedEmpty': 'No archived labels',
-  'workspaceSetting.labels.columns.created': 'Created',
-  'workspaceSetting.labels.columns.description': 'Description',
-  'workspaceSetting.labels.columns.name': 'Name',
-  'workspaceSetting.labels.columns.usage': 'Agents',
-  'workspaceSetting.labels.delete.archiveHint':
-    'To prevent future application of this label, archive the label instead.',
-  'workspaceSetting.labels.delete.confirmHint': 'To confirm, type "delete" below:',
-  'workspaceSetting.labels.delete.desc': 'Deletion cannot be undone.',
-  'workspaceSetting.labels.delete.descUsed':
-    'This label will be removed from {{count}} agents. Deletion cannot be undone.',
-  'workspaceSetting.labels.delete.success': 'Label deleted',
-  'workspaceSetting.labels.delete.title': 'Delete the label "{{name}}"?',
-  'workspaceSetting.labels.empty': 'No labels yet. Create one to organize your agents.',
-  'workspaceSetting.labels.filterEmpty': 'No labels match the filter',
-  'workspaceSetting.labels.filterPlaceholder': 'Filter by name...',
-  'workspaceSetting.labels.loadFailed': "Couldn't load labels",
-  'workspaceSetting.labels.form.color': 'Color',
-  'workspaceSetting.labels.form.createTitle': 'New label',
-  'workspaceSetting.labels.form.description': 'Description',
-  'workspaceSetting.labels.form.descriptionPlaceholder': 'Optional description',
-  'workspaceSetting.labels.form.duplicateName': 'A label with this name already exists',
-  'workspaceSetting.labels.form.editTitle': 'Edit label',
-  'workspaceSetting.labels.form.restoreTitle': 'Rename to restore',
-  'workspaceSetting.labels.form.name': 'Name',
-  'workspaceSetting.labels.form.namePlaceholder': 'Label name',
-  'workspaceSetting.labels.manageBlocked': 'Only workspace admins can manage labels',
-  'workspaceSetting.labels.scope.archived': 'Archived',
-  'workspaceSetting.labels.scope.personal': 'Personal',
-  'workspaceSetting.labels.scope.workspace': 'Workspace',
-  'workspaceSetting.labels.usage': '{{count}} agents',
-  'workspaceSetting.agents.canUse': 'Can use',
-  'workspaceSetting.agents.cannotEdit': 'Read-only',
   'workspaceSetting.agents.columnAgent': 'Agent',
-  'workspaceSetting.agents.columnCanEdit': 'Edit',
-  'workspaceSetting.agents.columnCanUse': 'Use',
   'workspaceSetting.agents.columnMaintainer': 'Maintainer',
   'workspaceSetting.agents.columnProjects': 'Projects',
   'workspaceSetting.agents.columnStatus': 'Status',
@@ -3823,7 +3733,7 @@ export default {
   'workspaceSetting.members.previewTasks_other': '{{count}} assigned issues',
   'workspaceSetting.members.previewTitle': 'This member still owns:',
   'workspaceSetting.members.projectRole.commenter': 'Commenter',
-  'workspaceSetting.members.projectRole.contributor': 'Contributor',
+  'workspaceSetting.members.projectRole.contributor': 'Participant',
   'workspaceSetting.members.projectRole.manager': 'Manager',
   'workspaceSetting.members.projectRole.viewer': 'Viewer',
   'workspaceSetting.members.projectsLabel': 'Add to projects',
@@ -3870,7 +3780,7 @@ export default {
   'workspaceSetting.members.title': 'Members',
   'workspaceSetting.members.workspaceRoleLabel': 'Workspace role',
   'workspaceSetting.tab.auditLog': 'Audit logs',
-  'workspaceSetting.tab.general': 'General',
+  'workspaceSetting.tab.general': 'Overview',
   'workspaceSetting.general.logo': 'Logo',
   'workspaceSetting.general.name': 'Name',
   'workspaceSetting.general.url': 'URL',
@@ -3881,10 +3791,9 @@ export default {
   'workspaceSetting.notification.inboxDesc': 'Notifications in your Orvilo inbox',
   'workspaceSetting.notification.email': 'Email',
   'workspaceSetting.notification.emailDesc': 'Notifications delivered by email',
-  'workspaceSetting.notification.push': 'Mobile push',
-  'workspaceSetting.notification.pushDesc': 'Push notifications on your devices',
+  'workspaceSetting.notification.push': 'Push & desktop',
+  'workspaceSetting.notification.pushDesc': 'Notifications on your desktop and mobile devices',
 
-  'workspaceSetting.tab.labels': 'Labels',
   'workspaceSetting.tab.members': 'Members',
   'workspaceSetting.storage.comingSoon': 'Workspace-scoped data import & export is coming soon.',
   'workspaceSetting.storage.telemetry.desc':
@@ -4329,14 +4238,10 @@ export default {
   'workspaceSetting.import.newImport': 'New import',
   'workspaceSetting.import.loadMore': 'Load more projects',
 
-  'settingAgent.generalSettings.agentLabel': 'Agent',
+  'settingAgent.generalSettings.agentLabel': 'Runtime',
   'settingAgent.execution.target': 'Execution target',
   'settingAgent.execution.cwd': 'Working directory',
   'settingAgent.execution.isolation': 'Isolate commands',
-  'settingAgent.opening.title': 'Opening',
-  'settingAgent.opening.message': 'Opening message',
-  'settingAgent.opening.questions': 'Suggested questions',
-  'settingAgent.opening.questionsHint': 'One question per line.',
   'settingAgent.accessSettings.permissions': 'Resource permissions',
   'settingAgent.accessSettings.managePermissions': 'Manage permissions',
   'settingAgent.accessSettings.topicSharing': 'Who can share conversations',
@@ -4356,4 +4261,78 @@ export default {
   'settingAgent.list.noDevice': 'No execution target',
   'settingAgent.list.unavailable': 'Agent unavailable',
   'settingAgent.list.error': 'Could not load configuration',
+  'settingAgent.useMembers.title': 'Who can use this agent',
+  'settingAgent.useMembers.hint':
+    'Selected members can send messages, run this agent, and answer its questions. Viewers remain read-only. Workspace members can read Issue conversations.',
+  'settingAgent.useMembers.add': 'Select members who can use this agent',
+  'settingAgent.useMembers.empty': 'No members can use this agent',
+  'permission.configAccess.agentManageRequired':
+    'Agent configuration requires its creator or a workspace admin. You can still read Issue conversations.',
+  'settingAgent.deviceSettings.runtimeUnverifiedTitle': 'Device runtime verification incomplete',
+  'settingAgent.deviceSettings.runtimeUnverifiedDesc':
+    'Some authorized devices could not be checked for this agent runtime. Retry verification before choosing a device.',
+  'workspaceSetting.tab.integrations': 'Integrations',
+  'integrations.description': 'Connect the apps your workspace uses.',
+  'integrations.apps': 'Apps',
+  'integrations.appsDescription': 'Bring your tools and Agents together in Orvilo.',
+  'integrations.configure': 'Configure',
+  'integrations.back': 'Back to integrations',
+  'integrations.connected': 'Connected',
+  'integrations.install': 'Install',
+  'integrations.connect': 'Connect',
+  'integrations.disconnect': 'Disconnect',
+  'integrations.cancel': 'Cancel',
+  'integrations.save': 'Save connection',
+  'integrations.add': 'Add connection',
+  'integrations.edit': 'Edit',
+  'integrations.delete': 'Delete',
+  'integrations.refresh': 'Refresh',
+  'integrations.loading': 'Loading integrations…',
+  'integrations.workspaceRequired': 'Select a workspace to manage integrations.',
+  'integrations.slack.description': 'Connect your Slack workspace with Orvilo.',
+  'integrations.slack.adminRequired':
+    'A workspace administrator can install Slack and manage channel connections. Members can connect their own Slack account.',
+  'integrations.slack.unconfiguredTitle': 'Slack is not available on this deployment',
+  'integrations.slack.unconfigured':
+    'Ask your instance administrator to enable Slack OAuth, then refresh this page.',
+  'integrations.slack.personalTitle': 'Connect your personal Slack account',
+  'integrations.slack.personalDescription':
+    'Link your Slack identity before running Agents from Slack. Your workspace permissions apply to every run.',
+  'integrations.slack.personalConnected': 'Slack identity connected: {{name}}',
+  'integrations.slack.workspaces': 'Connected Slack workspace',
+  'integrations.slack.workspaceConnected': 'Linked to this Orvilo workspace',
+  'integrations.slack.notConnected': 'No Slack workspace connected. Install Slack to continue.',
+  'integrations.slack.connections': 'Channel connections',
+  'integrations.slack.connectionsDescription': 'Connect Slack channels to Agents.',
+  'integrations.slack.emptyConnections': 'Connected channels and Agents will appear here.',
+  'integrations.slack.disconnectTitle': 'Disconnect Slack workspace?',
+  'integrations.slack.disconnectDescription':
+    'This removes the Slack installation, channel connections and linked personal accounts for this workspace.',
+  'integrations.slack.channel': 'Slack channel',
+  'integrations.slack.agent': 'Agent',
+  'integrations.slack.selectChannel': 'Select a Slack channel',
+  'integrations.slack.selectAgent': 'Select an Agent',
+  'integrations.slack.private': 'Private',
+  'integrations.slack.noChannels':
+    'No channels are available. Check the Slack app’s channel access, then retry.',
+  'integrations.slack.noAgents':
+    'No accessible Agents are available in this workspace. Create an Agent or request access first.',
+  'integrations.slack.moreChannels': 'Load more channels',
+  'integrations.slack.bindingTitle': 'Connect Slack channel to Agent',
+  'integrations.slack.editChannelHint': 'To connect a different channel, add another connection.',
+  'integrations.slack.saveFailed':
+    'The connection was not saved. Your selections are kept; retry Save connection.',
+  'integrations.slack.writeFailed':
+    'The change could not be confirmed. Refresh to check its current state, then retry the action.',
+  'integrations.slack.oauth.waiting':
+    'Complete Slack authorization in your browser. Stopping here only stops waiting; it does not revoke an authorization completed in Slack.',
+  'integrations.slack.oauth.popupBlocked':
+    'Your browser blocked the authorization window. Allow popups for Orvilo, then try again.',
+  'integrations.slack.oauth.timedOut':
+    'Authorization timed out. Check Slack and try connecting again.',
+  'integrations.slack.oauth.dismissed':
+    'Authorization was closed before it completed. Connect again when you are ready.',
+  'integrations.slack.oauth.failed':
+    'Slack authorization was not completed. Check the requested permissions and try again.',
+  'integrations.slack.oauth.stopWaiting': 'Stop waiting',
 };

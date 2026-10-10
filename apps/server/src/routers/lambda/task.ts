@@ -1,6 +1,7 @@
 import { TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
 import type {
+  TaskItem,
   TaskListItem,
   TaskParticipant,
   TaskVerifyConfig,
@@ -8,7 +9,7 @@ import type {
 } from '@orvilo/types';
 import { TASK_ATTENTION_REASONS } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
@@ -26,6 +27,7 @@ import {
   TaskRevisionConflictError,
 } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskReminderModel } from '@/database/models/taskReminder';
 import { TaskTopicModel } from '@/database/models/taskTopic';
@@ -34,9 +36,11 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { resolveWorkflowCreatePreset } from '@/database/models/workflowMove';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
-import { automationResultDeliveries } from '@/database/schemas/task';
+import { agentOperations } from '@/database/schemas/agentOperations';
+import { automationResultDeliveries, taskTopics } from '@/database/schemas/task';
+import { topics } from '@/database/schemas/topic';
 import type { OrviloDatabase } from '@/database/type';
-import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import { assertAgentVisibleTo } from '@/database/utils/agent-access';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
@@ -72,6 +76,8 @@ import { after } from '@/server/utils/scheduleAfterResponse';
 import { TransferErrorCode } from '@/types/transferError';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
+import { assertCanUseWorkspaceAgent } from './_helpers/workspaceAgentGuard';
+import { projectWorkspaceConversationMetadata } from './_helpers/workspaceConversationMetadata';
 
 const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -102,6 +108,111 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
 // run). Reads keep using `taskProcedure` so viewers can still inspect tasks
 // and their status.
 const taskProcedureWrite = taskProcedure.use(withScopedPermission('agent:update'));
+// Execution consumes Agent Use, independently of Agent configuration management.
+const taskExecutionProcedure = taskProcedure.use(withScopedPermission('ai_model:invoke'));
+
+interface TaskExecutionUseContext {
+  serverDB: OrviloDatabase;
+  taskModel: TaskModel;
+  taskTopicModel: TaskTopicModel;
+  userId: string;
+  workspaceId?: string | null;
+}
+
+/** Check stored and sealed incumbent executors before a user can stop or replace work. */
+async function assertTaskExecutionUse(
+  ctx: TaskExecutionUseContext,
+  targetTasks: Pick<TaskItem, 'id' | 'assigneeAgentId' | 'status'>[],
+  additionalAgentIds: Array<string | null | undefined> = [],
+) {
+  const taskIds = targetTasks.map((task) => task.id);
+  const [runningTopics, activeDispatches] = await Promise.all([
+    // These tasks were already resolved for this caller. Inspect only their sealed
+    // executor identity: historical topic visibility must not change stop authority.
+    taskIds.length
+      ? ctx.serverDB
+          .select({
+            agentId: topics.agentId,
+            operationId: taskTopics.operationId,
+            taskId: taskTopics.taskId,
+          })
+          .from(taskTopics)
+          .leftJoin(topics, eq(taskTopics.topicId, topics.id))
+          .where(
+            and(
+              inArray(taskTopics.taskId, taskIds),
+              eq(taskTopics.status, 'running'),
+              ctx.workspaceId
+                ? eq(taskTopics.workspaceId, ctx.workspaceId)
+                : and(isNull(taskTopics.workspaceId), eq(taskTopics.userId, ctx.userId)),
+            ),
+          )
+      : Promise.resolve([]),
+    Promise.all(
+      taskIds.map((id) =>
+        new TaskDispatchModel(ctx.serverDB, ctx.workspaceId ?? undefined).findActiveByTaskId(id),
+      ),
+    ),
+  ]);
+  const operationIds = [
+    ...new Set(
+      [
+        ...runningTopics.map((topic) => topic.operationId),
+        ...activeDispatches.map((dispatch) => dispatch?.operationId),
+      ].filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const operations = operationIds.length
+    ? await ctx.serverDB
+        .select({
+          id: agentOperations.id,
+          agentId: agentOperations.agentId,
+          workspaceId: agentOperations.workspaceId,
+        })
+        .from(agentOperations)
+        .where(inArray(agentOperations.id, operationIds))
+    : [];
+  if (operations.some((operation) => operation.workspaceId !== (ctx.workspaceId ?? null))) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
+  }
+  const operationAgents = new Map(operations.map((operation) => [operation.id, operation.agentId]));
+  const agentIds = new Set(
+    [
+      ...targetTasks.flatMap((task, index) => {
+        const dispatch = activeDispatches[index];
+        const sealedExecutors = [
+          ...runningTopics
+            .filter((topic) => topic.taskId === task.id)
+            .flatMap((topic) => [
+              topic.agentId,
+              topic.operationId ? operationAgents.get(topic.operationId) : null,
+            ]),
+          dispatch?.agentId,
+          dispatch?.operationId ? operationAgents.get(dispatch.operationId) : null,
+        ].filter((id): id is string => Boolean(id));
+        // A delegated/current run may differ from the issue's assignee field.
+        return sealedExecutors.length
+          ? sealedExecutors
+          : ['running', 'scheduled'].includes(task.status)
+            ? [task.assigneeAgentId]
+            : [];
+      }),
+      ...additionalAgentIds,
+    ].filter((id): id is string => Boolean(id)),
+  );
+  await Promise.all(
+    [...agentIds].map((agentId) =>
+      ctx.workspaceId
+        ? assertCanUseWorkspaceAgent({
+            agentId,
+            db: ctx.serverDB,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          })
+        : assertAgentVisibleTo(ctx.serverDB, agentId, { userId: ctx.userId }),
+    ),
+  );
+}
 
 // All procedures that take an id accept either raw id (task_xxx) or identifier (TASK-1)
 // Resolution happens in the model layer via model.resolve()
@@ -501,7 +612,7 @@ function notifyAssignedBestEffort(
   });
 }
 
-async function assertAssigneeAgentBelongsToUser(
+async function assertAssigneeAgentVisibleToCaller(
   db: OrviloDatabase,
   callerCtx: { userId: string; workspaceId?: string },
   assigneeAgentId?: string | null,
@@ -509,7 +620,7 @@ async function assertAssigneeAgentBelongsToUser(
   if (!assigneeAgentId) return;
 
   try {
-    await assertAgentUsableBy(db, assigneeAgentId, callerCtx);
+    await assertAgentVisibleTo(db, assigneeAgentId, callerCtx);
   } catch (error) {
     if (error instanceof TRPCError && error.code === 'NOT_FOUND') {
       // Preserve the task-context message so the UI surfaces "Assignee agent
@@ -545,11 +656,18 @@ async function resolveActivityActor(
 ): Promise<{ agentId?: string | null; userId: string }> {
   if (ctx.actingAgentId) return { agentId: ctx.actingAgentId, userId: ctx.userId };
   if (claimedAgentId) {
-    await assertAgentUsableBy(ctx.serverDB, claimedAgentId, {
+    await assertAgentVisibleTo(ctx.serverDB, claimedAgentId, {
       userId: ctx.userId,
       workspaceId: ctx.workspaceId ?? undefined,
     });
   }
+  if (ctx.workspaceId && claimedAgentId)
+    await assertCanUseWorkspaceAgent({
+      agentId: claimedAgentId,
+      db: ctx.serverDB,
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+    });
   return { agentId: claimedAgentId ?? null, userId: ctx.userId };
 }
 
@@ -866,7 +984,10 @@ export const taskRouter = router({
         const comment = await ctx.taskModel.updateComment(input.commentId, input.content, {
           actor,
           editorData: input.editorData === undefined ? null : input.editorData,
-          mutation: { source: actor.agentId ? 'agent' : 'user' },
+          mutation: {
+            actorAgentId: actor.agentId ?? undefined,
+            source: actor.agentId ? 'agent' : 'user',
+          },
         });
         if (!comment) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
@@ -930,11 +1051,15 @@ export const taskRouter = router({
       }
     }),
 
-  cancelTopic: taskProcedureWrite
+  cancelTopic: taskExecutionProcedure
     .input(z.object({ topicId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       try {
-        await ctx.taskService.cancelTopic(input.topicId);
+        const target = await ctx.taskTopicModel.findIssueTopicById(input.topicId);
+        if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
+        const task = await resolveOrThrow(ctx.taskModel, target.taskId);
+        await assertTaskExecutionUse(ctx, [task]);
+        await ctx.taskService.cancelTopic(input.topicId, task.id);
         return { message: 'Topic canceled', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -1075,7 +1200,11 @@ export const taskRouter = router({
     try {
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
-      assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
+      if (!(await model.canDeleteTask(task)))
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Issue creator, project manager or workspace admin rights are required',
+        });
       const snapshot = await ctx.taskIntegration.snapshotTaskWorktrees(task.id);
       const deleted = await model.delete(task.id, { source: 'user' });
       if (deleted) await ctx.taskIntegration.cleanupTaskWorktrees(task.id, snapshot);
@@ -1341,7 +1470,14 @@ export const taskRouter = router({
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
       const results = await ctx.taskTopicModel.findWithDetails(task.id);
-      return { data: results, success: true };
+      return {
+        data: await projectWorkspaceConversationMetadata(
+          { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          results,
+          (row) => row.id,
+        ),
+        success: true,
+      };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
       console.error('[task:getTopics]', error);
@@ -1450,6 +1586,8 @@ export const taskRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
+        const task = await resolveOrThrow(ctx.taskModel, input.taskId);
+        await assertTaskExecutionUse(ctx, [task], [input.toAgentId]);
         const result = await ctx.taskService.handoffTask(input);
         return { data: result, message: 'Task handed off', success: true };
       } catch (error) {
@@ -1594,7 +1732,7 @@ export const taskRouter = router({
     }
   }),
 
-  run: taskProcedureWrite
+  run: taskExecutionProcedure
     .input(
       idInput.merge(
         z.object({
@@ -2028,7 +2166,7 @@ export const taskRouter = router({
       }
     }),
 
-  runReview: taskProcedureWrite
+  runReview: taskExecutionProcedure
     .input(
       idInput.merge(
         z.object({
@@ -2039,6 +2177,8 @@ export const taskRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
+        const task = await resolveOrThrow(ctx.taskModel, input.id);
+        await assertTaskExecutionUse(ctx, [task], [task.assigneeAgentId]);
         const result = await ctx.taskService.runReview(input);
         return { data: result, success: true };
       } catch (error) {
@@ -2085,12 +2225,23 @@ export const taskRouter = router({
         }
         const model = ctx.taskModel;
         const actor = await resolveActivityActor(ctx, actorAgentId);
-        await assertAssigneeAgentBelongsToUser(
+        await assertAssigneeAgentVisibleToCaller(
           ctx.serverDB,
           { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
           data.assigneeAgentId,
         );
         const resolved = await resolveOrThrow(model, id);
+        if (status !== undefined) {
+          await assertTaskExecutionUse(
+            ctx,
+            [resolved],
+            [
+              ...(['running', 'scheduled'].includes(status)
+                ? [data.assigneeAgentId ?? resolved.assigneeAgentId]
+                : []),
+            ],
+          );
+        }
 
         let workflowPatch:
           | {
@@ -2435,7 +2586,7 @@ export const taskRouter = router({
     }
   }),
 
-  runReadySubtasks: taskProcedureWrite
+  runReadySubtasks: taskExecutionProcedure
     .input(
       idInput.merge(
         z.object({
@@ -2446,6 +2597,17 @@ export const taskRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
+        const parent = await resolveOrThrow(ctx.taskModel, input.id);
+        const plan = await ctx.taskService.previewSubtaskLayers(parent.id);
+        const firstLayer = new Set(plan.layers[0] ?? []);
+        const descendants = await ctx.taskModel.findAllDescendants(parent.id);
+        await assertTaskExecutionUse(
+          ctx,
+          descendants.filter((task) => firstLayer.has(task.identifier)),
+          descendants
+            .filter((task) => firstLayer.has(task.identifier))
+            .map((task) => task.assigneeAgentId),
+        );
         const result = await ctx.taskService.runReadySubtasks(input.id, input.requestId);
         return { data: result, success: result.failed.length === 0 };
       } catch (error) {
@@ -2473,6 +2635,12 @@ export const taskRouter = router({
       try {
         // A person (or their agent) changed it: record who. System
         // transitions call the service without an actor and stay silent.
+        const currentTask = await resolveOrThrow(ctx.taskModel, input.id);
+        await assertTaskExecutionUse(
+          ctx,
+          [currentTask],
+          ['running', 'scheduled'].includes(input.status) ? [currentTask.assigneeAgentId] : [],
+        );
         const actor = await resolveActivityActor(ctx, actorAgentId);
         const result = await ctx.taskService.updateStatus(statusInput, actor);
         const { task, unlocked, paused, checkpointTriggered, allSubtasksDone, parentTaskId } =
@@ -2527,6 +2695,16 @@ export const taskRouter = router({
         // Resolve once so the anchor computation can exclude the moving task —
         // the service re-resolves inside its own transaction anyway.
         const resolved = await resolveOrThrow(ctx.taskModel, input.id);
+        const descendants = await ctx.taskModel.findAllDescendants(resolved.id);
+        await assertTaskExecutionUse(ctx, [
+          resolved,
+          ...descendants.filter(
+            (task) =>
+              task.workflowCategory !== 'done' &&
+              task.workflowCategory !== 'canceled' &&
+              task.status !== 'failed',
+          ),
+        ]);
         // Compute the drop position up-front so it rides the cascade's single
         // transaction — status and position commit or fail together.
         const movePosition =
@@ -2675,10 +2853,9 @@ export const taskRouter = router({
       return ctx.taskInputs.list({ status: input.status, taskId: task.id });
     }),
 
-  // Delegating an agent onto a task consumes the caller's run capability (the
-  // `agent:update` gate on taskProcedureWrite) plus the same usable-agent
-  // predicate every other agent binding goes through.
-  delegateAgent: taskProcedureWrite
+  // Delegation consumes Agent Use for the selected executor, independently
+  // of authority to manage that Agent's configuration.
+  delegateAgent: taskExecutionProcedure
     .input(
       z.object({
         agentId: z.string(),
@@ -2696,7 +2873,14 @@ export const taskRouter = router({
         });
       }
 
-      await assertAgentUsableBy(ctx.serverDB, input.agentId, {
+      await assertAgentVisibleTo(ctx.serverDB, input.agentId, {
+        userId: ctx.userId,
+        workspaceId: task.workspaceId,
+      });
+
+      await assertCanUseWorkspaceAgent({
+        agentId: input.agentId,
+        db: ctx.serverDB,
         userId: ctx.userId,
         workspaceId: task.workspaceId,
       });

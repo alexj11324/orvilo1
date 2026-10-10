@@ -656,7 +656,7 @@ describe('ConversationLifecycle actions', () => {
           contextSelectionKey: 'same-conversation',
           draftKey: 'same-draft',
           editor,
-          feature: { inputCompletion: false, inputHistory: false },
+          feature: { inputHistory: false },
           onSend: ({ clearContent, getEditorData, getMarkdownContent, restoreDraft }) => {
             const message = getMarkdownContent();
             const editorData = getEditorData();

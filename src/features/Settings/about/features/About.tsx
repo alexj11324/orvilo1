@@ -1,6 +1,6 @@
 'use client';
 
-import { SiDiscord, SiGithub, SiRss, SiX, SiYoutube } from '@icons-pack/react-simple-icons';
+import { SiDiscord, SiGithub, SiX, SiYoutube } from '@icons-pack/react-simple-icons';
 import { BRANDING_EMAIL, BRANDING_NAME, SOCIAL_URL } from '@orvilo/business-const';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import Form from '@/components/GroupForm';
 import { Separator } from '@/components/ui/separator';
-import { BLOG, DOWNLOAD_URL, mailTo, OFFICIAL_SITE, PRIVACY_URL, TERMS_URL } from '@/const/url';
+import { DOWNLOAD_URL, mailTo, OFFICIAL_SITE } from '@/const/url';
 import { getHostContext } from '@/platform';
 
 import AboutList from './AboutList';
@@ -47,12 +47,6 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
           grid
           ItemRender={ItemCard}
           items={[
-            {
-              href: BLOG,
-              icon: SiRss,
-              label: t('blog'),
-              value: 'blog',
-            },
             {
               href: SOCIAL_URL.github,
               icon: SiGithub,
@@ -115,23 +109,6 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
               href: BRANDING_EMAIL.business ? mailTo(BRANDING_EMAIL.business) : undefined,
               label: t('mail.business'),
               value: 'business',
-            },
-          ]}
-        />
-        <Separator style={{ marginBlock: 0 }} />
-        <div className={styles.title}>{t('legal')}</div>
-        <AboutList
-          ItemRender={ItemLink}
-          items={[
-            {
-              href: TERMS_URL,
-              label: t('terms'),
-              value: 'terms',
-            },
-            {
-              href: PRIVACY_URL,
-              label: t('privacy'),
-              value: 'privacy',
             },
           ]}
         />

@@ -3,6 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PushChannel } from '../PushChannel';
 import type { PushDeliveryContext, PushTicketRecord } from '../types';
 
+const { getUserSettings } = vi.hoisted(() => ({ getUserSettings: vi.fn() }));
+vi.mock('@/database/models/workspaceUserSettings', () => ({
+  WorkspaceUserSettingsModel: class {
+    getPreference = async () => ({});
+  },
+}));
+vi.mock('@/database/models/user', () => ({
+  UserModel: class {
+    getUserSettings = getUserSettings;
+  },
+}));
+
 const mockListByUserId = vi.fn();
 const { mockLog } = vi.hoisted(() => ({ mockLog: vi.fn() }));
 
@@ -37,6 +49,24 @@ const makeExpoMock = (overrides: Partial<any> = {}) => ({
 describe('PushChannel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getUserSettings.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('uses personal event opt-outs for workspace push', async () => {
+    getUserSettings.mockResolvedValue({
+      notification: { push: { items: { work: { task_status_changed: false } } } },
+    });
+    mockListByUserId.mockResolvedValue([{ deviceId: 'phone', expoToken: 'ExponentPushToken[A]' }]);
+    const expo = makeExpoMock();
+    expo.sendPushNotificationsAsync.mockResolvedValue([{ id: 'ticket', status: 'ok' }]);
+    expect(
+      await new PushChannel(expo as any).deliver({
+        ...ctx,
+        type: 'task_status_changed',
+        workspaceId: 'ws',
+      }),
+    ).toEqual({ status: 'delivered' });
+    expect(expo.sendPushNotificationsAsync).not.toHaveBeenCalled();
   });
 
   it('returns no_tokens when the user has no push_tokens row', async () => {

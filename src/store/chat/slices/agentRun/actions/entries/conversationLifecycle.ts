@@ -12,6 +12,7 @@ import {
   chainCompressContext,
   COMPRESS_CONTEXT_JSON_SCHEMA,
   COMPRESS_CONTEXT_PROMPT_VERSION,
+  escapeXml,
 } from '@orvilo/prompts';
 import type {
   ChatAudioItem,
@@ -515,7 +516,7 @@ export class ConversationLifecycleActionImpl {
         const originalTopic = topicSelectors.getTopicById(context.topicId)(this.#get());
         const topicTitle = originalTopic?.title || '';
         // Inject referTopic into content for LLM context
-        const referTag = `<refer_topic name="${topicTitle}" id="${context.topicId}" />`;
+        const referTag = `<refer_topic name="${escapeXml(topicTitle)}" id="${context.topicId}" />`;
         message = `${referTag}\n${message}`;
         // Inject refer-topic node into editorData for rich text display
         editorData = injectReferTopicNode(editorData, context.topicId, topicTitle);

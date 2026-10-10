@@ -1,42 +1,34 @@
 'use client';
 
 import { type FC, memo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Outlet, useMatch } from 'react-router';
 
 import NavHeader from '@/features/NavHeader';
+import { useCategory } from '@/features/Settings/hooks/useCategory';
+import SideBar from '@/features/Settings/Layout/SideBar';
 import { RouteSkeletonChromeProvider } from '@/spa/router/routeSkeletonChrome';
 import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
 
 import Container from './Container';
-import { useWorkspaceSettingCategory } from './hooks/useCategory';
-import SideBar from './SideBar';
 
 const COMPACT_HEADER_TABS = new Set<string>([
-  WorkspaceSettingsTabs.About,
-  WorkspaceSettingsTabs.APIKey,
-  WorkspaceSettingsTabs.Appearance,
   WorkspaceSettingsTabs.Billing,
   WorkspaceSettingsTabs.Budget,
   WorkspaceSettingsTabs.Creds,
   WorkspaceSettingsTabs.Credits,
   WorkspaceSettingsTabs.Devices,
   WorkspaceSettingsTabs.General,
-  WorkspaceSettingsTabs.Hotkey,
-  WorkspaceSettingsTabs.Labels,
-  WorkspaceSettingsTabs.Labs,
+  WorkspaceSettingsTabs.Integrations,
   WorkspaceSettingsTabs.Members,
-  WorkspaceSettingsTabs.Notification,
   WorkspaceSettingsTabs.Plans,
-  WorkspaceSettingsTabs.Profile,
-  WorkspaceSettingsTabs.ServiceModel,
   WorkspaceSettingsTabs.Stats,
   WorkspaceSettingsTabs.Usage,
 ]);
 
 /**
  * Bare workspace settings shell — sidebar + outlet, no content padding.
- * Use this when a child route owns its own full-bleed layout (e.g. Provider).
+ * The sidebar is the one settings sidebar: the workspace pages are a group in
+ * it, not a second navigation.
  */
 const WorkspaceSettingsLayout: FC = () => {
   return (
@@ -55,17 +47,17 @@ const WorkspaceSettingsLayout: FC = () => {
  * other tabs keep the existing content-only wrapper.
  */
 const WorkspaceSettingsContentLayout: FC = memo(() => {
-  const { t } = useTranslation('auth');
-  const categories = useWorkspaceSettingCategory();
+  const categories = useCategory();
   const match = useMatch('/:workspaceSlug/settings/:tab/*');
   const activeTab = match?.params.tab;
-  // The Profile nav item is labelled with the user's name (like the personal
-  // sidebar); the page header keeps the generic title instead.
-  const title =
-    activeTab === WorkspaceSettingsTabs.Profile
-      ? t('profile.title')
-      : categories.flatMap((category) => category.items).find((item) => item.key === activeTab)
-          ?.label;
+  // The header repeats the label of the row that opened the page. Rows are
+  // matched by URL: a row's key is its personal tab id, which can differ from
+  // the workspace segment (`stats` vs `statistics`).
+  const title = activeTab
+    ? categories
+        .flatMap((category) => category.items)
+        .find((item) => item.href?.endsWith(`/settings/${activeTab}`))?.label
+    : undefined;
 
   const content = (
     <Container maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>

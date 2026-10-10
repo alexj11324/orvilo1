@@ -80,6 +80,7 @@ import {
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { taskVisibilitySql } from '../utils/taskTeamReadable';
+import { insertOutboxEvent } from './eventOutbox';
 
 export interface RecordTaskDomainEventInput {
   action?: string;
@@ -3299,6 +3300,19 @@ export class LinearSyncModel {
       teamId: input.task.teamId,
       type: input.eventType,
     });
+
+    if (
+      ['task.assigned', 'task.status.changed', 'task.requirement.changed'].includes(input.eventType)
+    ) {
+      await insertOutboxEvent(db, {
+        aggregateId: input.task.id,
+        aggregateType: 'task',
+        eventId: event.event.id,
+        eventType: input.eventType,
+        payload: event.event.payload,
+        workspaceId: this.workspaceId,
+      });
+    }
 
     if (input.suppressLinearOutbox || input.source === 'linear') {
       return { event, link: null, outbox: null };

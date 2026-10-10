@@ -8,13 +8,13 @@ import { LOADING_FLAT } from '@/const/message';
 import type { AgentRuntimeType } from '@/store/chat/slices/agentRun/actions/dispatch/agentDispatcher';
 import { emitClientAgentSignalSourceEvent } from '@/store/chat/slices/agentRun/actions/lifecycle/agentSignalBridge';
 import { snapshotTopicWorkingDirGit } from '@/store/chat/slices/agentRun/actions/lifecycle/snapshotWorkingDirGit';
+import { sliceTopicTitle } from '@/store/chat/slices/topic/topicTitle';
 import type { ChatStore } from '@/store/chat/store';
 import { notifyDesktopAgentCompleted } from '@/store/chat/utils/desktopNotification';
 import {
   hasCompletedAssistantText,
   isAudioOnlyFirstUserMessage,
 } from '@/store/chat/utils/topicTitle';
-import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import { messageMapKey } from '../../../../utils/messageMapKey';
 import { displayMessageSelectors } from '../../../message/selectors/displayMessage';
@@ -162,12 +162,11 @@ export const buildRunLifecycle = (
       await get().summaryTopicTitle(tid, messages);
       return;
     }
-    const firstUserText = messages.find((m) => m.role === 'user')?.content?.trim() ?? '';
-    const title = markdownToTxt(firstUserText).slice(0, 80) || 'New Topic';
+    const title = sliceTopicTitle(messages);
     // `internal_updateTopic` already balances its own loading owner. For a
     // new client-runtime topic like "阅读下面...", an extra `false` here would
     // consume the runtime's loading owner and hide the sidebar spinner early.
-    await get().internal_updateTopic(tid, { title });
+    await get().applyAutoTopicTitle(tid, title);
     console.info('[dev] sliced topic title (NEXT_PUBLIC_DEV_DISABLE_AUTO_TOPIC=1):', title);
   };
 
@@ -530,6 +529,13 @@ export const buildRunLifecycle = (
           break;
         }
         case 'failed': {
+          if (adapter.runScope === 'top_level') {
+            await notifyDesktopAgentCompleted(get, {
+              context: { agentId, groupId, topicId, workspaceSlug },
+              event: 'agent_run_failed',
+              badge: true,
+            });
+          }
           get().failOperation(operationId, {
             type: 'runtime_error',
             message: 'Agent runtime execution failed',

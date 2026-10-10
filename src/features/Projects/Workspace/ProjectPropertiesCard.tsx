@@ -167,7 +167,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
           <Button
             aria-label={t('properties.status')}
             className={PROPERTY_CONTROL_CLASS}
-            disabled={updatingStatus}
+            disabled={updatingStatus || !detail.capabilities?.canEdit}
             variant="ghost"
           >
             <ProjectStatusIcon
@@ -205,7 +205,17 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
           {t('properties.members')}
         </span>
         {membersEnabled ? (
-          <ProjectMembersField projectId={project.id} query={membersSWR} />
+          <ProjectMembersField
+            canManage={detail.capabilities?.canManage}
+            projectId={project.id}
+            projectVisibility={project.visibility}
+            query={membersSWR}
+            onChanged={() =>
+              detailSWR
+                .mutate()
+                .catch((error) => console.error('Failed to refresh project capabilities', error))
+            }
+          />
         ) : (
           <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
             —

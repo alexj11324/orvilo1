@@ -95,9 +95,7 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/billing', 'acme')).toBe('/acme/settings/billing');
     expect(buildWorkspaceAwarePath('/settings/credits', 'acme')).toBe('/acme/settings/credits');
     expect(buildWorkspaceAwarePath('/settings/usage', 'acme')).toBe('/acme/settings/usage');
-    expect(buildWorkspaceAwarePath('/settings/connector', 'acme')).toBe('/acme/settings/connector');
     expect(buildWorkspaceAwarePath('/settings/devices', 'acme')).toBe('/acme/settings/devices');
-    expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/acme/settings/labels');
     expect(buildWorkspaceAwarePath('/settings/credential', 'acme')).toBe(
       '/acme/settings/credential',
     );
@@ -108,17 +106,27 @@ describe('buildWorkspaceAwarePath', () => {
     );
     // Legacy alias — prefixed, then the router redirects to `statistics`.
     expect(buildWorkspaceAwarePath('/settings/stats', 'acme')).toBe('/acme/settings/stats');
+  });
+
+  // Provider bindings and default-model assignments are per-user, so the
+  // workspace copies are retired: these links must reach the personal pages
+  // instead of being rewritten onto a workspace path that only redirects back.
+  it('leaves the personal provider and service-model pages unprefixed', () => {
+    expect(buildWorkspaceAwarePath('/settings/provider', 'acme')).toBe('/settings/provider');
     expect(buildWorkspaceAwarePath('/settings/provider/openai', 'acme')).toBe(
-      '/acme/settings/provider/openai',
+      '/settings/provider/openai',
+    );
+    expect(buildWorkspaceAwarePath('/settings/service-model', 'acme')).toBe(
+      '/settings/service-model',
     );
   });
 
   // The OAuth-app console, the skill marketplace and the audit-log viewer
   // all had a workspace mirror; with their pages and routes gone the sub-path
   // is personal-only, like every other retired tab. None gets a redirect
-  // route the way `provider` / `service-model` did — those had a successor
-  // capability to land on, these have none, so the honest answer is the same
-  // not-found the personal settings render.
+  // route the way `provider` / `service-model` did (aliases onto the personal
+  // pages) — those had a successor capability to land on, these have none, so
+  // the honest answer is the same not-found the personal settings render.
   it('leaves the retired settings sub-paths unprefixed', () => {
     expect(buildWorkspaceAwarePath('/settings/oauth-apps', 'acme')).toBe('/settings/oauth-apps');
     expect(buildWorkspaceAwarePath('/settings/oauth-apps/client-1', 'acme')).toBe(
@@ -131,17 +139,22 @@ describe('buildWorkspaceAwarePath', () => {
     expect(buildWorkspaceAwarePath('/settings/audit-log', 'acme')).toBe('/settings/audit-log');
   });
 
-  // Account-level tabs are mirrored under the workspace so members can reach
-  // them without leaving it.
-  it('prefixes the account-level settings tabs', () => {
-    expect(buildWorkspaceAwarePath('/settings/profile', 'acme')).toBe('/acme/settings/profile');
-    expect(buildWorkspaceAwarePath('/settings/appearance', 'acme')).toBe(
-      '/acme/settings/appearance',
-    );
-    expect(buildWorkspaceAwarePath('/settings/hotkey', 'acme')).toBe('/acme/settings/hotkey');
-    expect(buildWorkspaceAwarePath('/settings/advanced', 'acme')).toBe('/acme/settings/advanced');
-    expect(buildWorkspaceAwarePath('/settings/labs', 'acme')).toBe('/acme/settings/labs');
-    expect(buildWorkspaceAwarePath('/settings/about', 'acme')).toBe('/acme/settings/about');
+  // Account pages follow the person. Their workspace mirrors were retired, so
+  // a link to one must stay on the personal page instead of taking a redirect
+  // round trip through the workspace tree.
+  it('leaves the account-level settings tabs personal', () => {
+    for (const tab of [
+      'profile',
+      'appearance',
+      'hotkey',
+      'notification',
+      'connector',
+      'apikey',
+      'advanced',
+      'about',
+    ]) {
+      expect(buildWorkspaceAwarePath(`/settings/${tab}`, 'acme')).toBe(`/settings/${tab}`);
+    }
   });
 
   it('skips prefix for personal-only settings sub-paths', () => {
@@ -153,12 +166,15 @@ describe('buildWorkspaceAwarePath', () => {
     );
     // The workspace Storage page was retired; personal Storage must stay reachable.
     expect(buildWorkspaceAwarePath('/settings/storage', 'acme')).toBe('/settings/storage');
+    // Agent labels were removed; the retired personal tab must not be rewritten
+    // onto the workspace alias route.
+    expect(buildWorkspaceAwarePath('/settings/labels', 'acme')).toBe('/settings/labels');
   });
 
-  it('prefixes the `/settings` index — both personal and workspace have a meaningful redirect', () => {
-    expect(buildWorkspaceAwarePath('/settings', 'acme')).toBe('/acme/settings');
-    expect(buildWorkspaceAwarePath('/settings/', 'acme')).toBe('/acme/settings/');
-    expect(buildWorkspaceAwarePath('/settings?foo=bar', 'acme')).toBe('/acme/settings?foo=bar');
+  it('keeps the `/settings` index personal — the workspace pages are a group inside it', () => {
+    expect(buildWorkspaceAwarePath('/settings', 'acme')).toBe('/settings');
+    expect(buildWorkspaceAwarePath('/settings/', 'acme')).toBe('/settings/');
+    expect(buildWorkspaceAwarePath('/settings?foo=bar', 'acme')).toBe('/settings?foo=bar');
   });
 });
 

@@ -16,8 +16,6 @@ import { regenerateAction } from './actions/regenerate';
 import { restoreToInputAction } from './actions/restoreToInput';
 import { selectAction } from './actions/select';
 import { shareAction } from './actions/share';
-import { translateAction } from './actions/translate';
-import { ttsAction } from './actions/tts';
 import { type MessageActionContext } from './types';
 
 /**
@@ -33,7 +31,7 @@ export const useBuildActions = (
   ctx: MessageActionContext,
 ): Record<string, MessageActionItem | null> => {
   // View-only General access on the conversation's agent/group: mutating
-  // actions (send/regenerate/edit/delete/translate/tts/branch) don't apply —
+  // actions (send/regenerate/edit/delete/branch) don't apply —
   // same "absent when not applicable" rule as the role checks above.
   const { canUseResource } = useConversationResourceAccess();
 
@@ -54,8 +52,6 @@ export const useBuildActions = (
     restoreToInput: restoreToInputAction.useBuild(ctx),
     select: selectAction.useBuild(ctx),
     share: shareAction.useBuild(ctx),
-    translate: translateAction.useBuild(ctx),
-    tts: ttsAction.useBuild(ctx),
   };
 
   if (!canUseResource) {
@@ -66,8 +62,6 @@ export const useBuildActions = (
       'delAndRegenerate',
       'edit',
       'regenerate',
-      'translate',
-      'tts',
     ]) {
       actions[key] = null;
     }

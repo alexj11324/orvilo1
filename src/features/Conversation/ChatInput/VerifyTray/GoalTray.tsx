@@ -17,8 +17,6 @@ import {
 } from '@/components/ai-elements/plan';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import { useConversationStore } from '../../store';
 import { pickArmedMessage } from './armedMessage';
@@ -33,8 +31,7 @@ interface GoalTrayProps {
 }
 
 /**
- * Topic Goal tray, floating just above the composer once a topic exists (behind
- * the `enableTopicAcceptance` lab). Before a topic is created the goal entry
+ * Topic Goal tray, floating just above the composer once a topic exists. Before a topic is created the goal entry
  * lives in the composer "+" menu; the moment the conversation has a topic, the
  * goal earns a persistent home above the input — the "sent" state the user
  * asked for.
@@ -46,7 +43,6 @@ interface GoalTrayProps {
  */
 const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
   const { t } = useTranslation('verify');
-  const enabled = useUserStore(labPreferSelectors.enableTopicAcceptance);
   const topicId = useConversationStore((s) => s.context.topicId);
   const agentId = useConversationStore((s) => s.context.agentId);
   const displayMessages = useConversationStore((s) => s.displayMessages);
@@ -65,18 +61,18 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
   // the arm or clobbering its saved goal). Spend the arm either way, so it never
   // leaks to the next topic.
   useEffect(() => {
-    if (!enabled || !agentId || armedAt === undefined || !topicId || isLoading) return;
+    if (!agentId || armedAt === undefined || !topicId || isLoading) return;
     if (!goal) {
       const armedMessage = pickArmedMessage(displayMessages, armedAt);
       if (armedMessage?.content) void setGoal(armedMessage.content);
     }
     disarm(agentId);
-  }, [enabled, agentId, armedAt, topicId, isLoading, goal, displayMessages, setGoal, disarm]);
+  }, [agentId, armedAt, topicId, isLoading, goal, displayMessages, setGoal, disarm]);
 
   // The pre-topic "armed" state is surfaced as a chip in the composer action bar
   // (see GoalArmedChip), not as a tray here — the tray is only the "goal set"
   // home once a topic exists.
-  if (!enabled || !topicId || !goal) return null;
+  if (!topicId || !goal) return null;
 
   const openAddCheck = () => openCheckEditModal({ onSubmit: (v) => addCheck(v) });
   const openEditGoal = () =>

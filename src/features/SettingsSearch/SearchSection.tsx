@@ -1,7 +1,7 @@
 'use client';
 
-import { SearchIcon, XIcon } from 'lucide-react';
-import { memo, type PropsWithChildren, useEffect, useRef, useState } from 'react';
+import { XIcon } from 'lucide-react';
+import { memo, type PropsWithChildren, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -10,12 +10,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@/components/ui/input-group';
-import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenuButton,
-  useSidebar,
-} from '@/components/ui/sidebar';
+import { SidebarGroup, SidebarGroupContent } from '@/components/ui/sidebar';
 
 import SearchResults from './SearchResults';
 import { useSettingsSearch } from './useSettingsSearch';
@@ -29,18 +24,8 @@ import { useSettingsSearch } from './useSettingsSearch';
  */
 const SearchSection = memo<PropsWithChildren>(({ children }) => {
   const { t } = useTranslation('setting');
-  const { state, isMobile, setOpen } = useSidebar();
-  const collapsed = !isMobile && state === 'collapsed';
   const inputRef = useRef<HTMLInputElement>(null);
-  const [focusOnExpand, setFocusOnExpand] = useState(false);
   const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    if (focusOnExpand && !collapsed) {
-      inputRef.current?.focus();
-      setFocusOnExpand(false);
-    }
-  }, [collapsed, focusOnExpand]);
   const { isIndexing, results } = useSettingsSearch(query);
 
   const showResults = !!query.trim();
@@ -49,53 +34,40 @@ const SearchSection = memo<PropsWithChildren>(({ children }) => {
     <>
       <SidebarGroup className="py-1">
         <SidebarGroupContent>
-          {collapsed ? (
-            <SidebarMenuButton
+          <InputGroup className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
+            <InputGroupInput
               aria-label={t('settingsSearch.placeholder')}
-              tooltip={t('settingsSearch.placeholder')}
-              onClick={() => {
-                setFocusOnExpand(true);
-                setOpen(true);
+              className="placeholder:text-[var(--sidebar-muted)]"
+              placeholder={t('settingsSearch.placeholder')}
+              ref={inputRef}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape' && query) {
+                  event.stopPropagation();
+                  setQuery('');
+                }
               }}
-            >
-              <SearchIcon aria-hidden />
-            </SidebarMenuButton>
-          ) : (
-            <InputGroup className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
-              <InputGroupInput
-                aria-label={t('settingsSearch.placeholder')}
-                className="placeholder:text-[var(--sidebar-muted)]"
-                placeholder={t('settingsSearch.placeholder')}
-                ref={inputRef}
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape' && query) {
-                    event.stopPropagation();
+            />
+            {query && (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  aria-label={t('settingsSearch.clear')}
+                  size="icon-xs"
+                  onClick={() => {
                     setQuery('');
-                  }
-                }}
-              />
-              {query && (
-                <InputGroupAddon align="inline-end">
-                  <InputGroupButton
-                    aria-label={t('settingsSearch.clear')}
-                    size="icon-xs"
-                    onClick={() => {
-                      setQuery('');
-                      inputRef.current?.focus();
-                    }}
-                  >
-                    <XIcon />
-                  </InputGroupButton>
-                </InputGroupAddon>
-              )}
-            </InputGroup>
-          )}
+                    inputRef.current?.focus();
+                  }}
+                >
+                  <XIcon />
+                </InputGroupButton>
+              </InputGroupAddon>
+            )}
+          </InputGroup>
         </SidebarGroupContent>
       </SidebarGroup>
-      {showResults && !collapsed ? (
+      {showResults ? (
         <SearchResults isIndexing={isIndexing} query={query} results={results} />
       ) : (
         children

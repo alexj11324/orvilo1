@@ -23,10 +23,6 @@ vi.mock('@/business/client/features/AccountDeletion', () => ({
   default: () => <div />,
 }));
 
-vi.mock('@/features/DataImporter', () => ({
-  default: ({ children }: { children: ReactNode }) => <>{children}</>,
-}));
-
 vi.mock('@/services/config', () => ({
   configService: {
     exportAll: vi.fn(),

@@ -323,7 +323,8 @@ describe('workspaceMemberRouter.invite', () => {
 
     expect(invitationModel.createInvitation).toHaveBeenCalledWith(
       expect.objectContaining({
-        projectGrants: [{ projectId: 'proj-1', role: 'commenter' }],
+        projectGrants: [{ projectId: 'proj-1', role: 'contributor' }],
+        role: 'viewer',
       }),
     );
   });

@@ -8,6 +8,7 @@ import { ProjectLinks } from './ProjectLinks';
 import ProjectResources from './ProjectResources';
 
 const mocks = vi.hoisted(() => ({
+  projectDetail: undefined as { capabilities: { canEdit: boolean } } | undefined,
   navigate: vi.fn(),
   openAddResourceModal: vi.fn(),
   onOk: undefined as (() => unknown) | undefined,
@@ -39,6 +40,7 @@ vi.mock('@/components/toast', () => ({
 }));
 
 vi.mock('@/store/project', () => ({
+  useCurrentProjectDetail: () => mocks.projectDetail,
   useProjectStore: (
     selector: (state: {
       saveProjectLink: typeof mocks.saveLink;
@@ -75,6 +77,7 @@ const renderPage = (links: ReturnType<typeof link>[], onRefresh = vi.fn()) => {
 };
 
 beforeEach(() => {
+  mocks.projectDetail = undefined;
   mocks.navigate.mockReset();
   mocks.openAddResourceModal.mockReset();
   mocks.onOk = undefined;
@@ -93,6 +96,7 @@ describe('project resources', () => {
     expect(() => render(<ProjectLinks ownerId="owner" projectId="prj_1" />)).not.toThrow();
   });
   it('keeps resource links visible when the project creator has been deleted', () => {
+    mocks.projectDetail = { capabilities: { canEdit: false } };
     mocks.linkQuery.data = {
       data: [{ id: 'link-1', title: 'Project spec', url: 'https://example.com/spec' }],
     };

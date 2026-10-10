@@ -10,6 +10,7 @@ import {
   mcpEventInbox,
   mcpEventTriggerRuns,
   mcpEventTriggers,
+  resourcePermissions,
   taskDispatches,
   tasks,
   topics,
@@ -57,6 +58,7 @@ const seed = async (
     enabled?: boolean;
     eventMeta?: Record<string, unknown>;
     triggerRevision?: number;
+    useGranted?: boolean;
   } = {},
 ) => {
   const enabled = options.enabled ?? true;
@@ -79,6 +81,16 @@ const seed = async (
     workspaceId,
   });
   await db.insert(agents).values({ id: agentId, title: 'Event runner', userId, workspaceId });
+  if (options.useGranted !== false) {
+    await db.insert(resourcePermissions).values({
+      accessLevel: 'use',
+      createdBy: userId,
+      resourceId: agentId,
+      resourceType: 'agent',
+      userId,
+      workspaceId,
+    });
+  }
   // The runtime boundary reports the operation's topic id; the dispatch
   // ledger then pins it on the task row via the real topics FK.
   await db.insert(topics).values({ agentId, id: topicId, title: 'Event run', userId, workspaceId });
@@ -236,6 +248,19 @@ describe('MCP event admission chain', () => {
     expect(replay).toEqual({ dispatchId: run.dispatchId, status: 'duplicate' });
     expect(await db.select().from(taskDispatches)).toHaveLength(1);
     expect(execAgent).toHaveBeenCalledOnce();
+  });
+
+  it('denies event execution without explicit Agent Use for the initiator', async () => {
+    await seed({ useGranted: false });
+    const execAgent = vi
+      .spyOn(AiAgentService.prototype, 'execAgent')
+      .mockResolvedValue(execResult());
+
+    expect(await sweepMcpEventInbox(db)).toEqual({ claimed: 1, completed: 1, retried: 0 });
+    const [run] = await db.select().from(mcpEventTriggerRuns);
+    expect(run).toMatchObject({ reason: 'revoked', status: 'denied' });
+    expect(await db.select().from(taskDispatches)).toHaveLength(0);
+    expect(execAgent).not.toHaveBeenCalled();
   });
 
   const claimInbox = async () => {

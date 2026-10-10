@@ -164,6 +164,7 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
   const taskId = useTaskDetailTaskId();
   const copy = useTaskCopyActions();
   const task = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const canDeleteTask = canEditTask && task?.capabilities?.canDelete === true;
   const taskUuid = task?.id;
   // Links/PRs use the exact database id, including legacy ids (see issueResourceRef).
   const resourceRef = issueResourceRef(task);
@@ -559,12 +560,12 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
     },
     {
       danger: true,
-      disabled: !canEditTask,
+      disabled: !canDeleteTask,
       icon: <Trash />,
       key: 'delete',
       label: t('delete', { ns: 'common' }),
       onClick: () => {
-        if (!canEditTask) return;
+        if (!canDeleteTask) return;
         confirmModal({
           content: t('taskDetail.deleteConfirm.content'),
           okButtonProps: { danger: true },

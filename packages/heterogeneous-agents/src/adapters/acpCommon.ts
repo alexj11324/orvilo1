@@ -79,3 +79,82 @@ export const acpEventIdOf = (raw: unknown): string | undefined => {
   const meta = toRecord(toRecord(toRecord(raw)?.params)?._meta);
   return typeof meta?.eventId === 'string' ? meta.eventId : undefined;
 };
+
+/** Longest session title forwarded from an agent; longer text is cut. */
+export const MAX_ACP_SESSION_TITLE_LENGTH = 100;
+
+/** Raw input considered at all (UTF-16 units); the rest is never scanned. */
+export const MAX_ACP_SESSION_TITLE_INPUT_LENGTH = 2000;
+
+/** Whitespace-like controls that separate words: become one space, never vanish. */
+const TITLE_SEPARATORS = /[\t\n\v\f\r\u0085\u2028\u2029]/gu;
+
+/**
+ * Everything invisible, removed outright (`a<ZWSP>b` -> `ab`): all of
+ * \p{C} (controls, format incl. zero-width / bidi / tag characters, lone
+ * surrogates, private use, unassigned), line/paragraph separators, and the
+ * invisible fillers and joiners outside those categories (CGJ, Hangul fillers,
+ * Mongolian variation selectors). A ZWJ is kept only between two pictographs,
+ * so a family emoji survives while a hidden joiner in text does not.
+ */
+/* eslint-disable no-misleading-character-class -- the class deliberately lists combining marks (U+034F, U+180B-U+180F) to remove them */
+// Variation selectors other than U+FE0F (emoji presentation) and the Khmer
+// inherent vowels render nothing and can carry hidden data inside a title.
+const INVISIBLE_CLASS = String.raw`\p{C}\p{Zl}\p{Zp}\u034F\u115F\u1160\u3164\uFFA0\u180B-\u180F\u2800\uFE00-\uFE0E\u{E0100}-\u{E01EF}\u17B4\u17B5`;
+// The pictograph before a kept ZWJ may carry U+FE0F or a skin-tone modifier.
+const INVISIBLE_TITLE_CHARS = new RegExp(
+  String.raw`(?<keep>(?<=\p{Extended_Pictographic}[\uFE0F\p{Emoji_Modifier}]?)\u200D(?=\p{Extended_Pictographic}))|[${INVISIBLE_CLASS}]`,
+  'gu',
+);
+/* eslint-enable no-misleading-character-class */
+
+/** A title must show at least one letter, number, punctuation mark or symbol (emoji count). */
+const VISIBLE_TITLE_CHAR = /[\p{L}\p{N}\p{P}\p{S}]/u;
+
+/**
+ * Title carried by an ACP `session_info_update` (`sessionUpdate` payload).
+ *
+ * Returns the trimmed, length-capped title only when it is a non-blank string.
+ * An omitted field means "unchanged", `null` means "cleared", and a
+ * `_meta`-only update is routine bookkeeping (the bundled Prime agent sends
+ * many); none of those is a title, so they all return `undefined`. The text is
+ * untrusted agent output: plain string only, newlines flattened.
+ */
+export const parseAcpSessionTitle = (update: unknown): string | undefined => {
+  const record = toRecord(update);
+  if (record?.sessionUpdate !== 'session_info_update') return undefined;
+  if (typeof record.title !== 'string') return undefined;
+
+  // Word separators first, then drop invisible characters (they would
+  // survive whitespace collapsing and could hide or reorder text), collapse
+  // whitespace, and cap by code points so no surrogate pair is split.
+  // Bound the work first: this runs on the desktop main thread, and the
+  // per-match callback below is linear in the input.
+  const printable = record.title
+    .slice(0, MAX_ACP_SESSION_TITLE_INPUT_LENGTH)
+    .replaceAll(TITLE_SEPARATORS, ' ')
+    .replaceAll(INVISIBLE_TITLE_CHARS, (match, ...rest) => {
+      const groups = rest.at(-1) as { keep?: string };
+      return groups.keep ? match : '';
+    });
+  const title = [...printable.replaceAll(/\s+/gu, ' ').trim()]
+    .slice(0, MAX_ACP_SESSION_TITLE_LENGTH)
+    .join('')
+    // The cap can land right after a kept joiner, leaving it dangling.
+    .replace(/\u200D+$/u, '')
+    .trim();
+  if (!VISIBLE_TITLE_CHAR.test(title)) return undefined;
+  return title || undefined;
+};
+
+/**
+ * {@link parseAcpSessionTitle} for a whole JSON-RPC message: only a live
+ * `session/update` notification counts, never a replayed historical one.
+ */
+export const parseAcpSessionTitleMessage = (message: {
+  method?: string;
+  params?: unknown;
+}): string | undefined => {
+  if (message.method !== 'session/update' || isAcpReplayMessage(message)) return undefined;
+  return parseAcpSessionTitle(toRecord(message.params)?.update);
+};

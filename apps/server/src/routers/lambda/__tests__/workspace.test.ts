@@ -45,10 +45,14 @@ const { memberModel, queries, audit, workspaceModel } = vi.hoisted(() => ({
     findBySlug: vi.fn(),
     listUserWorkspaces: vi.fn(),
     transferPrimaryOwnership: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
 vi.mock('@/business/server/membershipLifecycle/audit', () => audit);
+vi.mock('@/business/server/trpc-middlewares/dbGrants', () => ({
+  fetchDbGrantedCodes: async () => new Set(),
+}));
 vi.mock('@/business/server/membershipLifecycle/queries', () => queries);
 
 vi.mock('@/database/models/workspace', () => ({
@@ -67,6 +71,10 @@ vi.mock('@/business/server/trpc-middlewares/workspaceAuth', async () => {
   const { trpc } = await import('@/libs/trpc/lambda/init');
   const pass = () => trpc.middleware(async (opts: any) => opts.next({ ctx: opts.ctx }));
   return {
+    resolveWorkspaceMembership: async (ctx: any) =>
+      ctx.workspaceId
+        ? { role: ctx.workspaceRole, userId: ctx.userId, workspaceId: ctx.workspaceId }
+        : null,
     requireWorkspaceRole: pass,
     requireWorkspaceRoleWhenScoped: pass,
     wsAdminProcedure: authedProcedure,
@@ -395,5 +403,34 @@ describe('workspaceRouter', () => {
     const state = await createCaller({ userId: 'u-admin' }).pendingOwnershipTransfer();
     expect(state?.transfer.id).toBe('tr-1');
     expect(state?.toUser).toMatchObject({ fullName: 'Admin' });
+  });
+});
+
+describe('workspace overview updates', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    workspaceModel.findById.mockResolvedValue({ id: 'ws-1', name: 'Old', slug: 'old' });
+    workspaceModel.update.mockResolvedValue(undefined);
+  });
+  it('saves only the authenticated workspace and returns its new URL', async () => {
+    const result = await createCaller().update({ name: 'New', slug: 'new-team', avatar: '🤖' });
+    expect(workspaceModel.update).toHaveBeenCalledWith('ws-1', {
+      name: 'New',
+      slug: 'new-team',
+      avatar: '🤖',
+    });
+    expect(result.slug).toBe('new-team');
+  });
+  it('rejects ordinary members before writing', async () => {
+    await expect(
+      createCaller({ workspaceRole: 'member' }).update({ name: 'No' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(workspaceModel.update).not.toHaveBeenCalled();
+  });
+  it('reports slug conflicts without claiming success', async () => {
+    workspaceModel.update.mockRejectedValueOnce({ cause: { code: '23505' } });
+    await expect(createCaller().update({ slug: 'taken' })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
   });
 });

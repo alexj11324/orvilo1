@@ -220,7 +220,14 @@ const openMenu = () =>
   fireEvent.click(screen.getByRole('button', { name: 'taskDetail.menu.actions' }));
 const setDetail = (detail: Record<string, unknown>) => {
   mocks.state.taskDetailMap = {
-    'T-1': { domainRevision: 3, id: 'task-uuid-1', identifier: 'T-1', name: 'Issue', ...detail },
+    'T-1': {
+      capabilities: { canDelete: true },
+      domainRevision: 3,
+      id: 'task-uuid-1',
+      identifier: 'T-1',
+      name: 'Issue',
+      ...detail,
+    },
   };
 };
 
@@ -254,6 +261,23 @@ describe('TaskDetailHeaderActions', () => {
     setDetail({ dueDate: null, teamId: 'team-old', visibility: 'private' });
   });
   afterEach(cleanup);
+
+  it.each([
+    { canDelete: false, writable: true, allowed: false },
+    { canDelete: undefined, writable: true, allowed: false },
+    { canDelete: true, writable: false, allowed: false },
+    { canDelete: true, writable: true, allowed: true },
+  ])(
+    'requires a writable ceiling and server deletion capability: %j',
+    ({ canDelete, writable, allowed }) => {
+      mocks.canEdit = writable;
+      setDetail({ capabilities: canDelete === undefined ? undefined : { canDelete } });
+      render(<TaskDetailHeaderActions />);
+      expect(item('delete')?.disabled).toBe(!allowed);
+      item('delete')?.onClick?.();
+      expect(mocks.confirmModal).toHaveBeenCalledTimes(allowed ? 1 : 0);
+    },
+  );
 
   describe('menu shape', () => {
     it('renders the top-level commands in the agreed order', () => {

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { ModalInstance } from '@/components/Modal';
 import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -41,10 +42,14 @@ const RenameModalContent = memo<RenameModalContentProps>(
       try {
         await onSave(next);
         close();
+      } catch (error) {
+        // Stay open so the typed name is not lost, and say that it failed.
+        console.error('[RenameModal] save failed:', error);
+        toast.error(tCommon('operationFailed'));
       } finally {
         setLoading(false);
       }
-    }, [close, defaultValue, loading, onSave, value]);
+    }, [close, defaultValue, loading, onSave, tCommon, value]);
 
     return (
       <div className={'flex flex-col gap-5'}>

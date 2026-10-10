@@ -25,12 +25,7 @@ export const isWorkspaceRoleName = (value: unknown): value is WorkspaceRoleName 
   typeof value === 'string' && value in WORKSPACE_ROLE_RANK;
 
 /** Project roles an invite may carry for project grants. */
-export const PROJECT_ROLE_NAMES: readonly ProjectRoleName[] = [
-  'manager',
-  'contributor',
-  'commenter',
-  'viewer',
-];
+export const PROJECT_ROLE_NAMES: readonly ProjectRoleName[] = ['manager', 'contributor'];
 
 /**
  * Whether a caller holding `callerRole` may grant `grantRole` to somebody else
@@ -64,12 +59,12 @@ export const canManageMember = (
 
 /**
  * The highest project role a member with `workspaceRole` may hold. A workspace
- * viewer is capped at commenter — a project 'manager' label must never restore
+ * viewer is capped at participant — a project 'manager' label must never restore
  * write ability the workspace role withholds.
  */
 export const maxProjectRoleForWorkspaceRole = (
   workspaceRole: WorkspaceRoleName | null | undefined,
-): ProjectRoleName => (workspaceRole === 'viewer' ? 'commenter' : 'manager');
+): ProjectRoleName => (workspaceRole === 'viewer' ? 'contributor' : 'manager');
 
 /** Clamp `requested` to the ceiling implied by the member's workspace role. */
 export const capProjectRole = (

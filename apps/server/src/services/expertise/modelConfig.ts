@@ -1,15 +1,9 @@
-import type { UserSystemAgentConfig } from '@orvilo/types';
-
-import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
-import { resolveSystemAgentModelConfig } from '@/server/services/systemAgent/modelConfig';
+import { resolveOwnedSystemAgentModelConfig } from '@/server/services/systemAgent/ownedModelConfig';
 
-export const resolveExpertiseModelConfig = async (db: OrviloDatabase, userId: string) => {
-  const settings = await new UserModel(db, userId).getUserSettings();
-  const systemAgent = settings?.systemAgent as Partial<UserSystemAgentConfig> | undefined;
-
-  return resolveSystemAgentModelConfig({
-    taskConfig: systemAgent?.expertise,
-    taskKey: 'expertise',
-  });
-};
+export const resolveExpertiseModelConfig = (
+  db: OrviloDatabase,
+  userId: string,
+  agentId?: string | null,
+  workspaceId?: string,
+) => resolveOwnedSystemAgentModelConfig(db, userId, 'expertise', agentId, workspaceId);

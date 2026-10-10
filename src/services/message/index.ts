@@ -1,9 +1,6 @@
-import { type HeatmapsProps } from '@lobehub/charts';
 import {
   type ChatMessageError,
   type ChatMessagePluginError,
-  type ChatTranslate,
-  type ChatTTS,
   type CreateMessageParams,
   type CreateMessageResult,
   type HeterogeneousToolStateSnapshot,
@@ -200,14 +197,6 @@ export class MessageService {
     return lambdaClient.message.countWords.query(params);
   };
 
-  getHeatmaps = async (): Promise<HeatmapsProps['data']> => {
-    return lambdaClient.message.getHeatmaps.query();
-  };
-
-  getTokenHeatmaps = async (): Promise<HeatmapsProps['data']> => {
-    return lambdaClient.message.getTokenHeatmaps.query();
-  };
-
   updateMessageError = async (id: string, value: ChatMessageError, ctx?: MessageQueryContext) => {
     const error = value.type
       ? value
@@ -251,14 +240,6 @@ export class MessageService {
       id,
       value,
     });
-  };
-
-  updateMessageTranslate = async (id: string, translate: Partial<ChatTranslate> | false) => {
-    return lambdaClient.message.updateTranslate.mutate({ id, value: translate as ChatTranslate });
-  };
-
-  updateMessageTTS = async (id: string, tts: Partial<ChatTTS> | false) => {
-    return lambdaClient.message.updateTTS.mutate({ id, value: tts });
   };
 
   updateMessageMetadata = async (

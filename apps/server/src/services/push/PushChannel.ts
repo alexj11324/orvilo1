@@ -1,8 +1,10 @@
+import { notificationEventEnabled, type NotificationSettings } from '@orvilo/types';
 import { sleep } from '@orvilo/utils';
 import debug from 'debug';
 import { Expo, type ExpoPushMessage } from 'expo-server-sdk';
 
 import { PushTokenModel } from '@/database/models/pushToken';
+import { UserModel } from '@/database/models/user';
 import { serverDB } from '@/database/server';
 
 import { DEFAULT_PUSH_CHANNEL_ID } from './constants';
@@ -40,6 +42,15 @@ export class PushChannel {
   }
 
   async deliver(ctx: PushDeliveryContext): Promise<PushDeliveryResult> {
+    const settings = (await new UserModel(serverDB, ctx.userId).getUserSettings())?.notification;
+    if (
+      !notificationEventEnabled(
+        settings as NotificationSettings | undefined,
+        'push',
+        ctx.type ?? '',
+      )
+    )
+      return { status: 'delivered' };
     const tokens = await new PushTokenModel(serverDB, ctx.userId).listByUserId();
 
     if (tokens.length === 0) {

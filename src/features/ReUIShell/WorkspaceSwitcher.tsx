@@ -32,7 +32,7 @@ export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
           <DropdownMenu>
             <SidebarMenuButton
               aria-label={activeWorkspace?.name ?? t('common:reuiShell9.openWorkspaceMenu')}
-              className="h-9 px-1.5 group-data-[collapsible=icon]:justify-center data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
+              className="h-9 px-1.5 data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
               render={<DropdownMenuTrigger />}
               size="lg"
               tooltip={activeWorkspace?.name}
@@ -40,19 +40,19 @@ export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
               {activeWorkspace ? (
                 <>
                   <WorkspaceAvatar className="size-6" workspace={activeWorkspace} />
-                  <span className="flex-1 truncate text-sm font-medium text-sidebar-foreground group-data-[collapsible=icon]:sr-only">
+                  <span className="flex-1 truncate text-sm font-medium text-sidebar-foreground">
                     {activeWorkspace.name}
                   </span>
                 </>
               ) : (
                 <>
                   <Skeleton className="size-6 shrink-0 rounded-md" />
-                  <Skeleton className="h-4 min-w-0 flex-1 group-data-[collapsible=icon]:hidden" />
+                  <Skeleton className="h-4 min-w-0 flex-1" />
                 </>
               )}
               <ChevronsUpDownIcon
                 aria-hidden
-                className="ml-auto shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                className="ml-auto shrink-0 text-muted-foreground"
                 data-sidebar-affordance=""
               />
             </SidebarMenuButton>

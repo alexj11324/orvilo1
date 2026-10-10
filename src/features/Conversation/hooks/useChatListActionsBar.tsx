@@ -1,15 +1,12 @@
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
-import { css, cx } from 'antd-style';
 import {
   ArrowDownFromLine,
   Copy,
   DownloadIcon,
   Edit,
-  LanguagesIcon,
   ListChevronsDownUp,
   ListChevronsUpDown,
   ListRestart,
-  Play,
   RotateCcw,
   Share2,
   Split,
@@ -19,14 +16,6 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type ActionIconGroupItemType } from '@/components/ItemsMenu';
-import { localeOptions } from '@/locales/resources';
-
-const translateStyle = css`
-  .ant-dropdown-menu-sub {
-    overflow-y: scroll;
-    max-height: 400px;
-  }
-`;
 
 type ActionBarItem = ActionIconGroupItemType & { sfSymbol?: SFSymbol };
 
@@ -43,8 +32,6 @@ interface ChatListActionsBar {
   export: ActionBarItem;
   regenerate: ActionBarItem;
   share: ActionBarItem;
-  translate: ActionBarItem;
-  tts: ActionBarItem;
 }
 
 export const useChatListActionsBar = ({
@@ -133,22 +120,7 @@ export const useChatListActionsBar = ({
         label: t('share'),
         sfSymbol: 'square.and.arrow.up',
       },
-      translate: {
-        children: localeOptions.map((i) => ({
-          key: i.value,
-          label: t(`lang.${i.value}`),
-        })),
-        icon: LanguagesIcon,
-        key: 'translate',
-        label: t('translate.action', { ns: 'chat' }),
-        popupClassName: cx(translateStyle),
-      },
-      tts: {
-        icon: Play,
-        key: 'tts',
-        label: t('tts.action', { ns: 'chat' }),
-      },
     }),
-    [hasThread, isContinuing, isRegenerating],
+    [hasThread, isContinuing, isRegenerating, t],
   );
 };

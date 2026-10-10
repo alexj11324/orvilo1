@@ -27,6 +27,7 @@ vi.mock('@/services/work', async (importOriginal) => {
   };
 });
 vi.mock('@/store/chat/utils/desktopNotification', () => ({
+  notifyDesktopAgentCompleted: vi.fn().mockResolvedValue(undefined),
   notifyDesktopHumanApprovalRequired: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/store/chat/slices/agentRun/actions/lifecycle/agentSignalBridge', () => ({

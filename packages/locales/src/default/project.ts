@@ -103,8 +103,6 @@ export default {
   'create.visibilityLabel': 'Visibility',
   'create.visibilityPrivate': 'Private',
   'create.visibilityPublic': 'Workspace members',
-  'disabled.action': 'Enable in Labs',
-  'disabled.title': 'Project workspaces are an Alpha experiment',
   'goals.create': 'Create goal',
   'goals.description': 'Define the outcomes this project is pursuing and track them to acceptance.',
   'goals.emptyDescription': 'Create the first measurable outcome for this project.',

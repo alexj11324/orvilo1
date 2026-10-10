@@ -21,7 +21,11 @@ import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { providerBindingRouter } from '@/server/routers/lambda/providerBinding';
 
-import { checkProviderBinding, type ProviderConfigurationComposition } from './configuration';
+import {
+  checkProviderBinding,
+  checkProviderBindings,
+  type ProviderConfigurationComposition,
+} from './configuration';
 import { createProviderBindingComposition } from './controlPlane';
 
 const db: OrviloDatabase = await getTestDB();
@@ -30,7 +34,11 @@ const OWNER = 'ccp-check-owner';
 const OUTSIDER = 'ccp-check-outsider';
 const MODEL_ID = 'mock-model-1';
 const MODELS_BODY = JSON.stringify({
-  data: [{ context_length: 32_768, id: MODEL_ID, max_output_tokens: 8192 }],
+  data: [MODEL_ID, 'mock-model-2'].map((id) => ({
+    context_length: 32_768,
+    id,
+    max_output_tokens: 8192,
+  })),
 });
 
 interface SeenRequest {
@@ -165,6 +173,41 @@ afterAll(async () => {
 });
 
 describe('checkConnection real provider round-trip', () => {
+  it('reuses one provider probe and catalog per batch while filtering absent models', async () => {
+    const cred = await createCredential(OWNER, 'kv-env', { API_KEY: 'batch-fixture' });
+    const rows = await Promise.all(
+      [MODEL_ID, 'mock-model-2', 'absent-model'].map((model) =>
+        insertBinding(OWNER, bindConfig(endpoint(), `credential:${cred.id}`, model)),
+      ),
+    );
+    const model = new ProviderBindingModel(db, OWNER);
+    const verify = () =>
+      checkProviderBindings(
+        model,
+        OWNER,
+        rows,
+        createProviderBindingComposition(db, { reuseProviderVerification: true }),
+      );
+    await verify();
+    expect(seenRequests.map((request) => request.url)).toEqual(['/chat/completions', '/models']);
+    expect(JSON.parse(seenRequests[0].body).model).toBe(MODEL_ID);
+    expect(
+      (await Promise.all(rows.map((row) => model.find(row.id)))).map((row) => row?.config.enabled),
+    ).toEqual([true, true, false]);
+    requiredHeaders = { authorization: 'Bearer changed-secret' };
+    await verify();
+    expect(seenRequests.map((request) => request.url)).toEqual([
+      '/chat/completions',
+      '/models',
+      '/chat/completions',
+    ]);
+    expect(
+      (await Promise.all(rows.map((row) => model.find(row.id)))).every(
+        (row) => !row?.config.enabled,
+      ),
+    ).toBe(true);
+  });
+
   it('kv-header credential decrypts, maps headers, strips reserved ones, yields ready', async () => {
     const cred = await createCredential(OWNER, 'kv-header', {
       'Authorization': 'Bearer live-secret',
@@ -278,7 +321,7 @@ describe('checkConnection failure matrix — never a green check', () => {
     const result = await caller(OWNER).checkConnection({ id: row.id, revision: row.revision });
 
     expect(result.status).toBe('unavailable');
-    const req = seenRequests.find((r) => r.url === '/models');
+    const req = seenRequests.find((r) => r.url === '/chat/completions');
     expect(req?.headers['authorization']).toBe('Bearer env-secret-7');
   });
 

@@ -12,8 +12,8 @@ export interface WorkspaceAwareNavigateOptions extends NavigateOptions {
  * a new top-level personal-only route, append it here.
  *
  * `/settings` is handled separately via {@link WORKSPACE_SETTINGS_TABS} —
- * sub-paths in the allowlist get auto-prefixed; everything else (llm,
- * referral, system-tools, etc.) stays personal.
+ * sub-paths in the allowlist get auto-prefixed; everything else (the index,
+ * profile, provider, system-tools, etc.) stays personal.
  */
 const PERSONAL_PATH_REGEX =
   /^\/(?:apps|invite|onboarding|me|share|devtools|desktop-onboarding)(?:[/?#]|$)/;
@@ -21,27 +21,16 @@ const PERSONAL_PATH_REGEX =
 const isPersonalPath = (to: string): boolean => PERSONAL_PATH_REGEX.test(to);
 
 /**
- * Settings sub-paths that have a `/:workspaceSlug/settings/<tab>` mirror in
- * the SPA routers. Kept in sync with the workspace settings subtree in
- * `src/spa/router/desktopRouter.shared.tsx` and `mobileRouter.config.tsx`.
+ * Settings sub-paths whose page lives at `/:workspaceSlug/settings/<tab>`.
+ * Kept in sync with `sharedWorkspaceSettingsLeaves`.
  *
- * Tabs absent from this set (llm, referral, system-tools, security, sync,
- * plugin, tts, agent, common, system-agent, memory, ...) are personal-only
- * and never prefixed.
+ * Only pages that read or write the workspace belong here. Account pages
+ * (profile, appearance, hotkey, notification, …) are personal-only and never
+ * prefixed; their retired workspace mirrors redirect to them.
  */
 export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
-  // About and the developer tools (advanced / labs) are user-level pages
-  // mirrored under the workspace alongside the account-level tabs.
-  'about',
-  'advanced',
-  'apikey',
-  // Account-level tabs (profile / appearance / hotkey) are
-  // mirrored under the workspace so members can reach them without leaving
-  // the workspace.
-  'appearance',
   'billing',
   'budget',
-  'connector',
   'credential',
   // Legacy alias for `credential` — the routers keep a redirect, so prefixed
   // deep-links still land on `/:slug/settings/credential`.
@@ -49,17 +38,11 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'credits',
   'devices',
   'general',
-  'hotkey',
   'imports',
-  'labels',
-  'labs',
+  'integrations',
   'linear',
   'members',
-  'notification',
   'plans',
-  'profile',
-  'provider',
-  'service-model',
   'statistics',
   // Legacy alias for `statistics` — the routers keep a redirect, so prefixed
   // deep-links still land on `/:slug/settings/statistics`.
@@ -68,6 +51,7 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
 ]);
 
 const SETTINGS_PREFIX_REGEX = /^\/settings\/([^/?#]+)/;
+const SETTINGS_INDEX_REGEX = /^\/settings\/?(?:[?#]|$)/;
 const FIRST_SEGMENT_REGEX = /^\/([^/?#]+)/;
 
 export const WORKSPACE_MIRRORED_FIRST_SEGMENTS = new Set([
@@ -105,13 +89,13 @@ const parseFirstSegment = (pathname: string): string | null => {
 };
 
 /**
- * Returns `true` for `/settings/<tab>` where `<tab>` is NOT in
- * {@link WORKSPACE_SETTINGS_TABS} (llm, referral, system-tools, …).
- * `/settings` index (or with query/hash) gets prefixed too — workspace
- * `/${slug}/settings` redirects to `/${slug}/settings/general`, personal
- * `/settings` redirects to `/settings/profile`.
+ * Returns `true` for the settings index and for `/settings/<tab>` where `<tab>`
+ * is NOT in {@link WORKSPACE_SETTINGS_TABS} (profile, provider, system-tools, …).
+ * The index is personal: `/settings` opens the account page, and the workspace
+ * pages are reached by their own tab (`/settings/general`).
  */
 const isPersonalSettingsPath = (to: string): boolean => {
+  if (SETTINGS_INDEX_REGEX.test(to)) return true;
   const match = SETTINGS_PREFIX_REGEX.exec(to);
   if (!match) return false;
   return !WORKSPACE_SETTINGS_TABS.has(match[1]);

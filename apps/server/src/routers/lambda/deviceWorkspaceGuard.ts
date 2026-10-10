@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 
 import type { DeviceModel } from '@/database/models/device';
-import { isPathWithinRoot } from '@/server/services/deviceGateway';
+import { deviceGateway, isPathWithinRoot } from '@/server/services/deviceGateway';
 
 /**
  * Validate that a client-supplied workspace root is actually one the user has
@@ -26,6 +26,7 @@ export const assertWorkspaceRootApproved = async (
   deviceModel: DeviceModel,
   deviceId: string,
   workingDirectory: string,
+  workspaceId?: string,
 ): Promise<void> => {
   if (!workingDirectory) {
     throw new TRPCError({
@@ -34,7 +35,9 @@ export const assertWorkspaceRootApproved = async (
     });
   }
 
-  const device = await deviceModel.findByDeviceId(deviceId);
+  const device = workspaceId
+    ? await deviceModel.findWorkspaceDeviceById(deviceId)
+    : await deviceModel.findByDeviceId(deviceId);
 
   const approvedRoots = [
     ...(device?.workingDirs ?? []).map((dir) => dir.path),
@@ -83,4 +86,27 @@ export const assertWorkspaceDeviceVisible = async (
   if (!device) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace device not found.' });
   }
+};
+
+/** Repository-wide Git operations require approval of the native effective root. */
+export const assertWorkspaceGitRootApproved = async (
+  deviceModel: DeviceModel,
+  params: { deviceId: string; path: string; userId: string; workspaceId?: string },
+): Promise<void> => {
+  const inspection = await deviceGateway.inspectGitWorktreePath({
+    ...params,
+    worktreePath: params.path,
+  });
+  if (!inspection?.repoRoot) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'The device could not verify the effective Git repository root.',
+    });
+  }
+  await assertWorkspaceRootApproved(
+    deviceModel,
+    params.deviceId,
+    inspection.repoRoot,
+    params.workspaceId,
+  );
 };

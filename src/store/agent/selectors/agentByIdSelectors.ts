@@ -1,12 +1,11 @@
 import { DEFAULT_PROVIDER } from '@orvilo/business-const';
-import { DEFAULT_MODEL, DEFAUTT_AGENT_TTS_CONFIG, isDesktop } from '@orvilo/const';
+import { DEFAULT_MODEL, isDesktop } from '@orvilo/const';
 import { type AgentBuilderContext } from '@orvilo/context-engine';
 import {
   type AgentMode,
   getActivePluginIds,
   getWorkingDirEffectivePath,
   type OrviloAgentAgencyConfig,
-  type OrviloAgentTTSConfig,
   type RuntimeEnvConfig,
 } from '@orvilo/types';
 
@@ -46,16 +45,6 @@ const getAgentSystemRoleById =
   (agentId: string) =>
   (s: AgentStoreState): string | undefined =>
     agentSelectors.getAgentConfigById(agentId)(s)?.systemRole;
-
-const getAgentTTSById =
-  (agentId: string) =>
-  (s: AgentStoreState): OrviloAgentTTSConfig =>
-    agentSelectors.getAgentConfigById(agentId)(s)?.tts || DEFAUTT_AGENT_TTS_CONFIG;
-
-const getAgentTTSVoiceById =
-  (agentId: string) =>
-  (s: AgentStoreState): string =>
-    getAgentTTSById(agentId)(s).voice?.openai || 'alloy';
 
 const getAgentConfigErrorById =
   (agentId: string) =>
@@ -224,8 +213,6 @@ export const agentByIdSelectors = {
   getAgentModelProviderById,
   getAgentPluginsById,
   getAgentSystemRoleById,
-  getAgentTTSById,
-  getAgentTTSVoiceById,
   getAgentWorkingDirectoryById,
   isAgentConfigLoadingById,
   isAgentHeterogeneousById,

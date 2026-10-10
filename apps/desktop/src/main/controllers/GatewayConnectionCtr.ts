@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import type { DeviceControlDeps } from '@orvilo/device-control';
 import type { AgentRunRequestMessage, GatewayMcpParams } from '@orvilo/device-gateway-client';
-import type { GatewayConnectionStatus } from '@orvilo/electron-client-ipc';
+import type { GatewayConnectionStatus, GatewayLocalState } from '@orvilo/electron-client-ipc';
 import type { AutomationReadinessRequest } from '@orvilo/heterogeneous-agents/automationReadiness';
 import type { HeterogeneousAgentCancellationSignal } from '@orvilo/heterogeneous-agents/protocol';
 import type { RemotePlatformCommandRuntime } from '@orvilo/heterogeneous-agents/scanHost';
@@ -21,6 +21,12 @@ import { app as electronApp } from 'electron';
 import { resolveCliScript } from '@/modules/cliEmbedding';
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
+import {
+  createOutcome,
+  extractServerMessage,
+  resolveAutoConnectGate,
+  resolveRegisterOutcome,
+} from '@/services/gatewayLocalState';
 import { createLogger } from '@/utils/logger';
 import { setDesktopUserAgentHeader } from '@/utils/user-agent';
 
@@ -240,12 +246,17 @@ export default class GatewayConnectionCtr extends ControllerModule {
   @IpcMethod()
   async disconnect(): Promise<{ success: boolean }> {
     this.app.storeManager.set('gatewayEnabled', false);
-    return this.service.disconnect();
+    const result = await this.service.disconnect();
+    this.service.recordLocalOutcome(createOutcome('disabled', Date.now()));
+    return result;
   }
 
   @IpcMethod()
-  async getConnectionStatus(): Promise<{ status: GatewayConnectionStatus }> {
-    return { status: this.service.getStatus() };
+  async getConnectionStatus(): Promise<{
+    localState: GatewayLocalState;
+    status: GatewayConnectionStatus;
+  }> {
+    return { localState: this.service.getLocalState(), status: this.service.getStatus() };
   }
 
   @IpcMethod()
@@ -280,14 +291,23 @@ export default class GatewayConnectionCtr extends ControllerModule {
   // ─── Auto Connect ───
 
   private async tryAutoConnect() {
-    const gatewayEnabled = this.app.storeManager.get('gatewayEnabled');
-    if (!gatewayEnabled) return;
+    const gatewayEnabled = Boolean(this.app.storeManager.get('gatewayEnabled'));
+    const isConfigured = gatewayEnabled
+      ? await this.remoteServerConfigCtr.isRemoteServerConfigured()
+      : false;
+    const hasToken =
+      gatewayEnabled && isConfigured
+        ? Boolean(await this.remoteServerConfigCtr.getAccessToken())
+        : false;
 
-    const isConfigured = await this.remoteServerConfigCtr.isRemoteServerConfigured();
-    if (!isConfigured) return;
-
-    const token = await this.remoteServerConfigCtr.getAccessToken();
-    if (!token) return;
+    // Same preconditions and order as before; the only change is that the
+    // reason for not connecting is now recorded instead of silently dropped.
+    const blocked = resolveAutoConnectGate({ gatewayEnabled, hasToken, isConfigured }, Date.now());
+    if (blocked) {
+      logger.info(`Auto-connect skipped: ${blocked.phase}`);
+      this.service.recordLocalOutcome(blocked);
+      return;
+    }
 
     await this.service.connect();
   }
@@ -1292,9 +1312,8 @@ export default class GatewayConnectionCtr extends ControllerModule {
 
   /**
    * Persist this device to the server registry via `device.register`.
-   * Fire-and-forget from the connect path: a failure must not block the WS
-   * connection, the device just won't appear in the offline list until the
-   * next successful connect.
+   * A failure must not block the WS connection, but it throws so the
+   * caller can record `registerFailed` with the HTTP status.
    */
   private async registerDevice(info: {
     deviceId: string;
@@ -1306,7 +1325,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       this.remoteServerConfigCtr.getRemoteServerUrl(),
       this.remoteServerConfigCtr.getAccessToken(),
     ]);
-    if (!serverUrl || !token) return;
+    if (!serverUrl || !token) throw new Error('Server URL or access token is missing');
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -1319,11 +1338,22 @@ export default class GatewayConnectionCtr extends ControllerModule {
     // stale client is judged from its registered version, not guessed.
     const payload = { ...info, adapterVersion: electronApp.getVersion() };
 
-    await fetch(`${serverUrl}/trpc/lambda/device.register`, {
+    const res = await fetch(`${serverUrl}/trpc/lambda/device.register`, {
       body: JSON.stringify({ json: payload }),
       headers,
       method: 'POST',
     });
+
+    // A non-2xx used to pass silently, leaving the device out of the registry.
+    const outcome = resolveRegisterOutcome(
+      {
+        message: res.ok ? undefined : extractServerMessage(await res.text().catch(() => '')),
+        ok: res.ok,
+        status: res.status,
+      },
+      Date.now(),
+    );
+    if (outcome.phase === 'registerFailed') throw new Error(outcome.reason);
   }
 
   /**

@@ -40,7 +40,7 @@ vi.mock('@/database/models/agent', () => ({
     return {
       inheritRuntimeForCreation: mockInheritRuntime,
       getOrchestratorSourceAgentId: vi.fn().mockResolvedValue('saved-orchestrator'),
-      batchCreate: mockBatchCreate,
+      batchCreateGroupAgents: mockBatchCreate,
       getAgentConfigById: mockGetAgentConfigById,
       queryAgents: vi.fn(async () => []),
       update: mockUpdateAgent,

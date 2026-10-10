@@ -5,14 +5,16 @@ import {
   BotMessageSquareIcon,
   Brain,
   BrainCircuit,
+  Building2,
   ChartColumnBigIcon,
   Coins,
   CreditCard,
   Database,
   EllipsisIcon,
   EthernetPort,
-  FlaskConical,
   GitBranchIcon,
+  HandCoins,
+  Import,
   Info,
   KeyboardIcon,
   KeyIcon,
@@ -20,22 +22,26 @@ import {
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
+  Plug,
   Sparkles,
-  TagIcon,
   TerminalSquare,
   User,
+  Users,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import Avatar from '@/components/Avatar';
 import { isSettingsTabOffered } from '@/config/routes/settings';
+import { usePermission } from '@/hooks/usePermission';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { SettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
+import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
 
 import { useSettingsCapabilityContext } from './useSettingsCapability';
 
@@ -49,13 +55,30 @@ export enum SettingsGroupKey {
   ThisDevice = 'thisDevice',
   Tools = 'tools',
   UsageAndCost = 'usageAndCost',
+  Workspace = 'workspace',
 }
 
+/**
+ * Rows that exist only under `/:workspaceSlug/settings/*`. They have no
+ * `SettingsTabs` member because no personal page answers for them.
+ */
+export type WorkspaceOnlySettingsTab =
+  | WorkspaceSettingsTabs.Budget
+  | WorkspaceSettingsTabs.General
+  | WorkspaceSettingsTabs.Integrations
+  | WorkspaceSettingsTabs.Imports
+  | WorkspaceSettingsTabs.Members;
+
+export type SettingsNavKey = SettingsTabs | WorkspaceOnlySettingsTab;
+
 export interface CategoryItem {
-  /** Override the navigation URL. When omitted, Body derives the URL from `key`. */
+  /**
+   * Override the navigation URL. When omitted, Body derives the URL from `key`.
+   * Rows whose page reads or writes the workspace carry the workspace URL here.
+   */
   href?: string;
   icon: any;
-  key: SettingsTabs;
+  key: SettingsNavKey;
   label: string;
 }
 
@@ -68,7 +91,6 @@ export interface CategoryGroup {
 export const useCategory = () => {
   const { t } = useTranslation('setting');
   const { t: tAuth } = useTranslation('auth');
-  const { t: tLabs } = useTranslation('labs');
   const { t: tSubscription } = useTranslation('subscription');
   const { showProvider } = useServerConfigStore(featureFlagsSelectors);
   const [avatar, username] = useUserStore((s) => [
@@ -77,6 +99,12 @@ export const useCategory = () => {
   ]);
   const remoteServerUrl = useElectronStore(electronSyncSelectors.remoteServerUrl);
   const capabilityContext = useSettingsCapabilityContext();
+  const slug = useActiveWorkspaceSlug();
+  const { allowed: canManageWorkspace } = usePermission('manage_settings');
+  const { allowed: canViewBilling } = usePermission('view_billing');
+  // API keys act as the member who issued them, so the row follows the gate the
+  // server enforces: `API_KEY_*` is granted from Member up, never to Viewer.
+  const { allowed: canCreateContent } = usePermission('create_content');
 
   const avatarUrl = useMemo(() => {
     if (!avatar) return undefined;
@@ -91,6 +119,10 @@ export const useCategory = () => {
     // can no longer be opened by typing its URL — and `settings.test.ts` pins the
     // other direction, that a row offered here always renders.
     const offered = (tab: SettingsTabs) => isSettingsTabOffered(tab, capabilityContext);
+    // One row per capability. A page that reads or writes the workspace lives at
+    // `/:slug/settings/<tab>`; the row points there, and without a workspace it
+    // falls back to the personal page of the same name.
+    const inWorkspace = (tab: string) => (slug ? `/${slug}/settings/${tab}` : undefined);
 
     return [
       // Capability groups (S70). The sidebar used to be ordered by audience —
@@ -98,9 +130,8 @@ export const useCategory = () => {
       // two different places depending on who it was for. Grouping by what the
       // settings operate on keeps a capability's configuration together.
       //
-      // The workspace sidebar is deliberately not mirroring this: it already has a
-      // Workspace group (with Members) and an Admin group (with the audit log),
-      // which is the same vocabulary, and its shape is asserted by its own tests.
+      // There is one settings sidebar. The pages a workspace shares sit in their
+      // own group below; every other group follows the person or the install.
 
       // 账户与外观 — settings that follow the user everywhere.
       {
@@ -135,6 +166,41 @@ export const useCategory = () => {
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Channels,
         title: t('group.channels'),
+      },
+
+      // 工作区 — what the whole workspace shares. Only rendered inside one.
+      {
+        items: slug
+          ? ([
+              {
+                href: inWorkspace(WorkspaceSettingsTabs.General),
+                icon: Building2,
+                key: WorkspaceSettingsTabs.General,
+                label: t('workspaceSetting.tab.general'),
+              },
+              {
+                href: inWorkspace(WorkspaceSettingsTabs.Members),
+                icon: Users,
+                key: WorkspaceSettingsTabs.Members,
+                label: t('workspaceSetting.tab.members'),
+              },
+              {
+                href: inWorkspace(WorkspaceSettingsTabs.Integrations),
+                icon: Plug,
+                key: WorkspaceSettingsTabs.Integrations,
+                label: t('workspaceSetting.tab.integrations'),
+              },
+              // Importing is workspace data management, an admin task.
+              canManageWorkspace && {
+                href: inWorkspace(WorkspaceSettingsTabs.Imports),
+                icon: Import,
+                key: WorkspaceSettingsTabs.Imports,
+                label: t('workspaceSetting.tab.imports'),
+              },
+            ].filter(Boolean) as CategoryItem[])
+          : [],
+        key: SettingsGroupKey.Workspace,
+        title: t('workspaceSetting.group.workspace'),
       },
 
       // 执行环境与 Agent — the agent plus the runtime it executes in.
@@ -176,18 +242,13 @@ export const useCategory = () => {
       },
 
       // 工具与连接器 — the platform's own skill marketplace was retired, so the
-      // group no longer carries a Skill row. Connector and Labels stay.
+      // group no longer carries a Skill row. Connector stays.
       {
         items: [
           {
             icon: McpIcon,
             key: SettingsTabs.Connector,
             label: t('tab.connector'),
-          },
-          {
-            icon: TagIcon,
-            key: SettingsTabs.Labels,
-            label: t('tab.labels'),
           },
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Tools,
@@ -221,30 +282,50 @@ export const useCategory = () => {
       {
         items: [
           {
+            // The workspace page is the same statistics plus the by-member split.
+            href: inWorkspace(WorkspaceSettingsTabs.Stats),
             icon: ChartColumnBigIcon,
             key: SettingsTabs.Stats,
             label: tAuth('tab.stats'),
           },
           offered(SettingsTabs.Usage) && {
+            href: inWorkspace(WorkspaceSettingsTabs.Usage),
             icon: ChartColumnBigIcon,
             key: SettingsTabs.Usage,
             label: t('tab.usage'),
           },
           offered(SettingsTabs.Plans) && {
+            href: inWorkspace(WorkspaceSettingsTabs.Plans),
             icon: Map,
             key: SettingsTabs.Plans,
             label: tSubscription('tab.plans'),
           },
-          offered(SettingsTabs.Credits) && {
-            icon: Coins,
-            key: SettingsTabs.Credits,
-            label: tSubscription('tab.credits'),
-          },
-          offered(SettingsTabs.Billing) && {
-            icon: CreditCard,
-            key: SettingsTabs.Billing,
-            label: tSubscription('tab.billing'),
-          },
+          // Credits / Budget / Billing are readable by Admin-or-higher inside a
+          // workspace; the pages keep the money-moving controls behind the
+          // narrower subscription gate.
+          offered(SettingsTabs.Credits) &&
+            (!slug || canViewBilling) && {
+              href: inWorkspace(WorkspaceSettingsTabs.Credits),
+              icon: Coins,
+              key: SettingsTabs.Credits,
+              label: tSubscription('tab.credits'),
+            },
+          // Spend governance (budget pools + member caps) only exists per workspace.
+          offered(SettingsTabs.Billing) &&
+            !!slug &&
+            canViewBilling && {
+              href: inWorkspace(WorkspaceSettingsTabs.Budget),
+              icon: HandCoins,
+              key: WorkspaceSettingsTabs.Budget,
+              label: tSubscription('tab.budget'),
+            },
+          offered(SettingsTabs.Billing) &&
+            (!slug || canViewBilling) && {
+              href: inWorkspace(WorkspaceSettingsTabs.Billing),
+              icon: CreditCard,
+              key: SettingsTabs.Billing,
+              label: tSubscription('tab.billing'),
+            },
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.UsageAndCost,
         title: t('group.usageAndCost'),
@@ -256,15 +337,18 @@ export const useCategory = () => {
       {
         items: [
           {
+            // The workspace page carries both the personal and the shared credentials.
+            href: inWorkspace(WorkspaceSettingsTabs.Creds),
             icon: KeyRound,
             key: SettingsTabs.Creds,
             label: t('tab.creds'),
           },
-          offered(SettingsTabs.APIKey) && {
-            icon: KeyIcon,
-            key: SettingsTabs.APIKey,
-            label: tAuth('tab.apikey'),
-          },
+          offered(SettingsTabs.APIKey) &&
+            canCreateContent && {
+              icon: KeyIcon,
+              key: SettingsTabs.APIKey,
+              label: tAuth('tab.apikey'),
+            },
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Security,
         title: t('group.security'),
@@ -279,6 +363,8 @@ export const useCategory = () => {
             label: t('tab.storage'),
           },
           {
+            // The workspace page carries both the shared pool and the private devices.
+            href: inWorkspace(WorkspaceSettingsTabs.Devices),
             icon: MonitorSmartphoneIcon,
             key: SettingsTabs.Devices,
             label: t('tab.devices'),
@@ -289,7 +375,7 @@ export const useCategory = () => {
       },
 
       // 开发者 — app-level settings that operate on the install rather than on any
-      // capability: update channel, diagnostics, lab flags, version info. The plan
+      // capability: update channel, diagnostics, version info. The plan
       // names no group for these, and fitting them elsewhere would mislabel them.
       {
         items: [
@@ -297,11 +383,6 @@ export const useCategory = () => {
             icon: EllipsisIcon,
             key: SettingsTabs.Advanced,
             label: t('tab.advanced'),
-          },
-          {
-            icon: FlaskConical,
-            key: SettingsTabs.Labs,
-            label: tLabs('title'),
           },
           offered(SettingsTabs.About) && {
             icon: Info,
@@ -313,7 +394,19 @@ export const useCategory = () => {
         title: t('group.developer'),
       },
     ].filter((group) => group.items.length > 0);
-  }, [t, tAuth, tLabs, tSubscription, capabilityContext, avatarUrl, username, showProvider]);
+  }, [
+    t,
+    tAuth,
+    tSubscription,
+    capabilityContext,
+    avatarUrl,
+    username,
+    showProvider,
+    slug,
+    canManageWorkspace,
+    canViewBilling,
+    canCreateContent,
+  ]);
 
   return categoryGroups;
 };

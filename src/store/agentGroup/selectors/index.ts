@@ -15,6 +15,4 @@ export const agentGroupSelectors = {
   getGroupMemberCount: agentGroupByIdSelectors.groupMemberCount,
   getGroupMembers: agentGroupByIdSelectors.groupMembers,
   getGroupMeta: agentGroupByIdSelectors.groupMeta,
-  getGroupOpeningMessage: agentGroupByIdSelectors.groupOpeningMessage,
-  getGroupOpeningQuestions: agentGroupByIdSelectors.groupOpeningQuestions,
 };

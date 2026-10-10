@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, devices, type NewAgent, users, workspaces } from '../../schemas';
+import { agents, devices, type NewAgent, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 
@@ -30,6 +30,7 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values([{ id: wsId, name: 'WS', slug: 'ws', primaryOwnerId: userId }]);
+  await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId: wsId });
   await serverDB.insert(devices).values([
     { userId, deviceId: personalDeviceId, identitySource: 'machine-id' },
     {
@@ -262,17 +263,23 @@ describe('AgentModel workspace device binding', () => {
   describe('publishToWorkspace', () => {
     const createPrivateFixedAgent = async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
-      const agent = await wsModel.create(
-        withRuntime({
-          agencyConfig: {
-            boundDeviceId: workspaceDeviceId,
-            executionTargetSelectionPolicy: 'fixed',
-            executionTarget: 'device',
-          },
-          title: 'Private fixed agent',
-          visibility: 'private',
-        }),
-      );
+      // Existing private Agent fixture; the current workspace create API rejects private rows.
+      const [agent] = await serverDB
+        .insert(agents)
+        .values({
+          ...withRuntime({
+            agencyConfig: {
+              boundDeviceId: workspaceDeviceId,
+              executionTargetSelectionPolicy: 'fixed',
+              executionTarget: 'device',
+            },
+            title: 'Private fixed agent',
+            visibility: 'private',
+          }),
+          userId,
+          workspaceId: wsId,
+        })
+        .returning();
 
       return { agent, wsModel };
     };
@@ -377,6 +384,8 @@ describe('AgentModel workspace device binding', () => {
         heterogeneousProvider: { type: 'codex' },
         executionTargetSelectionPolicy: 'fixed',
         executionTarget: 'device',
+        modelSelectionPolicy: 'member',
+        topicSharePolicy: 'member',
         workingDirByDevice: { [workspaceDeviceId]: '/tmp/ws' },
       });
     });

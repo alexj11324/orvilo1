@@ -33,7 +33,7 @@ export interface RoomAccessGrant {
  * - `project:{id}`    → project must belong to the workspace and be visible to
  *   the caller (public, own private, or an explicit project_members row).
  * - `task:{id}`       → task must belong to the workspace and be visible via
- *   workspace task metadata scope and private-team ACL.
+ *   active workspace Issue read scope, independently of Team ACL.
  */
 export const assertRoomAccess = async (
   db: OrviloDatabase,

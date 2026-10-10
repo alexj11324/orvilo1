@@ -7,8 +7,4 @@ describe('API_ENDPOINTS', () => {
     expect(API_ENDPOINTS.oauth).toBe('/api/auth');
     expect(API_ENDPOINTS.trace).toBe('/webapi/trace');
   });
-
-  it('should return correct dynamic URLs', () => {
-    expect(API_ENDPOINTS.tts('openai')).toBe('/webapi/tts/openai');
-  });
 });

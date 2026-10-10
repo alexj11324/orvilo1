@@ -197,6 +197,7 @@ describe('AI Agent Router Integration Tests', () => {
   });
 
   afterEach(async () => {
+    await serverDB.delete(agentOperations).where(eq(agentOperations.userId, userId));
     await cleanupTestUser(serverDB, userId);
     vi.clearAllMocks();
   });
@@ -545,7 +546,9 @@ describe('AI Agent Router Integration Tests', () => {
     beforeEach(async () => {
       operationId = `op_contract_${userId}`;
       mockStartExecution.mockReset();
-      await serverDB.insert(agentOperations).values({ id: operationId, status: 'running', userId });
+      await serverDB
+        .insert(agentOperations)
+        .values({ id: operationId, agentId: testAgentId, status: 'running', userId });
     });
 
     afterEach(async () => {
@@ -600,10 +603,13 @@ describe('AI Agent Router Integration Tests', () => {
       ['terminal', 'CONFLICT'],
       ['not_found', 'NOT_FOUND'],
     ] as const)('maps a %s rejection to %s instead of an internal error', async (denial, code) => {
+      if (denial === 'not_found')
+        await serverDB.delete(agentOperations).where(eq(agentOperations.id, operationId));
       mockStartExecution.mockRejectedValue(new AgentStartError(denial, `denial: ${denial}`));
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       await expect(caller.startExecution({ operationId })).rejects.toMatchObject({ code });
+      if (denial === 'not_found') expect(mockStartExecution).not.toHaveBeenCalled();
     });
   });
 

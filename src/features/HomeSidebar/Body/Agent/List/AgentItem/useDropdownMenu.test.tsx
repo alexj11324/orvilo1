@@ -26,7 +26,6 @@ const mocks = vi.hoisted(() => ({
     pinAgent: vi.fn(),
     refreshAgentList: vi.fn(),
     removeAgent: vi.fn(),
-    toggleAgentLabel: vi.fn(),
     updateAgentGroup: vi.fn(),
   },
   navigate: vi.fn(),
@@ -109,9 +108,6 @@ vi.mock('@/store/home', () => ({
 }));
 
 vi.mock('@/store/home/selectors', () => ({
-  agentLabelSelectors: {
-    allLabels: () => [],
-  },
   homeAgentListSelectors: {
     allAgents: () => [
       {
@@ -293,58 +289,12 @@ describe('useAgentDropdownMenu', () => {
     expect(getMenuKeys(result.current())).toContain('duplicate');
   });
 
-  it('shows the Labels submenu only where it is enabled (the agents list page)', () => {
+  it('offers no Labels submenu (agent labels were removed)', () => {
     const { result } = renderHook(() =>
       useAgentDropdownMenu({
         anchor: null,
         group: undefined,
         id: 'agent-1',
-        labelsEnabled: true,
-        openCreateGroupModal: vi.fn(),
-        pinned: false,
-        title: 'Public Agent',
-        userId: 'creator-1',
-        visibility: 'public',
-      }),
-    );
-
-    expect(getMenuKeys(result.current())).toContain('labels');
-  });
-
-  it('offers the Labels submenu on an agent the member cannot configure', () => {
-    // Labelling is list organization, not configuration: a member with
-    // view-only access to a teammate's public agent may still tag it, and the
-    // server agrees (role scope only, no per-resource check).
-    mocks.canEditResource = false;
-
-    const { result } = renderHook(() =>
-      useAgentDropdownMenu({
-        anchor: null,
-        group: undefined,
-        id: 'agent-1',
-        labelsEnabled: true,
-        openCreateGroupModal: vi.fn(),
-        pinned: false,
-        title: 'Public Agent',
-        userId: 'creator-1',
-        visibility: 'public',
-      }),
-    );
-
-    expect(getMenuKeys(result.current())).toContain('labels');
-  });
-
-  it('hides the Labels submenu from a viewer', () => {
-    // The viewer role holds no `agent:update` grant, so the server refuses —
-    // this is the line labelling still respects.
-    mocks.canEdit = false;
-
-    const { result } = renderHook(() =>
-      useAgentDropdownMenu({
-        anchor: null,
-        group: undefined,
-        id: 'agent-1',
-        labelsEnabled: true,
         openCreateGroupModal: vi.fn(),
         pinned: false,
         title: 'Public Agent',

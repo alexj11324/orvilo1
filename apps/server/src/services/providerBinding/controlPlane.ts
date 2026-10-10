@@ -16,7 +16,11 @@ import {
   CONTROL_PLANE_VERSION,
   createProviderConfigurationBroker,
 } from '@orvilo/agent-execution/controlPlane';
-import type { CredentialKVPayload, ProviderBindingConfig } from '@orvilo/types';
+import {
+  type CredentialKVPayload,
+  type ProviderBindingConfig,
+  providerBindingUnavailableReason,
+} from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { eq } from 'drizzle-orm';
 
@@ -126,13 +130,21 @@ const toContractBinding = (
  * configuration row alone never yields `ready`.
  */
 export class SqlTrustedProviderBackend implements TrustedProviderBackend {
-  constructor(private readonly db: OrviloDatabase) {}
+  private readonly verificationRequests = new Map<string, Promise<Response | undefined>>();
+
+  constructor(
+    private readonly db: OrviloDatabase,
+    private readonly reuseProviderVerification = false,
+  ) {}
 
   private async resolveConnection(binding: ProviderBinding) {
     const bindings = new ProviderBindingModel(this.db, binding.ownerId);
     const row = await bindings.find(binding.bindingId);
     const config = row?.config;
     if (!config || row?.revision !== binding.revision) return undefined;
+    const reason = providerBindingUnavailableReason({ ...config, enabled: true });
+    if (reason === 'endpoint' || reason === 'protocol' || reason === 'configuration')
+      return undefined;
     const headers = await resolveProviderCredentialHeaders(
       this.db,
       binding.ownerId,
@@ -149,21 +161,42 @@ export class SqlTrustedProviderBackend implements TrustedProviderBackend {
   ): Promise<Response | undefined> {
     const connection = await this.resolveConnection(binding);
     if (!connection) return undefined;
-    try {
-      return await fetch(`${connection.endpoint}${path}`, {
+    // This cache lives only for one settings mutation. Re-resolve every binding
+    // before reuse; the broker still rechecks its revision and authority afterwards.
+    const key = JSON.stringify([
+      binding.ownerId,
+      binding.providerId,
+      binding.secretReference,
+      connection.endpoint,
+      connection.headers,
+      path,
+    ]);
+    let pending = this.reuseProviderVerification ? this.verificationRequests.get(key) : undefined;
+    if (!pending) {
+      pending = fetch(`${connection.endpoint}${path}`, {
         ...init,
         headers: { ...connection.headers, ...init.headers },
         signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
-      });
-    } catch {
-      return undefined;
+      }).catch(() => undefined);
+      if (this.reuseProviderVerification) this.verificationRequests.set(key, pending);
     }
+    return (await pending)?.clone();
   }
 
   async check(binding: ProviderBinding): Promise<boolean> {
-    // A real OpenAI-compatible model catalog read — the binding must prove
-    // endpoint reachability AND credential acceptance, not just stored shape.
-    const response = await this.request(binding, '/models', { method: 'GET' });
+    // Probe a real completion to verify the provider connection. Batch checks
+    // reuse one representative model's response; other models are catalog-checked,
+    // not individually inference-tested.
+    const response = await this.request(binding, '/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: binding.modelRoutes[0],
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_completion_tokens: 16,
+        stream: false,
+      }),
+    });
     return response?.ok === true;
   }
 
@@ -618,6 +651,7 @@ const toOpenAiTools = (tools: InferenceToolDefinition[]): Record<string, unknown
 /** Deployment composition for the canonical configuration broker. */
 export function createProviderBindingComposition(
   db: OrviloDatabase,
+  options: { reuseProviderVerification?: boolean } = {},
 ): ProviderConfigurationComposition {
   const authorizeScope = authorizePersonalScope(db);
   const authority: ConfigurationAuthority = {
@@ -640,7 +674,7 @@ export function createProviderBindingComposition(
     authorizeScope,
     broker: createProviderConfigurationBroker({
       authority,
-      backend: new SqlTrustedProviderBackend(db),
+      backend: new SqlTrustedProviderBackend(db, options.reuseProviderVerification),
     }),
   };
 }

@@ -1617,7 +1617,7 @@ describe('Generation Actions', () => {
     });
 
     // Regression: the guard used to be `isMessageProcessing` — ANY running op on
-    // the message. A stray op that outlived its run (a translate, or a gateway
+    // the message. A stray op that outlived its run (a group creation, or a gateway
     // regenerate whose WS dropped non-terminally so `onComplete` never fired)
     // then killed retry for that turn permanently, and silently.
     it('regenerates despite an unrelated running op left on the message', async () => {
@@ -1629,7 +1629,7 @@ describe('Generation Actions', () => {
         operations: {
           'stale-op': {
             id: 'stale-op',
-            type: 'translate',
+            type: 'createMessageGroup',
             status: 'running',
             context: { messageIds: ['msg-1'] },
           },

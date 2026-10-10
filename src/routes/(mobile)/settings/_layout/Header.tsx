@@ -19,7 +19,6 @@ import { mobileHeaderSticky } from '@/styles/mobileHeader';
 const TAB_TITLE_KEY: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Billing]: 'subscription:tab.billing',
   [SettingsTabs.Credits]: 'subscription:tab.credits',
-  [SettingsTabs.Labs]: 'labs:title',
   [SettingsTabs.Plans]: 'subscription:tab.plans',
   [SettingsTabs.Profile]: 'auth:profile.title',
   // No Referral entry: the page is retired and nothing routes to it any more,
@@ -41,7 +40,7 @@ const WORKSPACE_TAB_TITLE_KEY: Record<string, string> = {
 };
 
 const Header = memo(() => {
-  const { t } = useTranslation(['setting', 'auth', 'labs', 'subscription']);
+  const { t } = useTranslation(['setting', 'auth', 'subscription']);
   const showMobileWorkspace = useShowMobileWorkspace();
   const navigate = useWorkspaceAwareNavigate();
   const params = useParams<{ providerId?: string; tab?: string }>();

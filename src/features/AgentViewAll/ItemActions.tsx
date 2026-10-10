@@ -116,8 +116,6 @@ const AgentItemActions = memo<ItemActionsProps>(({ anchor, item, ...rest }) => {
     backgroundColor: backgroundColor || undefined,
     group: undefined,
     id,
-    labels: item.labels,
-    labelsEnabled: true,
     creationEnabled: true,
     openCreateGroupModal: handleOpenCreateGroupModal,
     pinned: pinned ?? false,

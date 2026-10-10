@@ -1,6 +1,6 @@
 'use client';
 
-import { HotkeyEnum, KeyEnum } from '@orvilo/const/hotkeys';
+import { KeyEnum } from '@orvilo/const/hotkeys';
 import { BotMessageSquare, LucideCheck, MessageSquarePlus } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -8,9 +8,8 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import type { ActionDropdownMenuItems } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import { useConversationStore, useConversationStoreApi } from '@/features/Conversation';
-import { useAddUserMessageHotkey } from '@/hooks/useHotkeys';
 import { useUserStore } from '@/store/user';
-import { preferenceSelectors, settingsSelectors } from '@/store/user/selectors';
+import { preferenceSelectors } from '@/store/user/selectors';
 
 /**
  * useSendMenuItems hook for ConversationStore
@@ -31,8 +30,6 @@ export const useSendMenuItems = (): ActionDropdownMenuItems => {
     s.updatePreference,
   ]);
 
-  const hotkey = useUserStore(settingsSelectors.getHotkeyById(HotkeyEnum.AddUserMessage));
-
   const handleAddAIMessage = useCallback(() => {
     const store = storeApi.getState();
     const message = editor?.getMarkdownContent() ?? store.inputMessage;
@@ -52,8 +49,6 @@ export const useSendMenuItems = (): ActionDropdownMenuItems => {
     editor?.clearContent();
     editor?.focus();
   }, [storeApi, editor]);
-
-  useAddUserMessageHotkey(handleAddUserMessage);
 
   return useMemo(
     () => [
@@ -108,15 +103,10 @@ export const useSendMenuItems = (): ActionDropdownMenuItems => {
       {
         icon: <MessageSquarePlus />,
         key: 'addUser',
-        label: (
-          <div className="flex items-center gap-6">
-            {t('input.addUser')}
-            <Kbd>{hotkey}</Kbd>
-          </div>
-        ),
+        label: t('input.addUser'),
         onClick: handleAddUserMessage,
       },
     ],
-    [useCmdEnterToSend, updatePreference, hotkey, handleAddAIMessage, handleAddUserMessage, t],
+    [useCmdEnterToSend, updatePreference, handleAddAIMessage, handleAddUserMessage, t],
   );
 };

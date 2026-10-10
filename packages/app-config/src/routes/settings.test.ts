@@ -146,11 +146,10 @@ describe('resolveSettingsCapability', () => {
     expect(isSettingsTabAvailable('apikey', ctx)).toBe(true);
   });
 
-  it('answers not-found for Notification where nothing hosts the page', () => {
-    // On the Web without business pages the component is a blank placeholder.
+  it('offers personal notification preferences on web and desktop without business features', () => {
     const plainWeb = context({ enableBusinessFeatures: false, isDesktop: false });
 
-    expect(isSettingsTabAvailable('notification', plainWeb)).toBe(false);
+    expect(isSettingsTabAvailable('notification', plainWeb)).toBe(true);
     expect(isSettingsTabAvailable('notification', context({ isDesktop: true }))).toBe(true);
     expect(isSettingsTabAvailable('notification', context({ enableBusinessFeatures: true }))).toBe(
       true,
@@ -199,10 +198,9 @@ describe('WORKSPACE_SETTINGS_ALIASES', () => {
     const aliases = WORKSPACE_SETTINGS_ALIASES.map((entry) => entry.alias);
 
     expect(new Set(aliases).size).toBe(aliases.length);
-    // `provider` and `service-model` are live workspace tabs (restored P30
-    // provider surface) — they resolve through the leaves registry, so an
-    // alias here would shadow the real pages.
-    expect(aliases).not.toContain('provider');
-    expect(aliases).not.toContain('service-model');
+    // The workspace copies are retired; the aliases send them to the
+    // personal pages that own provider bindings and model assignments.
+    expect(aliases).toContain('provider');
+    expect(aliases).toContain('service-model');
   });
 });

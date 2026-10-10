@@ -11,6 +11,7 @@ import AgentAdvancedSettings from '@/features/AgentSettings/AgentAdvancedSetting
 import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
 import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
 import AgentModelSettings from '@/features/AgentSettings/AgentModelSettings';
+import { AgentUseSettings } from '@/features/AgentSettings/AgentUseSettings';
 import ExternalAgentConnectionSettings from '@/features/AgentSettings/ExternalAgentConnectionSettings';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
 import { useAgentStore } from '@/store/agent';
@@ -69,6 +70,7 @@ const ProfileEditor = memo(() => {
               {isRemoteHetero ? null : <AgentModelSettings agentId={agentId} />}
               <AgentDeviceSettings agentId={agentId} />
               <AgentAccessSettings agentId={agentId} />
+              <AgentUseSettings agentId={agentId} />
               <AgentAdvancedSettings agentId={agentId} />
             </>
           ) : (
@@ -77,6 +79,7 @@ const ProfileEditor = memo(() => {
               <AgentModelSettings agentId={agentId} />
               <AgentDeviceSettings agentId={agentId} />
               <AgentAccessSettings agentId={agentId} />
+              <AgentUseSettings agentId={agentId} />
               <AgentAdvancedSettings agentId={agentId} />
             </>
           )}

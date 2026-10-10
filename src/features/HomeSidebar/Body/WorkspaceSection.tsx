@@ -130,7 +130,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey, open = true, on
           icon: <Settings2 />,
           key: 'workspaceSettings',
           label: t('navPanel.workspaceSettings'),
-          onClick: () => navigate('/settings'),
+          onClick: () => navigate('/settings/general'),
         },
       ] as SidebarMenuItems,
     [navigate, t],
@@ -152,7 +152,7 @@ const WorkspaceSection = memo<WorkspaceSectionProps>(({ itemKey, open = true, on
   return (
     <Collapsible
       open={open}
-      render={<SidebarGroup className="group/section group-data-[collapsible=icon]:hidden" />}
+      render={<SidebarGroup className="group/section" />}
       onOpenChange={(next) => onOpenChange?.(next)}
     >
       <SectionHeader

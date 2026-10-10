@@ -1490,6 +1490,13 @@
       "when": 1791488233854,
       "tag": "0210_task_completion_live_executor",
       "breakpoints": true
+    },
+    {
+      "idx": 211,
+      "version": "7",
+      "when": 1791555182024,
+      "tag": "0211_slack_integration",
+      "breakpoints": true
     }
   ]
 }

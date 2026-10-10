@@ -4,6 +4,7 @@ import {
   ILitexmlService,
   IMarkdownShortCutService,
 } from '@lobehub/editor';
+import { escapeXml } from '@orvilo/prompts';
 import {
   $createParagraphNode,
   $insertNodes,
@@ -63,7 +64,7 @@ export class ReferTopicPlugin {
 
     mdService?.registerMarkdownWriter(ReferTopicNode.getType(), (ctx: any, node: any) => {
       if ($isReferTopicNode(node)) {
-        ctx.appendLine(`<refer_topic name="${node.topicTitle}" id="${node.topicId}" />`);
+        ctx.appendLine(`<refer_topic name="${escapeXml(node.topicTitle)}" id="${node.topicId}" />`);
       }
     });
   }

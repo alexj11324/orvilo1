@@ -35,6 +35,11 @@ export async function checkProviderBinding(
   };
 
   const row = await load();
+  if (!(await model.setEnabled(row.id, false, row.revision)))
+    throw new TRPCError({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
+  if (row.config.providerSettings?.enabled === false) {
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PROVIDER_DISABLED' });
+  }
   // Absent host composition still enters the canonical broker, with network access refused.
   const active = composition ?? createClosedProviderComposition(model, userId);
 
@@ -58,8 +63,8 @@ export async function checkProviderBinding(
     .catch(() => {
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PROVIDER_CHECK_UNAVAILABLE' });
     });
-  // Authentication alone does not prove the selected model can run. Use the
-  // same broker capabilities that issuance uses before arming this route.
+  // After verifying the provider connection, require the selected model in its
+  // catalog. Bulk checks probe only one representative model per provider.
   const capabilities =
     result.ok &&
     result.value.status === 'ready' &&
@@ -108,8 +113,20 @@ export async function checkProviderBinding(
   // provider rejected (`unavailable`) must not arm it. Enabling is not a
   // config edit — `revision` stays put, and the next save lands
   // `enabled: false` again until re-verified.
-  if (result.value.status === 'ready' && !(await model.setEnabled(row.id, true))) {
+  if (result.value.status === 'ready' && !(await model.setEnabled(row.id, true, row.revision))) {
     throw new TRPCError({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
   }
   return result.value;
+}
+
+/** Each row retains its own revision, credential, authority and catalog-membership checks. */
+export async function checkProviderBindings(
+  model: ProviderBindingModel,
+  userId: string,
+  inputs: { id: string; revision: number }[],
+  composition: ProviderConfigurationComposition,
+): Promise<void> {
+  for (const input of inputs) {
+    await checkProviderBinding(model, userId, input, composition).catch(() => undefined);
+  }
 }

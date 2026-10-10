@@ -10,6 +10,7 @@ import {
 } from '@/server/services/resourcePermission';
 
 import { getWorkspaceAgentParentGroupIds } from './workspaceAgentGuard';
+import { readableWorkspaceIssueTopicIds } from './workspaceIssueRead';
 
 interface ConversationGuardCtx {
   db: OrviloDatabase;
@@ -178,13 +179,28 @@ export const assertCanViewMessageTargets = async (
   if (!ctx.workspaceId || messageIds.length === 0) return;
 
   const rows = await ctx.db
-    .select({ agentId: messages.agentId, groupId: messages.groupId, topicId: messages.topicId })
+    .select({
+      agentId: messages.agentId,
+      groupId: messages.groupId,
+      topicId: messages.topicId,
+      workspaceId: messages.workspaceId,
+    })
     .from(messages)
     .where(inArray(messages.id, messageIds));
 
+  const issueTopicIds = await readableWorkspaceIssueTopicIds(
+    ctx.db,
+    rows.flatMap((row) =>
+      row.workspaceId === ctx.workspaceId && row.topicId ? [row.topicId] : [],
+    ),
+    ctx.userId,
+    ctx.workspaceId,
+  );
   const targets: ConversationTarget[] = [];
   const fallbackTopicIds = new Set<string>();
   for (const row of rows) {
+    if (row.workspaceId === ctx.workspaceId && row.topicId && issueTopicIds.has(row.topicId))
+      continue;
     if (row.agentId || row.groupId) targets.push(row);
     else if (row.topicId) fallbackTopicIds.add(row.topicId);
   }
@@ -235,7 +251,15 @@ const assertCanAccessTopicTargets = async (
   const workspaceId = ctx.workspaceId ?? undefined;
   if (!workspaceId) return [];
 
-  const resolved = await resolveTopicTargets(ctx, topicIds);
+  // Issue View follows workspace membership; Agent Use still gates every mutation.
+  const issueTopics =
+    action === 'view'
+      ? await readableWorkspaceIssueTopicIds(ctx.db, topicIds, ctx.userId, workspaceId)
+      : new Set<string>();
+  const resolved = await resolveTopicTargets(
+    ctx,
+    topicIds.filter((id) => !issueTopics.has(id)),
+  );
   for (const { meta, resourceId, resourceType } of resolved) {
     await assertCanPerformResourceAction({
       action,

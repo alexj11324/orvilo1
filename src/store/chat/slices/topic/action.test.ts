@@ -3118,6 +3118,17 @@ describe('topic action', () => {
     });
   });
   describe('summaryTopicTitle', () => {
+    // The topic's agent names it, so the active agent needs a model of its own.
+    beforeEach(() => {
+      useAgentStore.setState({
+        agentMap: { test: { model: 'agent-model', provider: 'agent-provider' } as any },
+      });
+    });
+
+    afterEach(() => {
+      useAgentStore.setState({ agentMap: {} });
+    });
+
     it('should wait for assistant text before summarizing an audio-only conversation', async () => {
       const topicId = 'topic-1';
       const messages = [
@@ -3129,7 +3140,7 @@ describe('topic action', () => {
         },
         { content: LOADING_FLAT, id: 'message-2', role: 'assistant' },
       ] as UIChatMessage[];
-      const topics = [{ id: topicId, title: '' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: '' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
 
       await act(async () => {
@@ -3169,7 +3180,7 @@ describe('topic action', () => {
         },
         { content: LOADING_FLAT, id: 'message-2', role: 'assistant' },
       ] as UIChatMessage[];
-      const topics = [{ id: topicId, title: '' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: '' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
 
       await act(async () => {
@@ -3226,7 +3237,7 @@ describe('topic action', () => {
           role: 'assistantGroup',
         },
       ] as UIChatMessage[];
-      const topics = [{ id: topicId, title: '' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: '' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
 
       await act(async () => {
@@ -3260,7 +3271,7 @@ describe('topic action', () => {
     it('should deduplicate concurrent title requests for the same topic', async () => {
       const topicId = 'topic-1';
       const messages = [{ content: 'Hello', id: 'message-1', role: 'user' }] as UIChatMessage[];
-      const topics = [{ id: topicId, title: 'Default Topic' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: 'Default Topic' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
 
       await act(async () => {
@@ -3304,7 +3315,7 @@ describe('topic action', () => {
     it('should show a loading placeholder when auto-summarizing a topic without a title', async () => {
       const topicId = 'topic-1';
       const messages = [{ id: 'message-1', content: 'Hello' }] as UIChatMessage[];
-      const topics = [{ id: 'topic-1', title: '' }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: 'topic-1', title: '' }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
       await act(async () => {
         useChatStore.setState({
@@ -3346,7 +3357,7 @@ describe('topic action', () => {
       const topicId = 'topic-1';
       const messages = [{ id: 'message-1', content: 'Hello' }] as UIChatMessage[];
       const optimisticTitle = '阅读下面的材料，根据要求写作。';
-      const topics = [{ id: topicId, title: optimisticTitle }] as ChatTopic[];
+      const topics = [{ agentId: 'test', id: topicId, title: optimisticTitle }] as ChatTopic[];
       const { result } = renderHook(() => useChatStore());
       await act(async () => {
         useChatStore.setState({
@@ -3386,8 +3397,8 @@ describe('topic action', () => {
       const topicId = 'topic-1';
       const messages = [{ id: 'message-1', content: 'Hello' }] as UIChatMessage[];
 
-      const seedTopic = async (title: string) => {
-        const topics = [{ id: topicId, title }] as ChatTopic[];
+      const seedTopic = async (title: string, agentId: string | null = 'test') => {
+        const topics = [{ agentId, id: topicId, title }] as ChatTopic[];
         const { result } = renderHook(() => useChatStore());
 
         await act(async () => {
@@ -3458,10 +3469,27 @@ describe('topic action', () => {
         expect(updateTitleSpy).toHaveBeenLastCalledWith(topicId, '');
       });
 
-      it('restores the previous title when generation throws', async () => {
+      it('names the topic with the owning agent model', async () => {
         const result = await seedTopic('');
-        const updateTopicSpy = vi.spyOn(result.current, 'internal_updateTopic');
-        const updateTitleSpy = vi.spyOn(result.current, 'internal_updateTopicTitleInSummary');
+        const generateSpy = vi
+          .spyOn(aiChatService, 'generateJSON')
+          .mockResolvedValue({ data: { title: 'T' }, tracingId: 'tracing-1' } as any);
+
+        await act(async () => {
+          await result.current.summaryTopicTitle(topicId, messages);
+        });
+
+        expect(generateSpy.mock.calls[0][0]).toMatchObject({
+          model: 'agent-model',
+          provider: 'agent-provider',
+        });
+      });
+
+      it('falls back to the first-message slice when generation throws', async () => {
+        const result = await seedTopic('');
+        const updateTopicSpy = vi
+          .spyOn(result.current, 'internal_updateTopic')
+          .mockResolvedValue(undefined);
 
         vi.spyOn(aiChatService, 'generateJSON').mockRejectedValue(new Error('provider down'));
         vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -3470,8 +3498,106 @@ describe('topic action', () => {
           await result.current.summaryTopicTitle(topicId, messages);
         });
 
-        expect(updateTopicSpy).not.toHaveBeenCalled();
-        expect(updateTitleSpy).toHaveBeenLastCalledWith(topicId, '');
+        expect(updateTopicSpy).toHaveBeenCalledWith(topicId, { title: expect.any(String) });
+      });
+
+      it('names with the built-in agent model even though it carries the orvilo runtime type', async () => {
+        useAgentStore.setState({
+          agentMap: {
+            test: {
+              agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
+              model: 'deepseek-v4-flash',
+              provider: 'deepseek',
+            } as any,
+          },
+        });
+        const result = await seedTopic('');
+        const updateTopicSpy = vi
+          .spyOn(result.current, 'internal_updateTopic')
+          .mockResolvedValue(undefined);
+        const generateSpy = vi.spyOn(aiChatService, 'generateJSON').mockResolvedValue({
+          data: { title: '简单问候' },
+          tracingId: 'tracing-1',
+        } as any);
+
+        await act(async () => {
+          await result.current.summaryTopicTitle(topicId, messages);
+        });
+
+        expect(generateSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ model: 'deepseek-v4-flash', provider: 'deepseek' }),
+          expect.anything(),
+        );
+        expect(updateTopicSpy).toHaveBeenCalledWith(topicId, { title: '简单问候' });
+      });
+
+      it('never borrows the active agent model for a topic with no recorded owner', async () => {
+        useAgentStore.setState({
+          agentMap: {
+            test: {
+              agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
+              model: 'deepseek-v4-flash',
+              provider: 'deepseek',
+            } as any,
+          },
+        });
+        const result = await seedTopic('', null);
+        const updateTopicSpy = vi
+          .spyOn(result.current, 'internal_updateTopic')
+          .mockResolvedValue(undefined);
+        const generateSpy = vi.spyOn(aiChatService, 'generateJSON');
+
+        await act(async () => {
+          await result.current.summaryTopicTitle(topicId, messages);
+        });
+
+        expect(generateSpy).not.toHaveBeenCalled();
+        expect(updateTopicSpy).toHaveBeenCalledWith(topicId, { title: expect.any(String) });
+      });
+
+      it('never calls a cloud model for an agent whose runtime provider has no type', async () => {
+        useAgentStore.setState({
+          agentMap: {
+            test: {
+              agencyConfig: { heterogeneousProvider: {} },
+              model: 'deepseek-v4-flash',
+              provider: 'deepseek',
+            } as any,
+          },
+        });
+        const result = await seedTopic('');
+        vi.spyOn(result.current, 'internal_updateTopic').mockResolvedValue(undefined);
+        const generateSpy = vi.spyOn(aiChatService, 'generateJSON');
+
+        await act(async () => {
+          await result.current.summaryTopicTitle(topicId, messages);
+        });
+
+        expect(generateSpy).not.toHaveBeenCalled();
+      });
+
+      it('never calls a cloud model for a heterogeneous agent', async () => {
+        useAgentStore.setState({
+          agentMap: {
+            test: {
+              agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+              model: 'default',
+              provider: 'claude-code',
+            } as any,
+          },
+        });
+        const result = await seedTopic('');
+        const updateTopicSpy = vi
+          .spyOn(result.current, 'internal_updateTopic')
+          .mockResolvedValue(undefined);
+        const generateSpy = vi.spyOn(aiChatService, 'generateJSON');
+
+        await act(async () => {
+          await result.current.summaryTopicTitle(topicId, messages);
+        });
+
+        expect(generateSpy).not.toHaveBeenCalled();
+        expect(updateTopicSpy).toHaveBeenCalledWith(topicId, { title: expect.any(String) });
       });
     });
   });
@@ -3594,7 +3720,7 @@ describe('topic action', () => {
       });
 
       expect(getMessagesSpy).toHaveBeenCalledWith({ agentId: activeAgentId, topicId });
-      expect(summaryTopicTitleSpy).toHaveBeenCalledWith(topicId, messages);
+      expect(summaryTopicTitleSpy).toHaveBeenCalledWith(topicId, messages, { force: true });
     });
   });
 

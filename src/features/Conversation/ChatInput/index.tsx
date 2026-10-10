@@ -42,7 +42,6 @@ import {
   useConversationStoreApi,
 } from '../store';
 import TodoProgress from '../TodoProgress';
-import InputCompletionErrorAlert from './InputCompletionErrorAlert';
 import QueueTray from './QueueTray';
 import { sendVoiceMessage } from './sendVoiceMessage';
 import {
@@ -528,7 +527,6 @@ const ChatInput = memo<ChatInputProps>(
                   }
             }
           >
-            <InputCompletionErrorAlert />
             {!disableQueue && hasQueuedMessages && <QueueTray />}
             <TodoProgress topAttached={!disableQueue && hasQueuedMessages} />
             <GoalTray topAttached={(!disableQueue && hasQueuedMessages) || hasTodos} />

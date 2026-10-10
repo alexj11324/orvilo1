@@ -1,7 +1,7 @@
 'use client';
 
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { HardDriveDownload, HardDriveUpload } from 'lucide-react';
+import { HardDriveUpload } from 'lucide-react';
 import { createElement, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,7 +14,6 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
-import DataImporter from '@/features/DataImporter';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { configService } from '@/services/config';
 import { useServerConfigStore } from '@/store/serverConfig';
@@ -71,23 +70,6 @@ const AdvancedActions = () => {
 
   const system: FormGroupItemType = {
     children: [
-      {
-        children: (
-          <DataImporter>
-            <Button variant="outline">
-              {createElement(HardDriveDownload, {})}
-              {t('storage.actions.import.button')}
-            </Button>
-          </DataImporter>
-        ),
-        label: (
-          <SettingsSearchAnchor id={'storage-import'}>
-            {t('storage.actions.import.title')}
-          </SettingsSearchAnchor>
-        ),
-        layout: 'horizontal',
-        minWidth: undefined,
-      },
       ...(enableBusinessFeatures ? [renderExportButtonFormItem()] : []),
       {
         children: (

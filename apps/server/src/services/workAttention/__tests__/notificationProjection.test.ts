@@ -10,16 +10,20 @@ import {
   agents,
   eventOutbox,
   notifications,
+  taskComments,
   tasks,
   taskTopics,
   teams,
+  teamWorkflowStates,
   topics,
   users,
+  userSettings,
   workspaceMembers,
   workspaces,
+  workspaceUserSettings,
 } from '@/database/schemas';
 import type { EventOutboxItem } from '@/database/schemas/eventOutbox';
-import { taskSubscriptions } from '@/database/schemas/workAttention';
+import { eventConsumerReceipts, taskSubscriptions } from '@/database/schemas/workAttention';
 
 import {
   NotificationProjectionService,
@@ -109,6 +113,7 @@ describe('real Issue notification producers and projection', () => {
   const outsider = 'projection-outsider';
 
   beforeEach(async () => {
+    await db.delete(eventConsumerReceipts);
     await db.delete(eventOutbox);
     await db.delete(users);
     await db
@@ -140,6 +145,7 @@ describe('real Issue notification producers and projection', () => {
       .values({ taskId: 'projection-issue', userId: subscriber, workspaceId: wsId });
   });
   afterEach(async () => {
+    await db.delete(eventConsumerReceipts);
     await db.delete(eventOutbox);
     await db.delete(users);
   });
@@ -155,6 +161,144 @@ describe('real Issue notification producers and projection', () => {
   };
   const feed = (userId: string) =>
     new NotificationModel(db, userId, { workspaceId: wsId }).listFeed();
+
+  it('honors personal event switches inside a workspace and preserves other recipients', async () => {
+    await db.insert(userSettings).values({
+      id: subscriber,
+      notification: { inbox: { items: { work: { task_status_changed: false } } } },
+    });
+    await db.insert(workspaceUserSettings).values({
+      workspaceId: wsId,
+      userId: author,
+      preference: { notification: { inbox: { enabled: false } } },
+    });
+    await db
+      .update(tasks)
+      .set({ workflowCategory: 'in_review', reviewerUserId: author })
+      .where(eq(tasks.id, 'projection-issue'));
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'state-changed',
+      eventType: 'task.status.changed',
+      workspaceId: wsId,
+      payload: { userId: owner },
+    });
+    await project();
+    expect(await feed(subscriber)).toHaveLength(0);
+    expect(await feed(owner)).toHaveLength(0);
+    expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_review' })]);
+    await project();
+    expect(await feed(author)).toHaveLength(1);
+  });
+
+  it('honors an inbox channel opt-out for assignment and keeps unauthorized users out', async () => {
+    await db.insert(userSettings).values({
+      id: author,
+      notification: { inbox: { enabled: false } },
+    });
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'assigned',
+      eventType: 'task.assigned',
+      workspaceId: wsId,
+      payload: { userId: owner, assigneeUserId: outsider },
+    });
+    await project();
+    expect(await feed(author)).toHaveLength(0);
+    expect(await feed(outsider)).toHaveLength(0);
+  });
+
+  it.each([{ workflowCategory: 'in_progress' as const }, { assigneeUserId: owner }])(
+    'excludes a human actor through updateWithLog: %j',
+    async (patch) => {
+      await new TaskModel(db, owner, wsId).updateWithLog('projection-issue', patch, {
+        userId: owner,
+      });
+      const rows = await db.select().from(eventOutbox);
+      expect(rows).not.toHaveLength(0);
+      expect(rows[0].payload).toMatchObject({ userId: owner });
+      await project();
+      expect(await feed(owner)).toHaveLength(0);
+      if ('workflowCategory' in patch) expect(await feed(subscriber)).toHaveLength(1);
+    },
+  );
+
+  it('does not attribute an Agent edit to its human session owner', async () => {
+    await db.insert(agents).values({ id: 'editing-agent', userId: owner });
+    await new TaskModel(db, owner, wsId).updateWithLog(
+      'projection-issue',
+      { workflowCategory: 'in_progress' },
+      { agentId: 'editing-agent', userId: owner },
+    );
+    const [row] = await db.select().from(eventOutbox);
+    expect(row.payload).not.toHaveProperty('userId');
+    await project();
+    expect(await feed(owner)).toHaveLength(1);
+  });
+
+  it.each([
+    ['backlog', 'Backlog'],
+    ['todo', 'Todo'],
+    ['in_progress', 'In Progress'],
+    ['in_review', 'In Review'],
+    ['done', 'Done'],
+    ['canceled', 'Canceled'],
+    ['triage', 'Triage'],
+  ] as const)('uses a readable fallback for %s', async (category, label) => {
+    await db
+      .update(tasks)
+      .set({ workflowCategory: category })
+      .where(eq(tasks.id, 'projection-issue'));
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'status-label',
+      eventType: 'task.status.changed',
+      workspaceId: wsId,
+      payload: { userId: author },
+    });
+    await project();
+    expect(await feed(owner)).toEqual([
+      expect.objectContaining({ content: `Issue status changed to ${label}` }),
+    ]);
+  });
+
+  it('uses a custom workflow state name instead of its category', async () => {
+    await db
+      .insert(teams)
+      .values({ id: 'status-team', key: 'STATE', name: 'States', workspaceId: wsId });
+    const [state] = await db
+      .insert(teamWorkflowStates)
+      .values({
+        teamId: 'status-team',
+        workspaceId: wsId,
+        category: 'in_progress',
+        name: 'Quality assurance',
+      })
+      .returning();
+    await db
+      .update(tasks)
+      .set({
+        teamId: 'status-team',
+        workflowStateRefId: state.id,
+        workflowCategory: state.category,
+      })
+      .where(eq(tasks.id, 'projection-issue'));
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'custom-status',
+      eventType: 'task.status.changed',
+      workspaceId: wsId,
+      payload: { userId: author },
+    });
+    await project();
+    expect(await feed(owner)).toEqual([
+      expect.objectContaining({ content: 'Issue status changed to Quality assurance' }),
+    ]);
+  });
 
   it('notifies creator, subscriber and authorized mentions once, excludes the actor and arbitrary mention ids', async () => {
     const comment = await new TaskModel(db, author, wsId).addComment({
@@ -260,7 +404,7 @@ describe('real Issue notification producers and projection', () => {
     expect(await feed(owner)).toMatchObject([{ activityVersion: 1 }]);
   });
 
-  it('drops suspended and unsubscribed recipients and respects a private Issue ACL', async () => {
+  it('drops inactive and unsubscribed recipients while sharing Issue dialogue across private Teams', async () => {
     await db
       .update(workspaceMembers)
       .set({ suspendedAt: new Date() })
@@ -283,7 +427,7 @@ describe('real Issue notification producers and projection', () => {
     expect(await feed(owner)).toHaveLength(1);
     expect(await feed(mentioned)).toEqual([]);
     expect(await feed(subscriber)).toEqual([]);
-    // Workspace Issues are shared; a private Team the recipient is not in is the Issue ACL.
+    // Active workspace members can read Issue dialogue without private Team membership.
     await db.insert(teams).values({
       id: 'projection-private-team',
       key: 'PRV',
@@ -301,18 +445,52 @@ describe('real Issue notification producers and projection', () => {
       .where(eq(taskSubscriptions.userId, subscriber));
     await new TaskModel(db, owner, wsId).addComment({
       authorUserId: owner,
-      content: 'Private note',
+      content: 'Shared note in a private Team',
       editorData: {
-        root: { children: [{ metadata: { id: subscriber, type: 'member' }, type: 'mention' }] },
+        root: {
+          children: [subscriber, mentioned, outsider].map((id) => ({
+            metadata: { id, type: 'member' },
+            type: 'mention',
+          })),
+        },
       },
       taskId: 'projection-issue',
       userId: owner,
     });
     await project();
-    expect(await feed(subscriber)).toEqual([]);
-    // The projection itself must not store the row; the feed's read ACL is a second gate.
-    expect(
-      await db.select().from(notifications).where(eq(notifications.userId, subscriber)),
-    ).toEqual([]);
+    expect(await feed(subscriber)).toMatchObject([
+      { content: 'Shared note in a private Team', type: 'mention' },
+    ]);
+    for (const userId of [mentioned, outsider]) {
+      expect(await feed(userId)).toEqual([]);
+      // Denied recipients must be filtered before persistence, as well as at feed read.
+      expect(await db.select().from(notifications).where(eq(notifications.userId, userId))).toEqual(
+        [],
+      );
+    }
+  });
+
+  it('does not project a persisted private comment to other readable Issue members', async () => {
+    const comment = await new TaskModel(db, author, wsId).addComment({
+      authorUserId: author,
+      content: 'Private comment body',
+      editorData: {
+        root: { children: [{ metadata: { id: mentioned, type: 'member' }, type: 'mention' }] },
+      },
+      taskId: 'projection-issue',
+      userId: author,
+    });
+    // Retain the separate read boundary of an existing private comment row.
+    await db
+      .update(taskComments)
+      .set({ visibility: 'private' })
+      .where(eq(taskComments.id, comment.id));
+    await project();
+    for (const userId of [owner, subscriber, mentioned]) {
+      expect(await feed(userId)).toEqual([]);
+      expect(await db.select().from(notifications).where(eq(notifications.userId, userId))).toEqual(
+        [],
+      );
+    }
   });
 });

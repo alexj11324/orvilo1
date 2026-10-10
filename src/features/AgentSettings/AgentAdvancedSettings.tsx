@@ -7,23 +7,22 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
-import { SettingsGroup, SettingsRow } from './SettingsGroup';
+import { SettingsRow, settingsStyles } from './SettingsGroup';
 
 interface AgentAdvancedSettingsProps {
   agentId: string;
 }
 
 /**
- * The agent's Advanced settings group: a single diagnostics link out to the
- * agent's usage/diagnostics surface. Everything else a normal agent needs is
- * covered by the General/Model/Device groups.
+ * A single diagnostics link out to the agent's usage/diagnostics surface, shown
+ * as a plain row — there is no "Advanced" section to open first.
  */
 const AgentAdvancedSettings = memo<AgentAdvancedSettingsProps>(({ agentId }) => {
   const { t } = useTranslation('setting');
   const navigate = useWorkspaceAwareNavigate();
 
   return (
-    <SettingsGroup title={t('settingAgent.advancedSettings.title')}>
+    <div className={settingsStyles.group}>
       <SettingsRow label={t('settingAgent.advancedSettings.diagnosticsLabel')}>
         <Button
           className="gap-1 px-2 text-muted-foreground"
@@ -35,7 +34,7 @@ const AgentAdvancedSettings = memo<AgentAdvancedSettingsProps>(({ agentId }) => 
           <ChevronRightIcon size={14} />
         </Button>
       </SettingsRow>
-    </SettingsGroup>
+    </div>
   );
 });
 

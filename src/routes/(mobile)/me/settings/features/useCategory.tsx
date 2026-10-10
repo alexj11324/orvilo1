@@ -3,6 +3,7 @@ import {
   Bot,
   Brain,
   BrainCircuit,
+  Building2,
   ChartColumnBigIcon,
   Coins,
   CreditCard,
@@ -14,18 +15,21 @@ import {
   Map,
   PaletteIcon,
   Sparkles,
-  TagIcon,
   UserCircle,
+  Users,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { type CellProps } from '@/components/Cell';
 import { isSettingsTabOffered } from '@/config/routes/settings';
+import type { SettingsNavKey } from '@/features/Settings/hooks/useCategory';
 import { useSettingsCapabilityContext } from '@/features/Settings/hooks/useSettingsCapability';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { SettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
+import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
 
 export enum SettingsGroupKey {
   Account = 'account',
@@ -35,10 +39,11 @@ export enum SettingsGroupKey {
   Security = 'security',
   Tools = 'tools',
   UsageAndCost = 'usageAndCost',
+  Workspace = 'workspace',
 }
 
 export interface CategoryItem extends Omit<CellProps, 'type'> {
-  key: SettingsTabs;
+  key: SettingsNavKey;
   /**
    * Explicit destination for rows that don't map to a `/settings/<tab>` page —
    * e.g. the Agents row opens the `/agents` management surface.
@@ -57,6 +62,7 @@ export const useCategory = (): CategoryGroup[] => {
   const { t } = useTranslation(['setting', 'auth', 'subscription', 'common']);
   const capabilityContext = useSettingsCapabilityContext();
   const { showProvider } = useServerConfigStore(featureFlagsSelectors);
+  const slug = useActiveWorkspaceSlug();
 
   return useMemo(() => {
     // The mobile list is a deliberately narrower subset of the personal
@@ -70,7 +76,7 @@ export const useCategory = (): CategoryGroup[] => {
     const makeItem = ({ to, ...item }: Omit<CategoryItem, 'onClick'>): CategoryItem => ({
       ...item,
       to,
-      onClick: () => (to ? navigate(to) : navigateTo(item.key)),
+      onClick: () => (to ? navigate(to) : navigateTo(item.key as SettingsTabs)),
     });
 
     const account: CategoryItem[] = [
@@ -81,6 +87,25 @@ export const useCategory = (): CategoryGroup[] => {
         label: t('setting:tab.appearance'),
       }),
     ];
+
+    // The pages a workspace shares, same group as the desktop sidebar. The
+    // navigate helper adds the workspace prefix to these paths.
+    const workspace: CategoryItem[] = slug
+      ? [
+          makeItem({
+            icon: Building2,
+            key: WorkspaceSettingsTabs.General,
+            label: t('setting:workspaceSetting.tab.general'),
+            to: '/settings/general',
+          }),
+          makeItem({
+            icon: Users,
+            key: WorkspaceSettingsTabs.Members,
+            label: t('setting:workspaceSetting.tab.members'),
+            to: '/settings/members',
+          }),
+        ]
+      : [];
 
     const usageAndCost: CategoryItem[] = [
       // Stats is the ungated head of this group on every deployment — same as
@@ -138,7 +163,6 @@ export const useCategory = (): CategoryGroup[] => {
     ].filter((item): item is CategoryItem => Boolean(item));
 
     const tools: CategoryItem[] = [
-      makeItem({ icon: TagIcon, key: SettingsTabs.Labels, label: t('setting:tab.labels') }),
       makeItem({ icon: McpIcon, key: SettingsTabs.Connector, label: t('setting:tab.connector') }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
@@ -169,6 +193,11 @@ export const useCategory = (): CategoryGroup[] => {
     return [
       { items: account, key: SettingsGroupKey.Account, title: t('setting:group.profile') },
       {
+        items: workspace,
+        key: SettingsGroupKey.Workspace,
+        title: t('setting:workspaceSetting.group.workspace'),
+      },
+      {
         items: usageAndCost,
         key: SettingsGroupKey.UsageAndCost,
         title: t('setting:group.usageAndCost'),
@@ -183,5 +212,5 @@ export const useCategory = (): CategoryGroup[] => {
         title: t('setting:group.developer'),
       },
     ].filter((group) => group.items.length > 0);
-  }, [t, capabilityContext, navigate, showProvider]);
+  }, [t, capabilityContext, navigate, showProvider, slug]);
 };

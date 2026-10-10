@@ -2,8 +2,6 @@
 
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { usePermission } from '@/hooks/usePermission';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { useChatStore } from '@/store/chat';
@@ -21,31 +19,21 @@ const useConversationResourceAccessForTarget = ({
 }: ConversationResourceTarget) => {
   const isGroupContext = !!groupId;
 
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
-  const agentVisibility = useAgentStore((s) =>
-    agentId ? s.agentMap[agentId]?.visibility : undefined,
-  );
   const group = useAgentGroupStore((s) =>
     groupId ? agentGroupSelectors.getGroupById(groupId)(s) : undefined,
   );
 
-  const gatedResourceId = isGroupContext
-    ? group?.visibility === 'private'
-      ? undefined
-      : groupId
-    : agentId && agentId !== inboxAgentId && agentVisibility !== 'private'
-      ? agentId
-      : undefined;
+  const gatedAgentId = agentId ?? undefined;
+  const gatedGroupId = group?.visibility === 'private' ? undefined : (groupId ?? undefined);
 
   const { allowed: canCreateContent } = usePermission('create_content');
-  const { canUseResource, isLoading } = useResourceAccess(
-    isGroupContext ? 'agentGroup' : 'agent',
-    gatedResourceId ?? undefined,
-  );
+  const agentAccess = useResourceAccess('agent', gatedAgentId);
+  const groupAccess = useResourceAccess('agentGroup', gatedGroupId);
 
   return {
-    canUseResource: canCreateContent && canUseResource,
-    isAccessLoading: isLoading,
+    // A group ceiling does not substitute for the target Agent's Use member list.
+    canUseResource: canCreateContent && agentAccess.canUseResource && groupAccess.canUseResource,
+    isAccessLoading: agentAccess.isLoading || groupAccess.isLoading,
     isGroupContext,
   };
 };
@@ -59,9 +47,8 @@ const useConversationResourceAccessForTarget = ({
  *
  * Workspace topics are shared across members, so a `view`-level member can
  * open a teammate's conversation — every mutating affordance must check
- * `canUseResource` before firing. Inbox and private resources are never
- * gated; loading defaults permissive (`isAccessLoading` lets auto-send
- * dispatchers wait for the settled value instead).
+ * `canUseResource` before firing. Every explicit Agent, including the workspace inbox, requires confirmed Use.
+ * Auto-send dispatchers wait for the settled permission value.
  */
 export const useConversationResourceAccess = () => {
   const [agentId, groupId] = useConversationStore((s) => [s.context?.agentId, s.context?.groupId]);

@@ -22,7 +22,6 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import AgentAvatar from './AgentAvatar';
 import ItemActions from './ItemActions';
-import LabelTags from './LabelTags';
 
 /** Fixed action-column width (the "…" menu) so rows stay aligned. */
 export const ACTION_COL_WIDTH = 32;
@@ -145,16 +144,15 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
               </div>
             </div>
           </WorkspaceLink>
-          {/* Trailing cluster (Task-list-style): label pills + author avatar +
+          {/* Trailing cluster (Task-list-style): author avatar +
             update time as one tight right-aligned group. */}
           <div
             className="flex items-center gap-2 justify-end"
             style={{ flex: 'none', maxWidth: 420, overflow: 'hidden' }}
           >
-            <LabelTags labels={item.labels} />
             {showAuthor && (
               // The slot is reserved even without an author, so an unknown
-              // author doesn't shift the row's label pills sideways.
+              // author doesn't shift the row's update time sideways.
               <div className="flex flex-col" style={{ flex: 'none', width: AUTHOR_COL_WIDTH }}>
                 {author && (
                   <TooltipProvider>

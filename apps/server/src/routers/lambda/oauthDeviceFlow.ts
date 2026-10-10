@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AiProviderModel } from '@/database/models/aiProvider';
+import { ProviderBindingModel } from '@/database/models/providerBinding';
 import {
   ProviderBindingPlane,
   resolveBindingManagedProviderDetail,
@@ -17,6 +18,8 @@ import {
   getOAuthService,
   GithubCopilotOAuthService,
 } from '@/server/services/oauthDeviceFlow/providers/githubCopilot';
+import { checkProviderBindings } from '@/server/services/providerBinding/configuration';
+import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 
 const oauthProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -26,6 +29,13 @@ const oauthProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =>
   // workspace scope) — they persist through the binding plane when the
   // provider is binding-managed.
   const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
+    verifyBindings: (rows) =>
+      checkProviderBindings(
+        new ProviderBindingModel(ctx.serverDB, ctx.userId),
+        ctx.userId,
+        rows,
+        createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
+      ),
     workspaceId: ctx.workspaceId ?? undefined,
   });
 

@@ -15,29 +15,24 @@ vi.mock('./Container', () => ({
     React.createElement('main', undefined, children),
 }));
 
-vi.mock('./SideBar', () => ({ default: () => null }));
+vi.mock('@/features/Settings/Layout/SideBar', () => ({ default: () => null }));
 
-vi.mock('./hooks/useCategory', () => ({
-  useWorkspaceSettingCategory: () => [
+// The single settings sidebar: workspace rows carry the workspace URL, and a
+// row's key is its personal tab id (`stats`) rather than the URL segment.
+vi.mock('@/features/Settings/hooks/useCategory', () => ({
+  useCategory: () => [
     {
       items: [
-        { key: 'general', label: 'General' },
-        { key: 'members', label: 'Members' },
-        { key: 'devices', label: 'Devices' },
-        { key: 'plans', label: 'Plans' },
-        { key: 'billing', label: 'Billing' },
-        { key: 'credits', label: 'Credits' },
-        { key: 'apikey', label: 'API Keys' },
-        { key: 'service-model', label: 'Default Models' },
-        { key: 'credential', label: 'Credentials' },
-        { key: 'statistics', label: 'Statistics' },
-        { key: 'usage', label: 'Usage' },
+        { href: '/acme/settings/general', key: 'general', label: 'General' },
+        { href: '/acme/settings/members', key: 'members', label: 'Members' },
+        { href: '/acme/settings/devices', key: 'devices', label: 'Devices' },
+        { href: '/acme/settings/plans', key: 'plans', label: 'Plans' },
+        { href: '/acme/settings/billing', key: 'billing', label: 'Billing' },
+        { href: '/acme/settings/credits', key: 'credits', label: 'Credits' },
+        { href: '/acme/settings/credential', key: 'credential', label: 'Credentials' },
+        { href: '/acme/settings/statistics', key: 'stats', label: 'Statistics' },
+        { href: '/acme/settings/usage', key: 'usage', label: 'Usage' },
         { key: 'profile', label: 'Jane Doe' },
-        { key: 'appearance', label: 'Appearance' },
-        { key: 'hotkey', label: 'Hotkeys' },
-        { key: 'labs', label: 'Labs' },
-        { key: 'advanced', label: 'Advanced' },
-        { key: 'about', label: 'About' },
       ],
     },
   ],
@@ -62,18 +57,9 @@ describe('WorkspaceSettingsContentLayout', () => {
     ['plans', 'Plans'],
     ['billing', 'Billing'],
     ['credits', 'Credits'],
-    ['apikey', 'API Keys'],
-    ['service-model', 'Default Models'],
     ['credential', 'Credentials'],
     ['statistics', 'Statistics'],
     ['usage', 'Usage'],
-    ['appearance', 'Appearance'],
-    ['hotkey', 'Hotkeys'],
-    ['labs', 'Labs'],
-    ['about', 'About'],
-    // The Profile nav item is labelled with the user's name; the header keeps
-    // the generic page title.
-    ['profile', 'profile.title'],
   ])('renders the compact header for the %s tab', (tab, title) => {
     const html = renderLayout(tab);
 
@@ -83,7 +69,7 @@ describe('WorkspaceSettingsContentLayout', () => {
     expect(html).toContain('<main><div>Page content</div></main>');
   });
 
-  it.each(['advanced'])('keeps the %s tab on the content-only layout', (tab) => {
+  it.each(['imports'])('keeps the %s tab on the content-only layout', (tab) => {
     const html = renderLayout(tab);
 
     expect(html).not.toContain('<header>');

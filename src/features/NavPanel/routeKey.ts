@@ -8,9 +8,8 @@ export const resolveNavPanelKey = (
   const routeSegments = isWorkspaceRoute ? segments.slice(1) : segments;
   const [rootSegment, childSegment, grandchildSegment] = routeSegments;
 
-  if (rootSegment === 'settings') {
-    return isWorkspaceRoute ? 'workspace-settings' : 'settings';
-  }
+  // Personal and workspace settings share one sidebar, so they share one key.
+  if (rootSegment === 'settings') return 'settings';
 
   switch (rootSegment) {
     case 'agent': {

@@ -283,7 +283,6 @@ describe('tab preview popup lifecycle', () => {
       onOpenInSplitView: vi.fn(),
       onTogglePin: vi.fn(),
       pinnedCount: 0,
-      splitViewEnabled: false,
       tier: 'full' as const,
       totalCount: 2,
       width: 200,

@@ -4,7 +4,7 @@ import { AGENT_SIGNAL_SOURCE_TYPES, createSourceEvent } from '@orvilo/agent-sign
 import type { ISnapshotStore } from '@orvilo/agent-tracing';
 import { agents, messages, threads, topics, users } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createProcedurePolicyOptions as createProcedurePolicyOptionsFixture } from '@/server/services/agentSignal/procedure';
 import type { SelfReflectionReviewContext } from '@/server/services/agentSignal/services/selfIteration/reflection/handler';
@@ -81,6 +81,12 @@ const createNightlyReviewContext = (input: {
 });
 
 describe('runAgentSignalWorkflow', () => {
+  beforeAll(async () => {
+    // Bootstrap the database/migrations within the server project's setup budget,
+    // so the first workflow case keeps its 10s budget for hydration assertions.
+    await getTestDB();
+  });
+
   it('hydrates client.runtime.start into agent.user.message with serialized root-topic context', async () => {
     const db = await getTestDB();
     const userId = `eval_${uuid()}`;

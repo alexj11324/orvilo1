@@ -7,8 +7,6 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useConversationStore } from '../../store';
@@ -84,13 +82,12 @@ const styles = createStaticStyles(({ css }) => ({
  */
 const GoalArmedChip = memo(() => {
   const { t } = useTranslation('verify');
-  const enabled = useUserStore(labPreferSelectors.enableTopicAcceptance);
   const agentId = useConversationStore((s) => s.context.agentId);
   const topicId = useConversationStore((s) => s.context.topicId);
   const armedAt = useGoalArmStore((s) => (agentId ? s.armedAt[agentId] : undefined));
   const disarm = useGoalArmStore((s) => s.disarm);
 
-  if (!enabled || !agentId || topicId || armedAt === undefined) return null;
+  if (!agentId || topicId || armedAt === undefined) return null;
 
   return (
     <TooltipProvider>

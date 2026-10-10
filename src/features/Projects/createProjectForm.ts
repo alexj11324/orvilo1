@@ -124,7 +124,7 @@ export const getCreateProjectInput = (draft: CreateProjectDraft) => {
   return {
     identifier,
     name,
-    visibility: draft.visibility ?? 'private',
+    visibility: draft.visibility ?? 'public',
     ...(slug ? { slug } : {}),
     ...(draft.avatar ? { avatar: draft.avatar } : {}),
     ...(draft.summary?.trim() ? { summary: draft.summary.trim() } : {}),

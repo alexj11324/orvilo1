@@ -239,7 +239,8 @@ const ApprovalActions = memo<ApprovalActionsProps>(
       }
     };
 
-    const busy = loading || stopping || isMessageCreating;
+    // Readers retain visible choices; every response still requires Agent Use.
+    const busy = loading || stopping || isMessageCreating || !canUseResource;
     const argumentPreview = [
       requestArgs?.command,
       requestArgs?.path,
@@ -281,26 +282,24 @@ const ApprovalActions = memo<ApprovalActionsProps>(
               {t('tool.intervention.details')}
               <ChevronDownIcon className={detailsOpen ? 'size-3.5 rotate-180' : 'size-3.5'} />
             </CollapsibleTrigger>
-            {canUseResource && (
-              <ConfirmationActions>
-                <ConfirmationAction
-                  data-approval-choice="reject"
-                  disabled={busy}
-                  variant="outline"
-                  onClick={() => handleSubmit('reject')}
-                >
-                  {t('tool.intervention.reject')}
-                </ConfirmationAction>
-                <ConfirmationAction
-                  data-approval-choice="approve"
-                  disabled={busy}
-                  loading={loading}
-                  onClick={() => handleSubmit('approve')}
-                >
-                  {t('tool.intervention.optionApprove')}
-                </ConfirmationAction>
-              </ConfirmationActions>
-            )}
+            <ConfirmationActions>
+              <ConfirmationAction
+                data-approval-choice="reject"
+                disabled={busy}
+                variant="outline"
+                onClick={() => handleSubmit('reject')}
+              >
+                {t('tool.intervention.reject')}
+              </ConfirmationAction>
+              <ConfirmationAction
+                data-approval-choice="approve"
+                disabled={busy}
+                loading={loading}
+                onClick={() => handleSubmit('approve')}
+              >
+                {t('tool.intervention.optionApprove')}
+              </ConfirmationAction>
+            </ConfirmationActions>
           </div>
           <CollapsibleContent
             keepMounted
@@ -308,36 +307,32 @@ const ApprovalActions = memo<ApprovalActionsProps>(
             hidden={!detailsOpen}
           >
             {children}
-            {canUseResource && (
-              <>
-                <Input
-                  aria-label={t('tool.intervention.rejectReasonPlaceholder')}
+            <Input
+              aria-label={t('tool.intervention.rejectReasonPlaceholder')}
+              disabled={busy}
+              placeholder={t('tool.intervention.rejectReasonPlaceholder')}
+              ref={rejectInputRef}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              onFocus={() => setChoice('reject')}
+              onKeyDown={handleRejectInputKeyDown}
+            />
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <ConfirmationAction disabled={busy} variant="ghost" onClick={handleStop}>
+                <CircleStop data-icon="inline-start" /> {t('tool.intervention.stop')}
+              </ConfirmationAction>
+              {isAllowListMode && (
+                <ConfirmationAction
+                  className="h-auto min-h-8 whitespace-normal text-left"
+                  data-approval-choice="approve-remember"
                   disabled={busy}
-                  placeholder={t('tool.intervention.rejectReasonPlaceholder')}
-                  ref={rejectInputRef}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  onFocus={() => setChoice('reject')}
-                  onKeyDown={handleRejectInputKeyDown}
-                />
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <ConfirmationAction disabled={busy} variant="ghost" onClick={handleStop}>
-                    <CircleStop data-icon="inline-start" /> {t('tool.intervention.stop')}
-                  </ConfirmationAction>
-                  {isAllowListMode && (
-                    <ConfirmationAction
-                      className="h-auto min-h-8 whitespace-normal text-left"
-                      data-approval-choice="approve-remember"
-                      disabled={busy}
-                      variant="outline"
-                      onClick={() => handleSubmit('approve-remember')}
-                    >
-                      {t('tool.intervention.optionApproveRemember')}
-                    </ConfirmationAction>
-                  )}
-                </div>
-              </>
-            )}
+                  variant="outline"
+                  onClick={() => handleSubmit('approve-remember')}
+                >
+                  {t('tool.intervention.optionApproveRemember')}
+                </ConfirmationAction>
+              )}
+            </div>
           </CollapsibleContent>
         </Collapsible>
       </Confirmation>

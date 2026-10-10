@@ -656,6 +656,15 @@ describe('Task Router Integration', () => {
         ...createTestContext(otherUserId),
         workspaceId,
       });
+      const { resourcePermissions } = await import('@/database/schemas');
+      await serverDB.insert(resourcePermissions).values({
+        accessLevel: 'use',
+        createdBy: userId,
+        resourceId: wsAgentId,
+        resourceType: 'agent',
+        userId: otherUserId!,
+        workspaceId,
+      });
       const originalPrepare = TaskDispatchService.prototype.prepare;
       const kickoff = vi.spyOn(TaskModel.prototype, 'claimRunKickoff');
       const provision = vi.spyOn(TaskWorkspaceService.prototype, 'provision');
@@ -691,7 +700,7 @@ describe('Task Router Integration', () => {
         expect.soft(kickoff).not.toHaveBeenCalled();
         expect.soft(provision).not.toHaveBeenCalled();
         expect.soft(mockExecAgent).not.toHaveBeenCalled();
-        expect.soft(result).toMatchObject({ code: 'NOT_FOUND' });
+        expect.soft(result).toMatchObject({ code: 'FORBIDDEN' });
       } finally {
         prepare.mockRestore();
         kickoff.mockRestore();
@@ -720,7 +729,7 @@ describe('Task Router Integration', () => {
       const beforeRun = await teammate.findById(created.data.id);
 
       await expect(memberCaller.run({ id: created.data.id })).rejects.toMatchObject({
-        code: 'NOT_FOUND',
+        code: 'FORBIDDEN',
       });
       expect(await teammate.findById(created.data.id)).toEqual(beforeRun);
       expect(
@@ -1357,6 +1366,15 @@ describe('Task Router Integration', () => {
         .insert(agents)
         .values({ id: wsAgentId, slug: wsAgentId, userId, workspaceId })
         .onConflictDoNothing();
+      const { resourcePermissions } = await import('@/database/schemas');
+      await serverDB.insert(resourcePermissions).values({
+        accessLevel: 'use',
+        createdBy: userId,
+        resourceId: wsAgentId,
+        resourceType: 'agent',
+        userId,
+        workspaceId,
+      });
       await flushAfterResponse();
       mockNotifyTaskCommentActivity.mockClear();
       await wsCaller.addComment({
@@ -1417,7 +1435,7 @@ describe('Task Router Integration', () => {
       expect(mockNotifyTaskCommentActivity).toHaveBeenCalledTimes(1);
     });
 
-    it('never notifies workspace members who cannot open a private-team task', async () => {
+    it('notifies active workspace readers of private-team Issues and excludes inactive recipients', async () => {
       otherUserId = await createTestUser(serverDB);
       const thirdUserId = await createTestUser(serverDB);
       const { wsCaller, workspaceId } = await setupWorkspace();
@@ -1440,15 +1458,16 @@ describe('Task Router Integration', () => {
         visibility: 'private',
       });
 
-      // The mention must not leak the task's title and link to a member who
-      // cannot open it — neither on a new comment nor on an edit.
+      // Workspace Issue read is independent of private Team participation.
       const comment = await wsCaller.addComment({
         content: '@Member',
         editorData: editorDataWith(otherUserId!),
         id: task.data.id,
       });
       await flushAfterResponse();
-      expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
+      expect(mockNotifyTaskCommentActivity).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipients: [{ kind: 'mentioned', userId: otherUserId }] }),
+      );
 
       await wsCaller.updateComment({
         commentId: comment.data.id,
@@ -1456,7 +1475,32 @@ describe('Task Router Integration', () => {
         editorData: editorDataWith(otherUserId!, thirdUserId),
       });
       await flushAfterResponse();
-      expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
+      expect(mockNotifyTaskCommentActivity).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipients: [{ kind: 'mentioned', userId: thirdUserId }] }),
+      );
+
+      mockNotifyTaskCommentActivity.mockClear();
+      await serverDB
+        .update(workspaceMembers)
+        .set({ suspendedAt: new Date() })
+        .where(eq(workspaceMembers.userId, otherUserId!));
+      await serverDB
+        .update(workspaceMembers)
+        .set({ deletedAt: new Date() })
+        .where(eq(workspaceMembers.userId, thirdUserId));
+      const foreignId = await createTestUser(serverDB);
+      try {
+        await wsCaller.addComment({
+          content: '@Suspended @Removed @Foreign',
+          editorData: editorDataWith(otherUserId!, thirdUserId, foreignId),
+          id: task.data.id,
+        });
+        await flushAfterResponse();
+        expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
+      } finally {
+        await cleanupTestUser(serverDB, foreignId);
+        await cleanupTestUser(serverDB, thirdUserId);
+      }
     });
 
     it('should never notify in personal mode', async () => {

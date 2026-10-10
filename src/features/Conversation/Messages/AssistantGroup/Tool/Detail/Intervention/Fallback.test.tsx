@@ -476,18 +476,33 @@ describe('direct tool approval actions', () => {
     expect(approveToolCall).not.toHaveBeenCalled();
   });
 
-  it('keeps operation details available but hides mutation actions for viewers', async () => {
+  it('keeps execution choices visible but denies pointer and keyboard responses without Use', async () => {
     access.canUseResource = false;
-    await mountActions();
-    expect(screen.getByRole('button', { name: 'tool.intervention.details' })).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: 'tool.intervention.optionApprove' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'tool.intervention.reject' }),
-    ).not.toBeInTheDocument();
+    const beforeApprove = await mountActions('allow-list');
+    const approve = screen.getByRole('button', { name: 'tool.intervention.optionApprove' });
+    const reject = screen.getByRole('button', { name: 'tool.intervention.reject' });
+    expect(approve).toBeVisible();
+    expect(approve).toBeDisabled();
+    expect(reject).toBeVisible();
+    expect(reject).toBeDisabled();
+    fireEvent.click(approve);
+    fireEvent.click(reject);
+    fireEvent.click(screen.getByRole('button', { name: 'tool.intervention.details' }));
+    const stop = screen.getByRole('button', { name: 'tool.intervention.stop' });
+    const remember = screen.getByRole('button', {
+      name: 'tool.intervention.optionApproveRemember',
+    });
+    expect(stop).toBeDisabled();
+    expect(remember).toBeDisabled();
+    expect(screen.getByRole('textbox')).toBeDisabled();
+    fireEvent.click(stop);
+    fireEvent.click(remember);
+    fireEvent.keyDown(document.body, { key: '1' });
     fireEvent.keyDown(document.body, { key: 'Enter' });
     expect(approveToolCall).not.toHaveBeenCalled();
+    expect(rejectAndContinueToolCall).not.toHaveBeenCalled();
+    expect(stopPendingApprovalForCard).not.toHaveBeenCalled();
+    expect(beforeApprove).not.toHaveBeenCalled();
   });
 
   it('blocks all approval actions for temporary messages', async () => {

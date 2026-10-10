@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
-import { type ProjectDetail, useProjectStore } from '@/store/project';
+import { type ProjectDetail, useCurrentProjectDetail, useProjectStore } from '@/store/project';
 
 import {
   formatProjectDate,
@@ -62,8 +62,9 @@ function usePlanningMutation(projectId: string) {
   const update = useProjectStore((s) => s.updateProject);
   const lock = useRef(false);
   const [saving, setSaving] = useState(false);
+  const canEdit = useCurrentProjectDetail(projectId)?.capabilities?.canEdit === true;
   const save = async (input: Parameters<typeof update>[1]) => {
-    if (lock.current) return;
+    if (lock.current || !canEdit) return;
     lock.current = true;
     setSaving(true);
     try {
@@ -76,7 +77,7 @@ function usePlanningMutation(projectId: string) {
       setSaving(false);
     }
   };
-  return { save, saving };
+  return { save, saving: saving || !canEdit };
 }
 
 const priorities = ['noPriority', 'urgent', 'high', 'normal', 'low'] as const;

@@ -1,3 +1,3 @@
 export const SHELL9_SIDEBAR_WIDTH = 250;
-export const SHELL9_SIDEBAR_ICON_WIDTH = 50;
-export const SHELL9_SIDEBAR_COLLAPSED_WIDTH = SHELL9_SIDEBAR_ICON_WIDTH + 16;
+/** A collapsed sidebar is hidden entirely; no icon rail is left behind. */
+export const SHELL9_SIDEBAR_COLLAPSED_WIDTH = 0;

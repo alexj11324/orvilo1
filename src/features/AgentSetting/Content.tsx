@@ -1,12 +1,7 @@
 'use client';
 
 import isEqual from 'fast-deep-equal';
-import {
-  ActivityIcon,
-  GitBranchIcon,
-  MessageSquareHeartIcon,
-  NotebookTextIcon,
-} from 'lucide-react';
+import { ActivityIcon, GitBranchIcon, NotebookTextIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
@@ -23,13 +18,10 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { ChatSettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 const TAB_META = {
   [ChatSettingsTabs.Graph]: { icon: GitBranchIcon, labelKey: 'agentTab.graph' },
-  [ChatSettingsTabs.Opening]: { icon: MessageSquareHeartIcon, labelKey: 'agentTab.opening' },
   [ChatSettingsTabs.Rules]: { icon: NotebookTextIcon, labelKey: 'agentTab.rules' },
   [ChatSettingsTabs.SelfIteration]: {
     icon: ActivityIcon,
@@ -48,23 +40,20 @@ const Content = memo(() => {
   const meta = useAgentStore(agentSelectors.currentAgentMeta, isEqual);
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const { enableAgentSelfIteration } = useServerConfigStore(featureFlagsSelectors);
-  const enableAgentGraphConfigLab = useUserStore(labPreferSelectors.enableAgentGraphConfig);
-  const enableSelfLearning = useUserStore(labPreferSelectors.enableSelfLearning);
-  const [tab, setTab] = useState(ChatSettingsTabs.Opening);
-  const showGraphTab = enableAgentGraphConfigLab && !isInbox && !isHeterogeneous;
+  const [tab, setTab] = useState<ChatSettingsTabs>();
+  const showGraphTab = !isInbox && !isHeterogeneous;
 
   const availableTabs = useMemo(
     () =>
       [
-        ChatSettingsTabs.Opening,
-        enableSelfLearning ? ChatSettingsTabs.Rules : null,
+        ChatSettingsTabs.Rules,
         enableAgentSelfIteration ? ChatSettingsTabs.SelfIteration : null,
         showGraphTab ? ChatSettingsTabs.Graph : null,
       ].filter(Boolean) as ChatSettingsTabs[],
-    [enableAgentSelfIteration, enableSelfLearning, showGraphTab],
+    [enableAgentSelfIteration, showGraphTab],
   );
 
-  const activeTab = availableTabs.includes(tab) ? tab : availableTabs[0];
+  const activeTab = tab && availableTabs.includes(tab) ? tab : availableTabs[0];
 
   useEffect(() => {
     if (activeTab && activeTab !== tab) setTab(activeTab);

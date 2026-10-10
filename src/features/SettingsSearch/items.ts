@@ -1,4 +1,3 @@
-import { LAB_FEATURES } from '@/features/Settings/labs/features';
 import { SettingsTabs } from '@/store/global/initialState';
 
 export interface SettingsSearchContext {
@@ -6,7 +5,6 @@ export interface SettingsSearchContext {
   enableBusinessFeatures: boolean;
   enableComposio: boolean;
   enableGatewayMode: boolean;
-  enableSTT: boolean;
   /** Whether the signed-in user has an email on their profile */
   hasEmail: boolean;
   hideDocs: boolean;
@@ -29,7 +27,7 @@ export interface SettingsSearchItem {
   /** i18n key of the item label */
   labelKey: string;
   /** i18n namespace of `labelKey` / `descKey`, defaults to `setting` */
-  ns?: 'auth' | 'electron' | 'labs' | 'setting' | 'spend' | 'subscription';
+  ns?: 'auth' | 'electron' | 'setting' | 'spend' | 'subscription';
   tab: SettingsTabs;
   /**
    * Extra visibility gate mirroring the target item's own render condition
@@ -50,7 +48,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   [SettingsTabs.About]: ['about', 'version', 'changelog', 'feedback', 'help'],
   [SettingsTabs.Advanced]: ['advanced', 'developer', 'diagnostics'],
   [SettingsTabs.APIKey]: ['api', 'api key', 'apikey', 'token', 'secret', 'personal key'],
-  [SettingsTabs.Labels]: ['label', 'labels', 'tag', 'tags', 'group', 'grouping'],
   [SettingsTabs.Appearance]: [
     'appearance',
     'theme',
@@ -67,7 +64,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   [SettingsTabs.Creds]: ['credentials', 'secrets', 'oauth'],
   [SettingsTabs.Devices]: ['devices', 'sessions', 'logged in devices'],
   [SettingsTabs.Hotkey]: ['hotkey', 'shortcut', 'keyboard'],
-  [SettingsTabs.Labs]: ['labs', 'experiment', 'beta', 'preview', 'developer'],
   [SettingsTabs.Memory]: ['memory', 'memories', 'personalization'],
   [SettingsTabs.Messenger]: [
     'messenger',
@@ -108,17 +104,11 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   [SettingsTabs.ServiceModel]: [
     'service model',
     'model assignment',
-    'topic naming',
-    'translation',
-    'tts',
-    'tts settings',
-    'voice',
-    'speech',
+    'default model',
     'image',
     'image generation',
     'embedding',
     'prompt rewrite',
-    'suggestion',
     'search',
     'search model',
   ],
@@ -165,9 +155,7 @@ export const TAB_SEARCH_KEYWORDS_KEYS: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Credits]: 'settingsSearch.tabKeywords.credits',
   [SettingsTabs.Creds]: 'settingsSearch.tabKeywords.creds',
   [SettingsTabs.Devices]: 'settingsSearch.tabKeywords.devices',
-  [SettingsTabs.Labels]: 'settingsSearch.tabKeywords.labels',
   [SettingsTabs.Hotkey]: 'settingsSearch.tabKeywords.hotkey',
-  [SettingsTabs.Labs]: 'settingsSearch.tabKeywords.labs',
   [SettingsTabs.Memory]: 'settingsSearch.tabKeywords.memory',
   [SettingsTabs.Messenger]: 'settingsSearch.tabKeywords.messenger',
   [SettingsTabs.Notification]: 'settingsSearch.tabKeywords.notification',
@@ -405,22 +393,10 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     tab: SettingsTabs.Advanced,
     visible: (ctx) => ctx.isDesktop,
   },
-  // Labs — derived from the LAB_FEATURES catalog the page renders, so a new
-  // lab flag becomes searchable without a second registration. Anchors use
-  // `labs-${flag}`, matching the SettingsSearchAnchor wrap on each toggle.
-  ...LAB_FEATURES.map(({ desktopOnly, flag, i18nKey, searchKeywords }): SettingsSearchItem => ({
-    anchor: `labs-${flag}`,
-    descKey: `features.${i18nKey}.desc`,
-    keywords: searchKeywords,
-    labelKey: `features.${i18nKey}.title`,
-    ns: 'labs',
-    tab: SettingsTabs.Labs,
-    ...(desktopOnly ? { visible: (ctx: SettingsSearchContext) => ctx.isDesktop } : {}),
-  })),
   // Service Model
   {
     anchor: 'service-model-assignments',
-    keywords: ['model assignment', 'topic naming', 'translation', 'default model'],
+    keywords: ['model assignment', 'default model'],
     labelKey: 'serviceModel.modelAssignments.title',
     tab: SettingsTabs.ServiceModel,
   },
@@ -430,19 +406,6 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     labelKey: 'serviceModel.memoryModels.title',
     tab: SettingsTabs.ServiceModel,
   },
-  {
-    anchor: 'service-model-optional-features',
-    keywords: ['follow up', 'input completion', 'prompt rewrite', 'suggestion'],
-    labelKey: 'serviceModel.optionalFeatures.title',
-    tab: SettingsTabs.ServiceModel,
-  },
-  {
-    anchor: 'service-model-tts',
-    keywords: ['tts', 'tts settings', 'voice', 'speech', 'text to speech'],
-    labelKey: 'settingTTS.openai.ttsModel',
-    tab: SettingsTabs.ServiceModel,
-    visible: (ctx) => ctx.enableSTT,
-  },
   // Storage
   {
     anchor: 'storage-export',
@@ -450,12 +413,6 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     labelKey: 'storage.actions.export.title',
     tab: SettingsTabs.Storage,
     visible: (ctx) => ctx.enableBusinessFeatures,
-  },
-  {
-    anchor: 'storage-import',
-    keywords: ['import', 'restore'],
-    labelKey: 'storage.actions.import.title',
-    tab: SettingsTabs.Storage,
   },
   {
     anchor: 'storage-reset',

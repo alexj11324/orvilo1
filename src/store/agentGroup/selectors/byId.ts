@@ -55,16 +55,6 @@ const groupMemberAvatars =
       background: agent.backgroundColor || undefined,
     }));
 
-const groupOpeningMessage =
-  (groupId: string) =>
-  (s: ChatGroupStore): string | undefined =>
-    groupConfig(groupId)(s)?.openingMessage;
-
-const groupOpeningQuestions =
-  (groupId: string) =>
-  (s: ChatGroupStore): string[] =>
-    groupConfig(groupId)(s)?.openingQuestions || [];
-
 const groupAgentCount =
   (groupId: string) =>
   (s: ChatGroupStore): number =>
@@ -115,7 +105,5 @@ export const agentGroupByIdSelectors = {
   groupMemberCount,
   groupMembers,
   groupMeta,
-  groupOpeningMessage,
-  groupOpeningQuestions,
   isGroupNotFoundById,
 };

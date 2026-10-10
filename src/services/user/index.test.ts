@@ -8,7 +8,6 @@ const mockLambdaClient = vi.hoisted(() => ({
   user: {
     confirmOnboardingUnderstanding: { mutate: vi.fn() },
     getOnboardingUnderstanding: { query: vi.fn() },
-    getUserRegistrationDuration: { query: vi.fn() },
     getUserState: { query: vi.fn() },
     getUserSSOProviders: { query: vi.fn() },
     retryOnboardingUnderstandingSource: { mutate: vi.fn() },
@@ -29,18 +28,6 @@ vi.mock('@/libs/trpc/client', () => ({
 
 describe('UserService', () => {
   testService(UserService);
-
-  describe('getUserRegistrationDuration', () => {
-    it('should call lambdaClient.user.getUserRegistrationDuration.query', async () => {
-      const mockResult = { createdAt: '2024-01-01', duration: 100, updatedAt: '2024-01-02' };
-      mockLambdaClient.user.getUserRegistrationDuration.query.mockResolvedValueOnce(mockResult);
-
-      const result = await userService.getUserRegistrationDuration();
-
-      expect(mockLambdaClient.user.getUserRegistrationDuration.query).toHaveBeenCalled();
-      expect(result).toEqual(mockResult);
-    });
-  });
 
   /**
    * @example

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import type { NewSession, SessionItem } from '../../schemas';
 import {
+  agentOperations,
   agents,
   agentsToSessions,
   devices,
@@ -14,6 +15,8 @@ import {
   sessions,
   topics,
   users,
+  workspaceMembers,
+  workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { idGenerator } from '../../utils/idGenerator';
@@ -591,7 +594,7 @@ describe('SessionModel', () => {
           groupId: 'non-existent-group',
         },
       ];
-      const result = await sessionModel.batchCreate(sessions);
+      await sessionModel.batchCreate(sessions);
 
       // Assert results
       // expect(result[0].group).toBe('default');
@@ -880,6 +883,87 @@ describe('SessionModel', () => {
     });
   });
 
+  it('preserves an active workspace operation against Session config and deletion shortcuts', async () => {
+    const [workspace] = await serverDB
+      .insert(workspaces)
+      .values({ name: 'Session live guard', slug: 'session-live-guard', primaryOwnerId: userId })
+      .returning();
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ userId, workspaceId: workspace.id, role: 'owner' });
+    const [agent] = await serverDB
+      .insert(agents)
+      .values({
+        userId,
+        workspaceId: workspace.id,
+        visibility: 'public',
+        systemRole: 'Original prompt',
+      })
+      .returning();
+    const [session] = await serverDB
+      .insert(sessions)
+      .values({ userId, workspaceId: workspace.id, type: 'agent' })
+      .returning();
+    await serverDB
+      .insert(agentsToSessions)
+      .values({ userId, workspaceId: workspace.id, sessionId: session.id, agentId: agent.id });
+    await serverDB.insert(agentOperations).values({
+      id: 'session-live-operation',
+      userId,
+      workspaceId: workspace.id,
+      agentId: agent.id,
+      status: 'running',
+    });
+    const model = new SessionModel(serverDB, userId, workspace.id);
+    await expect(
+      model.updateConfig(session.id, { systemRole: 'Changed while running' }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    await expect(model.delete(session.id)).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    await expect(model.batchDelete([session.id])).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+    await expect(model.deleteAll()).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect((await model.findByIdOrSlug(session.id))?.agent?.systemRole).toBe('Original prompt');
+    await serverDB
+      .update(agentOperations)
+      .set({ status: 'done' })
+      .where(eq(agentOperations.id, 'session-live-operation'));
+    await model.delete(session.id);
+    expect(await model.findByIdOrSlug(session.id)).toBeUndefined();
+  });
+
+  it('bootstraps an existing shared builtin without another member personal config overwrite', async () => {
+    await serverDB.insert(users).values({ id: 'builtin-owner' });
+    const [workspace] = await serverDB
+      .insert(workspaces)
+      .values({
+        name: 'Shared bootstrap',
+        slug: 'shared-bootstrap',
+        primaryOwnerId: 'builtin-owner',
+      })
+      .returning();
+    await serverDB.insert(workspaceMembers).values([
+      { userId: 'builtin-owner', workspaceId: workspace.id, role: 'owner' },
+      { userId, workspaceId: workspace.id, role: 'member' },
+    ]);
+    await serverDB.insert(agents).values({
+      userId: 'builtin-owner',
+      workspaceId: workspace.id,
+      slug: 'inbox',
+      virtual: true,
+      title: 'Shared builtin',
+    });
+    const result = await new SessionModel(serverDB, userId, workspace.id).createInbox({
+      systemRole: 'Personal defaults',
+    });
+    expect(result?.slug).toBe('inbox');
+    const [agent] = await serverDB
+      .select()
+      .from(agents)
+      .where(eq(agents.workspaceId, workspace.id));
+    expect(agent.systemRole).not.toBe('Personal defaults');
+  });
+
   describe('createInbox', () => {
     it('should create inbox session if not exists', async () => {
       const inbox = await sessionModel.createInbox({});
@@ -1004,6 +1088,7 @@ describe('SessionModel', () => {
         await trx.insert(agents).values({
           id: agentId,
           userId,
+          agencyConfig: runtimeAgencyConfig,
           model: 'gpt-3.5-turbo',
           title: 'Original Title',
           description: 'Original description',
@@ -1051,6 +1136,7 @@ describe('SessionModel', () => {
         await trx.insert(agents).values({
           id: agentId,
           userId,
+          agencyConfig: runtimeAgencyConfig,
           model: 'gpt-3.5-turbo',
           title: 'Original Title',
           description: 'Original description',

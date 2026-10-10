@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   defaultGetProjectFileIndex,
@@ -359,5 +359,62 @@ describe('defaultSearchProjectFiles', () => {
     expect(relativePaths).toEqual(
       expect.arrayContaining(['.agents/', '.agents/skills/', '.agents/skills/target-skill.md']),
     );
+  });
+});
+
+describe('requested scope inside a parent Git repository', () => {
+  it('keeps index and search inside the requested subtree instead of the parent Git root', async () => {
+    const repo = await mkdtemp(path.join(tmpdir(), 'dc-approved-child-'));
+    cleanup.push(repo);
+    await promisify(execFile)('git', ['-c', 'init.defaultBranch=main', 'init'], { cwd: repo });
+    const child = path.join(repo, 'allowed');
+    await mkdir(child);
+    await writeFile(path.join(repo, 'parent-secret.txt'), 'outside requested scope');
+    await mkdir(path.join(child, 'nested'));
+    await writeFile(path.join(child, 'nested', 'child.txt'), 'inside requested scope');
+    const index = await defaultGetProjectFileIndex({ scope: child });
+    const indexWithTrailingSeparator = await defaultGetProjectFileIndex({
+      scope: `${child}${path.sep}`,
+    });
+    expect(indexWithTrailingSeparator.root).toBe(child);
+    expect(indexWithTrailingSeparator.entries).toEqual(index.entries);
+    const search = await defaultSearchProjectFiles({ scope: child, query: 'txt' });
+    const changedSearch = await defaultSearchProjectFiles({
+      scope: child,
+      query: 'txt',
+      changedOnly: true,
+    });
+    for (const result of [index, search, changedSearch]) {
+      expect(result.root).toBe(child);
+      expect(result.source).toBe('git');
+      expect(
+        result.entries
+          .filter((entry) => !entry.isDirectory)
+          .map(({ relativePath }) => relativePath),
+      ).toEqual(['nested/child.txt']);
+    }
+
+    // Simulate native Windows relative-path metadata on any test platform.
+    const nativeRelative = path.relative;
+    const nativeSeparator = path.sep;
+    const relativeSpy = vi
+      .spyOn(path, 'relative')
+      .mockImplementation((from, to) => nativeRelative(from, to).replaceAll('/', path.win32.sep));
+    Object.defineProperty(path, 'sep', { value: path.win32.sep });
+    try {
+      const windowsChangedSearch = await defaultSearchProjectFiles({
+        scope: child,
+        query: 'txt',
+        changedOnly: true,
+      });
+      expect(
+        windowsChangedSearch.entries
+          .filter((entry) => !entry.isDirectory)
+          .map(({ relativePath }) => relativePath),
+      ).toEqual(['nested/child.txt']);
+    } finally {
+      Object.defineProperty(path, 'sep', { value: nativeSeparator });
+      relativeSpy.mockRestore();
+    }
   });
 });

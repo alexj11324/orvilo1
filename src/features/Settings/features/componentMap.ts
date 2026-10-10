@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 
+import NotificationSettingsSkeleton from '@/components/Skeleton/Settings/Notification';
 import SettingsProfileSkeleton from '@/components/Skeleton/Settings/Profile';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import dynamic from '@/libs/next/dynamic';
@@ -10,9 +11,6 @@ const loading = (_debugId: string) => () => createElement(SettingsSectionSkeleto
 export const componentMap = {
   [SettingsTabs.Advanced]: dynamic(() => import('../advanced'), {
     loading: loading('Settings > Advanced'),
-  }),
-  [SettingsTabs.Labs]: dynamic(() => import('../labs'), {
-    loading: loading('Settings > Labs'),
   }),
   [SettingsTabs.Appearance]: dynamic(() => import('../appearance'), {
     loading: loading('Settings > Appearance'),
@@ -32,12 +30,9 @@ export const componentMap = {
   [SettingsTabs.Memory]: dynamic(() => import('../memory'), {
     loading: loading('Settings > Memory'),
   }),
-  [SettingsTabs.Notification]: dynamic(
-    () => import('@/business/client/BusinessSettingPages/Notification'),
-    {
-      loading: loading('Settings > Notification'),
-    },
-  ),
+  [SettingsTabs.Notification]: dynamic(() => import('../notification/personal'), {
+    loading: () => createElement(NotificationSettingsSkeleton),
+  }),
   [SettingsTabs.About]: dynamic(() => import('../about'), {
     loading: loading('Settings > About'),
   }),
@@ -56,9 +51,6 @@ export const componentMap = {
   [SettingsTabs.Devices]: dynamic(() => import('../devices'), {
     loading: loading('Settings > Devices'),
   }),
-  [SettingsTabs.Labels]: dynamic(() => import('../labels'), {
-    loading: loading('Settings > Labels'),
-  }),
   // Profile related tabs
   [SettingsTabs.Profile]: dynamic(() => import('../profile'), {
     loading: () => createElement(SettingsProfileSkeleton),
@@ -74,9 +66,6 @@ export const componentMap = {
   }),
   [SettingsTabs.Creds]: dynamic(() => import('../creds'), {
     loading: loading('Settings > Creds'),
-  }),
-  [SettingsTabs.Security]: dynamic(() => import('../security'), {
-    loading: loading('Settings > Security'),
   }),
   [SettingsTabs.Connector]: dynamic(() => import('../connector'), {
     loading: loading('Settings > Connector'),

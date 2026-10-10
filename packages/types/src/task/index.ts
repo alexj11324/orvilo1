@@ -1185,6 +1185,7 @@ export interface TaskDetailWorkspaceNode {
 
 export interface TaskDetailActivityAuthor {
   avatar?: string | null;
+  heterogeneousType?: string | null;
   id: string;
   name?: string | null;
   type: 'agent' | 'user';
@@ -1224,6 +1225,8 @@ export interface TaskDetailActivity {
   };
   author?: TaskDetailActivityAuthor;
   briefType?: string;
+  /** Comment-only: current server-authorized controls for this row. */
+  commentCapabilities?: { canEdit: boolean; canDelete: boolean };
   /**
    * Topic-only: ISO timestamp when the topic run terminated (any of
    * completed / failed / canceled / timeout). Pair with `time` (start) to
@@ -1338,6 +1341,7 @@ export interface TaskDetailData {
   agentId?: string | null;
   // null/undefined = no automation configured
   automationMode?: TaskAutomationMode | null;
+  capabilities?: { canEdit: boolean; canDelete: boolean };
   checkpoint?: CheckpointConfig;
   config?: Record<string, unknown>;
   createdAt?: string;

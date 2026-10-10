@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 
 import { casdoorWebhook } from './handlers/casdoor';
 import { githubEventsWebhook } from './handlers/githubEvents';
@@ -9,6 +10,7 @@ import { memoryExtractionWebhook } from './handlers/memoryExtraction';
 import { memoryExtractionBenchmarkLocomo } from './handlers/memoryExtractionBenchmarkLocomo';
 import { memoryUserMemoryChatTopicCancel } from './handlers/memoryUserMemoryChatTopicCancel';
 import { memoryUserMemoryPersonaUpdateWriting } from './handlers/memoryUserMemoryPersonaUpdateWriting';
+import { slackWebhook } from './handlers/slack';
 import { memoryWebhookAuth } from './middlewares/memoryWebhookAuth';
 
 const app = new Hono().basePath('/api/webhooks');
@@ -19,6 +21,7 @@ app.post('/logto', logtoWebhook);
 app.post('/linear/:workspaceId', linearWebhook);
 app.post('/github-events/:callbackToken', githubEventsWebhook);
 app.post('/mcp-events/:callbackToken', mcpEventsWebhook);
+app.post('/slack', bodyLimit({ maxSize: 1024 * 1024 }), slackWebhook);
 
 // Memory pipeline webhooks — share the configured static-header guard.
 app.post('/memory-extraction', memoryWebhookAuth(), memoryExtractionWebhook);

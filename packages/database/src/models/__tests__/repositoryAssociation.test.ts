@@ -4,7 +4,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
-import { projectRepositories, teamRepoDefaults, teams, users, workspaces } from '../../schemas';
+import {
+  projectRepositories,
+  teamRepoDefaults,
+  teams,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
 import { RepositoryModel } from '../repository';
@@ -39,6 +46,7 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
   await db.insert(teams).values({
     createdByUserId: userId,
     id: teamId,

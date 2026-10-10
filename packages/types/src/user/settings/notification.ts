@@ -14,3 +14,20 @@ export interface NotificationSettings {
    */
   push?: NotificationChannelSettings;
 }
+
+/** Event switches shared by inbox projection and the settings surfaces. */
+export const WORK_NOTIFICATION_EVENTS = [
+  'task_assigned',
+  'task_review',
+  'task_status_changed',
+  'agent_run_completed',
+  'agent_run_failed',
+  'acp_permission',
+] as const;
+
+export const notificationEventEnabled = (
+  settings: NotificationSettings | undefined,
+  channel: keyof NotificationSettings,
+  event: string,
+): boolean =>
+  settings?.[channel]?.enabled !== false && settings?.[channel]?.items?.work?.[event] !== false;

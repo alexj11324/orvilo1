@@ -44,6 +44,7 @@ const TOOL_CATEGORIES = {
       { descKey: 'settingSystemTools.tools.gemini.desc', name: 'gemini' },
       { descKey: 'settingSystemTools.tools.qwen.desc', name: 'qwen' },
       { descKey: 'settingSystemTools.tools.kimi.desc', name: 'kimi' },
+      { descKey: 'settingSystemTools.tools.opencode.desc', name: 'opencode' },
       { descKey: 'settingSystemTools.tools.aider.desc', name: 'aider' },
     ],
   },

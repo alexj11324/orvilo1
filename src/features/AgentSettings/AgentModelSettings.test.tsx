@@ -1,12 +1,11 @@
 /** @vitest-environment happy-dom */
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AgentModelSettings from './AgentModelSettings';
-import AgentOpeningSettings from './AgentOpeningSettings';
 
 dayjs.extend(relativeTime);
 
@@ -124,35 +123,5 @@ describe('Agent model settings states', () => {
     await userEvent.setup().click(view.getByRole('combobox'));
     expect(view.getByRole('option', { name: 'Model One' })).toBeTruthy();
     expect(view.queryByText('Provider/Model One')).toBeNull();
-  });
-});
-
-describe('Agent opening autosave recovery', () => {
-  it('keeps a failed message retry available after questions save successfully', async () => {
-    vi.clearAllMocks();
-    let messageFailed = false;
-    state.update.mockImplementation(
-      async (_agentId: string, patch: { openingMessage?: string; openingQuestions?: string[] }) => {
-        Object.assign(state.config, patch);
-        if (patch.openingMessage !== undefined && !messageFailed) {
-          messageFailed = true;
-          throw new Error('message save unavailable');
-        }
-      },
-    );
-    const view = render(<AgentOpeningSettings agentId="agt_one" />);
-    const message = view.getByRole('textbox', { name: 'settingAgent.opening.message' });
-    const questions = view.getByRole('textbox', { name: 'settingAgent.opening.questions' });
-    fireEvent.change(message, { target: { value: 'Hello from the Agent' } });
-    fireEvent.blur(message);
-    await waitFor(() => expect(state.update).toHaveBeenCalledTimes(1));
-    fireEvent.change(questions, { target: { value: 'How can you help?' } });
-    fireEvent.blur(questions);
-    await waitFor(() => expect(state.update).toHaveBeenCalledTimes(2));
-    const failedHint = await view.findByText(/autoSave.failed/);
-    fireEvent.click(failedHint);
-    await waitFor(() => expect(state.update).toHaveBeenCalledTimes(3));
-    expect(state.update.mock.calls[2][1]).toEqual({ openingMessage: 'Hello from the Agent' });
-    await waitFor(() => expect(view.queryByText(/autoSave.failed/)).toBeNull());
   });
 });

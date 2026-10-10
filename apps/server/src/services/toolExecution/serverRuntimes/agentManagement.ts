@@ -20,6 +20,10 @@ import {
 
 import { AgentModel } from '@/database/models/agent';
 import { PluginModel } from '@/database/models/plugin';
+import {
+  getResourceConfigAccess,
+  redactAgentConfig,
+} from '@/server/routers/lambda/_helpers/resourceConfigGuard';
 import { DiscoverService } from '@/server/services/discover';
 
 import { type ToolExecutionContext, type ToolExecutionResult } from '../types';
@@ -39,6 +43,7 @@ export const agentManagementRuntime: ServerRuntimeRegistration = {
       throw new Error('userId and serverDB are required for Agent Management execution');
     }
 
+    const { serverDB, userId, workspaceId } = context;
     const agentModel = new AgentModel(context.serverDB, context.userId, context.workspaceId);
     const pluginModel = new PluginModel(context.serverDB, context.userId, context.workspaceId);
     // Same identity requirement as the Agent Builder runtime: built without an
@@ -192,9 +197,20 @@ export const agentManagementRuntime: ServerRuntimeRegistration = {
 
       getAgentDetail: async (params: GetAgentDetailParams): Promise<ToolExecutionResult> => {
         try {
-          const agent = await agentModel.getAgentConfigById(params.agentId);
+          let agent = await agentModel.getAgentConfigById(params.agentId);
           if (!agent) {
             return { content: `Agent "${params.agentId}" not found.`, success: false };
+          }
+
+          if (workspaceId) {
+            const access = await getResourceConfigAccess(
+              { db: serverDB, userId, workspaceId },
+              'agent',
+              params.agentId,
+            );
+            if (access === 'none')
+              return { content: `Agent "${params.agentId}" not found.`, success: false };
+            if (access === 'profile') agent = redactAgentConfig(agent);
           }
 
           // Normalize to identifier strings (annotated with mode when not

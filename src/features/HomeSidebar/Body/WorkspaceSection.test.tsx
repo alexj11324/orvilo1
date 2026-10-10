@@ -153,8 +153,9 @@ describe('WorkspaceSection More menu', () => {
     resource?.onClick?.();
     expect(mocks.navigate).toHaveBeenCalledWith('/resource');
 
+    // Names the workspace page: the bare index is the personal account page.
     workspaceSettings?.onClick?.();
-    expect(mocks.navigate).toHaveBeenCalledWith('/settings');
+    expect(mocks.navigate).toHaveBeenCalledWith('/settings/general');
   });
 
   it('still renders the More row as the dropdown trigger', () => {

@@ -18,6 +18,10 @@ import { sweep as verifySweepHandler } from '@/server/router-hono/workflows/veri
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import { runMcpEventInboxSweep } from '@/server/services/mcpEvents/runtime';
+import {
+  runSlackIntegrationEvent,
+  slackEventInput,
+} from '@/server/services/slackIntegration/workflow';
 import { runTaskIssueRecurrenceSweep } from '@/server/services/taskIssueRecurrence/sweep';
 import { runTaskReminderSweep } from '@/server/services/taskReminder/sweep';
 import { runHeartbeatTick } from '@/server/services/taskRunner/heartbeatTick';
@@ -68,6 +72,20 @@ const readResponseBody = async (response: Response): Promise<JsonObject> => {
 };
 
 export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
+  const slackIntegrationEvent = hatchet.task({
+    name: HATCHET_TASK_NAMES.slackIntegrationEvent,
+    // Channels' serial handler is process-local. Queue the whole conversation
+    // across workers before its durable delivery dedup marks the next event.
+    concurrency: {
+      expression: 'input.conversationKey',
+      limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
+      maxRuns: 1,
+    },
+    executionTimeout: '5m',
+    fn: (input: z.infer<typeof slackEventInput> & InputType) => runSlackIntegrationEvent(input),
+    inputValidator: slackEventInput,
+    retries: 0,
+  });
   const agentSignalNightlySchedule = hatchet.task({
     name: HATCHET_TASK_NAMES.agentSignalNightlySchedule,
     executionTimeout: '15m',
@@ -204,6 +222,7 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     goalSweep,
     linearSyncSweep,
     mcpEventInboxSweep,
+    slackIntegrationEvent,
     taskHeartbeat,
     taskReminderSweep,
     taskScheduleDispatch,

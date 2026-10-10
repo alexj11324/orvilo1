@@ -1,4 +1,9 @@
-import { EVENT_CONSUMERS, type NotificationMetadata } from '@orvilo/types';
+import {
+  EVENT_CONSUMERS,
+  notificationEventEnabled,
+  type NotificationMetadata,
+  type NotificationSettings,
+} from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
@@ -6,11 +11,13 @@ import { EventConsumerReceiptModel } from '@/database/models/eventConsumerReceip
 import { NotificationModel } from '@/database/models/notification';
 import { allocateFeedRevision } from '@/database/models/notificationFeed';
 import { TaskModel } from '@/database/models/task';
+import { UserModel } from '@/database/models/user';
 import {
   agents,
   taskComments,
   tasks,
   taskTopics,
+  teamWorkflowStates,
   topics,
   users,
   workspaceMembers,
@@ -172,7 +179,10 @@ export class NotificationProjectionService {
             : isNull(taskSubscriptions.workspaceId),
         ),
       );
-    const recipientKinds = new Map<string, 'comment' | 'completion' | 'mention'>();
+    const recipientKinds = new Map<
+      string,
+      'comment' | 'completion' | 'mention' | 'status' | 'assigned' | 'review'
+    >();
     const completion = row.eventType.startsWith('task.run.');
     const commentId = asString(payload.commentId);
     const comment = commentId
@@ -184,7 +194,26 @@ export class NotificationProjectionService {
             .limit(1)
         )[0]
       : undefined;
-    if (!completion && !comment) return [];
+    const statusChange = row.eventType === 'task.status.changed';
+    const assignment = row.eventType === 'task.assigned';
+    const review =
+      task.reviewerUserId &&
+      (statusChange ||
+        (Array.isArray(payload.changedFields) &&
+          payload.changedFields.includes('reviewerUserId'))) &&
+      task.workflowCategory === 'in_review';
+    if (!completion && !comment && !statusChange && !assignment && !review) return [];
+    if (statusChange) {
+      for (const userId of [
+        task.createdByUserId,
+        task.assigneeUserId,
+        ...subscriptions.map((item) => item.userId),
+      ]) {
+        if (userId) recipientKinds.set(userId, 'status');
+      }
+    }
+    if (assignment && task.assigneeUserId) recipientKinds.set(task.assigneeUserId, 'assigned');
+    if (review) recipientKinds.set(task.reviewerUserId!, 'review');
     if (completion || row.eventType === 'task.comment.created') {
       for (const userId of [
         task.createdByUserId,
@@ -256,10 +285,33 @@ export class NotificationProjectionService {
           name: agent.name ?? undefined,
         };
     }
+    const [workflowState] = task.workflowStateRefId
+      ? await this.db
+          .select({ name: teamWorkflowStates.name })
+          .from(teamWorkflowStates)
+          .where(
+            and(
+              eq(teamWorkflowStates.id, task.workflowStateRefId),
+              eq(teamWorkflowStates.workspaceId, task.workspaceId!),
+            ),
+          )
+          .limit(1)
+      : [];
+    const statusLabel =
+      workflowState?.name ??
+      {
+        backlog: 'Backlog',
+        todo: 'Todo',
+        in_progress: 'In Progress',
+        in_review: 'In Review',
+        done: 'Done',
+        canceled: 'Canceled',
+        triage: 'Triage',
+      }[task.workflowCategory];
     const targets: ProjectionTarget[] = [];
     for (const [userId, kind] of recipientKinds) {
       if (!active.has(userId)) continue;
-      // TaskModel's shared predicate includes private-team and resource ACL.
+      // TaskModel enforces active workspace Issue readability independently of private Team membership.
       if (!(await new TaskModel(this.db, userId, row.workspaceId ?? undefined).findById(task.id)))
         continue;
       if (comment?.visibility === 'private' && comment.userId !== userId) continue;
@@ -268,7 +320,13 @@ export class NotificationProjectionService {
           ? row.eventType === 'task.run.completed'
             ? 'Agent finished this run'
             : 'Agent run failed'
-          : (asString(payload.content) ?? comment!.content),
+          : kind === 'status'
+            ? `Issue status changed to ${statusLabel}`
+            : kind === 'assigned'
+              ? 'Issue assigned to you'
+              : kind === 'review'
+                ? 'Issue review requested'
+                : (asString(payload.content) ?? comment!.content),
         episodeKey: completion
           ? `task:${task.id}:run:${String(payload.topicId)}:${String(payload.status)}`
           : `task:${task.id}:${kind}`,
@@ -279,13 +337,19 @@ export class NotificationProjectionService {
         resourceType: 'task',
         title: task.name || task.instruction,
         type:
-          kind === 'mention'
-            ? 'mention'
-            : completion
-              ? row.eventType === 'task.run.completed'
-                ? 'agent_run_completed'
-                : 'agent_run_failed'
-              : 'task_comment',
+          kind === 'status'
+            ? 'task_status_changed'
+            : kind === 'assigned'
+              ? 'task_assigned'
+              : kind === 'review'
+                ? 'task_review'
+                : kind === 'mention'
+                  ? 'mention'
+                  : completion
+                    ? row.eventType === 'task.run.completed'
+                      ? 'agent_run_completed'
+                      : 'agent_run_failed'
+                    : 'task_comment',
       });
     }
     return targets;
@@ -324,10 +388,24 @@ export class NotificationProjectionService {
 
     const targets =
       row.aggregateType === 'task' &&
-      (row.eventType.startsWith('task.comment.') || row.eventType.startsWith('task.run.'))
+      (row.eventType.startsWith('task.comment.') ||
+        row.eventType.startsWith('task.run.') ||
+        ['task.assigned', 'task.status.changed', 'task.requirement.changed'].includes(
+          row.eventType,
+        ))
         ? await this.resolveIssueTargets(row)
         : resolveNotificationTargets(row);
     for (const target of targets) {
+      const settings = (await new UserModel(this.db, target.recipientUserId).getUserSettings())
+        ?.notification;
+      if (
+        !notificationEventEnabled(
+          settings as NotificationSettings | undefined,
+          'inbox',
+          target.type,
+        )
+      )
+        continue;
       await this.db.transaction(async (tx) => {
         const model = new NotificationModel(tx as typeof this.db, target.recipientUserId, {
           workspaceId: row.workspaceId ?? null,

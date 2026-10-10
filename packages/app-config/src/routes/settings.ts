@@ -121,6 +121,14 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // to fall through to Appearance; it must not, so it deliberately names no
   // alias and answers not-found.
   [SettingsTabs.LLM]: { status: 'retired' },
+  // Agent labels only decorated the agent list; nothing in assignment,
+  // orchestration or execution read them. The page is gone and old links land
+  // on the settings root (Profile, the index tab).
+  [SettingsTabs.Labels]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+  // The Security tab was an empty redirect to the settings index with no
+  // sidebar entry. (The sidebar *group* of that name holds Credentials and
+  // API keys and is unrelated.)
+  [SettingsTabs.Security]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
   [SettingsTabs.ServiceModel]: { scope: 'user', status: 'enabled' },
   [SettingsTabs.TTS]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
 
@@ -138,16 +146,9 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Hotkeys are a desktop concept; the mobile shell has nothing to bind.
   [SettingsTabs.Hotkey]: { gate: ({ mobile }) => !mobile, scope: 'user', status: 'enabled' },
 
-  // Desktop notifications are a local capability, so the page is served on
-  // Electron regardless of whether the deployment ships the business pages
-  // that host the rest of the notification settings. Without either, the Web
-  // component is a blank business placeholder, so the URL answers not-found
-  // instead of an empty pane.
-  [SettingsTabs.Notification]: {
-    gate: ({ enableBusinessFeatures, isDesktop }) => enableBusinessFeatures || isDesktop,
-    scope: 'user',
-    status: 'enabled',
-  },
+  // Personal inbox and push preferences are available on every deployment.
+  // Electron adds local sound controls to the same settings surface.
+  [SettingsTabs.Notification]: { scope: 'user', status: 'enabled' },
 
   [SettingsTabs.Memory]: { scope: 'user', status: 'enabled' },
   // Electron-only: both pages configure the desktop runtime, and neither has
@@ -169,7 +170,6 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Messenger/IM adapters were retired as a product surface; stored links are dead ends.
   [SettingsTabs.Messenger]: { status: 'retired' },
   [SettingsTabs.Connector]: { scope: 'user', status: 'enabled' },
-  [SettingsTabs.Labels]: { scope: 'user', status: 'enabled' },
   // The user-built OAuth application console was retired. First-party clients
   // (`orvilo-cli`, desktop, mobile, market) come from the provider's static
   // `defaultClients`, and login / GitHub / Linear / device auth never went
@@ -212,13 +212,14 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
     scope: 'user',
     status: 'enabled',
   },
-  [SettingsTabs.Security]: { scope: 'user', status: 'enabled' },
 
   [SettingsTabs.Storage]: { scope: 'user', status: 'enabled' },
   [SettingsTabs.Devices]: { scope: 'device', status: 'enabled' },
 
   [SettingsTabs.Advanced]: { scope: 'user', status: 'enabled' },
-  [SettingsTabs.Labs]: { scope: 'user', status: 'enabled' },
+  // Labs held only on/off switches for features that now ship unconditionally,
+  // so the page was retired. Old bookmarks land on Advanced, its sibling.
+  [SettingsTabs.Labs]: { aliasOf: SettingsTabs.Advanced, status: 'retired' },
   // `hideDocs` withholds the *documentation* surface. The About page also
   // carries version, update channel and diagnostics, and `/apps` (retired)
   // still redirects into it, so the page stays enabled and only its nav row
@@ -302,15 +303,23 @@ export interface WorkspaceSettingsAlias {
   alias: string;
   /** Keep `<alias>/:sub` deep links too. */
   subPaths?: boolean;
-  /** Live workspace tab to land on, or `root` for the workspace settings index. */
+  /**
+   * Where the alias lands: a live workspace tab, `root` for the workspace
+   * settings index, or an absolute path (leading `/`) that leaves the
+   * workspace for a personal page.
+   */
   target: string | 'root';
 }
 
 export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   { alias: 'creds', target: 'credential' },
-  // `provider` and `service-model` are live workspace tabs again (restored P30
-  // provider surface), so they are registered by the leaves list, not here —
-  // an alias redirect would shadow the real pages.
+  // Provider bindings and the default-model assignments are per-user (they are
+  // written through the caller's personal settings and `provider_bindings`), so
+  // the workspace copies were retired and the old URLs land on the personal
+  // pages that actually own them. `provider/:providerId` deep links are handled
+  // by `WorkspaceProviderRedirect`, which keeps the provider id.
+  { alias: 'provider', target: '/settings/provider' },
+  { alias: 'service-model', target: '/settings/service-model' },
   //
   // The skill marketplace and the OAuth-app console are deliberately absent:
   // nothing succeeded them. A redirect to the settings root would imply the
@@ -321,4 +330,77 @@ export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   // The workspace Storage page held only permanently disabled "coming soon"
   // controls, so it was retired. Old bookmarks land on the settings index.
   { alias: 'storage', target: 'root' },
+  // The workspace Labs mirror was retired with the personal page; old bookmarks
+  // land on its sibling Advanced tab.
+  { alias: 'labs', target: 'advanced' },
+  // Agent labels were removed; old workspace bookmarks land on the settings index.
+  { alias: 'labels', target: 'root' },
+  // Account, notification, connector and developer pages follow the person,
+  // not the workspace. Their workspace mirrors rendered the very same personal
+  // pages inside a second sidebar, so the mirrors were retired and the old URLs
+  // land on the pages that own them.
+  { alias: 'about', target: '/settings/about' },
+  { alias: 'advanced', target: '/settings/advanced' },
+  { alias: 'apikey', target: '/settings/apikey' },
+  { alias: 'appearance', target: '/settings/appearance' },
+  { alias: 'connector', target: '/settings/connector' },
+  { alias: 'hotkey', target: '/settings/hotkey' },
+  { alias: 'notification', subPaths: true, target: '/settings/notification' },
+  { alias: 'profile', target: '/settings/profile' },
 ];
+
+/**
+ * Workspace settings tabs that only exist where the business overlay ships
+ * (`enableBusinessFeatures`). The open-source build has no page behind them —
+ * the business slot resolves to an empty component or to switches nothing reads
+ * — so a direct visit must behave like an unknown tab, not render a blank pane.
+ *
+ * Notification is not here: its preferences are personal, so the workspace URL
+ * is a redirect to the personal page on every deployment.
+ */
+const BUSINESS_ONLY_WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
+  'billing',
+  'budget',
+  'credits',
+  'plans',
+  'usage',
+]);
+
+export interface WorkspaceSettingsCapabilityContext {
+  /** The deployment ships the business (subscription / usage / billing) pages. */
+  enableBusinessFeatures: boolean;
+}
+
+/**
+ * Whether `/:workspaceSlug/settings/<tab>` may render in this deployment. Only
+ * answers for the deployment-level business gate; role checks stay with the
+ * pages and the nav.
+ */
+export const isWorkspaceSettingsTabAvailable = (
+  tab: string,
+  { enableBusinessFeatures }: WorkspaceSettingsCapabilityContext,
+): boolean => enableBusinessFeatures || !BUSINESS_ONLY_WORKSPACE_SETTINGS_TABS.has(tab);
+
+/**
+ * Capabilities whose workspace page is a superset of the personal one: the
+ * shared device pool next to the private devices, statistics with the
+ * by-member split, shared credentials next to the personal ones. Inside a
+ * workspace there is one page per capability, so the personal URL moves there.
+ */
+const WORKSPACE_PAGE_OF_PERSONAL_TAB: Readonly<Record<string, string>> = {
+  [SettingsTabs.Creds]: 'credential',
+  [SettingsTabs.Devices]: 'devices',
+  [SettingsTabs.Stats]: 'statistics',
+};
+
+/**
+ * Where `/settings/<tab>` belongs while a workspace is active, or `undefined`
+ * when the personal page is the right one (no workspace, or a personal tab).
+ */
+export const resolveWorkspaceSettingsUrl = (
+  tab: string | undefined,
+  slug: string | null | undefined,
+): string | undefined => {
+  if (!tab || !slug || !Object.hasOwn(WORKSPACE_PAGE_OF_PERSONAL_TAB, tab)) return undefined;
+  return `/${slug}/settings/${WORKSPACE_PAGE_OF_PERSONAL_TAB[tab]}`;
+};

@@ -145,9 +145,6 @@ The following is `git diff --name-only` from the exact base to implementation HE
 - `src/features/Memory/search/index.tsx`
 - `src/features/Memory/useScopedMemoryEditor.test.ts`
 - `src/features/Memory/useScopedMemoryEditor.ts`
-- `src/features/Settings/ProviderBindings/index.tsx`
-- `src/features/Settings/ProviderBindings/useBindingFeedback.test.ts`
-- `src/features/Settings/ProviderBindings/useBindingFeedback.ts`
 - `src/features/Settings/features/componentMap.desktop.ts`
 - `src/features/Settings/features/componentMap.ts`
 - `src/features/Settings/hooks/useCategory.test.tsx`

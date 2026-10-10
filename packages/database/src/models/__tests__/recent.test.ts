@@ -744,6 +744,10 @@ describe('RecentModel', () => {
         await serverDB
           .insert(workspaces)
           .values({ id: workspaceId, name: 'ws', primaryOwnerId: userId, slug: workspaceId });
+        await serverDB.insert(workspaceMembers).values([
+          { role: 'member', userId, workspaceId },
+          { role: 'member', userId: otherUserId, workspaceId },
+        ]);
         await serverDB
           .insert(agents)
           .values({ id: 'agent-ws', userId, slug: 'inbox', workspaceId });
@@ -1077,10 +1081,13 @@ describe('RecentModel', () => {
             workspaceId,
           });
           // project_members carries a composite FK to workspace_members.
-          await serverDB.insert(workspaceMembers).values([
-            { role: 'member', userId: otherUserId, workspaceId },
-            { role: 'owner', userId, workspaceId },
-          ]);
+          await serverDB
+            .insert(workspaceMembers)
+            .values([
+              { role: 'member', userId: otherUserId, workspaceId },
+              { role: 'owner', userId, workspaceId },
+            ])
+            .onConflictDoNothing();
           await serverDB.insert(projects).values({
             id: 'recent-proj-granted',
             identifier: 'RG',
@@ -1123,7 +1130,7 @@ describe('RecentModel', () => {
           ]);
         });
 
-        it('does not surface public-visibility private-team task titles to a non-member', async () => {
+        it('shares private-Team Issue titles with active workspace readers', async () => {
           await serverDB.insert(teams).values([
             {
               createdByUserId: userId,
@@ -1208,6 +1215,7 @@ describe('RecentModel', () => {
             'Assigned recents task',
             'Private-visibility recents task',
             'Public-team recents task',
+            'Secret recents task',
           ]);
         });
 

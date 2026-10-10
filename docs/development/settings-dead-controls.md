@@ -46,3 +46,91 @@ The retired workspace Storage URL remains a bookmark redirect to the workspace s
 - **`navigateToChat` ("切换至默认会话") is kept**: `useNavigateToChatHotkey` registers a handler through `useRegisterGlobalHotkeys`.
 - zh-CN labels for Quick Chat / Quick Composer are translated.
 - Settings > About hides the "Get desktop app" section inside the desktop app.
+
+## 2026/10/09 移除 Labs 设置页
+
+Labs 里每个开关的默认值都是开（`DEFAULT_PREFERENCE.lab`），页面实际只剩一个把核心功能关掉的入口，所以整页移除，原先被它控制的功能一律无条件启用。
+
+| 项   | 处理                                                                                                                                                                                                                                                                                                                                                      |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 开关 | `enableAgentGraphConfig`、`enableInputMarkdown`、`enableMessageTextSelectionActions`、`enableSelfLearning`、`enableTopicAcceptance`、`enableProjects`、`enableDesktopSplitView`、`enableHeteroSessionImport` 的读取点全部去掉条件。`enableTaskVerify`、`enableArtifactDeployment` 早已没有读取点，只删选择器。桌面端专属功能仍由各自的 `isDesktop` 判断。 |
+| 代码 | 删除 `LAB_FEATURES`、`labPreferSelectors`、`src/features/Settings/labs`、工作区 Labs 路由与 `ProjectDisabled`（它唯一的出口是 `/settings/labs`）。                                                                                                                                                                                                        |
+| 入口 | 个人与工作区两个侧栏、移动端标题映射、组件映射、搜索索引（含 Labs 标签关键词）全部去掉。`/settings/labs` 通过 `SETTINGS_CAPABILITIES` 的 `aliasOf` 重定向到 Advanced；`/:slug/settings/labs` 通过 `WORKSPACE_SETTINGS_ALIASES` 重定向到 Advanced，并从 `WORKSPACE_SETTINGS_TABS` 去掉。`SettingsTabs.Labs` 枚举值保留，作为退役注册表的键。               |
+| 文案 | 删除 `labs` 命名空间（`default/labs.ts`、en-US、zh-CN）、`settingsSearch.tabKeywords.labs`、`project` 里的 `disabled.*`。其他语言包的 `labs.json` 留给每日 i18n 流程清理。                                                                                                                                                                                |
+| 保留 | 持久化的 `preference.lab` 字段、`UserLab` 类型和默认常量不动，避免数据迁移；只是不再读取。                                                                                                                                                                                                                                                                |
+
+## 2026/10/09 移除无读取方的设置项
+
+只删控件与死代码；持久化类型字段与默认值保留（见 "未做"）。
+
+| 项                                                                                       | 证据                                                                                                                                                                                                              | 处理                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Service model「Prompt Rewriting / AI Image Topic Naming / Auto context compression」三行 | `src`、`packages`、`apps` 全仓搜索：`promptRewrite` 仅有 selector 与服务端 env 默认值；`generationTopic` 无读取（图片工作台已退役）；`historyCompress` 唯一读取方是 `internal_summaryHistory`，该 action 零调用方 | 删除三行、两个 selector、整个 `state/memory.ts`（类内只剩这一个方法）及其在 `agentRun/actions/index.ts` 的接线、en-US /zh-CN/default 的 `systemAgent.{key}.*` 文案 |
+| About 页 Blog、服务条款、隐私政策                                                        | `curl` 官网 `/blog`、`/terms`、`/privacy` 均返回 404                                                                                                                                                              | 删除 Blog 卡片与整个 Legal 分组、`common` 的 `blog` / `legal` / `terms` / `privacy` 文案（仅 About 使用）                                                          |
+| 旧 Linear 同步设置页 `WorkspaceSetting/Linear` 及路由桩 `settings/linear/index.tsx`      | 全仓无导入（含测试、barrel）；`/:slug/settings/linear` 由 `sharedMainAreaLeaves.tsx` 重定向到 `imports/linear`                                                                                                    | 删除页面与路由桩，保留重定向                                                                                                                                       |
+
+### 未做
+
+- `DEFAULT_SYSTEM_AGENT_CONFIG` / `UserSystemAgentConfig` 中的 `promptRewrite`、`generationTopic`、`historyCompress` 字段，以及 `parseSystemAgent.ts` 的 `promptRewrite` 默认值：已持久化到用户设置，服务端 env 解析测试仍断言 `historyCompress`，删除需要迁移，保留。
+- `TERMS_URL` / `PRIVACY_URL`：登录页与授权弹窗仍在用，只移除 About 引用；`BLOG` 常量已无引用，但在 `packages/const`，本次不动。
+- `workspaceSetting.linear.*` 文案：`LinearImport` 仍共用大量键且存在模板拼接键，无法证明旧页独有，保留。
+- 存储页 `useTransferAgentsFormItem`：位于 `src/business/client/hooks`，是业务 overlay 注入点，保留。
+- `agentMeta`、`topicAutoSummary`、记忆相关行仍在调查，未触碰。
+## 2026/10/09：移除 Agent 标签与空 Security 标签页
+
+Owner 决定：删除 Agent 标签功能和空的 Security 设置标签页。只做前端删除，不重组、不改名。
+
+- **Agent 标签**：标签只装饰 Agent 列表，Issue 指派、编排、执行都不读它。删除个人与工作区设置页（`src/features/Settings/labels`、`src/features/WorkspaceSetting/Labels`、工作区路由叶子）、两处侧栏入口、`WorkspaceSettingsTabs.Labels`、Agent 条目菜单的标签子菜单、Agent 列表页的标签胶囊与「按标签分组」、`useFetchAgentLabels`、home store 的 label slice 与 `agentLabelKeys`、客户端 `agentLabelService`，以及仅这些界面使用的 en-US /zh-CN/default locale key。
+- **Security 标签页**：`SettingsTabs.Security` 只是 `<Navigate to="/settings">`，没有侧栏入口。删除组件、组件映射与 `mobile` 参数分支。侧栏的 “Security & access” 分组（凭证与 API Key）是另一回事，保留。
+- **旧链接**：`SettingsTabs.Labels` / `SettingsTabs.Security` 枚举成员保留（注册表按枚举全量登记），状态改为 `retired` 并 alias 到设置首页 `Profile`；工作区 `/:slug/settings/labels` 通过 `WORKSPACE_SETTINGS_ALIASES` 重定向到设置首页，并像 `storage` 一样从 `WORKSPACE_SETTINGS_TABS` 去掉，避免个人链接被改写到工作区路径。持久化的 Agent 列表 `groupBy: 'label'` 会被 `normalizeAgentListViewOptions` 归一为 `none`。
+- **保留**：服务端 `apps/server/src/routers/lambda/agentLabel.ts`、DB 模型与 schema、`SidebarAgentItem.labels` 类型字段（后端清理另开 Issue）；Issue 标签（`taskLabel`、`ProjectLabelPicker`、`TaskLabelSelector`）和 `members.agentLabel`（“Agent” 文案）与此无关。
+- **防回潮**：`retiredSettingsSurfaces.test.ts` 断言两页、工作区镜像、客户端 store /service/hook 不存在，组件映射与侧栏不再引用，注册表别名仍在。
+- **验证**：`bun run check`；未在 Electron 与 Vercel 预览验证（后续进行）。
+## 2026/10/09 删除对话时代的服务模型功能
+
+Orvilo 以看板为中心，chat 只用来和 Agent 说话。以下功能连同设置一起删除，只改前端；后端与持久化字段留给后端 issue。
+
+| 功能             | 删除内容                                                                                                                                                                                                                               | 保留                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 消息内容翻译     | 服务模型一行；`store/chat/slices/translate`；消息菜单与右键菜单的翻译项；`Extras/Translate`；`chainTranslate` / `chainLangDetect` 两条 prompt 链及测试。                                                                               | `ChatTranslate` 类型、`updateTranslate` 路由、`messageTranslates` 表、追踪场景常量。           |
+| 语音合成（TTS）  | 设置里的 `ttsModel` 块与 `enableSTT` 门；`webapi/tts/openai` 路由；`useTTS`；`Extras/TTS`；`store/chat/slices/tts`；`store/file/slices/tts`；消息菜单与右键菜单的 TTS 项；`currentTTS`、`currentAgentTTS*` 等无调用方的选择器。        | `tts` 持久化设置与 Agent 配置的类型与默认值、`enableSTT` 特性开关本身、`@lobehub/tts` 依赖。   |
+| 跟进建议         | 服务模型一行；`useChatFollowUp` 及其四个接入点；`FollowUpChips`；`store/followUpAction`；`services/followUpAction`；聊天输入参数里的跟进建议开关。                                                                                     | `chatConfig.enableFollowUpChips` 字段、服务端 `followUpAction` 路由与 prompt 链。              |
+| 输入建议         | 服务模型一行；`InputEditor` 里的补全与反馈逻辑；`ChatInput` store 的错误断路器；`InputCompletionErrorAlert`；业务槽 `useBusinessInputCompletionErrorAlert`；`inputCompletionError`；`feature.inputCompletion`。                        | 服务端 `aiChat` 路由里的补全入口与追踪；`input.inputCompletionError.retry`（语音消息复用）。   |
+| 档案信息生成     | 服务模型一行；`AgentSetting` store 里的 `autoPickEmoji` / `autocomplete*` 与 `internal_getSystemAgentForMeta`；`useAgentSettings` 与无人使用的 `instanceRef`。                                                                         | 服务端 `generateSkillMeta`。                                                                   |
+| 话题自动总结     | 服务模型两行（开关 + 模型）与自定义提示词输入；`topicAutoSummary` 选择器。                                                                                                                                                             | 服务端工作流与 `topicSummary` 数据模型。                                                       |
+| 开场白与建议问题 | Settings → Agents 的开场设置区块；旧版 Agent 设置里的「开场设置」页签（`ChatSettingsTabs.Opening`）；无调用方的群组设置弹窗；Portal Agent 详情、AgentHome、群组欢迎页里对开场白与建议问题的读取；`AIChatbot/Suggestions`；相关选择器。 | `openingMessage` / `openingQuestions` 持久化字段与类型；Agent Builder 工具与上下文注入的读写。 |
+
+每个被删的 `systemAgent` 键同时删除了选择器与 en-US、zh-CN 与 default 文案；其它语言交给每日 CI。`UserServiceModelConfig` 的字段与 `DEFAULT_SYSTEM_AGENT_CONFIG` 里的默认值保留：去掉字段需要迁移，且 `parseSystemAgent` 仍按这些键解析部署配置。
+
+### 需要后端处理
+
+- 服务端 `followUpAction` 路由、`aiChat` 的输入补全、`topicAutoSummary` 工作流与 `generateSkillMeta`，以及对应的 prompt 链与追踪场景。
+- `systemAgent` 里六个键的字段与 `parseSystemAgent` 的解析；`tts` 设置与 `enableSTT` 开关；`messageTranslates` 表。
+
+### 未决
+
+- 旧版桌面 Agent 设置弹窗（`openAgentSettingsModal`）在三个页签（规则、自我迭代、Graph）都被开关关掉时没有页签；它唯一的入口 `routes/(main)/agent/profile` 已无路由（`/agent/:aid/profile` 重定向到 Settings → Agents），未做处理。
+- 语音转文字（STT）没有任何可达界面，只剩无人读取的 `tts.sttModel` 等持久化字段，未做处理。
+## 2026/10/09 Service model: topic naming follows the agent
+
+- **Topic titles follow the conversation's agent.** `summaryTopicTitle` no longer reads `systemAgent.topic`. The model comes from the topic's agent (`topic.agentId`, else the active agent) via `resolveTopicTitleModel` (`src/store/chat/slices/topic/topicTitle.ts`). A built-in Orvilo agent with its own model/provider names the topic through the same `generateJSON` path as before; a heterogeneous (CLI/ACP) agent, a missing agent or a model-less agent never calls an Orvilo cloud model and gets `sliceTopicTitle` (first user message, plain text, 80 chars) instead. A failed generation falls back to the same slice. The dev-only fast path in `buildRunLifecycle.ts` reuses the helper. `summaryThreadTitle` uses `systemAgent.thread`, not `topic`, and is unchanged.
+- **Removed the "Topic Auto-Naming" row** (`SYSTEM_AGENT_MODEL_ITEMS`), the `systemAgentSelectors.topic` selector, its `systemAgent.topic.*` locale keys and the settings-search keyword. `topic` joins the `Exclude` list of `ModelAssignmentItemKey`.
+- **"New Agent" is now "Default model".** The control and its field (`settings.defaultAgent.config`) are live: the server merges it under any personal agent whose model is empty. Only the copy changed, plus a one-line description.
+- Anti-resurrection assertions live in `retiredSettingsSurfaces.test.ts`.
+
+Backend follow-up (not touched here): the persisted `systemAgent.topic` field and its default, and the `taskReview` reader in `apps/server/src/services/taskReview/index.ts`, remain server-side.
+## 2026-10-09: executable model routes and notification preferences (#621, #623, #624)
+
+Provider settings now resolve standard OpenAI-compatible service endpoints when only a key is supplied. Saving credentials or enabling a model keeps its binding disabled until a completion probe and capability check succeed. Credential changes invalidate enabled routes before replacing the shared secret; checks are fenced by the binding revision. Unsupported protocols and local/device targets remain visible with a reason in the built-in Agent settings. Batch enable verifies each model once.
+
+Planning, acceptance drafting and self-evolution resolve the owning built-in Agent model before the global service fallback. A configured but unavailable binding blocks the operation rather than silently substituting another model. CLI Agent owners are explicitly unsupported for these server judgments. Memory extraction covers conversations from all runtimes; memory injection remains built-in-only.
+
+Workspace owners/admins can update name, URL slug and icon through the scoped workspace update procedure. Duplicate slugs fail with a conflict, and a successful slug edit redirects the settings URL. Personal and workspace notification settings expose inbox and push preferences for Issue assignment, review requests, status changes, run completion, run failure and approval. Workspace events read workspace preferences rather than personal overrides. Email is hidden because the open-source build has no email delivery pipeline.
+
+Backend retirement (#622) is deliberately deferred until frontend PRs #612, #615, #616 and #617 merge. These changes do not delete their routes, persisted settings or tables.
+
+### Settings design-system follow-up
+
+The affected workspace forms and notification surfaces now share the existing 640px settings lane, semantic colors, 14px labels, and local controls. General fields stack at narrow container widths, use 36px inputs, and keep Save in a compact action row. Notification sections reuse `FormGroup`, have distinct accessible channel/event labels, and do not add an embedded page heading or idle save badge to the desktop sound page. Provider diagnostics sit below model selection, wrap long IDs, and use readable text beside their verification action. Scoped loading skeletons match the new layouts.
+
+Personal inbox/push preferences now also render on the ordinary Web deployment. This supersedes the old Notification business-feature gate in item 19 above; Electron still adds device-local sound settings. The capability regression fails with the former gate and passes after removal.

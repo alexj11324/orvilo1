@@ -2,6 +2,7 @@ import {
   type DataSyncConfig,
   type ElectronAppState,
   type GatewayConnectionStatus,
+  type GatewayLocalState,
   type NetworkProxySettings,
 } from '@orvilo/electron-client-ipc';
 
@@ -31,6 +32,7 @@ export interface ElectronState extends CurrentRouteMetaState, RecentPagesState, 
   desktopHotkeys: Record<string, string>;
   gatewayConnectionStatus: GatewayConnectionStatus;
   gatewayDeviceInfo?: GatewayDeviceInfo;
+  gatewayLocalState?: GatewayLocalState;
   isAppStateInit?: boolean;
   isConnectingServer?: boolean;
   isConnectionDrawerOpen?: boolean;

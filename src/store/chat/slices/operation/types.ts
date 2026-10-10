@@ -71,9 +71,7 @@ export type OperationType =
   // Context compression (compress old messages into summary)
   | 'contextCompression'
   | 'createMessageGroup'
-  | 'generateSummary'
-  // === Others ===
-  | 'translate'; // Translate message
+  | 'generateSummary';
 
 /**
  * Operation status

@@ -74,7 +74,15 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
     );
 
   if (!collaborators || collaborators.length === 0)
-    return <div className={styles.empty}>{t('permission.collaborators.empty')}</div>;
+    return (
+      <div className={styles.empty}>
+        {t(
+          resourceType === 'agent'
+            ? 'settingAgent.useMembers.empty'
+            : 'permission.collaborators.empty',
+        )}
+      </div>
+    );
 
   return (
     <div className="flex flex-col">
@@ -97,7 +105,9 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
                 <div className="truncate min-w-0 text-[12px] text-muted-foreground">{email}</div>
               ) : null}
             </div>
-            {levelLabel ? <Badge variant="secondary">{levelLabel}</Badge> : null}
+            {resourceType !== 'agent' && levelLabel ? (
+              <Badge variant="secondary">{levelLabel}</Badge>
+            ) : null}
             <AlertDialog>
               <AlertDialogTrigger
                 render={

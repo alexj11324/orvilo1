@@ -15,7 +15,6 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
-import ProjectDisabled from '@/features/Projects/ProjectDisabled';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
@@ -26,8 +25,6 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import TeamIdentity from '@/features/WorkTeams/TeamIdentity';
 import { projectService } from '@/services/project';
 import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
-import { useUserStore } from '@/store/user';
-import { labPreferSelectors } from '@/store/user/selectors';
 
 import {
   ProjectUpdateComposer,
@@ -105,7 +102,6 @@ const ProjectWorkspace = memo(() => {
   const { t } = useTranslation('project');
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useWorkspaceAwareNavigate();
-  const enabled = useUserStore(labPreferSelectors.enableProjects);
   const detail = useCurrentProjectDetail(projectId);
   const updateProject = useProjectStore((s) => s.updateProject);
   const { error, isLoading, mutate } = useProjectStore((s) => s.useFetchProjectDetail)(projectId);
@@ -118,7 +114,6 @@ const ProjectWorkspace = memo(() => {
   const membersSWR = useProjectMembersQuery(databaseId, membersEnabled && !!databaseId);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  if (!enabled) return <ProjectDisabled />;
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
   if (isLoading || !detail)
     return (
@@ -176,12 +171,14 @@ const ProjectWorkspace = memo(() => {
               />
               <div className="flex flex-col" style={{ gap: 2 }}>
                 <ProjectOverviewField
+                  canEdit={detail.capabilities?.canEdit}
                   key={`${project.id}:name`}
                   kind="name"
                   value={project.name}
                   onSave={(name) => updateProject(project.id, { name })}
                 />
                 <ProjectOverviewField
+                  canEdit={detail.capabilities?.canEdit}
                   key={`${project.id}:summary`}
                   kind="summary"
                   value={project.summary ?? ''}
@@ -211,7 +208,7 @@ const ProjectWorkspace = memo(() => {
                   <Button
                     aria-label={t('properties.status')}
                     className={PROPERTY_CONTROL_CLASS}
-                    disabled={updatingStatus || lifecycleLocked}
+                    disabled={updatingStatus || lifecycleLocked || !detail.capabilities?.canEdit}
                     variant="ghost"
                   >
                     <ProjectStatusIcon
@@ -243,7 +240,13 @@ const ProjectWorkspace = memo(() => {
                   </WorkspaceLink>
                 ))}
                 {membersEnabled && (
-                  <ProjectMembersField projectId={project.id} query={membersSWR} />
+                  <ProjectMembersField
+                    canManage={detail.capabilities?.canManage}
+                    projectId={project.id}
+                    projectVisibility={project.visibility}
+                    query={membersSWR}
+                    onChanged={() => mutate()}
+                  />
                 )}
               </div>
             </div>
@@ -307,7 +310,7 @@ const ProjectWorkspace = memo(() => {
                   />
                 ) : (
                   <ProjectUpdateRow
-                    canEdit={canModerateUpdate(update)}
+                    {...canModerateUpdate(update)}
                     key={update.id}
                     update={update}
                     onChanged={() => void updatesSWR.mutate()}
@@ -317,6 +320,7 @@ const ProjectWorkspace = memo(() => {
               )}
             </div>
             <ProjectDescription
+              canEdit={detail.capabilities?.canEdit}
               description={project.description}
               key={project.id}
               projectId={project.id}

@@ -27,10 +27,7 @@ interface SectionHeaderProps {
  */
 const SectionHeader = ({ children, contextMenu, moreLabel, moreMenu }: SectionHeaderProps) => {
   const renderLabel = (trigger: ReactElement) => (
-    <SidebarGroupLabel
-      className="w-full cursor-pointer gap-0.5 whitespace-nowrap group-data-[collapsible=icon]:hidden"
-      render={trigger}
-    >
+    <SidebarGroupLabel className="w-full cursor-pointer gap-0.5 whitespace-nowrap" render={trigger}>
       {children}
       <SidebarCollapseIcon />
     </SidebarGroupLabel>

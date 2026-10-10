@@ -71,6 +71,15 @@ afterEach(async () => {
 });
 
 describe('ProviderBindingPlane write→read roundtrip', () => {
+  it('resolves a key-only OpenAI provider and keeps its model disarmed until verified', async () => {
+    await plane().updateProviderConfig('openai', { keyVaults: { apiKey: 'sk-invalid-fixture' } });
+    await plane().setProviderEnabled('openai', true);
+    await plane().setModelEnabled('openai', 'gpt-4o-mini', true);
+    const [row] = await modelRowsOf('openai');
+    expect(row.config.endpoint).toBe('https://api.openai.com/v1');
+    expect(row.config.enabled).toBe(false);
+  });
+
   it('persists provider writes into bindings + credential and reads them back', async () => {
     await plane().createProvider({
       id: providerId,
@@ -185,7 +194,7 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
     // Enabled model materialized, disabled one did not.
     const rows = await modelRowsOf();
     expect(rows.map((row) => row.config.model)).toEqual(['m-a']);
-    expect(rows[0].config.enabled).toBe(true);
+    expect(rows[0].config.enabled).toBe(false);
     expect(rows[0].config.endpoint).toBe('https://legacy.example/v1');
 
     // keyVaults hydrated from the credential.
@@ -205,7 +214,7 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
 
     let rows = await modelRowsOf();
     expect(rows).toHaveLength(2);
-    expect(rows.every((row) => row.config.enabled)).toBe(true); // provider created enabled:true
+    expect(rows.every((row) => !row.config.enabled)).toBe(true); // provider enabled is not verification
 
     await plane().setProviderEnabled(providerId, false);
     rows = await modelRowsOf();
@@ -218,7 +227,41 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
     await plane().setProviderEnabled(providerId, true);
     rows = await modelRowsOf();
     expect(rows).toHaveLength(1);
-    expect(rows[0].config.enabled).toBe(true);
+    expect(rows[0].config.enabled).toBe(false);
+  });
+
+  it('rechecks after a key change and never arms a rejected connection', async () => {
+    let accepted = true;
+    const verifyBindings = vi.fn(async (rows) => {
+      if (accepted) for (const row of rows) await bindings().setEnabled(row.id, true);
+    });
+    const verifiedPlane = new ProviderBindingPlane(db, owner, { verifyBindings });
+    await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'fixture' } });
+    await verifiedPlane.setProviderEnabled('openai', true);
+    await verifiedPlane.setModelEnabled('openai', 'gpt-4o-mini', true);
+    expect((await modelRowsOf('openai'))[0].config.enabled).toBe(true);
+    accepted = false;
+    await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'wrong' } });
+    expect((await modelRowsOf('openai'))[0].config.enabled).toBe(false);
+    expect(verifyBindings).toHaveBeenCalledTimes(2);
+  });
+
+  it('verifies once per provider for a batch and subsequent config mutations', async () => {
+    const verifyBindings = vi.fn(async (_rows: { config: { model: string } }[]) => undefined);
+    const verifiedPlane = new ProviderBindingPlane(db, owner, { verifyBindings });
+    await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'fixture' } });
+    await verifiedPlane.setProviderEnabled('openai', true);
+    await verifiedPlane.setModelsEnabled('openai', ['model-a', 'model-b', 'model-c'], true);
+    expect(verifyBindings).toHaveBeenCalledTimes(1);
+    expect(verifyBindings.mock.calls[0][0].map((row) => row.config.model).sort()).toEqual([
+      'model-a',
+      'model-b',
+      'model-c',
+    ]);
+    verifyBindings.mockClear();
+    await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'replacement' } });
+    expect(verifyBindings).toHaveBeenCalledTimes(1);
+    expect(verifyBindings.mock.calls[0][0]).toHaveLength(3);
   });
 
   it('unmanaged providers are unaffected by model mirrors', async () => {
@@ -273,8 +316,10 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
 
     expect(await bindings().list()).toEqual([]);
     expect(await new CredentialModel(db, owner).listPersonal()).toEqual([]);
-    expect(await db.query.aiProviders.findMany()).toEqual([]);
-    expect(await db.query.aiModels.findMany()).toEqual([]);
+    expect(await db.query.aiProviders.findMany({ where: eq(aiProviders.userId, owner) })).toEqual(
+      [],
+    );
+    expect(await db.query.aiModels.findMany({ where: eq(aiModels.userId, owner) })).toEqual([]);
   });
 
   it("leaves foreign users blind to the owner's bindings", async () => {
@@ -380,6 +425,11 @@ describe('ProviderBindingPlane workspace scope', () => {
     expect(
       await db.query.aiProviders.findFirst({ where: legacyProviderWhere(providerId) }),
     ).toBeUndefined();
+
+    // A server verification is required before the migrated route can resolve.
+    expect(await resolveLike('sandbox')).toBeUndefined();
+    const [unverified] = await modelRowsOf();
+    await bindings().setEnabled(unverified.id, true);
 
     // The enabled model materialized a route row the canonical resolver
     // predicate matches: runtime 'orvilo' + https → 'sandbox' target.
@@ -504,12 +554,16 @@ describe('ProviderBindingPlane workspace scope', () => {
     await wsPlane.deleteProvider(providerId);
 
     expect(await bindings().list()).toEqual([]);
-    expect(await db.query.aiProviders.findMany()).toEqual([
-      expect.objectContaining({ name: 'Foreign', userId: foreign }),
-    ]);
-    expect(await db.query.aiModels.findMany()).toEqual([
-      expect.objectContaining({ id: 'm-foreign', userId: foreign }),
-    ]);
+    expect(
+      await db.query.aiProviders.findMany({
+        where: inArray(aiProviders.userId, [owner, foreign]),
+      }),
+    ).toEqual([expect.objectContaining({ name: 'Foreign', userId: foreign })]);
+    expect(
+      await db.query.aiModels.findMany({
+        where: inArray(aiModels.userId, [owner, foreign]),
+      }),
+    ).toEqual([expect.objectContaining({ id: 'm-foreign', userId: foreign })]);
   });
 });
 

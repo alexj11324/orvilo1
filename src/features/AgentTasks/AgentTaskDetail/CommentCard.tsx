@@ -71,6 +71,8 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   const viewerId = useUserStore(userProfileSelectors.userId);
   const { allowed: canWrite } = usePermission('create_content');
   const actions = getCommentActions(activity, viewerId, { canWrite });
+  const canEdit = actions.canEdit && activity.commentCapabilities?.canEdit === true;
+  const canDelete = actions.canDelete && activity.commentCapabilities?.canDelete === true;
   const copyCommentLink = useCommentCopyLink();
 
   // `#comment-<id>` deep link: scroll the card into view and ring it briefly.
@@ -102,8 +104,8 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   }, [activity.files]);
 
   const handleEdit = useCallback(() => {
-    setIsEditing(true);
-  }, []);
+    if (canEdit) setIsEditing(true);
+  }, [canEdit]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
@@ -117,7 +119,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   );
 
   const handleSave = useCallback(async () => {
-    if (!commentId || submitting) return;
+    if (!canEdit || !commentId || submitting) return;
     const next = String(editor?.getDocument?.('markdown') ?? '').trim();
     const json = editor?.getDocument?.('json') as unknown;
     const hasFiles = getAttachmentFileIdsFromEditor(editor).length > 0;
@@ -129,10 +131,10 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
     } finally {
       setSubmitting(false);
     }
-  }, [commentId, editor, submitting, updateComment]);
+  }, [canEdit, commentId, editor, submitting, updateComment]);
 
   const handleDelete = useCallback(() => {
-    if (!commentId) return;
+    if (!canDelete || !commentId) return;
     confirmModal({
       content: t('taskDetail.comment.deleteConfirm.content'),
       okButtonProps: { danger: true },
@@ -140,7 +142,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
       onOk: () => deleteComment(commentId),
       title: t('taskDetail.comment.deleteConfirm.title'),
     });
-  }, [commentId, deleteComment, t]);
+  }, [canDelete, commentId, deleteComment, t]);
 
   const handleCopyLink = useCallback(() => {
     if (commentId) void copyCommentLink(commentId);
@@ -148,7 +150,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
 
   const menuItems = useMemo(
     () => [
-      ...(actions.canEdit
+      ...(canEdit
         ? [
             {
               danger: false,
@@ -170,7 +172,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
             },
           ]
         : []),
-      ...(actions.canDelete
+      ...(canDelete
         ? [
             {
               danger: true,
@@ -182,15 +184,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
           ]
         : []),
     ],
-    [
-      actions.canCopyLink,
-      actions.canDelete,
-      actions.canEdit,
-      t,
-      handleCopyLink,
-      handleEdit,
-      handleDelete,
-    ],
+    [actions.canCopyLink, canDelete, canEdit, t, handleCopyLink, handleEdit, handleDelete],
   );
 
   return (
@@ -262,7 +256,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
         </Markdown>
       )}
 
-      {!isEditing && commentId && !isOptimisticActivityId(commentId) && (
+      {!isEditing && menuItems.length > 0 && commentId && !isOptimisticActivityId(commentId) && (
         <div className={`${styles.commentActions} comment-actions`}>
           <DropdownMenu>
             <DropdownMenuTrigger

@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles } from 'antd-style';
 import { Check, PenLine, Replace, Send, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -17,18 +16,6 @@ import type { AskUserFormApi } from './useAskUserForm';
 
 const optionValue = (option: AskUserQuestionItem['options'][number]): string =>
   option.id ?? option.label;
-
-const styles = createStaticStyles(({ css }) => ({
-  tabs: css`
-    [role='tablist'] {
-      width: 100%;
-
-      > [role='tab']:has([data-replace-all]) {
-        margin-inline-start: auto;
-      }
-    }
-  `,
-}));
 
 /**
  * A focused interactive control keeps its native key activation — hijacking
@@ -306,7 +293,6 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
     <div className="flex flex-col gap-3" ref={rootRef}>
       {questions.length > 0 && (
         <Tabs
-          className={styles.tabs}
           value={escapeActive ? 'escape' : supplementActive ? 'supplement' : activeTab}
           onValueChange={(key) => {
             if (key === 'escape') {
@@ -318,7 +304,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
             }
           }}
         >
-          <TabsList variant="line">
+          <TabsList className="w-full" variant="line">
             {questions.map((q, idx) => {
               const done = isQuestionAnswered(q, picks, custom);
               return (
@@ -339,7 +325,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
             {isMulti && (
               // Replace-all stays at the far right because it discards the
               // structured selections, unlike additional notes.
-              <TabsTrigger value="escape">
+              <TabsTrigger className="ms-auto" value="escape">
                 <div data-replace-all className="flex items-center gap-[6px]">
                   <Replace size={12} />
                   <div>{labels.escapeEnter}</div>

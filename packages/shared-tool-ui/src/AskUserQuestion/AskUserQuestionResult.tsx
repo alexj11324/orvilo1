@@ -1,99 +1,26 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
 import type { AskUserQuestionItem } from './types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  // Codex-style flat summary: the question keeps the body text color and the
-  // answer drops to tertiary — the exchange reads as a quiet process record,
-  // not an interactive control. No chips, icons, or borders. Tertiary (not
-  // secondary) so the question/answer hierarchy stays legible at a glance.
-  answer: css`
-    font-size: 14px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextTertiary};
-    overflow-wrap: anywhere;
-  `,
-  container: css`
-    padding-block: 8px 4px;
-  `,
-  divider: css`
-    align-self: stretch;
-    height: 1px;
-    margin-block: 4px;
-    background: ${cssVar.colorFillSecondary};
-  `,
-  header: css`
-    flex-shrink: 0;
-
-    padding-inline: 8px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 20px;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  ordinal: css`
-    flex-shrink: 0;
-
-    box-sizing: border-box;
-    width: 28px;
-    height: 20px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    line-height: 20px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  question: css`
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 1.5;
-    color: ${cssVar.colorText};
-    overflow-wrap: anywhere;
-  `,
-  questionContent: css`
-    min-width: 0;
-  `,
-  // Mirrors OptionCard's recommended pill so the marker reads the same in the
-  // form and in the completed summary.
-  recommendedBadge: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 11px;
-    line-height: 18px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  titleRow: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: baseline;
-  `,
-  unanswered: css`
-    font-size: 14px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  // Preserve the tertiary answer tone separately from the secondary badge tone.
+  answer: 'text-sm leading-[1.5] text-(--ant-color-text-tertiary) [overflow-wrap:anywhere]',
+  container: '[padding-block:8px_4px]',
+  divider: 'self-stretch h-px [margin-block:4px] bg-selected',
+  header:
+    'shrink-0 [padding-inline:8px] rounded-(--radius-chip) text-xs font-normal leading-5 text-(--ant-color-text-tertiary) whitespace-nowrap bg-(--ant-color-fill-quaternary)',
+  ordinal:
+    'shrink-0 box-border w-7 h-5 rounded-(--radius-chip) font-mono text-xs tabular-nums leading-5 text-(--ant-color-text-tertiary) text-center bg-(--ant-color-fill-quaternary)',
+  question: 'text-sm font-normal leading-[1.5] text-foreground [overflow-wrap:anywhere]',
+  questionContent: 'min-w-0',
+  recommendedBadge:
+    'shrink-0 [padding-block:1px] [padding-inline:8px] rounded-[999px] text-[11px] leading-[18px] text-muted-foreground bg-selected',
+  titleRow: 'flex flex-wrap gap-2 items-baseline',
+  unanswered: 'text-sm leading-[1.5] text-(--ant-color-text-quaternary)',
+};
 
 export interface AskUserQuestionResultLabels {
   noAnswer: string;

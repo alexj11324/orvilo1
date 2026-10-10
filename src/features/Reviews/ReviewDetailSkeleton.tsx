@@ -3,7 +3,7 @@ import { clsx as cx } from 'cn';
 import SkeletonBar from '@/components/Skeleton/Bar';
 
 const styles = {
-  diff: 'w-full max-w-375 mx-auto [padding-block:16px_48px] px-6 [@media(width<=768px)]:px-2',
+  diff: 'w-full max-w-375 mx-auto pbs-4 pbe-12 px-6 [@media(width<=768px)]:px-2',
   file: 'overflow-hidden border border-divider rounded-(--radius-card)',
   fileHeader: 'p-3 [border-block-end:1px_solid_var(--divider)] bg-fill-quaternary',
   main: 'min-w-0',
@@ -21,7 +21,7 @@ const ReviewDetailSkeleton = ({ view }: { view: 'overview' | 'diff' }) =>
           <SkeletonBar height={12} width={100} />
           <SkeletonBar height={12} width={160} />
         </div>
-        <div className="flex flex-col gap-3 [margin-block-start:32px]">
+        <div className="flex flex-col gap-3 mbs-8">
           <SkeletonBar height={12} width={90} />
           <SkeletonBar height={14} width={'94%'} />
           <SkeletonBar height={14} width={'82%'} />

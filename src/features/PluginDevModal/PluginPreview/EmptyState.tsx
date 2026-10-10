@@ -7,7 +7,7 @@ const styles = {
   iconWrapper: 'flex items-center justify-center size-16 rounded-full bg-primary-wash',
   line: 'h-1.5 rounded-full bg-divider',
   placeholderLine: 'h-1.5 my-2 mx-0 rounded-full bg-divider',
-  title: '[margin-block-end:8px] text-xl leading-7 font-semibold',
+  title: 'mbe-2 text-xl leading-7 font-semibold',
 };
 
 export default function PluginEmptyState() {

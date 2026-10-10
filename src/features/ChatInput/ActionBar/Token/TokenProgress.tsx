@@ -19,9 +19,9 @@ interface TokenProgressProps {
 const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) => {
   const total = data.reduce((acc, item) => acc + item.value, 0);
   return (
-    <div className="flex flex-col gap-2 w-[100%]" style={{ position: 'relative' }}>
+    <div className="flex flex-col gap-2 w-full" style={{ position: 'relative' }}>
       <div
-        className="flex flex-row h-[6px] w-[100%]"
+        className="flex flex-row h-1.5 w-full"
         style={{
           background: total === 0 ? 'var(--ant-color-fill)' : undefined,
           borderRadius: 3,
@@ -31,7 +31,7 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) =
       >
         {data.map((item) => (
           <div
-            className="flex flex-col h-[100%]"
+            className="flex flex-col h-full"
             key={item.id}
             style={{ background: item.color, flex: item.value }}
           />

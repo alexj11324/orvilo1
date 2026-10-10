@@ -60,10 +60,7 @@ const ToggleItem = memo<ToggleOption>(({ value, description, icon, label }) => {
       }}
     >
       <div
-        className={cn(
-          'flex flex-col items-center justify-center flex-none h-[32px] w-[32px]',
-          styles.icon,
-        )}
+        className={cn('flex flex-col items-center justify-center flex-none h-8 w-8', styles.icon)}
       >
         <span className="anticon" role="img">
           {createElement(icon, { size: '1em', width: '1em', height: '1em', fill: 'transparent' })}

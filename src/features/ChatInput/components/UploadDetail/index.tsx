@@ -27,7 +27,7 @@ const UploadDetail = memo<UploadDetailProps>(({ error, uploadState, status, size
   const { t } = useTranslation('chat');
 
   return (
-    <div className="flex flex-row items-center gap-2 h-[22px]">
+    <div className="flex flex-row items-center gap-2 h-5.5">
       <UploadStatus error={error} size={size} status={status} uploadState={uploadState} />
       {!!tasks && Object.keys(tasks).length === 0 ? (
         <div className="text-muted-foreground" style={{ fontSize: 12 }}>

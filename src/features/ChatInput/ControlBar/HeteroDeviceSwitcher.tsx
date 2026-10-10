@@ -78,17 +78,17 @@ const styles = {
   optionDisabled: 'cursor-not-allowed hover:bg-transparent hover:bg-none',
   optionIcon:
     'flex flex-none items-center justify-center w-7 h-7 border border-solid border-sidebar-border rounded-(--radius-card) text-foreground bg-popover bg-none',
-  optionMeta: 'flex flex-1 flex-col gap-[1px] min-w-0',
+  optionMeta: 'flex flex-1 flex-col gap-px min-w-0',
   reconnectButton: 'min-h-4.5 py-0 px-0.5 text-[11px] leading-(--text-xs--line-height)',
   optionTitle:
     'overflow-hidden text-[13px] font-medium text-foreground text-ellipsis whitespace-nowrap',
-  tag: 'flex-none py-0 px-[5px] rounded-(--radius-chip) text-[10px] leading-[16px] text-muted-foreground bg-selected bg-none',
+  tag: 'flex-none py-0 px-1.25 rounded-(--radius-chip) text-[10px] leading-[16px] text-muted-foreground bg-selected bg-none',
   header: 'flex gap-1.5 items-center justify-between py-1 px-2',
   headerInfo:
     'cursor-help text-[var(--ant-color-text-quaternary)] [transition:color_0.2s] hover:text-muted-foreground',
   headerTitle: 'text-[12px] font-medium text-[var(--ant-color-text-tertiary)]',
   manageButton:
-    'cursor-pointer flex gap-[3px] items-center p-0 border-0 text-[11px] text-[var(--ant-color-text-quaternary)] bg-transparent bg-none [transition:color_0.2s] hover:text-primary',
+    'cursor-pointer flex gap-0.75 items-center p-0 border-0 text-[11px] text-[var(--ant-color-text-quaternary)] bg-transparent bg-none [transition:color_0.2s] hover:text-primary',
   groupLabel:
     'py-1 px-2 text-[11px] font-medium text-[var(--ant-color-text-quaternary)] uppercase [letter-spacing:0.04em]',
 };

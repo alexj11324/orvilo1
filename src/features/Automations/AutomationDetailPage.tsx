@@ -1,5 +1,4 @@
 import { agentDisplayName } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -146,7 +145,7 @@ const AgentChip = memo(() => {
       <div
         className="flex items-center gap-2"
         style={{
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          border: `1px solid var(--sidebar-border)`,
           borderRadius: 8,
           cursor: 'pointer',
           paddingBlock: 6,
@@ -158,7 +157,7 @@ const AgentChip = memo(() => {
         <div className="text-[13px]">
           {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
         </div>
-        <ChevronRightIcon color={cssVar.colorTextTertiary} size={14} />
+        <ChevronRightIcon color={'var(--ant-color-text-tertiary)'} size={14} />
       </div>
     </AssigneeAgentSelector>
   );

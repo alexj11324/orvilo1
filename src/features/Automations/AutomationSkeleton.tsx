@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -6,31 +5,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 // The grid templates, paddings and 24px trailing control mirror `row` /
 // `headerRow` in AutomationScheduleList.tsx and AutomationRunsPage.tsx, so the
 // load -> content swap keeps the same row height and column positions.
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  headerRow: css`
-    display: grid;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  row: css`
-    display: grid;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 8px;
-  `,
-  runs: css`
-    grid-template-columns: minmax(0, 2fr) 90px 130px 120px 70px 40px;
-  `,
-  schedule: css`
-    grid-template-columns: 28px minmax(0, 2fr) 130px 110px minmax(0, 1.4fr) 110px 40px;
-  `,
-}));
+const styles = {
+  headerRow: 'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5',
+  row: 'grid items-center gap-3 p-2',
+  runs: 'grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
+  schedule: 'grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
+};
 
 const ROWS = 6;
 

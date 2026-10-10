@@ -1,5 +1,5 @@
 import type { AutomationResultWebhookConfig } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { ChevronRightIcon, TimerIcon } from 'lucide-react';
@@ -19,21 +19,10 @@ import { useCanManageAutomation } from './useCanManageAutomation';
 
 dayjs.extend(relativeTime);
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  sectionTitle: css`
-    font-size: 13px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  triggerCard: css`
-    cursor: pointer;
-    width: 100%;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  sectionTitle: 'text-[13px] font-semibold text-foreground',
+  triggerCard: 'w-full cursor-pointer hover:bg-accent',
+};
 
 const Section = ({ children, title }: { children: React.ReactNode; title: string }) => (
   <div className="flex flex-col gap-2">
@@ -53,10 +42,10 @@ const TriggerCard = memo(() => {
   return (
     <TaskScheduleConfig>
       <div
-        className={cx(styles.triggerCard, 'flex items-center gap-3 p-3 border')}
-        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+        className={cn(styles.triggerCard, 'flex items-center gap-3 p-3 border')}
+        style={{ borderColor: 'var(--sidebar-border)', background: 'var(--card)' }}
       >
-        <TimerIcon color={cssVar.colorTextTertiary} size={18} />
+        <TimerIcon color={'var(--ant-color-text-tertiary)'} size={18} />
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
           <div className="truncate min-w-0 text-[13px] font-medium">
             {summary || t('trigger.unconfigured')}
@@ -67,7 +56,7 @@ const TriggerCard = memo(() => {
             </div>
           ) : null}
         </div>
-        <ChevronRightIcon color={cssVar.colorTextTertiary} size={14} />
+        <ChevronRightIcon color={'var(--ant-color-text-tertiary)'} size={14} />
       </div>
     </TaskScheduleConfig>
   );

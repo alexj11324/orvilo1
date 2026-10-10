@@ -1,5 +1,4 @@
 import { agentDisplayName } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -228,7 +227,7 @@ const AutomationCreatePage = memo(() => {
               <div
                 className="flex items-center gap-2"
                 style={{
-                  border: `1px solid ${cssVar.colorBorderSecondary}`,
+                  border: `1px solid var(--sidebar-border)`,
                   borderRadius: 8,
                   cursor: 'pointer',
                   paddingBlock: 6,
@@ -242,7 +241,7 @@ const AutomationCreatePage = memo(() => {
                     ? agentDisplayName(assigneeMeta)
                     : t('instructions.agent_placeholder')}
                 </div>
-                <ChevronRight color={cssVar.colorTextTertiary} size={14} />
+                <ChevronRight color={'var(--ant-color-text-tertiary)'} size={14} />
               </div>
             </AssigneeAgentSelector>
           </div>

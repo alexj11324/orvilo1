@@ -1,13 +1,12 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AutomationStatus } from './shared';
 
 const STATUS_COLOR: Record<AutomationStatus, string> = {
-  active: cssVar.colorSuccess,
-  inactive: cssVar.colorTextQuaternary,
-  paused: cssVar.colorTextDescription,
+  active: 'var(--success)',
+  inactive: 'var(--ant-color-text-quaternary)',
+  paused: 'var(--ant-color-text-description)',
 };
 
 interface AutomationStatusBadgeProps {

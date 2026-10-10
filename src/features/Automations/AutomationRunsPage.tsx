@@ -1,5 +1,5 @@
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -43,42 +43,12 @@ dayjs.extend(relativeTime);
 const PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 400;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  headerRow: css`
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) 90px 130px 120px 70px 40px;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  row: css`
-    cursor: pointer;
-
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) 90px 130px 120px 70px 40px;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 8px;
-    border-radius: 8px;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  statCard: css`
-    flex: 1;
-    min-width: 140px;
-  `,
-}));
+const styles = {
+  headerRow:
+    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-(--ant-color-text-tertiary) grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
+  row: 'grid cursor-pointer items-center gap-3 rounded-(--radius-card) p-2 hover:bg-accent grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
+  statCard: 'min-w-[140px] flex-1',
+};
 
 interface RunRow {
   agentId?: string | null;
@@ -100,11 +70,11 @@ const StatCard = memo<{
   value: number;
 }>(({ danger, icon, label, value }) => (
   <div
-    className={cx(styles.statCard, 'flex flex-col gap-2 p-4 border')}
-    style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+    className={cn(styles.statCard, 'flex flex-col gap-2 p-4 border')}
+    style={{ borderColor: 'var(--sidebar-border)', background: 'var(--card)' }}
   >
     <div className="flex items-center gap-2">
-      {createElement(icon, { color: danger ? cssVar.colorError : cssVar.colorSuccess, size: 16 })}
+      {createElement(icon, { color: danger ? 'var(--destructive)' : 'var(--success)', size: 16 })}
       <div className="text-[12px] text-muted-foreground">{label}</div>
     </div>
     <div className="text-[22px] font-semibold">{value}</div>
@@ -169,7 +139,7 @@ const AutomationRunsPage = memo(() => {
         styles={{ left: { paddingLeft: 8 } }}
         left={
           <div className="flex items-center gap-2">
-            <HistoryIcon color={cssVar.colorTextTertiary} size={16} />
+            <HistoryIcon color={'var(--ant-color-text-tertiary)'} size={16} />
             <div className="text-sm font-medium">{t('runs.title')}</div>
           </div>
         }

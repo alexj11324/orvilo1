@@ -181,7 +181,7 @@ const Bar = memo(() => {
   const { center, right, tabs } = selectBarLayout(items, pinOverrides, activePanelId);
 
   return (
-    <div className={cx(styles.bar, 'flex items-center gap-[3px]')}>
+    <div className={cx(styles.bar, 'flex items-center gap-0.75')}>
       <button
         className={styles.iconButton}
         title={'Collapse DevDock'}

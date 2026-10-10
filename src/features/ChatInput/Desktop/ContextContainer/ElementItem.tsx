@@ -21,7 +21,7 @@ const styles = {
   thumbnail:
     'block max-w-[min(420px,70vw)] max-h-60 border border-sidebar-border rounded-[6px] object-contain bg-card',
   tooltip: 'max-w-[min(460px,75vw)]',
-  url: 'overflow-hidden text-[12px] text-(--ant-color-text-quaternary) text-ellipsis whitespace-nowrap',
+  url: 'overflow-hidden text-[12px] text-foreground-quaternary text-ellipsis whitespace-nowrap',
 };
 
 /**

@@ -45,7 +45,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 const styles = {
   headerRow:
-    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-(--ant-color-text-tertiary) grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
+    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-foreground-tertiary grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
   row: 'grid cursor-pointer items-center gap-3 rounded-(--radius-card) p-2 hover:bg-accent grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
   statCard: 'min-w-[140px] flex-1',
 };

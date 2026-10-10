@@ -36,7 +36,7 @@ const styles = {
   option:
     'cursor-pointer justify-start w-full h-auto py-2.5 px-2 rounded-[calc(var(--radius)_-_2px)] text-start whitespace-normal [transition:background-color_0.2s] hover:bg-selected hover:bg-none',
   optionDisabled: 'cursor-not-allowed opacity-55 hover:bg-transparent hover:bg-none',
-  optionDesc: 'text-[12px] leading-[1.4] text-[var(--ant-color-text-description)]',
+  optionDesc: 'text-[12px] leading-[1.4] text-foreground-description',
   optionIcon:
     'shrink-0 border border-solid border-sidebar-border rounded-(--radius-card) bg-popover bg-none',
   optionTitle: 'text-[14px] font-medium leading-[1.4] text-foreground',

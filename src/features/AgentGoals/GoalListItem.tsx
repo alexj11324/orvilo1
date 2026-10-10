@@ -12,7 +12,7 @@ import GoalStatusGlyph from './GoalStatusGlyph';
 import type { GoalItemProps } from './types';
 
 const styles = {
-  row: 'min-w-0 rounded-none [&+&]:[border-block-start:1px_solid_var(--sidebar-border)] hover:bg-(--ant-color-fill-quaternary)',
+  row: 'min-w-0 rounded-none [&+&]:[border-block-start:1px_solid_var(--sidebar-border)] hover:bg-fill-quaternary',
 };
 
 export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {

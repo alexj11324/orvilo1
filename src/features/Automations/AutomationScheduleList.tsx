@@ -58,7 +58,7 @@ const styles = {
   batchBar:
     'sticky bottom-4 mx-auto flex w-fit items-center gap-2 rounded-[12px] border border-sidebar-border bg-popover px-4 py-2 shadow-(--shadow-popover)',
   headerRow:
-    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-(--ant-color-text-tertiary) grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
+    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-foreground-tertiary grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
   row: 'grid cursor-pointer items-center gap-3 rounded-(--radius-card) p-2 hover:bg-accent grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
   titleCell: 'flex min-w-0 items-center gap-2',
   titleText: 'truncate text-[13px] font-medium',

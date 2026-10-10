@@ -18,13 +18,12 @@ import { KindDot } from './shared';
  */
 
 const styles = {
-  arrow:
-    'flex-none text-[var(--ant-color-text-quaternary)] transition-[transform] duration-200 ease-[ease]',
+  arrow: 'flex-none text-foreground-quaternary transition-[transform] duration-200 ease-[ease]',
   arrowOpen: '[transform:rotate(90deg)]',
   body: 'pt-0 pb-2.5 ps-7.5 pe-2',
   source: 'flex-none max-w-[40%] text-end',
   time: 'flex-none min-w-15 text-end',
-  row: 'cursor-pointer p-2 rounded-(--ant-border-radius-sm) hover:bg-[var(--ant-color-fill-quaternary)]',
+  row: 'cursor-pointer p-2 rounded-(--ant-border-radius-sm) hover:bg-fill-quaternary',
 };
 
 const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView }>(

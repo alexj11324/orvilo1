@@ -21,7 +21,7 @@ const MEMORY_EFFORT_LEVELS: readonly UserMemoryEffort[] = ['low', 'medium', 'hig
 
 const styles = {
   active: 'bg-accent',
-  description: 'text-[12px] text-(--ant-color-text-description)',
+  description: 'text-[12px] text-foreground-description',
   icon: 'border border-accent rounded-(--ant-border-radius) bg-popover',
   option:
     'cursor-pointer w-full p-2 rounded-(--ant-border-radius) transition-[background-color] duration-200 ease-[ease] hover:bg-accent',

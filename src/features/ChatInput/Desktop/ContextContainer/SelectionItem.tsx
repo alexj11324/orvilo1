@@ -20,10 +20,10 @@ const styles = {
   codePreview:
     'overflow-auto max-w-[min(560px,80vw)] max-h-55 m-0 py-2 px-0 font-mono text-[12px] leading-[1.55]',
   content: 'overflow-hidden min-w-0 text-foreground text-ellipsis whitespace-pre',
-  lineNumber: 'select-none text-(--ant-color-text-quaternary) text-end',
+  lineNumber: 'select-none text-foreground-quaternary text-end',
   meta: 'overflow-hidden max-w-[min(560px,80vw)] pb-1.5 border-b border-sidebar-border font-mono text-[12px] text-muted-foreground text-ellipsis whitespace-nowrap',
   textPreview: 'max-w-[min(420px,70vw)] text-foreground whitespace-pre-wrap',
-  truncated: 'pt-1 text-(--ant-color-text-quaternary)',
+  truncated: 'pt-1 text-foreground-quaternary',
 };
 
 const MAX_CODE_PREVIEW_LINES = 8;

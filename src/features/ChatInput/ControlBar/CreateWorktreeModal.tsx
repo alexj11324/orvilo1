@@ -68,7 +68,7 @@ const CreateWorktreeContent = memo<CreateWorktreeContentProps>(({ onSubmit, reso
           }}
         />
         {previewPath ? (
-          <div className="text-[12px] text-(--ant-color-text-tertiary) break-all">
+          <div className="text-[12px] text-foreground-tertiary break-all">
             {tDevice('workingDirectory.newWorktreeLocation', { path: previewPath })}
           </div>
         ) : null}

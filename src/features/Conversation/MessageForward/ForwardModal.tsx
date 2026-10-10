@@ -1,7 +1,6 @@
 'use client';
 
 import { agentDisplayName, type StoreApiWithSelector } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
@@ -30,73 +29,20 @@ import {
 import SelectCircle from './SelectCircle';
 import { type ForwardTarget, useForwardMessages } from './useForwardMessages';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    block-size: 460px;
-  `,
-  divider: css`
-    align-self: stretch;
-    inline-size: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  list: css`
-    overflow-y: auto;
-    flex: 1;
-    margin-inline: -4px;
-    padding-inline: 4px;
-  `,
-  // Shared container holding the message preview and the note input, split by a
-  // divider above the input.
-  preview: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  previewLines: css`
-    overflow-y: auto;
-    flex: 1;
-    padding-block: 12px;
-    padding-inline: 12px;
-  `,
-  note: css`
-    background: transparent;
-  `,
-  noteDivider: css`
-    block-size: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  previewLine: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  previewMore: css`
-    padding-block-start: 2px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  row: css`
-    cursor: pointer;
-
-    min-block-size: 44px;
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    transition: background-color 0.1s ${cssVar.motionEaseInOut};
-
-    &:hover {
-      background-color: ${cssVar.colorFillTertiary};
-    }
-  `,
-  rowSelected: css`
-    background-color: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  body: '[block-size:460px]',
+  divider: 'self-stretch [inline-size:1px] bg-sidebar-border',
+  list: 'flex-1 overflow-y-auto -mx-1 px-1',
+  preview:
+    'overflow-hidden border border-sidebar-border rounded-(--ant-border-radius-lg) bg-[var(--ant-color-fill-quaternary)]',
+  previewLines: 'flex-1 overflow-y-auto p-3',
+  note: 'bg-transparent dark:bg-transparent disabled:bg-transparent dark:disabled:bg-transparent',
+  noteDivider: '[block-size:1px] bg-sidebar-border',
+  previewLine: 'truncate text-[12px] text-muted-foreground',
+  previewMore: '[padding-block-start:2px] text-[12px] text-[var(--ant-color-text-tertiary)]',
+  row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--ant-border-radius-lg) transition-[background-color] duration-100 ease-[var(--ant-motion-ease-in-out)] hover:bg-accent',
+  rowSelected: 'bg-[var(--ant-color-fill-quaternary)]',
+};
 
 const ForwardModalContent = memo(() => {
   const { t } = useTranslation('chat');
@@ -187,7 +133,7 @@ const ForwardModalContent = memo(() => {
                   {...clickableProps()}
                   key={agent.id}
                   className={cn(
-                    cn('flex items-center gap-2', cx(styles.row, checked && styles.rowSelected)),
+                    cn('flex items-center gap-2', cn(styles.row, checked && styles.rowSelected)),
                     CLICKABLE_FOCUS_RING,
                   )}
                   onClick={() => toggle(agent.id)}

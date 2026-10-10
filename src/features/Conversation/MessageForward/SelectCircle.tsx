@@ -1,29 +1,14 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo } from 'react';
 
-const styles = createStaticStyles(({ css }) => ({
-  checked: css`
-    border-color: ${cssVar.colorPrimary};
-    color: ${cssVar.colorBgContainer};
-    background: ${cssVar.colorPrimary};
-  `,
-  circle: css`
-    flex: none;
-
-    inline-size: 20px;
-    block-size: 20px;
-    border: 1.5px solid ${cssVar.colorBorder};
-    border-radius: 50%;
-
-    transition:
-      background-color 0.15s ${cssVar.motionEaseInOut},
-      border-color 0.15s ${cssVar.motionEaseInOut};
-  `,
-}));
+const styles = {
+  checked: 'border-primary bg-primary text-card',
+  circle:
+    'flex-none [inline-size:20px] [block-size:20px] border-[1.5px] border-border rounded-[50%] transition-[background-color,border-color] duration-150 ease-[var(--ant-motion-ease-in-out)]',
+};
 
 interface SelectCircleProps {
   checked?: boolean;
@@ -39,7 +24,7 @@ const SelectCircle = memo<SelectCircleProps>(({ checked, className }) => (
   <div
     className={cn(
       'flex flex-col items-center justify-center',
-      cx(styles.circle, checked && styles.checked, className),
+      cn(styles.circle, checked && styles.checked, className),
     )}
   >
     {checked && <Check size={14} />}

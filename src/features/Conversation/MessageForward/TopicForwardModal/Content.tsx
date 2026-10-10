@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Search as SearchIcon, X as XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -20,44 +19,15 @@ import SelectCircle from '../SelectCircle';
 import type { ForwardTarget } from '../useForwardMessages';
 import { useForwardTopic } from '../useForwardTopic';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    block-size: 460px;
-  `,
-  context: css`
-    flex: 1;
-
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  divider: css`
-    align-self: stretch;
-    inline-size: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  list: css`
-    overflow-y: auto;
-    flex: 1;
-  `,
-  row: css`
-    cursor: pointer;
-
-    min-block-size: 44px;
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  selected: css`
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  body: '[block-size:460px]',
+  context:
+    'flex-1 p-3 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-[var(--ant-color-fill-quaternary)]',
+  divider: 'self-stretch [inline-size:1px] bg-sidebar-border',
+  list: 'flex-1 overflow-y-auto',
+  row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--ant-border-radius-lg) hover:bg-accent',
+  selected: 'bg-[var(--ant-color-fill-quaternary)]',
+};
 
 export interface TopicForwardContentProps {
   sourceAgentId: string;
@@ -135,7 +105,7 @@ export const TopicForwardContent = ({
                   {...clickableProps()}
                   key={agent.id}
                   className={cn(
-                    cn('flex items-center gap-2', cx(styles.row, selected && styles.selected)),
+                    cn('flex items-center gap-2', cn(styles.row, selected && styles.selected)),
                     CLICKABLE_FOCUS_RING,
                   )}
                   onClick={() =>

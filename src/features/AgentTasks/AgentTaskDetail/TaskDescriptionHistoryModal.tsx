@@ -189,6 +189,7 @@ const TaskDescriptionHistory = ({ taskId, canEdit, onChanged }: HistoryModalProp
           {more && (data?.data.versions.length ?? 0) >= 50 ? (
             <Button
               loading={pending}
+              size="compact"
               type="button"
               variant="ghost"
               onClick={() => void loadOlder()}

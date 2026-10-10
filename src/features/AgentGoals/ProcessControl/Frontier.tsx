@@ -387,6 +387,7 @@ const FrontierRow = memo<{
                         render={
                           <span style={{ display: 'inline-flex' }}>
                             <Button
+                              size="compact"
                               variant={
                                 option.id === view.decision?.recommendedOptionId
                                   ? 'default'

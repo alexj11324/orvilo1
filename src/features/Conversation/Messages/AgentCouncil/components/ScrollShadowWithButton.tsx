@@ -103,6 +103,7 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
           <Button
             aria-label={tCommon('previous')}
             className={cx(styles.button, styles.leftButton, 'scroll-button', 'rounded-full')}
+            size="compact"
             variant="outline"
             onClick={() => handleScroll('left')}
           >
@@ -123,6 +124,7 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
           <Button
             aria-label={tCommon('next')}
             className={cx(styles.button, styles.rightButton, 'scroll-button', 'rounded-full')}
+            size="compact"
             variant="outline"
             onClick={() => handleScroll('right')}
           >

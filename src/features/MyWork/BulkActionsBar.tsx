@@ -190,7 +190,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
           {t('myWork.bulk.selected', { count })}
         </span>
         <DropdownMenu items={actionItems} placement={'top'}>
-          <Button disabled={busy} variant="outline">
+          <Button disabled={busy} size="compact" variant="outline">
             {t('myWork.bulk.actions')}
           </Button>
         </DropdownMenu>

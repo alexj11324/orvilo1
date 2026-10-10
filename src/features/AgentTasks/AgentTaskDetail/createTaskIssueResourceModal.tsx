@@ -68,6 +68,7 @@ export const TaskIssueResourcePicker = ({
               <Button
                 disabled={pending}
                 key={value}
+                size="compact"
                 type="button"
                 variant={tab === value ? 'secondary' : 'ghost'}
                 onClick={() => {
@@ -121,6 +122,7 @@ export const TaskIssueResourcePicker = ({
               {queue?.data.hasMore && queue.data.endCursor ? (
                 <Button
                   disabled={pending}
+                  size="compact"
                   type="button"
                   variant="outline"
                   onClick={() => setCursor(queue.data.endCursor)}

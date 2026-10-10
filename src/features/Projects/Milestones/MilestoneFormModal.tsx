@@ -75,6 +75,7 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
             maxLength={255}
             placeholder={t('create.milestone.name')}
             value={name}
+            visualSize="normal"
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.nativeEvent.isComposing) void submit();

@@ -91,6 +91,7 @@ const AddWorkingDirContent = ({
           placeholder={placeholder || tPlugin('workingDirectory.placeholder')}
           ref={inputRef}
           value={value}
+          visualSize="normal"
           onKeyDown={(e) => e.key === 'Enter' && void handleSubmit(value)}
           onChange={(e) => {
             setValue(e.target.value);
@@ -103,6 +104,7 @@ const AddWorkingDirContent = ({
         {deviceId && (
           <Button
             disabled={loading}
+            size="lg"
             onClick={() => {
               setError(undefined);
               setManual(false);
@@ -111,10 +113,15 @@ const AddWorkingDirContent = ({
             {tPlugin('workingDirectory.browseFolders')}
           </Button>
         )}
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button disabled={!value.trim()} loading={loading} onClick={() => handleSubmit(value)}>
+        <Button
+          disabled={!value.trim()}
+          loading={loading}
+          size="lg"
+          onClick={() => handleSubmit(value)}
+        >
           {tPlugin('workingDirectory.useFolder')}
         </Button>
       </div>

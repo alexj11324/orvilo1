@@ -829,7 +829,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                         else setTeams([]);
                       }}
                     />
-                    <Button disabled={busy} variant="outline" onClick={connect}>
+                    <Button disabled={busy} size="lg" variant="outline" onClick={connect}>
                       {installationId
                         ? t('workspaceSetting.linear.reconnect')
                         : t('workspaceSetting.linear.connect')}
@@ -936,6 +936,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                 ) : (
                   <Button
                     disabled={step === 0 || busy}
+                    size="lg"
                     variant="outline"
                     onClick={() => setStep((current) => current - 1)}
                   >
@@ -943,13 +944,14 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                   </Button>
                 )}
                 {job && ['completed', 'failed'].includes(job.status) && (
-                  <Button disabled={busy} variant="default" onClick={newImport}>
+                  <Button disabled={busy} size="lg" variant="default" onClick={newImport}>
                     {t('workspaceSetting.import.newImport')}
                   </Button>
                 )}
                 {!job && (
                   <Button
                     disabled={!canNext || loading || busy}
+                    size="lg"
                     variant="default"
 
                     onClick={() => {

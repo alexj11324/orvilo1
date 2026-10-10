@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,30 +12,11 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { UpdateAgentPromptParams, UpdateAgentPromptState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar: cv }) => ({
-  agentName: css`
-    overflow: hidden;
-
-    max-width: 120px;
-
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  label: css`
-    flex-shrink: 0;
-    color: ${cv.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-}));
+const styles = {
+  agentName: 'max-w-[120px] truncate font-medium',
+  label: 'shrink-0 whitespace-nowrap text-muted-foreground',
+  root: 'flex items-center gap-1.5 overflow-hidden min-w-0',
+};
 
 export const UpdateAgentPromptInspector = memo<
   BuiltinInspectorProps<UpdateAgentPromptParams, UpdateAgentPromptState>
@@ -84,7 +64,7 @@ export const UpdateAgentPromptInspector = memo<
   return (
     <div className={cn('flex', 'items-center', 'gap-[6px]', styles.root)}>
       <span
-        className={cx(
+        className={cn(
           styles.label,
           (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
         )}
@@ -107,7 +87,7 @@ export const UpdateAgentPromptInspector = memo<
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
         <span
           className="font-mono rounded bg-muted px-1 whitespace-nowrap text-[12px]"
-          style={{ color: lengthDiff >= 0 ? cssVar.colorSuccess : cssVar.colorError }}
+          style={{ color: lengthDiff >= 0 ? 'var(--success)' : 'var(--destructive)' }}
         >
           {lengthDiff >= 0 ? '+' : ''}
           {lengthDiff}
@@ -118,7 +98,7 @@ export const UpdateAgentPromptInspector = memo<
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
-          style={{ color: cssVar.colorTextDescription }}
+          style={{ color: 'var(--ant-color-text-description)' }}
         >
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})

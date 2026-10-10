@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { Loader2, MoreVerticalIcon, Plus, Unplug } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,7 +61,7 @@ const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier,
   const renderIcon = () => {
     if (typeof icon === 'string') return <img alt={label} height={40} src={icon} width={40} />;
     return React.createElement(icon as React.ComponentType<{ fill?: string; size?: number }>, {
-      fill: cssVar.colorText,
+      fill: 'var(--foreground)',
       size: 40,
     });
   };

@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -17,7 +17,7 @@ export const ListWorkspaceMembersInspector = memo<
 
   return (
     <div
-      className={cx(
+      className={cn(
         inspectorTextStyles.root,
         (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
       )}
@@ -26,7 +26,7 @@ export const ListWorkspaceMembersInspector = memo<
       {typeof count === 'number' && (
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
-          style={{ color: cssVar.colorTextSecondary }}
+          style={{ color: 'var(--muted-foreground)' }}
         >
           {count}
         </span>

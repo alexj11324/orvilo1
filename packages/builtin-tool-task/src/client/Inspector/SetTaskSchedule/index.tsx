@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,37 +9,13 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { SetTaskScheduleParams, SetTaskScheduleState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  identifierChip: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  modeChip: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorInfo};
-
-    background: ${cssVar.colorInfoBg};
-  `,
-  separator: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  identifierChip:
+    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
+  modeChip:
+    'shrink-0 rounded-[999px] bg-[var(--ant-color-info-bg)] px-2 py-0.5 text-[12px] text-info',
+  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
+};
 
 export const SetTaskScheduleInspector = memo<
   BuiltinInspectorProps<SetTaskScheduleParams, SetTaskScheduleState>
@@ -52,7 +28,7 @@ export const SetTaskScheduleInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-task.apiName.setTaskSchedule')}
       </span>
       {identifier && <span className={styles.identifierChip}>{identifier}</span>}

@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Play } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,44 +10,13 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { RunTaskParams, RunTaskState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  identifierChip: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  promptChip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 240px;
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  separator: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  identifierChip:
+    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
+  promptChip:
+    'inline-flex min-w-0 max-w-[240px] shrink items-center truncate rounded-[999px] bg-accent px-2 py-0.5 text-[12px] text-foreground',
+  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
+};
 
 export const RunTaskInspector = memo<BuiltinInspectorProps<RunTaskParams, RunTaskState>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading }) => {
@@ -60,8 +29,8 @@ export const RunTaskInspector = memo<BuiltinInspectorProps<RunTaskParams, RunTas
 
     return (
       <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
-        <Play size={12} style={{ color: cssVar.colorWarning }} />
-        <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+        <Play size={12} style={{ color: 'var(--warning)' }} />
+        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.runTask')}
         </span>
         {identifier && (
@@ -72,7 +41,7 @@ export const RunTaskInspector = memo<BuiltinInspectorProps<RunTaskParams, RunTas
         {continueTopicId && (
           <>
             <span className={styles.separator}>·</span>
-            <span style={{ color: cssVar.colorTextTertiary, fontSize: 12 }}>
+            <span style={{ color: 'var(--ant-color-text-tertiary)', fontSize: 12 }}>
               {t('builtins.orvilo-task.run.continueTopic')}
             </span>
           </>

@@ -2,7 +2,7 @@
 
 import { priorityLabel } from '@orvilo/prompts';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,105 +15,21 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { EditTaskParams, EditTaskState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  addChip: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorSuccess};
-
-    background: ${cssVar.colorSuccessBg};
-  `,
-  assigneeAvatar: css`
-    flex-shrink: 0;
-  `,
-  assigneeChip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 220px;
-    padding-block: 1px;
-    padding-inline: 4px 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  assigneeName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 200px;
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  group: css`
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-  `,
-  identifierChip: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  label: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  removeChip: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border: 1px dashed ${cssVar.colorErrorBorder};
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorError};
-    text-decoration: line-through;
-
-    background: transparent;
-  `,
-}));
+const styles = {
+  addChip:
+    'shrink-0 rounded-[999px] bg-[var(--ant-color-success-bg)] px-2 py-px font-mono text-[12px] text-success',
+  assigneeAvatar: 'shrink-0',
+  assigneeChip:
+    'inline-flex min-w-0 max-w-[220px] shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent py-px ps-1 pe-2 text-[12px] text-foreground',
+  assigneeName: 'truncate',
+  chip: 'inline-flex min-w-0 max-w-[200px] shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground',
+  group: 'inline-flex flex-wrap items-center gap-1',
+  identifierChip:
+    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground',
+  label: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  removeChip:
+    'shrink-0 rounded-[999px] border border-dashed border-[var(--ant-color-error-border)] bg-transparent px-2 py-px font-mono text-[12px] text-destructive line-through',
+};
 
 const AssigneeChip = memo<{ agentId: string }>(({ agentId }) => {
   const agentMeta = useAgentDisplayMeta(agentId, { fallbackToDefault: false });
@@ -262,13 +178,13 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
 
     return (
       <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
-        <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.editTask')}
         </span>
         {identifier && <span className={styles.identifierChip}>{identifier}</span>}
         {segments.map((segment, index) => (
           <span className={styles.group} key={segment.key}>
-            {index > 0 && <span style={{ color: cssVar.colorTextQuaternary }}>·</span>}
+            {index > 0 && <span style={{ color: 'var(--ant-color-text-quaternary)' }}>·</span>}
             {segment.content}
           </span>
         ))}

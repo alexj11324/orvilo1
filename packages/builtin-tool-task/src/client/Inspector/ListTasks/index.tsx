@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -35,11 +35,11 @@ export const ListTasksInspector = memo<BuiltinInspectorProps<ListTasksParams, Li
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isLoading && shinyTextStyles.shinyText)}>
+        <span className={cn(isLoading && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.listTasks')}
         </span>
         {filterText && (
-          <span className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+          <span className="text-[12px]" style={{ color: 'var(--ant-color-text-tertiary)' }}>
             {' · '}
             {filterText}
           </span>
@@ -47,7 +47,7 @@ export const ListTasksInspector = memo<BuiltinInspectorProps<ListTasksParams, Li
         {typeof count === 'number' && (
           <span
             className="font-mono rounded bg-muted px-1 text-[12px]"
-            style={{ color: cssVar.colorTextSecondary }}
+            style={{ color: 'var(--muted-foreground)' }}
           >
             {typeof total === 'number' && total !== count ? `${count}/${total}` : count}
           </span>

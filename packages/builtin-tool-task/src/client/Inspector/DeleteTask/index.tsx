@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,24 +9,10 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { DeleteTaskParams, DeleteTaskState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  identifierChip: css`
-    flex-shrink: 0;
-
-    margin-inline-start: 6px;
-    padding-block: 2px;
-    padding-inline: 8px;
-    border: 1px dashed ${cssVar.colorErrorBorder};
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorError};
-    text-decoration: line-through;
-
-    background: transparent;
-  `,
-}));
+const styles = {
+  identifierChip:
+    'shrink-0 rounded-[999px] border border-dashed border-[var(--ant-color-error-border)] bg-transparent px-2 py-0.5 font-mono text-[12px] text-destructive line-through ms-1.5',
+};
 
 export const DeleteTaskInspector = memo<BuiltinInspectorProps<DeleteTaskParams, DeleteTaskState>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading }) => {
@@ -37,8 +23,8 @@ export const DeleteTaskInspector = memo<BuiltinInspectorProps<DeleteTaskParams, 
     return (
       <div className={inspectorTextStyles.root}>
         <span
-          className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
-          style={{ color: cssVar.colorError }}
+          className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
+          style={{ color: 'var(--destructive)' }}
         >
           {t('builtins.orvilo-task.apiName.deleteTask')}
         </span>

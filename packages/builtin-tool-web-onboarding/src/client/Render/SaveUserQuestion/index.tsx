@@ -2,67 +2,19 @@
 
 import type { InterestAreaKey } from '@orvilo/const';
 import type { BuiltinRenderProps, SaveUserQuestionInput } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  avatar: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    box-sizing: border-box;
-    width: 48px;
-    height: 48px;
-    border-radius: 16px;
-
-    font-size: 28px;
-    line-height: 1;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  chip: css`
-    display: inline-flex;
-    align-items: center;
-
-    padding-block: 4px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  detailCard: css`
-    padding: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-    background: ${cssVar.colorFillTertiary};
-  `,
-  name: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-size: 16px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  sectionLabel: css`
-    font-size: 12px;
-    font-weight: 600;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  value: css`
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  // The identity emoji is a graphic glyph: 48px avatar slot and 28px glyph dimension.
+  avatar:
+    'inline-flex shrink-0 items-center justify-center box-border size-12 rounded-full [font-size:28px] leading-none bg-fill-quaternary',
+  chip: 'inline-flex items-center py-1 px-2.5 rounded-(--radius-chip) text-xs leading-5 text-foreground bg-fill-quaternary',
+  detailCard: 'p-4 border border-divider rounded-(--radius-card) bg-muted',
+  name: 'line-clamp-1 text-base leading-6 font-semibold text-foreground',
+  sectionLabel: 'text-xs leading-5 font-semibold text-muted-foreground',
+  value: 'text-sm leading-5.5 font-medium text-foreground',
+};
 
 const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown, unknown>>(
   ({ args }) => {
@@ -120,7 +72,7 @@ const SaveUserQuestion = memo<BuiltinRenderProps<SaveUserQuestionInput, unknown,
             <div className={styles.sectionLabel}>
               {t('builtins.orvilo-web-onboarding.render.interests')}
             </div>
-            <div className="flex" style={{ flexWrap: 'wrap', gap: 8 }}>
+            <div className="flex flex-wrap gap-2">
               {interestLabels.map((label) => (
                 <span className={styles.chip} key={label}>
                   {label}

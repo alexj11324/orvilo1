@@ -24,7 +24,7 @@ const styles = {
   createChip:
     'cursor-pointer flex gap-2 items-center justify-center py-3.5 px-4 border border-dashed border-border rounded-(--radius-overlay) text-muted-foreground bg-transparent [transition:border-color_0.2s_var(--ant-motion-ease-in-out),color_0.2s_var(--ant-motion-ease-in-out)] hover:border-(--ant-color-text-quaternary) hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50',
   grid: 'grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3',
-  name: 'truncate text-[13px] font-medium text-foreground',
+  name: 'truncate text-(length:--text-dense) font-medium text-foreground',
 };
 
 /**

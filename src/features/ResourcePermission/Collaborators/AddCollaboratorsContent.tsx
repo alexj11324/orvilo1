@@ -285,7 +285,7 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
         <div className={cx('flex flex-row items-center gap-2', styles.footer)}>
           <div className="flex flex-col flex-1">
             {selected.length > 0 ? (
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-(length:--text-dense) text-muted-foreground">
                 {t('permission.collaborators.addModal.selectedCount', { count: selected.length })}
               </div>
             ) : null}

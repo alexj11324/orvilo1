@@ -246,7 +246,7 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
         />
       </button>
       <span className={styles.caption}>
-        <span className="text-[13px]" style={{ color: 'inherit' }}>
+        <span className="text-(length:--text-dense)" style={{ color: 'inherit' }}>
           {label}
         </span>
       </span>
@@ -270,7 +270,7 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
             );
           })}
           {overflow > 0 && (
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-(length:--text-dense) text-muted-foreground">
               {t('pageEditor.likes.more', { count: overflow })}
             </div>
           )}

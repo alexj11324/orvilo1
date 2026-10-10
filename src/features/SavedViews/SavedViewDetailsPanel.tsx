@@ -121,7 +121,7 @@ const DetailRow = memo<{ label: string; value: ReactNode }>(({ label, value }) =
   <div className={cx('flex items-center justify-between gap-4', styles.metaRow)}>
     <div className="text-[12px] text-muted-foreground">{label}</div>
     {typeof value === 'string' ? (
-      <div className="truncate block text-[13px] font-medium">{value}</div>
+      <div className="truncate block text-(length:--text-dense) font-medium">{value}</div>
     ) : (
       value
     )}
@@ -203,7 +203,9 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
               owner.name ? (
                 <div className={styles.ownerCell}>
                   <Avatar avatar={owner.avatar} name={owner.name} size={20} />
-                  <div className="truncate block text-[13px] font-medium">{owner.name}</div>
+                  <div className="truncate block text-(length:--text-dense) font-medium">
+                    {owner.name}
+                  </div>
                 </div>
               ) : (
                 '—'
@@ -272,7 +274,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                       className={cx('flex items-center justify-between', styles.facetRow)}
                       key={bucket.key ?? 'none'}
                     >
-                      <div className="truncate block text-[13px]">
+                      <div className="truncate block text-(length:--text-dense)">
                         {bucket.name ??
                           (bucket.key === null
                             ? t(
@@ -288,7 +290,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                   ))}
                   {restrictedCount > 0 ? (
                     <div className={cx('flex items-center justify-between', styles.facetRow)}>
-                      <div className="text-[13px] text-muted-foreground">
+                      <div className="text-(length:--text-dense) text-muted-foreground">
                         {t('savedViews.facetRestricted', { ns: 'common' })}
                       </div>
                       <div className="text-[12px] text-muted-foreground">{restrictedCount}</div>
@@ -325,7 +327,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                       color: cssVar.colorTextTertiary,
                       size: 14,
                     })}
-                    <div className="text-[13px]">{groupLabel}</div>
+                    <div className="text-(length:--text-dense)">{groupLabel}</div>
                   </div>
                   <div className="text-[12px] text-muted-foreground">{group.total}</div>
                 </div>

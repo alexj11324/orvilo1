@@ -243,7 +243,7 @@ export const SavedViewProjectBoard = memo<{
           <div className={cx('flex flex-col', styles.boardColumn)} key={group.key}>
             <div className={cx('flex flex-row', styles.boardColumnHeader)}>
               <ProjectStatusIcon size={14} status={status} />
-              <div className="text-[13px] font-medium">{t(`status.${status}`)}</div>
+              <div className="text-(length:--text-dense) font-medium">{t(`status.${status}`)}</div>
               <div className="text-[12px] text-muted-foreground">{group.total}</div>
             </div>
             <div className={cx('flex flex-col', styles.boardColumnBody)}>
@@ -289,7 +289,7 @@ export const SavedViewProjectGroupList = memo<{
           <div className="flex flex-col gap-0.5" key={group.key}>
             <div className="flex flex-row items-center gap-2 px-2">
               <ProjectStatusIcon size={14} status={status} />
-              <div className="text-[13px] font-medium">{t(`status.${status}`)}</div>
+              <div className="text-(length:--text-dense) font-medium">{t(`status.${status}`)}</div>
               <div className="text-[12px] text-muted-foreground">{group.total}</div>
             </div>
             {group.tasks.map((project) => (

@@ -57,7 +57,7 @@ const TopicRow = memo<TopicRowProps>(({ topic, leading, trailing }) => {
       {leading}
       {agent && <AssigneeAvatar agentId={topic.agentId} size={22} />}
       <div className="flex items-center flex-1 gap-1.5" style={{ minWidth: 0 }}>
-        <div className="truncate block text-[13px]" style={{ minWidth: 0 }}>
+        <div className="truncate block text-(length:--text-dense)" style={{ minWidth: 0 }}>
           {topic.title}
         </div>
         <RunningElapsedTime startTime={topic.runStartedAt} />

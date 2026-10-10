@@ -293,7 +293,7 @@ const NavItem = memo<NavItemProps>(
           {description ? (
             <div className="flex flex-col flex-1 gap-0.75" style={{ overflow: 'hidden' }}>
               <div
-                className="truncate font-medium text-[13px]"
+                className="truncate font-medium text-(length:--text-dense)"
                 style={{ color: textColor }}
                 title={typeof title === 'string' ? title : undefined}
               >
@@ -303,7 +303,7 @@ const NavItem = memo<NavItemProps>(
             </div>
           ) : (
             <div
-              className="flex-1 truncate font-medium text-[13px]"
+              className="flex-1 truncate font-medium text-(length:--text-dense)"
               style={{ color: textColor }}
               title={typeof title === 'string' ? title : undefined}
             >

@@ -118,3 +118,15 @@ export async function checkProviderBinding(
   }
   return result.value;
 }
+
+/** Each row retains its own revision, credential, authority and model-readiness fences. */
+export async function checkProviderBindings(
+  model: ProviderBindingModel,
+  userId: string,
+  inputs: { id: string; revision: number }[],
+  composition: ProviderConfigurationComposition,
+): Promise<void> {
+  for (const input of inputs) {
+    await checkProviderBinding(model, userId, input, composition).catch(() => undefined);
+  }
+}

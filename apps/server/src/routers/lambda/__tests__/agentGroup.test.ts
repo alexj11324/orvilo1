@@ -97,6 +97,7 @@ describe('agentGroupRouter', () => {
 
     agentModelMock = {
       batchCreate: vi.fn(),
+      batchCreateGroupAgents: vi.fn(),
       getOrchestratorSourceAgentId: vi.fn().mockResolvedValue('selected-source'),
       inheritRuntimeForCreation: vi.fn().mockResolvedValue({
         agencyConfig: {
@@ -203,6 +204,7 @@ describe('agentGroupRouter', () => {
       });
       expect(result.supervisorAgentId).toBe('member-a');
       expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreateGroupAgents).not.toHaveBeenCalled();
       expect(agentModelMock.inheritRuntimeForCreation).not.toHaveBeenCalled();
       expect(agentGroupRepoMock.createGroupWithSupervisor).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Group' }),
@@ -219,6 +221,7 @@ describe('agentGroupRouter', () => {
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
       expect(agentGroupRepoMock.createGroupWithSupervisor).not.toHaveBeenCalled();
       expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreateGroupAgents).not.toHaveBeenCalled();
     });
 
     it('accepts only existing member IDs in the members endpoint', async () => {
@@ -237,6 +240,7 @@ describe('agentGroupRouter', () => {
         supervisorAgentId: 'member-a',
       });
       expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreateGroupAgents).not.toHaveBeenCalled();
     });
   });
 
@@ -579,6 +583,7 @@ describe('agentGroupRouter', () => {
         }),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
       expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+      expect(agentModelMock.batchCreateGroupAgents).not.toHaveBeenCalled();
     });
 
     it('rejects createGroupWithMembers carrying a retired adapterType write', async () => {

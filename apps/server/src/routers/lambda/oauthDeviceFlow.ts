@@ -18,7 +18,7 @@ import {
   getOAuthService,
   GithubCopilotOAuthService,
 } from '@/server/services/oauthDeviceFlow/providers/githubCopilot';
-import { checkProviderBinding } from '@/server/services/providerBinding/configuration';
+import { checkProviderBindings } from '@/server/services/providerBinding/configuration';
 import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 
 const oauthProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
@@ -29,12 +29,12 @@ const oauthProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =>
   // workspace scope) — they persist through the binding plane when the
   // provider is binding-managed.
   const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
-    verifyBinding: (row) =>
-      checkProviderBinding(
+    verifyBindings: (rows) =>
+      checkProviderBindings(
         new ProviderBindingModel(ctx.serverDB, ctx.userId),
         ctx.userId,
-        row,
-        createProviderBindingComposition(ctx.serverDB),
+        rows,
+        createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
       ),
     workspaceId: ctx.workspaceId ?? undefined,
   });

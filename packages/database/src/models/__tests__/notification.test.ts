@@ -10,6 +10,7 @@ import { TaskModel } from '../../models/task';
 import { agents } from '../../schemas/agent';
 import { messagePlugins, messages } from '../../schemas/message';
 import { notificationDeliveries, notifications } from '../../schemas/notification';
+import { projects } from '../../schemas/project';
 import { projectMembers } from '../../schemas/projectMember';
 import { tasks as tasksTable, taskTopics } from '../../schemas/task';
 import { teamMembers, teams } from '../../schemas/team';
@@ -1282,6 +1283,10 @@ describe('NotificationModel (integration)', () => {
         primaryOwnerId: userId,
         slug: 'acl-ws',
       });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
       const task = await new TaskModel(serverDB, userId, workspaceId).create({
         instruction: 'Hidden later',
         name: 'Hidden later',
@@ -1310,7 +1315,7 @@ describe('NotificationModel (integration)', () => {
       expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
     });
 
-    it('stops listing a private-team task title after the viewer leaves the team', async () => {
+    it('keeps workspace Issue notifications after Team enrollment ends', async () => {
       const workspaceId = 'notification-team-acl-ws';
       await serverDB.insert(workspaces).values({
         id: workspaceId,
@@ -1358,8 +1363,8 @@ describe('NotificationModel (integration)', () => {
 
       await serverDB.delete(teamMembers).where(eq(teamMembers.userId, otherUserId));
 
-      expect((await viewer.listFeed()).map((row) => row.title)).toEqual([]);
-      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(0);
+      expect((await viewer.listFeed()).map((row) => row.title)).toEqual(['Secret title']);
+      expect((await viewer.getFeedSummary()).unreadBadgeCount).toBe(1);
     });
 
     it('keeps a private-team task title for an assignee who is not a team member', async () => {
@@ -1421,8 +1426,11 @@ describe('NotificationModel (integration)', () => {
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'SEC06',
         name: 'Secret Project',
-        visibility: 'private',
       });
+      await serverDB
+        .update(projects)
+        .set({ visibility: 'private' })
+        .where(eq(projects.id, project.id));
       const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
       await viewer.create(
         baseNotification({
@@ -1455,7 +1463,6 @@ describe('NotificationModel (integration)', () => {
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'GRANT',
         name: 'Granted Project',
-        visibility: 'private',
       });
       await serverDB.insert(projectMembers).values({
         projectId: project.id,
@@ -1463,6 +1470,10 @@ describe('NotificationModel (integration)', () => {
         userId: otherUserId,
         workspaceId,
       });
+      await serverDB
+        .update(projects)
+        .set({ visibility: 'private' })
+        .where(eq(projects.id, project.id));
       const viewer = new NotificationModel(serverDB, otherUserId, { workspaceId });
       await viewer.create(
         baseNotification({

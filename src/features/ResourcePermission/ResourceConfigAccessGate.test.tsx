@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   accessResolved: true,
   canEditContent: true,
   canEditResource: false,
+  canManageResource: false,
   navigate: vi.fn(),
   toastInfo: vi.fn(),
 }));
@@ -38,6 +39,7 @@ vi.mock('./useResourceAccess', () => ({
   useResourceAccess: () => ({
     accessError: undefined,
     canEditResource: mocks.canEditResource,
+    canManageResource: mocks.canManageResource,
     isAccessResolved: mocks.accessResolved,
     isLoading: false,
     retryAccess: vi.fn(),
@@ -61,6 +63,7 @@ describe('ResourceConfigAccessGate', () => {
     vi.clearAllMocks();
     mocks.canEditContent = true;
     mocks.canEditResource = false;
+    mocks.canManageResource = false;
     mocks.accessResolved = true;
   });
 
@@ -70,7 +73,25 @@ describe('ResourceConfigAccessGate', () => {
     await waitFor(() => {
       expect(mocks.navigate).toHaveBeenCalledWith('/agent/agent-1', { replace: true });
     });
-    expect(mocks.toastInfo).toHaveBeenCalledWith('permission.configAccess.agentChatOnly');
+    expect(mocks.toastInfo).toHaveBeenCalledWith('permission.configAccess.agentManageRequired');
+  });
+
+  it('does not admit Agent configuration through generic edit or Use access', async () => {
+    mocks.canEditResource = true;
+    const view = renderGate();
+    expect(view.queryByText('Agent config')).toBeNull();
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledOnce());
+  });
+
+  it('admits a manager while preserving ordinary Agent group edit access', () => {
+    mocks.canEditResource = true;
+    mocks.canManageResource = true;
+    const agent = renderGate();
+    expect(agent.getByText('Agent config')).toBeTruthy();
+    agent.unmount();
+    mocks.canManageResource = false;
+    const group = renderGate('agentGroup');
+    expect(group.getByText('Agent config')).toBeTruthy();
   });
 
   // "only collaborators with Can edit" read as an authorship denial to

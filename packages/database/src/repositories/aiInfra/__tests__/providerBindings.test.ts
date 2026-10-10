@@ -232,10 +232,10 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
 
   it('rechecks after a key change and never arms a rejected connection', async () => {
     let accepted = true;
-    const verifyBinding = vi.fn(async (row) => {
-      if (accepted) await bindings().setEnabled(row.id, true);
+    const verifyBindings = vi.fn(async (rows) => {
+      if (accepted) for (const row of rows) await bindings().setEnabled(row.id, true);
     });
-    const verifiedPlane = new ProviderBindingPlane(db, owner, { verifyBinding });
+    const verifiedPlane = new ProviderBindingPlane(db, owner, { verifyBindings });
     await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'fixture' } });
     await verifiedPlane.setProviderEnabled('openai', true);
     await verifiedPlane.setModelEnabled('openai', 'gpt-4o-mini', true);
@@ -243,21 +243,25 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
     accepted = false;
     await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'wrong' } });
     expect((await modelRowsOf('openai'))[0].config.enabled).toBe(false);
-    expect(verifyBinding).toHaveBeenCalledTimes(2);
+    expect(verifyBindings).toHaveBeenCalledTimes(2);
   });
 
-  it('verifies each enabled model once in a batch', async () => {
-    const verifyBinding = vi.fn(async (_row: { config: { model: string } }) => undefined);
-    const verifiedPlane = new ProviderBindingPlane(db, owner, { verifyBinding });
+  it('verifies once per provider for a batch and subsequent config mutations', async () => {
+    const verifyBindings = vi.fn(async (_rows: { config: { model: string } }[]) => undefined);
+    const verifiedPlane = new ProviderBindingPlane(db, owner, { verifyBindings });
     await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'fixture' } });
     await verifiedPlane.setProviderEnabled('openai', true);
     await verifiedPlane.setModelsEnabled('openai', ['model-a', 'model-b', 'model-c'], true);
-    expect(verifyBinding).toHaveBeenCalledTimes(3);
-    expect(verifyBinding.mock.calls.map(([row]) => row.config.model).sort()).toEqual([
+    expect(verifyBindings).toHaveBeenCalledTimes(1);
+    expect(verifyBindings.mock.calls[0][0].map((row) => row.config.model).sort()).toEqual([
       'model-a',
       'model-b',
       'model-c',
     ]);
+    verifyBindings.mockClear();
+    await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'replacement' } });
+    expect(verifyBindings).toHaveBeenCalledTimes(1);
+    expect(verifyBindings.mock.calls[0][0]).toHaveLength(3);
   });
 
   it('unmanaged providers are unaffected by model mirrors', async () => {

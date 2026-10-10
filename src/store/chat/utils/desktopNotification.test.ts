@@ -22,9 +22,16 @@ import {
 import { renderAvatarToDataUrl } from './notificationAvatar';
 import { topicMapKey } from './topicMapKey';
 
+const { userState } = vi.hoisted(() => ({
+  userState: {
+    settings: {} as Record<string, unknown>,
+    defaultSettings: {},
+    workspaceUserPreference: {},
+  },
+}));
 vi.mock('@/store/user', () => ({
   useUserStore: {
-    getState: () => ({ settings: {}, defaultSettings: {}, workspaceUserPreference: {} }),
+    getState: () => userState,
   },
 }));
 vi.mock('@/libs/trpc/client', () => ({
@@ -74,11 +81,27 @@ const FALLBACK = 'fallback';
 
 describe('completion sound and desktop banner', () => {
   beforeEach(() => {
+    userState.settings = {};
     getNotificationSoundFile.mockReset().mockResolvedValue(undefined);
     playSound.mockReset().mockResolvedValue(undefined);
     setBadgeCount.mockReset().mockResolvedValue(undefined);
     showNotification.mockReset().mockResolvedValue({ success: true });
   });
+
+  it.each(['team', 'background'])(
+    'uses personal event settings for workspace %s',
+    async (workspaceSlug) => {
+      userState.settings = {
+        notification: { push: { items: { work: { agent_run_completed: false } } } },
+      };
+      await notifyDesktopAgentCompleted(() => ({}) as ChatStore, {
+        context: { workspaceSlug },
+        content: 'Done',
+      });
+      expect(showNotification).not.toHaveBeenCalled();
+      expect(playSound).not.toHaveBeenCalled();
+    },
+  );
 
   it('leaves a delivered banner to carry the sound alone', async () => {
     await notifyDesktopAgentCompleted(() => ({}) as ChatStore, { context: {}, content: 'Done' });

@@ -9,8 +9,6 @@ import type { ConversationContext } from '@orvilo/types';
 import { agentDisplayName, isHostUnsupportedResult, notificationEventEnabled } from '@orvilo/types';
 import { t } from 'i18next';
 
-import { getWorkspaceContextState } from '@/business/client/workspaceContextStore';
-import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
 import { getHostPort, hasHostCapability } from '@/platform';
 import { getAgentStoreState } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -144,30 +142,12 @@ export const buildNotificationBody = (
     : text;
 };
 
-const desktopEventEnabled = async (context: DesktopNotificationContext, event: string) => {
-  const state = useUserStore.getState();
-  if (!context.workspaceSlug)
-    return notificationEventEnabled(
-      settingsSelectors.currentSettings(state).notification,
-      'push',
-      event,
-    );
-  const active = getWorkspaceContextState();
-  if (
-    active.activeWorkspaceSlug === context.workspaceSlug &&
-    state.workspaceUserPreferenceWorkspaceId === active.activeWorkspaceId
-  ) {
-    return notificationEventEnabled(state.workspaceUserPreference.notification, 'push', event);
-  }
-  // A background run must use its original workspace, not the currently open workspace.
-  const workspaces = await createWorkspaceLambdaClient(null).workspace.list.query();
-  const workspace = workspaces.find((item) => item.slug === context.workspaceSlug);
-  if (!workspace) return false;
-  const preference = await createWorkspaceLambdaClient(
-    workspace.id,
-  ).workspaceUserSettings.getPreference.query();
-  return notificationEventEnabled(preference.notification, 'push', event);
-};
+const desktopEventEnabled = (event: string) =>
+  notificationEventEnabled(
+    settingsSelectors.currentSettings(useUserStore.getState()).notification,
+    'push',
+    event,
+  );
 
 export const notifyDesktopHumanApprovalRequired = async (
   get: () => ChatStore,
@@ -176,7 +156,7 @@ export const notifyDesktopHumanApprovalRequired = async (
   if (!hasHostCapability('notification.native')) return;
 
   try {
-    if (!(await desktopEventEnabled(context, 'acp_permission'))) return;
+    if (!desktopEventEnabled('acp_permission')) return;
     const title = resolveNotificationTitle(
       get,
       context,
@@ -230,7 +210,7 @@ export const notifyDesktopAgentCompleted = async (
   if (!hasHostCapability('notification.native')) return;
 
   try {
-    if (!(await desktopEventEnabled(context, event))) return;
+    if (!desktopEventEnabled(event)) return;
     const { completionSoundService } = await import('@/services/electron/completionSound');
     const fallback =
       event === 'agent_run_failed'

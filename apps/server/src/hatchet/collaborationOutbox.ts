@@ -28,7 +28,7 @@ export const createCollaborationHatchetTasks = (hatchet: HatchetClient) => {
     fn: async (input: { createdByUserId?: string; workspaceId?: string } & InputType) => ({
       outputsProcessed: await AutomationResultDeliveryService.recoverDue(
         await getServerDB(),
-        input,
+        input ?? {},
       ),
     }),
     inputValidator: z.object({

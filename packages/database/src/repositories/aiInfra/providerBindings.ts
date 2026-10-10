@@ -53,7 +53,7 @@ export interface ProviderBindingPlaneDeps {
    */
   resolveEnabledModelIds?: (providerId: string) => Promise<string[]>;
   /** Server-owned verification; absent compositions always leave routes disarmed. */
-  verifyBinding?: (row: ProviderBindingRow) => Promise<unknown>;
+  verifyBindings?: (rows: ProviderBindingRow[]) => Promise<unknown>;
   /**
    * The caller's workspace scope. Bindings and credentials themselves are
    * always personal — this only selects which legacy `ai_providers`/`ai_models`
@@ -666,52 +666,48 @@ export class ProviderBindingPlane {
    * resolvable route surface in sync for binding-managed providers.
    */
   async setModelEnabled(providerId: string, modelId: string, enabled: boolean): Promise<void> {
-    const bound = await this.getManaged(providerId);
-    const anchor = bound?.anchor;
-    if (!bound || !anchor?.config) return;
-
-    const row = bound.models.find((item) => item.config?.model === modelId);
-    if (!enabled) {
-      if (row) await this.bindings.delete(row.id, row.revision);
-      return;
-    }
-    if (row) {
-      // Re-arm under the current provider enable state.
-      await this.updateRow(row, { enabled: false });
-      await this.verifyModels(providerId, [modelId]);
-      return;
-    }
-
-    const anchorConfig = anchor.config;
-    const providerSettings = anchorConfig.providerSettings ?? { enabled: true };
-    await this.bindings.create({
-      enabled: false,
-      endpoint: anchorConfig.endpoint,
-      model: modelId.slice(0, 200),
-      name: `${providerId}/${modelId}`.slice(0, 120),
-      provider: providerId,
-      secretReference: anchorConfig.secretReference,
-      providerSettings,
-      selection: buildSelection(providerSettings, anchorConfig.endpoint),
-    });
-    await this.verifyModels(providerId, [modelId]);
+    await this.setModelsEnabled(providerId, [modelId], enabled);
   }
 
   private async verifyModels(providerId: string, modelIds?: string[]) {
     const bound = await this.getManaged(providerId);
-    if (!bound?.anchor?.config.providerSettings?.enabled || !this.deps.verifyBinding) return;
-    for (const row of bound.models) {
-      if (modelIds && !modelIds.includes(row.config.model)) continue;
-      if (row.config.selection.target !== 'sandbox' || row.config.endpoint === PLACEHOLDER_ENDPOINT)
-        continue;
-      // A failed probe keeps the saved settings, but never makes the route selectable.
-      await this.deps.verifyBinding(row).catch(() => undefined);
-    }
+    if (!bound?.anchor?.config.providerSettings?.enabled || !this.deps.verifyBindings) return;
+    const rows = bound.models.filter(
+      (row) =>
+        (!modelIds || modelIds.includes(row.config.model)) &&
+        row.config.selection.target === 'sandbox' &&
+        row.config.endpoint !== PLACEHOLDER_ENDPOINT,
+    );
+    // A failed probe keeps the saved settings, but never makes the route selectable.
+    if (rows.length) await this.deps.verifyBindings(rows).catch(() => undefined);
   }
 
-  /** Mirror a batch enable-set write (same semantics as setModelEnabled). */
+  /** Mirror a batch enable-set write, then verify this provider once. */
   async setModelsEnabled(providerId: string, modelIds: string[], enabled: boolean): Promise<void> {
-    for (const modelId of modelIds) await this.setModelEnabled(providerId, modelId, enabled);
+    const bound = await this.getManaged(providerId);
+    if (!bound?.anchor?.config) return;
+    const anchorConfig = bound.anchor.config;
+    for (const modelId of new Set(modelIds)) {
+      const row = bound.models.find((item) => item.config.model === modelId);
+      if (!enabled) {
+        if (row) await this.bindings.delete(row.id, row.revision);
+      } else if (row) {
+        await this.updateRow(row, { enabled: false });
+      } else {
+        const providerSettings = anchorConfig.providerSettings ?? { enabled: true };
+        await this.bindings.create({
+          enabled: false,
+          endpoint: anchorConfig.endpoint,
+          model: modelId.slice(0, 200),
+          name: `${providerId}/${modelId}`.slice(0, 120),
+          provider: providerId,
+          secretReference: anchorConfig.secretReference,
+          providerSettings,
+          selection: buildSelection(providerSettings, anchorConfig.endpoint),
+        });
+      }
+    }
+    if (enabled) await this.verifyModels(providerId, modelIds);
   }
 
   /** Drop route rows for removed models (`removeAiModel`, `clearModels*`). */

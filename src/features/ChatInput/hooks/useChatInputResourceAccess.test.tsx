@@ -24,7 +24,10 @@ vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ allowed: true, reason: '' }),
 }));
 
-vi.mock('@/store/agent', () => ({ useAgentStore: () => undefined }));
+const agentState = vi.hoisted(() => ({ agentMap: { 'agent-1': { visibility: 'private' } } }));
+vi.mock('@/store/agent', () => ({
+  useAgentStore: (selector: (state: typeof agentState) => unknown) => selector(agentState),
+}));
 vi.mock('@/store/agent/selectors', () => ({
   builtinAgentSelectors: { inboxAgentId: () => undefined },
 }));
@@ -63,6 +66,15 @@ describe('useChatInputResourceAccess', () => {
     expect(result.current.canShowControls).toBe(true);
     expect(result.current.canUseResource).toBe(true);
     expect(useResourceAccessMock).toHaveBeenLastCalledWith('agent', 'agent-1');
+  });
+
+  it('queries private Agent Use rather than bypassing the member list', () => {
+    const store = createStore({ agentId: 'agent-1' });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <Provider createStore={() => store}>{children}</Provider>
+    );
+    renderHook(() => useChatInputResourceAccess(), { wrapper });
+    expect(useResourceAccessMock).toHaveBeenCalledWith('agent', 'agent-1');
   });
 
   it('hides composer controls when the caller can only view the resource', () => {

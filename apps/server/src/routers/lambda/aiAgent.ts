@@ -83,7 +83,15 @@ import {
   assertCanUseTopicTargets,
   assertCanViewMessageTargets,
 } from '@/server/routers/lambda/_helpers/conversationResourceGuard';
+import { getResourceConfigAccess } from '@/server/routers/lambda/_helpers/resourceConfigGuard';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
+import {
+  projectWorkspaceIssueOperationStatus,
+  projectWorkspaceIssuePendingInterventions,
+  projectWorkspaceUseOperationStatus,
+  projectWorkspaceUsePendingIntervention,
+  readableWorkspaceIssueTopicIds,
+} from '@/server/routers/lambda/_helpers/workspaceIssueRead';
 import {
   GetAgentInterventionReviewBySourceSchema,
   GetAgentInterventionReviewSchema,
@@ -760,13 +768,16 @@ const resolveHeteroTopicWorkspace = async (params: {
 const assertCanUseOperationAgent = async (params: {
   db: OrviloDatabase;
   operationId: string;
+  topicId?: string;
   userId: string;
   workspaceId?: string | null;
 }) => {
-  const { db, operationId, userId, workspaceId } = params;
+  const { db, operationId, topicId, userId, workspaceId } = params;
   const [row] = await db
     .select({
       agentId: agentOperations.agentId,
+      groupId: agentOperations.chatGroupId,
+      topicId: agentOperations.topicId,
       userId: agentOperations.userId,
       workspaceId: agentOperations.workspaceId,
     })
@@ -777,10 +788,21 @@ const assertCanUseOperationAgent = async (params: {
   if (row.workspaceId !== (workspaceId ?? null) || row.userId !== userId) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
   }
-  if (!workspaceId) return;
-  if (!row.agentId)
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation has no authorized Agent' });
-  await assertCanUseWorkspaceAgent({ agentId: row.agentId, db, userId, workspaceId });
+  if (topicId && row.topicId !== topicId) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation does not belong to this topic' });
+  }
+  if (row.workspaceId) {
+    if (!row.agentId)
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation has no authorized Agent' });
+    await assertCanUseWorkspaceAgent({
+      agentId: row.agentId,
+      db,
+      groupId: row.groupId,
+      userId,
+      workspaceId: row.workspaceId,
+    });
+  }
+  return row;
 };
 
 /**
@@ -797,8 +819,9 @@ const assertCanUseOperationAgent = async (params: {
  * details). Without this guard the visitor could replay that id here and read
  * the unredacted creator config the stream path deliberately hides.
  *
- * Visible to: the operation's owner, or (workspace runs) a member with `use`
- * access to the operation's agent in the SAME workspace as the caller.
+ * Issue members receive a safe status/question projection. The operation's
+ * owner retains their own history/questions. Workspace executable metadata
+ * requires actual Agent Manage; standalone operations still require Agent Use.
  * Everything else — share visitors, AND the creator looking at a visitor's
  * run — resolves as NOT_FOUND so the endpoint does not confirm which ids
  * exist.
@@ -819,6 +842,7 @@ const assertOperationVisibleToCaller = async (params: {
   const [row] = await db
     .select({
       agentId: agentOperations.agentId,
+      topicId: agentOperations.topicId,
       userId: agentOperations.userId,
       workspaceId: agentOperations.workspaceId,
     })
@@ -831,13 +855,30 @@ const assertOperationVisibleToCaller = async (params: {
   const notFound = () => new TRPCError({ code: 'NOT_FOUND', message: 'Operation not found' });
 
   if (!row) throw notFound();
-  if (row.userId === userId) return;
+  const configAccess = async () => {
+    if (!row.workspaceId) return 'full' as const;
+    if (!row.agentId) return 'config_profile' as const;
+    const access = await getResourceConfigAccess(
+      { db, userId, workspaceId: row.workspaceId },
+      'agent',
+      row.agentId,
+    );
+    return access === 'full' ? ('full' as const) : ('config_profile' as const);
+  };
+  if (row.userId === userId) return configAccess();
 
   if (!row.workspaceId || !workspaceId || row.workspaceId !== workspaceId || !row.agentId) {
     throw notFound();
   }
 
+  if (
+    row.topicId &&
+    (await readableWorkspaceIssueTopicIds(db, [row.topicId], userId, workspaceId)).has(row.topicId)
+  ) {
+    return 'issue_view' as const;
+  }
   await assertCanUseWorkspaceAgent({ agentId: row.agentId, db, userId, workspaceId });
+  return configAccess();
 };
 
 /**
@@ -1821,6 +1862,7 @@ const aiAgentProcedure = aiAgentBaseProcedure.use(async (opts) => {
 // normal user OIDC tokens go through the legacy ownership guards.
 const heteroAgentProcedure = heteroAuthedProcedure.use(serverDatabase);
 const aiAgentWriteProcedure = aiAgentProcedure.use(withScopedPermission('message:create'));
+const aiAgentUseProcedure = aiAgentProcedure.use(withScopedPermission('ai_model:invoke'));
 
 const authorizeOperationCallback = async (
   ctx: {
@@ -1899,7 +1941,7 @@ export const aiAgentRouter = router({
    * - The subAgentId is the worker agent that executes the task
    * - Thread messages query should not filter by agentId to include all parent messages
    */
-  createClientGroupAgentTaskThread: aiAgentWriteProcedure
+  createClientGroupAgentTaskThread: aiAgentUseProcedure
     .input(CreateClientGroupAgentTaskThreadSchema)
     .mutation(async ({ input, ctx }) => {
       const { groupId, instruction, parentMessageId, subAgentId, title, topicId } = input;
@@ -2009,7 +2051,7 @@ export const aiAgentRouter = router({
    * Called by the desktop-local heterogeneous dispatch path to materialize the
    * isolated thread; execution happens in the local agent process.
    */
-  createClientTaskThread: aiAgentWriteProcedure
+  createClientTaskThread: aiAgentUseProcedure
     .input(CreateClientTaskThreadSchema)
     .mutation(async ({ input, ctx }) => {
       const { agentId, assistantMessage, groupId, instruction, parentMessageId, title, topicId } =
@@ -2124,7 +2166,7 @@ export const aiAgentRouter = router({
       }
     }),
 
-  execAgent: aiAgentWriteProcedure.input(ExecAgentSchema).mutation(async ({ input, ctx }) => {
+  execAgent: aiAgentUseProcedure.input(ExecAgentSchema).mutation(async ({ input, ctx }) => {
     const {
       agentId,
       slug,
@@ -2406,7 +2448,7 @@ export const aiAgentRouter = router({
    * Cancelling / rescheduling goes through the ordinary topic update mutations —
    * those are already ownership-scoped, and a schedule is just topic state.
    */
-  scheduleAgentRun: aiAgentWriteProcedure
+  scheduleAgentRun: aiAgentUseProcedure
     .input(ScheduleAgentRunSchema)
     .mutation(async ({ input, ctx }) => {
       log('scheduleAgentRun: identifier=%s, runAt=%s', input.agentId || input.slug, input.runAt);
@@ -2435,7 +2477,7 @@ export const aiAgentRouter = router({
    * Batch execute multiple agents
    * Supports parallel or sequential execution
    */
-  execAgents: aiAgentWriteProcedure.input(ExecAgentsSchema).mutation(async ({ input, ctx }) => {
+  execAgents: aiAgentUseProcedure.input(ExecAgentsSchema).mutation(async ({ input, ctx }) => {
     const { tasks, parallel = true } = input;
 
     log('execAgents: %d tasks, parallel=%s', tasks.length, parallel);
@@ -2547,7 +2589,7 @@ export const aiAgentRouter = router({
    * 4. Trigger Supervisor Agent execution
    * 5. Return operationId for SSE connection + messages for UI sync
    */
-  execGroupAgent: aiAgentWriteProcedure
+  execGroupAgent: aiAgentUseProcedure
     .input(ExecGroupAgentSchema)
     .mutation(async ({ input, ctx }) => {
       const { agentId, groupId, message, files, topicId, newTopic, initialTopicMetadata } = input;
@@ -2616,7 +2658,7 @@ export const aiAgentRouter = router({
    * - Group mode: pass groupId, Thread will be associated with the Group
    * - Single Agent mode: omit groupId, Thread will only be associated with the Agent
    */
-  execSubAgentTask: aiAgentWriteProcedure
+  execSubAgentTask: aiAgentUseProcedure
     .input(ExecSubAgentTaskSchema)
     .mutation(async ({ input, ctx }) => {
       const {
@@ -2695,7 +2737,7 @@ export const aiAgentRouter = router({
 
       log('Getting operation status for %s', operationId);
 
-      await assertOperationVisibleToCaller({
+      const readAccess = await assertOperationVisibleToCaller({
         db: ctx.serverDB,
         operationId,
         userId: ctx.userId,
@@ -2709,7 +2751,10 @@ export const aiAgentRouter = router({
         operationId,
       });
 
-      return operationStatus;
+      if (readAccess === 'issue_view') return projectWorkspaceIssueOperationStatus(operationStatus);
+      return readAccess === 'config_profile'
+        ? projectWorkspaceUseOperationStatus(operationStatus)
+        : operationStatus;
     }),
 
   getPendingInterventions: aiAgentProcedure
@@ -2723,8 +2768,9 @@ export const aiAgentRouter = router({
       // resolve to a run the caller may see, and the user-wide listing may only
       // ever enumerate the CALLER's own runs — `input.userId` is not a way to
       // read another user's pending interventions.
+      let readAccess: 'full' | 'issue_view' | 'config_profile' = 'full';
       if (operationId) {
-        await assertOperationVisibleToCaller({
+        readAccess = await assertOperationVisibleToCaller({
           db: ctx.serverDB,
           operationId,
           userId: ctx.userId,
@@ -2743,7 +2789,33 @@ export const aiAgentRouter = router({
         userId: operationId ? undefined : ctx.userId,
       });
 
-      return result;
+      if (readAccess === 'issue_view') return projectWorkspaceIssuePendingInterventions(result);
+      if (operationId) {
+        return readAccess === 'config_profile'
+          ? {
+              ...result,
+              pendingInterventions: result.pendingInterventions.map(
+                projectWorkspaceUsePendingIntervention,
+              ),
+            }
+          : result;
+      }
+      // The user-wide listing can include runs started with Use on another member's Agent.
+      return {
+        ...result,
+        pendingInterventions: await Promise.all(
+          result.pendingInterventions.map(async (entry) => {
+            if (!entry.modelRuntimeConfig) return entry;
+            const entryAccess = await assertOperationVisibleToCaller({
+              db: ctx.serverDB,
+              operationId: entry.operationId,
+              userId: ctx.userId,
+              workspaceId: ctx.workspaceId,
+            });
+            return entryAccess === 'full' ? entry : projectWorkspaceUsePendingIntervention(entry);
+          }),
+        ),
+      };
     }),
 
   /**
@@ -3025,7 +3097,7 @@ export const aiAgentRouter = router({
    * a live loop will persist the outcome — a parked run has no loop, so its
    * tool rows and DB row would both be left behind.
    */
-  stopPendingApproval: aiAgentWriteProcedure
+  stopPendingApproval: aiAgentUseProcedure
     .input(
       z.object({
         /** Stable sealed batch id stamped on every pending tool row. */
@@ -3038,6 +3110,13 @@ export const aiAgentRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await assertCanUseOperationAgent({
+        db: ctx.serverDB,
+        operationId: input.operationId,
+        topicId: input.topicId,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
       // Same ownership gate the approval resume uses: every target must belong
       // to the caller before anything is written.
       await assertCanUseAgentRunConversation({
@@ -3094,25 +3173,45 @@ export const aiAgentRouter = router({
       });
     }),
 
-  interruptTask: aiAgentWriteProcedure
-    .input(InterruptTaskSchema)
-    .mutation(async ({ input, ctx }) => {
-      const { threadId, operationId, topicId } = input;
+  interruptTask: aiAgentUseProcedure.input(InterruptTaskSchema).mutation(async ({ input, ctx }) => {
+    const { threadId, operationId, topicId } = input;
 
-      log('interruptTask: threadId=%s, operationId=%s, topicId=%s', threadId, operationId, topicId);
+    log('interruptTask: threadId=%s, operationId=%s, topicId=%s', threadId, operationId, topicId);
 
-      try {
-        return await ctx.aiAgentService.interruptTask({ operationId, threadId, topicId });
-      } catch (error: any) {
-        if (error.message === 'Thread not found') {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Thread not found' });
-        }
-        if (error.message === 'Operation ID not found') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Operation ID not found' });
-        }
-        throw error;
+    try {
+      const thread = threadId ? await ctx.threadModel.findById(threadId) : undefined;
+      if (threadId && !thread)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Thread not found' });
+      const resolvedOperationId = operationId ?? thread?.metadata?.operationId;
+      if (!resolvedOperationId)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Operation ID not found' });
+      if (thread?.agentId) {
+        await assertCanUseWorkspaceAgent({
+          agentId: thread.agentId,
+          db: ctx.serverDB,
+          groupId: thread.groupId,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        });
       }
-    }),
+      await assertCanUseOperationAgent({
+        db: ctx.serverDB,
+        operationId: resolvedOperationId,
+        topicId: topicId ?? thread?.topicId ?? undefined,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
+      return await ctx.aiAgentService.interruptTask({ operationId, threadId, topicId });
+    } catch (error: any) {
+      if (error.message === 'Thread not found') {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Thread not found' });
+      }
+      if (error.message === 'Operation ID not found') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Operation ID not found' });
+      }
+      throw error;
+    }
+  }),
 
   /**
    * Ingest a batch of `AgentStreamEvent`s from a `orvilo hetero exec` producer
@@ -3531,9 +3630,15 @@ export const aiAgentRouter = router({
    * Review. OSS returns unavailable so its existing message-row path remains
    * the compatibility fallback.
    */
-  resolveAgentInterventionBySource: aiAgentWriteProcedure
+  resolveAgentInterventionBySource: aiAgentUseProcedure
     .input(ResolveAgentInterventionBySourceSchema)
     .mutation(async ({ input, ctx }) => {
+      await assertCanUseOperationAgent({
+        db: ctx.serverDB,
+        operationId: input.operationId,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
       await assertCanUseAgentRunConversation({
         db: ctx.serverDB,
         messageIds: input.targets.map(({ toolMessageId }) => toolMessageId),
@@ -3597,7 +3702,7 @@ export const aiAgentRouter = router({
    * every runtime authority (operation, tool call, message, canonical tool
    * key) after ACL + batch membership checks.
    */
-  resolveAgentIntervention: aiAgentWriteProcedure
+  resolveAgentIntervention: aiAgentUseProcedure
     .input(ResolveAgentInterventionSchema)
     .mutation(async ({ input, ctx }) => {
       if (input.action.type === 'submit_custom') {
@@ -3671,7 +3776,7 @@ export const aiAgentRouter = router({
    * publishing, and an already-decided receipt projects the stored winner
    * into the published response.
    */
-  resolveHeteroIntervention: aiAgentWriteProcedure
+  resolveHeteroIntervention: aiAgentUseProcedure
     .input(ResolveHeteroInterventionReviewSchema)
     .mutation(async ({ input, ctx }) => {
       const resolution = await resolveHeteroIntervention({
@@ -3838,7 +3943,7 @@ export const aiAgentRouter = router({
    * (`waitInterventionResponse` → `bridge.resolve`). Symmetric with the
    * desktop path, which resolves the bridge over Electron IPC instead.
    */
-  submitHeteroIntervention: aiAgentWriteProcedure
+  submitHeteroIntervention: aiAgentUseProcedure
     .input(SubmitHeteroInterventionSchema)
     .mutation(async ({ input, ctx }) => {
       const {
@@ -3946,7 +4051,7 @@ export const aiAgentRouter = router({
       return { approval, status: 'resolving' as const, success: true as const };
     }),
 
-  processHumanIntervention: aiAgentWriteProcedure
+  processHumanIntervention: aiAgentUseProcedure
     .input(ProcessHumanInterventionSchema)
     .mutation(async ({ input, ctx }) => {
       const { operationId, action, data, reason, stepIndex, toolMessageId } = input;
@@ -4099,7 +4204,7 @@ export const aiAgentRouter = router({
       };
     }),
 
-  startExecution: aiAgentWriteProcedure
+  startExecution: aiAgentUseProcedure
     .input(StartExecutionSchema)
     .mutation(async ({ input, ctx }) => {
       const { operationId, context, priority, delay } = input;

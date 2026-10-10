@@ -29,6 +29,7 @@ import ProjectPropertiesCard from './ProjectPropertiesCard';
 
 const mocks = vi.hoisted(() => ({
   canManageMembers: false,
+  changeProjectMemberRole: vi.fn(),
   canInvite: false,
   openInvite: vi.fn(),
   workspaceRole: null as string | null,
@@ -248,6 +249,7 @@ vi.mock('@/features/Teammates/api/hooks', () => ({
   useProjectMembersQuery: mocks.projectMembersQuery,
   useTeammateActions: () => ({
     addProjectMember: mocks.addProjectMember,
+    changeProjectMemberRole: mocks.changeProjectMemberRole,
     removeProjectMember: mocks.removeProjectMember,
     mutating: false,
   }),
@@ -304,6 +306,7 @@ vi.mock('@/store/project', () => ({
     return mocks.projectResolved
       ? {
           ...detail,
+          capabilities: { canEdit: true, canComment: true, canManage: mocks.canManageMembers },
           project: {
             ...detail.project,
             completedReviewId: mocks.completedReviewId,
@@ -371,6 +374,7 @@ vi.mock('@/store/goal', () => ({
 }));
 
 const detail = {
+  capabilities: { canEdit: true, canComment: true, canManage: false },
   agents: [],
   completionReviews: [],
   dependencies: [],
@@ -493,7 +497,13 @@ describe('project membership editing', () => {
   it('opens a project-scoped invitation without treating the command as a member', async () => {
     mocks.canManageMembers = true;
     mocks.canInvite = true;
-    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    render(
+      <ProjectMembersField
+        canManage={mocks.canManageMembers || mocks.workspaceRole === 'member'}
+        projectId="prj_1"
+        query={query}
+      />,
+    );
     await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
     await userEvent.click(await screen.findByRole('option', { name: 'properties.inviteAndAdd' }));
     expect(mocks.openInvite).toHaveBeenCalledWith({
@@ -521,7 +531,13 @@ describe('project membership editing', () => {
 
   it('does not offer workspace invitations to a project-only manager', async () => {
     mocks.workspaceRole = 'member';
-    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    render(
+      <ProjectMembersField
+        canManage={mocks.canManageMembers || mocks.workspaceRole === 'member'}
+        projectId="prj_1"
+        query={query}
+      />,
+    );
     await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
     expect(
       screen.queryByRole('option', { name: 'properties.inviteAndAdd' }),
@@ -530,19 +546,37 @@ describe('project membership editing', () => {
 
   it('keeps workspace viewers read-only even when their project role is manager', () => {
     mocks.workspaceRole = 'viewer';
-    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    render(
+      <ProjectMembersField
+        canManage={mocks.canManageMembers || mocks.workspaceRole === 'member'}
+        projectId="prj_1"
+        query={query}
+      />,
+    );
     expect(screen.getByRole('combobox', { name: 'properties.members' })).toBeDisabled();
   });
 
   it('allows active project managers to edit without workspace administration rights', () => {
     mocks.workspaceRole = 'member';
-    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    render(
+      <ProjectMembersField
+        canManage={mocks.canManageMembers || mocks.workspaceRole === 'member'}
+        projectId="prj_1"
+        query={query}
+      />,
+    );
     expect(screen.getByRole('combobox', { name: 'properties.members' })).not.toBeDisabled();
   });
 
   it('allows removing a selected member who is no longer in the workspace roster', async () => {
     mocks.canManageMembers = true;
-    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    render(
+      <ProjectMembersField
+        canManage={mocks.canManageMembers || mocks.workspaceRole === 'member'}
+        projectId="prj_1"
+        query={query}
+      />,
+    );
     await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
     const option = await screen.findByRole('option', { name: 'user_1' });
     expect(option).not.toHaveAttribute('aria-disabled', 'true');
@@ -556,7 +590,13 @@ describe('project membership editing', () => {
     mocks.workspaceMembers = [
       { userId: 'user_2', user: { fullName: 'New teammate' }, deletedAt: null, suspendedAt: null },
     ];
-    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    render(
+      <ProjectMembersField
+        canManage={mocks.canManageMembers || mocks.workspaceRole === 'member'}
+        projectId="prj_1"
+        query={query}
+      />,
+    );
     await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
     await userEvent.click(await screen.findByRole('option', { name: 'New teammate' }));
     await waitFor(() => expect(mocks.addProjectMember).toHaveBeenCalledTimes(1));
@@ -570,7 +610,13 @@ describe('project membership editing', () => {
     mocks.workspaceMembers = [
       { userId: 'user_2', user: { fullName: 'New teammate' }, deletedAt: null, suspendedAt: null },
     ];
-    render(<ProjectMembersField projectId="prj_1" query={query} />);
+    render(
+      <ProjectMembersField
+        canManage={mocks.canManageMembers || mocks.workspaceRole === 'member'}
+        projectId="prj_1"
+        query={query}
+      />,
+    );
     const trigger = screen.getByRole('combobox', { name: 'properties.members' });
     await userEvent.click(trigger);
     await userEvent.click(await screen.findByRole('option', { name: 'New teammate' }));
@@ -672,6 +718,46 @@ describe('project update composer controls', () => {
     expect(screen.getByText('Launch ready').tagName).toBe('STRONG');
     expect(screen.queryByText('**Launch ready**')).not.toBeInTheDocument();
   });
+  it.each([
+    { canEdit: false, canDelete: true, allowed: 'delete', denied: 'edit' },
+    { canEdit: true, canDelete: false, allowed: 'edit', denied: 'delete' },
+  ])(
+    'keeps update $allowed independent from $denied in the timeline row',
+    ({ canEdit, canDelete, allowed, denied }) => {
+      const onEdit = vi.fn();
+      const update = {
+        id: 'update_acl',
+        projectId: 'prj_1',
+        authorId: 'user_2',
+        body: 'A teammate update',
+        createdAt: '2026-09-22T00:00:00Z',
+        kind: 'comment' as const,
+      };
+      render(
+        <ProjectUpdateRow
+          hideAuthorAvatar
+          canDelete={canDelete}
+          canEdit={canEdit}
+          update={update}
+          onEdit={onEdit}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'overview.updateMenu' }));
+      expect(screen.getByRole('menuitem', { name: `common:${allowed}` })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: `common:${denied}` })).not.toBeInTheDocument();
+      if (canEdit) {
+        fireEvent.click(screen.getByRole('menuitem', { name: 'common:edit' }));
+        expect(onEdit).toHaveBeenCalledWith(update);
+      } else {
+        fireEvent.click(screen.getByRole('menuitem', { name: 'common:delete' }));
+        expect(mocks.confirmModal).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'overview.commentDeleteConfirm.title' }),
+        );
+        expect(onEdit).not.toHaveBeenCalled();
+      }
+    },
+  );
+
   // The composer scopes drafts by user, workspace, project and target; the mocks
   // above sign in `user_1` in workspace `ws_1`.
   const newDraftKey = (projectId: string) =>
@@ -813,17 +899,19 @@ describe('project update composer controls', () => {
 
 describe('project description disclosure', () => {
   it('renders new server descriptions and empty content without requiring an edit-mode click', async () => {
-    const { rerender } = render(<ProjectDescription description="Initial" projectId="prj_1" />);
+    const { rerender } = render(
+      <ProjectDescription canEdit description="Initial" projectId="prj_1" />,
+    );
     const editor = await screen.findByRole('textbox', { name: 'overview.descriptionEditor' });
-    rerender(<ProjectDescription description="**Revised**" projectId="prj_1" />);
+    rerender(<ProjectDescription canEdit description="**Revised**" projectId="prj_1" />);
     await waitFor(() => expect(editor.querySelector('strong')).toHaveTextContent('Revised'));
-    rerender(<ProjectDescription description="" projectId="prj_1" />);
+    rerender(<ProjectDescription canEdit description="" projectId="prj_1" />);
     await waitFor(() => expect(editor.textContent).toBe(''));
     expect(screen.queryByRole('button', { name: /descriptionSave|Save/ })).not.toBeInTheDocument();
   });
 
   it('exposes an immediately editable rich description and preserves it across disclosure toggles', async () => {
-    render(<ProjectDescription description="**Project scope**" projectId="prj_1" />);
+    render(<ProjectDescription canEdit description="**Project scope**" projectId="prj_1" />);
     const disclosure = screen.getByRole('button', { name: 'overview.descriptionLabel' });
     expect(disclosure).toHaveAttribute('aria-expanded', 'true');
     const entry = await screen.findByRole('textbox', { name: 'overview.descriptionEditor' });
@@ -840,7 +928,7 @@ describe('project description disclosure', () => {
 describe('project overview inline fields', () => {
   it('saves an empty summary without substituting a description', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
-    render(<ProjectOverviewField kind="summary" value="Original" onSave={save} />);
+    render(<ProjectOverviewField canEdit kind="summary" value="Original" onSave={save} />);
     const field = screen.getByRole('textbox');
     fireEvent.change(field, { target: { value: '' } });
     fireEvent.blur(field);
@@ -849,7 +937,7 @@ describe('project overview inline fields', () => {
 
   it('cancels drafts with Escape and does not save a blank name', () => {
     const save = vi.fn();
-    render(<ProjectOverviewField kind="name" value="Apollo" onSave={save} />);
+    render(<ProjectOverviewField canEdit kind="name" value="Apollo" onSave={save} />);
     const field = screen.getByRole('textbox');
     field.focus();
     fireEvent.change(field, { target: { value: 'Draft' } });
@@ -870,7 +958,7 @@ describe('project overview inline fields', () => {
       .mockRejectedValueOnce(new Error('Offline'))
       .mockResolvedValueOnce(undefined);
     try {
-      render(<ProjectOverviewField kind="summary" value="Original" onSave={save} />);
+      render(<ProjectOverviewField canEdit kind="summary" value="Original" onSave={save} />);
       const field = screen.getByRole('textbox');
       fireEvent.change(field, { target: { value: 'Draft' } });
       fireEvent.blur(field);
@@ -1196,8 +1284,16 @@ describe('project milestone management', () => {
     );
   });
 
-  it('keeps the cards read-only for a non-owner while still showing content', () => {
-    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
+  it('keeps the cards read-only when the server denies editing while still showing content', () => {
+    render(
+      <ProjectDashboard
+        projectId={'prj_1'}
+        detail={{
+          ...withMilestone,
+          capabilities: { canEdit: false, canComment: false, canManage: false },
+        }}
+      />,
+    );
     expect(screen.getByText('Ship the parity pass')).toBeInTheDocument();
     expect(screen.getByText('Release the parity pass')).toBeInTheDocument();
     // The date stays readable as text, not a picker.

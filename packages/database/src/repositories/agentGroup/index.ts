@@ -43,7 +43,10 @@ import {
   topics,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
-import { assertAgentRuntimeCreation } from '../../utils/agentRuntimeCreation';
+import {
+  assertAgentRuntimeCreation,
+  initializeAgentCreatorUse,
+} from '../../utils/agentRuntimeCreation';
 import { insertInBatches, splitCrossBatchSelfReferences } from '../../utils/batchInsert';
 import { COPIED_TOPIC_USAGE_RESET } from '../../utils/copiedTranscript';
 import { copyMessagesInDatabase, type IdPair } from '../../utils/copyMessagesInDatabase';
@@ -710,6 +713,7 @@ export class AgentGroupRepository {
             config,
           );
           const [copy] = await tx.insert(agents).values(config).returning();
+          await initializeAgentCreatorUse(tx as OrviloDatabase, [copy]);
           agentId = copy.id;
         }
         links.push({
@@ -1100,7 +1104,8 @@ export class AgentGroupRepository {
               virtual: true,
             })),
           )
-          .returning({ id: agents.id });
+          .returning({ id: agents.id, userId: agents.userId, workspaceId: agents.workspaceId });
+        await initializeAgentCreatorUse(trx as OrviloDatabase, clones);
 
         for (const [index, member] of referencedMembers.entries()) {
           const newAgentId = clones[index].id;
@@ -1421,7 +1426,8 @@ export class AgentGroupRepository {
               ),
             ),
           )
-          .returning({ id: agents.id });
+          .returning({ id: agents.id, userId: agents.userId, workspaceId: agents.workspaceId });
+        await initializeAgentCreatorUse(trx as OrviloDatabase, newMembers);
 
         for (const [index, member] of sourceMembers.entries()) {
           memberAgentIdMap.set(member.agent.id, newMembers[index].id);

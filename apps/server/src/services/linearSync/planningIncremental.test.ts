@@ -16,6 +16,7 @@ import {
   taskPlanningScopes,
   tasks,
   users,
+  workspaceMembers,
   workspaces,
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
@@ -50,6 +51,7 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
   // Project creation inherits a Prime runtime; strict admission requires an
   // executable orvilo runtime (host device + armed binding + owned credential).
   await seedPrimeRuntime(db, { userId, workspaceId });

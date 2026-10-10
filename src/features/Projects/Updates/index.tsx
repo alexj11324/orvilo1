@@ -9,7 +9,6 @@ import { createElement, memo, useCallback, useEffect, useRef, useState } from 'r
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
@@ -22,6 +21,7 @@ import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/heal
 import { formatProjectDay } from '@/features/Projects/projectPlanningDate';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
+import { useCurrentProjectDetail } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -176,24 +176,18 @@ export const useProjectUpdates = (projectId?: string) =>
     return (response?.data ?? []).map(toUpdate);
   });
 
-/**
- * Per-row ⋯-menu gate: the author may always edit/delete their own post; the
- * project owner, the project lead, or a workspace admin may moderate
- * anyone's — the same ACL `ProjectModel.updateUpdate`/`deleteUpdate` enforce.
- * Accepts a possibly-unloaded project so surfaces can call it above their
- * loading early-returns.
- */
-export const useCanModerateProjectUpdate = (
-  project?: { leadUserId?: null | string; userId?: null | string } | null,
-) => {
+/** Server capabilities govern deletion; only the author may edit a post. */
+export const useCanModerateProjectUpdate = (project?: { id?: string } | null) => {
   const userId = useUserStore(userProfileSelectors.userId);
-  const { canManageMembers } = useWorkspaceCapabilities();
-  const canManage =
-    canManageMembers ||
-    (!!userId && (project?.userId === userId || project?.leadUserId === userId));
+  const detail = useCurrentProjectDetail(project?.id);
+  const canComment = detail?.capabilities?.canComment === true;
+  const canManage = detail?.capabilities?.canManage === true;
   return useCallback(
-    (update: ProjectUpdate) => canManage || (!!userId && update.authorId === userId),
-    [canManage, userId],
+    (update: ProjectUpdate) => ({
+      canEdit: canComment && update.authorId === userId,
+      canDelete: canComment && (canManage || update.authorId === userId),
+    }),
+    [canComment, canManage, userId],
   );
 };
 
@@ -227,6 +221,9 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
     projectId,
   }) => {
     const { t } = useTranslation(['project', 'common']);
+    const canComment = useCurrentProjectDetail(projectId)?.capabilities?.canComment === true;
+    const userId = useUserStore(userProfileSelectors.userId);
+    const canPost = canComment && (!editingUpdate || editingUpdate.authorId === userId);
     const editing = !!editingUpdate;
     const [initial] = useState(() =>
       resolveProjectUpdateDraft(readProjectUpdateDraft(draftKey), editingUpdate, defaultMode),
@@ -252,7 +249,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
 
     const post = async () => {
       const content = body.trim();
-      if (!content || posting) return;
+      if (!canPost || !content || posting) return;
       setPosting(true);
       try {
         if (editingUpdate) {
@@ -288,6 +285,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
     if (!expanded) {
       const entry = (
         <button
+          disabled={!canPost}
           type="button"
           className={[styles.collapsed, emptyState && styles.collapsedEmpty]
             .filter(Boolean)
@@ -361,7 +359,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
         )}
         <div className={cn('flex flex-col', styles.composer)}>
           <ProjectUpdateEditor
-            disabled={posting}
+            disabled={!canPost || posting}
             initialContent={editorRevision === 0 ? initial.body : ''}
             key={editorRevision}
             label={t(mode === 'update' ? 'overview.updateEditor' : 'overview.commentEditor')}
@@ -389,7 +387,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
             )}
             <Button
               aria-busy={posting}
-              disabled={!body.trim() || posting}
+              disabled={!canPost || !body.trim() || posting}
               variant="default"
               onClick={() => void post()}
             >
@@ -433,13 +431,14 @@ ProjectUpdateComposer.displayName = 'ProjectUpdateComposer';
 export const ProjectUpdateRow = memo<{
   /** Whether the ⋯ menu (edit/delete) renders — the caller applies the row ACL. */
   canEdit?: boolean;
+  canDelete?: boolean;
   /** The host already draws the author's avatar as the row's leading mark (activity timeline). */
   hideAuthorAvatar?: boolean;
   /** Called after a delete lands so the feed can revalidate. */
   onChanged?: () => void;
   onEdit?: (update: ProjectUpdate) => void;
   update: ProjectUpdate;
-}>(({ update, canEdit, hideAuthorAvatar, onChanged, onEdit }) => {
+}>(({ update, canEdit, canDelete, hideAuthorAvatar, onChanged, onEdit }) => {
   const { t } = useTranslation(['project', 'common']);
   const meta = update.health ? PROJECT_HEALTH_META[update.health] : null;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -499,27 +498,35 @@ export const ProjectUpdateRow = memo<{
           <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
             {formatProjectDay(update.createdAt)}
           </span>
-          {canEdit && (
+          {(canEdit || canDelete) && (
             <div
               className={cn('flex flex-row', cx(UPDATE_ACTIONS_CLASS, styles.updateActions))}
               style={{ justifyContent: 'flex-end', flex: 1 }}
             >
               <DropdownMenu
                 items={[
-                  {
-                    icon: PencilIcon,
-                    key: 'edit',
-                    label: t('common:edit'),
-                    onClick: () => onEdit?.(update),
-                  },
-                  { type: 'divider' as const },
-                  {
-                    danger: true,
-                    icon: Trash2Icon,
-                    key: 'delete',
-                    label: t('common:delete'),
-                    onClick: confirmDelete,
-                  },
+                  ...(canEdit
+                    ? [
+                        {
+                          icon: PencilIcon,
+                          key: 'edit',
+                          label: t('common:edit'),
+                          onClick: () => onEdit?.(update),
+                        },
+                      ]
+                    : []),
+                  ...(canEdit && canDelete ? [{ type: 'divider' as const }] : []),
+                  ...(canDelete
+                    ? [
+                        {
+                          danger: true,
+                          icon: Trash2Icon,
+                          key: 'delete',
+                          label: t('common:delete'),
+                          onClick: confirmDelete,
+                        },
+                      ]
+                    : []),
                 ]}
                 onOpenChange={setMenuOpen}
               >

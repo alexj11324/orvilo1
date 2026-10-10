@@ -1,10 +1,12 @@
 import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
+import { TRPCError } from '@trpc/server';
 import type * as ModelBankModule from 'model-bank';
 import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import type * as FeatureFlagsModule from '@/server/featureFlags';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 
@@ -14,6 +16,10 @@ import { createDispatchTestDb } from './dispatchAdmission.test-utils';
 
 const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
   mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/server/featureFlags', async (importOriginal) => ({
@@ -336,6 +342,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(assertCanUseWorkspaceAgent).mockReset().mockResolvedValue(undefined);
     mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: false });
     mockDispatchHeteroAgent.mockImplementation((deps, ctx, input) =>
       realDispatchRef.current!(deps, ctx, input),
@@ -549,6 +556,21 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         }),
         undefined,
       );
+    });
+
+    it('does not start a queued workspace run after Agent Use is revoked at admission', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        executionTargetSelectionPolicy: 'fixed',
+      });
+      service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
+      vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValue(new TRPCError({ code: 'FORBIDDEN' }));
+      await expect(
+        service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' }),
+      ).resolves.toMatchObject({ success: false, error: 'AGENT_USE_FORBIDDEN' });
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
     });
 
     it('keeps the shared fixed device even when the request asks for another', async () => {

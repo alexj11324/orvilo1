@@ -171,12 +171,14 @@ const ProjectWorkspace = memo(() => {
               />
               <div className="flex flex-col" style={{ gap: 2 }}>
                 <ProjectOverviewField
+                  canEdit={detail.capabilities?.canEdit}
                   key={`${project.id}:name`}
                   kind="name"
                   value={project.name}
                   onSave={(name) => updateProject(project.id, { name })}
                 />
                 <ProjectOverviewField
+                  canEdit={detail.capabilities?.canEdit}
                   key={`${project.id}:summary`}
                   kind="summary"
                   value={project.summary ?? ''}
@@ -206,7 +208,7 @@ const ProjectWorkspace = memo(() => {
                   <Button
                     aria-label={t('properties.status')}
                     className={PROPERTY_CONTROL_CLASS}
-                    disabled={updatingStatus || lifecycleLocked}
+                    disabled={updatingStatus || lifecycleLocked || !detail.capabilities?.canEdit}
                     variant="ghost"
                   >
                     <ProjectStatusIcon
@@ -238,7 +240,13 @@ const ProjectWorkspace = memo(() => {
                   </WorkspaceLink>
                 ))}
                 {membersEnabled && (
-                  <ProjectMembersField projectId={project.id} query={membersSWR} />
+                  <ProjectMembersField
+                    canManage={detail.capabilities?.canManage}
+                    projectId={project.id}
+                    projectVisibility={project.visibility}
+                    query={membersSWR}
+                    onChanged={() => mutate()}
+                  />
                 )}
               </div>
             </div>
@@ -302,7 +310,7 @@ const ProjectWorkspace = memo(() => {
                   />
                 ) : (
                   <ProjectUpdateRow
-                    canEdit={canModerateUpdate(update)}
+                    {...canModerateUpdate(update)}
                     key={update.id}
                     update={update}
                     onChanged={() => void updatesSWR.mutate()}
@@ -312,6 +320,7 @@ const ProjectWorkspace = memo(() => {
               )}
             </div>
             <ProjectDescription
+              canEdit={detail.capabilities?.canEdit}
               description={project.description}
               key={project.id}
               projectId={project.id}

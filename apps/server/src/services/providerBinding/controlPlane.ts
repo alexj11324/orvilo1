@@ -130,7 +130,12 @@ const toContractBinding = (
  * configuration row alone never yields `ready`.
  */
 export class SqlTrustedProviderBackend implements TrustedProviderBackend {
-  constructor(private readonly db: OrviloDatabase) {}
+  private readonly verificationRequests = new Map<string, Promise<Response | undefined>>();
+
+  constructor(
+    private readonly db: OrviloDatabase,
+    private readonly reuseProviderVerification = false,
+  ) {}
 
   private async resolveConnection(binding: ProviderBinding) {
     const bindings = new ProviderBindingModel(this.db, binding.ownerId);
@@ -156,15 +161,26 @@ export class SqlTrustedProviderBackend implements TrustedProviderBackend {
   ): Promise<Response | undefined> {
     const connection = await this.resolveConnection(binding);
     if (!connection) return undefined;
-    try {
-      return await fetch(`${connection.endpoint}${path}`, {
+    // This cache lives only for one settings mutation. Re-resolve every binding
+    // before reuse; the broker still rechecks its revision and authority afterwards.
+    const key = JSON.stringify([
+      binding.ownerId,
+      binding.providerId,
+      binding.secretReference,
+      connection.endpoint,
+      connection.headers,
+      path,
+    ]);
+    let pending = this.reuseProviderVerification ? this.verificationRequests.get(key) : undefined;
+    if (!pending) {
+      pending = fetch(`${connection.endpoint}${path}`, {
         ...init,
         headers: { ...connection.headers, ...init.headers },
         signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
-      });
-    } catch {
-      return undefined;
+      }).catch(() => undefined);
+      if (this.reuseProviderVerification) this.verificationRequests.set(key, pending);
     }
+    return (await pending)?.clone();
   }
 
   async check(binding: ProviderBinding): Promise<boolean> {
@@ -634,6 +650,7 @@ const toOpenAiTools = (tools: InferenceToolDefinition[]): Record<string, unknown
 /** Deployment composition for the canonical configuration broker. */
 export function createProviderBindingComposition(
   db: OrviloDatabase,
+  options: { reuseProviderVerification?: boolean } = {},
 ): ProviderConfigurationComposition {
   const authorizeScope = authorizePersonalScope(db);
   const authority: ConfigurationAuthority = {
@@ -656,7 +673,7 @@ export function createProviderBindingComposition(
     authorizeScope,
     broker: createProviderConfigurationBroker({
       authority,
-      backend: new SqlTrustedProviderBackend(db),
+      backend: new SqlTrustedProviderBackend(db, options.reuseProviderVerification),
     }),
   };
 }

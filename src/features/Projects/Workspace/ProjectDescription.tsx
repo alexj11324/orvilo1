@@ -40,6 +40,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 interface ProjectDescriptionProps {
+  canEdit?: boolean;
   description?: string | null;
   onSaved?: () => void;
   projectId: string;
@@ -48,7 +49,12 @@ interface ProjectDescriptionProps {
 const plugins = [ReactLinkPlugin, ReactListPlugin];
 
 // Keep the document mounted when collapsed so disclosure never discards a draft.
-const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescriptionProps) => {
+const ProjectDescription = ({
+  canEdit = false,
+  description,
+  onSaved,
+  projectId,
+}: ProjectDescriptionProps) => {
   const { t } = useTranslation('project');
   const editor = useEditor();
   const bodyId = useId();
@@ -82,7 +88,7 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
   }, [description, dirty, editor]);
 
   const save = async () => {
-    if (pending.current) return;
+    if (!canEdit || pending.current) return;
     const draft = String(editor.getDocument('markdown') ?? '');
     pending.current = true;
     setSaving(true);
@@ -126,7 +132,7 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
           className={styles.editor}
           content={description || ''}
           debounceWait={0}
-          editable={!saving}
+          editable={canEdit && !saving}
           editor={editor}
           placeholder={t('overview.descriptionEmpty')}
           plugins={plugins}
@@ -145,7 +151,7 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
             <div className="flex flex-row" style={{ gap: 8 }}>
               <Button
                 aria-busy={saving}
-                disabled={saving}
+                disabled={saving || !canEdit}
                 size="sm"
                 variant="default"
                 onClick={() => void save()}

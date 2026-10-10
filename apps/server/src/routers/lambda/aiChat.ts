@@ -22,7 +22,12 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
-import { resolveContext } from '@/server/routers/lambda/_helpers/resolveContext';
+import { assertCanUseTopicTargets } from '@/server/routers/lambda/_helpers/conversationResourceGuard';
+import {
+  resolveContext,
+  resolveContextWithAgentId,
+} from '@/server/routers/lambda/_helpers/resolveContext';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { AiChatService } from '@/server/services/aiChat';
 import { AiGenerationService, isAcpJudgmentBindingError } from '@/server/services/aiGeneration';
 import { FileService } from '@/server/services/file';
@@ -224,6 +229,68 @@ export const aiChatRouter = router({
   sendMessageInServer: aiChatWriteProcedure
     .input(AiSendMessageServerSchema)
     .mutation(async ({ input, ctx }) => {
+      if (ctx.workspaceId) {
+        const context = await resolveContextWithAgentId(
+          input,
+          ctx.serverDB,
+          ctx.userId,
+          ctx.workspaceId,
+        );
+        if (
+          (input.agentId && input.agentId !== context.agentId) ||
+          (input.sessionId && input.sessionId !== context.sessionId)
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Inconsistent Agent conversation target',
+          });
+        }
+        if (context.agentId) {
+          await assertCanUseWorkspaceAgent({
+            agentId: context.agentId,
+            db: ctx.serverDB,
+            groupId: context.groupId,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          });
+        }
+        const targets = await assertCanUseTopicTargets(
+          { db: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId },
+          input.topicId ? [input.topicId] : [],
+        );
+        if (
+          !context.agentId &&
+          targets.length === 0 &&
+          (input.agentId || input.sessionId || input.topicId || input.groupId)
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'No authorized Agent execution target',
+          });
+        }
+        const assistantAgentId = input.newAssistantMessage.agentId ?? context.agentId;
+        if (assistantAgentId && assistantAgentId !== context.agentId) {
+          // Direct mentions can select a distinct Group member. Admit that
+          // actual assistant too before any conversation write.
+          await assertCanUseWorkspaceAgent({
+            agentId: assistantAgentId,
+            db: ctx.serverDB,
+            groupId: context.groupId,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          });
+        }
+        input = {
+          ...input,
+          agentId: context.agentId ?? undefined,
+          sessionId: context.sessionId ?? undefined,
+          groupId: context.groupId ?? undefined,
+          newAssistantMessage: {
+            ...input.newAssistantMessage,
+            agentId: assistantAgentId ?? undefined,
+          },
+        };
+      }
       const timingContext =
         input.newAssistantMessage.provider === 'orvilo'
           ? { requestId: createTimingRequestId(), startedAt: Date.now() }

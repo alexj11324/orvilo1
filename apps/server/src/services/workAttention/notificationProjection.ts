@@ -12,12 +12,12 @@ import { NotificationModel } from '@/database/models/notification';
 import { allocateFeedRevision } from '@/database/models/notificationFeed';
 import { TaskModel } from '@/database/models/task';
 import { UserModel } from '@/database/models/user';
-import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSettings';
 import {
   agents,
   taskComments,
   tasks,
   taskTopics,
+  teamWorkflowStates,
   topics,
   users,
   workspaceMembers,
@@ -285,10 +285,33 @@ export class NotificationProjectionService {
           name: agent.name ?? undefined,
         };
     }
+    const [workflowState] = task.workflowStateRefId
+      ? await this.db
+          .select({ name: teamWorkflowStates.name })
+          .from(teamWorkflowStates)
+          .where(
+            and(
+              eq(teamWorkflowStates.id, task.workflowStateRefId),
+              eq(teamWorkflowStates.workspaceId, task.workspaceId!),
+            ),
+          )
+          .limit(1)
+      : [];
+    const statusLabel =
+      workflowState?.name ??
+      {
+        backlog: 'Backlog',
+        todo: 'Todo',
+        in_progress: 'In Progress',
+        in_review: 'In Review',
+        done: 'Done',
+        canceled: 'Canceled',
+        triage: 'Triage',
+      }[task.workflowCategory];
     const targets: ProjectionTarget[] = [];
     for (const [userId, kind] of recipientKinds) {
       if (!active.has(userId)) continue;
-      // TaskModel's shared predicate includes private-team and resource ACL.
+      // TaskModel enforces active workspace Issue readability independently of private Team membership.
       if (!(await new TaskModel(this.db, userId, row.workspaceId ?? undefined).findById(task.id)))
         continue;
       if (comment?.visibility === 'private' && comment.userId !== userId) continue;
@@ -298,7 +321,7 @@ export class NotificationProjectionService {
             ? 'Agent finished this run'
             : 'Agent run failed'
           : kind === 'status'
-            ? `Issue status changed to ${task.workflowCategory}`
+            ? `Issue status changed to ${statusLabel}`
             : kind === 'assigned'
               ? 'Issue assigned to you'
               : kind === 'review'
@@ -373,15 +396,8 @@ export class NotificationProjectionService {
         ? await this.resolveIssueTargets(row)
         : resolveNotificationTargets(row);
     for (const target of targets) {
-      const settings = row.workspaceId
-        ? (
-            await new WorkspaceUserSettingsModel(
-              this.db,
-              target.recipientUserId,
-              row.workspaceId,
-            ).getPreference()
-          ).notification
-        : (await new UserModel(this.db, target.recipientUserId).getUserSettings())?.notification;
+      const settings = (await new UserModel(this.db, target.recipientUserId).getUserSettings())
+        ?.notification;
       if (
         !notificationEventEnabled(
           settings as NotificationSettings | undefined,

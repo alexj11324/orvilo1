@@ -1,5 +1,5 @@
 import type { DeviceListItem } from '@orvilo/types';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Activity, useDeferredValue } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,6 +16,7 @@ const targetFixture = vi.hoisted(() => ({
   boundDeviceId: undefined as string | undefined,
   memberSelectedDeviceId: undefined as string | undefined,
   canSelectPersonalDevice: false,
+  runtimeError: undefined as Error | undefined,
   listeners: new Set<() => void>(),
 }));
 const buildDevice = (
@@ -39,6 +40,8 @@ const buildDevice = (
   ...overrides,
 });
 const selectTargetMock = vi.hoisted(() => vi.fn());
+const refreshRuntimeMock = vi.hoisted(() => vi.fn());
+const refreshListMock = vi.hoisted(() => vi.fn());
 vi.mock('@orvilo/const', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   isDesktop: true,
@@ -56,9 +59,42 @@ vi.mock('@/features/ChatInput/hooks/useSelectExecutionTarget', () => ({
 vi.mock('@/features/ChatInput/hooks/useLocalSandboxCapability', () => ({
   useLocalSandboxCapability: () => ({ mutate: vi.fn() }),
 }));
-vi.mock('@/features/DeviceManager/useDeviceList', () => ({
-  useDeviceList: () => ({ data: targetFixture.devices, isLoading: false, mutate: vi.fn() }),
-}));
+vi.mock('@/features/DeviceManager/useDeviceList', async () => {
+  const { useSyncExternalStore } = await import('react');
+  return {
+    useAgentDeviceCandidates: () => ({
+      error: useSyncExternalStore(
+        (listener) => {
+          targetFixture.listeners.add(listener);
+          return () => {
+            targetFixture.listeners.delete(listener);
+          };
+        },
+        () => targetFixture.runtimeError,
+      ),
+      data: {
+        candidates: targetFixture.devices.map((device) => ({
+          deviceId: device.deviceId,
+          capabilityOk: true,
+          versionOk: true,
+          scopeOk:
+            device.scope === (targetFixture.workspaceId ? 'workspace' : 'personal') ||
+            (device.scope === 'personal' &&
+              (targetFixture.canSelectPersonalDevice ||
+                device.deviceId === targetFixture.memberSelectedDeviceId)),
+          online: device.online,
+        })),
+        inventoryComplete: true,
+      },
+      mutate: refreshRuntimeMock,
+    }),
+    useDeviceList: () => ({
+      data: targetFixture.devices,
+      isLoading: false,
+      mutate: refreshListMock,
+    }),
+  };
+});
 vi.mock('@/hooks/useTopicAgencyConfig', async () => {
   const { useSyncExternalStore } = await import('react');
   return {
@@ -126,9 +162,42 @@ beforeEach(() => {
   targetFixture.memberSelectedDeviceId = undefined;
   targetFixture.canSelectPersonalDevice = false;
   selectTargetMock.mockClear();
+  targetFixture.runtimeError = undefined;
+  refreshRuntimeMock.mockReset().mockImplementation(async () => {
+    targetFixture.runtimeError = undefined;
+    targetFixture.listeners.forEach((listener) => listener());
+  });
+  refreshListMock.mockReset().mockImplementation(async () => targetFixture.devices);
 });
 
 describe('HeteroDeviceSwitcher retained tab lifecycle', () => {
+  it.each(['retry', 'reconnect'])(
+    'recovers a cached runtime inventory failure through visible %s',
+    async (action) => {
+      targetFixture.runtimeError = new Error('Temporary runtime scan failure');
+      if (action === 'reconnect') {
+        targetFixture.devices = [buildDevice('machine', { online: false })];
+        useElectronStore.setState({
+          connectGateway: vi.fn(async () => {
+            targetFixture.devices = [buildDevice('machine')];
+          }),
+        });
+      }
+      const user = userEvent.setup();
+      render(<HeteroDeviceSwitcher agentId="agent-1" />);
+      await user.click(screen.getByRole('button', { name: 'heteroAgent.executionTarget.none' }));
+      expect(screen.getByText('asyncState.title')).toBeInTheDocument();
+      await user.click(
+        screen.getByRole('button', {
+          name: action === 'retry' ? 'error.retry' : 'heteroAgent.executionTarget.reconnect',
+        }),
+      );
+      await waitFor(() => expect(screen.queryByText('asyncState.title')).not.toBeInTheDocument());
+      expect(refreshRuntimeMock).toHaveBeenCalledTimes(1);
+      expect(targetFixture.runtimeError).toBeUndefined();
+    },
+  );
+
   it.each([0, 1])('keeps the picker read-only with %s legitimate candidates', async (count) => {
     targetFixture.devices = Array.from({ length: count }, (_, index) =>
       buildDevice(`node-${index}`),

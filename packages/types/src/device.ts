@@ -443,6 +443,20 @@ export interface DeviceEnroller {
   username: string | null;
 }
 
+/** Installation observed on the addressed host; connectivity is separate. */
+export interface DeviceRuntimeInstallationEvidence {
+  available: boolean;
+  command: string;
+  observedAt: string;
+  version?: string;
+}
+
+/** Existing device capability JSON; successful probes update only their fields. */
+export interface DeviceCapabilitySnapshot {
+  installedRuntimes?: Record<string, DeviceRuntimeInstallationEvidence>;
+  supportedTools?: string[];
+}
+
 export interface DeviceListItem {
   channels: DeviceChannel[];
   defaultCwd: string | null;

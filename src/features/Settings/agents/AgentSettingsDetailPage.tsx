@@ -16,6 +16,7 @@ import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
 import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
 import AgentModelSettings from '@/features/AgentSettings/AgentModelSettings';
 import AgentRuntimeSettings from '@/features/AgentSettings/AgentRuntimeSettings';
+import { AgentUseSettings } from '@/features/AgentSettings/AgentUseSettings';
 import ExternalAgentConnectionSettings from '@/features/AgentSettings/ExternalAgentConnectionSettings';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
 import ResourceConfigAccessGate from '@/features/ResourcePermission/ResourceConfigAccessGate';
@@ -128,6 +129,7 @@ const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId })
               {externalAgent ? <ExternalAgentConnectionSettings agentId={agentId} /> : null}
             </details>
             <AgentAccessSettings agentId={agentId} />
+            <AgentUseSettings agentId={agentId} />
             <AgentAdvancedSettings agentId={agentId} />
           </div>
         </AsyncBoundary>

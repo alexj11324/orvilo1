@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
-import { tasks, users, workspaces } from '../../schemas';
+import { agents, projects, tasks, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { NavigationFavoriteConflictError, NavigationFavoriteModel } from '../navigationFavorite';
 import { ProjectModel } from '../project';
@@ -26,6 +26,10 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: 'fav-ws',
   });
+  await serverDB.insert(workspaceMembers).values([
+    { role: 'owner', userId, workspaceId },
+    { role: 'member', userId: otherUserId, workspaceId },
+  ]);
   // Project creation provisions a coordinator through Prime inheritance.
   await seedPrimeRuntime(serverDB, { userId, workspaceId });
   await seedPrimeRuntime(serverDB, { userId: otherUserId, workspaceId });
@@ -100,9 +104,9 @@ describe('NavigationFavoriteModel', () => {
       instruction: 'Ship the picker',
       name: 'Board picker',
     });
-    const hiddenTask = await ownerTasks.create({
-      instruction: 'Stay hidden',
-      name: 'Secret task',
+    const sharedTeamTask = await ownerTasks.create({
+      instruction: 'Shared private-Team Issue',
+      name: 'Shared Team Issue',
       visibility: 'private',
     });
     const publicTeam = await teams.create({
@@ -115,7 +119,7 @@ describe('NavigationFavoriteModel', () => {
       name: 'Private Team',
       visibility: 'private',
     });
-    await ownerTasks.update(hiddenTask.id, { teamId: privateTeam.id });
+    await ownerTasks.update(sharedTeamTask.id, { teamId: privateTeam.id });
     const legacyShared = await ownerTasks.create({
       instruction: 'Legacy shared',
       name: 'Legacy shared task',
@@ -131,10 +135,23 @@ describe('NavigationFavoriteModel', () => {
     const hiddenProject = await ownerProjects.create({
       identifier: 'HID01',
       name: 'Hidden Project',
-      visibility: 'private',
+    });
+    // Historical private Project and coordinator stay private without invoking new-private creation.
+    await serverDB
+      .update(projects)
+      .set({ visibility: 'private' })
+      .where(eq(projects.id, hiddenProject.id));
+    await serverDB
+      .update(agents)
+      .set({ visibility: 'private' })
+      .where(eq(agents.id, hiddenProject.coordinatorAgentId!));
+    const hiddenTask = await new TaskModel(serverDB, userId).create({
+      instruction: 'Personal Issue',
+      name: 'Personal Issue',
     });
 
     await visitor.pin({ targetId: readableTask.id, targetType: 'task' });
+    await visitor.pin({ targetId: sharedTeamTask.id, targetType: 'task' });
     await visitor.pin({ targetId: hiddenTask.id, targetType: 'task' });
     await visitor.pin({ targetId: legacyShared.id, targetType: 'task' });
     await visitor.pin({ targetId: publicTeam.id, targetType: 'team' });
@@ -144,6 +161,9 @@ describe('NavigationFavoriteModel', () => {
 
     const listed = await visitor.list();
     expect(listed.find((row) => row.targetId === readableTask.id)?.title).toBe('Board picker');
+    expect(listed.find((row) => row.targetId === sharedTeamTask.id)?.title).toBe(
+      'Shared Team Issue',
+    );
     expect(listed.find((row) => row.targetId === hiddenTask.id)?.title).toBeNull();
     expect(listed.find((row) => row.targetId === legacyShared.id)?.title).toBe(
       'Legacy shared task',

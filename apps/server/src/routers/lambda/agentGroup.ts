@@ -274,7 +274,7 @@ export const agentGroupRouter = router({
         visibility: group.visibility,
       }));
 
-      const createdAgents = await ctx.agentModel.batchCreate(agentConfigs);
+      const createdAgents = await ctx.agentModel.batchCreateGroupAgents(agentConfigs);
       const agentIds = createdAgents.map((agent) => agent.id);
 
       // Add all agents to the group

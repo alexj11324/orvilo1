@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -14,6 +14,7 @@ import {
   tasks,
   teams,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import { LinearSyncModel } from '../linearSync';
@@ -26,6 +27,26 @@ const userId = 'prerequisites-user';
 const otherUserId = 'prerequisites-other';
 const model = new TaskModel(db, userId);
 const create = (instruction: string) => model.create({ instruction });
+
+const seedMembership = async (workspaceId: string, includeMember = false) => {
+  await db
+    .insert(workspaceMembers)
+    .values([
+      { role: 'owner', userId, workspaceId },
+      ...(includeMember ? [{ role: 'member', userId: otherUserId, workspaceId }] : []),
+    ]);
+};
+
+const moveToForeignWorkspace = async (taskId: string) => {
+  const workspaceId = 'prerequisite-foreign-workspace';
+  await db.insert(workspaces).values({
+    id: workspaceId,
+    name: 'Foreign prerequisites',
+    primaryOwnerId: userId,
+    slug: workspaceId,
+  });
+  await db.update(tasks).set({ teamId: null, workspaceId }).where(eq(tasks.id, taskId));
+};
 
 beforeEach(async () => {
   await db.delete(users);
@@ -225,6 +246,7 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await seedMembership(workspaceId);
     const scoped = new TaskModel(db, userId, workspaceId);
     const a = await scoped.create({ instruction: 'A' });
     const b = await scoped.create({ instruction: 'B' });
@@ -244,6 +266,7 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await seedMembership(workspaceId);
     const installationId = '00000000-0000-4000-8000-000000000031';
     await db.insert(linearInstallations).values({
       id: installationId,
@@ -378,7 +401,7 @@ describe('task prerequisite invariants', () => {
     expect(await scoped.areAllDependenciesCompleted(dependent.id)).toBe(true);
   });
 
-  it('fails closed after private-team access changes while allowing the dependent owner to remove the edge', async () => {
+  it('keeps completed private-Team Issues ready for active members but blocks after a foreign move', async () => {
     const workspaceId = 'prerequisite-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -386,6 +409,7 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await seedMembership(workspaceId, true);
     const owner = new TaskModel(db, userId, workspaceId);
     const member = new TaskModel(db, otherUserId, workspaceId);
     const upstream = await owner.create({ instruction: 'Shared', status: 'completed' });
@@ -400,12 +424,15 @@ describe('task prerequisite invariants', () => {
       workspaceId,
     });
     await owner.update(upstream.id, { teamId: privateTeamId });
+    expect(await member.findById(upstream.id)).toMatchObject({ id: upstream.id });
+    await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
+    await moveToForeignWorkspace(upstream.id);
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
     await member.removeDependency(dependent.id, upstream.id);
     await expect(member.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
   });
 
-  it('keeps an outgoing related placeholder when its target moves into a private team', async () => {
+  it('shares private-Team relation targets, then keeps an outgoing placeholder after a foreign move', async () => {
     const workspaceId = 'related-private-target-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -413,6 +440,7 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await seedMembership(workspaceId, true);
     const owner = new TaskModel(db, userId, workspaceId);
     const member = new TaskModel(db, otherUserId, workspaceId);
     const current = await owner.create({ instruction: 'Visible issue' });
@@ -427,6 +455,11 @@ describe('task prerequisite invariants', () => {
       workspaceId,
     });
     await owner.update(target.id, { teamId: privateTeamId });
+    expect(await member.findById(target.id)).toMatchObject({ id: target.id });
+    expect(await member.getIssueRelations(target.id)).toMatchObject([
+      { dependsOnId: current.id, type: 'relates' },
+    ]);
+    await moveToForeignWorkspace(target.id);
     expect(await member.findById(target.id)).toBeNull();
     expect(await member.getIssueRelations(current.id)).toMatchObject([
       { dependsOnId: target.id, type: 'relates' },
@@ -437,7 +470,7 @@ describe('task prerequisite invariants', () => {
     expect(await owner.getDependencies(current.id)).toEqual([]);
   });
 
-  it('keeps an incoming related placeholder removable when its source moves into a private team', async () => {
+  it('shares private-Team relation sources, then keeps an incoming placeholder removable after a foreign move', async () => {
     const workspaceId = 'related-private-source-workspace';
     await db.insert(workspaces).values({
       id: workspaceId,
@@ -445,6 +478,7 @@ describe('task prerequisite invariants', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await seedMembership(workspaceId, true);
     const owner = new TaskModel(db, userId, workspaceId);
     const member = new TaskModel(db, otherUserId, workspaceId);
     const source = await owner.create({ instruction: 'Later private source' });
@@ -459,13 +493,17 @@ describe('task prerequisite invariants', () => {
       workspaceId,
     });
     await owner.update(source.id, { teamId: privateTeamId });
+    expect(await member.findById(source.id)).toMatchObject({ id: source.id });
+    await moveToForeignWorkspace(source.id);
     expect(await member.findById(source.id)).toBeNull();
     expect(await member.getIssueRelations(current.id)).toMatchObject([
       { dependsOnId: source.id, type: 'relates' },
     ]);
     const [relation] = await member.getIssueRelations(current.id);
     await member.removeDependencyByRelationId(current.id, relation.id);
-    expect(await owner.getDependencies(source.id)).toEqual([]);
+    expect(
+      await db.select().from(taskDependencies).where(eq(taskDependencies.taskId, source.id)),
+    ).toEqual([]);
   });
 });
 
@@ -478,6 +516,7 @@ describe('prerequisite review regressions', () => {
       slug: workspaceId,
       primaryOwnerId: userId,
     });
+    await seedMembership(workspaceId, true);
     const privateTeamId = `${workspaceId}-private-team`;
     await db.insert(teams).values({
       id: privateTeamId,
@@ -505,6 +544,16 @@ describe('prerequisite review regressions', () => {
       .where(eq(taskDependencies.taskId, dependent.id));
     await owner.update(dependent.id, { teamId: privateTeamId });
     expect(await owner.getDependencies(dependent.id)).toHaveLength(1);
+    expect(await member.getDependencies(dependent.id)).toHaveLength(1);
+    await db
+      .update(workspaceMembers)
+      .set({ suspendedAt: new Date() })
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, 'prerequisite-review-workspace'),
+          eq(workspaceMembers.userId, otherUserId),
+        ),
+      );
     expect(await member.getDependencies(dependent.id)).toEqual([]);
     await expect(owner.reserveRun(dependent.id, 'blocked')).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
@@ -532,6 +581,17 @@ describe('prerequisite review regressions', () => {
     expect((await member.getUnlockedTasks(publicTask.id)).map(({ id }) => id)).toEqual([
       dependent.id,
     ]);
+    expect(await member.findById(privateTask.id)).toMatchObject({ id: privateTask.id });
+    expect(await member.areAllDependenciesCompleted(dependent.id)).toBe(true);
+    await db
+      .update(workspaceMembers)
+      .set({ suspendedAt: new Date() })
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, 'prerequisite-review-workspace'),
+          eq(workspaceMembers.userId, otherUserId),
+        ),
+      );
     expect(await member.areAllDependenciesCompleted(dependent.id)).toBe(false);
     expect(await owner.areAllDependenciesCompleted(dependent.id)).toBe(true);
   });

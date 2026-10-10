@@ -5,7 +5,6 @@ import { Expo, type ExpoPushMessage } from 'expo-server-sdk';
 
 import { PushTokenModel } from '@/database/models/pushToken';
 import { UserModel } from '@/database/models/user';
-import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSettings';
 import { serverDB } from '@/database/server';
 
 import { DEFAULT_PUSH_CHANNEL_ID } from './constants';
@@ -43,15 +42,7 @@ export class PushChannel {
   }
 
   async deliver(ctx: PushDeliveryContext): Promise<PushDeliveryResult> {
-    const settings = ctx.workspaceId
-      ? (
-          await new WorkspaceUserSettingsModel(
-            serverDB,
-            ctx.userId,
-            ctx.workspaceId,
-          ).getPreference()
-        ).notification
-      : (await new UserModel(serverDB, ctx.userId).getUserSettings())?.notification;
+    const settings = (await new UserModel(serverDB, ctx.userId).getUserSettings())?.notification;
     if (
       !notificationEventEnabled(
         settings as NotificationSettings | undefined,

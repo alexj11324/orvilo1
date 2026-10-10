@@ -28,7 +28,7 @@ import { getServerGlobalConfig } from '@/server/globalConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
 import { getUserScopedAiProviderRuntimeState } from '@/server/services/aiProviderAccess';
-import { checkProviderBinding } from '@/server/services/providerBinding/configuration';
+import { checkProviderBindings } from '@/server/services/providerBinding/configuration';
 import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 import { type AiProviderDetailItem, type AiProviderRuntimeState } from '@/types/aiProvider';
 import {
@@ -57,12 +57,12 @@ const aiProviderProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
   // bindings and credentials themselves are always personal (tenantId is
   // stamped at issuance).
   const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
-    verifyBinding: (row) =>
-      checkProviderBinding(
+    verifyBindings: (rows) =>
+      checkProviderBindings(
         new ProviderBindingModel(ctx.serverDB, ctx.userId),
         ctx.userId,
-        row,
-        createProviderBindingComposition(ctx.serverDB),
+        rows,
+        createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
       ),
     decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
     resolveEnabledModelIds: async (providerId) =>

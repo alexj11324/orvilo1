@@ -5,6 +5,7 @@ import type {
   OrviloAgentSession,
   OrviloGroupSession,
 } from '@orvilo/types';
+import { TRPCError } from '@trpc/server';
 import { and, asc, count, desc, eq, inArray, not, or, sql } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
@@ -20,6 +21,7 @@ import { idGenerator } from '../utils/idGenerator';
 import { inJsonStringArray } from '../utils/inJsonStringArray';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { AgentModel } from './agent';
+import { getActiveWorkspaceMembershipRole } from './workspace';
 
 export class SessionModel {
   private userId: string;
@@ -198,6 +200,8 @@ export class SessionModel {
     slug?: string;
     type: 'agent' | 'group';
   }): Promise<SessionItem> => {
+    if (this.workspaceId && config.visibility === 'private')
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Workspace Agents must be public' });
     return this.db.transaction(async (trx) => {
       if (slug) {
         const existResult = await trx.query.sessions.findFirst({
@@ -277,6 +281,7 @@ export class SessionModel {
         title,
         tts: tts || {},
         updatedAt: new Date(),
+        visibility: config.visibility,
       });
 
       const result = await trx
@@ -318,10 +323,23 @@ export class SessionModel {
       const agentModel = new AgentModel(trx, this.userId, this.workspaceId);
       const builtin = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
       if (!builtin) throw new Error('Builtin Inbox is unavailable');
-      await agentModel.updateConfig(
-        builtin.id,
-        merge(DEFAULT_AGENT_CONFIG, defaultAgentConfig) as Partial<NewAgent>,
-      );
+      // Workspace bootstrap must not overwrite an existing shared builtin with
+      // another member's personal defaults. Personal bootstrap remains owner-scoped.
+      const role = this.workspaceId
+        ? await getActiveWorkspaceMembershipRole(trx, {
+            userId: this.userId,
+            workspaceId: this.workspaceId,
+          })
+        : undefined;
+      if (
+        !this.workspaceId ||
+        (builtin.userId === this.userId &&
+          (role === 'owner' || role === 'admin' || role === 'member'))
+      )
+        await agentModel.updateConfig(
+          builtin.id,
+          merge(DEFAULT_AGENT_CONFIG, defaultAgentConfig) as Partial<NewAgent>,
+        );
       const [inbox] = await trx
         .insert(sessions)
         .values(
@@ -361,6 +379,7 @@ export class SessionModel {
     if (!result) return;
 
     const { agent, clientId: _clientId, ...session } = result;
+    await new AgentModel(this.db, this.userId, this.workspaceId).assertAgentManageable(agent);
     const sessionId = this.genId();
 
     const { id: _, slug: __, ...config } = agent;
@@ -390,6 +409,8 @@ export class SessionModel {
         .where(and(eq(agentsToSessions.sessionId, id), this.agentsToSessionsOwnership()));
 
       const agentIds = links.map((link) => link.agentId);
+
+      await new AgentModel(trx, this.userId, this.workspaceId).assertCanDeleteAgents(agentIds);
 
       // Delete links in agentsToSessions
       await trx
@@ -421,6 +442,8 @@ export class SessionModel {
 
       const agentIds = [...new Set(links.map((link) => link.agentId))];
 
+      await new AgentModel(trx, this.userId, this.workspaceId).assertCanDeleteAgents(agentIds);
+
       // Delete links in agentsToSessions
       await trx
         .delete(agentsToSessions)
@@ -443,8 +466,22 @@ export class SessionModel {
    */
   deleteAll = async () => {
     return this.db.transaction(async (trx) => {
+      const [ownedAgents, linkedAgents] = await Promise.all([
+        trx.select({ id: agents.id }).from(agents).where(this.agentsOwnership()),
+        trx
+          .select({ agentId: agentsToSessions.agentId })
+          .from(agentsToSessions)
+          .where(this.agentsToSessionsOwnership()),
+      ]);
+      const agentModel = new AgentModel(trx, this.userId, this.workspaceId);
+      await agentModel.assertCanDeleteAgents([
+        ...new Set([
+          ...ownedAgents.map((agent) => agent.id),
+          ...linkedAgents.map((link) => link.agentId),
+        ]),
+      ]);
       await trx.delete(agentsToSessions).where(this.agentsToSessionsOwnership());
-      await trx.delete(agents).where(this.agentsOwnership());
+      await agentModel.batchDelete(ownedAgents.map((agent) => agent.id));
       return trx.delete(sessions).where(this.ownership());
     });
   };
@@ -466,9 +503,7 @@ export class SessionModel {
     // Batch delete orphaned agents (this will cascade to agentsFiles, agentsKnowledgeBases, etc.)
     // and SET NULL on messages.agentId
     if (orphanedAgentIds.length > 0) {
-      await trx
-        .delete(agents)
-        .where(and(inArray(agents.id, orphanedAgentIds), this.agentsOwnership()));
+      await new AgentModel(trx, this.userId, this.workspaceId).batchDelete(orphanedAgentIds);
     }
 
     return orphanedAgentIds;
@@ -486,61 +521,16 @@ export class SessionModel {
 
   updateConfig = async (sessionId: string, data: PartialDeep<AgentItem> | undefined | null) => {
     if (!data || Object.keys(data).length === 0) return;
-
     const session = await this.findByIdOrSlug(sessionId);
     if (!session) return;
-
-    if (!session.agent) {
+    if (!session.agent?.id)
       throw new Error(
         'this session is not assign with agent, please contact with admin to fix this issue.',
       );
-    }
-
-    // First process the params field: undefined means delete, null means disable flag
-    const existingParams = session.agent.params ?? {};
-    const updatedParams: Record<string, any> = { ...existingParams };
-
-    if (data.params) {
-      const incomingParams = data.params as Record<string, any>;
-      Object.keys(incomingParams).forEach((key) => {
-        const incomingValue = incomingParams[key];
-
-        // undefined means explicitly delete this field
-        if (incomingValue === undefined) {
-          delete updatedParams[key];
-          return;
-        }
-
-        // All other values (including null) are directly overwritten, null means disable this param on the frontend
-        updatedParams[key] = incomingValue;
-      });
-    }
-
-    // Build data to be merged, excluding params (processed separately)
-
-    const { params: _params, ...restData } = data;
-    const mergedValue = merge(session.agent, restData);
-
-    // Apply the processed parameters
-    mergedValue.params = Object.keys(updatedParams).length > 0 ? updatedParams : undefined;
-
-    // Final cleanup: ensure no undefined or null values enter the database
-    if (mergedValue.params) {
-      const params = mergedValue.params as Record<string, any>;
-      Object.keys(params).forEach((key) => {
-        if (params[key] === undefined) {
-          delete params[key];
-        }
-      });
-      if (Object.keys(params).length === 0) {
-        mergedValue.params = undefined;
-      }
-    }
-
-    return this.db
-      .update(agents)
-      .set(mergedValue)
-      .where(and(eq(agents.id, session.agent.id), this.agentsOwnership()));
+    return new AgentModel(this.db, this.userId, this.workspaceId).updateConfig(
+      session.agent.id,
+      data,
+    );
   };
 
   // **************** Helper *************** //

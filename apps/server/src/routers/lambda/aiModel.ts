@@ -23,7 +23,7 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { getUserScopedAiProviderModelList } from '@/server/services/aiProviderAccess';
-import { checkProviderBinding } from '@/server/services/providerBinding/configuration';
+import { checkProviderBindings } from '@/server/services/providerBinding/configuration';
 import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 import { type ProviderConfig } from '@/types/user/settings';
 
@@ -68,12 +68,12 @@ const aiModelProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) 
   // binding-managed providers (every scope — see the aiProvider router for
   // why provider settings are a personal credential surface).
   const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
-    verifyBinding: (row) =>
-      checkProviderBinding(
+    verifyBindings: (rows) =>
+      checkProviderBindings(
         new ProviderBindingModel(ctx.serverDB, ctx.userId),
         ctx.userId,
-        row,
-        createProviderBindingComposition(ctx.serverDB),
+        rows,
+        createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
       ),
     decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
     resolveEnabledModelIds: async (providerId) =>

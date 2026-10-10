@@ -21,6 +21,7 @@ import {
   RedisKeys,
 } from '@/libs/redis';
 import { getServerDefaultAgentConfig } from '@/server/globalConfig';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 
 import { type UpdateAgentResult } from './type';
 
@@ -141,6 +142,7 @@ export class AgentService {
    * 4. The actual agent config from database
    */
   async getAgentConfig(idOrSlug: string): Promise<AgentConfigWithId | null> {
+    if (this.workspaceId) return this.getAgentConfigForExecution(idOrSlug);
     const [agent, defaultAgentConfig] = await Promise.all([
       this.agentModel.getAgentConfig(idOrSlug),
       this.userModel.getUserSettingsDefaultAgentConfig(),
@@ -150,6 +152,24 @@ export class AgentService {
     if (!config) return null;
 
     return this.applyBuiltinIdentity(config);
+  }
+
+  /** Internal runtime resolution; the client config endpoint retains its own read gate. */
+  async getAgentConfigForExecution(idOrSlug: string): Promise<AgentConfigWithId | null> {
+    const agentId = await this.agentModel.getAgentIdForExecution(idOrSlug);
+    if (!agentId) return null;
+    await assertCanUseWorkspaceAgent({
+      agentId,
+      db: this.db,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    const [agent, defaultAgentConfig] = await Promise.all([
+      this.agentModel.getAgentConfigForExecution(agentId),
+      this.userModel.getUserSettingsDefaultAgentConfig(),
+    ]);
+    const config = this.mergeDefaultConfig(agent, defaultAgentConfig) as AgentConfigWithId | null;
+    return config ? this.applyBuiltinIdentity(config) : null;
   }
 
   /**

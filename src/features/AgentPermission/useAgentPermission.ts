@@ -12,7 +12,7 @@ export interface AgentPermissionState {
   accessError: unknown;
   accessLevel?: ResourceAccessLevel;
   accessLoading: boolean;
-  /** Only the creator or a workspace owner may change member selection policies. */
+  /** Only the writable creator or workspace Owner/Admin may change policies. */
   canEditConfig: boolean;
   /**
    * Whether the viewer may write the three policy rows. Narrower than
@@ -22,7 +22,7 @@ export interface AgentPermissionState {
   canEditPolicies: boolean;
   /** Members can be assigned a target only if one is actually resolvable. */
   canFixExecutionTarget: boolean;
-  /** Only the creator or a workspace owner may re-level members. */
+  /** Only the writable creator or workspace Owner/Admin may manage members. */
   canManageAccess: boolean;
   executionTargetPolicy: AgentModelSelectionPolicy;
   isPrivate: boolean;
@@ -69,8 +69,8 @@ export const useAgentPermission = (agentId: string): AgentPermissionState => {
     accessError,
     accessLevel: access?.accessLevel,
     accessLoading,
-    canEditConfig: access?.canManage === true,
-    canManageAccess: access?.canManage === true,
+    canEditConfig: isWorkspaceAgent ? access?.canManage === true : policies.canEditPolicies,
+    canManageAccess: isWorkspaceAgent && access?.canManage === true,
     isPrivate,
     isWorkspaceAgent,
     retryAccess: () => void retryAccess(),

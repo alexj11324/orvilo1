@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CircleArrowRight, GripVertical, Trash2 } from 'lucide-react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
@@ -14,39 +13,14 @@ import { Input } from '@/components/ui/input';
 
 import { useTodoListStore } from './store';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  deleteIcon: css`
-    flex-shrink: 0;
-    opacity: 0;
-    transition: opacity 0.2s;
-  `,
-  dragHandle: css`
-    flex-shrink: 0;
-    width: 16px !important;
-    opacity: 0;
-    transition: opacity 0.2s;
-  `,
-  itemRow: css`
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 4px 12px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-
-    &:hover {
-      .drag-handle,
-      .delete-icon {
-        opacity: 1;
-      }
-    }
-  `,
-  textCompleted: css`
-    color: ${cssVar.colorTextQuaternary};
-    text-decoration: line-through;
-  `,
-  textProcessing: css`
-    color: ${cssVar.colorWarningText};
-  `,
-}));
+const styles = {
+  deleteIcon: 'shrink-0 opacity-0 transition-opacity duration-200 ease-[ease]',
+  dragHandle: 'w-4 shrink-0 opacity-0 transition-opacity duration-200 ease-[ease]',
+  itemRow:
+    'w-full border-b border-dashed border-sidebar-border py-2.5 ps-1 pe-3 hover:[&_.drag-handle]:opacity-100 hover:[&_.delete-icon]:opacity-100',
+  textCompleted: 'text-(--ant-color-text-quaternary) line-through',
+  textProcessing: 'text-(--ant-color-warning-text)',
+};
 
 interface TodoItemRowProps {
   id: string;
@@ -132,25 +106,25 @@ const TodoItemRow = memo<TodoItemRowProps>(({ id, placeholder }) => {
 
   return (
     <div className={cn('flex', 'items-center', 'gap-1', styles.itemRow)} style={{ width: '100%' }}>
-      <SortableItemHandle className={cx(styles.dragHandle, 'drag-handle')}>
+      <SortableItemHandle className={cn(styles.dragHandle, 'drag-handle')}>
         <GripVertical size={14} />
       </SortableItemHandle>
       {isProcessing ? (
         <CircleArrowRight
           size={16}
-          style={{ color: cssVar.colorInfo, cursor: 'pointer', flexShrink: 0 }}
+          style={{ color: 'var(--info)', cursor: 'pointer', flexShrink: 0 }}
           onClick={handleToggle}
         />
       ) : (
         <Checkbox
           checked={isCompleted}
           className="rounded-full"
-          style={{ borderWidth: 1.5, borderColor: cssVar.colorSuccess }}
+          style={{ borderWidth: 1.5, borderColor: 'var(--success)' }}
           onCheckedChange={handleToggle}
         />
       )}
       <Input
-        className={cx(isCompleted && styles.textCompleted, isProcessing && styles.textProcessing)}
+        className={cn(isCompleted && styles.textCompleted, isProcessing && styles.textProcessing)}
         placeholder={defaultPlaceholder}
         ref={inputRef}
         style={{ flex: 1 }}
@@ -160,7 +134,7 @@ const TodoItemRow = memo<TodoItemRowProps>(({ id, placeholder }) => {
         onKeyDown={handleKeyDown}
       />
       <ActionIcon
-        className={cx(styles.deleteIcon, 'delete-icon')}
+        className={cn(styles.deleteIcon, 'delete-icon')}
         icon={Trash2}
         size="small"
         tabIndex={-1}

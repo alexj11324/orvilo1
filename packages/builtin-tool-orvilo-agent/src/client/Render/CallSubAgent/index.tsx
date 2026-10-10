@@ -1,7 +1,6 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -13,36 +12,14 @@ import { portalThreadSelectors, threadSelectors } from '@/store/chat/selectors';
 
 import type { CallSubAgentParams, CallSubAgentState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 4px;
-  `,
-  label: css`
-    padding-inline-start: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  labelRow: css`
-    margin-block-end: 4px;
-  `,
-  openThread: css`
-    height: 22px;
-    padding-inline: 6px;
-    font-size: 12px;
-  `,
-  promptBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  resultBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  container: 'py-1',
+  label: 'ps-1 text-[12px] text-(--ant-color-text-tertiary)',
+  labelRow: 'mb-1',
+  openThread: 'h-[22px] px-1.5 text-[12px] leading-(--text-xs--line-height)',
+  promptBox: 'rounded-(--ant-border-radius-lg) bg-accent px-3 py-2',
+  resultBox: 'rounded-(--ant-border-radius-lg) bg-card px-3 py-2',
+};
 
 /**
  * Render for orvilo-agent's `callSubAgent` tool.

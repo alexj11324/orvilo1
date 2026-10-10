@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Plus } from 'lucide-react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
@@ -13,15 +12,10 @@ import { Input } from '@/components/ui/input';
 
 import { ADD_ITEM_ID, useTodoListStore } from './store';
 
-const styles = createStaticStyles(({ css }) => ({
-  addRow: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-  `,
-  dragHandlePlaceholder: css`
-    width: 8px;
-  `,
-}));
+const styles = {
+  addRow: 'px-3 py-2.5',
+  dragHandlePlaceholder: 'w-2',
+};
 
 interface AddItemRowProps {
   className?: string;
@@ -89,7 +83,7 @@ const AddItemRow = memo<AddItemRowProps>(({ placeholder, showDragHandle = true, 
   }, [setFocusedId]);
 
   return (
-    <div className={cn('flex', 'items-center', 'gap-1', cx(styles.addRow, className))}>
+    <div className={cn('flex', 'items-center', 'gap-1', cn(styles.addRow, className))}>
       {showDragHandle && <div className={styles.dragHandlePlaceholder} />}
       <Checkbox
         checked={false}

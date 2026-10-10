@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -35,9 +34,9 @@ const AddTodoIntervention = memo<BuiltinInterventionProps<CreateTodosParams>>(
     return (
       <div
         style={{
-          background: cssVar.colorBgContainer,
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: cssVar.borderRadius,
+          background: 'var(--card)',
+          border: `1px solid var(--sidebar-border)`,
+          borderRadius: 'var(--ant-border-radius)',
         }}
       >
         <SortableTodoList

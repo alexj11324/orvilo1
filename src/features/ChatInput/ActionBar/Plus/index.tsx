@@ -286,7 +286,7 @@ const PopoverLabel = memo<PopoverLabelProps>(({ disabled, label, popoverContent 
           <PopoverPrimitive.Popup
             className={cn(
               POPUP_Z_CLASS,
-              'flex origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-0 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden',
+              'flex origin-(--transform-origin) flex-col gap-2.5 rounded-(--radius-overlay) bg-popover p-0 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden',
             )}
           >
             {popoverContent}

@@ -93,7 +93,7 @@ const AgentAccessSettings = memo<AgentAccessSettingsProps>(({ agentId }) => {
   if (!isWorkspaceAgent) return null;
 
   return (
-    <details className="mt-5 rounded-lg border px-4 py-3">
+    <details className="mt-5 rounded-(--radius-card) border px-4 py-3">
       <summary className="cursor-pointer text-sm font-medium">
         {t('settingAgent.accessSettings.title')}
       </summary>

@@ -286,7 +286,7 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
               )}
             </div>
             {picker === kind && allowed && (
-              <div className="overflow-hidden rounded-md border">
+              <div className="overflow-hidden rounded-(--radius-card) border">
                 <div className="flex items-center gap-2 border-b px-2">
                   <Search aria-hidden className="text-muted-foreground" size={14} />
                   <Input

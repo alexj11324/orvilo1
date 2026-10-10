@@ -183,7 +183,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
       <PreviewCard.Portal>
         <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
           <PreviewCard.Popup
-            className={`${POPUP_Z_CLASS} flex flex-col rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
+            className={`${POPUP_Z_CLASS} flex flex-col rounded-(--radius-overlay) bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
           >
             {tooltip}
           </PreviewCard.Popup>

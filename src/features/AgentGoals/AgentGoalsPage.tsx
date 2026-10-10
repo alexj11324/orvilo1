@@ -79,7 +79,10 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
         {isLoading && !isInitialized ? (
           <GoalSkeleton chrome={'body'} />
         ) : error ? (
-          <div className="flex flex-col rounded-md border border-border" style={{ padding: 32 }}>
+          <div
+            className="flex flex-col rounded-(--radius-card) border border-border"
+            style={{ padding: 32 }}
+          >
             <div className="flex flex-col items-center gap-3">
               <div className="font-semibold">{t('goalList.loadError')}</div>
               <div className="text-[13px] text-muted-foreground">
@@ -161,7 +164,7 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
               <div className={viewMode === 'card' ? styles.list : styles.listRows}>
                 {filteredGoals.length === 0 ? (
                   <div
-                    className="flex flex-col rounded-md border border-border"
+                    className="flex flex-col rounded-(--radius-card) border border-border"
                     style={{ padding: 32 }}
                   >
                     <Empty>

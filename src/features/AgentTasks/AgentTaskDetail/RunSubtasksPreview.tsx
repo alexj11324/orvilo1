@@ -35,7 +35,7 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
               : t('taskDetail.runAll.layerHint.next', { prev: index });
           return (
             <div
-              className="flex flex-col gap-1.5 rounded-md border border-border"
+              className="flex flex-col gap-1.5 rounded-(--radius-card) border border-border"
               key={`layer-${index}`}
               style={{ paddingBlock: 8, paddingInline: 12 }}
             >
@@ -85,7 +85,7 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
 
       {plan.cycles.length > 0 && (
         <div
-          className="rounded-md border border-border"
+          className="rounded-(--radius-card) border border-border"
           style={{ paddingBlock: 8, paddingInline: 12 }}
         >
           <div className="text-[12px]" style={{ color: cssVar.colorWarning }}>

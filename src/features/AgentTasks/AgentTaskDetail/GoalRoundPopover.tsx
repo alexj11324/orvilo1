@@ -88,7 +88,7 @@ const GoalRoundPopover = memo<GoalRoundPopoverProps>(
         <PreviewCard.Portal>
           <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
             <PreviewCard.Popup
-              className={`${POPUP_Z_CLASS} flex flex-col rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
+              className={`${POPUP_Z_CLASS} flex flex-col rounded-(--radius-overlay) bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
             >
               <div className="flex flex-col gap-1.5" style={{ minWidth: 140 }}>
                 <div className="text-sm font-medium">

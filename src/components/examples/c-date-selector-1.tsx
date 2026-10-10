@@ -23,7 +23,7 @@ export function Pattern() {
       </Card>
 
       {value ? (
-        <pre className="bg-muted w-full overflow-auto rounded-md p-3 font-mono text-xs md:w-[500px]">
+        <pre className="bg-muted w-full overflow-auto rounded-(--radius-card) p-3 font-mono text-xs md:w-[500px]">
           {JSON.stringify(
             value,
             (key, val) => {

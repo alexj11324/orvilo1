@@ -71,7 +71,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
       style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
     >
       <Button
-        className="h-auto min-w-0 flex-1 justify-start gap-2.5 rounded-lg py-2 pr-1 pl-3 text-left font-normal"
+        className="h-auto min-w-0 flex-1 justify-start gap-2.5 rounded-(--radius-button) py-2 pr-1 pl-3 text-left font-normal"
         variant="ghost"
         onClick={() => void openDocumentModal(node.documentId)}
       >

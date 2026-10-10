@@ -104,7 +104,7 @@ const GoalAcceptanceCriteria = memo<{ criteriaIds: string[]; goalId: string }>(
     // accordion row in ProcessControl — this renders the list body only.
     return (
       <div
-        className="flex flex-col rounded-md border border-border"
+        className="flex flex-col rounded-(--radius-card) border border-border"
         style={{ paddingBlock: 4, paddingInline: 16 }}
       >
         {criteriaIds.length === 0 && (

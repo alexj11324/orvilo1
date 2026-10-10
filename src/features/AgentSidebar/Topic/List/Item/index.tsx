@@ -560,7 +560,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
               <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'right'} sideOffset={4}>
                 <PreviewCard.Popup
                   className={
-                    'rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
+                    'rounded-(--radius-overlay) bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
                   }
                 >
                   <MetaHoverCard metadata={metadata} title={title} topicId={id} />

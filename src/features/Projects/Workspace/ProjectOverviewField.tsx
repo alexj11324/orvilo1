@@ -61,8 +61,8 @@ export function ProjectOverviewField({
         aria-busy={saving || undefined}
         aria-invalid={failed || undefined}
         maxLength={kind === 'name' ? 255 : 280}
-
         placeholder={kind === 'summary' ? t('create.summaryPlaceholder') : undefined}
+
         readOnly={saving || !canEdit}
         value={draft ?? value}
         visualSize="normal"

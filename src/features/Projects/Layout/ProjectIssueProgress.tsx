@@ -5,8 +5,8 @@ import type { ProjectDetail } from '@/store/project';
 import { projectIssueProgress } from '../projectIssueProgress';
 
 const styles = {
-  metric: 'm-0 flex-1 text-[12px] leading-5',
-  marker: 'size-1.5 rounded-[1px]',
+  metric: 'm-0 flex-1 text-xs leading-5',
+  marker: 'size-1.5 rounded-[1px]', // linear-token-override: preserve the existing 1px progress legend marker radius; this is not a chip.
 };
 
 const colors = {
@@ -23,11 +23,11 @@ export function ProjectIssueProgress({ issues }: { issues: ProjectDetail['tasks'
     <div className="flex flex-row" style={{ gap: 8 }}>
       {(['scope', 'started', 'completed'] as const).map((key) => (
         <dl className={styles.metric} key={key}>
-          <dt className="flex items-center gap-[5px] text-muted-foreground">
+          <dt className="flex items-center gap-1.25 text-muted-foreground">
             <span aria-hidden className={styles.marker} style={{ background: colors[key] }} />
             {t(`overview.progress.${key}`)}
           </dt>
-          <dd className="m-0 ps-[11px] text-foreground">{progress[key]}</dd>
+          <dd className="m-0 ps-2.75 text-foreground">{progress[key]}</dd>
         </dl>
       ))}
     </div>

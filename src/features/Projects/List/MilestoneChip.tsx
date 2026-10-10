@@ -9,8 +9,8 @@ import { useCurrentProjectDetail } from '@/store/project';
 import { pickNextMilestone } from './displayOptions';
 
 const styles = {
-  chip: 'inline-flex max-w-[220px] flex-none items-center gap-1 rounded-[4px] border border-sidebar-border px-1.5 py-px text-[11px] text-muted-foreground whitespace-nowrap',
-  date: 'flex-none text-[var(--ant-color-text-quaternary)]',
+  chip: 'inline-flex max-w-55 flex-none items-center gap-1 rounded-(--radius-chip) border border-sidebar-border px-1.5 py-px text-[11px] text-muted-foreground whitespace-nowrap', // linear-token-override: preserve existing 11px milestone metadata during the style-only migration.
+  date: 'flex-none text-[var(--ant-color-text-quaternary)]', // linear-token-override: existing quaternary theme role has no exact local semantic alias yet.
   name: 'overflow-hidden text-ellipsis',
 };
 

@@ -1,6 +1,5 @@
 'use client';
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { UsersIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -14,54 +13,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import type { TeamHomeMember } from './teamHomeMembersModel';
 
-const styles = createStaticStyles(({ css }) => ({
-  email: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  joined: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  list: css`
-    display: flex;
-    flex-direction: column;
-
-    @container work-surface (max-width: 1000px) {
-      padding-inline: 6px;
-    }
-  `,
-  memberCell: css`
-    display: flex;
-    flex: 1;
-    gap: 10px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  row: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 4px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  email: 'overflow-hidden text-[12px] text-muted-foreground text-ellipsis whitespace-nowrap',
+  joined: 'flex-none text-[12px] leading-(--text-sm--line-height) text-(--ant-color-text-tertiary)',
+  list: 'flex flex-col [@container_work-surface_(max-width:1000px)]:px-1.5',
+  memberCell: 'flex flex-1 gap-2.5 items-center min-w-0',
+  name: 'overflow-hidden text-[14px] font-medium text-ellipsis whitespace-nowrap',
+  row: 'flex gap-3 items-center py-2.5 px-1 [border-block-end:1px_solid_var(--sidebar-border)]',
+};
 
 interface TeamHomeMembersProps {
   error: unknown;

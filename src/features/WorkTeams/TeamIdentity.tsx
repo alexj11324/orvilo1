@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { memo, useMemo } from 'react';
 
 import { teamGlyphFontSize, teamGlyphForeground } from './teamGlyph';
@@ -32,19 +31,9 @@ const hashCode = (value: string): number => {
 export const teamAccentColor = (id: string, color?: string | null): string =>
   color ?? TEAM_PALETTE[hashCode(id) % TEAM_PALETTE.length]!;
 
-const styles = createStaticStyles(({ css }) => ({
-  glyph: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 4px;
-
-    font-weight: 600;
-    text-transform: uppercase;
-  `,
-}));
+const styles = {
+  glyph: 'inline-flex flex-none items-center justify-center rounded-[4px] font-semibold uppercase',
+};
 
 const TeamIdentity = memo<{ color?: string | null; id: string; letter?: string; size?: number }>(
   ({ color, id, letter, size = 16 }) => {
@@ -52,7 +41,7 @@ const TeamIdentity = memo<{ color?: string | null; id: string; letter?: string; 
     return (
       <span
         aria-hidden
-        className={cx(styles.glyph)}
+        className={styles.glyph}
         style={{
           background,
           // Derived from the team color: white is unreadable on the light accents.

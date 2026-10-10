@@ -1,6 +1,5 @@
 'use client';
 import type { TaskStatus, TaskWorkflowCategory, WorkQuerySortMode } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { PlusIcon, UsersIcon, XIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -72,59 +71,14 @@ import {
 import { teamSurfaceState } from './teamSurfaceState';
 import { ALL_TEAM_CYCLES, type TeamIssueScope, teamTaskQuery } from './teamWorkQuery';
 
-const styles = createStaticStyles(({ css }) => ({
-  /**
-   * Peek layout mirrors My issues: the list keeps its flexible width and the
-   * detail pane is a fixed 400px column that overlays under 900px of surface
-   * width (Linear's proportions).
-   */
-  detailLayout: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-
-    height: 0;
-    min-height: 0;
-  `,
-  detailPane: css`
-    overflow-y: auto;
-    flex: none;
-
-    width: 400px;
-    padding-block-end: 12px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgLayout};
-
-    @container work-surface (max-width: 900px) {
-      position: absolute;
-      z-index: 10;
-      inset-block: 0;
-      inset-inline-end: 0;
-
-      width: min(400px, calc(100% - 40px));
-
-      box-shadow: ${cssVar.boxShadowSecondary};
-    }
-  `,
-  filterChips: css`
-    padding-block: 4px;
-    padding-inline: 4px;
-  `,
-  resultsBody: css`
-    box-sizing: border-box;
-    min-height: 100%;
-    padding-block: 8px;
-  `,
-  resultsScroll: css`
-    overflow: auto;
-    overscroll-behavior: contain;
-    flex: 1;
-    min-width: 0;
-  `,
-}));
+const styles = {
+  detailLayout: 'relative overflow-hidden flex flex-1 h-0 min-h-0',
+  detailPane:
+    'overflow-y-auto flex-none w-100 [padding-block-end:12px] border-s border-sidebar-border bg-background [@container_work-surface_(max-width:900px)]:absolute [@container_work-surface_(max-width:900px)]:z-10 [@container_work-surface_(max-width:900px)]:[inset-block:0] [@container_work-surface_(max-width:900px)]:end-0 [@container_work-surface_(max-width:900px)]:w-[min(400px,calc(100%-40px))] [@container_work-surface_(max-width:900px)]:shadow-(--ant-box-shadow-secondary)',
+  filterChips: 'p-1',
+  resultsBody: 'box-border min-h-full py-2',
+  resultsScroll: 'overflow-auto overscroll-contain flex-1 min-w-0',
+};
 
 // Board mode bounds the collection body to the scrollport so the kanban's own
 // column scrollers engage; list mode lets the body grow and the scroll host

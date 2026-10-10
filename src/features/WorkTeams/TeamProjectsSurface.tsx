@@ -1,7 +1,6 @@
 'use client';
 
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Layers2Icon, LoaderCircleIcon, PanelRightIcon, PlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -69,84 +68,19 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import TeamIdentity from './TeamIdentity';
 import { enrichTeamProjects, summarizeTeamProjects, teamProjectsWorkQuery } from './teamProjects';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  loadMore: css`
-    padding-block: 12px;
-  `,
-  separator: css`
-    flex: none;
-  `,
-  sidebar: css`
-    overflow-y: auto;
-    flex: none;
-
-    box-sizing: border-box;
-    width: 264px;
-    padding: 16px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  sidebarRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 5px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: 6px;
-
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  sidebarRowActive: css`
-    color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  sidebarRowCount: css`
-    margin-inline-start: auto;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  sidebarSection: css`
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  `,
-  viewChip: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 12px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  viewChipActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-}));
+const styles = {
+  loadMore: 'py-3',
+  separator: 'flex-none',
+  sidebar: 'overflow-y-auto flex-none box-border w-66 p-4 border-s border-sidebar-border bg-card',
+  sidebarRow:
+    'cursor-pointer flex gap-2 items-center w-full py-1.25 px-2 border-none rounded-[6px] text-foreground text-start bg-transparent hover:bg-accent',
+  sidebarRowActive: 'text-primary bg-selected',
+  sidebarRowCount: 'ms-auto text-[12px] text-muted-foreground',
+  sidebarSection: 'flex flex-col gap-0.5',
+  viewChip:
+    'cursor-pointer inline-flex items-center h-7 px-3 border border-transparent rounded-[999px] text-muted-foreground bg-transparent hover:bg-accent',
+  viewChipActive: 'text-foreground bg-selected',
+};
 
 /**
  * Team Projects tab — the Linear `/team/:key/projects` surface (evidence:
@@ -379,7 +313,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
           {summary.health.map(({ count, state }) => (
             <button
               aria-pressed={activeHealth.has(state)}
-              className={cx(styles.sidebarRow, activeHealth.has(state) && styles.sidebarRowActive)}
+              className={cn(styles.sidebarRow, activeHealth.has(state) && styles.sidebarRowActive)}
               key={state}
               type="button"
               onClick={() => toggleHealth(state)}
@@ -399,7 +333,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
           {summary.leads.map(({ count, userId }) => (
             <button
               aria-pressed={activeLeads.has(userId)}
-              className={cx(styles.sidebarRow, activeLeads.has(userId) && styles.sidebarRowActive)}
+              className={cn(styles.sidebarRow, activeLeads.has(userId) && styles.sidebarRowActive)}
               key={userId ?? 'none'}
               type="button"
               onClick={() => toggleLead(userId)}
@@ -427,7 +361,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
           </span>
           <button
             aria-pressed={activeHealth.has(null)}
-            className={cx(styles.sidebarRow, activeHealth.has(null) && styles.sidebarRowActive)}
+            className={cn(styles.sidebarRow, activeHealth.has(null) && styles.sidebarRowActive)}
             type="button"
             onClick={() => toggleHealth(null)}
           >
@@ -514,7 +448,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                   </>
                 }
               >
-                <span className={cx(styles.viewChip, styles.viewChipActive)}>
+                <span className={cn(styles.viewChip, styles.viewChipActive)}>
                   {t('teams.viewAllProjects', { ns: 'common' })}
                 </span>
                 <Button

@@ -631,7 +631,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         >
           <div className="flex flex-wrap items-center gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
-              <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
+              <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
                 <div className="text-[12px]">
                   {priority === 0
@@ -645,7 +645,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
 
             {activeWorkspaceId && (
               <AssigneeMemberSelector currentUserId={assigneeUserId} onChange={handleMemberChange}>
-                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
+                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
@@ -664,13 +664,13 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             )}
 
             {lockAssignee ? (
-              <div className="flex h-6 items-center gap-1.5 rounded-md px-2 py-[3px]">
+              <div className="flex h-6 items-center gap-1.5 rounded-md px-2 py-0.75">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
                 <div className="text-[12px]">{assigneeMeta?.title}</div>
               </div>
             ) : (
               <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
-                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
+                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />

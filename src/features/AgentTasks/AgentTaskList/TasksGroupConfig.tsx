@@ -278,7 +278,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
     const boardFormItems = [groupingFormItem, showCompletedFormItem];
 
     const panelContent = (
-      <div className="flex w-[280px] flex-col gap-3">
+      <div className="flex w-70 flex-col gap-3">
         <Tabs
           value={viewMode}
           onValueChange={(key) =>

@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -43,7 +43,7 @@ export const SearchKnowledgeBaseInspector = memo<
   return (
     <div className={inspectorTextStyles.root}>
       <span style={{ marginInlineStart: 2 }}>
-        <span className={cx(isLoading && shinyTextStyles.shinyText)}>
+        <span className={cn(isLoading && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-knowledge-base.apiName.searchKnowledgeBase')}:{' '}
         </span>
         {query && <span className={highlightTextStyles.gold}>{query}</span>}
@@ -54,7 +54,7 @@ export const SearchKnowledgeBaseInspector = memo<
           ) : (
             <span
               className="text-[12px]"
-              style={{ marginInlineStart: 4, color: cssVar.colorTextDescription }}
+              style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
             >
               ({t('builtins.orvilo-knowledge-base.inspector.noResults')})
             </span>

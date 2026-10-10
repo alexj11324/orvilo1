@@ -1,7 +1,6 @@
 'use client';
 
 import { MaterialFileTypeIcon } from '@lobehub/ui';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -9,60 +8,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import type { FileContentDetail } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  cardBody: css`
-    padding-block: 12px 8px;
-    padding-inline: 16px;
-  `,
-  container: css`
-    overflow: hidden;
-
-    min-width: 360px;
-    max-width: 360px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-  `,
-  description: css`
-    margin-block: 0 4px !important;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  footer: css`
-    padding-block: 8px;
-    padding-inline: 16px;
-    border-radius: 8px;
-
-    text-align: center;
-
-    background-color: ${cssVar.colorFillQuaternary};
-  `,
-  footerText: css`
-    font-size: 12px !important;
-    color: ${cssVar.colorTextTertiary} !important;
-  `,
-  icon: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  preview: css`
-    overflow: hidden;
-
-    max-height: 80px;
-    padding: 8px;
-    border-radius: 6px;
-
-    line-height: 1.5;
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    margin-block-end: 0;
-  `,
-  titleRow: css`
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  cardBody: '[padding-block-start:12px] [padding-block-end:8px] ps-4 pe-4',
+  container:
+    'overflow-hidden min-w-[360px] max-w-[360px] border border-sidebar-border rounded-[var(--radius-overlay)]',
+  footer:
+    'py-2 ps-4 pe-4 rounded-[var(--radius-card)] text-center bg-[var(--ant-color-fill-quaternary)]',
+  footerText: 'text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)]',
+  preview: 'overflow-hidden max-h-20 p-2 rounded-[var(--radius-input)] leading-[1.5]',
+  title: 'line-clamp-1 [margin-block-end:0]',
+  titleRow: 'text-foreground',
+};
 
 interface FileCardProps {
   file: FileContentDetail;
@@ -71,9 +27,9 @@ interface FileCardProps {
 const FileCard = memo<FileCardProps>(({ file }) => {
   if (file.error) {
     return (
-      <div className={cx('flex flex-col gap-2', styles.container)}>
-        <div className={cx('flex flex-col gap-2', styles.cardBody)}>
-          <div className={cx('flex flex-row items-center gap-2', styles.titleRow)}>
+      <div className={cn('flex flex-col gap-2', styles.container)}>
+        <div className={cn('flex flex-col gap-2', styles.cardBody)}>
+          <div className={cn('flex flex-row items-center gap-2', styles.titleRow)}>
             <MaterialFileTypeIcon
               filename={file.filename}
               size={16}
@@ -93,9 +49,9 @@ const FileCard = memo<FileCardProps>(({ file }) => {
   }
 
   return (
-    <div className={cx('flex flex-col justify-between', styles.container)}>
-      <div className={cx('flex flex-col gap-2', styles.cardBody)}>
-        <div className={cx('flex flex-row items-center gap-2', styles.titleRow)}>
+    <div className={cn('flex flex-col justify-between', styles.container)}>
+      <div className={cn('flex flex-col gap-2', styles.cardBody)}>
+        <div className={cn('flex flex-row items-center gap-2', styles.titleRow)}>
           <MaterialFileTypeIcon filename={file.filename} size={16} type={'file'} variant={'raw'} />
           <div className={styles.title}>{file.filename}</div>
         </div>
@@ -118,11 +74,11 @@ const FileCard = memo<FileCardProps>(({ file }) => {
       </div>
       <div className={styles.footer}>
         <div className="flex gap-6">
-          <div className={cx('flex gap-1', styles.footerText)}>
+          <div className={cn('flex gap-1', styles.footerText)}>
             <span>Chars</span>
             <span>{file.totalCharCount?.toLocaleString()}</span>
           </div>
-          <div className={cx('flex gap-1', styles.footerText)}>
+          <div className={cn('flex gap-1', styles.footerText)}>
             <span>Lines</span>
             <span>{file.totalLineCount?.toLocaleString()}</span>
           </div>

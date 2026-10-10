@@ -1,7 +1,7 @@
 'use client';
 import { GroupBotIcon } from '@lobehub/ui/icons';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,37 +10,12 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 import type { CallSubAgentParams, CallSubAgentState } from '../../../types';
 import { SubAgentStats } from '../../components/SubAgentStats';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  icon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
-  label: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorText};
-  `,
-  root: css`
-    gap: 6px;
-  `,
-}));
+const styles = {
+  chip: 'inline-flex min-w-0 shrink truncate items-center rounded-full bg-muted px-2.5 py-0.5 text-xs leading-5 text-foreground',
+  icon: 'shrink-0 text-muted-foreground',
+  label: 'shrink-0 text-foreground',
+  root: 'gap-1.5',
+};
 
 /**
  * Collapsed row for orvilo-agent's `callSubAgent`. Mirrors the Claude Code Agent
@@ -65,9 +40,9 @@ export const CallSubAgentInspector = memo<
   const stats = hasFinalStats ? pluginState : pluginState?.progress;
 
   return (
-    <div className={cx(inspectorTextStyles.root, styles.root)}>
+    <div className={cn(inspectorTextStyles.root, styles.root)}>
       <GroupBotIcon className={styles.icon} size={14} />
-      <span className={cx(styles.label, isShiny && shinyTextStyles.shinyText)}>
+      <span className={cn(styles.label, isShiny && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-agent.apiName.callSubAgent')}
       </span>
       {description && <span className={styles.chip}>{description}</span>}

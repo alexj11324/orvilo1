@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleArrowRight, CircleCheckBig, CircleX, ListTodo, RotateCcw } from 'lucide-react';
 import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,76 +10,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 import { ClaudeCodeApiName, type TaskUpdateArgs } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  header: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  headerCount: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  headerDetail: css`
-    overflow: hidden;
-    min-width: 0;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-  `,
-  headerLabel: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    gap: 0;
-    align-items: center;
-
-    min-width: 0;
-
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  itemRow: css`
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  processingRow: css`
-    display: flex;
-    gap: 7px;
-    align-items: center;
-  `,
-  textCompleted: css`
-    color: ${cssVar.colorTextQuaternary};
-    text-decoration: line-through;
-  `,
-  textPending: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  textProcessing: css`
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  header: 'flex items-center gap-2 border-b border-divider bg-muted px-3 py-2.5',
+  headerCount:
+    'shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-xs leading-5 text-muted-foreground',
+  headerDetail: 'min-w-0 overflow-hidden text-foreground text-ellipsis',
+  headerLabel: 'flex min-w-0 flex-1 items-center gap-0 truncate text-muted-foreground',
+  itemRow:
+    'min-h-11 w-full border-b border-dashed border-divider px-3 py-2.5 text-sm leading-5.5 last:border-b-0',
+  processingRow: 'flex items-center gap-2',
+  textCompleted: 'text-muted-foreground line-through',
+  textPending: 'text-muted-foreground',
+  textProcessing: 'text-foreground',
+};
 
 interface TaskPluginStateItem {
   id?: string;
@@ -103,8 +46,8 @@ const TaskRow = memo<TaskRowProps>(({ item }) => {
 
   if (status === 'processing') {
     return (
-      <div className={cx(styles.itemRow, styles.processingRow)}>
-        <span className="anticon" role="img" style={{ color: cssVar.colorInfo }}>
+      <div className={cn(styles.itemRow, styles.processingRow)}>
+        <span className="anticon text-info-text" role="img">
           <CircleArrowRight fill={'transparent'} height={17} size={17} width={17} />
         </span>
         <span className={styles.textProcessing}>{text}</span>
@@ -115,14 +58,14 @@ const TaskRow = memo<TaskRowProps>(({ item }) => {
   const isCompleted = status === 'completed';
 
   return (
-    <label className={cx('flex items-center gap-2', styles.itemRow)} style={{ cursor: 'default' }}>
+    <label className={cn('flex cursor-default items-center gap-2', styles.itemRow)}>
       <Checkbox
         checked={isCompleted}
         className="rounded-full data-checked:border-success data-checked:bg-success"
         style={{ borderWidth: 1.5 }}
       />
       <span
-        className={cx(
+        className={cn(
           styles.textPending,
           isCompleted && 'text-muted-foreground',
           isCompleted && styles.textCompleted,
@@ -167,7 +110,7 @@ const TaskHeader = memo<TaskHeaderProps>(({ completed, total, inProgress, overri
     override?.icon ?? (inProgress ? CircleArrowRight : allDone ? CircleCheckBig : ListTodo);
   const color =
     override?.color ??
-    (inProgress ? cssVar.colorInfo : allDone ? cssVar.colorSuccess : cssVar.colorTextSecondary);
+    (inProgress ? 'var(--info-text)' : allDone ? 'var(--success-text)' : 'var(--muted-foreground)');
 
   const label =
     override?.label ??
@@ -180,7 +123,7 @@ const TaskHeader = memo<TaskHeaderProps>(({ completed, total, inProgress, overri
 
   return (
     <div className={styles.header}>
-      <span className="anticon" role="img" style={{ color, flexShrink: 0 }}>
+      <span className="anticon shrink-0" role="img" style={{ color }}>
         {createElement(icon, { size: 16, width: 16, height: 16, fill: 'transparent' })}
       </span>
       <div className={styles.headerLabel}>
@@ -245,22 +188,22 @@ const Task = memo<BuiltinRenderProps<TaskUpdateArgs | undefined, TaskPluginState
       if (status) {
         const map = {
           completed: {
-            color: cssVar.colorSuccess,
+            color: 'var(--success-text)',
             icon: CircleCheckBig,
             label: t('builtins.orvilo-claude-code.task.updateCompleted'),
           },
           deleted: {
-            color: cssVar.colorError,
+            color: 'var(--destructive-text)',
             icon: CircleX,
             label: t('builtins.orvilo-claude-code.task.updateDeleted'),
           },
           in_progress: {
-            color: cssVar.colorInfo,
+            color: 'var(--info-text)',
             icon: CircleArrowRight,
             label: t('builtins.orvilo-claude-code.task.updateInProgress'),
           },
           pending: {
-            color: cssVar.colorTextSecondary,
+            color: 'var(--muted-foreground)',
             icon: RotateCcw,
             label: t('builtins.orvilo-claude-code.task.updatePending'),
           },
@@ -273,7 +216,7 @@ const Task = memo<BuiltinRenderProps<TaskUpdateArgs | undefined, TaskPluginState
       // generic todo aggregate.
       if (argsSubject) {
         return {
-          color: cssVar.colorTextSecondary,
+          color: 'var(--muted-foreground)',
           detail: resolvedSubject,
           icon: ListTodo,
           label: t('builtins.orvilo-claude-code.task.updateSubject.completed'),
@@ -285,7 +228,7 @@ const Task = memo<BuiltinRenderProps<TaskUpdateArgs | undefined, TaskPluginState
     if (!items || items.length === 0) return null;
 
     return (
-      <div className="rounded-(--radius-card) border bg-card" style={{ width: '100%' }}>
+      <div className="w-full rounded-(--radius-card) border bg-card">
         <TaskHeader
           completed={stats.completed}
           inProgress={stats.inProgress}

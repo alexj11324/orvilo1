@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckCircle2, CircleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,30 +22,12 @@ const CATEGORY_LABEL_KEYS = {
 const getTitleKey = (category?: VentCategory) =>
   category ? CATEGORY_LABEL_KEYS[category] : ('builtins.orvilo-agent.apiName.vent' as const);
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  iconRecorded: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorSuccess};
-  `,
-  iconRejected: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorWarning};
-  `,
-  meta: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  summary: css`
-    overflow: hidden;
-
-    min-width: 0;
-    max-width: 320px;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  iconRecorded: 'shrink-0 text-success-text',
+  iconRejected: 'shrink-0 text-warning-text',
+  meta: 'shrink-0 text-xs leading-5 text-muted-foreground',
+  summary: 'min-w-0 max-w-80 truncate',
+};
 
 export const VentInspector = memo<BuiltinInspectorProps<VentParams, VentState>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading, pluginState }) => {
@@ -67,12 +49,12 @@ export const VentInspector = memo<BuiltinInspectorProps<VentParams, VentState>>(
     const isSettled = !isArgumentsStreaming && !isLoading && !!pluginState;
 
     return (
-      <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
-        <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <div className={cn(inspectorTextStyles.root, 'flex-wrap gap-1')}>
+        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {title}
         </span>
         {summary && (
-          <span className={cx(highlightTextStyles.primary, styles.summary)}>{summary}</span>
+          <span className={cn(highlightTextStyles.primary, styles.summary)}>{summary}</span>
         )}
         {isSettled &&
           pluginState &&

@@ -2,7 +2,7 @@
 
 import { TodoPanelHeader } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleArrowRight } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,33 +12,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { ClaudeCodeTodoItem, TodoWriteArgs } from '../../../types';
 import { computeTodoSummary, TODO_SUMMARY_LABEL_KEYS } from '../../todoSummary';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  itemRow: css`
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  processingRow: css`
-    display: flex;
-    gap: 7px;
-    align-items: center;
-  `,
-  textCompleted: css`
-    color: ${cssVar.colorTextQuaternary};
-    text-decoration: line-through;
-  `,
-  textPending: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  textProcessing: css`
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  itemRow:
+    'min-h-11 w-full border-b border-dashed border-divider px-3 py-2.5 text-sm leading-5.5 last:border-b-0',
+  processingRow: 'flex items-center gap-2',
+  textCompleted: 'text-muted-foreground line-through',
+  textPending: 'text-muted-foreground',
+  textProcessing: 'text-foreground',
+};
 
 interface TodoRowProps {
   item: ClaudeCodeTodoItem;
@@ -49,8 +30,8 @@ const TodoRow = memo<TodoRowProps>(({ item }) => {
 
   if (status === 'in_progress') {
     return (
-      <div className={cx(styles.itemRow, styles.processingRow)}>
-        <span className="anticon" role="img" style={{ color: cssVar.colorInfo }}>
+      <div className={cn(styles.itemRow, styles.processingRow)}>
+        <span className="anticon text-info-text" role="img">
           <CircleArrowRight fill={'transparent'} height={17} size={17} width={17} />
         </span>
         <span className={styles.textProcessing}>{activeForm || content}</span>
@@ -61,14 +42,14 @@ const TodoRow = memo<TodoRowProps>(({ item }) => {
   const isCompleted = status === 'completed';
 
   return (
-    <label className={cx('flex items-center gap-2', styles.itemRow)} style={{ cursor: 'default' }}>
+    <label className={cn('flex cursor-default items-center gap-2', styles.itemRow)}>
       <Checkbox
         checked={isCompleted}
         className="rounded-full data-checked:border-success data-checked:bg-success"
         style={{ borderWidth: 1.5 }}
       />
       <span
-        className={cx(
+        className={cn(
           styles.textPending,
           isCompleted && 'text-muted-foreground',
           isCompleted && styles.textCompleted,
@@ -91,7 +72,7 @@ const TodoWrite = memo<BuiltinRenderProps<TodoWriteArgs>>(({ args }) => {
   if (!todos || todos.length === 0) return null;
 
   return (
-    <div className="rounded-(--radius-card) border bg-card" style={{ width: '100%' }}>
+    <div className="w-full rounded-(--radius-card) border bg-card">
       <TodoPanelHeader label={t(TODO_SUMMARY_LABEL_KEYS[summary.state])} summary={summary} />
       {todos.map((item, index) => (
         <TodoRow item={item} key={index} />

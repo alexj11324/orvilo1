@@ -1,5 +1,4 @@
 import { resolveCCSubagentType } from '@orvilo/builtin-tool-claude-code/client';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
@@ -27,7 +26,7 @@ const Active = memo(() => {
       <AssigneeAvatar agentId={currentThread.agentId} size={24} />
       <div
         className={cn('truncate min-w-0', oneLineEllipsis)}
-        style={{ color: cssVar.colorTextSecondary, fontSize: 14 }}
+        style={{ color: 'var(--ant-color-text-secondary)', fontSize: 14 }}
       >
         {currentThread.title === LOADING_FLAT ? (
           <div className="flex flex-col flex-1 h-[30px] justify-center">
@@ -42,7 +41,7 @@ const Active = memo(() => {
           size="sm"
           variant="secondary"
           style={{
-            color: cssVar.colorTextDescription,
+            color: 'var(--ant-color-text-description)',
             flexShrink: 0,
             fontSize: 11,
           }}

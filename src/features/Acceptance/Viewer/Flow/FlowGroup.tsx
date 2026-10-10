@@ -27,7 +27,7 @@ const styles = {
   collapsed: 'cursor-pointer h-full p-3',
   glyph: 'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius)',
   title: 'line-clamp-2 text-[13px] font-medium leading-[1.4]',
-  summary: 'text-[11px] leading-4 text-(--ant-color-text-tertiary)',
+  summary: 'text-xs leading-4 text-(--ant-color-text-tertiary)',
 };
 
 export function FlowGroup({ data }: { data: FlowGraphData }) {
@@ -126,11 +126,9 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
             <div className="truncate min-w-0 text-[13px]" style={{ flex: 1 }}>
               {data.title}
             </div>
-            <div className="text-[12px] text-muted-foreground">
-              {`${data.passed}/${data.total}`}
-            </div>
+            <div className="text-xs text-muted-foreground">{`${data.passed}/${data.total}`}</div>
             {Boolean(data.reviewed) && (
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('flow.groupReviewed', { count: data.reviewed })}
               </div>
             )}

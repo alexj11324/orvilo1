@@ -24,7 +24,7 @@ import { buildOutlineTree, type OutlineBranch, type OutlineStep } from './flowOu
 const styles = {
   item: 'w-full h-auto min-h-9 py-1.5 px-3 text-start whitespace-normal',
   branch:
-    'justify-start w-fit max-w-full h-auto min-h-6 py-0.5 px-3 text-[12px] leading-[18px] text-start whitespace-normal',
+    'justify-start w-fit max-w-full h-auto min-h-6 py-0.5 px-3 text-xs leading-[18px] text-start whitespace-normal',
   branchContent: 'text-(--ant-color-text-tertiary)',
   nested: 'ms-[18px] ps-2 border-s border-sidebar-border',
 };
@@ -73,7 +73,7 @@ export function FlowOutline({
             {data.title}
           </div>
           {group ? (
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {data.passed}/{data.total}
             </div>
           ) : (

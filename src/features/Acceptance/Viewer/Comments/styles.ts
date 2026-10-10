@@ -4,7 +4,7 @@ export const TIMELINE_NODE = 32;
 // Rail: 32px avatar + 12px gutter + 19px inset; its 2px line begins at 62px.
 // The tail's repeated selector outranks the first/last-entry truncation.
 export const styles = {
-  body: 'min-h-20 py-3 px-3.5 text-[14px] leading-[1.7] wrap-anywhere whitespace-pre-wrap',
+  body: 'min-h-20 py-3 px-3.5 text-sm leading-[1.7] wrap-anywhere whitespace-pre-wrap',
   box: 'relative flex-1 min-w-0 border border-sidebar-border rounded-(--ant-border-radius) bg-card',
   boxSelf: 'border-[color-mix(in_srgb,var(--ant-color-info-border)_45%,transparent)]',
   boxHeader: 'py-2 px-3.5 rounded-ss-(--ant-border-radius) rounded-se-(--ant-border-radius)',
@@ -15,7 +15,7 @@ export const styles = {
   event: 'py-0.5 text-[13px] text-muted-foreground',
   eventDot:
     'relative inline-flex flex-none items-center justify-center size-5 border border-sidebar-border rounded-[50%] text-(--ant-color-text-tertiary) bg-popover',
-  meta: 'flex-none text-[12px] text-(--ant-color-text-tertiary)',
+  meta: 'flex-none text-xs text-(--ant-color-text-tertiary)',
   timeLink:
     'cursor-pointer p-0 border-none bg-none bg-transparent transition-colors duration-(--ant-motion-duration-fast) ease-[ease] hover:text-foreground hover:underline',
   panelBody: 'pt-1.5 text-[13px] leading-[1.65] wrap-anywhere whitespace-pre-wrap',

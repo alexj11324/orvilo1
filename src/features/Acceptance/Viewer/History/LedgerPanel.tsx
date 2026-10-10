@@ -29,8 +29,7 @@ export interface RoundReview {
 }
 
 const styles = {
-  countBadge:
-    'py-px px-[7px] rounded-[99px] text-[12px] tabular-nums text-muted-foreground bg-accent',
+  countBadge: 'py-px px-[7px] rounded-[99px] text-xs tabular-nums text-muted-foreground bg-accent',
   round:
     'py-2.5 px-3 border border-sidebar-border rounded-(--ant-border-radius) transition-[box-shadow,border-color] duration-200 ease-[ease]',
   roundActive: 'border-primary shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
@@ -165,7 +164,7 @@ const LedgerPanel = memo<LedgerPanelProps>(
                   {t('acceptance.round', { round: round.run.roundIndex })}
                 </div>
                 {round.run.roundIndex === latestIndex && (
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('acceptance.ledger.latest')}
                   </div>
                 )}
@@ -177,7 +176,7 @@ const LedgerPanel = memo<LedgerPanelProps>(
                   {stateLabel}
                 </div>
                 <div className="flex flex-col flex-1" />
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {hydrated ? formatAbsoluteDateTime(round.run.createdAt) : null}
                 </div>
                 {openable && (
@@ -189,11 +188,11 @@ const LedgerPanel = memo<LedgerPanelProps>(
                 )}
               </div>
               {round.run.title && (
-                <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.5 }}>
+                <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.5 }}>
                   {round.run.title}
                 </div>
               )}
-              {stats && <div className="text-[12px] text-muted-foreground">{stats}</div>}
+              {stats && <div className="text-xs text-muted-foreground">{stats}</div>}
             </div>
           );
         })}

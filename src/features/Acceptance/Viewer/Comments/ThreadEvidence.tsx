@@ -11,7 +11,7 @@ import { useAcceptanceAuthorColor } from './authorColor';
 const THUMBNAIL_WIDTH = 220;
 
 const styles = {
-  caption: 'text-[12px] text-(--ant-color-text-tertiary)',
+  caption: 'text-xs text-(--ant-color-text-tertiary)',
   wrapper: 'self-start',
 };
 
@@ -52,7 +52,7 @@ const ThreadEvidence = memo<ThreadEvidenceProps>(({ comment, evidence, roundInde
       </span>
       {evidence.description && (
         <div
-          className="truncate min-w-0 text-[12px] text-muted-foreground"
+          className="truncate min-w-0 text-xs text-muted-foreground"
           style={{ maxWidth: THUMBNAIL_WIDTH }}
         >
           {evidence.description}

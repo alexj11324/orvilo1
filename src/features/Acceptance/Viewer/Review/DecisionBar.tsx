@@ -233,7 +233,7 @@ const DecisionBar = memo<DecisionBarProps>(
           <div className="flex flex-col gap-0.5" style={{ flex: '0 1 auto', minWidth: 0 }}>
             <div className="truncate min-w-0 text-muted-foreground">{statusText}</div>
             {subText && (
-              <div className="truncate min-w-0 text-[12px] text-muted-foreground">{subText}</div>
+              <div className="truncate min-w-0 text-xs text-muted-foreground">{subText}</div>
             )}
           </div>
 

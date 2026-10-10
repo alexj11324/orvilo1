@@ -16,7 +16,7 @@ import { AnnotationCanvas } from '../Evidence/Annotation';
 import { isAnnotatable } from '../Evidence/evidence';
 
 const styles = {
-  hint: 'text-[12px] text-(--ant-color-text-tertiary)',
+  hint: 'text-xs text-(--ant-color-text-tertiary)',
   stage:
     'overflow-auto max-h-[min(60vh,640px)] border border-sidebar-border rounded-[8px] bg-(--ant-color-fill-quaternary)',
   thumb:
@@ -116,7 +116,7 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
         />
         <div className="flex items-center gap-2 justify-end">
           {!rect && (
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('acceptance.comments.regionMissing')}
             </div>
           )}

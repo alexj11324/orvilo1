@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 17px reaction-glyph geometry pending a design-scale choice; no matching role is approved.
 
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -24,7 +25,7 @@ const styles = {
   chip: 'inline-flex h-6 cursor-pointer items-center gap-[5px] rounded-[999px] border border-sidebar-border bg-(--ant-color-fill-quaternary) px-2 py-0 text-[13px] leading-none hover:border-border',
   chipMine:
     'border-(--ant-color-info-border) bg-[color-mix(in_srgb,var(--info)_10%,transparent)] text-(--ant-color-info-text)',
-  count: 'text-[12px] text-muted-foreground',
+  count: 'text-xs text-muted-foreground',
   emojiButton:
     'flex size-[30px] cursor-pointer items-center justify-center rounded-(--ant-border-radius) text-[17px] hover:bg-selected',
   moreButton:

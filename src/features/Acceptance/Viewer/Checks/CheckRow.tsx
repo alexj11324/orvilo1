@@ -653,7 +653,7 @@ export const AcceptanceCheckRow = memo<{
               hid the middle of the argument behind an ellipsis with no way to
               open it — in a detail view there is nothing to preview. */}
             {check.result?.toulmin?.evidence && (
-              <div className="text-[12px] text-muted-foreground" style={{ whiteSpace: 'pre-wrap' }}>
+              <div className="text-xs text-muted-foreground" style={{ whiteSpace: 'pre-wrap' }}>
                 {check.result.toulmin.evidence}
               </div>
             )}
@@ -687,7 +687,7 @@ export const AcceptanceCheckRow = memo<{
             />
             {staleThreads.length > 0 && (
               <div className={`flex flex-col gap-2.5 ${styles.staleRegions}`}>
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('acceptance.comments.historicalRegions', { count: staleThreads.length })}
                 </div>
                 {staleThreads.map((thread) => {
@@ -737,7 +737,7 @@ export const AcceptanceCheckRow = memo<{
                   size={15}
                   style={{ flex: 'none' }}
                 />
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('acceptance.focus.verifierDescription.notExecuted')}
                 </div>
               </div>
@@ -762,10 +762,10 @@ export const AcceptanceCheckRow = memo<{
                     width: '100%',
                   }}
                 >
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('acceptance.checks.judgeReason')}
                   </div>
-                  <div className="text-[12px]" style={{ whiteSpace: 'pre-wrap' }}>
+                  <div className="text-xs" style={{ whiteSpace: 'pre-wrap' }}>
                     {check.result.toulmin.reasoning}
                   </div>
                 </div>
@@ -780,7 +780,7 @@ export const AcceptanceCheckRow = memo<{
                     width: '100%',
                   }}
                 >
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('acceptance.evidence.empty')}
                   </div>
                 </div>

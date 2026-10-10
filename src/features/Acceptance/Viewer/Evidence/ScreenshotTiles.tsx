@@ -389,7 +389,7 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
                 className={styles.swatch}
                 style={{ background: opened.color ?? cssVar.colorError }}
               />
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {numbered ? `${opened.label ?? openedNote! + 1} · ` : ''}
                 {opened.authorName}
               </div>

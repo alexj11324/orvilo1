@@ -20,7 +20,7 @@ type Rect = AcceptanceReviewAnnotation['rect'];
 
 const styles = {
   badge:
-    'absolute -top-[9px] -start-[9px] inline-flex items-center justify-center size-[18px] rounded-[50%] text-[11px] font-semibold leading-none text-(--ant-color-text-light-solid) bg-destructive',
+    'absolute -top-[9px] -start-[9px] inline-flex items-center justify-center size-[18px] rounded-[50%] text-xs font-semibold leading-none text-(--ant-color-text-light-solid) bg-destructive',
   badgeDelete:
     'cursor-pointer absolute -top-[9px] -end-[9px] inline-flex items-center justify-center size-[18px] border-none rounded-[50%] text-(--ant-color-text-light-solid) bg-destructive hover:brightness-[1.15] [@media(pointer:coarse)]:-top-3 [@media(pointer:coarse)]:-end-3 [@media(pointer:coarse)]:size-6',
   canvas: 'cursor-crosshair select-none',
@@ -90,7 +90,7 @@ export const AnnotatedImage = memo<AnnotatedImageProps>(
             {annotations.map(
               (annotation, index) =>
                 annotation.comment && (
-                  <div className="text-[12px] text-muted-foreground" key={index}>
+                  <div className="text-xs text-muted-foreground" key={index}>
                     {numbered ? `${annotation.label ?? index + 1}. ` : ''}
                     {annotation.authorName ? `${annotation.authorName}: ` : ''}
                     {annotation.comment}

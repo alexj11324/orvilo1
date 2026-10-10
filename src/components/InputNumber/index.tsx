@@ -1,8 +1,15 @@
 'use client';
 
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { type ComponentProps, type CSSProperties, memo, type ReactNode } from 'react';
 
-import { NumberField, NumberFieldGroup, NumberFieldInput } from '@/components/reui/number-field';
+import {
+  NumberField,
+  NumberFieldDecrement,
+  NumberFieldGroup,
+  NumberFieldIncrement,
+  NumberFieldInput,
+} from '@/components/reui/number-field';
 
 /**
  * Drop-in for the lobehub/antd `InputNumber` usages in this codebase: a single
@@ -12,7 +19,7 @@ import { NumberField, NumberFieldGroup, NumberFieldInput } from '@/components/re
 export interface InputNumberProps {
   'aria-label'?: string;
   'className'?: string;
-  /** antd-only prop kept for API parity; steppers are always rendered. */
+  /** Show the numeric stepper controls; enabled by default. */
   'controls'?: boolean;
   'disabled'?: boolean;
   'max'?: number;
@@ -30,6 +37,7 @@ const InputNumber = memo<InputNumberProps>(
   ({
     'aria-label': ariaLabel,
     className,
+    controls = true,
     disabled,
     max,
     min,
@@ -53,10 +61,31 @@ const InputNumber = memo<InputNumberProps>(
       value={value}
       onValueChange={(next) => onChange?.(next)}
     >
-      <NumberFieldGroup className="gap-1 px-2">
+      <NumberFieldGroup className={controls ? 'gap-1 ps-2 pe-0 pointer-coarse:pe-2' : 'gap-1 px-2'}>
         {prefix}
-        <NumberFieldInput placeholder={placeholder} />
+        <NumberFieldInput className={controls ? 'px-0' : undefined} placeholder={placeholder} />
+        {controls && (
+          <div className="grid h-full w-5 shrink-0 grid-rows-2 border-s border-input pointer-coarse:hidden">
+            <NumberFieldIncrement className="rounded-none rounded-se-(--radius-input) px-0 text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent">
+              <ChevronUp className="size-3" />
+            </NumberFieldIncrement>
+            <NumberFieldDecrement className="rounded-none rounded-ee-(--radius-input) px-0 text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent">
+              <ChevronDown className="size-3" />
+            </NumberFieldDecrement>
+          </div>
+        )}
       </NumberFieldGroup>
+      {controls && (
+        // 40px controls with an 8px gap keep the shared 44px touch targets separate.
+        <div className="hidden w-full items-center justify-center gap-2 pointer-coarse:flex">
+          <NumberFieldDecrement className="size-10 rounded-(--radius-input) border border-input text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent">
+            <ChevronDown className="size-4" />
+          </NumberFieldDecrement>
+          <NumberFieldIncrement className="size-10 rounded-(--radius-input) border border-input text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent">
+            <ChevronUp className="size-4" />
+          </NumberFieldIncrement>
+        </div>
+      )}
     </NumberField>
   ),
 );

@@ -205,7 +205,7 @@ const MemberRow = memo<MemberRowProps>(
             size={32}
             title={member.user?.email ?? displayName(member)}
           />
-          <div className="flex flex-col flex-1 gap-[0px]" style={{ minWidth: 0 }}>
+          <div className="flex flex-col flex-1 gap-0" style={{ minWidth: 0 }}>
             <span className={styles.name}>
               {displayName(member)}
               {member.role === 'owner' && (

@@ -89,7 +89,7 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
     <div className={styles.row}>
       <div className={styles.cell}>
         <AssigneeAvatar agentId={agent.id} size={32} />
-        <div className="flex flex-col flex-1 gap-[0px]" style={{ minWidth: 0 }}>
+        <div className="flex flex-col flex-1 gap-0" style={{ minWidth: 0 }}>
           <span className={styles.name}>
             <Bot size={12} style={{ marginInlineEnd: 6 }} />
             {agent.name}

@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,7 +16,7 @@ const CreateGoalInspector = memo<BuiltinInspectorProps<CreateGoalParams, CreateG
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-goal.apiName.createGoal')}
         </span>
         {name && <span> · {name}</span>}

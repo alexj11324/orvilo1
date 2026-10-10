@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps, TaskStatus } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,43 +10,21 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 import type { UpdateTaskStatusParams, UpdateTaskStatusState } from '../../../types';
 
 const STATUS_TONE: Partial<Record<TaskStatus, { bg: string; fg: string }>> = {
-  backlog: { bg: cssVar.colorFillTertiary, fg: cssVar.colorTextSecondary },
-  canceled: { bg: cssVar.colorFillTertiary, fg: cssVar.colorTextSecondary },
-  completed: { bg: cssVar.colorSuccessBg, fg: cssVar.colorSuccess },
-  failed: { bg: cssVar.colorErrorBg, fg: cssVar.colorError },
-  paused: { bg: cssVar.colorFillTertiary, fg: cssVar.colorTextSecondary },
-  running: { bg: cssVar.colorWarningBg, fg: cssVar.colorWarning },
-  scheduled: { bg: cssVar.colorInfoBg, fg: cssVar.colorInfo },
+  backlog: { bg: 'var(--accent)', fg: 'var(--muted-foreground)' },
+  canceled: { bg: 'var(--accent)', fg: 'var(--muted-foreground)' },
+  completed: { bg: 'var(--ant-color-success-bg)', fg: 'var(--success)' },
+  failed: { bg: 'var(--ant-color-error-bg)', fg: 'var(--destructive)' },
+  paused: { bg: 'var(--accent)', fg: 'var(--muted-foreground)' },
+  running: { bg: 'var(--ant-color-warning-bg)', fg: 'var(--warning)' },
+  scheduled: { bg: 'var(--ant-color-info-bg)', fg: 'var(--info)' },
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  identifierChip: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  separator: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  statusChip: css`
-    flex-shrink: 0;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-  `,
-}));
+const styles = {
+  identifierChip:
+    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
+  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
+  statusChip: 'shrink-0 rounded-[999px] px-2 py-0.5 text-[12px]',
+};
 
 export const UpdateTaskStatusInspector = memo<
   BuiltinInspectorProps<UpdateTaskStatusParams, UpdateTaskStatusState>
@@ -59,7 +37,7 @@ export const UpdateTaskStatusInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-task.apiName.updateTaskStatus')}
       </span>
       {identifier && <span className={styles.identifierChip}>{identifier}</span>}
@@ -69,8 +47,8 @@ export const UpdateTaskStatusInspector = memo<
           <span
             className={styles.statusChip}
             style={{
-              background: tone?.bg ?? cssVar.colorFillTertiary,
-              color: tone?.fg ?? cssVar.colorTextSecondary,
+              background: tone?.bg ?? 'var(--accent)',
+              color: tone?.fg ?? 'var(--muted-foreground)',
             }}
           >
             {status}

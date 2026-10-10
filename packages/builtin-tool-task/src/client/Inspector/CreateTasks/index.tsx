@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,49 +9,14 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { CreateTasksParams, CreateTasksState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  countBadge: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorSuccess};
-
-    background: ${cssVar.colorSuccessBg};
-  `,
-  moreBadge: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  previewChip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 280px;
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  separator: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  countBadge:
+    'shrink-0 rounded-[999px] bg-[var(--ant-color-success-bg)] px-2 py-px text-[12px] font-medium text-success',
+  moreBadge: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  previewChip:
+    'inline-flex min-w-0 max-w-[280px] shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground',
+  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
+};
 
 export const CreateTasksInspector = memo<
   BuiltinInspectorProps<CreateTasksParams, CreateTasksState>
@@ -76,7 +41,7 @@ export const CreateTasksInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-task.apiName.createTasks')}
       </span>
       {count > 0 && (

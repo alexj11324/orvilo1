@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Play } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,55 +10,16 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { RunTasksParams, RunTasksState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  countBadge: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorWarning};
-
-    background: ${cssVar.colorWarningBg};
-  `,
-  failedBadge: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorError};
-
-    background: ${cssVar.colorErrorBg};
-  `,
-  identifierChip: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  moreBadge: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  separator: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  countBadge:
+    'shrink-0 rounded-[999px] bg-[var(--ant-color-warning-bg)] px-2 py-px text-[12px] font-medium text-warning',
+  failedBadge:
+    'shrink-0 rounded-[999px] bg-[var(--ant-color-error-bg)] px-2 py-px text-[12px] text-destructive',
+  identifierChip:
+    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground',
+  moreBadge: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
+};
 
 export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunTasksState>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading, pluginState }) => {
@@ -74,7 +35,7 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
     if (isArgumentsStreaming && count === 0) {
       return (
         <div className={inspectorTextStyles.root}>
-          <Play size={12} style={{ color: cssVar.colorWarning }} />
+          <Play size={12} style={{ color: 'var(--warning)' }} />
           <span className={shinyTextStyles.shinyText}>
             {t('builtins.orvilo-task.apiName.runTasks')}
           </span>
@@ -84,8 +45,8 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
 
     return (
       <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
-        <Play size={12} style={{ color: cssVar.colorWarning }} />
-        <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+        <Play size={12} style={{ color: 'var(--warning)' }} />
+        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.runTasks')}
         </span>
         {count > 0 && (

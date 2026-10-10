@@ -1,6 +1,5 @@
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
-import { cssVar } from 'antd-style';
 import { AlertTriangle, Copy, RotateCw } from 'lucide-react';
 import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -78,7 +77,7 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
             target="_blank"
             style={{
               alignItems: 'center',
-              color: hasDiscord ? '#5865F2' : cssVar.colorLink,
+              color: hasDiscord ? '#5865F2' : 'var(--ant-color-link)',
               display: 'inline-flex',
               gap: 2,
               verticalAlign: 'middle',
@@ -97,7 +96,7 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
                   cursor: 'pointer',
                   opacity: 0.65,
                   textDecoration: 'underline dashed',
-                  textDecorationColor: cssVar.colorTextQuaternary,
+                  textDecorationColor: 'var(--ant-color-text-quaternary)',
                   textUnderlineOffset: 3,
                 }}
                 onClick={handleCopyTraceId}

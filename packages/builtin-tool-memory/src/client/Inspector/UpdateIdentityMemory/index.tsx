@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,7 +29,7 @@ export const UpdateIdentityMemoryInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-user-memory.apiName.updateIdentityMemory')}
       </span>
     </div>

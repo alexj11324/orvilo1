@@ -91,7 +91,6 @@ const InputNumber = memo<InputNumberProps>(
     value,
   }) => (
     <NumberField
-      aria-label={ariaLabel}
       className={className}
       disabled={disabled}
       max={max}
@@ -104,7 +103,11 @@ const InputNumber = memo<InputNumberProps>(
     >
       <NumberFieldGroup className={controls ? 'gap-1 ps-2 pe-0 pointer-coarse:pe-2' : 'gap-1 px-2'}>
         {prefix}
-        <NumberFieldInput className={controls ? 'px-0' : undefined} placeholder={placeholder} />
+        <NumberFieldInput
+          aria-label={ariaLabel}
+          className={controls ? 'px-0' : undefined}
+          placeholder={placeholder}
+        />
         {controls && (
           <div className="grid h-full w-5 shrink-0 grid-rows-2 border-s border-input pointer-coarse:hidden">
             <NumberFieldStepper

@@ -50,8 +50,8 @@ export class RenderBoundary extends Component<
         style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
       >
         <div className="flex flex-col gap-2">
-          <div className="text-[14px] text-destructive font-medium">{this.props.label} crashed</div>
-          <div className="text-[12px] text-muted-foreground">{this.state.error.message}</div>
+          <div className="text-sm text-destructive font-medium">{this.props.label} crashed</div>
+          <div className="text-xs text-muted-foreground">{this.state.error.message}</div>
         </div>
       </div>
     );

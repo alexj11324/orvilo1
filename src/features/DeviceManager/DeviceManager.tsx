@@ -187,7 +187,7 @@ const ConnectOption = memo<ConnectOptionProps>(({ icon: Icon, title, desc, badge
         <div className="font-medium">{title}</div>
         {badge && <span className={styles.badge}>{badge}</span>}
       </div>
-      <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+      <div className="text-xs" style={{ color: cssVar.colorTextTertiary }}>
         {desc}
       </div>
     </div>
@@ -216,7 +216,7 @@ const Capabilities = memo(() => {
   ];
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-[12px] text-muted-foreground font-medium">
+      <div className="text-xs text-muted-foreground font-medium">
         {t('devices.capabilities.title')}
       </div>
       <div className="flex gap-4">
@@ -227,7 +227,7 @@ const Capabilities = memo(() => {
             </span>
             <div className="flex flex-col gap-1">
               <div className="font-medium">{cap.title}</div>
-              <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+              <div className="text-xs" style={{ color: cssVar.colorTextTertiary }}>
                 {cap.desc}
               </div>
             </div>
@@ -315,7 +315,7 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
               <MonitorDownIcon size={28} />
             )}
           </span>
-          <div className="text-[18px] font-semibold">
+          <div className="text-lg font-semibold">
             {t(isWorkspace ? 'workspaceSetting.devices.heroTitle' : 'devices.empty.title')}
           </div>
           <div className="text-muted-foreground" style={{ maxWidth: 440 }}>

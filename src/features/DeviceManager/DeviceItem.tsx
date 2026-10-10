@@ -303,7 +303,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
 
       <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
         <div className="flex items-center gap-2">
-          <div className="truncate block text-[15px] font-medium">{displayName}</div>
+          <div className="truncate block text-sm font-medium">{displayName}</div>
           <span className={online ? styles.statusOnline : styles.statusOffline} />
           {isCurrent && <Tag>{t('devices.currentBadge')}</Tag>}
           {device.scope === 'workspace' && device.sharedFromPersonal && (

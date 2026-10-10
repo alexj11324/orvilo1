@@ -38,7 +38,7 @@ const PREVIEWABLE_IMAGE_EXTENSIONS = new Set([
 const styles = {
   actionBar: 'flex-wrap max-w-80',
   label: 'overflow-hidden self-baseline min-w-0 font-normal text-ellipsis whitespace-nowrap',
-  path: 'max-w-90 py-2 px-2.5 rounded-(--ant-border-radius) font-mono text-[12px] leading-[1.5] text-muted-foreground break-all bg-(--ant-color-fill-quaternary)',
+  path: 'max-w-90 py-2 px-2.5 rounded-(--ant-border-radius) font-mono text-xs leading-[1.5] text-muted-foreground break-all bg-(--ant-color-fill-quaternary)',
   popover: 'max-w-98',
   previewFrame:
     'overflow-hidden flex items-center justify-center w-[min(360px,72vw)] max-h-60 border border-selected rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary)',

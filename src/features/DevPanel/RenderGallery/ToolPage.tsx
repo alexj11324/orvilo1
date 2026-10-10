@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 22px title geometry pending a design-scale choice; no matching role is approved.
 
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -196,7 +197,7 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
             <div className="flex items-center gap-2.5" style={{ flexWrap: 'wrap' }}>
               <div className="text-[22px] font-bold">{toolset.toolsetName}</div>
               <Tag>{toolset.identifier}</Tag>
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {toolset.apis.length} API{toolset.apis.length === 1 ? '' : 's'}
               </div>
             </div>
@@ -209,7 +210,7 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
             <div className={cx(styles.controlGroup, 'flex')}>
               <div
                 className={cn(
-                  'text-[12px]',
+                  'text-xs',
                   'text-muted-foreground',
                   'font-semibold',
                   styles.controlLabel,
@@ -233,7 +234,7 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
             <div className={cx(styles.controlGroup, 'flex')}>
               <div
                 className={cn(
-                  'text-[12px]',
+                  'text-xs',
                   'text-muted-foreground',
                   'font-semibold',
                   styles.controlLabel,

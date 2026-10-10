@@ -25,7 +25,7 @@ const GoalElapsedTime = memo<GoalElapsedTimeProps>(({ startedAt }) => {
 
   return (
     <div
-      className="text-[12px] text-muted-foreground"
+      className="text-xs text-muted-foreground"
       style={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
     >
       {formatElapsedClockTime(now - startedAtMs)}

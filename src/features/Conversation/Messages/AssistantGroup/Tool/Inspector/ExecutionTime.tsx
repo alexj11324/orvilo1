@@ -74,10 +74,7 @@ const ExecutionTime = memo<ExecutionTimeProps>(({ isExecuting, startTime, timerK
   if (!isExecuting) return null;
 
   return (
-    <div
-      className="text-[12px] text-muted-foreground"
-      style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
-    >
+    <div className="text-xs text-muted-foreground" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
       {formatElapsedTime(elapsed)}
     </div>
   );

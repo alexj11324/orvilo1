@@ -137,7 +137,7 @@ const ApiList = memo<ApiListProps>(({ apis, activeApiName, onSelect }) => {
   return (
     <aside className={styles.column}>
       <div className={devDockPanelStyles.paneHeader}>
-        <div className="text-[12px] text-muted-foreground font-semibold">APIs · {apis.length}</div>
+        <div className="text-xs text-muted-foreground font-semibold">APIs · {apis.length}</div>
       </div>
       <div className={cx(styles.list, 'flex flex-col')} ref={listRef}>
         {apis.map((api) => {

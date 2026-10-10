@@ -38,8 +38,8 @@ const styles = {
   previewLines: 'flex-1 overflow-y-auto p-3',
   note: 'bg-transparent dark:bg-transparent disabled:bg-transparent dark:disabled:bg-transparent',
   noteDivider: '[block-size:1px] bg-sidebar-border',
-  previewLine: 'truncate text-[12px] text-muted-foreground',
-  previewMore: '[padding-block-start:2px] text-[12px] text-[var(--ant-color-text-tertiary)]',
+  previewLine: 'truncate text-xs text-muted-foreground',
+  previewMore: '[padding-block-start:2px] text-xs text-[var(--ant-color-text-tertiary)]',
   row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--ant-border-radius-lg) transition-[background-color] duration-100 ease-[var(--ant-motion-ease-in-out)] hover:bg-accent',
   rowSelected: 'bg-[var(--ant-color-fill-quaternary)]',
 };

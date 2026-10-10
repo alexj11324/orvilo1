@@ -91,9 +91,7 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
           <div className={cn('flex flex-col gap-1', styles.versionRow)} key={version.id}>
             <div className="flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-                <div className="font-mono rounded bg-muted px-1 text-[12px]">
-                  v{version.version}
-                </div>
+                <div className="font-mono rounded bg-muted px-1 text-xs">v{version.version}</div>
                 <div className={cn('truncate', styles.versionTitle)}>
                   {t(`workingPanel.works.changeType.${version.changeType}` as never)}
                 </div>
@@ -101,11 +99,8 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
               <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                 {cost && (
                   <div
+                    className={cn('font-mono rounded bg-muted px-1 text-xs', styles.versionCost)}
                     title={t('workingPanel.works.versionCost', { cost })}
-                    className={cn(
-                      'font-mono rounded bg-muted px-1 text-[12px]',
-                      styles.versionCost,
-                    )}
                   >
                     {cost}
                   </div>

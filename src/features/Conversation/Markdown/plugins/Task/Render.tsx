@@ -162,7 +162,7 @@ const Render = memo<TaskRenderProps>(({ children }) => {
         <>
           <div className={styles.divider} />
           <div className="flex flex-col gap-1">
-            <div className="text-[12px] text-muted-foreground">{t('task.card.instruction')}</div>
+            <div className="text-xs text-muted-foreground">{t('task.card.instruction')}</div>
             <div className={styles.instruction}>{parsed.instruction}</div>
           </div>
         </>

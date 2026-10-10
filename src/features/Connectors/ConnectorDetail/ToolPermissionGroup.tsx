@@ -59,7 +59,7 @@ const ToolPermissionGroup = memo<ToolPermissionGroupProps>(
             {label}
             <span
               className={
-                'inline-flex items-center justify-center rounded-(--radius-chip) bg-selected px-1.5 py-px text-[12px] text-muted-foreground'
+                'inline-flex items-center justify-center rounded-(--radius-chip) bg-selected px-1.5 py-px text-xs text-muted-foreground'
               }
             >
               {tools.length}

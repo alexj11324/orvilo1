@@ -241,7 +241,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
             'flex h-10.5 shrink-0 items-center justify-between gap-2 border-be border-sidebar-border px-4'
           }
         >
-          <div className={'text-[14px] font-medium'}>{connectorName}</div>
+          <div className={'text-sm font-medium'}>{connectorName}</div>
           <div className={'flex gap-2'}>
             {/* Reset permissions: restore all tools to auto (fully open) */}
             <ManageTooltip title={manageTooltip}>
@@ -351,7 +351,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
         <div className={'flex min-h-0 flex-1 flex-col p-4'}>
           {/* Description */}
           {connectorDescription && (
-            <div className={'mbe-4 text-[14px] leading-[1.6] text-muted-foreground'}>
+            <div className={'mbe-4 text-sm leading-[1.6] text-muted-foreground'}>
               {connectorDescription}
             </div>
           )}
@@ -390,7 +390,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
               />
             </div>
           ) : (
-            <div className={'text-[14px] text-(--ant-color-text-tertiary)'}>
+            <div className={'text-sm text-(--ant-color-text-tertiary)'}>
               {t('connector.noTools', 'No tool permissions to configure.')}
             </div>
           )}

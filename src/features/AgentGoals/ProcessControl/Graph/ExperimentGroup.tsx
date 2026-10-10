@@ -74,7 +74,7 @@ const ExperimentGroup = ({ data }: NodeProps) => {
         </div>
       </div>
       <div className="flex gap-3" style={{ paddingBlock: 6, paddingInline: 16 }}>
-        <div className="flex items-center gap-[5px]">
+        <div className="flex items-center gap-1.25">
           <status.icon color={status.color} size={13} />
           <div className="text-[12px]" style={{ color: status.color }}>
             {t(`goalExperiment.status.${view.node.status}`)}

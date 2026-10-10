@@ -135,7 +135,7 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
     return (
       <div className="flex items-center gap-3" style={{ paddingBlock: 4 }}>
         <Target color={'var(--ant-color-text-quaternary)'} size={16} />
-        <div className="text-[13px] text-muted-foreground">
+        <div className="text-(length:--text-dense) text-muted-foreground">
           {t('goalProcess.northStar.emptyHint')}
         </div>
         {canEdit && (

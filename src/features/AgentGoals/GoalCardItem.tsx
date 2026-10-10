@@ -43,7 +43,7 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
     >
       <div className="flex items-start gap-3 justify-between">
         <div className="flex flex-col gap-1" style={{ minWidth: 0 }}>
-          <div className="flex items-center gap-[7px]">
+          <div className="flex items-center gap-1.75">
             <GoalStatusGlyph size={13} status={goal.status} />
             <div className="truncate min-w-0 text-[15px] font-semibold">{goal.title}</div>
           </div>

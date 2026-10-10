@@ -190,7 +190,7 @@ const StaleBody = memo<{ view: GoalNodeView }>(({ view }) => {
   const { t } = useTranslation('chat');
   const { text } = useActivityTime(view.heartbeatAt);
   return (
-    <div className="text-[13px] text-muted-foreground">
+    <div className="text-(length:--text-dense) text-muted-foreground">
       {t('goalProcess.stale.description', { duration: text })}
     </div>
   );
@@ -359,7 +359,7 @@ const FrontierRow = memo<{
             // State the problem itself, in the user's language when the
             // coordinator's vocabulary is recognized — the buttons below
             // already carry the choices, so no extra framing sentence.
-            <div className="text-[13px] font-medium">
+            <div className="text-(length:--text-dense) font-medium">
               {gateReasonText ?? view.decision.question}
             </div>
           )}

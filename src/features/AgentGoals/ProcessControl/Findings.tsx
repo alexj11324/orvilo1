@@ -111,7 +111,9 @@ const Findings = memo<{ graph: GoalGraphView; onSelect: (nodeId: string) => void
 
     if (findings.length === 0)
       return (
-        <div className="text-[13px] text-muted-foreground">{t('goalProcess.findings.empty')}</div>
+        <div className="text-(length:--text-dense) text-muted-foreground">
+          {t('goalProcess.findings.empty')}
+        </div>
       );
 
     return (

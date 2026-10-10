@@ -63,7 +63,7 @@ const Metric = memo<{
   value: ReactNode;
 }>(({ label, onClick, value }) => (
   <div className={`flex flex-col gap-0.5 ${styles.metric}`} onClick={onClick}>
-    <div className="flex items-center gap-[7px]" style={{ minHeight: 26 }}>
+    <div className="flex items-center gap-1.75" style={{ minHeight: 26 }}>
       {value}
     </div>
     <div className="text-[12px] text-muted-foreground">{label}</div>

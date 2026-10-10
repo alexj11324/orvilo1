@@ -1,5 +1,4 @@
 import { type ToolIntervention } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import {
   AlertTriangle,
   Ban,
@@ -57,8 +56,8 @@ const StatusIndicator = memo<StatusIndicatorProps>(
           <Tooltip>
             <TooltipTrigger
               render={
-                <span style={{ display: 'inline-flex' }}>
-                  <PauseIcon color={cssVar.colorTextTertiary} />
+                <span className="inline-flex">
+                  <PauseIcon className="text-foreground-tertiary" />
                 </span>
               }
             />
@@ -74,8 +73,8 @@ const StatusIndicator = memo<StatusIndicatorProps>(
           <Tooltip>
             <TooltipTrigger
               render={
-                <span style={{ display: 'inline-flex' }}>
-                  <CornerUpRight color={cssVar.colorTextTertiary} />
+                <span className="inline-flex">
+                  <CornerUpRight className="text-foreground-tertiary" />
                 </span>
               }
             />
@@ -87,8 +86,8 @@ const StatusIndicator = memo<StatusIndicatorProps>(
           <Tooltip>
             <TooltipTrigger
               render={
-                <span style={{ display: 'inline-flex' }}>
-                  <Ban color={cssVar.colorTextTertiary} />
+                <span className="inline-flex">
+                  <Ban className="text-foreground-tertiary" />
                 </span>
               }
             />
@@ -97,30 +96,19 @@ const StatusIndicator = memo<StatusIndicatorProps>(
         </TooltipProvider>
       );
     } else if (hasError) {
-      icon = <X color={cssVar.colorError} />;
+      icon = <X className="text-destructive-text" />;
     } else if (isPending) {
-      icon = <HandIcon color={cssVar.colorInfo} />;
+      icon = <HandIcon className="text-info-text" />;
     } else if (hasSuccessResult && !hasError && successVariant === 'warning') {
-      icon = <AlertTriangle color={cssVar.colorWarning} />;
+      icon = <AlertTriangle className="text-warning-text" />;
     } else if (hasResult || isToolComplete) {
-      icon = createElement(successIcon ?? Check, { color: cssVar.colorSuccess });
+      icon = createElement(successIcon ?? Check, { className: 'text-success-text' });
     } else {
       icon = <NeuralNetworkLoading size={16} />;
     }
 
     return (
-      <div
-        className="flex items-center gap-1 justify-center"
-        style={{
-          flex: 'none',
-          height: 24,
-          border: `1px solid ${cssVar.colorBorder}`,
-          borderRadius: cssVar.borderRadiusLG,
-          width: 24,
-
-          fontSize: 12,
-        }}
-      >
+      <div className="flex size-6 flex-none items-center justify-center gap-1 rounded-full border border-border text-xs leading-5">
         {icon}
       </div>
     );

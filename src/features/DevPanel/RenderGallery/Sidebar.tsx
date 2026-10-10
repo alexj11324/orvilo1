@@ -23,7 +23,7 @@ const retainedMenuStyles = createStaticStyles(({ css }) => ({
 const styles = {
   menuItem:
     'cursor-pointer block w-full min-h-8 py-1 px-3 border-0 rounded-none text-sm leading-5.5 text-foreground text-start bg-none bg-transparent hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
-  menuItemActive: 'text-primary-text bg-primary-wash',
+  menuItemActive: 'text-foreground bg-selected hover:bg-selected',
   sidebar: 'flex flex-col shrink-0 w-65 h-full border-e border-divider bg-card',
   scroll: 'overflow-auto flex-1',
   menu: retainedMenuStyles.menu,

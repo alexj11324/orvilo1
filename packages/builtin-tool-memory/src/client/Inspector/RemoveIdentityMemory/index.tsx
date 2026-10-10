@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,13 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { RemoveIdentityMemoryParams, RemoveIdentityMemoryState } from '../../../types';
-
-const styles = createStaticStyles(({ css }) => ({
-  statusIcon: css`
-    margin-block-end: -2px;
-    margin-inline-start: 4px;
-  `,
-}));
 
 export const RemoveIdentityMemoryInspector = memo<
   BuiltinInspectorProps<RemoveIdentityMemoryParams, RemoveIdentityMemoryState>
@@ -39,7 +32,7 @@ export const RemoveIdentityMemoryInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-user-memory.apiName.removeIdentityMemory')}
       </span>
       {id && (
@@ -48,7 +41,7 @@ export const RemoveIdentityMemoryInspector = memo<
         </>
       )}
       {!isLoading && isSuccess && (
-        <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
+        <Check className="[margin-block-end:-2px] ms-1" color="var(--success)" size={14} />
       )}
     </div>
   );

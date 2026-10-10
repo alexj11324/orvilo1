@@ -6,7 +6,7 @@ import {
   shinyTextStyles,
 } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,14 +19,14 @@ export const WebSearchInspector = memo<BuiltinInspectorProps<WebSearchArgs>>(
     const query = (args?.query || partialArgs?.query || '').trim();
 
     if (isArgumentsStreaming && !query) {
-      return <div className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
+      return <div className={cn(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
     }
 
     const isShiny = isArgumentsStreaming || isLoading;
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isShiny && shinyTextStyles.shinyText)}>{label}</span>
+        <span className={cn(isShiny && shinyTextStyles.shinyText)}>{label}</span>
         {query && (
           <>
             <span>: </span>

@@ -3,7 +3,7 @@
 import { normalizeAskUserQuestions } from '@orvilo/shared-tool-ui/ask-user';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,41 +18,13 @@ import { ClaudeCodeApiName } from '../../types';
  */
 const MAX_CHIPS = 2;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  chips: css`
-    overflow: hidden;
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-  `,
+const styles = {
+  chip: 'overflow-hidden min-w-0 py-0.5 px-2.5 rounded-[999px] text-[12px] text-foreground text-ellipsis whitespace-nowrap bg-accent',
+  chips: 'overflow-hidden flex gap-1 items-center min-w-0 ms-1.5',
   /** Never shrinks — the chips absorb the compression and ellipsize instead. */
-  label: css`
-    flex-shrink: 0;
-  `,
-  more: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+  label: 'shrink-0',
+  more: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
+};
 
 export const AskUserQuestionInspector = memo<BuiltinInspectorProps<AskUserQuestionArgs>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading }) => {
@@ -70,13 +42,13 @@ export const AskUserQuestionInspector = memo<BuiltinInspectorProps<AskUserQuesti
     const rest = headers.length - shown.length;
 
     if (isArgumentsStreaming && shown.length === 0) {
-      return <div className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
+      return <div className={cn(inspectorTextStyles.root, shinyTextStyles.shinyText)}>{label}</div>;
     }
 
     return (
       <div className={inspectorTextStyles.root}>
         <span
-          className={cx(
+          className={cn(
             styles.label,
             (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
           )}

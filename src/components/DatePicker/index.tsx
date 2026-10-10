@@ -333,7 +333,8 @@ const DatePicker = memo<DatePickerProps>(
           variant="outline"
           {...triggerProps}
           className={cn(
-            'w-full justify-start gap-1.5 rounded-lg border-input bg-transparent text-sm font-normal hover:bg-accent',
+            'w-full justify-start gap-1.5 rounded-lg border-input bg-transparent font-normal hover:bg-accent',
+            triggerSize === 'large' ? 'text-base' : 'text-sm',
             className,
           )}
         />

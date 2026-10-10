@@ -309,7 +309,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
               const done = isQuestionAnswered(q, picks, custom);
               return (
                 <TabsTrigger key={String(idx)} value={String(idx)}>
-                  <div className="flex items-center gap-[6px]">
+                  <div className="flex items-center gap-1.5">
                     <div>Q{idx + 1}</div>
                     {done && <Check size={12} />}
                   </div>
@@ -317,7 +317,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
               );
             })}
             <TabsTrigger value="supplement">
-              <div className="flex items-center gap-[6px]">
+              <div className="flex items-center gap-1.5">
                 <PenLine size={12} />
                 <div>{labels.supplementEnter}</div>
               </div>
@@ -326,7 +326,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
               // Replace-all stays at the far right because it discards the
               // structured selections, unlike additional notes.
               <TabsTrigger className="ms-auto" value="escape">
-                <div data-replace-all className="flex items-center gap-[6px]">
+                <div data-replace-all className="flex items-center gap-1.5">
                   <Replace size={12} />
                   <div>{labels.escapeEnter}</div>
                 </div>

@@ -16,7 +16,7 @@ import { CategoryAvatar } from './CategoryAvatar';
 import { EngineAvatar } from './EngineAvatar';
 
 const styles = {
-  textHeader: 'flex-none w-[120px]',
+  textHeader: 'flex-none w-30',
 };
 
 interface SearchBarProps {
@@ -78,7 +78,7 @@ const SearchBar = memo<SearchBarProps>(
 
     return (
       <>
-        <div className="flex flex-row items-center flex-1 gap-2 h-[32px] justify-between">
+        <div className="flex flex-row items-center flex-1 gap-2 h-8 justify-between">
           {tooltip ? (
             <SimpleTooltip title={t('search.searchBar.tooltip')}>{searchComponent}</SimpleTooltip>
           ) : (

@@ -159,7 +159,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const hasItems = <T,>(items: T[]) => items.length > 0;
 
 const Section = memo<{ children: ReactNode; title: string }>(({ children, title }) => (
-  <div className="flex flex-col gap-[6px]">
+  <div className="flex flex-col gap-1.5">
     <div className={styles.sectionLabel}>{title}</div>
     {children}
   </div>
@@ -220,7 +220,7 @@ const EntityCard = memo<{ entity: LinearEntity }>(({ entity }) => {
 
   return (
     <div
-      className="flex flex-col gap-2 p-[10px]"
+      className="flex flex-col gap-2 p-2.5"
       style={{
         background: cssVar.colorBgContainer,
         border: `1px solid ${cssVar.colorBorderSecondary}`,

@@ -125,7 +125,7 @@ const WebSearchRender = memo<BuiltinRenderProps<CodexWebSearchArgs, CodexWebSear
               const title = <span className={styles.title}>{result.title}</span>;
 
               return (
-                <div className={cn('flex', 'flex-col', 'gap-[3px]', styles.resultItem)} key={key}>
+                <div className={cn('flex', 'flex-col', 'gap-0.75', styles.resultItem)} key={key}>
                   {result.url ? (
                     <a href={result.url} rel={'noreferrer'} target={'_blank'}>
                       {title}

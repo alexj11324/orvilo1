@@ -102,7 +102,7 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-(length:--text-dense) text-muted-foreground">
         {t('agentMarketplace.inspector.pickCount', { count: installedCount })}
         {skippedCount > 0 &&
           ` · ${t('agentMarketplace.render.alreadyInLibrary', { count: skippedCount })}`}

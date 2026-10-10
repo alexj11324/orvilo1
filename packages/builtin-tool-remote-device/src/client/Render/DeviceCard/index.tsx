@@ -21,7 +21,7 @@ const styles = {
   root: 'w-full',
   status:
     'inline-flex flex-none gap-1.5 items-center text-xs leading-[inherit] text-muted-foreground',
-  statusDot: 'size-[7px] border border-[var(--ant-color-text-quaternary)] rounded-full',
+  statusDot: 'size-1.75 border border-[var(--ant-color-text-quaternary)] rounded-full',
   statusDotOnline: 'border-0 bg-success shadow-[0_0_0_3px_var(--ant-color-success-bg)]',
 };
 

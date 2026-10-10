@@ -99,6 +99,7 @@ export const CriterionEditor = ({
           autoFocus
           placeholder={t('criterion.titlePlaceholder')}
           value={draft.title}
+          visualSize="normal"
           onChange={(event) => patch({ title: event.target.value })}
         />
       </div>
@@ -121,7 +122,7 @@ export const CriterionEditor = ({
           value={verifierType}
           onValueChange={(value) => patch({ verifierType: value as VerifierType })}
         >
-          <SelectTrigger>
+          <SelectTrigger size="normal">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -178,6 +179,7 @@ export const CriterionEditor = ({
         {onDelete ? (
           <Button
             className="text-destructive"
+            size="lg"
             variant="ghost"
             onClick={() => {
               onDelete();
@@ -190,10 +192,13 @@ export const CriterionEditor = ({
           <span />
         )}
         <div className="flex gap-2">
-          <Button onClick={onClose}>{t('criterion.cancel')}</Button>
+          <Button size="lg" onClick={onClose}>
+            {t('criterion.cancel')}
+          </Button>
           <Button
             disabled={!draft.title.trim()}
             loading={saving}
+            size="lg"
             variant="outline"
             onClick={handleSave}
           >

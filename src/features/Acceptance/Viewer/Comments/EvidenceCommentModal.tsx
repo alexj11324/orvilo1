@@ -123,6 +123,7 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
           <Button
             disabled={!rect || !trimmed}
             loading={submitting}
+            size="lg"
             variant="outline"
             onClick={() => void submit()}
           >

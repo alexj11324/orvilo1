@@ -182,9 +182,12 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
         width={640}
         footer={
           <div className="flex justify-end gap-2">
-            <Button onClick={closeEditor}>{t('cancel')}</Button>
+            <Button size="lg" onClick={closeEditor}>
+              {t('cancel')}
+            </Button>
             <Button
               disabled={!dirty || !shareReady || !draft?.name.trim()}
+              size="lg"
               variant="default"
               onClick={() =>
                 void onSave().then((saved) => {

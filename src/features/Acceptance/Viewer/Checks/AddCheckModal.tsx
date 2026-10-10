@@ -78,6 +78,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
             <Input
               placeholder={tv('acceptance.tray.editModal.namePlaceholder')}
               value={name}
+              visualSize="normal"
               onChange={(event) => setName(event.target.value)}
             />
           </div>
@@ -119,7 +120,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
               setSelectedIds(new Set());
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger size="normal">
               <SelectValue placeholder={tv('acceptance.checkCreate.selectRubric')} />
             </SelectTrigger>
             <SelectContent>
@@ -192,12 +193,13 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
         </div>
       </div>
       <div className="flex gap-2 justify-end">
-        <Button disabled={saving} onClick={close}>
+        <Button disabled={saving} size="lg" onClick={close}>
           {tv('acceptance.actions.cancel')}
         </Button>
         <Button
           disabled={!canSave || saving}
           loading={saving}
+          size="lg"
           variant="outline"
           onClick={handleSave}
         >

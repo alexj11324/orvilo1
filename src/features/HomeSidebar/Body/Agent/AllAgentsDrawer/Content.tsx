@@ -79,7 +79,7 @@ const Content = memo<ContentProps>(({ searchKeyword }) => {
   // Show loading skeleton when searching
   if (state === 'loading') {
     return (
-      <div className="flex flex-col gap-[1px] py-[1px] px-[4px]">
+      <div className="flex flex-col gap-px py-px px-1">
         <SkeletonList rows={5} />
       </div>
     );
@@ -96,7 +96,7 @@ const Content = memo<ContentProps>(({ searchKeyword }) => {
       style={{ height: '100%' }}
     >
       {displayItems.map((item) => (
-        <div className="flex flex-col py-[1px] px-[4px]" key={item.id}>
+        <div className="flex flex-col py-px px-1" key={item.id}>
           {item.type === 'group' ? (
             <GroupItem item={item} onNavigate={handleNavigate} />
           ) : (

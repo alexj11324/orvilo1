@@ -40,7 +40,7 @@ const ExampleItem = memo<ExampleItemProps>(({ title, description, onClick, promp
       }}
       onClick={() => onClick(prompt)}
     >
-      <div className="flex flex-col gap-1 py-3 px-[14px]">
+      <div className="flex flex-col gap-1 py-3 px-3.5">
         <div className="truncate text-[14px]" style={{ fontWeight: 500 }}>
           {title}
         </div>

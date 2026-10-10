@@ -53,7 +53,7 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
         <div className="flex items-center">
           <div className="min-w-0 flex-1">
             <AccordionTrigger>
-              <div className="flex items-center gap-[4px]">
+              <div className="flex items-center gap-1">
                 <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                   {t('navPanel.privateAgents', { defaultValue: 'Private' })}
                 </span>

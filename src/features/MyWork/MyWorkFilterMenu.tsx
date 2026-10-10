@@ -475,6 +475,7 @@ const DirectoryFieldPane = memo<{
           className="mx-2 my-1 rounded border border-border bg-transparent px-2 py-1 text-sm"
           defaultValue={typeof textValue === 'string' ? textValue : ''}
           placeholder={t('savedViews.filters.textPlaceholder')}
+          visualSize="small"
           onBlur={(event) =>
             onBuilderChange(setMyWorkDirectoryText(builder, field, event.target.value))
           }

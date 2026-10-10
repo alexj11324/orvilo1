@@ -2,7 +2,6 @@
 
 import type { GoalStatus } from '@orvilo/const/goal';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import type { TFunction } from 'i18next';
 import {
   AlertTriangle,
@@ -38,15 +37,15 @@ const formatElapsed = (milliseconds: number) => {
  * acceptance, because from here the next move is the user's.
  */
 const PHASE_META = {
-  accepted: { color: cssVar.colorSuccess, icon: CheckCheck, settled: true },
-  awaitingDecision: { color: cssVar.colorError, icon: AlertTriangle, settled: true },
-  awaitingReview: { color: cssVar.colorWarning, icon: Stamp, settled: true },
-  closed: { color: cssVar.colorTextTertiary, icon: CircleSlash, settled: true },
-  errored: { color: cssVar.colorError, icon: CircleX, settled: true },
-  rejected: { color: cssVar.colorError, icon: RotateCcw, settled: false },
-  repairing: { color: cssVar.colorWarning, icon: RefreshCw, settled: false },
-  running: { color: cssVar.colorInfo, icon: LoaderCircle, settled: false },
-  verifying: { color: cssVar.colorInfo, icon: LoaderCircle, settled: false },
+  accepted: { color: 'var(--success)', icon: CheckCheck, settled: true },
+  awaitingDecision: { color: 'var(--destructive)', icon: AlertTriangle, settled: true },
+  awaitingReview: { color: 'var(--warning)', icon: Stamp, settled: true },
+  closed: { color: 'var(--ant-color-text-tertiary)', icon: CircleSlash, settled: true },
+  errored: { color: 'var(--destructive)', icon: CircleX, settled: true },
+  rejected: { color: 'var(--destructive)', icon: RotateCcw, settled: false },
+  repairing: { color: 'var(--warning)', icon: RefreshCw, settled: false },
+  running: { color: 'var(--info)', icon: LoaderCircle, settled: false },
+  verifying: { color: 'var(--info)', icon: LoaderCircle, settled: false },
 } as const;
 
 type PhaseKey = keyof typeof PHASE_META;
@@ -154,7 +153,7 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
     return (
       <TaskResultCard
         icon={Target}
-        iconColor={cssVar.colorTextSecondary}
+        iconColor={'var(--muted-foreground)'}
         title={snapshot?.goal.title ?? pluginState.name ?? args?.name}
       >
         <div

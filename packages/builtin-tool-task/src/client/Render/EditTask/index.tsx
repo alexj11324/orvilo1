@@ -1,7 +1,6 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { Pencil } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,36 +17,13 @@ import {
   TaskResultCard,
 } from '../shared';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  addChip: css`
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorSuccess};
-
-    background: ${cssVar.colorSuccessBg};
-  `,
-  deps: css`
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-  `,
-  removeChip: css`
-    padding-block: 1px;
-    padding-inline: 8px;
-    border: 1px dashed ${cssVar.colorErrorBorder};
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorError};
-    text-decoration: line-through;
-  `,
-}));
+const styles = {
+  addChip:
+    'rounded-[999px] bg-[var(--ant-color-success-bg)] px-2 py-px font-mono text-[12px] text-success',
+  deps: 'inline-flex flex-wrap items-center gap-1',
+  removeChip:
+    'rounded-[999px] border border-dashed border-[var(--ant-color-error-border)] px-2 py-px font-mono text-[12px] text-destructive line-through',
+};
 
 export const EditTaskRender = memo<BuiltinRenderProps<EditTaskParams, EditTaskState>>(
   ({ args, pluginState }) => {

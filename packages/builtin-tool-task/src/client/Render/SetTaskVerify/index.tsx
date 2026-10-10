@@ -2,7 +2,6 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Check, ShieldCheck, X } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,38 +9,12 @@ import { useTranslation } from 'react-i18next';
 import type { SetTaskVerifyParams, SetTaskVerifyState } from '../../../types';
 import { TaskResultCard } from '../shared';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  offBadge: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  onBadge: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorSuccess};
-
-    background: ${cssVar.colorSuccessBg};
-  `,
-}));
+const styles = {
+  offBadge:
+    'inline-flex shrink-0 items-center gap-1 rounded-[999px] bg-accent px-2 py-0.5 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  onBadge:
+    'inline-flex shrink-0 items-center gap-1 rounded-[999px] bg-[var(--ant-color-success-bg)] px-2 py-0.5 text-[12px] text-success',
+};
 
 export const SetTaskVerifyRender = memo<
   BuiltinRenderProps<SetTaskVerifyParams, SetTaskVerifyState>
@@ -67,7 +40,7 @@ export const SetTaskVerifyRender = memo<
     <TaskResultCard
       headerExtra={statusBadge}
       icon={ShieldCheck}
-      iconColor={enabled === false ? cssVar.colorTextTertiary : cssVar.colorSuccess}
+      iconColor={enabled === false ? 'var(--ant-color-text-tertiary)' : 'var(--success)'}
       identifier={identifier}
       title={t('builtins.orvilo-task.apiName.setTaskVerify')}
     >

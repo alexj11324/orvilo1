@@ -1,7 +1,6 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { PanelRight, PanelRightClose } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,65 +13,17 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 
 import type { CreateTaskParams, CreateTaskState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  identifier: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  instruction: css`
-    /* The instruction is model-facing markdown; render it as a faded preview
-       rather than flattening it to plain text. Full content lives in the
-       expanded detail panel. */
-    overflow: hidden;
-    max-height: 132px;
-
-    mask-image: linear-gradient(to bottom, black 78%, transparent);
-  `,
-  row: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  taskItem: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-  `,
-  title: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-size: 13px;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  description: 'line-clamp-3 text-[12px] leading-[1.5] text-[var(--ant-color-text-tertiary)]',
+  identifier:
+    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
+  // Fade the model-facing markdown preview; the detail panel contains the full content.
+  instruction:
+    'max-h-[132px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_78%,transparent)]',
+  row: 'flex items-center gap-2',
+  taskItem: 'flex flex-col gap-1.5 px-3 py-2.5',
+  title: 'min-w-0 flex-1 truncate text-[13px] leading-[1.4] text-foreground',
+};
 
 export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, CreateTaskState>>(
   ({ args, pluginState }) => {
@@ -113,9 +64,9 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
     return (
       <div
         style={{
-          background: cssVar.colorBgContainer,
-          border: `1px solid ${cssVar.colorBorderSecondary}`,
-          borderRadius: cssVar.borderRadius,
+          background: 'var(--card)',
+          border: '1px solid var(--sidebar-border)',
+          borderRadius: 'var(--ant-border-radius)',
           width: '100%',
         }}
         onClick={identifier ? () => openTaskDetail(identifier) : undefined}
@@ -156,7 +107,7 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
             </div>
           ) : null}
           {parent && (
-            <span className="text-[11px]" style={{ color: cssVar.colorTextTertiary }}>
+            <span className="text-[11px]" style={{ color: 'var(--ant-color-text-tertiary)' }}>
               {`Subtask of ${parent}`}
             </span>
           )}

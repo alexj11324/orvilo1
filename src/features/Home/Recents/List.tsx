@@ -58,7 +58,7 @@ const RecentsList = memo<RecentsListProps>(({ error, onRetry, scope }) => {
       loading={<SkeletonList rows={3} />}
       onRetry={onRetry}
     >
-      <div className="flex flex-col gap-[1px]">
+      <div className="flex flex-col gap-px">
         {displayItems.map((item) => {
           const itemRef = `${item.type}:${item.id}` as const;
           return (

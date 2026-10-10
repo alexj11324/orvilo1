@@ -76,7 +76,7 @@ const AllRecentsDrawer = memo<AllRecentsDrawerProps>(({ open, onClose }) => {
       }
       onClose={onClose}
     >
-      <div className="flex flex-col gap-[1px] py-[1px] px-1">
+      <div className="flex flex-col gap-px py-px px-1">
         {isLoading && !query ? (
           <SkeletonList rows={5} />
         ) : filteredItems.length === 0 && searchKeyword.trim() ? (

@@ -403,7 +403,7 @@ const CreateDomainPage = memo(() => {
   ];
 
   return (
-    <div className="flex flex-col h-[100%] w-[100%]">
+    <div className="flex flex-col h-full w-full">
       <NavHeader
         styles={{ left: { paddingInlineStart: 24 } }}
         left={
@@ -416,7 +416,7 @@ const CreateDomainPage = memo(() => {
           ) : null
         }
       />
-      <div className={cx('flex flex-col flex-1 w-[100%]', styles.body)}>
+      <div className={cx('flex flex-col flex-1 w-full', styles.body)}>
         <WideScreenContainer minWidth={960}>
           <div className={cx('flex flex-col', styles.content)} onKeyDown={onKeyDown}>
             <div className={cx('flex flex-row', styles.head)}>

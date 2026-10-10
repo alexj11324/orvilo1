@@ -59,7 +59,7 @@ const Page = ({ mobile }: PageProps) => {
       <NavHeader right={createButton} styles={{ center: { alignItems: 'center' } }}>
         <span>{t('tab.creds')}</span>
       </NavHeader>
-      <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
+      <SettingContainer paddingBlock={'24px 128px'} paddingInline={24} width="wide">
         <CredsList key={refreshKey} />
       </SettingContainer>
     </>

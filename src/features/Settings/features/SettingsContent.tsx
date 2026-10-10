@@ -12,6 +12,7 @@ import {
 } from '@/config/routes/settings';
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
+import { getSettingsContentWidth } from '@/features/Setting/settingsWidth';
 import { useSettingsAnchorScroll } from '@/features/SettingsSearch/anchor';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { SettingsTabs } from '@/store/global/initialState';
@@ -39,7 +40,10 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Storage,
 ] as const;
 
-/** Tabs whose pages own their internal layout and must not be wrapped. */
+/**
+ * Opted-out pages must supply their own container: use SettingContainer for a
+ * centered lane, or retain a dedicated container for a multi-pane surface.
+ */
 const FULL_WIDTH_TABS: readonly string[] = [
   // Agents hosts the full per-agent config surface (index list + the exiled
   // profile page) — it owns its layout end to end.
@@ -146,7 +150,18 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
   }
 
   if (mobile) {
-    return activeTab ? renderComponent(activeTab) : renderComponent(SettingsTabs.Profile);
+    const tab = activeTab ?? SettingsTabs.Profile;
+    const content = renderComponent(tab);
+    if (FULL_WIDTH_TABS.includes(tab)) return content;
+    return (
+      <SettingContainer
+        className="h-auto shrink-0"
+        style={{ overflow: 'visible' }}
+        width={getSettingsContentWidth(tab)}
+      >
+        {content}
+      </SettingContainer>
+    );
   }
 
   if (!activeTab) return null;
@@ -165,7 +180,11 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
       >
         {compactHeaderTitle && <span style={{ fontWeight: 500 }}>{compactHeaderTitle}</span>}
       </NavHeader>
-      <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
+      <SettingContainer
+        paddingBlock={'24px 128px'}
+        paddingInline={24}
+        width={getSettingsContentWidth(activeTab)}
+      >
         {content}
       </SettingContainer>
     </Fragment>

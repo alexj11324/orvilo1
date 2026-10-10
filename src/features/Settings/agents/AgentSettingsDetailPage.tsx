@@ -100,7 +100,7 @@ const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId })
       resourceId={agentId}
       resourceType={'agent'}
     >
-      <SettingContainer maxWidth={640} paddingBlock={'24px 128px'} paddingInline={24}>
+      <SettingContainer paddingBlock={'24px 128px'} paddingInline={24} width="form">
         <AgentSettingsHeader agentId={agentId} />
         <AsyncBoundary
           data={isAgentConfigLoading ? undefined : true}

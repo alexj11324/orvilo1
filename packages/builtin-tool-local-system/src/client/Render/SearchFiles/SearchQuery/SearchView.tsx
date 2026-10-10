@@ -6,8 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { shinyTextStyles } from '@/styles';
 
 const styles = {
-  font: 'text-[12px] text-[var(--ant-color-text-tertiary)]',
-  query: 'rounded-[8px] px-2 py-1 text-[12px] text-muted-foreground',
+  font: 'text-xs text-[var(--ant-color-text-tertiary)]',
+  query: 'rounded-[8px] px-2 py-1 text-xs text-muted-foreground',
 };
 
 interface SearchBarProps {

@@ -51,7 +51,7 @@ export const ReplaceTextInspector = memo<BuiltinInspectorProps<ReplaceTextArgs, 
               {to || t('builtins.orvilo-page-agent.apiName.replaceText.empty')}
             </span>
             {count > 0 && (
-              <span className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground">
+              <span className="font-mono rounded bg-muted px-1 text-xs text-muted-foreground">
                 {' '}
                 ({t('builtins.orvilo-page-agent.apiName.replaceText.count', { count })})
               </span>

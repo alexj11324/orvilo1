@@ -44,12 +44,12 @@ const PlanCard = memo<PlanCardProps>(({ plan }) => {
         onClick={handleHeaderClick}
       >
         <ListChecksIcon size={18} />
-        <div className="truncate text-[16px] font-medium">{plan.goal}</div>
+        <div className="truncate text-base font-medium">{plan.goal}</div>
       </div>
 
       {/* Description */}
       {plan.description && (
-        <div className="line-clamp-2 text-[14px] text-muted-foreground">{plan.description}</div>
+        <div className="line-clamp-2 text-sm text-muted-foreground">{plan.description}</div>
       )}
 
       {/* Context content */}

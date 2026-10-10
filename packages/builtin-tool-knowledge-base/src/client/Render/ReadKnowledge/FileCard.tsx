@@ -63,7 +63,7 @@ const FileCard = memo<FileCardProps>(({ file }) => {
               'bg-muted',
               'px-1',
               'line-clamp-4',
-              'text-[12px]',
+              'text-xs',
               'text-muted-foreground',
               styles.preview,
             )}

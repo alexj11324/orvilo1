@@ -83,6 +83,7 @@ const DocumentCard = memo<DocumentCardProps>(({ content, documentId, title }) =>
       {documentId && (
         <Button
           className={cn('rounded-full', styles.expandButton)}
+          size="compact"
           variant="outline"
           onClick={handleToggle}
         >

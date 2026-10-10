@@ -29,24 +29,24 @@ A static value never belongs in `style`. Do not start a new `createStaticStyles`
 
 Pick the role, then write the class in this table. A literal such as `text-[13px]`, `rounded-[8px]`, `h-[32px]`, `#080808` or `rgba(...)` in a component means a row here was skipped.
 
-| Need                                               | Write                                                                                 | Resolves to                        |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------- |
-| Primary / secondary text                           | `text-foreground` / `text-muted-foreground`                                           | `colorText` / `colorTextSecondary` |
-| Canvas / panel / overlay surface                   | `bg-background` / `bg-card` / `bg-popover`                                            | layout / container / elevated      |
-| Hover wash / selected or pressed                   | `hover:bg-accent` (static: `bg-muted`) / `bg-selected`                                | `colorFillTertiary` / `…Secondary` |
-| Stronger edge                                      | `border-border`                                                                       | `colorBorder`                      |
-| Status text or icon                                | `text-destructive-text`, `text-success-text`, …                                       | contrast-checked `*-text` role     |
-| Filled action                                      | `<Button>`; else `bg-primary text-primary-foreground`                                 | primary pair                       |
-| Metadata / body / emphasis text                    | `text-xs` / `text-sm` / `text-base`                                                   | 12 / 14 / 16px                     |
-| Dense label, on a surface DESIGN.md scopes to 13px | `text-(length:--text-dense)`                                                          | 13px                               |
-| Chip or tag radius                                 | `rounded-(--radius-chip)`                                                             | 4px                                |
-| Input or small-control radius                      | `rounded-(--radius-input)`                                                            | 6px                                |
-| Button / card radius                               | `rounded-(--radius-button)` / `rounded-(--radius-card)`                               | 8px                                |
-| Menu, popover or dialog radius                     | `rounded-(--radius-overlay)`                                                          | 12px                               |
-| Pill, avatar, circular action                      | `rounded-full`                                                                        |                                    |
-| Control height                                     | `<Button size>`: `lg` 36 normal, `default` 32 compact toolbar, `sm` 28 dense, `xs` 24 | never `h-*` on a Button            |
-| Any other whole-pixel size or gap                  | px ÷ 4 on the scale: `h-11` 44px, `w-70` 280px, `gap-2` 8px                           | 4px rhythm; half steps allowed     |
-| Full width or height                               | `w-full` / `h-full`                                                                   | not `w-[100%]`                     |
+| Need                                               | Write                                                                                                        | Resolves to                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
+| Primary / secondary text                           | `text-foreground` / `text-muted-foreground`                                                                  | `colorText` / `colorTextSecondary` |
+| Canvas / panel / overlay surface                   | `bg-background` / `bg-card` / `bg-popover`                                                                   | layout / container / elevated      |
+| Hover wash / selected or pressed                   | `hover:bg-accent` (static: `bg-muted`) / `bg-selected`                                                       | `colorFillTertiary` / `…Secondary` |
+| Stronger edge                                      | `border-border`                                                                                              | `colorBorder`                      |
+| Status text or icon                                | `text-destructive-text`, `text-success-text`, …                                                              | contrast-checked `*-text` role     |
+| Filled action                                      | `<Button>`; else `bg-primary text-primary-foreground`                                                        | primary pair                       |
+| Metadata / body / emphasis text                    | `text-xs` / `text-sm` / `text-base`                                                                          | 12 / 14 / 16px                     |
+| Dense label, on a surface DESIGN.md scopes to 13px | `text-(length:--text-dense)`                                                                                 | 13px                               |
+| Chip or tag radius                                 | `rounded-(--radius-chip)`                                                                                    | 4px                                |
+| Input or small-control radius                      | `rounded-(--radius-input)`                                                                                   | 6px                                |
+| Button / card radius                               | `rounded-(--radius-button)` / `rounded-(--radius-card)`                                                      | 8px                                |
+| Menu, popover or dialog radius                     | `rounded-(--radius-overlay)`                                                                                 | 12px                               |
+| Pill, avatar, circular action                      | `rounded-full`                                                                                               |                                    |
+| Control height                                     | `<Button size>`: `lg` 36 normal, `compact` 32 compact toolbar (`default` remains 32), `sm` 28 dense, `xs` 24 | never `h-*` on a Button            |
+| Any other whole-pixel size or gap                  | px ÷ 4 on the scale: `h-11` 44px, `w-70` 280px, `gap-2` 8px                                                  | 4px rhythm; half steps allowed     |
+| Full width or height                               | `w-full` / `h-full`                                                                                          | not `w-[100%]`                     |
 
 - **`rounded-lg` is 10px and `rounded-xl` is 14px** until the Tailwind radius scale is re-pinned; neither is an approved role. Use the role forms above. `rounded-sm` (6px) and `rounded-md` (8px) happen to match and appear in installed primitives; new code still names the role.
 - **Do not invent a utility name for a role.** `cn` cannot classify one: `cn('text-foreground', 'text-dense')` drops the text color and `cn('rounded-md', 'rounded-card')` keeps both. The variable forms above merge correctly, which is why role variables live in `:root` in [globals.css](../../../src/app/globals.css) and not in `@theme`.

@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, lazy, memo, Suspense, useCallback, useState } from 'react';
@@ -16,61 +15,19 @@ import { useBriefStore } from '@/store/brief';
 const Markdown = lazy(() => import('@lobehub/ui/es/Markdown/index'));
 
 const AVATAR_SIZE = 20;
-const ROW_GAP = 10;
-const ROW_PADDING_INLINE = 14;
 
-const BARE_PADDING_INLINE = 8;
 /** Past this the rail card stops being a card and starts being a page. */
 const RAIL_COLLAPSED_COUNT = 6;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  // Line the content up under the headline, past the leading avatar.
-  bareBody: css`
-    padding-block-end: 8px;
-    padding-inline: ${BARE_PADDING_INLINE + AVATAR_SIZE + ROW_GAP}px ${BARE_PADDING_INLINE}px;
-  `,
-  // Inside a rail card the shell is already drawn; only the hover bleed remains.
-  bareList: css`
-    margin-inline: -${BARE_PADDING_INLINE}px;
-  `,
-  bareRow: css`
-    padding-block: 7px;
-    padding-inline: ${BARE_PADDING_INLINE}px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  body: css`
-    padding-block-end: 12px;
-    padding-inline: ${ROW_PADDING_INLINE + AVATAR_SIZE + ROW_GAP}px ${ROW_PADDING_INLINE}px;
-  `,
-  list: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  row: css`
-    justify-content: flex-start;
-
-    width: 100%;
-    height: auto;
-    padding-block: 11px;
-    padding-inline: ${ROW_PADDING_INLINE}px;
-    border: 0;
-
-    text-align: start;
-
-    transition: background ${cssVar.motionDurationFast};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  section: css`
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-}));
+const styles = {
+  bareBody: 'pbe-2 ps-9.5 pe-2',
+  bareList: '-mx-2',
+  bareRow: 'py-1.75 px-2 rounded-(--radius-button)',
+  body: 'pbe-3 ps-11 pe-3.5',
+  list: 'overflow-hidden border border-divider rounded-(--radius-card) bg-card',
+  row: 'justify-start w-full h-auto py-2.75 px-3.5 border-0 text-start text-sm leading-5.5 transition-[background] duration-(--orvilo-motion-fast) ease-[ease] [&:hover]:bg-accent',
+  section: '[&:not(:last-child)]:border-be [&:not(:last-child)]:border-divider',
+};
 
 interface NewsItemProps {
   bare?: boolean;
@@ -104,13 +61,13 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
   }, [brief.id, markBriefRead, read]);
 
   return (
-    <div className={cx(bare ? undefined : styles.section, 'flex flex-col')}>
+    <div className={cn(bare ? undefined : styles.section, 'flex flex-col')}>
       <Button
-        className={cn(cx(styles.row, bare && styles.bareRow))}
+        className={cn(cn(styles.row, bare && styles.bareRow))}
         variant="ghost"
         onClick={toggle}
       >
-        <div className="flex items-center" style={{ gap: ROW_GAP, width: '100%' }}>
+        <div className="flex w-full items-center gap-2.5">
           {brief.agent ? (
             // Fade the whole row once read: the leading glyph dims with the title
             // so a scanned item recedes as one, not just a lighter headline.
@@ -121,26 +78,24 @@ const NewsItem = memo<NewsItemProps>(({ bare, brief, showTime }) => {
             <BriefIcon muted={read} type={brief.type} />
           )}
           <div
-            className={cn('truncate', 'block', homeType.itemTitle)}
+            className={cn('truncate', 'block', 'flex-1 min-w-0', homeType.itemTitle)}
             style={{
-              color: read ? cssVar.colorTextTertiary : undefined,
-              flex: 1,
+              color: read ? 'var(--foreground-tertiary)' : undefined,
               fontWeight: read ? 400 : undefined,
-              minWidth: 0,
             }}
           >
             {brief.title}
           </div>
           {showTime && <Time date={brief.createdAt} />}
           {createElement(expanded ? ChevronDownIcon : ChevronRightIcon, {
-            color: cssVar.colorTextQuaternary,
+            className: 'text-foreground-quaternary',
             size: 14,
           })}
         </div>
       </Button>
 
       {expanded && (brief.summary || brief.artifacts) && (
-        <div className={cx(bare ? styles.bareBody : styles.body, 'flex flex-col gap-2')}>
+        <div className={cn(bare ? styles.bareBody : styles.body, 'flex flex-col gap-2')}>
           {brief.summary && (
             <Suspense fallback={null}>
               <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
@@ -180,13 +135,13 @@ const NewsList = memo<NewsListProps>(({ bare, news, showTime }) => {
   const shown = collapsed ? news.slice(0, RAIL_COLLAPSED_COUNT) : news;
 
   return (
-    <div className={cx(bare ? styles.bareList : styles.list, 'flex flex-col')}>
+    <div className={cn(bare ? styles.bareList : styles.list, 'flex flex-col')}>
       {shown.map((brief) => (
         <NewsItem bare={bare} brief={brief} key={brief.id} showTime={showTime} />
       ))}
       {collapsed && (
         <Button
-          className={cn(cx(styles.row, styles.bareRow, homeType.supporting))}
+          className={cn(cn(styles.row, styles.bareRow, homeType.supporting))}
           variant="ghost"
           onClick={() => setExpanded(true)}
         >

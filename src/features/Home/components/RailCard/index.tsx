@@ -1,41 +1,17 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, memo, type ReactNode } from 'react';
 
+import { Button } from '@/components/ui/button';
+
 import CountBadge from '../CountBadge';
 import { homeType } from '../homeType';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  // Frosted, not opaque: the agent standing behind the first card reads through
-  // the pane as a soft silhouette instead of being clipped away.
-  card: css`
-    padding-block: 14px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: color-mix(in srgb, ${cssVar.colorBgContainer} 72%, transparent);
-    backdrop-filter: saturate(150%) blur(12px);
-  `,
-  // The whole heading is the hit target, not just the chevron — a 14px glyph is
-  // a poor thing to ask someone to aim at, and the label is already there.
-  heading: css`
-    cursor: pointer;
-
-    min-width: 0;
-    padding: 0;
-    border: 0;
-
-    text-align: start;
-
-    background: none;
-
-    &:hover .home-rail-card-chevron {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-}));
+const styles = {
+  card: 'p-4 border border-divider rounded-(--radius-card) bg-[color-mix(in_srgb,var(--card)_72%,transparent)] [backdrop-filter:saturate(150%)_blur(12px)]',
+  heading:
+    'min-w-0 justify-start p-0 border-0 text-start bg-transparent aria-expanded:bg-transparent [&:hover]:bg-transparent active:not-aria-[haspopup]:translate-y-0 [&:hover_.home-rail-card-chevron]:text-muted-foreground',
+};
 
 interface RailCardProps {
   action?: ReactNode;
@@ -53,32 +29,33 @@ interface RailCardProps {
 const RailCard = memo<RailCardProps>(
   ({ action, children, collapsed = false, count, onCollapsedChange, title }) => {
     const heading = (
-      <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+      <div className="flex min-w-0 items-center gap-1.5">
         <div className={cn('truncate', homeType.sectionLabel)}>{title}</div>
         {count !== undefined && <CountBadge count={count} />}
         {onCollapsedChange &&
           createElement(collapsed ? ChevronRightIcon : ChevronDownIcon, {
-            className: 'home-rail-card-chevron',
-            color: cssVar.colorTextQuaternary,
+            className: 'home-rail-card-chevron size-3.5 text-foreground-quaternary',
             size: 14,
           })}
       </div>
     );
 
     return (
-      <div className={cx(styles.card, 'flex flex-col gap-3')} data-testid={'home-rail-card'}>
+      <div className={cn(styles.card, 'flex flex-col gap-3')} data-testid={'home-rail-card'}>
         {title && (
           <div className="flex items-center gap-2 justify-between">
             {onCollapsedChange ? (
-              <button
+              <Button
                 aria-expanded={!collapsed}
                 className={styles.heading}
                 data-testid={'home-rail-card-toggle'}
+                size="lg"
                 type={'button'}
+                variant="ghost"
                 onClick={() => onCollapsedChange(!collapsed)}
               >
                 {heading}
-              </button>
+              </Button>
             ) : (
               heading
             )}

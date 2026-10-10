@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,14 +8,9 @@ import RailCard from '@/features/Home/components/RailCard';
 
 import InboxBriefCard from './InboxBriefCard';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  pager: css`
-    padding-inline: 2px;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  pager: 'px-0.5 text-xs leading-5 tabular-nums text-foreground-tertiary',
+};
 
 /**
  * In the rail the actionable briefs are stacked, not listed: one at a time with

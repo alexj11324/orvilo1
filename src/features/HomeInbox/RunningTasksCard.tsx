@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, memo, type ReactNode, useState } from 'react';
@@ -18,68 +17,17 @@ const AVATAR_SIZE = 20;
 /** Past this the stack turns into a smudge; the rest are counted instead. */
 const MAX_AVATARS = 5;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  avatars: css`
-    /* Overlap the stack so N agents read as one cluster, not a toolbar. */
-    > *:not(:first-child) {
-      margin-inline-start: -6px;
-    }
-  `,
-  bareRoot: css`
-    margin-block: -6px;
-    margin-inline: -8px;
-  `,
-  body: css`
-    padding-block: 4px 8px;
-    padding-inline: 8px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  bareBody: css`
-    padding-inline: 0;
-  `,
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  head: css`
-    flex: 1;
-    justify-content: flex-start;
-
-    width: auto;
-    min-width: 0;
-    height: auto;
-    padding-block: 11px;
-    padding-inline: 14px;
-    border: 0;
-
-    text-align: start;
-
-    transition: background ${cssVar.motionDurationFast};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  // Inside a rail card the shell is already drawn; only the hover bleed remains.
-  bareHead: css`
-    padding-block: 7px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  overflowCount: css`
-    flex: none;
-    margin-inline-start: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  // Ring in the card's own background so overlapping avatars stay separable.
-  stackedAvatar: css`
-    flex: none;
-    box-shadow: 0 0 0 2px ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  avatars: '[&>*:not(:first-child)]:-ms-1.5',
+  bareRoot: '-my-1.5 -mx-2',
+  body: 'pbs-1 pbe-2 px-2 border-bs border-divider',
+  bareBody: 'px-0',
+  card: 'overflow-hidden border border-divider rounded-(--radius-card) bg-card',
+  head: 'flex-1 justify-start w-auto min-w-0 h-auto py-2.75 px-3.5 border-0 text-start text-sm leading-5.5 transition-[background] duration-(--orvilo-motion-fast) ease-[ease] [&:hover]:bg-accent',
+  bareHead: 'py-1.75 px-2 rounded-(--radius-button)',
+  overflowCount: 'flex-none ms-1 text-xs leading-5 text-foreground-tertiary',
+  stackedAvatar: 'flex-none shadow-[0_0_0_2px_var(--card)]',
+};
 
 /** One avatar of the collapsed stack. Its own component because `useAgentDisplayMeta` is a hook and the stack is a list. */
 const StackedAgentAvatar = memo<{ agentId: string }>(({ agentId }) => {
@@ -108,7 +56,7 @@ const RunningAgentAvatars = memo<{ running: InboxTopic[] }>(({ running }) => {
   if (shown.length === 0) return null;
 
   return (
-    <div className={cx(styles.avatars, 'flex items-center flex-none')}>
+    <div className={cn(styles.avatars, 'flex items-center flex-none')}>
       {shown.map((agentId) => (
         <StackedAgentAvatar agentId={agentId} key={agentId} />
       ))}
@@ -138,21 +86,21 @@ const RunningTasksCard = memo<RunningTasksCardProps>(({ action, bare, running, s
   if (running.length === 0) return null;
 
   return (
-    <div className={cx(bare ? styles.bareRoot : styles.card, 'flex flex-col')}>
+    <div className={cn(bare ? styles.bareRoot : styles.card, 'flex flex-col')}>
       <div className="flex items-center">
         <Button
-          className={cn(cx(styles.head, bare && styles.bareHead))}
+          className={cn(cn(styles.head, bare && styles.bareHead))}
           variant="ghost"
           onClick={() => setOpen((v) => !v)}
         >
-          <div className="flex items-center gap-2.5" style={{ width: '100%' }}>
+          <div className="flex w-full items-center gap-2.5">
             <RunningGlyph />
-            <div className={cn(homeType.itemTitle)} style={{ flex: 1 }}>
+            <div className={cn('flex-1', homeType.itemTitle)}>
               {t('inbox.running.title', { count: running.length })}
             </div>
             <RunningAgentAvatars running={running} />
             {createElement(open ? ChevronDownIcon : ChevronRightIcon, {
-              color: cssVar.colorTextQuaternary,
+              className: 'text-foreground-quaternary',
               size: 14,
             })}
           </div>
@@ -161,7 +109,7 @@ const RunningTasksCard = memo<RunningTasksCardProps>(({ action, bare, running, s
       </div>
 
       {open && (
-        <div className={cx(cx(styles.body, bare && styles.bareBody), 'flex flex-col')}>
+        <div className={cn(cn(styles.body, bare && styles.bareBody), 'flex flex-col')}>
           {running.map((topic) => (
             <TopicRow
               key={topic.id}

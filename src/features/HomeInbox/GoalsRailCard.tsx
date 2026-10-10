@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRightIcon, TargetIcon } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -14,61 +13,17 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { type HomeGoalEntry, homeGoalHref, resolveHomeGoalView } from './homeGoals';
 
 const AVATAR_SIZE = 20;
-const ROW_GAP = 10;
-const ROW_PADDING_INLINE = 14;
-const BARE_PADDING_INLINE = 8;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  bareGroupLabel: css`
-    padding-inline: ${BARE_PADDING_INLINE}px;
-  `,
-  bareList: css`
-    margin-inline: -${BARE_PADDING_INLINE}px;
-  `,
-  bareRow: css`
-    padding-block: 7px;
-    padding-inline: ${BARE_PADDING_INLINE}px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  glyph: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-  `,
-  // The bucket a row belongs to is the one thing a goal glance must not make the
-  // reader infer, so each pile is named — even when it holds a single row.
-  groupLabel: css`
-    padding-block: 8px 2px;
-    padding-inline: ${ROW_PADDING_INLINE}px;
-  `,
-  list: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  rounds: css`
-    flex: none;
-    font-variant-numeric: tabular-nums;
-  `,
-  row: css`
-    justify-content: flex-start;
-
-    width: 100%;
-    height: auto;
-    padding-block: 9px;
-    padding-inline: ${ROW_PADDING_INLINE}px;
-    border: 0;
-
-    text-align: start;
-
-    transition: background ${cssVar.motionDurationFast};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
+const styles = {
+  bareGroupLabel: 'px-2',
+  bareList: '-mx-2',
+  bareRow: 'px-2 rounded-(--radius-button)',
+  glyph: 'flex flex-none items-center',
+  groupLabel: 'pbs-2 pbe-0.5 px-3.5',
+  list: 'overflow-hidden border border-divider rounded-(--radius-card) bg-card',
+  rounds: 'flex-none tabular-nums',
+  row: 'justify-start w-full py-1.75 px-3.5 border-0 text-start text-sm leading-5.5 transition-[background] duration-(--orvilo-motion-fast) ease-[ease] [&:hover]:bg-accent',
+};
 
 /** The agent behind the goal — the face is what makes a long-running goal recognisable. */
 const GoalAgentAvatar = memo<{ agentId: string | null }>(({ agentId }) => {
@@ -90,12 +45,13 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
 
   return (
     <Button
-      className={cn(cx(styles.row, bare && styles.bareRow))}
+      className={cn(cn(styles.row, bare && styles.bareRow))}
       disabled={!href}
+      size="lg"
       variant="ghost"
       onClick={() => href && navigate(href)}
     >
-      <div className="flex items-center" style={{ gap: ROW_GAP, width: '100%' }}>
+      <div className="flex w-full items-center gap-2.5">
         {/* The pile heading says which of the two states this is; the glyph
             carries the exact one (verifying, planning, waiting) on hover, where
             it costs the row nothing. */}
@@ -103,19 +59,16 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
           {entry.bucket === 'running' ? (
             <RunningGlyph />
           ) : (
-            <TargetIcon color={cssVar.colorInfo} size={16} />
+            <TargetIcon className="text-info-text" size={16} />
           )}
         </span>
-        <div
-          className={cn('truncate', 'block', homeType.itemTitle)}
-          style={{ flex: 1, minWidth: 0 }}
-        >
+        <div className={cn('truncate', 'block', 'flex-1 min-w-0', homeType.itemTitle)}>
           {entry.title}
         </div>
         <GoalAgentAvatar agentId={entry.agentId} />
         {/* A goal is measured in the tasks it has closed, not in time — how far
             through its own decomposition it is says more at a glance. */}
-        <span className={cx(homeType.meta, styles.rounds)}>
+        <span className={cn(homeType.meta, styles.rounds)}>
           {entry.pendingDecisions > 0
             ? t('goalList.needsYou', { count: entry.pendingDecisions, ns: 'chat' })
             : t('goalList.taskProgress', {
@@ -124,7 +77,7 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
                 total: entry.taskTotal,
               })}
         </span>
-        <ChevronRightIcon color={cssVar.colorTextQuaternary} size={14} />
+        <ChevronRightIcon className="text-foreground-quaternary" size={14} />
       </div>
     </Button>
   );
@@ -152,12 +105,12 @@ const GoalsRailCard = memo<GoalsRailCardProps>(({ bare, entries }) => {
   const { buckets, collapsed } = resolveHomeGoalView(entries, expanded);
 
   return (
-    <div className={cx(bare ? styles.bareList : styles.list, 'flex flex-col')}>
+    <div className={cn(bare ? styles.bareList : styles.list, 'flex flex-col')}>
       {buckets.map(({ bucket, entries: rows, total }) => (
         <div className="flex flex-col" key={bucket}>
           <div
-            className={cx(
-              cx(styles.groupLabel, bare && styles.bareGroupLabel),
+            className={cn(
+              cn(styles.groupLabel, bare && styles.bareGroupLabel),
               'flex items-center gap-1.5',
             )}
           >
@@ -173,7 +126,8 @@ const GoalsRailCard = memo<GoalsRailCardProps>(({ bare, entries }) => {
       ))}
       {collapsed && (
         <Button
-          className={cn(cx(styles.row, bare && styles.bareRow, homeType.supporting))}
+          className={cn(cn(styles.row, bare && styles.bareRow, homeType.supporting))}
+          size="lg"
           variant="ghost"
           onClick={() => setExpanded(true)}
         >

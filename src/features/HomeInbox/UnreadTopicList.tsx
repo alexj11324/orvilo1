@@ -1,6 +1,5 @@
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon, MessageSquarePlus } from 'lucide-react';
 import { createElement, lazy, memo, Suspense, useCallback, useState } from 'react';
@@ -22,9 +21,6 @@ import { type InboxTopic } from './useHomeInboxTopics';
 
 const MarkdownMessage = lazy(() => import('@/features/Conversation/Markdown'));
 
-const DOT_WIDTH = 14;
-const ROW_GAP = 8;
-const ROW_PADDING_INLINE = 14;
 const AVATAR_SIZE = 20;
 
 const loadRunReplyEditor = () => import('@/features/AgentTasks/AgentTaskDetail/RunReplyEditor');
@@ -34,59 +30,17 @@ const preloadRunReplyEditor = () => {
   void loadRunReplyEditor();
 };
 
-const BARE_PADDING_INLINE = 8;
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  bareBody: css`
-    padding-block-end: 8px;
-    padding-inline: ${BARE_PADDING_INLINE + DOT_WIDTH + ROW_GAP}px ${BARE_PADDING_INLINE}px;
-  `,
-  // Inside a rail card the shell is already drawn; only the hover bleed remains.
-  bareList: css`
-    margin-inline: -${BARE_PADDING_INLINE}px;
-  `,
-  bareRow: css`
-    padding-block: 7px;
-    padding-inline: ${BARE_PADDING_INLINE}px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  // Line the reply up under the agent that wrote it, not under the unread dot.
-  body: css`
-    padding-block-end: 12px;
-    padding-inline: ${ROW_PADDING_INLINE + DOT_WIDTH + ROW_GAP}px ${ROW_PADDING_INLINE}px;
-  `,
-  // Keeps the title from shifting left once the dot is gone.
-  dotPlaceholder: css`
-    flex: none;
-    width: ${DOT_WIDTH}px;
-  `,
-  list: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  row: css`
-    cursor: pointer;
-    padding-block: 11px;
-    padding-inline: ${ROW_PADDING_INLINE}px;
-    transition: background ${cssVar.motionDurationFast};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  section: css`
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  replyEditorFallback: css`
-    min-height: 88px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  bareBody: 'pbe-2 ps-7.5 pe-2',
+  bareList: '-mx-2',
+  bareRow: 'py-1.75 px-2 rounded-(--radius-button)',
+  body: 'pbe-3 ps-9 pe-3.5',
+  dotPlaceholder: 'flex-none w-3.5',
+  list: 'overflow-hidden border border-divider rounded-(--radius-card) bg-card',
+  row: 'cursor-pointer py-2.75 px-3.5 transition-[background] duration-(--orvilo-motion-fast) ease-[ease] [&:hover]:bg-accent',
+  section: '[&:not(:last-child)]:border-be [&:not(:last-child)]:border-divider',
+  replyEditorFallback: 'min-h-22 border border-divider rounded-(--radius-input) bg-fill-quaternary',
+};
 
 interface UnreadTopicItemProps {
   bare?: boolean;
@@ -174,22 +128,21 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
     return (
       <div className={cn('flex flex-col', bare ? undefined : styles.section)}>
         <div
-          className={cn('flex items-center', cx(styles.row, bare && styles.bareRow))}
-          style={{ gap: ROW_GAP }}
+          className={cn('flex items-center gap-2', styles.row, bare && styles.bareRow)}
           onClick={toggle}
         >
           {read ? <span className={styles.dotPlaceholder} /> : <UnreadDot />}
           {agent && <AssigneeAvatar agentId={topic.agentId} size={AVATAR_SIZE} />}
           <div
-            className={cn('truncate', 'block', homeType.itemTitle)}
-            style={{ flex: 1, fontWeight: read ? 400 : undefined, minWidth: 0 }}
+            className={cn('truncate', 'block', 'flex-1 min-w-0', homeType.itemTitle)}
+            style={{ fontWeight: read ? 400 : undefined }}
           >
             {topic.title}
           </div>
           {showAuthor && <AuthorChip trigger={topic.trigger} userId={topic.userId} />}
           <Time date={topic.updatedAt ?? topic.createdAt} />
           {createElement(expanded ? ChevronDownIcon : ChevronRightIcon, {
-            color: cssVar.colorTextQuaternary,
+            className: 'text-foreground-quaternary',
             size: 14,
           })}
         </div>
@@ -216,12 +169,13 @@ const UnreadTopicItem = memo<UnreadTopicItemProps>(
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <Button size="sm" variant="ghost" onClick={viewChat}>
+                <Button className="leading-5.5" size="lg" variant="ghost" onClick={viewChat}>
                   {t('inbox.unread.viewChat')}
                 </Button>
                 <Button
+                  className="leading-5.5"
                   disabled={!agentId}
-                  size="sm"
+                  size="lg"
                   variant="secondary"
                   onClick={() => setReplying(true)}
                   onFocus={preloadRunReplyEditor}

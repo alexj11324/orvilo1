@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { ComponentType } from 'react';
 
@@ -16,29 +15,15 @@ interface SurfaceSkeletonProps {
   variant?: SurfaceSkeletonVariant;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  divider: css`
-    width: 100%;
-    height: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  editor: css`
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  row: css`
-    min-height: 64px;
-    padding-block: 16px;
-  `,
-}));
+const styles = {
+  card: 'rounded-(--radius-card) bg-muted',
+  divider: 'h-px w-full bg-divider',
+  editor: 'rounded-(--radius-card) border border-divider bg-card',
+  row: 'min-h-16 py-4',
+};
 
 const HeaderSkeleton = () => (
-  <div className={'flex items-center justify-between px-4'} style={{ flex: 'none' }}>
+  <div className={'flex flex-none items-center justify-between px-4'}>
     <SkeletonBar height={20} width={144} />
     <SkeletonBar height={28} width={72} />
   </div>
@@ -47,7 +32,7 @@ const HeaderSkeleton = () => (
 const ListSkeleton = () => (
   <div className={'flex flex-col gap-3 p-4'}>
     {Array.from({ length: 5 }).map((_, index) => (
-      <div className={cn('flex flex-col p-4', styles.card)} key={index} style={{ gap: 10 }}>
+      <div className={cn('flex flex-col gap-2.5 p-4', styles.card)} key={index}>
         <div className={'flex gap-2 items-center'}>
           <SkeletonBar height={24} radius={'50%'} width={24} />
           <SkeletonBar height={14} width={96 + (index % 3) * 24} />
@@ -62,8 +47,8 @@ const ListSkeleton = () => (
 const FormSkeleton = () => (
   <div className={'flex flex-col items-center p-6'}>
     <FormGroup
+      className={'w-[min(800px,100%)]'}
       collapsible={false}
-      style={{ width: 'min(800px, 100%)' }}
       title={<SkeletonBar height={18} width={112} />}
       variant={'filled'}
     >
@@ -76,7 +61,7 @@ const FormSkeleton = () => (
                 <SkeletonBar height={16} width={112 + index * 24} />
                 <SkeletonBar height={12} width={220 + index * 28} />
               </div>
-              <SkeletonBar height={32} width={index % 2 ? 152 : 88} />
+              <SkeletonBar height={36} width={index % 2 ? 152 : 88} />
             </div>
           </div>
         ))}
@@ -86,13 +71,10 @@ const FormSkeleton = () => (
 );
 
 const GridSkeleton = () => (
-  <div
-    className={'grid gap-4 p-4'}
-    style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}
-  >
+  <div className={'grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4 p-4'}>
     {Array.from({ length: 6 }).map((_, index) => (
       <div className={'flex flex-col gap-3 p-4'} key={index}>
-        <SkeletonBar height={120} radius={cssVar.borderRadiusLG} />
+        <SkeletonBar height={120} radius={'var(--radius-overlay)'} />
         <SkeletonBar height={16} width={'72%'} />
         <SkeletonBar height={12} width={'48%'} />
       </div>
@@ -101,8 +83,8 @@ const GridSkeleton = () => (
 );
 
 const DetailSkeleton = () => (
-  <div className={'flex flex-col items-center'} style={{ padding: '32px 24px' }}>
-    <div className={'flex flex-col gap-6'} style={{ width: 'min(960px, 100%)' }}>
+  <div className={'flex flex-col items-center px-6 py-8'}>
+    <div className={'flex w-[min(960px,100%)] flex-col gap-6'}>
       <div className={'flex gap-4 items-center'}>
         <SkeletonBar height={64} radius={'50%'} width={64} />
         <div className={'flex flex-col gap-2 flex-1'}>
@@ -120,18 +102,15 @@ const DetailSkeleton = () => (
         <SkeletonBar height={14} width={'94%'} />
         <SkeletonBar height={14} width={'88%'} />
         <SkeletonBar height={14} width={'62%'} />
-        <SkeletonBar height={180} radius={cssVar.borderRadiusLG} />
+        <SkeletonBar height={180} radius={'var(--radius-overlay)'} />
       </div>
     </div>
   </div>
 );
 
 const EditorSkeleton = () => (
-  <div className={'flex flex-col items-center flex-1'} style={{ padding: '32px 24px' }}>
-    <div
-      className={cn('flex flex-col gap-5', styles.editor)}
-      style={{ padding: '32px 40px 96px', width: 'min(760px, 100%)' }}
-    >
+  <div className={'flex flex-1 flex-col items-center px-6 py-8'}>
+    <div className={cn('flex w-[min(760px,100%)] flex-col gap-5 px-10 pt-8 pb-24', styles.editor)}>
       <SkeletonBar height={28} width={'54%'} />
       <SkeletonBar height={14} width={'92%'} />
       <SkeletonBar height={14} width={'86%'} />
@@ -142,9 +121,9 @@ const EditorSkeleton = () => (
 );
 
 const SurfaceSkeleton = ({ header = true, variant = 'list' }: SurfaceSkeletonProps) => (
-  <div aria-busy className={'flex flex-1 flex-col'} style={{ minHeight: 0, overflow: 'hidden' }}>
+  <div aria-busy className={'flex min-h-0 flex-1 flex-col overflow-hidden'}>
     {header && <HeaderSkeleton />}
-    <div className={'flex flex-1 flex-col'} style={{ minHeight: 0, overflow: 'hidden' }}>
+    <div className={'flex min-h-0 flex-1 flex-col overflow-hidden'}>
       {variant === 'list' && <ListSkeleton />}
       {variant === 'form' && <FormSkeleton />}
       {variant === 'grid' && <GridSkeleton />}

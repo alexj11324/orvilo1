@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import type { CSSProperties, HTMLAttributes } from 'react';
 
@@ -8,12 +7,9 @@ import { CONVERSATION_MIN_WIDTH } from '@/const/layoutTokens';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    flex-grow: 1;
-    align-self: center;
-  `,
-}));
+const styles = {
+  container: 'grow self-center',
+};
 
 const ConversationSkeletonContainer = ({
   children,
@@ -28,13 +24,9 @@ const ConversationSkeletonContainer = ({
   const wideScreen = useGlobalStore(systemStatusSelectors.wideScreen);
 
   return (
-    <div
-      aria-busy
-      className={'flex flex-col'}
-      style={{ flex, height, minHeight: 0, width: '100%' }}
-    >
+    <div aria-busy className={'flex min-h-0 w-full flex-col'} style={{ flex, height }}>
       <div
-        className={cn('flex px-4', cx(styles.container, className))}
+        className={cn('flex px-4', styles.container, className)}
         style={{
           flex,
           height,

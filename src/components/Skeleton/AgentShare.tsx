@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { ReactNode } from 'react';
 
@@ -9,35 +8,21 @@ import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
 
 import SkeletonBar from './Bar';
 
-const styles = createStaticStyles(({ css }) => ({
-  header: css`
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  notice: css`
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  tabs: css`
-    border-block-end: 1px solid ${cssVar.colorBorder};
-  `,
-}));
+const styles = {
+  header: 'border-be border-divider',
+  notice: 'rounded-(--radius-card) border border-divider bg-muted',
+  tabs: 'border-be border-border',
+};
 
 /** Breadcrumb on the left, the profile tab switcher centred — same as `NavHeader` on the page. */
 const NavigationSkeleton = () => (
-  <div
-    className={cn('flex items-center px-4', styles.header)}
-    style={{ flex: 'none', position: 'relative' }}
-  >
+  <div className={cn('relative flex flex-none items-center px-4', styles.header)}>
     <div className={'flex gap-2 items-center'}>
       <SkeletonBar height={20} radius={'50%'} width={20} />
       <SkeletonBar height={14} width={120} />
     </div>
     {/* Mirrors `AGENT_PROFILE_TABS_CENTER_STYLE`: centred on the header midpoint. */}
-    <div
-      className={'flex flex-col'}
-      style={{ left: '50%', position: 'absolute', transform: 'translateX(-50%)' }}
-    >
+    <div className={'absolute left-1/2 flex -translate-x-1/2 flex-col'}>
       <SkeletonBar height={28} radius={14} width={280} />
     </div>
   </div>
@@ -45,7 +30,7 @@ const NavigationSkeleton = () => (
 
 const SettingRowSkeleton = ({ control, index }: { control: 'switch' | 'input'; index: number }) => (
   <div className={'flex gap-4 items-center justify-between'}>
-    <div className={'flex flex-col'} style={{ gap: 6 }}>
+    <div className={'flex flex-col gap-1.5'}>
       <SkeletonBar height={14} width={96 + (index % 3) * 28} />
       <SkeletonBar height={12} width={200 + (index % 2) * 48} />
     </div>
@@ -66,15 +51,8 @@ const SectionSkeleton = ({
   descWidth?: number;
   titleWidth: number;
 }) => (
-  <div
-    className={'flex flex-col gap-4'}
-    style={{
-      border: `1px solid ${cssVar.colorBorderSecondary}`,
-      borderRadius: cssVar.borderRadiusLG,
-      padding: 20,
-    }}
-  >
-    <div className={'flex flex-col'} style={{ gap: 6 }}>
+  <div className={'flex flex-col gap-4 rounded-(--radius-card) border border-divider p-5'}>
+    <div className={'flex flex-col gap-1.5'}>
       <SkeletonBar height={16} width={titleWidth} />
       <SkeletonBar height={12} width={descWidth} />
     </div>
@@ -92,7 +70,7 @@ const SectionSkeleton = ({
  */
 export const AgentShareSettingsBodySkeleton = () => (
   <div aria-busy className={'flex flex-col gap-4 py-4'}>
-    <div className={cn('flex gap-3', styles.notice)} style={{ padding: '12px 16px' }}>
+    <div className={cn('flex gap-3 px-4 py-3', styles.notice)}>
       <SkeletonBar height={18} radius={'50%'} width={18} />
       <div className={'flex flex-col gap-2 flex-1'}>
         <SkeletonBar height={14} width={160} />
@@ -104,7 +82,7 @@ export const AgentShareSettingsBodySkeleton = () => (
       <SkeletonBar height={36} width={'100%'} />
     </SectionSkeleton>
     {/* Mirrors `ShareTabs`: two underline tabs on a hairline. */}
-    <div className={cn('flex gap-6', styles.tabs)} style={{ paddingBlock: 10 }}>
+    <div className={cn('flex gap-6 py-2.5', styles.tabs)}>
       <SkeletonBar height={14} width={64} />
       <SkeletonBar height={14} width={64} />
     </div>
@@ -121,9 +99,9 @@ export const AgentShareSettingsBodySkeleton = () => (
 
 /** Route-level skeleton for `/agent/:aid/share` (see `agentShareRouteMeta`). */
 const AgentShareSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => (
-  <div aria-busy className={'flex flex-col flex-1'} style={{ minHeight: 0, overflow: 'hidden' }}>
+  <div aria-busy className={'flex min-h-0 flex-1 flex-col overflow-hidden'}>
     {chrome !== 'body' && <NavigationSkeleton />}
-    <div className={'flex flex-col flex-1'} style={{ minHeight: 0, overflow: 'hidden' }}>
+    <div className={'flex min-h-0 flex-1 flex-col overflow-hidden'}>
       <WideScreenContainer>
         <AgentShareSettingsBodySkeleton />
       </WideScreenContainer>

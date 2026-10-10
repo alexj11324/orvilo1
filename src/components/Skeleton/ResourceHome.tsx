@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 
 import SkeletonBar from './Bar';
@@ -28,34 +27,22 @@ export const ResourceSectionSkeleton = ({
   minItemWidth,
 }: SectionSkeletonProps) => (
   <div
+    className={'grid gap-3'}
     style={{
-      display: 'grid',
-      gap: 12,
       gridTemplateColumns: `repeat(auto-fill, minmax(${minItemWidth}px, 1fr))`,
     }}
   >
     {Array.from({ length: count }).map((_, index) => (
-      <SkeletonBar height={itemHeight} key={index} radius={cssVar.borderRadiusLG} />
+      <SkeletonBar height={itemHeight} key={index} radius={'var(--radius-card)'} />
     ))}
   </div>
 );
 
-const styles = createStaticStyles(({ css }) => ({
-  content: css`
-    width: 100%;
-    max-width: 1080px;
-    margin-inline: auto;
-    padding-block: 32px 64px;
-    padding-inline: 32px;
-  `,
-  header: css`
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  scroll: css`
-    overflow: hidden;
-    flex: 1;
-  `,
-}));
+const styles = {
+  content: 'mx-auto w-full max-w-270 px-8 pbs-8 pbe-16',
+  header: 'border-be border-divider',
+  scroll: 'flex-1 overflow-hidden',
+};
 
 const Section = (props: SectionSkeletonProps) => (
   <div className={'flex flex-col gap-3'}>
@@ -65,15 +52,8 @@ const Section = (props: SectionSkeletonProps) => (
 );
 
 const ResourceHomeSkeleton = () => (
-  <div
-    aria-busy
-    className={'flex flex-1 flex-col'}
-    style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
-  >
-    <div
-      className={cn('flex items-center justify-between px-4', styles.header)}
-      style={{ flex: 'none', height: 44 }}
-    >
+  <div aria-busy className={'flex h-full min-h-0 flex-1 flex-col overflow-hidden'}>
+    <div className={cn('flex h-11 flex-none items-center justify-between px-4', styles.header)}>
       <SkeletonBar height={20} width={96} />
       <SkeletonBar height={28} width={88} />
     </div>

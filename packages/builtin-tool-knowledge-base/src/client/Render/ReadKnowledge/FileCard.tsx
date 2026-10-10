@@ -11,7 +11,7 @@ import type { FileContentDetail } from '../../../types';
 const styles = {
   cardBody: '[padding-block-start:12px] [padding-block-end:8px] ps-4 pe-4',
   container:
-    'overflow-hidden min-w-[360px] max-w-[360px] border border-sidebar-border rounded-[var(--radius-overlay)]',
+    'overflow-hidden min-w-90 max-w-90 border border-sidebar-border rounded-[var(--radius-overlay)]',
   footer:
     'py-2 ps-4 pe-4 rounded-[var(--radius-card)] text-center bg-[var(--ant-color-fill-quaternary)]',
   footerText: 'text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)]',

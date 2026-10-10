@@ -19,7 +19,7 @@ interface SearchBarProps {
 const SearchBar = memo<SearchBarProps>(({ defaultQuery, resultsNumber, searching }) => {
   const { t } = useTranslation('tool');
   return (
-    <div className="flex flex-row items-center justify-between gap-10 h-[26px]">
+    <div className="flex flex-row items-center justify-between gap-10 h-6.5">
       <div className={cn('flex flex-row items-center gap-2', styles.query)}>
         <span className="anticon" role="img">
           <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />

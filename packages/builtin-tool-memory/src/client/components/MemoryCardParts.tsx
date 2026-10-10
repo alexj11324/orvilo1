@@ -26,7 +26,7 @@ export const memoryCardStyles = {
   chipType: 'text-(--ant-color-text-quaternary)',
   container: 'overflow-hidden w-full border border-sidebar-border rounded-[16px] bg-card',
   content: '[padding-block:12px] [padding-inline:16px]',
-  detail: 'text-[13px] leading-[1.6] text-muted-foreground',
+  detail: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
   header:
     '[padding-block:10px] [padding-inline:12px] [border-block-end:1px_solid_var(--sidebar-border)]',
   section: 'p-1 [border-block-start:1px_solid_var(--sidebar-border)]',
@@ -67,7 +67,7 @@ export const EntityChips = memo<EntityChipsProps>(({ entities }) => (
   <div className="flex gap-2 flex-wrap">
     {entities.map((entity, index) => {
       const chip = (
-        <div className={cn('flex', 'items-center', 'gap-[6px]', memoryCardStyles.chip)} key={index}>
+        <div className={cn('flex', 'items-center', 'gap-1.5', memoryCardStyles.chip)} key={index}>
           <span>{(entity.type && ENTITY_ICONS[entity.type]) || FALLBACK_ENTITY_ICON}</span>
           <span>{entity.name}</span>
           {entity.type && <span className={memoryCardStyles.chipType}>{entity.type}</span>}

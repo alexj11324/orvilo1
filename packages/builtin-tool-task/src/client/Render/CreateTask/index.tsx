@@ -19,10 +19,10 @@ const styles = {
     'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
   // Fade the model-facing markdown preview; the detail panel contains the full content.
   instruction:
-    'max-h-[132px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_78%,transparent)]',
+    'max-h-33 overflow-hidden [mask-image:linear-gradient(to_bottom,black_78%,transparent)]',
   row: 'flex items-center gap-2',
   taskItem: 'flex flex-col gap-1.5 px-3 py-2.5',
-  title: 'min-w-0 flex-1 truncate text-[13px] leading-[1.4] text-foreground',
+  title: 'min-w-0 flex-1 truncate text-(length:--text-dense) leading-[1.4] text-foreground',
 };
 
 export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, CreateTaskState>>(

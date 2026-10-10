@@ -169,9 +169,9 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
             size: 15,
             style: { color: meta.color },
           })}
-          <div className="flex flex-col flex-1 gap-[2px]">
+          <div className="flex flex-col flex-1 gap-0.5">
             <div className="flex items-center justify-between">
-              <div className="text-[13px]">{phaseLabel(t, phase)}</div>
+              <div className="text-(length:--text-dense)">{phaseLabel(t, phase)}</div>
               {!meta.settled && (
                 <div className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground">
                   {formatElapsed(now - new Date(pluginState.startedAt ?? Date.now()).getTime())}

@@ -1,7 +1,7 @@
 'use client';
 
 import { Handle, Position } from '@xyflow/react';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckCircle2,
   CircleDashed,
@@ -26,104 +26,43 @@ export interface FlowNodeData extends Record<string, unknown> {
 
 export const flowStateBackground = (state?: string) =>
   state === 'passed'
-    ? cssVar.colorSuccessBg
+    ? 'var(--ant-color-success-bg)'
     : state === 'failed'
-      ? cssVar.colorErrorBg
+      ? 'var(--ant-color-error-bg)'
       : state
-        ? cssVar.colorWarningBg
-        : cssVar.colorFillTertiary;
+        ? 'var(--ant-color-warning-bg)'
+        : 'var(--accent)';
 
 export const flowStateColor = (state?: string) =>
   state === 'passed'
-    ? cssVar.colorSuccess
+    ? 'var(--success)'
     : state === 'failed'
-      ? cssVar.colorError
+      ? 'var(--destructive)'
       : state
-        ? cssVar.colorWarning
-        : cssVar.colorTextTertiary;
+        ? 'var(--warning)'
+        : 'var(--ant-color-text-tertiary)';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+// The public style prop keeps these hit targets independent of React Flow stylesheet order.
+export const flowHandleStyle = {
+  width: 1,
+  minWidth: 0,
+  height: 1,
+  minHeight: 0,
+  border: 0,
+  opacity: 0,
+};
 
-    width: 260px;
-    height: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-
-    transition:
-      border-color 0.15s,
-      box-shadow 0.15s;
-
-    &:hover {
-      border-color: ${cssVar.colorPrimaryBorder};
-    }
-  `,
-  selected: css`
-    border-color: ${cssVar.colorPrimaryBorder};
-    box-shadow: 0 0 0 2px ${cssVar.colorPrimaryBg};
-  `,
-  head: css`
-    padding-block: 12px;
-    padding-inline: 12px;
-  `,
-  glyph: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 36px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.4;
-  `,
-  subtitle: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 11px;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  footer: css`
-    margin-block-start: auto;
-    padding-block: 7px;
-    padding-inline: 12px;
-    border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  handle: css`
-    width: 1px;
-    min-width: 0;
-    height: 1px;
-    min-height: 0;
-    border: none;
-
-    opacity: 0;
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden flex flex-col w-[260px] h-full border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card transition-[border-color,box-shadow] duration-150 ease-[ease] hover:border-(--ant-color-primary-border)',
+  selected: 'border-(--ant-color-primary-border) shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
+  head: 'p-3',
+  glyph:
+    'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius) text-muted-foreground bg-accent',
+  title: 'line-clamp-2 text-[13px] font-medium leading-[1.4]',
+  subtitle: 'line-clamp-2 text-[11px] leading-4 text-(--ant-color-text-tertiary)',
+  footer:
+    'mt-auto py-[7px] px-3 border-t border-dashed border-sidebar-border text-[11px] text-(--ant-color-text-tertiary)',
+};
 
 /** Same status/head/summary hierarchy as Goal's exploration cards. */
 export function FlowNode({ data }: { data: FlowNodeData }) {
@@ -142,8 +81,8 @@ export function FlowNode({ data }: { data: FlowNodeData }) {
               : CircleDashed;
   return (
     <>
-      <Handle className={styles.handle} id="in" position={Position.Left} type="target" />
-      <div className={cx(styles.card, data.selected && styles.selected)}>
+      <Handle id="in" position={Position.Left} style={flowHandleStyle} type="target" />
+      <div className={cn(styles.card, data.selected && styles.selected)}>
         <div className={`flex gap-2.5 ${styles.head}`}>
           <div
             aria-label={t(`flow.state.${data.state ?? 'pending'}`)}
@@ -172,19 +111,17 @@ export function FlowNode({ data }: { data: FlowNodeData }) {
           </div>
         </div>
       </div>
-      <Handle className={styles.handle} id="out" position={Position.Right} type="source" />
+      <Handle id="out" position={Position.Right} style={flowHandleStyle} type="source" />
       <Handle
-        className={styles.handle}
         id="return-in"
         position={Position.Bottom}
-        style={{ left: '35%' }}
+        style={{ ...flowHandleStyle, left: '35%' }}
         type="target"
       />
       <Handle
-        className={styles.handle}
         id="return-out"
         position={Position.Bottom}
-        style={{ left: '65%' }}
+        style={{ ...flowHandleStyle, left: '65%' }}
         type="source"
       />
     </>

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronsDownUp, ChevronsUpDown, GitBranch, GitCommitHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,70 +13,12 @@ import { useAcceptanceBundle } from '../useAcceptanceBundle';
 
 const GOAL_COLLAPSED_STORAGE_KEY = 'orvilo-acceptance-goal-collapsed';
 
-const styles = createStaticStyles(({ css }) => ({
-  /**
-   * No border, no card. The requirement is the page's own subject line, not a
-   * widget parked on it — boxing it added a frame around the one thing nobody
-   * needs help finding.
-   */
-  card: css`
-    &:hover [data-goal-toggle='true'] {
-      pointer-events: auto;
-      opacity: 1;
-    }
-  `,
-  goalToggle: css`
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity ${cssVar.motionDurationMid};
-
-    &:focus-visible {
-      pointer-events: auto;
-      opacity: 1;
-    }
-
-    @media (hover: none) {
-      pointer-events: auto;
-      opacity: 1;
-    }
-  `,
-  requirementLabel: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-    letter-spacing: 0.04em;
-  `,
-  scopeChip: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  scopeLink: css`
-    cursor: pointer;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      text-decoration: underline;
-    }
-  `,
-  summaryClamp: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    line-height: 1.6;
-  `,
-  viewReportLink: css`
-    cursor: pointer;
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-}));
+const styles = {
+  card: '[&:hover_[data-goal-toggle=true]]:pointer-events-auto [&:hover_[data-goal-toggle=true]]:opacity-100',
+  goalToggle:
+    'pointer-events-none opacity-0 transition-opacity duration-(--ant-motion-duration-mid) ease-[ease] focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100',
+  scopeChip: 'text-[12px] text-muted-foreground',
+};
 
 interface AcceptanceGoalProps {
   editSlot?: ReactNode;

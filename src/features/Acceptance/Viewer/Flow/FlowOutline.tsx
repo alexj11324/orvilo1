@@ -1,5 +1,4 @@
 import type { Edge, Node } from '@xyflow/react';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   ArrowRight,
@@ -22,49 +21,13 @@ import type { FlowGraphData } from './flowGraph';
 import { flowStateColor } from './FlowNode';
 import { buildOutlineTree, type OutlineBranch, type OutlineStep } from './flowOutlineTree';
 
-const styles = createStaticStyles(({ css }) => ({
-  item: css`
-    width: 100%;
-    height: auto;
-    min-height: 36px;
-    padding-block: 6px;
-    padding-inline: 12px;
-
-    text-align: start;
-    white-space: normal;
-  `,
-  // A branch is the condition for reaching the next step, not a step of its own.
-  // Row-width and body-size type made it read as one more item in the list, so
-  // it shrinks to caption scale and hugs its own text.
-  branch: css`
-    justify-content: flex-start;
-
-    width: fit-content;
-    max-width: 100%;
-    height: auto;
-    min-height: 24px;
-
-    /* Same inline padding as a step row, so the branch glyph sits on the same
-       axis as the status glyphs above and below it. */
-    padding-block: 2px;
-    padding-inline: 12px;
-
-    font-size: 12px;
-    line-height: 18px;
-    text-align: start;
-    white-space: normal;
-  `,
-  // The button carries its own colour rule, so the caption tone has to sit on
-  // the content it wraps.
-  branchContent: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  nested: css`
-    margin-inline-start: 18px;
-    padding-inline-start: 8px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  item: 'w-full h-auto min-h-9 py-1.5 px-3 text-start whitespace-normal',
+  branch:
+    'justify-start w-fit max-w-full h-auto min-h-6 py-0.5 px-3 text-[12px] leading-[18px] text-start whitespace-normal',
+  branchContent: 'text-(--ant-color-text-tertiary)',
+  nested: 'ms-[18px] ps-2 border-s border-sidebar-border',
+};
 
 /** A readable traversal of the same graph: dependent steps are indented under the branch that leads to them. */
 export function FlowOutline({

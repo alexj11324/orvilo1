@@ -1,5 +1,4 @@
 import { Handle, Position, useNodeId } from '@xyflow/react';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   CheckCircle2,
@@ -19,65 +18,17 @@ import { Button } from '@/components/ui/button';
 
 import { FlowAnchorContext } from './flowAnchor';
 import type { FlowGraphData } from './flowGraph';
-import { flowStateBackground, flowStateColor } from './FlowNode';
+import { flowHandleStyle, flowStateBackground, flowStateColor } from './FlowNode';
 
-const styles = createStaticStyles(({ css }) => ({
-  group: css`
-    overflow: hidden;
-
-    width: 100%;
-    height: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  header: css`
-    height: 36px;
-    padding-inline: 16px;
-    background: transparent;
-  `,
-  collapsed: css`
-    cursor: pointer;
-    height: 100%;
-    padding-block: 12px;
-    padding-inline: 12px;
-  `,
-  glyph: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 36px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.4;
-  `,
-  summary: css`
-    font-size: 11px;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  handle: css`
-    width: 1px;
-    min-width: 0;
-    height: 1px;
-    min-height: 0;
-    border: 0;
-
-    opacity: 0;
-  `,
-}));
+const styles = {
+  group:
+    'overflow-hidden w-full h-full border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card',
+  header: 'h-9 px-4 bg-transparent',
+  collapsed: 'cursor-pointer h-full p-3',
+  glyph: 'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius)',
+  title: 'line-clamp-2 text-[13px] font-medium leading-[1.4]',
+  summary: 'text-[11px] leading-4 text-(--ant-color-text-tertiary)',
+};
 
 export function FlowGroup({ data }: { data: FlowGraphData }) {
   const { t } = useTranslation('verify');
@@ -103,7 +54,7 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
               : CircleDashed;
   return (
     <>
-      <Handle className={styles.handle} id="in" position={Position.Left} type="target" />
+      <Handle id="in" position={Position.Left} style={flowHandleStyle} type="target" />
       <div className={styles.group}>
         {data.collapsed ? (
           <div
@@ -200,21 +151,19 @@ export function FlowGroup({ data }: { data: FlowGraphData }) {
           </div>
         )}
       </div>
-      <Handle className={styles.handle} id="stack-in" position={Position.Top} type="target" />
-      <Handle className={styles.handle} id="stack-out" position={Position.Bottom} type="source" />
-      <Handle className={styles.handle} id="out" position={Position.Right} type="source" />
+      <Handle id="stack-in" position={Position.Top} style={flowHandleStyle} type="target" />
+      <Handle id="stack-out" position={Position.Bottom} style={flowHandleStyle} type="source" />
+      <Handle id="out" position={Position.Right} style={flowHandleStyle} type="source" />
       <Handle
-        className={styles.handle}
         id="return-in"
         position={Position.Bottom}
-        style={{ left: '35%' }}
+        style={{ ...flowHandleStyle, left: '35%' }}
         type="target"
       />
       <Handle
-        className={styles.handle}
         id="return-out"
         position={Position.Bottom}
-        style={{ left: '65%' }}
+        style={{ ...flowHandleStyle, left: '65%' }}
         type="source"
       />
     </>

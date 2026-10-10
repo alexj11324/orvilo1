@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { ListChecks, MessagesSquare, Paperclip, Route } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,15 +8,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export type AcceptanceTabKey = 'checks' | 'discussion' | 'resources' | 'flow';
 
-const styles = createStaticStyles(({ css }) => ({
-  // The square variant underlines its whole list; the band below already draws
-  // the full-width rule, so the list's own line would sit on top of it.
-  list: css`
-    && {
-      box-shadow: none;
-    }
-  `,
-}));
+const styles = {
+  list: 'shadow-none',
+};
 
 interface AcceptanceTabsProps {
   active: AcceptanceTabKey;

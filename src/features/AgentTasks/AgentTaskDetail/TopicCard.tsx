@@ -352,7 +352,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             {activity.title}
           </div>
           {activity.seq != null && (
-            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
+            <div className="text-xs text-muted-foreground" style={{ flexShrink: 0 }}>
               #{activity.seq}
             </div>
           )}
@@ -368,7 +368,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             </Tag>
           )}
           {durationText && (
-            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
+            <div className="text-xs text-muted-foreground" style={{ flexShrink: 0 }}>
               · {durationText}
             </div>
           )}
@@ -386,7 +386,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
 
         <div className="flex shrink-0 items-center gap-2">
           {startedAt && (
-            <div className="text-[12px] text-muted-foreground" title={startedAtTitle}>
+            <div className="text-xs text-muted-foreground" title={startedAtTitle}>
               {startedAt}
             </div>
           )}

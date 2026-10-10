@@ -78,7 +78,7 @@ const AcceptanceError = memo<AcceptanceErrorProps>(({ onRetry }) => {
 
   return (
     <div className={`flex items-center gap-2 ${styles.error}`}>
-      <div className="text-[12px] text-destructive" style={{ flex: 1 }}>
+      <div className="text-xs text-destructive" style={{ flex: 1 }}>
         {t('taskDetail.acceptance.loadError')}
       </div>
       <Button size="sm" variant="ghost" onClick={onRetry}>
@@ -291,7 +291,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                 <GoalRoundTimeline rounds={bundle.rounds} />
                 {requirement && (
                   <div className="flex flex-col gap-1.5">
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('taskDetail.acceptance.goal')}
                     </div>
                     {/* The contract, not the result. A goal-dispatched task carries
@@ -310,7 +310,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                 )}
                 <div className="flex flex-col gap-[7px]">
                   <div className="flex items-center gap-2">
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('taskDetail.acceptance.checklist')}
                     </div>
                     <div className="flex-1" />
@@ -347,8 +347,8 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                                   })
                                 }
                               >
-                                <div className="text-[12px]">{group.label}</div>
-                                <div className="text-[11px] text-muted-foreground">
+                                <div className="text-xs">{group.label}</div>
+                                <div className="text-xs text-muted-foreground">
                                   {group.checks.length}
                                 </div>
                                 <div className="flex-1" />

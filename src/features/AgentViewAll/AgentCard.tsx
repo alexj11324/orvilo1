@@ -167,7 +167,13 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
                   ) : null}
                 </div>
               </div>
-              <div className={cn('text-[12px]', 'text-muted-foreground', cardStyles.description)}>
+              <div
+                className={cn(
+                  'text-xs leading-normal',
+                  'text-muted-foreground',
+                  cardStyles.description,
+                )}
+              >
                 {description}
               </div>
               <div
@@ -190,13 +196,13 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
                         </Tooltip>
                       </TooltipProvider>
                     ) : (
-                      <div className="text-[12px] text-muted-foreground">–</div>
+                      <div className="text-xs text-muted-foreground">–</div>
                     )}
                   </div>
                 ) : (
                   <div />
                 )}
-                <div className={cn('text-[12px]', cardStyles.updatedAt)}>
+                <div className={cn('text-xs', cardStyles.updatedAt)}>
                   {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
                 </div>
               </div>

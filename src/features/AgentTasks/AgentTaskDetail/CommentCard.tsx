@@ -211,7 +211,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
           {activity.author?.name || t('taskDetail.activities.fallback.comment')}
         </div>
         {relTime && (
-          <div className="text-[12px] text-muted-foreground" title={relTimeTitle}>
+          <div className="text-xs text-muted-foreground" title={relTimeTitle}>
             {relTime}
           </div>
         )}

@@ -128,18 +128,16 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
   const conflictFields = link.conflict?.fields.join(', ');
   const tooltip = (
     <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
-      <div className="text-[12px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t('taskDetail.linearSync.source')}: {link.linearIdentifier}
       </div>
-      <div className="text-[12px] text-muted-foreground">{t(meta.labelKey as never)}</div>
+      <div className="text-xs text-muted-foreground">{t(meta.labelKey as never)}</div>
       {conflictFields && (
-        <div className="text-[12px] text-warning" style={{ wordBreak: 'break-word' }}>
+        <div className="text-xs text-warning" style={{ wordBreak: 'break-word' }}>
           {t('taskDetail.linearSync.conflictFields', { fields: conflictFields })}
         </div>
       )}
-      {issueUrl && (
-        <div className="text-[12px] text-info">{t('taskDetail.linearSync.openIssue')}</div>
-      )}
+      {issueUrl && <div className="text-xs text-info">{t('taskDetail.linearSync.openIssue')}</div>}
     </div>
   );
 

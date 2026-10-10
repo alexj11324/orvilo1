@@ -33,8 +33,8 @@ export const PendingAcceptanceCheckList = memo<PendingAcceptanceCheckListProps>(
       <CriterionList>
         {grouped && (
           <div className={`flex items-center gap-2 ${styles.groupHeader}`}>
-            <div className="text-[12px]">{groupLabel}</div>
-            <div className="text-[11px] text-muted-foreground">{items.length}</div>
+            <div className="text-xs">{groupLabel}</div>
+            <div className="text-xs text-muted-foreground">{items.length}</div>
           </div>
         )}
         {items.map((item, index) => (

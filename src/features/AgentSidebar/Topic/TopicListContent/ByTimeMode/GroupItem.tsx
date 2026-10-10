@@ -25,10 +25,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
         style={{ paddingBlock: 4, paddingInline: 8 }}
       >
         <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
-          <div
-            className="truncate text-[12px] text-muted-foreground font-medium"
-            style={{ flex: 1 }}
-          >
+          <div className="truncate text-xs text-muted-foreground font-medium" style={{ flex: 1 }}>
             {title || timeTitle}
           </div>
         </div>

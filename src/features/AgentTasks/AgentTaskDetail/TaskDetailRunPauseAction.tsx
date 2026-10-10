@@ -230,7 +230,7 @@ const TaskDetailRunPauseAction = memo(() => {
           </DropdownMenu>
         </div>
         {countdownText && (
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {countdownText.type === 'days'
               ? t('taskDetail.nextRunCountdownDays', countdownText)
               : t('taskDetail.nextRunCountdown', countdownText)}

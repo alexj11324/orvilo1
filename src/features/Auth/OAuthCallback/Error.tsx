@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
 
 // Highlighter is intentionally avoided: it pulls every shiki grammar (~10 MB) into the auth bundle
 import { cn } from 'cn';
@@ -31,7 +32,7 @@ const FailedPage = () => {
         <EmptyDescription>
           {
             <div className="flex flex-col gap-2">
-              <div className="text-[16px] text-muted-foreground">
+              <div className="text-base text-muted-foreground">
                 {t('error.desc', {
                   reason: t(`error.reason.${reason}` as any, { defaultValue: reason ?? '' }),
                 })}

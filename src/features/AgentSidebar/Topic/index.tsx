@@ -47,11 +47,11 @@ const Topic = memo<TopicProps>(({ expanded, itemKey }) => {
               style={{ paddingBlock: 4, paddingInline: 8 }}
             >
               <div className="flex h-[24px] items-center gap-1">
-                <div className="truncate text-[12px] text-muted-foreground font-medium">
+                <div className="truncate text-xs text-muted-foreground font-medium">
                   {t('sidebar.title')}
                 </div>
                 {topicCount > 0 && (
-                  <div className="text-[11px] text-muted-foreground">{topicCount}</div>
+                  <div className="text-xs text-muted-foreground">{topicCount}</div>
                 )}
                 {isRevalidating && <NeuralNetworkLoading size={14} />}
               </div>

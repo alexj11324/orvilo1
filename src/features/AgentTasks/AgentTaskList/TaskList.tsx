@@ -106,7 +106,7 @@ const normalizeGroupBy = (value: TaskGroupBy | string | undefined, fallback: Tas
 const renderGroupTitle = (group: TaskGroupMeta, count: number, sub?: boolean) => (
   <div className="flex items-center justify-between gap-2">
     <TaskGroupLabel group={group} />
-    <div className="text-[12px] text-muted-foreground">{count}</div>
+    <div className="text-xs text-muted-foreground">{count}</div>
     {sub ? (
       <Separator
         className="flex-1"

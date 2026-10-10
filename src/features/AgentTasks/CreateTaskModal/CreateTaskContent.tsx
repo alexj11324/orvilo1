@@ -332,7 +332,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
             <TaskPriorityTag priority={priority} onChange={setPriority}>
               <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
-                <div className="text-[12px]">
+                <div className="text-xs">
                   {priority === 0
                     ? t('taskDetail.priority.none')
                     : t(
@@ -348,12 +348,12 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
-                      <div className="text-[12px]">{memberMeta?.title}</div>
+                      <div className="text-xs">{memberMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div className="text-xs" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.member')}
                       </div>
                     </>
@@ -365,7 +365,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
             {lockAssignee ? (
               <div className="flex items-center gap-1.5 rounded-md px-2 py-1">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                <div className="text-[12px]">{assigneeMeta?.title}</div>
+                <div className="text-xs">{assigneeMeta?.title}</div>
               </div>
             ) : (
               <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
@@ -373,12 +373,12 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                      <div className="text-[12px]">{assigneeMeta?.title}</div>
+                      <div className="text-xs">{assigneeMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div className="text-xs" style={{ color: cssVar.colorTextDescription }}>
                         {t('createTask.assignee')}
                       </div>
                     </>

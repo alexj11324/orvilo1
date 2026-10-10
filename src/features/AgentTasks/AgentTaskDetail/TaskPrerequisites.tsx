@@ -294,6 +294,7 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
                     className="border-0 shadow-none focus-visible:ring-0"
                     placeholder={t('taskDetail.relations.search')}
                     value={query}
+                    visualSize="compact"
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </div>
@@ -351,6 +352,7 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
                       <Button
                         className="min-w-0 flex-1 justify-start gap-2 border-0 px-1 font-normal"
                         disabled={unavailable}
+                        size="compact"
                         variant="ghost"
                         onClick={() =>
                           navigate(taskDetailPath(edge.dependsOn, undefined, edge.name))

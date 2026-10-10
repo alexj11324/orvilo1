@@ -12,13 +12,13 @@ import type { RunTasksParams, RunTasksState } from '../../../types';
 
 const styles = {
   countBadge:
-    'shrink-0 rounded-[999px] bg-[var(--ant-color-warning-bg)] px-2 py-px text-[12px] font-medium text-warning',
+    'shrink-0 rounded-[999px] bg-warning-wash px-2 py-px text-[12px] font-medium text-warning',
   failedBadge:
-    'shrink-0 rounded-[999px] bg-[var(--ant-color-error-bg)] px-2 py-px text-[12px] text-destructive',
+    'shrink-0 rounded-[999px] bg-destructive-wash px-2 py-px text-[12px] text-destructive',
   identifierChip:
     'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground',
-  moreBadge: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
-  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
+  moreBadge: 'shrink-0 text-[12px] text-foreground-tertiary',
+  separator: 'shrink-0 text-foreground-quaternary',
 };
 
 export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunTasksState>>(

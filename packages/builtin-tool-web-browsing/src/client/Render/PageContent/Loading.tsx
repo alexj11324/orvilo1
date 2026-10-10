@@ -1,51 +1,30 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Copy } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { lineEllipsis, shinyTextStyles } from '@/styles';
+import { shinyTextStyles } from '@/styles';
 import { copyToClipboard } from '@/utils/clipboard';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    cardBody: css`
-      padding-block-start: 12px;
-      padding-inline: 12px;
-    `,
-    container: css`
-      overflow: hidden;
-      justify-content: space-between;
-
-      min-width: 360px;
-      max-width: 360px;
-      height: 136px;
-      border: 1px solid ${cssVar.colorBorderSecondary};
-      border-radius: 12px;
-    `,
-
-    footer: css`
-      padding-block: 8px;
-      padding-inline: 12px;
-
-      font-size: ${cssVar.fontSizeSM};
-      color: ${cssVar.colorTextTertiary};
-
-      background-color: ${cssVar.colorFillQuaternary};
-    `,
-    text: cx(lineEllipsis(2), shinyTextStyles.shinyText),
-  };
-});
+const styles = {
+  cardBody: 'ps-3 pe-3 [padding-block-start:12px]',
+  container:
+    'overflow-hidden justify-between min-w-[360px] max-w-[360px] h-[136px] border border-sidebar-border rounded-[var(--radius-overlay)]',
+  footer:
+    'py-2 ps-3 pe-3 text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)] bg-[var(--ant-color-fill-quaternary)]',
+  text: cn('line-clamp-2 text-ellipsis', shinyTextStyles.shinyText),
+};
 
 const LoadingCard = memo<{ url: string }>(({ url }) => {
   const { t } = useTranslation('plugin');
 
   return (
-    <div className={cx('flex flex-col', styles.container)}>
-      <div className={cx('flex flex-row justify-between', styles.cardBody)}>
+    <div className={cn('flex flex-col', styles.container)}>
+      <div className={cn('flex flex-row justify-between', styles.cardBody)}>
         <a href={url} rel={'nofollow'} target={'_blank'}>
           <div className={styles.text}>{url}</div>
         </a>

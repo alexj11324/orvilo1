@@ -1,28 +1,15 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo, useMemo } from 'react';
 
 import { useFileStore } from '@/store/file';
 import { type FileChunk } from '@/types/chunk';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 12px;
-    padding-inline: 8px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-    border-radius: 4px;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  text: css`
-    font-size: 14px;
-    line-height: 24px;
-  `,
-  title: css`
-    font-size: 18px;
-  `,
-}));
+const styles = {
+  container:
+    'py-3 px-2 [border-block-end:1px_dashed_var(--divider)] rounded-(--radius-card) hover:bg-accent',
+  text: 'text-sm leading-5.5 text-foreground',
+  title: 'text-xl leading-7 font-semibold text-foreground',
+};
 
 type ChunkItemProps = FileChunk;
 

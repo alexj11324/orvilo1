@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -10,14 +10,9 @@ import { phaseCardBackground, phaseFromStatus } from '@/features/Acceptance/util
 
 import { dataSelectors, useConversationStore } from '../../store';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-    background: ${cssVar.colorBgElevated};
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden border border-divider rounded-(--radius-card) bg-popover',
+};
 
 interface VerifyMessageProps {
   id: string;

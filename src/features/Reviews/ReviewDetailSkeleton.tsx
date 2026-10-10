@@ -1,50 +1,15 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 
 import SkeletonBar from '@/components/Skeleton/Bar';
 
-const styles = createStaticStyles(({ css }) => ({
-  diff: css`
-    width: 100%;
-    max-width: 1500px;
-    margin-inline: auto;
-    padding-block: 16px 48px;
-    padding-inline: 24px;
-
-    @media (width <= 768px) {
-      padding-inline: 8px;
-    }
-  `,
-  file: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  fileHeader: css`
-    padding: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  main: css`
-    min-width: 0;
-  `,
-  overview: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(200px, 24%);
-    gap: 32px;
-
-    width: 100%;
-    max-width: 1500px;
-    margin-inline: auto;
-    padding-block: 24px;
-    padding-inline: 32px;
-
-    @media (width <= 768px) {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 24px;
-      padding-inline: 16px;
-    }
-  `,
-}));
+const styles = {
+  diff: 'w-full max-w-375 mx-auto [padding-block:16px_48px] px-6 [@media(width<=768px)]:px-2',
+  file: 'overflow-hidden border border-divider rounded-(--radius-card)',
+  fileHeader: 'p-3 [border-block-end:1px_solid_var(--divider)] bg-fill-quaternary',
+  main: 'min-w-0',
+  overview:
+    'grid grid-cols-[minmax(0,1fr)_minmax(200px,24%)] gap-8 w-full max-w-375 mx-auto py-6 px-8 [@media(width<=768px)]:grid-cols-[minmax(0,1fr)] [@media(width<=768px)]:gap-6 [@media(width<=768px)]:px-4',
+};
 
 const ReviewDetailSkeleton = ({ view }: { view: 'overview' | 'diff' }) =>
   view === 'overview' ? (
@@ -56,7 +21,7 @@ const ReviewDetailSkeleton = ({ view }: { view: 'overview' | 'diff' }) =>
           <SkeletonBar height={12} width={100} />
           <SkeletonBar height={12} width={160} />
         </div>
-        <div className="flex flex-col gap-3" style={{ marginBlockStart: 32 }}>
+        <div className="flex flex-col gap-3 [margin-block-start:32px]">
           <SkeletonBar height={12} width={90} />
           <SkeletonBar height={14} width={'94%'} />
           <SkeletonBar height={14} width={'82%'} />

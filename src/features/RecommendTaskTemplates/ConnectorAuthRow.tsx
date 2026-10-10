@@ -1,5 +1,4 @@
 import type { TaskTemplateConnectorReference } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -48,8 +47,8 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
         ) : (
           <span className="anticon" role="img">
             <meta.icon
-              color={cssVar.colorText}
-              fill={cssVar.colorText}
+              color={'var(--ant-color-text)'}
+              fill={'var(--ant-color-text)'}
               height={16}
               size={16}
               width={16}

@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { ArrowUpIcon, FolderIcon, HouseIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -107,7 +106,7 @@ export const RemoteDirectoryBrowser = ({
                 role={'button'}
                 tabIndex={loading || !entry.readable ? -1 : 0}
                 title={entry.name}
-                titleColor={cssVar.colorText}
+                titleColor={'var(--ant-color-text)'}
                 description={
                   entry.readable ? undefined : (
                     <div className="text-muted-foreground">

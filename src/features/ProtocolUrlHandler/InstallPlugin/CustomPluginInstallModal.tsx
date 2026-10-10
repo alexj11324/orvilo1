@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { CircleAlert, TriangleAlert, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -196,8 +195,8 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
           <div
             className="flex gap-4 justify-between p-4 border"
             style={{
-              borderColor: cssVar.colorBorderSecondary,
-              background: cssVar.colorBgContainer,
+              borderColor: 'var(--ant-color-border-secondary)',
+              background: 'var(--ant-color-bg-container)',
             }}
           >
             <div className="flex gap-4">

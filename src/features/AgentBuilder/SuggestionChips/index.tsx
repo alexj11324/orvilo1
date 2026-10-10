@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { RefreshCw } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -54,7 +53,7 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
         <div className="truncate block text-sm" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-xs" style={{ color: cssVar.colorTextTertiary }}>
+        <div className="line-clamp-2 text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
           {prompt}
         </div>
       </div>
@@ -156,7 +155,7 @@ const SuggestionChips = memo<SuggestionChipsProps>(
             }}
           >
             <ActionIcon disabled={disabled} icon={RefreshCw} size={'small'} />
-            <div className="text-xs" style={{ color: cssVar.colorTextSecondary }}>
+            <div className="text-xs" style={{ color: 'var(--ant-color-text-secondary)' }}>
               {tCommon('switch')}
             </div>
           </div>

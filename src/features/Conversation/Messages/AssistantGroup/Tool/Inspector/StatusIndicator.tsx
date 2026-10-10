@@ -1,5 +1,4 @@
 import { type ToolIntervention } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import {
   AlertTriangle,
   Ban,
@@ -58,7 +57,7 @@ const StatusIndicator = memo<StatusIndicatorProps>(
             <TooltipTrigger
               render={
                 <span style={{ display: 'inline-flex' }}>
-                  <PauseIcon color={cssVar.colorTextTertiary} />
+                  <PauseIcon color={'var(--ant-color-text-tertiary)'} />
                 </span>
               }
             />
@@ -75,7 +74,7 @@ const StatusIndicator = memo<StatusIndicatorProps>(
             <TooltipTrigger
               render={
                 <span style={{ display: 'inline-flex' }}>
-                  <CornerUpRight color={cssVar.colorTextTertiary} />
+                  <CornerUpRight color={'var(--ant-color-text-tertiary)'} />
                 </span>
               }
             />
@@ -88,7 +87,7 @@ const StatusIndicator = memo<StatusIndicatorProps>(
             <TooltipTrigger
               render={
                 <span style={{ display: 'inline-flex' }}>
-                  <Ban color={cssVar.colorTextTertiary} />
+                  <Ban color={'var(--ant-color-text-tertiary)'} />
                 </span>
               }
             />
@@ -97,13 +96,13 @@ const StatusIndicator = memo<StatusIndicatorProps>(
         </TooltipProvider>
       );
     } else if (hasError) {
-      icon = <X color={cssVar.colorError} />;
+      icon = <X color={'var(--ant-color-error)'} />;
     } else if (isPending) {
-      icon = <HandIcon color={cssVar.colorInfo} />;
+      icon = <HandIcon color={'var(--ant-color-info)'} />;
     } else if (hasSuccessResult && !hasError && successVariant === 'warning') {
-      icon = <AlertTriangle color={cssVar.colorWarning} />;
+      icon = <AlertTriangle color={'var(--ant-color-warning)'} />;
     } else if (hasResult || isToolComplete) {
-      icon = createElement(successIcon ?? Check, { color: cssVar.colorSuccess });
+      icon = createElement(successIcon ?? Check, { color: 'var(--ant-color-success)' });
     } else {
       icon = <NeuralNetworkLoading size={16} />;
     }
@@ -114,8 +113,8 @@ const StatusIndicator = memo<StatusIndicatorProps>(
         style={{
           flex: 'none',
           height: 24,
-          border: `1px solid ${cssVar.colorBorder}`,
-          borderRadius: cssVar.borderRadiusLG,
+          border: `1px solid ${'var(--ant-color-border)'}`,
+          borderRadius: 'var(--ant-border-radius-lg)',
           width: 24,
 
           fontSize: 12,

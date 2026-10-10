@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { ChevronRight, GlobeIcon } from 'lucide-react';
 import { memo, type ReactElement, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -122,15 +121,15 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
             paddingInline: 12,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = cssVar.colorFillTertiary as string;
+            e.currentTarget.style.background = 'var(--ant-color-fill-tertiary)' as string;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
           }}
         >
           <div className="flex flex-col flex-1">{currentLabel}</div>
-          <GlobeIcon size={'small'} style={{ color: cssVar.colorTextSecondary }} />
-          <ChevronRight size={'small'} style={{ color: cssVar.colorTextSecondary }} />
+          <GlobeIcon size={'small'} style={{ color: 'var(--ant-color-text-secondary)' }} />
+          <ChevronRight size={'small'} style={{ color: 'var(--ant-color-text-secondary)' }} />
         </div>
       );
     }

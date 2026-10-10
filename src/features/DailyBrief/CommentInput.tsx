@@ -1,5 +1,4 @@
 import { ChatInput, Editor, SendButton, useEditor } from '@lobehub/editor/react';
-import { cssVar } from 'antd-style';
 import { ChevronLeft } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,7 +41,7 @@ const CommentInput = memo<CommentInputProps>(({ onSubmit, onCancel }) => {
             size="sm"
             variant="ghost"
             style={{
-              color: cssVar.colorTextDescription,
+              color: 'var(--ant-color-text-description)',
             }}
             onClick={onCancel}
           >

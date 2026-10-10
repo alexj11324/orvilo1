@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -20,7 +19,10 @@ const ItemLink = memo<ItemLinkProps>(({ label, href }) => {
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
       >
         {label}
-        {createElement(SquareArrowOutUpRight, { color: cssVar.colorTextDescription, size: 14 })}
+        {createElement(SquareArrowOutUpRight, {
+          color: 'var(--ant-color-text-description)',
+          size: 14,
+        })}
       </div>
     </a>
   );

@@ -1,5 +1,4 @@
 import { CategoryBar, useThemeColorRange } from '@lobehub/charts';
-import { cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -109,7 +108,7 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
 
   const renderInnerIcon = (id: string, color: string) => {
     const baseStyle = {
-      boxShadow: `0 0 0 2px ${cssVar.colorBgContainer}, 0 0 0 4px ${color}`,
+      boxShadow: `0 0 0 2px ${'var(--ant-color-bg-container)'}, 0 0 0 4px ${color}`,
       boxSizing: 'content-box' as const,
     };
     return (groupBy ?? GroupBy.Model) === GroupBy.Provider ? (
@@ -129,7 +128,7 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
         >
           <Avatar
             avatar={remoteAvatarSrc(display?.avatar || display?.name || key) || undefined}
-            background={cssVar.colorFillSecondary}
+            background={'var(--ant-color-fill-secondary)'}
             name={display?.name || key}
             shape={'circle'}
             size={24}

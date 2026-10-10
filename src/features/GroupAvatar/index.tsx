@@ -2,7 +2,6 @@
 
 import { type GroupAvatarProps } from '@lobehub/ui';
 import { GroupAvatar } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,7 +34,7 @@ const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
       return [
         {
           avatar: userAvatar || nickName || username,
-          style: { color: cssVar.colorText },
+          style: { color: 'var(--ant-color-text)' },
         },
         ...displayAvatars,
       ];

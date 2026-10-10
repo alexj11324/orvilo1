@@ -6,7 +6,6 @@ import type {
   CodexRateLimitResetCredit,
 } from '@orvilo/electron-client-ipc';
 import { uuid } from '@orvilo/utils';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { RotateCcwIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -316,7 +315,7 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
                     </div>
                   </div>
                   {resetCredits.totalEarnedCount !== undefined && (
-                    <div style={{ fontSize: 12, color: cssVar.colorTextTertiary }}>
+                    <div style={{ fontSize: 12, color: 'var(--ant-color-text-tertiary)' }}>
                       {t('heteroAgent.codexQuota.totalEarned', {
                         count: resetCredits.totalEarnedCount,
                       })}

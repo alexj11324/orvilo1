@@ -2,7 +2,6 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { TaskTemplate } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { Clock, X } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
@@ -63,7 +62,7 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
               <div className="flex flex-row items-center gap-1">
                 <span className="anticon" role="img">
                   <Clock
-                    color={cssVar.colorTextSecondary}
+                    color={'var(--ant-color-text-secondary)'}
                     fill={'transparent'}
                     height={12}
                     size={12}

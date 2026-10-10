@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { CircleHelp, Globe, ImagePlus, Trash2 } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -67,7 +66,7 @@ const CountedInput = ({ maxLength, prefix, ...rest }: CountedControlProps) => (
     {prefix && (
       <span
         style={{
-          color: cssVar.colorTextSecondary,
+          color: 'var(--ant-color-text-secondary)',
           left: 8,
           position: 'absolute',
           top: '50%',
@@ -81,7 +80,7 @@ const CountedInput = ({ maxLength, prefix, ...rest }: CountedControlProps) => (
     {maxLength !== undefined && (
       <span
         style={{
-          color: cssVar.colorTextSecondary,
+          color: 'var(--ant-color-text-secondary)',
           fontSize: 12,
           position: 'absolute',
           right: 8,
@@ -101,7 +100,7 @@ const CountedTextArea = ({ maxLength, prefix: _prefix, ...rest }: CountedControl
     {maxLength !== undefined && (
       <span
         style={{
-          color: cssVar.colorTextSecondary,
+          color: 'var(--ant-color-text-secondary)',
           fontSize: 12,
           position: 'absolute',
           right: 8,
@@ -539,11 +538,11 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                   >
                     <div
                       style={{
-                        backgroundColor: bannerUrl ? undefined : cssVar.colorFillTertiary,
+                        backgroundColor: bannerUrl ? undefined : 'var(--ant-color-fill-tertiary)',
                         backgroundImage: bannerUrl ? `url(${bannerUrl})` : undefined,
                         backgroundPosition: 'center',
                         backgroundSize: 'cover',
-                        borderRadius: cssVar.borderRadiusLG,
+                        borderRadius: 'var(--ant-border-radius-lg)',
                         cursor: 'pointer',
                         height: 120,
                         overflow: 'hidden',
@@ -570,11 +569,13 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                         <div className="flex flex-col items-center gap-2">
                           <ImagePlus
                             size={24}
-                            style={{ color: bannerUrl ? '#fff' : cssVar.colorTextSecondary }}
+                            style={{
+                              color: bannerUrl ? '#fff' : 'var(--ant-color-text-secondary)',
+                            }}
                           />
                           <div
                             style={{
-                              color: bannerUrl ? '#fff' : cssVar.colorTextSecondary,
+                              color: bannerUrl ? '#fff' : 'var(--ant-color-text-secondary)',
                               fontSize: 12,
                             }}
                           >
@@ -592,7 +593,7 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                         {...clickableProps()}
                         className={CLICKABLE_FOCUS_RING}
                         style={{
-                          color: cssVar.colorError,
+                          color: 'var(--ant-color-error)',
                           cursor: 'pointer',
                           fontSize: 12,
                         }}

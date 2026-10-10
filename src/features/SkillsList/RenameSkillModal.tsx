@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -66,7 +65,9 @@ const RenameSkillContent = memo<RenameSkillContentProps>(({ currentName, onSubmi
             if (e.key === 'Enter') handleSubmit();
           }}
         />
-        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+        {error ? (
+          <div style={{ color: 'var(--ant-color-error)', fontSize: 12 }}>{error}</div>
+        ) : null}
       </div>
       <div className="flex gap-2 justify-end">
         <Button disabled={loading} size="lg" onClick={close}>

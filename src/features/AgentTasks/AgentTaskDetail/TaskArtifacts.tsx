@@ -1,5 +1,4 @@
 import type { TaskDetailWorkspaceNode } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { FileLock2Icon, FileTextIcon, MoreHorizontal, Package, Trash } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
@@ -68,7 +67,10 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
     // must not contain another interactive control.
     <div
       className="flex items-center gap-1 pr-2"
-      style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
+      style={{
+        border: `1px solid ${'var(--ant-color-border)'}`,
+        borderRadius: 'var(--ant-border-radius-lg)',
+      }}
     >
       <Button
         className="h-auto min-w-0 flex-1 justify-start gap-2.5 rounded-(--radius-button) py-2 pr-1 pl-3 text-left font-normal"
@@ -76,7 +78,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
         onClick={() => void openDocumentModal(node.documentId)}
       >
         {createElement(inaccessible ? FileLock2Icon : FileTextIcon, {
-          color: cssVar.colorTextSecondary,
+          color: 'var(--ant-color-text-secondary)',
           size: 18,
           strokeWidth: 1.5,
           style: { flexShrink: 0 },

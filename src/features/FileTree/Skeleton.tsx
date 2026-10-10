@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,7 +20,7 @@ const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile =
         <div className="flex flex-row items-center gap-1.5 px-2" style={{ height: ROW_HEIGHT }}>
           <Skeleton
             style={{
-              borderRadius: cssVar.borderRadius,
+              borderRadius: 'var(--ant-border-radius)',
               height: 14,
               minWidth: 14,
               width: 14,
@@ -29,7 +28,7 @@ const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile =
           />
           <Skeleton
             style={{
-              borderRadius: cssVar.borderRadius,
+              borderRadius: 'var(--ant-border-radius)',
               height: 16,
               minWidth: 80,
               opacity: 0.6,
@@ -50,7 +49,7 @@ const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile =
           >
             <Skeleton
               style={{
-                borderRadius: cssVar.borderRadius,
+                borderRadius: 'var(--ant-border-radius)',
                 height: 14,
                 minWidth: 14,
                 width: 14,
@@ -58,7 +57,7 @@ const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile =
             />
             <Skeleton
               style={{
-                borderRadius: cssVar.borderRadius,
+                borderRadius: 'var(--ant-border-radius)',
                 height: 16,
                 minWidth: 70,
                 opacity: 0.55,

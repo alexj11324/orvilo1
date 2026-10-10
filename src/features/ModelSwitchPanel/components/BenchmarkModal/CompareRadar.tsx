@@ -1,5 +1,4 @@
 import { RadarChart } from '@lobehub/charts';
-import { cssVar } from 'antd-style';
 import type { FC } from 'react';
 import { memo } from 'react';
 
@@ -66,7 +65,7 @@ const CompareRadar: FC<CompareRadarProps> = memo(({ dimensions, series }) => {
           ? (label, row) => (
               <>
                 {label}{' '}
-                <tspan fill={cssVar.colorText} fontWeight={600}>
+                <tspan fill={'var(--ant-color-text)'} fontWeight={600}>
                   {row?.[series[0].id]}
                 </tspan>
               </>

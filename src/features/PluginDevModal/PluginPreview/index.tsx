@@ -1,5 +1,4 @@
 import { type ToolManifest } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { FileCode } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +20,10 @@ const PluginPreview = memo<{ form: NonNullable<FormProps['form']> }>(({ form }) 
 
   if (!manifest)
     return (
-      <div className="flex flex-col h-full" style={{ background: cssVar.colorBgLayout, flex: 2 }}>
+      <div
+        className="flex flex-col h-full"
+        style={{ background: 'var(--ant-color-bg-layout)', flex: 2 }}
+      >
         <PluginEmptyState />
       </div>
     );
@@ -29,7 +31,7 @@ const PluginPreview = memo<{ form: NonNullable<FormProps['form']> }>(({ form }) 
   return (
     <div
       className="flex flex-col gap-6 p-3"
-      style={{ background: cssVar.colorBgLayout, overflowY: 'auto', flex: 2 }}
+      style={{ background: 'var(--ant-color-bg-layout)', overflowY: 'auto', flex: 2 }}
     >
       <div className="rounded-(--radius-card) border bg-card flex flex-col">
         <div className="px-4 py-2 font-medium">{t('dev.preview.card')}</div>

@@ -1,5 +1,4 @@
 import { workspaceHtmlArtifactIdentifierForFile } from '@orvilo/html-artifact';
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
@@ -84,8 +83,10 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
                       <div
                         className="text-muted-foreground"
                         style={{
-                          color: failedPaths.has(item.absolutePath) ? cssVar.colorError : undefined,
-                          fontFamily: cssVar.fontFamilyCode,
+                          color: failedPaths.has(item.absolutePath)
+                            ? 'var(--ant-color-error)'
+                            : undefined,
+                          fontFamily: 'var(--ant-font-family-code)',
                           wordBreak: 'break-all',
                         }}
                       >
@@ -105,7 +106,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
             })}
           </div>
           {failed.length > 0 && (
-            <div style={{ color: cssVar.colorError }}>
+            <div style={{ color: 'var(--ant-color-error)' }}>
               {t('workingPanel.localFile.publish.outsideWorkspace.copyFailed', {
                 list: failed.map((item) => item.absolutePath).join(', '),
                 ns: 'chat',

@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo, type ReactNode } from 'react';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
@@ -72,10 +71,10 @@ const TopicCreatorAvatar = memo<TopicCreatorAvatarProps>(({ userId, size = 20, c
           // Solid panel background so the badge glyph reads cleanly instead of
           // colliding with the avatar underneath; the ring blends it into the
           // sidebar like a Slack/Discord presence badge.
-          background: cssVar.colorBgLayout,
+          background: 'var(--ant-color-bg-layout)',
           borderRadius: '50%',
           bottom: -4,
-          boxShadow: `0 0 0 1.5px ${cssVar.colorBgLayout}`,
+          boxShadow: `0 0 0 1.5px ${'var(--ant-color-bg-layout)'}`,
           display: 'inline-flex',
           height: 13,
           justifyContent: 'center',

@@ -1,7 +1,6 @@
 'use client';
 
 import { type ElectronAppState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { Bell, Check, FolderOpen, Mic, MonitorCog, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useState } from 'react';
@@ -187,28 +186,31 @@ const OsPermissionsPanel = memo(() => {
           style={{
             paddingBlock: 8,
             paddingInline: '12px 12px',
-            background: permission.granted ? cssVar.colorFillSecondary : undefined,
-            borderColor: permission.granted ? cssVar.colorSuccess : undefined,
+            background: permission.granted ? 'var(--ant-color-fill-secondary)' : undefined,
+            borderColor: permission.granted ? 'var(--ant-color-success)' : undefined,
           }}
           onClick={() => !permission.granted && handlePermissionRequest(permission.id)}
         >
           <div className="flex flex-col items-center h-10 justify-center rounded-md border border-border w-10">
-            {createElement(permission.icon, { color: cssVar.colorTextDescription, size: 20 })}
+            {createElement(permission.icon, {
+              color: 'var(--ant-color-text-description)',
+              size: 20,
+            })}
           </div>
           <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 2, flex: 1 }}>
             <span style={{ fontWeight: 500 }}>{t(permission.titleKey as any)}</span>
-            <span style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
+            <span style={{ color: 'var(--ant-color-text-secondary)', fontSize: 12 }}>
               {t(permission.descriptionKey as any)}
             </span>
           </div>
           {permission.granted ? (
-            createElement(Check, { color: cssVar.colorSuccess, size: 20 })
+            createElement(Check, { color: 'var(--ant-color-success)', size: 20 })
           ) : (
             <Button
               size="sm"
               variant="ghost"
               style={{
-                color: cssVar.colorTextSecondary,
+                color: 'var(--ant-color-text-secondary)',
               }}
               onClick={(e) => {
                 e.stopPropagation();

@@ -4,7 +4,6 @@ import { Freeze } from '@lobehub/ui';
 import { FloatingPanel } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext, TaskDetailActivity } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import {
   Copy,
   ExternalLink,
@@ -409,7 +408,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
       styles={{
         body: { padding: 0 },
         panel: {
-          background: cssVar.colorBgContainer,
+          background: 'var(--ant-color-bg-container)',
           // Leave room for whatever the panel reserves when it yields the
           // bottom edge to a toast; the library's own cap assumes a 16px
           // offset and this panel sits at 8.

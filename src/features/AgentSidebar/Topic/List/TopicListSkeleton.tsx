@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,7 +22,7 @@ const RowSkeleton = memo<{ width: string }>(({ width }) => (
     <div className="flex flex-col flex-1">
       <Skeleton
         style={{
-          borderRadius: cssVar.borderRadius,
+          borderRadius: 'var(--ant-border-radius)',
           height: 14,
           margin: 0,
           maxHeight: 14,
@@ -49,7 +48,7 @@ const TopicListSkeleton = memo(() => (
         <div className="flex items-center h-6" style={{ paddingInline: '8px 4px' }}>
           <Skeleton
             style={{
-              borderRadius: cssVar.borderRadiusSM,
+              borderRadius: 'var(--ant-border-radius-sm)',
               height: 12,
               maxHeight: 12,
               maxWidth: group.header,

@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -37,7 +36,10 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
           <div className="flex flex-col items-center justify-center flex-none h-6 w-6">
             <meta.icon color={meta.color} size={14} strokeWidth={1.75} />
           </div>
-          <div className="truncate text-sm" style={{ color: cssVar.colorTextSecondary, flex: 1 }}>
+          <div
+            className="truncate text-sm"
+            style={{ color: 'var(--ant-color-text-secondary)', flex: 1 }}
+          >
             {t(meta.titleKey as 'taskList.kanban.backlog')}
           </div>
           <div className="text-xs text-muted-foreground">{group.tasks.length}</div>

@@ -7,7 +7,6 @@ import {
   getTopicMetadataWorkingDirectoryEffectivePath,
   getTopicMetadataWorkingDirectorySourcePath,
 } from '@orvilo/utils/client/topic';
-import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import {
   CircleCheck,
@@ -48,9 +47,17 @@ export interface PullRequestStateVisual {
 }
 
 export const PR_STATE_VISUAL: Record<PullRequestState, PullRequestStateVisual> = {
-  closed: { color: cssVar.colorError, icon: GitPullRequestClosed, labelKey: 'metaCard.pr.closed' },
+  closed: {
+    color: 'var(--ant-color-error)',
+    icon: GitPullRequestClosed,
+    labelKey: 'metaCard.pr.closed',
+  },
   merged: { color: MERGED_PURPLE, icon: GitMerge, labelKey: 'metaCard.pr.merged' },
-  open: { color: cssVar.colorSuccess, icon: GitPullRequestArrow, labelKey: 'metaCard.pr.open' },
+  open: {
+    color: 'var(--ant-color-success)',
+    icon: GitPullRequestArrow,
+    labelKey: 'metaCard.pr.open',
+  },
 };
 
 export interface CiVisual {
@@ -63,16 +70,28 @@ export interface CiVisual {
 export const getCiVisual = (status?: DeviceGitPullRequestCiStatus): CiVisual => {
   switch (status) {
     case 'success': {
-      return { color: cssVar.colorSuccess, icon: CircleCheck, labelKey: 'metaCard.ci.success' };
+      return {
+        color: 'var(--ant-color-success)',
+        icon: CircleCheck,
+        labelKey: 'metaCard.ci.success',
+      };
     }
     case 'failure': {
-      return { color: cssVar.colorError, icon: CircleX, labelKey: 'metaCard.ci.failure' };
+      return { color: 'var(--ant-color-error)', icon: CircleX, labelKey: 'metaCard.ci.failure' };
     }
     case 'pending': {
-      return { color: cssVar.colorWarning, icon: LoaderCircle, labelKey: 'metaCard.ci.pending' };
+      return {
+        color: 'var(--ant-color-warning)',
+        icon: LoaderCircle,
+        labelKey: 'metaCard.ci.pending',
+      };
     }
     default: {
-      return { color: cssVar.colorTextTertiary, icon: CircleSlash, labelKey: 'metaCard.ci.none' };
+      return {
+        color: 'var(--ant-color-text-tertiary)',
+        icon: CircleSlash,
+        labelKey: 'metaCard.ci.none',
+      };
     }
   }
 };

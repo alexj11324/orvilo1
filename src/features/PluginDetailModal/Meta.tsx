@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -14,7 +13,10 @@ const Meta = memo<{
   return (
     <div
       className="flex gap-4 p-4"
-      style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
+      style={{
+        border: `1px solid ${'var(--ant-color-border)'}`,
+        borderRadius: 'var(--ant-border-radius-lg)',
+      }}
     >
       <PluginAvatar identifier={id} size={40} />
       <div className="flex flex-col gap-0.5">

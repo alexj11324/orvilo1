@@ -1,7 +1,6 @@
 'use client';
 
 import type { LinearIssueLinkSyncState } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { CircleCheck, CircleDashed, CircleMinus, CircleX, TriangleAlert } from 'lucide-react';
 import { createContext, createElement, memo, type PropsWithChildren, use, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,32 +20,32 @@ const STATE_META: Record<
   { color: string; icon: typeof CircleCheck; labelKey: string }
 > = {
   conflict: {
-    color: cssVar.colorWarning,
+    color: 'var(--ant-color-warning)',
     icon: TriangleAlert,
     labelKey: 'taskDetail.linearSync.state.conflict',
   },
   outcome_unknown: {
-    color: cssVar.colorError,
+    color: 'var(--ant-color-error)',
     icon: CircleX,
     labelKey: 'taskDetail.linearSync.state.outcomeUnknown',
   },
   pending: {
-    color: cssVar.colorWarning,
+    color: 'var(--ant-color-warning)',
     icon: CircleDashed,
     labelKey: 'taskDetail.linearSync.state.pending',
   },
   removed: {
-    color: cssVar.colorTextTertiary,
+    color: 'var(--ant-color-text-tertiary)',
     icon: CircleMinus,
     labelKey: 'taskDetail.linearSync.state.removed',
   },
   synced: {
-    color: cssVar.colorSuccess,
+    color: 'var(--ant-color-success)',
     icon: CircleCheck,
     labelKey: 'taskDetail.linearSync.state.synced',
   },
   unlinked: {
-    color: cssVar.colorTextTertiary,
+    color: 'var(--ant-color-text-tertiary)',
     icon: CircleMinus,
     labelKey: 'taskDetail.linearSync.state.unlinked',
   },

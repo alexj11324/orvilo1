@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 interface HighlightedContentProps {
@@ -14,7 +13,7 @@ const HighlightedContent = memo<HighlightedContentProps>(({ title, children }) =
       fontSize={14}
       variant={'chat'}
       style={{
-        color: cssVar.colorText,
+        color: 'var(--ant-color-text)',
         overflow: 'visible',
       }}
     >

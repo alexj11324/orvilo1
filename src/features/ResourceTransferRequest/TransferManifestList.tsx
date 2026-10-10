@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { PowerOff, RotateCcw, TriangleAlert, Unlink } from 'lucide-react';
 import { createElement, type CSSProperties } from 'react';
@@ -35,7 +34,7 @@ const ManifestRow = ({ icon, text, warning }: Omit<RenderRow, 'id'>) => (
         size: 14,
         width: 14,
         height: 14,
-        color: warning ? cssVar.colorWarning : cssVar.colorTextTertiary,
+        color: warning ? 'var(--ant-color-warning)' : 'var(--ant-color-text-tertiary)',
         fill: 'transparent',
       })}
     </span>

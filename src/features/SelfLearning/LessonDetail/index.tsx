@@ -32,7 +32,7 @@ const styles = {
   sections: 'overflow-hidden w-[min(100%,760px)]',
   sectionItem:
     'grid grid-cols-[72px_minmax(0,1fr)] gap-4 py-3.5 px-4 [&+&]:[border-block-start:1px_solid_var(--sidebar-border)]',
-  title: 'max-w-[880px] text-balance',
+  title: 'max-w-220 text-balance',
   hitTitle: 'min-w-0',
 };
 
@@ -188,7 +188,7 @@ const LessonDetail = memo(() => {
                   ) : (
                     data.hits.map((hit, index) => (
                       <div
-                        className="flex flex-col gap-1.5 p-[14px] border border-sidebar-border bg-card"
+                        className="flex flex-col gap-1.5 p-3.5 border border-sidebar-border bg-card"
                         key={`${hit.createdAt}-${index}`}
                       >
                         <div className="flex items-start gap-3 justify-between">
@@ -207,7 +207,7 @@ const LessonDetail = memo(() => {
                         )}
                         {hit.subjectType === 'topic' && activeAgentId ? (
                           <Link to={urlJoin('/agent', activeAgentId, hit.subjectId)}>
-                            <div className="flex items-center gap-[5px]">
+                            <div className="flex items-center gap-1.25">
                               <MessagesSquare className="text-muted-foreground" size={13} />
                               <div className="text-[12px] text-muted-foreground">
                                 {hit.runTitle ?? `#${hit.runIndex}`}

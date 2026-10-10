@@ -63,7 +63,7 @@ const RecentDots = memo<{ recent: ExpertiseHabit['recent'] }>(({ recent }) => {
         <TooltipTrigger
           render={
             <span className="inline-flex">
-              <div className="flex gap-[3px]" style={{ flex: 'none' }}>
+              <div className="flex gap-0.75" style={{ flex: 'none' }}>
                 {recent.length === 0
                   ? [0, 1, 2].map((i) => (
                       <span className={`${styles.dot} ${styles.dotNone}`} key={i} />

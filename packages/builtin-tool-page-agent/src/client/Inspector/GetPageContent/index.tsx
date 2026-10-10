@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { oneLineEllipsis, shinyTextStyles } from '@/styles';
 
 const styles = {
-  done: 'text-[var(--ant-color-text-description)]',
+  done: 'text-foreground-description',
 };
 
 export const GetPageContentInspector = memo<BuiltinInspectorProps>(({ isArgumentsStreaming }) => {

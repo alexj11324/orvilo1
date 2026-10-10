@@ -22,8 +22,8 @@ import { ENTITY_ICONS, FALLBACK_ENTITY_ICON } from './memoryArgs';
  * reads the same whichever layer it was written to.
  */
 export const memoryCardStyles = {
-  chip: '[padding-block:4px] [padding-inline:8px] rounded-(--radius-input) text-xs leading-[1.4] text-foreground bg-(--ant-color-fill-quaternary)',
-  chipType: 'text-(--ant-color-text-quaternary)',
+  chip: '[padding-block:4px] [padding-inline:8px] rounded-(--radius-input) text-xs leading-[1.4] text-foreground bg-fill-quaternary',
+  chipType: 'text-foreground-quaternary',
   container: 'overflow-hidden w-full border border-sidebar-border rounded-[16px] bg-card',
   content: '[padding-block:12px] [padding-inline:16px]',
   detail: 'text-[13px] leading-[1.6] text-muted-foreground',

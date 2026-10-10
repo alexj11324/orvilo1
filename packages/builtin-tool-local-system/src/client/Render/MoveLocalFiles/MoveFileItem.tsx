@@ -4,8 +4,8 @@ import { ArrowRight } from 'lucide-react';
 import { memo } from 'react';
 
 const styles = {
-  icon: 'text-[var(--ant-color-text-quaternary)]',
-  item: 'rounded-[var(--ant-border-radius)] px-3 py-1 transition-[background-color] duration-200 ease-[ease] hover:bg-[var(--ant-color-fill-quaternary)]',
+  icon: 'text-foreground-quaternary',
+  item: 'rounded-[var(--ant-border-radius)] px-3 py-1 transition-[background-color] duration-200 ease-[ease] hover:bg-fill-quaternary',
   path: 'font-mono text-[12px] break-all',
 };
 

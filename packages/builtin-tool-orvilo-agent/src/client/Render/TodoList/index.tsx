@@ -23,7 +23,7 @@ export interface TodoListRenderState {
 const styles = {
   itemRow: 'w-full border-b border-dashed border-sidebar-border px-3 py-2.5 last:border-b-0',
   processingRow: 'flex items-center gap-[7px]',
-  textCompleted: 'text-(--ant-color-text-quaternary) line-through',
+  textCompleted: 'text-foreground-quaternary line-through',
   textProcessing: 'text-foreground',
   textTodo: 'text-muted-foreground',
 };

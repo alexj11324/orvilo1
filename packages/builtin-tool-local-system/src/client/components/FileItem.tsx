@@ -12,9 +12,9 @@ import { formatSize } from '@/utils/format';
 
 const styles = {
   container: 'rounded-[4px] text-muted-foreground [&_:hover]:bg-accent [&_:hover]:text-foreground',
-  dir: 'truncate font-mono text-[11px] leading-[1.3] text-[var(--ant-color-text-tertiary)]',
-  size: 'min-w-[56px] shrink-0 text-end font-mono text-[11px] text-[var(--ant-color-text-tertiary)]',
-  time: 'truncate text-[11px] leading-none text-[var(--ant-color-text-description)]',
+  dir: 'truncate font-mono text-[11px] leading-[1.3] text-foreground-tertiary',
+  size: 'min-w-[56px] shrink-0 text-end font-mono text-[11px] text-foreground-tertiary',
+  time: 'truncate text-[11px] leading-none text-foreground-description',
   title: 'block truncate leading-[1.3] text-inherit',
 };
 

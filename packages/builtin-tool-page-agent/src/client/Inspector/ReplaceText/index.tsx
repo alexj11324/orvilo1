@@ -12,7 +12,7 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 import type { ReplaceTextState } from '../../../types';
 
 const styles = {
-  arrow: 'mx-1 text-[var(--ant-color-text-quaternary)]',
+  arrow: 'mx-1 text-foreground-quaternary',
   from: 'text-muted-foreground line-through',
   title: 'me-2 text-foreground',
 };

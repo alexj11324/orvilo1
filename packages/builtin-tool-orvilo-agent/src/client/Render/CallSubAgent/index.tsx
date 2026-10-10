@@ -14,7 +14,7 @@ import type { CallSubAgentParams, CallSubAgentState } from '../../../types';
 
 const styles = {
   container: 'py-1',
-  label: 'ps-1 text-[12px] text-(--ant-color-text-tertiary)',
+  label: 'ps-1 text-[12px] text-foreground-tertiary',
   labelRow: 'mb-1',
   openThread: 'h-[22px] px-1.5 text-[12px] leading-(--text-xs--line-height)',
   promptBox: 'rounded-(--ant-border-radius-lg) bg-accent px-3 py-2',

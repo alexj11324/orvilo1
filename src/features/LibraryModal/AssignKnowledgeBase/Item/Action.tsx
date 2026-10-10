@@ -98,7 +98,7 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
       ) : (
         <Button
           loading={loading}
-          size={mobile ? 'sm' : undefined}
+          size={mobile ? 'sm' : 'compact'}
           variant="default"
           onClick={assignKnowledge}
         >

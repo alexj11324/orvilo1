@@ -46,7 +46,7 @@ const Topic = memo<TopicProps>(({ expanded, itemKey }) => {
               className={accordionStyles.trigger}
               style={{ paddingBlock: 4, paddingInline: 8 }}
             >
-              <div className="flex h-[24px] items-center gap-1">
+              <div className="flex h-6 items-center gap-1">
                 <div className="truncate text-[12px] text-muted-foreground font-medium">
                   {t('sidebar.title')}
                 </div>
@@ -67,7 +67,7 @@ const Topic = memo<TopicProps>(({ expanded, itemKey }) => {
       </SidebarContextMenu>
       <AccordionContent className="p-0">
         <Suspense fallback={<SkeletonList />}>
-          <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+          <div className="flex flex-col gap-px" style={{ paddingBlock: 1 }}>
             <List />
           </div>
         </Suspense>

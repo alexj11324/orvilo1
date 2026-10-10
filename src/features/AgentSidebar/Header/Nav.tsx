@@ -19,7 +19,7 @@ const Nav = () => {
   const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
 
   return (
-    <div className="flex flex-col gap-[1px]" style={{ paddingInline: 4 }}>
+    <div className="flex flex-col gap-px" style={{ paddingInline: 4 }}>
       <NavItem
         active={pathname === issuesHref}
         href={issuesHref}

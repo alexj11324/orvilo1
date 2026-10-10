@@ -33,8 +33,8 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
   return (
     <AccordionItem value={group.key}>
       <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-        <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
-          <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[24px]">
+        <div className="flex items-center gap-2 h-6" style={{ overflow: 'hidden' }}>
+          <div className="flex flex-col items-center justify-center flex-none h-6 w-6">
             <meta.icon color={meta.color} size={14} strokeWidth={1.75} />
           </div>
           <div className="truncate text-sm" style={{ color: cssVar.colorTextSecondary, flex: 1 }}>
@@ -44,7 +44,7 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
         </div>
       </AccordionTrigger>
       <AccordionContent className="p-0">
-        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+        <div className="flex flex-col gap-px" style={{ paddingBlock: 1 }}>
           {group.tasks.map((task) => (
             <TaskItem
               active={taskId === task.identifier || taskId === task.id}

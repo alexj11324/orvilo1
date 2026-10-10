@@ -1,7 +1,7 @@
 import { Markdown } from '@lobehub/ui';
 import type { CrawlResult } from '@orvilo/types';
 import type { CrawlSuccessResult } from '@orvilo/web-crawler';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleAlert, Copy, ExternalLink, Info } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,75 +14,15 @@ import { copyToClipboard } from '@/utils/clipboard';
 
 import { CRAWL_CONTENT_LIMITED_COUNT } from '../../../const';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    cardBody: css`
-      padding-block: 12px 8px;
-      padding-inline: 16px;
-    `,
-    container: css`
-      cursor: pointer;
-
-      overflow: hidden;
-
-      max-width: 360px;
-      border: 1px solid ${cssVar.colorBorderSecondary};
-      border-radius: 12px;
-
-      transition: border-color 0.2s;
-
-      :hover {
-        border-color: ${cssVar.colorPrimary};
-      }
-    `,
-    description: css`
-      margin-block: 0 4px !important;
-      color: ${cssVar.colorTextSecondary};
-    `,
-    detailsSection: css`
-      padding-block: ${cssVar.paddingSM};
-    `,
-    externalLink: css`
-      color: ${cssVar.colorPrimary};
-    `,
-    footer: css`
-      padding: ${cssVar.paddingXS};
-      border-radius: 6px;
-      text-align: center;
-      background-color: ${cssVar.colorFillQuaternary};
-    `,
-    footerText: css`
-      font-size: ${cssVar.fontSizeSM};
-      color: ${cssVar.colorTextTertiary} !important;
-    `,
-    metaInfo: css`
-      display: flex;
-      align-items: center;
-      color: ${cssVar.colorTextSecondary};
-    `,
-    sliced: css`
-      color: ${cssVar.colorTextQuaternary};
-    `,
-    title: css`
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-
-      margin-block-end: 0;
-
-      font-size: 16px;
-      font-weight: bold;
-    `,
-    titleRow: css`
-      color: ${cssVar.colorText};
-    `,
-
-    url: css`
-      color: ${cssVar.colorTextTertiary};
-    `,
-  };
-});
+const styles = {
+  description: '[margin-block-start:0] [margin-block-end:4px] text-muted-foreground',
+  footer: 'p-2 rounded-[var(--radius-input)] text-center bg-[var(--ant-color-fill-quaternary)]',
+  footerText: 'text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)]',
+  sliced: 'text-[var(--ant-color-text-quaternary)]',
+  title: 'line-clamp-2 [margin-block-end:0] text-base leading-[inherit] font-bold',
+  titleRow: 'text-foreground',
+  url: 'text-[var(--ant-color-text-tertiary)]',
+};
 
 enum DisplayType {
   Raw = 'raw',
@@ -102,9 +42,9 @@ const PageContent = memo<PageContentProps>(({ result }) => {
 
   if ('errorType' in result.data) {
     return (
-      <div className={cx('flex flex-col gap-1', styles.footer)}>
+      <div className={cn('flex flex-col gap-1', styles.footer)}>
         <div>
-          <div className={cx('flex gap-1', styles.footerText)}>
+          <div className={cn('flex gap-1', styles.footerText)}>
             <span>{t('search.crawPages.meta.crawler')}</span>
             <span>{result.crawler}</span>
           </div>
@@ -132,13 +72,13 @@ const PageContent = memo<PageContentProps>(({ result }) => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <div className={cx('flex flex-row items-center gap-6 justify-between', styles.titleRow)}>
+        <div className={cn('flex flex-row items-center gap-6 justify-between', styles.titleRow)}>
           <div className="flex flex-col">
             <div className={styles.title}>{title || result.originalUrl}</div>
           </div>
         </div>
         {description && <div className={`line-clamp-4 ${styles.description}`}>{description}</div>}
-        <div className={cx('flex flex-row items-center gap-1', styles.url)}>
+        <div className={cn('flex flex-row items-center gap-1', styles.url)}>
           {siteName && <div>{siteName} · </div>}
           <a
             className={styles.url}
@@ -157,11 +97,11 @@ const PageContent = memo<PageContentProps>(({ result }) => {
 
         <div className={styles.footer}>
           <div className="flex gap-6">
-            <div className={cx('flex gap-1', styles.footerText)}>
+            <div className={cn('flex gap-1', styles.footerText)}>
               <span>{t('search.crawPages.meta.words')}</span>
               <span>{result.data.content?.length}</span>
             </div>
-            <div className={cx('flex gap-1', styles.footerText)}>
+            <div className={cn('flex gap-1', styles.footerText)}>
               <span>{t('search.crawPages.meta.crawler')}</span>
               <span>{result.crawler}</span>
             </div>

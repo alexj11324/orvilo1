@@ -1,5 +1,5 @@
 import type { UniformSearchResult } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useState } from 'react';
 
 import AvatarGroup from '@/components/Avatar/AvatarGroup';
@@ -7,58 +7,13 @@ import AvatarGroup from '@/components/Avatar/AvatarGroup';
 import { ENGINE_ICON_MAP } from '../../../../../const';
 import TitleExtra from './TitleExtra';
 
-const styles = createStaticStyles(({ css }) => {
-  return {
-    container: css`
-      display: flex;
-      flex: 1;
-
-      padding: 8px;
-      border-radius: 8px;
-
-      color: initial;
-
-      &:hover {
-        background: ${cssVar.colorFillTertiary};
-      }
-    `,
-    desc: css`
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-
-      color: ${cssVar.colorTextTertiary};
-      text-overflow: ellipsis;
-    `,
-    displayLink: css`
-      color: ${cssVar.colorTextQuaternary};
-    `,
-    iframe: css`
-      border: 1px solid ${cssVar.colorBorder};
-      border-radius: 8px;
-    `,
-    title: css`
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 1;
-
-      font-size: 16px;
-      color: ${cssVar.colorLink};
-      text-overflow: ellipsis;
-    `,
-    url: css`
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 1;
-
-      color: ${cssVar.colorTextDescription};
-      text-overflow: ellipsis;
-    `,
-  };
-});
+const styles = {
+  container: 'flex flex-1 p-2 rounded-[var(--radius-card)] [color:initial] hover:bg-accent',
+  desc: 'line-clamp-2 text-ellipsis text-[var(--ant-color-text-tertiary)]',
+  iframe: 'border border-border rounded-[var(--radius-card)]',
+  title: 'line-clamp-1 text-ellipsis text-base leading-[inherit] text-[var(--ant-color-link)]',
+  url: 'line-clamp-1 text-ellipsis text-[var(--ant-color-text-description)]',
+};
 
 interface SearchResultProps extends UniformSearchResult {
   highlight?: boolean;
@@ -70,7 +25,7 @@ const VideoItem = memo<SearchResultProps>(
     const videoUrl = iframeSrc || (res as any).iframe_src; // iframe_src is a SearchXNG field, for backward compatibility with old data structure
     return (
       <div className="flex flex-col gap-3">
-        <div className={cx('flex flex-col', styles.container)} onClick={() => setExpand(!expand)}>
+        <div className={cn('flex flex-col', styles.container)} onClick={() => setExpand(!expand)}>
           <div className="flex flex-row flex-1 gap-2 p-3">
             {videoUrl && (
               <div className="flex flex-col">
@@ -101,12 +56,12 @@ const VideoItem = memo<SearchResultProps>(
                     size={20}
                     items={engines.map((engine) => ({
                       avatar: ENGINE_ICON_MAP[engine],
-                      background: cssVar.colorBgLayout,
+                      background: 'var(--background)',
                       key: engine,
                       title: engine,
                     }))}
                   />
-                  <div className={cx('flex flex-col', styles.title)}>{title}</div>
+                  <div className={styles.title}>{title}</div>
                 </div>
                 <TitleExtra
                   category={category}
@@ -115,8 +70,8 @@ const VideoItem = memo<SearchResultProps>(
                   score={score}
                 />
               </div>
-              <div className={`text-muted-foreground ${styles.url}`}>{url}</div>
-              <div className={cx('flex flex-col', styles.desc)}>{content}</div>
+              <div className={styles.url}>{url}</div>
+              <div className={styles.desc}>{content}</div>
             </div>
           </div>
         </div>

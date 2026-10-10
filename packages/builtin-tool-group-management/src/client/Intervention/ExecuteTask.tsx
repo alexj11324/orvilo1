@@ -19,7 +19,7 @@ import type { ExecuteTaskParams } from '../../types';
 
 const styles = {
   agentTitle: 'text-[14px] font-semibold text-foreground',
-  container: 'rounded-[var(--ant-border-radius)] py-3',
+  container: 'rounded-(--ant-border-radius) py-3',
   timeoutInput: 'w-[100px]',
 };
 

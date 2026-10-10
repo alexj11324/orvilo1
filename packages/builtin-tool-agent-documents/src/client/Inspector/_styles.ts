@@ -12,9 +12,9 @@ export const inspectorChipStyles = {
   idChip:
     'shrink-0 rounded-full bg-accent py-0.5 ps-2 pe-2 [font-family:var(--ant-font-family-code)] text-xs leading-[inherit] text-muted-foreground',
   /** Inline middot used between segments */
-  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
+  separator: 'shrink-0 text-(--ant-color-text-quaternary)',
   /** Secondary, lower-contrast chip for metadata (counts, target scope, …) */
-  subdued: 'shrink-0 text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)]',
+  subdued: 'shrink-0 text-xs leading-[inherit] text-(--ant-color-text-tertiary)',
 };
 
 const UUID_LIKE = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;

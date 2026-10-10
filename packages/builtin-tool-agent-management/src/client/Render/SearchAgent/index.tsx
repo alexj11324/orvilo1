@@ -24,10 +24,10 @@ export const SearchAgentRender = memo<BuiltinRenderProps<SearchAgentParams, Sear
     }
 
     return (
-      <div className="flex flex-col gap-2 rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
+      <div className="flex flex-col gap-2 rounded-(--radius-card) bg-(--ant-color-fill-quaternary) p-3">
         {agents.map((agent: AgentSearchItem) => (
           <div
-            className="flex flex-row items-center gap-3 rounded-[var(--radius-input)] bg-[var(--ant-color-fill-quaternary)] py-2 ps-3 pe-3"
+            className="flex flex-row items-center gap-3 rounded-(--radius-input) bg-(--ant-color-fill-quaternary) py-2 ps-3 pe-3"
             key={agent.id}
           >
             <Avatar
@@ -41,12 +41,12 @@ export const SearchAgentRender = memo<BuiltinRenderProps<SearchAgentParams, Sear
               <div className="flex flex-row items-center gap-2">
                 <span className="text-[13px] font-medium">{agent.title || agent.id}</span>
                 {agent.heteroType && (
-                  <span className="rounded-[var(--radius-chip)] bg-selected py-0.5 ps-1.5 pe-1.5 text-[10px] text-muted-foreground">
+                  <span className="rounded-(--radius-chip) bg-selected py-0.5 ps-1.5 pe-1.5 text-[10px] text-muted-foreground">
                     {HETEROGENEOUS_TYPE_LABELS[agent.heteroType] ?? agent.heteroType}
                   </span>
                 )}
                 {agent.isMarket && (
-                  <span className="rounded-[var(--radius-chip)] bg-[var(--ant-color-primary-bg)] py-0.5 ps-1.5 pe-1.5 text-[10px] text-[var(--ant-color-primary)]">
+                  <span className="rounded-(--radius-chip) bg-(--ant-color-primary-bg) py-0.5 ps-1.5 pe-1.5 text-[10px] text-(--ant-color-primary)">
                     Market
                   </span>
                 )}

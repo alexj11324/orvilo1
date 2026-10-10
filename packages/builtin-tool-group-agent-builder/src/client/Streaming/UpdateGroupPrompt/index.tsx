@@ -21,7 +21,7 @@ export const UpdateGroupPromptStreaming = memo<BuiltinStreamingProps<UpdateGroup
     if (!prompt) return null;
 
     return (
-      <div className="w-full rounded-[var(--ant-border-radius)] border border-sidebar-border bg-card px-3 py-2">
+      <div className="w-full rounded-(--ant-border-radius) border border-sidebar-border bg-card px-3 py-2">
         <Markdown animated variant={'chat'}>
           {prompt}
         </Markdown>

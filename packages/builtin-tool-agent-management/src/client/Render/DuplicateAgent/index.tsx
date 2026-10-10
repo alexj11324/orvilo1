@@ -14,7 +14,7 @@ export const DuplicateAgentRender = memo<
   if (!pluginState?.success) return null;
 
   return (
-    <div className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
+    <div className="rounded-(--radius-card) bg-(--ant-color-fill-quaternary) p-3">
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-0.5">
           <span className="text-xs leading-[inherit] font-medium text-muted-foreground">

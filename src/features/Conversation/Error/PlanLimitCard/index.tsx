@@ -1,6 +1,5 @@
 import { BRANDING_URL } from '@orvilo/business-const';
 import { ChatErrorType, Plans } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,33 +26,6 @@ const PLAN_TITLE_KEYS = {
   [Plans.Starter]: 'plans.plan.starter.title',
   [Plans.Ultimate]: 'plans.plan.ultimate.title',
 } as const satisfies Record<Plans, string>;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  budgetFact: css`
-    display: flex;
-    justify-content: space-between;
-
-    width: 100%;
-
-    font-size: 13px;
-    line-height: 1.4;
-  `,
-  budgetFactLabel: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  budgetFactValue: css`
-    font-weight: 600;
-    color: ${cssVar.colorText};
-    white-space: nowrap;
-  `,
-  budgetFactWarningValue: css`
-    font-weight: 700;
-    color: ${cssVar.colorError};
-  `,
-  budgetFacts: css`
-    width: 100%;
-  `,
-}));
 
 const getBudgetDescriptionKey = (pricingBasis?: PlanLimitPricingBasis) => {
   switch (pricingBasis) {
@@ -130,15 +102,18 @@ const PlanLimitCard = memo<PlanLimitCardProps>(({ errorBody, errorType, onRetry 
     <ErrorActionContainer>
       <FormAction animation avatar={'💰'} description={description} title={title}>
         {facts.length > 0 && (
-          <div className={cn('flex flex-col gap-2', styles.budgetFacts)}>
+          <div className="flex w-full flex-col gap-2">
             {facts.map((fact) => (
-              <div className={styles.budgetFact} key={fact.label}>
-                <span className={styles.budgetFactLabel}>{fact.label}</span>
+              <div
+                className={'flex w-full justify-between text-[13px] leading-[1.4]'}
+                key={fact.label}
+              >
+                <span className={'text-(--ant-color-text-tertiary)'}>{fact.label}</span>
                 <span
                   className={
                     fact.warning
-                      ? `${styles.budgetFactValue} ${styles.budgetFactWarningValue}`
-                      : styles.budgetFactValue
+                      ? 'font-bold whitespace-nowrap text-destructive'
+                      : 'font-semibold whitespace-nowrap text-foreground'
                   }
                 >
                   {formatCreditAmount(fact.value!)}

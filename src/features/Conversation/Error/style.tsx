@@ -1,30 +1,14 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type ComponentProps, type ReactNode } from 'react';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    border: 1px solid ${cssVar.colorSplit};
-    border-radius: 8px;
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorBgContainer};
-  `,
-  desc: css`
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  form: css`
-    width: 100%;
-    max-width: 360px;
-
-    @media (width <= 768px) {
-      max-width: 90%;
-    }
-  `,
-}));
+export const styles = {
+  container: 'rounded-(--radius-card) border border-(--ant-color-split) bg-card text-foreground',
+  desc: 'text-center text-(--ant-color-text-tertiary)',
+  form: 'w-full max-w-90 [@media(width<=768px)]:max-w-[90%]',
+};
 
 type CenterProps = ComponentProps<'div'> & {
   gap?: number | string;
@@ -35,7 +19,7 @@ export const ErrorActionContainer = memo<CenterProps>(
   ({ children, className, gap = 24, padding = 24, ...rest }) => {
     return (
       <div
-        className={cn('flex flex-col items-center justify-center', cx(styles.container, className))}
+        className={cn('flex flex-col items-center justify-center', styles.container, className)}
         style={{ gap, padding }}
         {...rest}
       >
@@ -67,14 +51,14 @@ export const FormAction = memo<
   }) => {
     return (
       <div
-        className={cn('flex flex-col items-center justify-center', cx(styles.form, className))}
+        className={cn('flex flex-col items-center justify-center', styles.form, className)}
         style={{ gap }}
         {...rest}
       >
         <Avatar
           animation={animation}
           avatar={avatar}
-          background={background ?? cssVar.colorFillContent}
+          background={background ?? 'var(--ant-color-fill-content)'}
           shape={'square'}
           size={80}
         />

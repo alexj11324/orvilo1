@@ -5,7 +5,6 @@ import { AgentRuntimeErrorType, getErrorCodeSpec } from '@orvilo/model-runtime';
 import { type ChatMessageError, type ErrorType, type IToolErrorType } from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
-import { cssVar } from 'antd-style';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -78,17 +77,7 @@ const getErrorDetails = (error?: ChatMessageError | null) => {
 };
 
 const loading = () => (
-  <div
-    className="flex flex-col items-center p-4"
-    style={{
-      border: `1px solid ${cssVar.colorBorder}`,
-      borderRadius: cssVar.borderRadiusLG,
-
-      overflow: 'hidden',
-      position: 'relative',
-      width: '100%',
-    }}
-  >
+  <div className="relative flex w-full flex-col items-center overflow-hidden rounded-(--ant-border-radius-lg) border border-border p-4">
     <Skeleton style={{ height: 36 }} />
   </div>
 );

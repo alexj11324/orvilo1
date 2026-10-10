@@ -1,7 +1,6 @@
 'use client';
 
 import type { TaskTemplateConnectorReference } from '@orvilo/const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { PlusIcon, XIcon } from 'lucide-react';
@@ -37,19 +36,6 @@ import type {
   PendingOrviloTool,
 } from './resolvePendingAuthTools';
 import { resolvePendingAuthTools } from './resolvePendingAuthTools';
-
-const styles = createStaticStyles(({ css }) => ({
-  // Reveal the remove icon only when the row is hovered.
-  row: css`
-    &:hover .tool-auth-remove {
-      opacity: 1;
-    }
-  `,
-  removeIcon: css`
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  `,
-}));
 
 // Tools that require Market authentication
 const MARKET_AUTH_TOOLS = [
@@ -225,7 +211,7 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
     if (typeof tool.icon === 'string') {
       return <Avatar alt={tool.label} avatar={tool.icon} size={20} style={{ flex: 'none' }} />;
     }
-    return <tool.icon fill={cssVar.colorText} size={20} />;
+    return <tool.icon fill={'var(--foreground)'} size={20} />;
   };
 
   const isLoading = isConnecting || isWaitingAuth;
@@ -234,7 +220,7 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
     <div
       {...clickableProps()}
       className={cn(
-        cn('flex items-center gap-3 justify-between', cx(styles.row)),
+        'flex items-center justify-between gap-3 [&:hover_.tool-auth-remove]:opacity-100',
         CLICKABLE_FOCUS_RING,
       )}
       style={{
@@ -246,7 +232,7 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
         {renderIcon()}
         <div>{tool.label}</div>
         <ActionIcon
-          className={cx('tool-auth-remove', styles.removeIcon)}
+          className={'tool-auth-remove opacity-0 transition-opacity duration-200 ease-[ease]'}
           icon={XIcon}
           size="small"
           title={t('toolAuth.remove')}
@@ -314,7 +300,7 @@ const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
     typeof tool.icon === 'string' ? (
       <Avatar alt={tool.label} avatar={tool.icon} size={20} style={{ flex: 'none' }} />
     ) : (
-      <tool.icon fill={cssVar.colorText} size={20} />
+      <tool.icon fill={'var(--foreground)'} size={20} />
     );
 
   return (
@@ -322,7 +308,7 @@ const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
       {...clickableProps()}
       style={{ cursor: 'pointer' }}
       className={cn(
-        cn('flex items-center gap-3 justify-between', cx(styles.row)),
+        'flex items-center justify-between gap-3 [&:hover_.tool-auth-remove]:opacity-100',
         CLICKABLE_FOCUS_RING,
       )}
       onClick={handleAuthorize}
@@ -331,7 +317,7 @@ const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
         {icon}
         <div>{tool.label}</div>
         <ActionIcon
-          className={cx('tool-auth-remove', styles.removeIcon)}
+          className={'tool-auth-remove opacity-0 transition-opacity duration-200 ease-[ease]'}
           icon={XIcon}
           size="small"
           title={t('toolAuth.remove')}
@@ -387,7 +373,7 @@ const MarketToolAuthItem = memo<MarketToolAuthItemProps>(({ tool }) => {
     <div
       {...clickableProps()}
       className={cn(
-        cn('flex items-center gap-3 justify-between', cx(styles.row)),
+        'flex items-center justify-between gap-3 [&:hover_.tool-auth-remove]:opacity-100',
         CLICKABLE_FOCUS_RING,
       )}
       style={{
@@ -399,7 +385,7 @@ const MarketToolAuthItem = memo<MarketToolAuthItemProps>(({ tool }) => {
         <Avatar alt={tool.label} avatar={tool.avatar} size={20} style={{ flex: 'none' }} />
         <div>{tool.label}</div>
         <ActionIcon
-          className={cx('tool-auth-remove', styles.removeIcon)}
+          className={'tool-auth-remove opacity-0 transition-opacity duration-200 ease-[ease]'}
           icon={XIcon}
           size="small"
           title={t('toolAuth.remove')}

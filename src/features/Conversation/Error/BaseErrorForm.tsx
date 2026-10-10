@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
@@ -10,17 +9,7 @@ interface BaseErrorFormProps {
 }
 const BaseErrorForm = memo<BaseErrorFormProps>(({ title, desc, action, avatar }) => {
   return (
-    <div
-      className="flex items-center gap-2 justify-between p-4"
-      style={{
-        border: `1px solid ${cssVar.colorBorder}`,
-        borderRadius: cssVar.borderRadiusLG,
-
-        overflow: 'hidden',
-        position: 'relative',
-        width: '100%',
-      }}
-    >
+    <div className="relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-(--ant-border-radius-lg) border border-border p-4">
       <div className="flex items-center gap-3">
         {avatar}
         <div className="flex flex-col gap-0.5">

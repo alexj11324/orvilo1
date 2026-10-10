@@ -67,7 +67,7 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
           entirely in that case and let the title line carry the time. */}
       {hasTaskMeta && (
         <div
-          className={cx(canNavigate ? styles.meta : undefined, 'flex items-center gap-[7px]')}
+          className={cx(canNavigate ? styles.meta : undefined, 'flex items-center gap-1.75')}
           onClick={canNavigate ? openTask : undefined}
         >
           {/* On error the task glyph would render its paused/scheduled state

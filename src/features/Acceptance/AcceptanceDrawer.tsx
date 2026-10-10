@@ -1,9 +1,9 @@
 'use client';
 
-import { useResponsive } from 'antd-style';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AcceptanceDrawerStyles {
   bodyContent?: CSSProperties;
@@ -36,8 +36,7 @@ export const AcceptanceDrawer = ({
   title,
   width,
 }: AcceptanceDrawerProps) => {
-  const { md = true } = useResponsive();
-  const mobile = !md;
+  const mobile = useIsMobile();
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose?.()}>

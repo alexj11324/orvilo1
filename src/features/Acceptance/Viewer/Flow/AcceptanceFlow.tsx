@@ -3,7 +3,7 @@
 import '@xyflow/react/dist/style.css';
 
 import { MarkerType, ReactFlowProvider } from '@xyflow/react';
-import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { use, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
 import { acceptanceContentLayout } from '../layout';
@@ -98,7 +99,7 @@ export function AcceptanceFlow() {
     setAppElement(document.querySelector('[data-lobe-portal-host]'));
   }, []);
   const panelHost = use(FlowPanelHostContext);
-  const { md = true } = useResponsive();
+  const md = !useIsMobile();
   const [display, setDisplay] = useState<'graph' | 'outline'>();
   const showOutline = (display ?? (md ? 'graph' : 'outline')) === 'outline';
   const { acceptanceId } = useAcceptanceScope();

@@ -1,8 +1,8 @@
-import { type FormInstance } from 'antd';
 import { CircleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { FormProps } from '@/components/GroupForm';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,7 @@ import { electronStylish } from '@/styles/electron';
 import { parseMcpInput } from './utils';
 
 interface QuickImportSectionProps {
-  form: FormInstance;
+  form: NonNullable<FormProps['form']>;
   isEditMode?: boolean;
   onClearConnectionError?: () => void;
 }

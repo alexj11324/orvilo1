@@ -1,11 +1,10 @@
 import { type ToolManifest } from '@orvilo/types';
-import { type FormInstance } from 'antd';
 import { cssVar } from 'antd-style';
 import { FileCode } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import AForm from '@/components/GroupForm';
+import AForm, { type FormProps } from '@/components/GroupForm';
 import ManifestPreviewer from '@/components/ManifestPreviewer';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import PluginTag from '@/components/Plugins/PluginTag';
@@ -15,7 +14,7 @@ import { pluginHelpers } from '@/store/tool';
 import ApiVisualizer from './ApiVisualizer';
 import PluginEmptyState from './EmptyState';
 
-const PluginPreview = memo<{ form: FormInstance }>(({ form }) => {
+const PluginPreview = memo<{ form: NonNullable<FormProps['form']> }>(({ form }) => {
   const { t } = useTranslation('plugin');
   const manifest: ToolManifest = AForm.useWatch(['manifest'], form);
   const meta = manifest?.meta;

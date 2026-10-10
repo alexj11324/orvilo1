@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowRightIcon } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { memo } from 'react';
@@ -12,21 +11,9 @@ import { GoalProgress } from './GoalProgress';
 import GoalStatusGlyph from './GoalStatusGlyph';
 import type { GoalItemProps } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    min-width: 0;
-    transition:
-      border-color 0.2s ${cssVar.motionEaseOut},
-      background 0.2s ${cssVar.motionEaseOut},
-      transform 0.2s ${cssVar.motionEaseOut};
-
-    &:hover {
-      transform: translateY(-1px);
-      border-color: ${cssVar.colorPrimaryBorder};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
+const styles = {
+  card: 'min-w-0 [transition:border-color_0.2s_var(--ant-motion-ease-out),background_0.2s_var(--ant-motion-ease-out),transform_0.2s_var(--ant-motion-ease-out)] hover:[transform:translateY(-1px)] hover:border-(--ant-color-primary-border) hover:bg-(--ant-color-fill-quaternary)',
+};
 
 export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
   const navigate = useWorkspaceAwareNavigate();
@@ -66,7 +53,7 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
             </div>
           )}
         </div>
-        <ArrowRightIcon color={cssVar.colorTextQuaternary} size={16} />
+        <ArrowRightIcon color={'var(--ant-color-text-quaternary)'} size={16} />
       </div>
       <GoalProgress
         findingCount={item.findingCount}

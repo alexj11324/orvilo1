@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowRightIcon } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { memo } from 'react';
@@ -12,20 +11,9 @@ import { GoalProgress } from './GoalProgress';
 import GoalStatusGlyph from './GoalStatusGlyph';
 import type { GoalItemProps } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  row: css`
-    min-width: 0;
-    border-radius: 0;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
+const styles = {
+  row: 'min-w-0 rounded-none [&+&]:[border-block-start:1px_solid_var(--sidebar-border)] hover:bg-(--ant-color-fill-quaternary)',
+};
 
 export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
   const navigate = useWorkspaceAwareNavigate();
@@ -72,7 +60,7 @@ export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
         totalRunCost={item.totalRunCost}
         totalRunDuration={item.totalRunDuration}
       />
-      <ArrowRightIcon color={cssVar.colorTextQuaternary} size={16} />
+      <ArrowRightIcon color={'var(--ant-color-text-quaternary)'} size={16} />
     </div>
   );
 });

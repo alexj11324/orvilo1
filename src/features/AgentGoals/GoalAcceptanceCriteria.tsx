@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { PencilIcon, PlusIcon, XIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,21 +15,10 @@ import type { GoalCriterionWithInstruction } from '@/services/verify';
 import { verifyService } from '@/services/verify';
 import { useGoalStore } from '@/store/goal';
 
-const styles = createStaticStyles(({ css }) => ({
-  row: css`
-    padding-block: 8px;
-
-    &:not(:last-child) {
-      border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-    }
-  `,
-  seq: css`
-    flex: none;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  row: '[padding-block:8px] [&:not(:last-child)]:[border-block-end:1px_dashed_var(--sidebar-border)]',
+  seq: 'flex-none font-mono text-xs leading-[inherit] text-(--ant-color-text-quaternary)',
+};
 
 /**
  * The goal's structured acceptance standard: the persisted verify criteria the

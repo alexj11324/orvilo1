@@ -1,7 +1,6 @@
 'use client';
 
 import type { GoalStatus } from '@orvilo/const/goal';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { LayoutGridIcon, ListIcon, RefreshCwIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,47 +19,15 @@ import { GoalCardItem } from './GoalCardItem';
 import GoalEmptyState from './GoalEmptyState';
 import { GoalListItem } from './GoalListItem';
 
-const styles = createStaticStyles(({ css }) => ({
-  countBadge: css`
-    padding-block: 1px;
-    padding-inline: 7px;
-    border-radius: 99px;
-
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    line-height: 18px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  overview: css`
-    padding-block: 6px 18px;
-  `,
-  list: css`
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-
-    @media (width <= 900px) {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  `,
-  listRows: css`
-    display: flex;
-    flex-direction: column;
-    border-block: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  metric: css`
-    min-width: 88px;
-    padding-inline-start: 16px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:first-child {
-      padding-inline-start: 0;
-      border-inline-start: 0;
-    }
-  `,
-}));
+const styles = {
+  countBadge:
+    '[padding-block:1px] [padding-inline:7px] rounded-[99px] text-xs tabular-nums leading-[18px] text-muted-foreground bg-accent',
+  overview: '[padding-block:6px_18px]',
+  list: 'grid grid-cols-2 gap-3 [@media(width<=900px)]:grid-cols-1',
+  listRows: 'flex flex-col [border-block:1px_solid_var(--sidebar-border)]',
+  metric:
+    'min-w-[88px] ps-4 [border-inline-start:1px_solid_var(--sidebar-border)] first:ps-0 first:[border-inline-start:0]',
+};
 
 /** Goals whose loop has stopped for good — hidden by the default "open" filter. */
 const TERMINAL_GOAL_STATUSES = new Set<GoalStatus>(['achieved', 'failed', 'canceled']);

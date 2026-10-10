@@ -95,7 +95,7 @@ const AgentList = memo<AgentListProps>(
           variant="ghost"
           className={cx(
             `${styles.item} ${isActive ? styles.active : ''}`,
-            'flex h-auto w-full justify-start items-center gap-2 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring hover:bg-[var(--ant-color-fill-tertiary)]',
+            'flex h-auto w-full justify-start items-center gap-2 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring hover:bg-(--ant-color-fill-tertiary)',
           )}
           onClick={() => onSelect(row.id)}
         >

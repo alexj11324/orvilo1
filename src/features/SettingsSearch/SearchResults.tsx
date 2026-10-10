@@ -57,9 +57,9 @@ const SearchResults = memo<SearchResultsProps>(({ isIndexing, query, results }) 
         {isIndexing ? (
           // A zero-result answer is not authoritative while the pinyin dict is
           // still loading — show a spinner instead of a false empty state.
-          <Spinner className="text-[var(--sidebar-muted)]" />
+          <Spinner className="text-(--sidebar-muted)" />
         ) : (
-          <span className="text-xs text-[var(--sidebar-muted)]">
+          <span className="text-xs text-(--sidebar-muted)">
             {t('settingsSearch.empty', { keyword })}
           </span>
         )}
@@ -75,9 +75,7 @@ const SearchResults = memo<SearchResultsProps>(({ isIndexing, query, results }) 
           key={result.key}
           title={<HighlightMatch query={keyword} text={result.label} />}
           description={
-            <span className="truncate text-xs text-[var(--sidebar-muted)]">
-              {result.breadcrumb}
-            </span>
+            <span className="truncate text-xs text-(--sidebar-muted)">{result.breadcrumb}</span>
           }
           onClick={(e) => {
             trackResultClick(result, index + 1);

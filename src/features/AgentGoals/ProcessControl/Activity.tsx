@@ -25,12 +25,12 @@ import { useElapsed } from './useElapsed';
 
 const styles = {
   arrow:
-    'flex-none text-[var(--ant-color-text-quaternary)] transition-[transform] duration-200 ease-[ease]',
+    'flex-none text-(--ant-color-text-quaternary) transition-[transform] duration-200 ease-[ease]',
   arrowOpen: '[transform:rotate(90deg)]',
   attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
   body: 'pt-0 pb-2.5 ps-10.5 pe-2.25',
   mono: 'font-mono tabular-nums',
-  row: 'cursor-pointer py-1.5 px-2.25 rounded-(--ant-border-radius-sm) hover:bg-[var(--ant-color-fill-quaternary)]',
+  row: 'cursor-pointer py-1.5 px-2.25 rounded-(--ant-border-radius-sm) hover:bg-(--ant-color-fill-quaternary)',
   time: 'flex-none ms-auto',
 };
 

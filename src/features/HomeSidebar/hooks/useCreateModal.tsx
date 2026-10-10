@@ -32,7 +32,7 @@ interface ExampleItemProps {
 const ExampleItem = memo<ExampleItemProps>(({ title, description, onClick, prompt }) => {
   return (
     <div
-      className="flex cursor-pointer flex-col border hover:bg-[var(--ant-color-fill-tertiary)]"
+      className="flex cursor-pointer flex-col border hover:bg-(--ant-color-fill-tertiary)"
       style={{
         borderColor: cssVar.colorBorderSecondary,
         background: cssVar.colorBgContainer,

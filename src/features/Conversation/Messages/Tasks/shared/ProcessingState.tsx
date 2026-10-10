@@ -20,7 +20,7 @@ const styles = {
   progressBar: 'absolute h-full rounded-[2px] [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,var(--primary),var(--primary-hover))] transition-[width] duration-500 ease-out',
   progressCompact: 'relative h-0.75 overflow-hidden rounded-[2px] bg-selected',
   progressShimmer: 'absolute size-full [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,transparent,var(--ant-color-primary-bg-hover),transparent)] animate-[text-shiny-sweep-transform_2s_ease_infinite] motion-reduce:hidden',
-  separator: 'size-0.75 rounded-[50%] bg-[var(--ant-color-text-quaternary)]',
+  separator: 'size-0.75 rounded-[50%] bg-(--ant-color-text-quaternary)',
 };
 
 export type ProcessingStateVariant = 'detail' | 'compact';

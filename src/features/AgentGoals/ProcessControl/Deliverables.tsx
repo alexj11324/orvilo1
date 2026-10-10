@@ -38,7 +38,7 @@ const styles = {
   time: 'flex-none min-w-15 text-end',
   row: 'w-full p-2 border-none rounded-(--ant-border-radius-sm) text-start bg-transparent bg-none',
   rowOpenable:
-    'cursor-pointer hover:bg-[var(--ant-color-fill-quaternary)] focus-visible:[outline:2px_solid_var(--primary)] focus-visible:-outline-offset-2',
+    'cursor-pointer hover:bg-(--ant-color-fill-quaternary) focus-visible:[outline:2px_solid_var(--primary)] focus-visible:-outline-offset-2',
 };
 
 /**

@@ -111,7 +111,7 @@ const Head = memo<{ id: string }>(({ id }) => {
         key: library.id,
         label: library.name,
         onClick: () => handleLibrarySwitch(library.id),
-        className: library.id === id ? 'bg-[var(--ant-control-item-bg-active)]' : undefined,
+        className: library.id === id ? 'bg-(--ant-control-item-bg-active)' : undefined,
       },
       visibility: library.visibility,
     }));

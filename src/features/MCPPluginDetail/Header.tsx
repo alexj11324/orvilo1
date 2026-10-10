@@ -87,7 +87,7 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-row items-start gap-4 w-[100%]">
+      <div className="flex flex-row items-start gap-4 w-full">
         <Avatar avatar={icon} shape={'square'} size={mobile ? 48 : 64} />
         <div
           className="flex flex-col flex-1 gap-1"

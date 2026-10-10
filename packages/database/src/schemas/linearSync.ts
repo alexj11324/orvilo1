@@ -551,7 +551,7 @@ export const taskDomainEvents = pgTable(
     revision: bigint('revision', { mode: 'number' })
       .notNull()
       .default(sql`nextval('task_domain_event_revision_seq')`),
-    payload: jsonb('payload').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
     createdAt: createdAt(),
   },
   (table) => [

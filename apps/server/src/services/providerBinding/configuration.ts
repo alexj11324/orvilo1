@@ -63,8 +63,8 @@ export async function checkProviderBinding(
     .catch(() => {
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PROVIDER_CHECK_UNAVAILABLE' });
     });
-  // Authentication alone does not prove the selected model can run. Use the
-  // same broker capabilities that issuance uses before arming this route.
+  // After verifying the provider connection, require the selected model in its
+  // catalog. Bulk checks probe only one representative model per provider.
   const capabilities =
     result.ok &&
     result.value.status === 'ready' &&
@@ -119,7 +119,7 @@ export async function checkProviderBinding(
   return result.value;
 }
 
-/** Each row retains its own revision, credential, authority and model-readiness fences. */
+/** Each row retains its own revision, credential, authority and catalog-membership checks. */
 export async function checkProviderBindings(
   model: ProviderBindingModel,
   userId: string,

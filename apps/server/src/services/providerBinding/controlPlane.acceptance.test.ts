@@ -190,6 +190,7 @@ describe('checkConnection real provider round-trip', () => {
       );
     await verify();
     expect(seenRequests.map((request) => request.url)).toEqual(['/chat/completions', '/models']);
+    expect(JSON.parse(seenRequests[0].body).model).toBe(MODEL_ID);
     expect(
       (await Promise.all(rows.map((row) => model.find(row.id)))).map((row) => row?.config.enabled),
     ).toEqual([true, true, false]);

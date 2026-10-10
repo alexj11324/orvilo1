@@ -184,8 +184,9 @@ export class SqlTrustedProviderBackend implements TrustedProviderBackend {
   }
 
   async check(binding: ProviderBinding): Promise<boolean> {
-    // A real OpenAI-compatible model catalog read — the binding must prove
-    // endpoint reachability AND credential acceptance, not just stored shape.
+    // Probe a real completion to verify the provider connection. Batch checks
+    // reuse one representative model's response; other models are catalog-checked,
+    // not individually inference-tested.
     const response = await this.request(binding, '/chat/completions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

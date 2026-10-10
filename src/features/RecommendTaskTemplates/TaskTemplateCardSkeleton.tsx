@@ -18,7 +18,7 @@ export const TaskTemplateCardSkeleton = memo<TaskTemplateCardSkeletonProps>(
     if (compact)
       return (
         <div
-          className="flex flex-row items-center gap-2.5 py-[6px]"
+          className="flex flex-row items-center gap-2.5 py-1.5"
           data-testid={'task-template-card-skeleton'}
         >
           <Skeleton

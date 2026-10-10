@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -42,7 +42,7 @@ export const createListLocalFilesInspector = (translationKey: string) => {
       return (
         <div className={inspectorTextStyles.root}>
           <span
-            className={cx(isLoading && shinyTextStyles.shinyText)}
+            className={cn(isLoading && shinyTextStyles.shinyText)}
             style={{ marginInlineEnd: 6 }}
           >
             {t(translationKey as any)}:

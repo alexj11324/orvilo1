@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Plus } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,7 +52,7 @@ export const createWriteLocalFileInspector = (translationKey: string) => {
       return (
         <div className={inspectorTextStyles.root}>
           <span
-            className={cx(isLoading && shinyTextStyles.shinyText)}
+            className={cn(isLoading && shinyTextStyles.shinyText)}
             style={{ marginInlineEnd: 6 }}
           >
             {t(translationKey as any)}:
@@ -63,7 +63,7 @@ export const createWriteLocalFileInspector = (translationKey: string) => {
               {' '}
               <span
                 className="font-mono rounded bg-muted px-1 text-[12px]"
-                style={{ color: cssVar.colorSuccess }}
+                style={{ color: 'var(--success)' }}
               >
                 <Plus size={12} />
                 {lineCount}

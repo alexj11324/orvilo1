@@ -2,7 +2,7 @@
 
 import type { EditFileState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Minus, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
@@ -11,12 +11,9 @@ import { useTranslation } from 'react-i18next';
 import { FilePathDisplay } from '../../components/FilePathDisplay';
 import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  separator: css`
-    margin-inline: 2px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  separator: 'mx-0.5 text-[var(--ant-color-text-quaternary)]',
+};
 
 interface EditFileArgs {
   all?: boolean;
@@ -67,7 +64,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
           key="added"
-          style={{ color: cssVar.colorSuccess }}
+          style={{ color: 'var(--success)' }}
         >
           <Plus size={12} />
           {linesAdded}
@@ -79,7 +76,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
         <span
           className="font-mono rounded bg-muted px-1 text-[12px]"
           key="deleted"
-          style={{ color: cssVar.colorError }}
+          style={{ color: 'var(--destructive)' }}
         >
           <Minus size={12} />
           {linesDeleted}
@@ -89,7 +86,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(isLoading && shinyTextStyles.shinyText)} style={{ marginInlineEnd: 6 }}>
+        <span className={cn(isLoading && shinyTextStyles.shinyText)} style={{ marginInlineEnd: 6 }}>
           {t(translationKey as any)}:
         </span>
         <FilePathDisplay filePath={filePath} />

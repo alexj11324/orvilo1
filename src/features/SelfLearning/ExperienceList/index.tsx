@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { DnaIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,13 +22,6 @@ import { useAgentStore } from '@/store/agent';
 
 import { useExpertiseOverview } from '../hooks';
 import HabitList from '../Portrait/HabitList';
-
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow-y: auto;
-    display: flex;
-  `,
-}));
 
 /**
  * 一个方向的全部规则。数据与概览页同源（同一份 overview），只是把范围收窄到一个方向并去掉
@@ -75,7 +67,7 @@ const ExperienceList = memo(() => {
           ) : null
         }
       />
-      <div className={cx(styles.body, 'flex flex-col flex-1 w-full')}>
+      <div className="flex flex-col flex-1 w-full overflow-y-auto">
         <WideScreenContainer>
           <AsyncBoundary
             data={data}

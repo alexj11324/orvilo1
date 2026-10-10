@@ -29,8 +29,7 @@ const PasswordRow = () => {
       label={t('profile.password')}
       action={
         <Button
-          className="text-sm"
-          style={{ cursor: 'pointer', fontSize: 13 }}
+          className="cursor-pointer text-sm leading-5.5"
           type="button"
           variant="link"
           onClick={() => window.open(accountsUrl, '_blank', 'noopener,noreferrer')}

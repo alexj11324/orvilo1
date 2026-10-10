@@ -45,8 +45,7 @@ export const SSOProvidersList = memo(() => {
       {providers.length === 0 && <span>--</span>}
 
       <Button
-        className="text-[12px] text-muted-foreground"
-        style={{ cursor: 'pointer' }}
+        className="cursor-pointer text-sm leading-5.5 text-muted-foreground"
         type="button"
         variant="link"
         onClick={() => window.open(accountsUrl, '_blank', 'noopener,noreferrer')}

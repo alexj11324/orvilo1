@@ -178,6 +178,7 @@ export const QueueSectionTrigger = ({
   <CollapsibleTrigger
     render={
       <Button
+        size="compact"
         type="button"
         variant="ghost"
         className={cn(

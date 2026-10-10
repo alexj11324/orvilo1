@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { BookOpen, LibraryBigIcon, Plus, Unlink } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
@@ -17,38 +16,11 @@ import type { ProjectDetail } from '@/store/project';
 
 import { openAddResourceModal } from './AddResourceModal';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    padding-block: 12px;
-    padding-inline: 14px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    background: color-mix(in srgb, ${cssVar.colorBgContainer} 82%, ${cssVar.colorFillQuaternary});
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-    }
-  `,
-  icon: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-
-    color: ${cssVar.colorPrimary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  list: css`
-    display: grid;
-    gap: 10px;
-  `,
-}));
+const styles = {
+  card: 'rounded-[12px] border border-sidebar-border bg-[color-mix(in_srgb,var(--card)_82%,var(--ant-color-fill-quaternary))] px-3.5 py-3 hover:border-border', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
+  icon: 'flex size-9 flex-none items-center justify-center rounded-[10px] bg-[var(--ant-color-fill-quaternary)] text-primary', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
+  list: 'grid gap-2.5',
+};
 
 type ProjectResourceLink = NonNullable<ProjectDetail['knowledgeBases']>[number];
 

@@ -62,6 +62,7 @@ ENV NODE_OPTIONS="--max-old-space-size=8192"
 WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml ./
+COPY patches ./patches
 COPY .npmrc ./
 COPY packages ./packages
 # workspace manifests must exist before pnpm i so --filter can resolve them
@@ -91,7 +92,7 @@ RUN set -e && \
     mkdir -p /deps && \
     cd /deps && \
     echo '{"name":"deps","private":true}' > package.json && \
-    pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk --allow-build=protobufjs pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4
+    pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk --allow-build=protobufjs pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4 @copilotkit/channels-core@0.11.0
 
 COPY . .
 
@@ -110,7 +111,8 @@ RUN pnpm exec esbuild scripts/pgSearchCleanup/index.ts --bundle --platform=node 
 # starts. Native sharp stays external and is copied with its platform package into the runtime.
 # Keep Hatchet external too: its CommonJS SDK resolves heartbeat and proto assets
 # relative to its installed package directory.
-RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker --entry-names=worker '--chunk-names=chunks/[name]-[hash]' --out-extension:.js=.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --external:sharp --external:@hatchet-dev/typescript-sdk --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);'
+# Channels core reads its package.json via createRequire(import.meta.url).
+RUN pnpm exec esbuild apps/server/src/hatchet/worker.ts --bundle --platform=node --format=esm --splitting --outdir=/app/hatchet-worker --entry-names=worker '--chunk-names=chunks/[name]-[hash]' --out-extension:.js=.mjs --loader:.md=text --external:pg --external:drizzle-orm '--external:drizzle-orm/*' --external:sharp --external:@hatchet-dev/typescript-sdk --external:@copilotkit/channels-core --banner:js='import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);'
 
 # Standalone collaboration gateway (presence/cursor rooms) — pure TS, no native deps.
 # CJS like the fts scripts: ws is CommonJS, so an esm bundle would break its
@@ -154,6 +156,7 @@ COPY --from=builder /deps/node_modules/@neondatabase /app/node_modules/@neondata
 COPY --from=builder /deps/node_modules/sharp /app/node_modules/sharp
 COPY --from=builder /deps/node_modules/@hatchet-dev /app/node_modules/@hatchet-dev
 COPY --from=builder /deps/node_modules/@grpc /app/node_modules/@grpc
+COPY --from=builder /deps/node_modules/@copilotkit /app/node_modules/@copilotkit
 
 # Copy server launcher and shared scripts
 COPY --from=builder /app/scripts/serverLauncher/startServer.js /app/startServer.js

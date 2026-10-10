@@ -22,6 +22,7 @@ import {
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
+  Plug,
   Sparkles,
   TerminalSquare,
   User,
@@ -64,6 +65,7 @@ export enum SettingsGroupKey {
 export type WorkspaceOnlySettingsTab =
   | WorkspaceSettingsTabs.Budget
   | WorkspaceSettingsTabs.General
+  | WorkspaceSettingsTabs.Integrations
   | WorkspaceSettingsTabs.Imports
   | WorkspaceSettingsTabs.Members;
 
@@ -181,6 +183,12 @@ export const useCategory = () => {
                 icon: Users,
                 key: WorkspaceSettingsTabs.Members,
                 label: t('workspaceSetting.tab.members'),
+              },
+              {
+                href: inWorkspace(WorkspaceSettingsTabs.Integrations),
+                icon: Plug,
+                key: WorkspaceSettingsTabs.Integrations,
+                label: t('workspaceSetting.tab.integrations'),
               },
               // Importing is workspace data management, an admin task.
               canManageWorkspace && {

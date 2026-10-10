@@ -91,6 +91,7 @@ import { sessionRouter } from './session';
 import { sessionGroupRouter } from './sessionGroup';
 import { shareRouter } from './share';
 import { shareChatRouter } from './shareChat';
+import { slackIntegrationRouter } from './slackIntegration';
 import { taskRouter } from './task';
 import { taskDraftRouter } from './taskDraft';
 import { taskLabelRouter } from './taskLabel';
@@ -112,6 +113,7 @@ import { workAttentionRouter } from './workAttention';
 import { workspaceUserSettingsRouter } from './workspaceUserSettings';
 
 export const lambdaRouter = router({
+  slackIntegration: slackIntegrationRouter,
   providerBinding: providerBindingRouter,
   acceptance: acceptanceRouter,
   acceptanceComment: acceptanceCommentRouter,

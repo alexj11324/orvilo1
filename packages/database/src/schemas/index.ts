@@ -66,6 +66,7 @@ export * from './repository';
 export * from './resourcePermission';
 export * from './resourceTransferRequest';
 export * from './session';
+export * from './slackIntegration';
 export * from './task';
 export * from './taskCommentDraft';
 export * from './taskDescriptionHistory';

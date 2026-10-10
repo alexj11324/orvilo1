@@ -1,0 +1,35 @@
+diff --git a/dist/adapter.d.ts b/dist/adapter.d.ts
+--- a/dist/adapter.d.ts
++++ b/dist/adapter.d.ts
+@@ -1,10 +1,12 @@
+-import { App, LogLevel } from "@slack/bolt";
++import { App, LogLevel, type Receiver } from "@slack/bolt";
+ import type { WebClient } from "@slack/web-api";
+ import type { KnownBlock } from "@slack/types";
+ import type { PlatformAdapter, SurfaceCapabilities, IngressSink, InteractionEvent, RunRenderer, ReplyTarget as BotReplyTarget, ConversationStore, MessageRef, ProviderActor, UserQuery, EphemeralResult, NativePayload, ReplyContinuationOptions } from "@copilotkit/channels-core";
+ import type { ChannelNode, ThreadMessage, EmojiValue } from "@copilotkit/channels-ui";
+ import type { SlackAssistantOptions, SlackFeedbackOptions, SlackRespondToOptions } from "./types.js";
+ export interface SlackAdapterOptions {
++    /** Host-owned ingress receiver; lifecycle remains owned by Channels. */
++    receiver?: Receiver;
+     /** Slack bot token (xoxb-…). */
+     botToken: string;
+     /** Slack app-level token (xapp-…) used for Socket Mode. */
+@@ -194,4 +196,4 @@
+ }
+ /** Construct a Slack `PlatformAdapter`. */
+ export declare function slack(opts: SlackAdapterOptions): SlackAdapter;
+-//# sourceMappingURL=adapter.d.ts.map
+\ No newline at end of file
++//# sourceMappingURL=adapter.d.ts.map
+diff --git a/dist/adapter.js b/dist/adapter.js
+--- a/dist/adapter.js
++++ b/dist/adapter.js
+@@ -60,6 +60,7 @@
+             supportsThreadTitle: assistantEnabled,
+         };
+         this.app = new App({
++            receiver: opts.receiver,
+             token: opts.botToken,
+             appToken: opts.appToken,
+             signingSecret: opts.signingSecret,

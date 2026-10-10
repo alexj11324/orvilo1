@@ -20,6 +20,7 @@ export enum WorkspaceSettingsTabs {
   General = 'general',
   Hotkey = 'hotkey',
   Imports = 'imports',
+  Integrations = 'integrations',
   Linear = 'linear',
   Members = 'members',
   Notification = 'notification',

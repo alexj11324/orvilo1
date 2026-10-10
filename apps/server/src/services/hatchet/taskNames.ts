@@ -7,6 +7,7 @@ export const HATCHET_TASK_NAMES = {
   goalSweep: 'orvilo-goal-sweep',
   linearSyncSweep: 'orvilo-linear-sync-sweep',
   mcpEventInboxSweep: 'orvilo-mcp-event-inbox-sweep',
+  slackIntegrationEvent: 'orvilo-slack-integration-event',
   taskHeartbeat: 'orvilo-task-heartbeat',
   taskReminderSweep: 'orvilo-task-reminder-sweep',
   taskScheduleDispatch: 'orvilo-task-schedule-dispatch',

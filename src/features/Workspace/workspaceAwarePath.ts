@@ -39,6 +39,7 @@ export const WORKSPACE_SETTINGS_TABS: ReadonlySet<string> = new Set([
   'devices',
   'general',
   'imports',
+  'integrations',
   'linear',
   'members',
   'plans',

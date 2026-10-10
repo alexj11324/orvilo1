@@ -4271,4 +4271,68 @@ export default {
   'settingAgent.deviceSettings.runtimeUnverifiedTitle': 'Device runtime verification incomplete',
   'settingAgent.deviceSettings.runtimeUnverifiedDesc':
     'Some authorized devices could not be checked for this agent runtime. Retry verification before choosing a device.',
+  'workspaceSetting.tab.integrations': 'Integrations',
+  'integrations.description': 'Connect the apps your workspace uses.',
+  'integrations.apps': 'Apps',
+  'integrations.appsDescription': 'Bring your tools and Agents together in Orvilo.',
+  'integrations.configure': 'Configure',
+  'integrations.back': 'Back to integrations',
+  'integrations.connected': 'Connected',
+  'integrations.install': 'Install',
+  'integrations.connect': 'Connect',
+  'integrations.disconnect': 'Disconnect',
+  'integrations.cancel': 'Cancel',
+  'integrations.save': 'Save connection',
+  'integrations.add': 'Add connection',
+  'integrations.edit': 'Edit',
+  'integrations.delete': 'Delete',
+  'integrations.refresh': 'Refresh',
+  'integrations.loading': 'Loading integrations…',
+  'integrations.workspaceRequired': 'Select a workspace to manage integrations.',
+  'integrations.slack.description': 'Connect your Slack workspace with Orvilo.',
+  'integrations.slack.adminRequired':
+    'A workspace administrator can install Slack and manage channel connections. Members can connect their own Slack account.',
+  'integrations.slack.unconfiguredTitle': 'Slack is not available on this deployment',
+  'integrations.slack.unconfigured':
+    'Ask your instance administrator to enable Slack OAuth, then refresh this page.',
+  'integrations.slack.personalTitle': 'Connect your personal Slack account',
+  'integrations.slack.personalDescription':
+    'Link your Slack identity before running Agents from Slack. Your workspace permissions apply to every run.',
+  'integrations.slack.personalConnected': 'Slack identity connected: {{name}}',
+  'integrations.slack.workspaces': 'Connected Slack workspace',
+  'integrations.slack.workspaceConnected': 'Linked to this Orvilo workspace',
+  'integrations.slack.notConnected': 'No Slack workspace connected. Install Slack to continue.',
+  'integrations.slack.connections': 'Channel connections',
+  'integrations.slack.connectionsDescription': 'Connect Slack channels to Agents.',
+  'integrations.slack.emptyConnections': 'Connected channels and Agents will appear here.',
+  'integrations.slack.disconnectTitle': 'Disconnect Slack workspace?',
+  'integrations.slack.disconnectDescription':
+    'This removes the Slack installation, channel connections and linked personal accounts for this workspace.',
+  'integrations.slack.channel': 'Slack channel',
+  'integrations.slack.agent': 'Agent',
+  'integrations.slack.selectChannel': 'Select a Slack channel',
+  'integrations.slack.selectAgent': 'Select an Agent',
+  'integrations.slack.private': 'Private',
+  'integrations.slack.noChannels':
+    'No channels are available. Check the Slack app’s channel access, then retry.',
+  'integrations.slack.noAgents':
+    'No accessible Agents are available in this workspace. Create an Agent or request access first.',
+  'integrations.slack.moreChannels': 'Load more channels',
+  'integrations.slack.bindingTitle': 'Connect Slack channel to Agent',
+  'integrations.slack.editChannelHint': 'To connect a different channel, add another connection.',
+  'integrations.slack.saveFailed':
+    'The connection was not saved. Your selections are kept; retry Save connection.',
+  'integrations.slack.writeFailed':
+    'The change could not be confirmed. Refresh to check its current state, then retry the action.',
+  'integrations.slack.oauth.waiting':
+    'Complete Slack authorization in your browser. Stopping here only stops waiting; it does not revoke an authorization completed in Slack.',
+  'integrations.slack.oauth.popupBlocked':
+    'Your browser blocked the authorization window. Allow popups for Orvilo, then try again.',
+  'integrations.slack.oauth.timedOut':
+    'Authorization timed out. Check Slack and try connecting again.',
+  'integrations.slack.oauth.dismissed':
+    'Authorization was closed before it completed. Connect again when you are ready.',
+  'integrations.slack.oauth.failed':
+    'Slack authorization was not completed. Check the requested permissions and try again.',
+  'integrations.slack.oauth.stopWaiting': 'Stop waiting',
 };

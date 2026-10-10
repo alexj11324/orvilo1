@@ -22,6 +22,14 @@ vi.hoisted(() => {
   });
 });
 
+const { workspaceRole } = vi.hoisted(() => ({ workspaceRole: { value: 'owner' } }));
+vi.mock('@/business/client/hooks/useFetchWorkspaces', () => ({
+  useFetchWorkspaces: () => ({
+    data: [{ id: 'ws-1', role: workspaceRole.value }],
+    isLoading: false,
+  }),
+}));
+
 const createWrapper = (
   showProvider: boolean,
   extraFlags: Record<string, unknown> = {},
@@ -61,6 +69,7 @@ const initialUserStoreState = useUserStore.getState();
 
 afterEach(() => {
   cleanup();
+  workspaceRole.value = 'owner';
   useUserStore.setState(initialUserStoreState, true);
   useWorkspaceContextStore.getState().setActiveWorkspace(null);
 });
@@ -209,8 +218,20 @@ describe('settings useCategory', () => {
       expect(workspace?.items.map((item) => item.href)).toEqual([
         '/acme/settings/general',
         '/acme/settings/members',
+        '/acme/settings/integrations',
         '/acme/settings/imports',
       ]);
+    });
+
+    it('keeps integrations reachable but withholds admin and billing settings from viewers', () => {
+      workspaceRole.value = 'viewer';
+      const hrefs = renderInWorkspace({ enableBusinessFeatures: true }).flatMap((group) =>
+        group.items.map((item) => item.href),
+      );
+      expect(hrefs).toContain('/acme/settings/integrations');
+      expect(hrefs).not.toContain('/acme/settings/imports');
+      expect(hrefs).not.toContain('/acme/settings/budget');
+      expect(hrefs).not.toContain('/acme/settings/credits');
     });
 
     it('lists every capability once and sends the shared ones to the workspace page', () => {

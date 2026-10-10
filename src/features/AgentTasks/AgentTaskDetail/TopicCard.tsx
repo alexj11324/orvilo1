@@ -305,14 +305,13 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
       className={
         primary
           ? 'flex flex-col gap-3'
-          : 'relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-2'
+          : 'relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-2'
       }
       style={
         primary
           ? undefined
           : {
               borderColor: cssVar.colorBorderSecondary,
-              borderRadius: cssVar.borderRadiusLG,
               background: cssVar.colorBgContainer,
             }
       }

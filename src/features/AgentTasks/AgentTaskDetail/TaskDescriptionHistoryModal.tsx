@@ -197,7 +197,7 @@ const TaskDescriptionHistory = ({ taskId, canEdit, onChanged }: HistoryModalProp
             </Button>
           ) : null}
         </div>
-        <div className="max-h-96 min-w-0 overflow-auto rounded-md border p-3">
+        <div className="max-h-96 min-w-0 overflow-auto rounded-(--radius-card) border p-3">
           <Markdown>{selected?.instruction ?? ''}</Markdown>
         </div>
       </div>

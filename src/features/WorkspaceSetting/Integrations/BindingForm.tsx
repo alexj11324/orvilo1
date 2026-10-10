@@ -92,7 +92,7 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
           <label htmlFor="slack-channel">{t('integrations.slack.channel')}</label>
           {binding ? (
             <>
-              <div className="rounded-md border border-border bg-secondary p-2 text-sm">
+              <div className="rounded-(--radius-card) border border-border bg-secondary p-2 text-sm">
                 #{binding.slackChannelName}
               </div>
               <p className="text-xs text-muted-foreground">

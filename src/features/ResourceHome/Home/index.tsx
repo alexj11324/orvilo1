@@ -12,7 +12,7 @@ import RecentFiles from './RecentFiles';
 import RecentWorks from './RecentWorks';
 
 const styles = {
-  content: 'w-full max-w-[1080px] mx-auto pt-8 pb-16 px-8',
+  content: 'w-full max-w-270 mx-auto pt-8 pb-16 px-8',
   scroll: 'overflow-x-hidden overflow-y-auto flex-1',
 };
 
@@ -25,7 +25,7 @@ const ResourceHomeDashboard = memo(() => {
   const { t } = useTranslation('file');
 
   return (
-    <div className="flex flex-col h-[100%]">
+    <div className="flex flex-col h-full">
       <NavHeader
         right={<AddButton />}
         style={{ borderBottom: '1px solid var(--sidebar-border)' }}

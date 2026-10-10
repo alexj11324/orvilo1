@@ -11,7 +11,7 @@ const HomeLayout: FC = () => {
   return (
     <>
       <Sidebar />
-      <div className={cn('flex flex-col flex-1 h-[100%]', styles.mainContainer)}>
+      <div className={cn('flex flex-col flex-1 h-full', styles.mainContainer)}>
         <Outlet />
       </div>
     </>

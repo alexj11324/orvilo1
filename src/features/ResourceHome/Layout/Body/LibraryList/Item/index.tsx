@@ -85,7 +85,7 @@ const KnowledgeBaseItem = memo<KnowledgeBaseItemProps>(
     // active-library header and its switcher.
     const icon = useMemo(() => {
       if (isLoading) {
-        return <Spinner className="size-[18px] text-muted-foreground" />;
+        return <Spinner className="size-4.5 text-muted-foreground" />;
       }
 
       return (

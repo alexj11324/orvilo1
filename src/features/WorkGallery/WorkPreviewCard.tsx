@@ -250,7 +250,7 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
             item.resourceType !== 'document' &&
             item.resourceType !== 'github_pull_request' &&
             item.resourceType !== 'linear_issue' && (
-              <div className={cx('flex items-center gap-[3px]', styles.identifier)}>
+              <div className={cx('flex items-center gap-0.75', styles.identifier)}>
                 {displayIdentifier}
               </div>
             )}
@@ -261,12 +261,12 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
           )}
         </div>
         <div className={styles.title}>{title}</div>
-        <div className={cx('flex items-baseline gap-[7px]', styles.footer)}>
+        <div className={cx('flex items-baseline gap-1.75', styles.footer)}>
           {agent && (
             <>
               <AssigneeAvatar agentId={item.originAgentId} size={24} />
               <div className={cx('flex flex-col gap-0.5', styles.identityMeta)}>
-                <div className="flex items-baseline gap-[7px]">
+                <div className="flex items-baseline gap-1.75">
                   <span className={styles.agentName}>{agent.title}</span>
                   <span className={styles.meta}>{eventTime}</span>
                 </div>

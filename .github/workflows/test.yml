@@ -12,10 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Opt out of fail-fast for one push: put `[ci full]` in the head commit
-  # message and every job runs to its own verdict, so one run lists every
-  # failure instead of only the first. The gate still fails if any job fails.
-  CI_RUN_ALL: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[ci full]') }}
   # `secrets` is not an allowed context in step `if` conditions; map it once here.
   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -218,7 +214,7 @@ jobs:
         run: node scripts/slimming/census.mjs --check
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
@@ -249,7 +245,7 @@ jobs:
           node --test scripts/ci/checkNativeControls.test.mjs
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
@@ -288,7 +284,7 @@ jobs:
           node --test scripts/ci/checkHostDeviceBoundaries.test.mjs
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
@@ -296,7 +292,7 @@ jobs:
   # Package tests - all packages in single job to save runner resources
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # A failing leaf means the run's verdict is already known: cancel
@@ -398,7 +394,7 @@ jobs:
   # App tests - run sharded tests
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # A failing leaf means the run's verdict is already known: cancel
@@ -410,8 +406,6 @@ jobs:
     needs: [check-duplicate-run, changes]
     if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.app == 'true'
     strategy:
-      # `env` is not available here; same switch as CI_RUN_ALL.
-      fail-fast: ${{ !(github.event_name == 'push' && contains(github.event.head_commit.message, '[ci full]')) }}
       matrix:
         shard: [1, 2]
     name: Test App (shard ${{ matrix.shard }}/2)
@@ -454,7 +448,7 @@ jobs:
   # Merge sharded test reports and upload coverage
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # A failing leaf means the run's verdict is already known: cancel
@@ -528,7 +522,7 @@ jobs:
         run: bun run packages/local-file-shell/scripts/verify-windows-shell.ts
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # A failing leaf means the run's verdict is already known: cancel
@@ -589,7 +583,7 @@ jobs:
           flags: desktop
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # A failing leaf means the run's verdict is already known: cancel
@@ -602,8 +596,6 @@ jobs:
     needs: [check-duplicate-run, changes]
     if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.server == 'true'
     strategy:
-      # `env` is not available here; same switch as CI_RUN_ALL.
-      fail-fast: ${{ !(github.event_name == 'push' && contains(github.event.head_commit.message, '[ci full]')) }}
       matrix:
         shard: [1, 2]
     name: Test Server (shard ${{ matrix.shard }}/2)
@@ -642,7 +634,7 @@ jobs:
   # Merge sharded test reports and upload coverage
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # A failing leaf means the run's verdict is already known: cancel
@@ -777,7 +769,7 @@ jobs:
   # silently excluded from the gate.
 
       - name: Fail fast — cancel sibling jobs
-        if: failure() && env.CI_RUN_ALL != 'true'
+        if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # A failing leaf means the run's verdict is already known: cancel

@@ -105,7 +105,7 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
               value={slackChannelId}
               onValueChange={(value) => setDraft({ ...draft, slackChannelId: value || '' })}
             >
-              <SelectTrigger className="w-full" id="slack-channel">
+              <SelectTrigger className="w-full" id="slack-channel" size="normal">
                 <SelectValue placeholder={t('integrations.slack.selectChannel')} />
               </SelectTrigger>
               <SelectContent>
@@ -156,7 +156,7 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
             value={agentId}
             onValueChange={(value) => setDraft({ ...draft, agentId: value || '' })}
           >
-            <SelectTrigger className="w-full" id="slack-agent">
+            <SelectTrigger className="w-full" id="slack-agent" size="normal">
               <SelectValue placeholder={t('integrations.slack.selectAgent')} />
             </SelectTrigger>
             <SelectContent>
@@ -178,10 +178,10 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
         )}
       </div>
       <ModalFooter>
-        <Button disabled={saving} variant="outline" onClick={close}>
+        <Button disabled={saving} size="lg" variant="outline" onClick={close}>
           {t('integrations.cancel')}
         </Button>
-        <Button disabled={!canSave} loading={saving} onClick={save}>
+        <Button disabled={!canSave} loading={saving} size="lg" onClick={save}>
           {t('integrations.save')}
         </Button>
       </ModalFooter>

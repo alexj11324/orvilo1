@@ -133,7 +133,7 @@ const WebSearch = memo<BuiltinRenderProps<WebSearchArgs, WebSearchPluginState>>(
 
           return (
             <div
-              className={cx('flex flex-col gap-[3px]', styles.resultItem)}
+              className={cx('flex flex-col gap-0.75', styles.resultItem)}
               key={`${result.link}-${index}`}
             >
               <a href={result.link} rel={'noreferrer'} target={'_blank'}>

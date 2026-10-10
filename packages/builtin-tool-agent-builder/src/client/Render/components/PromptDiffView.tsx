@@ -49,13 +49,13 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
       : 'builtins.orvilo-agent-builder.render.updatePrompt.cleared';
 
   return (
-    <div className={cn('flex', 'flex-col', 'gap-2', 'text-[13px]')}>
+    <div className={cn('flex', 'flex-col', 'gap-2', 'text-(length:--text-dense)')}>
       <div
         className={cn(
           'flex',
           'items-center',
-          'gap-[6px]',
-          'ms-[9px] [margin-block-end:6px] text-success',
+          'gap-1.5',
+          'ms-2.25 [margin-block-end:6px] text-success',
         )}
       >
         <CheckCircle size={14} />
@@ -63,7 +63,7 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
       </div>
 
       {hasDiff && (
-        <div className="ms-3 max-h-[400px] overflow-auto rounded-(--radius-card) bg-(--ant-color-fill-quaternary)">
+        <div className="ms-3 max-h-100 overflow-auto rounded-(--radius-card) bg-(--ant-color-fill-quaternary)">
           {parseUnifiedDiff(
             createTwoFilesPatch(
               'a/prompt.md',
@@ -87,7 +87,7 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
             'ms-3 border-s-[3px] border-success bg-accent p-3',
           )}
         >
-          <div className="flex items-center gap-[6px]">
+          <div className="flex items-center gap-1.5">
             <FileText className="text-(--ant-color-text-tertiary)" size={14} />
             <span className="text-xs leading-[inherit] font-medium text-muted-foreground">
               {t('builtins.orvilo-agent-builder.render.updatePrompt.newPrompt', {
@@ -95,7 +95,7 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
               })}
             </span>
           </div>
-          <div className="ms-5 -me-3 max-h-[200px] overflow-auto ps-3 pe-3 text-[13px] leading-[1.6] text-foreground [word-break:break-word] whitespace-pre-wrap">
+          <div className="ms-5 -me-3 max-h-50 overflow-auto ps-3 pe-3 text-(length:--text-dense) leading-[1.6] text-foreground [word-break:break-word] whitespace-pre-wrap">
             {newPrompt.length > MAX_FALLBACK_LENGTH
               ? newPrompt.slice(0, MAX_FALLBACK_LENGTH) + '...'
               : newPrompt}

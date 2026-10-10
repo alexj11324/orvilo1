@@ -39,7 +39,7 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
             title={title || undefined}
           />
           <div className="flex flex-col flex-1 gap-0.5">
-            <span className="text-[13px] font-medium">{title}</span>
+            <span className="text-(length:--text-dense) font-medium">{title}</span>
             {description && (
               <span className="truncate text-xs leading-[inherit] text-muted-foreground">
                 {description}
@@ -61,7 +61,7 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
             <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
               Title
             </div>
-            <div className="text-[13px]">{title}</div>
+            <div className="text-(length:--text-dense)">{title}</div>
           </div>
         )}
         {description && (
@@ -69,7 +69,7 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
             <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
               Description
             </div>
-            <div className="text-[13px]">{description}</div>
+            <div className="text-(length:--text-dense)">{description}</div>
           </div>
         )}
         {(model || provider) && (
@@ -77,7 +77,7 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
             <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
               Model
             </div>
-            <div className="text-[13px]">
+            <div className="text-(length:--text-dense)">
               {provider && `${provider}/`}
               {model}
             </div>

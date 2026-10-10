@@ -13,7 +13,7 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 import type { UpdateAgentPromptParams, UpdateAgentPromptState } from '../../../types';
 
 const styles = {
-  agentName: 'max-w-[120px] truncate font-medium',
+  agentName: 'max-w-30 truncate font-medium',
   label: 'shrink-0 whitespace-nowrap text-muted-foreground',
   root: 'flex items-center gap-1.5 overflow-hidden min-w-0',
 };
@@ -62,7 +62,7 @@ export const UpdateAgentPromptInspector = memo<
     : 'builtins.orvilo-group-agent-builder.apiName.updateAgentPrompt';
 
   return (
-    <div className={cn('flex', 'items-center', 'gap-[6px]', styles.root)}>
+    <div className={cn('flex', 'items-center', 'gap-1.5', styles.root)}>
       <span
         className={cn(
           styles.label,

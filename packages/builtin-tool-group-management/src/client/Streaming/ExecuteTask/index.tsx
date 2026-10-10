@@ -38,7 +38,7 @@ export const ExecuteTaskStreaming = memo<BuiltinStreamingProps<ExecuteTaskParams
             {agent?.title || 'Agent'}
           </span>
         </div>
-        <div className="text-[13px] text-muted-foreground">
+        <div className="text-(length:--text-dense) text-muted-foreground">
           <Markdown animated variant={'chat'}>
             {instruction}
           </Markdown>

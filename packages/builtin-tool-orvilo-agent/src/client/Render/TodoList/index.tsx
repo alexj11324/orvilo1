@@ -22,7 +22,7 @@ export interface TodoListRenderState {
 // Styles matching TodoItemRow in SortableTodoList
 const styles = {
   itemRow: 'w-full border-b border-dashed border-sidebar-border px-3 py-2.5 last:border-b-0',
-  processingRow: 'flex items-center gap-[7px]',
+  processingRow: 'flex items-center gap-1.75',
   textCompleted: 'text-(--ant-color-text-quaternary) line-through',
   textProcessing: 'text-foreground',
   textTodo: 'text-muted-foreground',

@@ -27,8 +27,8 @@ export const InstallPluginRender = memo<
         <span
           className={
             pluginState.installed
-              ? 'text-[13px] font-medium text-success'
-              : 'text-[13px] font-medium text-destructive'
+              ? 'text-(length:--text-dense) font-medium text-success'
+              : 'text-(length:--text-dense) font-medium text-destructive'
           }
         >
           {pluginState.installed

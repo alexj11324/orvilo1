@@ -20,7 +20,7 @@ import type { ExecuteTaskParams } from '../../types';
 const styles = {
   agentTitle: 'text-[14px] font-semibold text-foreground',
   container: 'rounded-(--ant-border-radius) py-3',
-  timeoutInput: 'w-[100px]',
+  timeoutInput: 'w-25',
 };
 
 const DEFAULT_TIMEOUT = 1_800_000; // 30 minutes

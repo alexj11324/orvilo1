@@ -18,7 +18,7 @@ export const CreateAgentStreaming = memo<BuiltinStreamingProps<CreateAgentParams
       {title && (
         <div className="flex flex-col gap-1">
           <div className="text-xs leading-[inherit] font-medium text-muted-foreground">Title</div>
-          <div className="text-[13px]">{title}</div>
+          <div className="text-(length:--text-dense)">{title}</div>
         </div>
       )}
       {description && (
@@ -26,13 +26,13 @@ export const CreateAgentStreaming = memo<BuiltinStreamingProps<CreateAgentParams
           <div className="text-xs leading-[inherit] font-medium text-muted-foreground">
             Description
           </div>
-          <div className="text-[13px]">{description}</div>
+          <div className="text-(length:--text-dense)">{description}</div>
         </div>
       )}
       {(model || provider) && (
         <div className="flex flex-col gap-1">
           <div className="text-xs leading-[inherit] font-medium text-muted-foreground">Model</div>
-          <div className="text-[13px]">
+          <div className="text-(length:--text-dense)">
             {provider && `${provider}/`}
             {model}
           </div>

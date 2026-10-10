@@ -376,6 +376,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
             {editing && (
               <Button
                 disabled={posting}
+                size="lg"
                 variant="outline"
                 onClick={() => {
                   settle();
@@ -388,6 +389,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
             <Button
               aria-busy={posting}
               disabled={!canPost || !body.trim() || posting}
+              size="lg"
               variant="default"
               onClick={() => void post()}
             >

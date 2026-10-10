@@ -427,10 +427,11 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             <Input
               autoFocus
               aria-label={t('create.nameLabel')}
-
               maxLength={255}
+
               placeholder={t('create.nameLabel')}
               value={form.name}
+              visualSize="normal"
               onChange={(event) => updateName(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.nativeEvent.isComposing) void handleCreate();
@@ -438,10 +439,11 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             />
             <Input
               aria-label={t('create.summary')}
-
               maxLength={280}
+
               placeholder={t('create.summaryPlaceholder')}
               value={form.summary ?? ''}
+              visualSize="normal"
               onChange={(event) => updateForm({ summary: event.target.value })}
             />
           </div>
@@ -809,6 +811,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                   maxLength={6}
                   placeholder={t('create.identifierPlaceholder')}
                   value={form.identifier}
+                  visualSize="normal"
                   onChange={(event) =>
                     updateForm({
                       identifier: event.target.value.toUpperCase(),
@@ -846,6 +849,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                   maxLength={100}
                   placeholder={t('create.slugPlaceholder')}
                   value={form.slug}
+                  visualSize="normal"
                   onChange={(event) =>
                     updateForm({ slug: event.target.value.toLowerCase(), slugEdited: true })
                   }

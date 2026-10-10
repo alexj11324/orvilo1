@@ -28,7 +28,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     margin-block-start: 16px;
 
     button {
-      height: 32px;
       padding-block: 0;
       padding-inline: 12px;
       border-color: transparent;
@@ -193,12 +192,13 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
           <Input
             autoFocus
             required
-
             disabled={pending}
+
             id={`${id}-url`}
             maxLength={8192}
             placeholder="https://…"
             value={url}
+            visualSize="normal"
             onChange={(event) => setUrl(event.target.value)}
           />
         </div>
@@ -209,11 +209,12 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
           </label>
           <Input
             aria-label={t('resources.link.title')}
-
             disabled={pending}
+
             id={`${id}-title`}
             maxLength={255}
             value={title}
+            visualSize="normal"
             onChange={(event) => setTitle(event.target.value)}
           />
         </div>
@@ -228,10 +229,16 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
           className={cn('flex flex-row', styles.actions)}
           style={{ justifyContent: 'flex-end', gap: 16 }}
         >
-          <Button disabled={pending} variant="outline" onClick={close}>
+          <Button disabled={pending} size="lg" variant="outline" onClick={close}>
             {t('resources.link.cancel')}
           </Button>
-          <Button aria-busy={pending} disabled={pending || pending} type="submit" variant="default">
+          <Button
+            aria-busy={pending}
+            disabled={pending || pending}
+            size="lg"
+            type="submit"
+            variant="default"
+          >
             {pending && <Spinner />}
             {t(savedId ? 'resources.link.save' : 'resources.link.add')}
           </Button>

@@ -131,7 +131,7 @@ export const RemoteDirectoryBrowser = ({
                 >
                   {t('workingDirectory.foldersLoadFailed')}
                 </div>
-                <Button disabled={loading} onClick={() => void retry()}>
+                <Button disabled={loading} size="lg" onClick={() => void retry()}>
                   {tCommon('retry')}
                 </Button>
               </div>
@@ -141,7 +141,12 @@ export const RemoteDirectoryBrowser = ({
               </div>
             ) : null}
             {hasMore && !error && (
-              <Button disabled={loading} loading={isLoadingMore} onClick={() => void loadMore()}>
+              <Button
+                disabled={loading}
+                loading={isLoadingMore}
+                size="lg"
+                onClick={() => void loadMore()}
+              >
                 {t('workingDirectory.loadMoreFolders')}
               </Button>
             )}
@@ -154,15 +159,16 @@ export const RemoteDirectoryBrowser = ({
         </div>
       )}
       <div className="flex flex-wrap justify-between gap-2">
-        <Button disabled={loading} onClick={() => onManual(displayedPath)}>
+        <Button disabled={loading} size="lg" onClick={() => onManual(displayedPath)}>
           {t('workingDirectory.enterPathManually')}
         </Button>
         <div className="flex gap-2">
-          <Button disabled={loading} onClick={onCancel}>
+          <Button disabled={loading} size="lg" onClick={onCancel}>
             {tCommon('cancel')}
           </Button>
           <Button
             loading={loading}
+            size="lg"
             disabled={
               !directory || isLoading || (draft !== undefined && draft.trim() !== directory.path)
             }

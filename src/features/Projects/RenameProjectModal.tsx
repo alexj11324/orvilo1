@@ -48,6 +48,7 @@ const RenameProjectContent = ({ project }: RenameProjectContentProps) => {
           autoFocus
           maxLength={255}
           value={name}
+          visualSize="normal"
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.nativeEvent.isComposing) void handleRename();

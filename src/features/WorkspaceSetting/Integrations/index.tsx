@@ -147,7 +147,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                 </p>
               </div>
             </div>
-            <Button render={<Link to={`${basePath}/slack`} />} variant="outline">
+            <Button render={<Link to={`${basePath}/slack`} />} size="lg" variant="outline">
               {t('integrations.configure')}
               <ArrowRight size={16} />
             </Button>
@@ -173,6 +173,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
             ) : (
               <Button
                 loading={oauthMode === 'workspace'}
+                size="lg"
                 disabled={
                   disabled || !data?.configured || !data.canManage || isLoading || Boolean(error)
                 }
@@ -216,6 +217,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
               <Button
                 className="mt-3"
                 loading={isValidating}
+                size="lg"
                 variant="outline"
                 onClick={() => {
                   void mutate();
@@ -235,6 +237,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
             >
               <span className="text-sm">{t('integrations.slack.oauth.waiting')}</span>
               <Button
+                size="lg"
                 variant="outline"
                 onClick={() => {
                   authController.current?.abort();
@@ -273,6 +276,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                   <Button
                     disabled={disabled}
                     loading={pending === 'personal'}
+                    size="lg"
                     variant="outline"
                     onClick={() => {
                       void runWrite('personal', () =>
@@ -286,6 +290,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                   <Button
                     disabled={!connected || disabled}
                     loading={oauthMode === 'personal'}
+                    size="lg"
                     variant="outline"
                     onClick={() => {
                       void connect('personal');
@@ -310,6 +315,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                       <Button
                         disabled={!data.canManage || disabled}
                         loading={pending === 'workspace'}
+                        size="lg"
                         variant="outline"
                         onClick={() =>
                           confirmModal({

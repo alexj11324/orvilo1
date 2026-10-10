@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import {
   ArrowDownWideNarrowIcon,
@@ -39,71 +38,21 @@ import {
   TIMELINE_PROJECT_LIST_PROPERTIES,
 } from './displayOptions';
 
-const styles = createStaticStyles(({ css }) => ({
-  chip: css`
-    cursor: pointer;
-
-    flex: none;
-
-    padding-block: 3px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    background: transparent;
-
-    &:hover,
-    &:focus-visible {
-      border-color: ${cssVar.colorTextTertiary};
-      color: ${cssVar.colorText};
-    }
-  `,
-  chipActive: css`
-    border-color: ${cssVar.colorTextTertiary};
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  chipDisabled: css`
-    cursor: not-allowed;
-    opacity: 0.4;
-
-    &:hover,
-    &:focus-visible {
-      border-color: ${cssVar.colorBorder};
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  optionLabel: css`
-    flex: none;
-    width: 118px;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  panel: css`
-    width: 302px;
-    padding: 12px;
-  `,
-  sectionTitle: css`
-    font-size: 12px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  subTitle: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  chip: 'h-7 flex-none cursor-pointer rounded-(--radius-input) border border-border bg-transparent px-2.5 py-0.75 text-xs leading-5 text-muted-foreground whitespace-nowrap hover:border-foreground-tertiary hover:text-foreground focus-visible:border-foreground-tertiary focus-visible:text-foreground',
+  chipActive: 'border-foreground-tertiary bg-accent text-foreground',
+  chipDisabled:
+    'cursor-not-allowed opacity-40 hover:border-border hover:text-muted-foreground focus-visible:border-border focus-visible:text-muted-foreground',
+  optionLabel: 'w-30 flex-none text-xs leading-5 text-muted-foreground',
+  panel: 'w-80 p-3',
+  sectionTitle: 'text-sm leading-5.5 font-semibold text-foreground',
+  subTitle: 'text-xs leading-5 text-foreground-tertiary',
+};
 
 const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, label }) => (
-  <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
+  <div className="flex flex-row items-center gap-2">
     <span className={styles.optionLabel}>{label}</span>
-    <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
-      {children}
-    </div>
+    <div className="flex flex-row items-center gap-1 flex-1 min-w-0">{children}</div>
   </div>
 ));
 
@@ -146,9 +95,9 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
           </Button>
         }
       />
-      <PopoverContent align="end" side="bottom">
+      <PopoverContent align="end" className="w-auto p-0" side="bottom">
         {
-          <div className={cn('flex flex-col', styles.panel)} style={{ gap: 10 }}>
+          <div className={cn(cn('flex flex-col', styles.panel), 'gap-2.5')}>
             <Tabs
               value={options.layout}
               onValueChange={(value) => {
@@ -182,7 +131,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
               </TabsList>
             </Tabs>
             {timelineLayout ? (
-              <div className="flex flex-col" style={{ gap: 4 }}>
+              <div className="flex flex-col gap-1">
                 <span className={styles.sectionTitle}>{t('list.display.timelineOptions')}</span>
                 {(
                   [
@@ -190,11 +139,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                     ['showWeekNumbers', t('list.display.showWeekNumbers')],
                   ] as const
                 ).map(([key, label]) => (
-                  <div
-                    className="flex flex-row"
-                    key={key}
-                    style={{ alignItems: 'center', justifyContent: 'space-between' }}
-                  >
+                  <div className="flex flex-row items-center justify-between" key={key}>
                     <span className={styles.subTitle}>{label}</span>
                     <Switch
                       checked={options.timeline[key]}
@@ -213,7 +158,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <span style={{ display: 'flex', flex: 1, minWidth: 0 }}>
+                    <span className="flex flex-1 min-w-0">
                       <Select
                         disabled={options.layout === 'board'}
                         value={options.grouping}
@@ -225,7 +170,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                           onChange({ grouping: value as ProjectListDisplayOptions['grouping'] })
                         }
                       >
-                        <SelectTrigger size="sm" style={{ flex: 1, minWidth: 0 }}>
+                        <SelectTrigger className="flex-1 min-w-0" size="sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -274,7 +219,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                   })
                 }
               >
-                <SelectTrigger size="sm" style={{ flex: 1, minWidth: 0 }}>
+                <SelectTrigger className="flex-1 min-w-0" size="sm">
                   <SelectValue>
                     {options.orderBy === 'name'
                       ? options.orderDirection === 'desc'
@@ -313,7 +258,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <span style={{ display: 'inline-flex' }}>
+                    <span className="inline-flex">
                       <Button
                         aria-label={t('list.display.reverseOrder')}
                         disabled={options.orderBy === 'manual'}
@@ -349,7 +294,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                   onChange({ showClosed: value as ProjectListClosedWindow })
                 }
               >
-                <SelectTrigger size="sm" style={{ flex: 1, minWidth: 0 }}>
+                <SelectTrigger className="flex-1 min-w-0" size="sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -364,7 +309,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                 </SelectContent>
               </Select>
             </OptionRow>
-            <div className="flex flex-col" style={{ gap: 4 }}>
+            <div className="flex flex-col gap-1">
               <span className={styles.sectionTitle}>
                 {timelineLayout ? t('list.display.properties') : t('list.display.listOptions')}
               </span>
@@ -372,7 +317,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                 <span className={styles.subTitle}>{t('list.display.properties')}</span>
               )}
             </div>
-            <div className="flex flex-row" style={{ gap: 6, flexWrap: 'wrap' }}>
+            <div className="flex flex-row gap-1.5 flex-wrap">
               {(timelineLayout ? TIMELINE_PROJECT_LIST_PROPERTIES : PROJECT_LIST_PROPERTIES).map(
                 (property) => {
                   const supported = isDataBackedProjectListProperty(property);
@@ -383,7 +328,7 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                       disabled={!supported}
                       key={property}
                       type="button"
-                      className={cx(
+                      className={cn(
                         styles.chip,
                         active && styles.chipActive,
                         !supported && styles.chipDisabled,
@@ -401,26 +346,21 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
                     chip
                   ) : (
                     <Tooltip key={property}>
-                      <TooltipTrigger
-                        render={<span style={{ display: 'inline-flex' }}>{chip}</span>}
-                      />
+                      <TooltipTrigger render={<span className="inline-flex">{chip}</span>} />
                       <TooltipContent>{t('list.display.propertyUnavailable')}</TooltipContent>
                     </Tooltip>
                   );
                 },
               )}
             </div>
-            <div
-              className="flex flex-row"
-              style={{ alignItems: 'center', justifyContent: 'space-between' }}
-            >
+            <div className="flex flex-row items-center justify-between">
               <Button size="sm" variant="ghost" onClick={onReset}>
                 {t('list.display.reset')}
               </Button>
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <span style={{ display: 'inline-flex' }}>
+                    <span className="inline-flex">
                       <Button disabled={true} size="sm" variant="outline">
                         {t('list.display.setDefault')}
                       </Button>

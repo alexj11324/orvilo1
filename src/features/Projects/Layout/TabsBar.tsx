@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo, type Ref, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,58 +31,13 @@ import {
   projectPathSection,
 } from './navigation';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  headerMembers: css`
-    display: flex;
-    align-items: center;
-
-    > * {
-      margin-inline-start: -6px;
-      border: 2px solid ${cssVar.colorBgContainer};
-      border-radius: 50%;
-
-      &:first-child {
-        margin-inline-start: 0;
-      }
-    }
-  `,
-  tabsRow: css`
-    flex: none;
-    min-height: 40px;
-    padding-inline: 20px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  navigationLink: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 10px;
-    border-radius: 9999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    line-height: normal;
-    color: ${cssVar.colorTextSecondary};
-    text-decoration: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &[aria-current='page'] {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: 2px;
-    }
-  `,
-}));
+const styles = {
+  headerMembers:
+    'flex items-center [&>*]:-ms-1.5 [&>*]:rounded-full [&>*]:border-2 [&>*]:border-card [&>*:first-child]:ms-0',
+  tabsRow: 'min-h-10 flex-none border-b border-divider px-5',
+  navigationLink:
+    'inline-flex h-8 flex-none items-center rounded-(--radius-button) px-2.5 text-sm leading-5.5 font-medium text-muted-foreground no-underline group-hover/project-tab:bg-accent group-hover/project-tab:text-foreground group-aria-[current=page]/project-tab:bg-selected group-aria-[current=page]/project-tab:text-foreground group-focus-visible/project-tab:bg-accent group-focus-visible/project-tab:text-foreground',
+};
 
 // Linear shape: project navigation is a tab strip in the content header, not a
 // second left rail — the workspace nav panel is the only rail on /project/*.
@@ -175,10 +129,15 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
         }
         right={
           detail?.project.id ? (
-            <div className="flex flex-row" style={{ alignItems: 'center', gap: 10 }}>
+            <div className="flex flex-row items-center gap-2.5">
               {/* The glyph carries the status colour; the label stays foreground, since the
                   status fill colours are not text-safe on light (amber 2.2:1). */}
-              <Badge className="text-xs text-foreground" radius="full" size="sm" variant="outline">
+              <Badge
+                className="h-auto text-xs leading-5 text-foreground"
+                radius="full"
+                size="default"
+                variant="outline"
+              >
                 <ProjectStatusIcon size={16} status={detail.project.status} />
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,
@@ -205,19 +164,16 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
           ) : undefined
         }
       />
-      <div
-        className={cn('flex flex-row', styles.tabsRow)}
-        style={{ alignItems: 'center', justifyContent: 'space-between' }}
-      >
-        <div className="flex flex-row" style={{ gap: 4 }}>
+      <div className={cn(cn('flex flex-row', styles.tabsRow), 'items-center justify-between')}>
+        <div className="flex flex-row gap-1">
           {tabs.map((tab) => (
             <WorkspaceLink
               aria-current={activeTab === tab.path ? 'page' : undefined}
-              className={styles.navigationLink}
+              className="group/project-tab inline-flex flex-none rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
               key={tab.path}
               to={tab.path}
             >
-              {tab.label}
+              <span className={styles.navigationLink}>{tab.label}</span>
             </WorkspaceLink>
           ))}
         </div>

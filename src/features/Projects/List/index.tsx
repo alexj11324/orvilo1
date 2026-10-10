@@ -1,7 +1,6 @@
 'use client';
 
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
@@ -78,237 +77,34 @@ import ProjectMilestoneChip from './MilestoneChip';
 import ProjectBoard from './ProjectBoard';
 import ProjectTimeline from './ProjectTimeline';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  actions: css`
-    position: relative;
-    z-index: 1;
-
-    flex: none;
-
-    opacity: 0;
-
-    transition: opacity ${cssVar.motionDurationFast};
-
-    @media (hover: none) {
-      opacity: 1;
-    }
-  `,
-  cell: css`
-    flex: none;
-
-    min-width: 0;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  /**
-   * The health cell is its own navigation target (the latest-update surface /
-   * write-update flow), so it floats above the row's stretched link like the
-   * lead trigger does.
-   */
-  healthCell: css`
-    cursor: pointer;
-
-    position: relative;
-    z-index: 1;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    align-self: stretch;
-
-    width: 100%;
-
-    text-decoration: none;
-
-    &:hover,
-    &:focus-visible {
-      color: ${cssVar.colorText};
-    }
-  `,
-  columns: css`
-    display: grid;
-    gap: 12px;
-    align-items: center;
-  `,
-  groupHeader: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  headerRow: css`
-    padding-block: 4px;
-    padding-inline: 12px;
-
-    font-size: 12px;
-    font-weight: 450;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  identifier: css`
-    flex: none;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  link: css`
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    color: inherit;
-  `,
-  leadEmpty: css`
-    opacity: 0;
-
-    &:focus-visible {
-      opacity: 1;
-    }
-
-    @media (hover: none) {
-      opacity: 1;
-    }
-  `,
-  leadOpen: css`
-    opacity: 1;
-  `,
-  leadOption: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 32px;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 4px;
-
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover,
-    &:focus-visible {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  leadPopover: css`
-    overflow: auto;
-    width: 240px;
-    max-height: 320px;
-    padding: 4px;
-  `,
-  leadTrigger: css`
-    cursor: pointer;
-
-    position: relative;
-    z-index: 1;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 0;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover,
-    &:focus-visible {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  nameCell: css`
-    flex: 1;
-    min-width: 0;
-  `,
-  numeric: css`
-    justify-content: flex-end;
-    padding-inline-end: 8px;
-    font-variant-numeric: tabular-nums;
-  `,
-  owner: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    min-width: 0;
-  `,
-  row: css`
-    position: relative;
-
-    min-height: 48px;
-    padding-block: 7px;
-    padding-inline: 12px;
-
-    color: inherit;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:hover .project-row-actions,
-    &:focus-within .project-row-actions {
-      opacity: 1;
-    }
-
-    &:hover .project-lead-empty,
-    &:focus-within .project-lead-empty {
-      opacity: 1;
-    }
-  `,
-  screenReaderOnly: css`
-    position: absolute;
-
-    overflow: hidden;
-
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    border: 0;
-
-    white-space: nowrap;
-
-    clip-path: inset(50%);
-  `,
-  sortHeader: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding: 0;
-    border: 0;
-
-    font: inherit;
-    color: inherit;
-    text-align: start;
-
-    background: transparent;
-
-    &:hover,
-    &:focus-visible {
-      color: ${cssVar.colorText};
-    }
-  `,
-  sortHeaderActive: css`
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  actions:
+    'relative z-1 flex-none opacity-0 transition-opacity duration-(--orvilo-motion-fast) [@media(hover:none)]:opacity-100',
+  cell: 'min-w-0 flex-none text-xs leading-5 text-muted-foreground whitespace-nowrap',
+  healthCell:
+    'relative z-1 flex w-full cursor-pointer items-center self-stretch gap-1.5 no-underline hover:text-foreground focus-visible:text-foreground',
+  columns: 'grid items-center gap-3',
+  groupHeader:
+    'flex items-center gap-2 border-b border-divider px-3 py-2 text-xs leading-5 text-muted-foreground',
+  headerRow: 'px-3 py-1 text-xs leading-5 font-normal text-muted-foreground',
+  identifier: 'flex-none font-mono text-xs leading-5 text-foreground-quaternary',
+  link: 'absolute inset-0 rounded-[inherit] text-inherit',
+  leadEmpty: 'opacity-0 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
+  leadOpen: 'opacity-100',
+  leadOption:
+    'flex min-h-9 w-full cursor-pointer items-center gap-2 rounded-(--radius-button) border-0 bg-transparent px-2 text-start text-sm leading-5.5 text-foreground hover:bg-accent focus-visible:bg-accent',
+  leadPopover: 'max-h-80 w-60 overflow-auto p-1',
+  leadTrigger:
+    'relative z-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-(--radius-input) border-0 bg-transparent p-0 text-muted-foreground hover:bg-accent focus-visible:bg-accent',
+  nameCell: 'min-w-0 flex-1',
+  numeric: 'justify-end pe-2 tabular-nums',
+  owner: 'flex min-w-0 flex-none items-center',
+  row: 'relative min-h-12 px-3 py-1.75 text-inherit hover:bg-accent [&:hover_.project-row-actions]:opacity-100 [&:focus-within_.project-row-actions]:opacity-100 [&:hover_.project-lead-empty]:opacity-100 [&:focus-within_.project-lead-empty]:opacity-100',
+  screenReaderOnly: 'sr-only',
+  sortHeader:
+    'inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-start [font:inherit] text-inherit hover:text-foreground focus-visible:text-foreground',
+  sortHeaderActive: 'text-foreground',
+};
 
 /**
  * Grid/row chrome for the projects table. Also imported by the team-scoped
@@ -339,16 +135,16 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
     project.health && project.health in PROJECT_HEALTH_META ? project.health : null;
   return (
     <WorkspaceLink
-      className={cx(styles.cell, styles.healthCell)}
+      className={cn(styles.cell, styles.healthCell)}
       state={health ? undefined : { projectUpdate: true }}
       title={health ? undefined : t('list.health.noUpdatesHint')}
       to={getProjectActivityPath(project.slug ?? project.id)}
     >
       <ProjectHealthIcon health={health} size={14} />
       <span
-        style={{ fontSize: 12, fontWeight: health ? undefined : 500 }}
         className={cn(
-          'text-sm',
+          'text-xs leading-5',
+          !health && 'font-medium',
           health ? PROJECT_HEALTH_META[health].textClass : 'text-muted-foreground',
         )}
       >
@@ -446,8 +242,8 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
         <PopoverContent align="start" side="bottom">
           {
             <div
-              className={cn('flex flex-col', styles.leadPopover)}
-              style={{ gap: 4 }}
+              className={cn(cn('flex flex-col', styles.leadPopover), 'gap-1')}
+
               onClick={(event) => event.stopPropagation()}
             >
               <Input
@@ -471,7 +267,7 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
                 {t('properties.noLead')}
               </button>
               {members.isLoading ? (
-                <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                <span className="text-muted-foreground text-xs leading-5">
                   {t('list.lead.loading')}
                 </span>
               ) : members.error ? (
@@ -481,7 +277,7 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
                   onRetry={() => members.mutate()}
                 />
               ) : availableMembers.length === 0 ? (
-                <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                <span className="text-muted-foreground text-xs leading-5">
                   {t('list.lead.noMatches')}
                 </span>
               ) : (
@@ -519,8 +315,8 @@ ProjectLeadCell.displayName = 'ProjectLeadCell';
 // register — spell the same shape out in core tokens instead.
 const DateCell = memo<{ value: Date | null | string | undefined }>(({ value }) => (
   <span
-    className={cn('text-sm', styles.cell)}
-    style={{ fontSize: 12 }}
+    className={cn(cn('text-sm', styles.cell), 'text-xs leading-5')}
+
     title={value ? dayjs(value).format('YYYY/MM/DD h:mm A') : undefined}
   >
     {value ? formatProjectDay(value) : '—'}
@@ -599,8 +395,8 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
       case 'summary': {
         return (
           <span
-            className={cn('text-sm truncate', styles.cell)}
-            style={{ fontSize: 12 }}
+            className={cn(cn('text-sm truncate', styles.cell), 'text-xs leading-5')}
+
             title={project.summary ?? undefined}
           >
             {project.summary || '—'}
@@ -616,8 +412,10 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
       case 'issues': {
         return (
           <span
-            className={cn('text-sm', styles.cell)}
-            style={{ fontSize: 12, fontWeight: 450, color: cssVar.colorText }}
+            className={cn(
+              cn('text-sm', styles.cell),
+              'text-xs leading-5 font-normal text-foreground',
+            )}
           >
             {typeof project.taskCount === 'number' ? project.taskCount : '—'}
           </span>
@@ -639,15 +437,10 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
             ? Math.min(100, Math.max(0, project.progressPercent))
             : null;
         return (
-          <div
-            className={cn('flex flex-row', styles.cell)}
-            style={{ alignItems: 'center', gap: 6 }}
-          >
+          <div className={cn(cn('flex flex-row', styles.cell), 'items-center gap-1.5')}>
             <span className={styles.screenReaderOnly}>{t(`status.${status}`)}</span>
             <ProjectStatusIcon percent={percent ?? 0} size={16} status={status} />
-            <span className="text-sm" style={{ fontSize: 12 }}>
-              {percent == null ? '—' : `${percent}%`}
-            </span>
+            <span className="text-xs leading-5">{percent == null ? '—' : `${percent}%`}</span>
           </div>
         );
       }
@@ -657,35 +450,30 @@ export const ProjectRow = memo<ProjectRowProps>(({ columns, members, project, pr
   const row = (
     <div
       className={cn('flex flex-row', `${styles.row} ${styles.columns}`)}
-      style={{ alignItems: 'center', gap: 0, ...projectListGridTemplate(columns) }}
+      style={projectListGridTemplate(columns)}
     >
       <WorkspaceLink
         aria-label={project.name}
         className={styles.link}
         to={`/project/${project.slug ?? project.id}`}
       />
-      <div
-        className={cn('flex flex-row', styles.nameCell)}
-        style={{ alignItems: 'center', gap: 10 }}
-      >
+      <div className={cn(cn('flex flex-row', styles.nameCell), 'items-center gap-2.5')}>
         {project.avatar && project.avatar !== '📦' ? (
           <Avatar avatar={project.avatar} name={project.name} shape={'square'} size={18} />
         ) : (
-          <ProjectIcon color={cssVar.colorTextTertiary} size={16} />
+          <ProjectIcon color="var(--foreground-tertiary)" size={16} />
         )}
         {properties.id ? (
-          <span className={cn('text-sm', styles.identifier)} style={{ fontSize: 11 }}>
+          <span className={cn(cn('text-sm', styles.identifier), 'text-xs leading-5')}>
             {project.identifier}
           </span>
         ) : null}
-        <span className="text-sm truncate" style={{ fontSize: 13, fontWeight: 500 }}>
-          {project.name}
-        </span>
+        <span className="truncate text-sm leading-5.5 font-medium">{project.name}</span>
         {properties.milestones ? <ProjectMilestoneChip projectId={project.id} /> : null}
       </div>
       {columns.map((column) => (
         <span
-          className={cx(styles.owner, column.key === 'issues' && styles.numeric)}
+          className={cn(styles.owner, column.key === 'issues' && styles.numeric)}
           key={column.key}
         >
           {cellFor(column)}
@@ -742,16 +530,12 @@ export const SortableHeader = memo<{
   sortBy?: ProjectListSortableOrdering;
 }>(({ label, onSort, orderBy, orderDirection, sortBy }) => {
   if (!sortBy) {
-    return (
-      <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
-        {label}
-      </span>
-    );
+    return <span className="text-muted-foreground text-xs leading-5">{label}</span>;
   }
   const active = orderBy === sortBy;
   return (
     <button
-      className={cx(styles.sortHeader, active && styles.sortHeaderActive)}
+      className={cn(styles.sortHeader, active && styles.sortHeaderActive)}
       type="button"
       onClick={() => onSort(sortBy)}
     >
@@ -783,12 +567,9 @@ export const ProjectListTableHeader = memo<{
   return (
     <div
       className={cn('flex flex-row', `${styles.headerRow} ${styles.columns}`)}
-      style={{ alignItems: 'center', gap: 0, ...projectListGridTemplate(columns) }}
+      style={projectListGridTemplate(columns)}
     >
-      <div
-        className={cn('flex flex-row', styles.nameCell)}
-        style={{ alignItems: 'center', gap: 10 }}
-      >
+      <div className={cn(cn('flex flex-row', styles.nameCell), 'items-center gap-2.5')}>
         <SortableHeader
           label={t('list.columnName', { defaultValue: 'Name' })}
           orderBy={orderBy}
@@ -799,7 +580,7 @@ export const ProjectListTableHeader = memo<{
       </div>
       {columns.map((column) => (
         <span
-          className={cx(styles.owner, column.key === 'issues' && styles.numeric)}
+          className={cn(styles.owner, column.key === 'issues' && styles.numeric)}
           key={column.key}
         >
           <SortableHeader
@@ -834,9 +615,7 @@ export const ProjectListGroupHeader = memo<{
     return (
       <>
         <ProjectStatusIcon size={16} status={status} />
-        <span className="text-sm" style={{ fontSize: 12, fontWeight: 500 }}>
-          {t(`status.${status}`)}
-        </span>
+        <span className="text-xs leading-5 font-medium">{t(`status.${status}`)}</span>
       </>
     );
   }
@@ -845,7 +624,7 @@ export const ProjectListGroupHeader = memo<{
     return (
       <>
         <NoLeadIcon />
-        <span className="text-sm text-muted-foreground" style={{ fontSize: 12, fontWeight: 500 }}>
+        <span className="text-muted-foreground text-xs leading-5 font-medium">
           {t('properties.noLead')}
         </span>
       </>
@@ -855,9 +634,7 @@ export const ProjectListGroupHeader = memo<{
   return (
     <>
       <Avatar avatar={leadAvatar(userId)} name={name} shape="circle" size={16} />
-      <span className="text-sm" style={{ fontSize: 12, fontWeight: 500 }}>
-        {name}
-      </span>
+      <span className="text-xs leading-5 font-medium">{name}</span>
     </>
   );
 });
@@ -974,11 +751,7 @@ const ProjectListPage = memo(() => {
   return (
     <WorkSurface>
       <NavHeader
-        left={
-          <span className="text-sm" style={{ fontWeight: 500 }}>
-            {t('list.title')}
-          </span>
-        }
+        left={<span className="text-sm font-medium">{t('list.title')}</span>}
         right={
           <Button size="lg" variant="ghost" onClick={() => openCreateProjectModal()}>
             {createElement(PlusIcon, { 'size': 16, 'aria-hidden': true })}
@@ -1042,10 +815,7 @@ const ProjectListPage = memo(() => {
             ))}
           </div>
         ) : visibleProjects.length === 0 ? (
-          <div
-            className="flex flex-col items-center justify-center"
-            style={{ flex: 1, padding: 48 }}
-          >
+          <div className="flex flex-col items-center justify-center flex-1 p-12">
             <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
               {createElement(filters.length > 0 ? SearchXIcon : PROJECT_ENTITY_ICON, {
                 'size': 40,
@@ -1072,7 +842,7 @@ const ProjectListPage = memo(() => {
             options={options}
           />
         ) : (
-          <div className="flex flex-col" style={{ gap: 0, minWidth: 'max-content' }}>
+          <div className="flex flex-col gap-0 min-w-max">
             <ProjectListTableHeader
               columns={columns}
               orderBy={options.orderBy}
@@ -1080,11 +850,11 @@ const ProjectListPage = memo(() => {
               onSort={handleHeaderSort}
             />
             {groups.map((group) => (
-              <div className="flex flex-col" key={group.key} style={{ gap: 0 }}>
+              <div className="flex flex-col gap-0" key={group.key}>
                 {group.key !== 'all' ? (
                   <div className={styles.groupHeader}>
                     {groupHeader(group.key)}
-                    <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                    <span className="text-muted-foreground text-xs leading-5">
                       {group.items.length}
                     </span>
                   </div>

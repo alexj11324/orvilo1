@@ -1,7 +1,6 @@
 'use client';
 import { ReactLinkPlugin, ReactListPlugin } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
-import { createStaticStyles } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,35 +8,14 @@ import { useTranslation } from 'react-i18next';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { projectService } from '@/services/project';
 
-const styles = createStaticStyles(({ css }) => ({
-  editor: css`
-    [contenteditable] {
-      min-height: 32px;
-      font-size: 15px !important;
-      font-weight: 450;
-      line-height: 24px;
-    }
-  `,
-  header: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    align-self: flex-start;
-
-    padding: 0;
-    border: 0;
-
-    color: inherit;
-
-    background: transparent;
-  `,
-}));
+const styles = {
+  editor:
+    'min-h-9 [&_[contenteditable]]:text-sm [&_[contenteditable]]:leading-5.5 [&_[contenteditable]]:font-normal [&_[contenteditable]]:[--lobe-markdown-font-size:var(--text-sm)] [&_[contenteditable]]:[--lobe-markdown-line-height:calc(22/14)] py-1 px-0',
+  header:
+    'flex min-h-8 min-w-8 cursor-pointer items-center self-start gap-1 rounded-(--radius-button) border-0 bg-transparent p-0 text-inherit select-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2',
+};
 
 interface ProjectDescriptionProps {
   canEdit?: boolean;
@@ -107,7 +85,7 @@ const ProjectDescription = ({
   };
 
   return (
-    <div className="flex flex-col" style={{ gap: 4 }}>
+    <div className="flex flex-col gap-1">
       <button
         aria-controls={bodyId}
         aria-expanded={open}
@@ -116,14 +94,7 @@ const ProjectDescription = ({
         onClick={() => setOpen((value) => !value)}
       >
         {createElement(open ? ChevronDownIcon : ChevronRightIcon, { size: 14 })}
-        <span
-          className="text-sm"
-          style={{
-            color: SECTION_LABEL_PROPS.color,
-            fontSize: SECTION_LABEL_PROPS.fontSize,
-            fontWeight: SECTION_LABEL_PROPS.weight,
-          }}
-        >
+        <span className="text-muted-foreground text-xs leading-5 font-medium">
           {t('overview.descriptionLabel')}
         </span>
       </button>
@@ -134,10 +105,13 @@ const ProjectDescription = ({
           debounceWait={0}
           editable={canEdit && !saving}
           editor={editor}
-          placeholder={t('overview.descriptionEmpty')}
           plugins={plugins}
-          style={{ padding: '4px 0' }}
           type={description ? 'markdown' : 'text'}
+          placeholder={
+            <span className="block px-0 py-1 text-sm leading-5.5">
+              {t('overview.descriptionEmpty')}
+            </span>
+          }
           onChange={(current) => {
             if (baseline.current !== undefined && !pending.current)
               setDirty(String(current.getDocument('markdown') ?? '') !== baseline.current);
@@ -147,12 +121,12 @@ const ProjectDescription = ({
           }}
         />
         {dirty && (
-          <div className="flex flex-col" style={{ gap: 8 }}>
-            <div className="flex flex-row" style={{ gap: 8 }}>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-row gap-2">
               <Button
                 aria-busy={saving}
                 disabled={saving || !canEdit}
-                size="sm"
+                size="lg"
                 variant="default"
                 onClick={() => void save()}
               >
@@ -161,7 +135,7 @@ const ProjectDescription = ({
               </Button>
               <Button
                 disabled={saving}
-                size="sm"
+                size="lg"
                 variant="outline"
                 onClick={() => {
                   if (pending.current) return;

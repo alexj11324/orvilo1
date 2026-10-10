@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowRightIcon, Link2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -18,7 +17,6 @@ import { getProjectActivityPath } from '@/features/Projects/Layout/navigation';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { ProjectLinks } from '@/features/Projects/Resources/ProjectLinks';
-import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -38,56 +36,15 @@ import { ProjectMembersField } from './ProjectMembersField';
 import { ProjectOverviewField } from './ProjectOverviewField';
 import { getProjectOverviewUpdateState } from './projectOverviewUpdates';
 import { ProjectDateField, ProjectLeadField, ProjectPriorityField } from './ProjectPlanningFields';
-import { PROPERTY_CONTROL_CLASS, PROPERTY_LINK_CLASS } from './propertyControl';
+import { PROPERTY_CONTROL_CLASS } from './propertyControl';
 
-const styles = createStaticStyles(({ css }) => ({
-  content: css`
-    scrollbar-width: thin;
-
-    /* Linear parity, read off the reference's own scroll container: a fixed
-       48px inline padding plus a thin scrollbar gutter reserved on BOTH edges
-       (scrollbar-gutter: stable both-edges; 11px each side here). Those two
-       gutters are the "constant 11px inset" measured at 1440 and 1600 — the
-       column is fluid, never centred and never capped.
-
-       An earlier version imitated the gutters with an 11px margin on the
-       page. That only held while the overview fit the viewport: once it
-       scrolled, the real scrollbar took a further 11px and the column shrank
-       from 669 to 658. Reserving the gutter keeps it at 669 either way. */
-    scrollbar-gutter: stable both-edges;
-
-    overflow: auto;
-
-    width: 100%;
-    padding-inline: 48px;
-
-    @media (width <= 720px) {
-      scrollbar-gutter: auto;
-      padding-inline: 0;
-    }
-  `,
-  page: css`
-    box-sizing: border-box;
-
-    /* Leave the same gap below the tabs as Linear's overview body. */
-    padding-block: 72px 32px;
-
-    @media (width <= 720px) {
-      margin-inline: 20px;
-      padding-block: 20px 48px;
-    }
-  `,
-  shell: css`
-    overflow: hidden;
-    height: 100%;
-    background: ${cssVar.colorBgContainer};
-  `,
-  properties: css`
-    flex: 1;
-    gap: 2px 4px;
-    min-width: 0;
-  `,
-}));
+const styles = {
+  content:
+    '[scrollbar-width:thin] [scrollbar-gutter:stable_both-edges] overflow-auto w-full px-12 [@media(width<=720px)]:[scrollbar-gutter:auto] [@media(width<=720px)]:px-0',
+  page: 'box-border pt-18 pb-8 [@media(width<=720px)]:mx-5 [@media(width<=720px)]:pt-5 [@media(width<=720px)]:pb-12',
+  shell: 'h-full overflow-hidden bg-card',
+  properties: 'min-w-0 flex-1 gap-x-1 gap-y-0.5',
+};
 
 const editableStatuses = [
   'backlog',
@@ -117,7 +74,7 @@ const ProjectWorkspace = memo(() => {
   if (error) return <AsyncError error={error} variant={'page'} onRetry={() => mutate()} />;
   if (isLoading || !detail)
     return (
-      <div className="flex flex-col items-center justify-center" style={{ height: '100%' }}>
+      <div className="flex flex-col items-center justify-center h-full">
         <NeuralNetworkLoading />
       </div>
     );
@@ -157,11 +114,11 @@ const ProjectWorkspace = memo(() => {
   }));
 
   return (
-    <div className={cn('flex flex-col', styles.shell)} style={{ flex: 1 }}>
+    <div className={cn(cn('flex flex-col', styles.shell), 'flex-1')}>
       <div className={styles.content}>
-        <div className={cn('flex flex-col', styles.page)} style={{ gap: 0 }}>
-          <div className="flex flex-col" style={{ gap: 20 }}>
-            <div className="flex flex-col" style={{ gap: 10 }}>
+        <div className={cn(cn('flex flex-col', styles.page), 'gap-0')}>
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2.5">
               <Avatar
                 avatar={project.avatar || undefined}
                 name={project.name}
@@ -169,7 +126,7 @@ const ProjectWorkspace = memo(() => {
                 size={44}
                 title={project.name}
               />
-              <div className="flex flex-col" style={{ gap: 2 }}>
+              <div className="flex flex-col gap-0.5">
                 <ProjectOverviewField
                   canEdit={detail.capabilities?.canEdit}
                   key={`${project.id}:name`}
@@ -186,29 +143,18 @@ const ProjectWorkspace = memo(() => {
                 />
               </div>
             </div>
-            <div className="flex flex-row" style={{ alignItems: 'center', gap: 16 }}>
-              {/* Label column: the reference sizes one shared grid column by
-                  the widest label — "Resources" at 65.4766px (≈65.5). */}
-              <span
-                className="text-sm"
-                style={{
-                  color: SECTION_LABEL_PROPS.color,
-                  fontSize: SECTION_LABEL_PROPS.fontSize,
-                  fontWeight: SECTION_LABEL_PROPS.weight,
-                  minWidth: 65.5,
-                }}
-              >
+            <div className="flex flex-row items-center gap-4">
+              {/* Shared metadata label column follows the 72px spacing rhythm. */}
+              <span className="text-muted-foreground text-xs leading-5 font-medium min-w-18">
                 {t('overview.propertiesLabel', { defaultValue: 'Properties' })}
               </span>
-              <div
-                className={cn('flex flex-row', styles.properties)}
-                style={{ alignItems: 'center', flexWrap: 'wrap' }}
-              >
+              <div className={cn(cn('flex flex-row', styles.properties), 'items-center flex-wrap')}>
                 <DropdownMenu items={statusItems}>
                   <Button
                     aria-label={t('properties.status')}
                     className={PROPERTY_CONTROL_CLASS}
                     disabled={updatingStatus || lifecycleLocked || !detail.capabilities?.canEdit}
+                    size="sm"
                     variant="ghost"
                   >
                     <ProjectStatusIcon
@@ -226,17 +172,19 @@ const ProjectWorkspace = memo(() => {
                 <ProjectDateField kind="targetDate" project={project} />
                 {teams.map((team) => (
                   <WorkspaceLink
-                    className={PROPERTY_LINK_CLASS}
+                    className="group/project-team inline-flex min-w-0 rounded-(--radius-input) focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
                     key={team.id}
                     to={`/teams/${team.id}`}
                   >
-                    <TeamIdentity
-                      color={team.color}
-                      id={team.id}
-                      letter={(team.key || team.name).slice(0, 1)}
-                      size={14}
-                    />
-                    {team.name}
+                    <span className="inline-flex h-7 max-w-full shrink-0 items-center gap-2 rounded-(--radius-input) px-1.5 py-0 text-sm leading-5.5 font-medium text-foreground group-hover/project-team:bg-accent group-focus-visible/project-team:bg-accent">
+                      <TeamIdentity
+                        color={team.color}
+                        id={team.id}
+                        letter={(team.key || team.name).slice(0, 1)}
+                        size={14}
+                      />
+                      {team.name}
+                    </span>
                   </WorkspaceLink>
                 ))}
                 {membersEnabled && (
@@ -250,24 +198,19 @@ const ProjectWorkspace = memo(() => {
                 )}
               </div>
             </div>
-            <div className="flex flex-row" style={{ alignItems: 'center', gap: 16 }}>
-              <span
-                className="text-sm"
-                style={{
-                  color: SECTION_LABEL_PROPS.color,
-                  fontSize: SECTION_LABEL_PROPS.fontSize,
-                  fontWeight: SECTION_LABEL_PROPS.weight,
-                  minWidth: 65.5,
-                }}
-              >
+            <div className="flex flex-row items-center gap-4">
+              <span className="text-muted-foreground text-xs leading-5 font-medium min-w-18">
                 {t('overview.resourcesLabel', { defaultValue: 'Resources' })}
               </span>
-              <div
-                className="flex flex-row"
-                style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
-              >
+              <div className="flex flex-row items-center gap-2 flex-wrap">
                 {knowledgeBases.map((link) => (
-                  <Badge key={link.knowledgeBase.id} radius="full" size="sm" variant="secondary">
+                  <Badge
+                    className="h-auto leading-5"
+                    key={link.knowledgeBase.id}
+                    radius="full"
+                    size="default"
+                    variant="secondary"
+                  >
                     <Link2Icon size={12} />
                     {link.knowledgeBase.name}
                   </Badge>
@@ -275,7 +218,7 @@ const ProjectWorkspace = memo(() => {
                 <ProjectLinks ownerId={project.userId} projectId={project.id} />
               </div>
             </div>
-            <div className="flex flex-col" style={{ gap: 8 }}>
+            <div className="flex flex-col gap-2">
               <ProjectUpdateComposer
                 emptyState={updatesEmpty}
                 key={project.id}

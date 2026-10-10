@@ -1,21 +1,15 @@
 import { ReactLinkPlugin, ReactListPlugin } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
-import { createStaticStyles } from 'antd-style';
 import { useEffect } from 'react';
 
 import { useWhileMounted } from './useWhileMounted';
 
 const plugins = [ReactLinkPlugin, ReactListPlugin];
 
-const styles = createStaticStyles(({ css }) => ({
-  editor: css`
-    [contenteditable] {
-      min-height: 32px;
-      font-size: 14px !important;
-      line-height: 22px;
-    }
-  `,
-}));
+const styles = {
+  editor:
+    'min-h-9 [&_[contenteditable]]:text-sm [&_[contenteditable]]:leading-5.5 [&_[contenteditable]]:font-normal [&_[contenteditable]]:[--lobe-markdown-font-size:var(--text-sm)] [&_[contenteditable]]:[--lobe-markdown-line-height:calc(22/14)] max-h-60 overflow-y-auto px-3 pt-2.5 pb-1',
+};
 
 interface ProjectUpdateEditorProps {
   disabled: boolean;
@@ -56,11 +50,11 @@ export function ProjectUpdateEditor({
       debounceWait={0}
       editable={!disabled}
       editor={editor}
-      placeholder={placeholder}
       plugins={plugins}
-      style={{ minHeight: 32, maxHeight: 240, overflowY: 'auto', padding: '10px 12px 4px' }}
-      theme={{ fontSize: 14, lineHeight: 1.6 }}
       type={initialContent ? 'markdown' : 'text'}
+      placeholder={
+        <span className="block px-3 pt-2.5 pb-1 text-sm leading-5.5">{placeholder}</span>
+      }
       onChange={(current) => emitChange(String(current.getDocument('markdown') ?? ''))}
       onPressEnter={({ event }) => {
         if (!event.isComposing && (event.metaKey || event.ctrlKey)) {

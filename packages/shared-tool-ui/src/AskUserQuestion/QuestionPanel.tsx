@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -9,36 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { OptionCard } from '../components';
 import type { AskUserQuestionItem } from './types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  // Per-question "write your own" input — sits as the last row in the option
-  // stack, carrying the next sequential number so it reads as one more choice
-  // rather than a separate control.
-  customRow: css`
-    margin-block-start: 2px;
-
-    /* Align the chip under the option number chips (OptionCard padding-inline). */
-    padding-inline: 12px;
-  `,
-  // Mirrors OptionCard's `optionIndex` chip so the free-text row's number reads
-  // identically to the numbered options above it.
-  index: css`
-    flex-shrink: 0;
-
-    box-sizing: border-box;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 22px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  // Keep the free-text row aligned with OptionCard's numbered options.
+  customRow: '[margin-block-start:2px] [padding-inline:12px]',
+  index:
+    'shrink-0 box-border size-[22px] rounded-(--radius-input) font-mono text-xs font-semibold leading-[22px] text-muted-foreground text-center bg-accent',
+};
 
 interface QuestionPanelProps {
   /** The picked option id(s), falling back to labels for legacy options. */

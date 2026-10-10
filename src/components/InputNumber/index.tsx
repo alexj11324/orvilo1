@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, memo, type ReactNode } from 'react';
+import { type ComponentProps, type CSSProperties, memo, type ReactNode } from 'react';
 
 import { NumberField, NumberFieldGroup, NumberFieldInput } from '@/components/reui/number-field';
 
@@ -20,6 +20,7 @@ export interface InputNumberProps {
   'onChange'?: (value: number | null) => void;
   'placeholder'?: string;
   'prefix'?: ReactNode;
+  'size'?: ComponentProps<typeof NumberField>['size'];
   'step'?: number;
   'style'?: CSSProperties;
   'value'?: number | null;
@@ -35,6 +36,7 @@ const InputNumber = memo<InputNumberProps>(
     onChange,
     placeholder,
     prefix,
+    size,
     step,
     style,
     value,
@@ -45,6 +47,7 @@ const InputNumber = memo<InputNumberProps>(
       disabled={disabled}
       max={max}
       min={min}
+      size={size}
       step={step}
       style={style}
       value={value}

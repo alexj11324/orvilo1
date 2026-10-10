@@ -389,6 +389,7 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
           className={styles.address}
           placeholder={t('workingPanel.browser.addressPlaceholder')}
           value={address}
+          visualSize="compact"
           onBlur={() => setIsEditing(false)}
           onFocus={() => setIsEditing(true)}
           onChange={(event) => {

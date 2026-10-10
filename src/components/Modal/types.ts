@@ -1,4 +1,6 @@
-import { type CSSProperties, type MouseEvent, type ReactNode } from 'react';
+import { type ComponentProps, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
+
+import type { Button } from '@/components/ui/button';
 
 interface ModalSemanticClassNames {
   backdrop?: string;
@@ -54,6 +56,7 @@ interface ModalButtonProps {
   disabled?: boolean;
   loading?: boolean;
   onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
+  size?: ComponentProps<typeof Button>['size'];
   style?: CSSProperties;
   type?: string;
 }

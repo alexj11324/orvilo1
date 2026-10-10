@@ -84,6 +84,7 @@ export const TaskIssueResourcePicker = ({
             aria-label={t('taskDetail.resources.searchPullRequests')}
             placeholder={t('taskDetail.resources.searchPullRequests')}
             value={query}
+            visualSize="compact"
             onChange={(event) => setQuery(event.target.value)}
           />
           {error ? (

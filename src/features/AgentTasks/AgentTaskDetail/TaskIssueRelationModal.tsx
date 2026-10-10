@@ -77,6 +77,7 @@ const TaskIssueRelationPicker = ({
         disabled={pending}
         placeholder={t('taskDetail.menu.searchIssues')}
         value={query}
+        visualSize="compact"
         onChange={(event) => setQuery(event.target.value)}
       />
       {error ? (

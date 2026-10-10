@@ -113,7 +113,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
         trigger="onValueChange"
       >
         <Select disabled={disabled} items={connectionOptions}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" size="normal">
             <SelectValue placeholder={t('creds.form.selectConnectionPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
@@ -134,7 +134,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
           { pattern: /^[\w-]+$/, message: t('creds.form.keyPattern') },
         ]}
       >
-        <Input disabled={disabled} placeholder="e.g., github-oauth" />
+        <Input disabled={disabled} placeholder="e.g., github-oauth" visualSize="normal" />
       </Form.Item>
 
       <Form.Item
@@ -142,7 +142,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
         name="name"
         rules={[{ required: true, message: t('creds.form.nameRequired') }]}
       >
-        <Input disabled={disabled} placeholder="e.g., GitHub Connection" />
+        <Input disabled={disabled} placeholder="e.g., GitHub Connection" visualSize="normal" />
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">

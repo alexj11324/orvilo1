@@ -220,7 +220,11 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                         if (next === 'board' || next === 'list') onLayoutChange(next);
                       }}
                     >
-                      <SelectTrigger aria-label={t('myWork.displayLayout')} className="w-full">
+                      <SelectTrigger
+                        aria-label={t('myWork.displayLayout')}
+                        className="w-full"
+                        size="compact"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -260,7 +264,11 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                         }
                       }}
                     >
-                      <SelectTrigger aria-label={t('savedViews.grouping')} className="w-full">
+                      <SelectTrigger
+                        aria-label={t('savedViews.grouping')}
+                        className="w-full"
+                        size="compact"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -287,7 +295,11 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                         }
                       }}
                     >
-                      <SelectTrigger aria-label={t('savedViews.grouping')} className="w-full">
+                      <SelectTrigger
+                        aria-label={t('savedViews.grouping')}
+                        className="w-full"
+                        size="compact"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -323,7 +335,11 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                         }
                       }}
                     >
-                      <SelectTrigger aria-label={t('myWork.subGrouping')} className="w-full">
+                      <SelectTrigger
+                        aria-label={t('myWork.subGrouping')}
+                        className="w-full"
+                        size="compact"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -359,7 +375,11 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                         }
                       }}
                     >
-                      <SelectTrigger aria-label={t('myWork.subGrouping')} className="w-full">
+                      <SelectTrigger
+                        aria-label={t('myWork.subGrouping')}
+                        className="w-full"
+                        size="compact"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -391,7 +411,11 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                         }
                       }}
                     >
-                      <SelectTrigger aria-label={t('savedViews.ordering')} className="w-full">
+                      <SelectTrigger
+                        aria-label={t('savedViews.ordering')}
+                        className="w-full"
+                        size="compact"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -422,7 +446,11 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                       }
                     }}
                   >
-                    <SelectTrigger aria-label={t('myWork.completedIssues')} className="w-full">
+                    <SelectTrigger
+                      aria-label={t('myWork.completedIssues')}
+                      className="w-full"
+                      size="compact"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

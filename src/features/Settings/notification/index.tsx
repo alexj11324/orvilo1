@@ -168,7 +168,7 @@ export const DesktopNotificationSettings = () => {
                             })(value);
                         }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger size="normal">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

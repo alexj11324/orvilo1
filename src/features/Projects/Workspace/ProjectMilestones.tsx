@@ -273,6 +273,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           aria-label={t('create.milestone.name')}
           placeholder={t('create.milestone.name')}
           value={name}
+          visualSize="normal"
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') submit();
@@ -301,13 +302,13 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           onChange={(event) => setDescription(event.target.value)}
         />
         <div className="flex flex-row" style={{ justifyContent: 'end', gap: 8 }}>
-          <Button size="sm" variant="outline" onClick={onCancel}>
+          <Button size="lg" variant="outline" onClick={onCancel}>
             {t('common:cancel')}
           </Button>
           <Button
             aria-busy={saving}
             disabled={!name.trim() || saving}
-            size="sm"
+            size="lg"
             variant="default"
             onClick={submit}
           >
@@ -797,7 +798,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
           />
         ) : (
           <Button
-            size="sm"
+            size="lg"
             variant="ghost"
             onClick={() => {
               setEditingId(null);

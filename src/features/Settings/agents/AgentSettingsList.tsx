@@ -194,6 +194,7 @@ export const AgentSettingsList = ({
           className="ml-auto w-full sm:w-60"
           placeholder={t('settingAgent.list.search')}
           value={query}
+          visualSize="compact"
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>

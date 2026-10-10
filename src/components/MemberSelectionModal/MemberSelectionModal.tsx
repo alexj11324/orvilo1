@@ -342,6 +342,7 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
                 className={'pl-8'}
                 placeholder={t('memberSelection.searchAgents')}
                 value={searchTerm}
+                visualSize="compact"
                 onChange={handleSearchChange}
               />
             </div>

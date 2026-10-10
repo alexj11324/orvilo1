@@ -444,7 +444,7 @@ const TeamViewsSurface = ({
                   setSort(value);
               }}
             >
-              <SelectTrigger aria-label={t('savedViews.sortDefault')}>
+              <SelectTrigger aria-label={t('savedViews.sortDefault')} size="compact">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

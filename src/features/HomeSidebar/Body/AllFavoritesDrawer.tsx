@@ -47,6 +47,7 @@ const AllFavoritesDrawer = memo<AllFavoritesDrawerProps>(
               placeholder={t('navPanel.searchFavorites')}
               type="search"
               value={searchKeyword}
+              visualSize="compact"
               onChange={(event) => setSearchKeyword(event.target.value)}
             />
           </div>

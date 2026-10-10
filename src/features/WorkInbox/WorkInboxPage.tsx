@@ -1198,6 +1198,7 @@ const WorkInboxPage = memo(() => {
                   aria-label={t('inbox.inputPlaceholder')}
                   placeholder={t('inbox.inputPlaceholder')}
                   value={inputDraft}
+                  visualSize="normal"
                   onChange={(event) => setInputDraft(event.target.value)}
                 />
               ) : null}
@@ -1331,6 +1332,7 @@ const WorkInboxPage = memo(() => {
               aria-label={t('inbox.inputPlaceholder')}
               placeholder={t('inbox.inputPlaceholder')}
               value={inputDraft}
+              visualSize="normal"
               onChange={(event) => setInputDraft(event.target.value)}
             />
           ) : null}

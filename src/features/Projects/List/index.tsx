@@ -455,6 +455,7 @@ const ProjectLeadCell = memo<{ members: MembersQuery; project: ProjectListItem }
                 aria-label={t('list.lead.search')}
                 placeholder={t('list.lead.search')}
                 value={keyword}
+                visualSize="compact"
                 onChange={(event) => setKeyword(event.target.value)}
               />
               <button

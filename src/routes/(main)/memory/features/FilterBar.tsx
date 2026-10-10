@@ -31,6 +31,7 @@ const FilterBar = memo<FilterBarProps>(
             className="pl-7"
             defaultValue={searchValue}
             placeholder={t('filter.search')}
+            visualSize="compact"
             onChange={(e) => {
               const v = e.target.value;
               if (!v) {
@@ -48,7 +49,7 @@ const FilterBar = memo<FilterBarProps>(
             value={sortValue}
             onValueChange={(value) => value && onSortChange(value)}
           >
-            <SelectTrigger style={{ minWidth: 150 }}>
+            <SelectTrigger size="compact" style={{ minWidth: 150 }}>
               <ArrowDownNarrowWide style={{ marginRight: 4 }} />
               <SelectValue />
             </SelectTrigger>

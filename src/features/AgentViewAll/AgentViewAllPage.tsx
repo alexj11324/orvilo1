@@ -421,6 +421,7 @@ const AgentViewAllPage = memo(() => {
                 className="pl-7"
                 placeholder={t('navPanel.searchAgent')}
                 value={keyword}
+                visualSize="compact"
                 onChange={(e) => setKeyword(e.target.value)}
               />
             </div>
@@ -436,6 +437,7 @@ const AgentViewAllPage = memo(() => {
                   className="pl-7"
                   placeholder={t('navPanel.searchAgent')}
                   value={keyword}
+                  visualSize="compact"
                   onChange={(e) => setKeyword(e.target.value)}
                 />
               </div>

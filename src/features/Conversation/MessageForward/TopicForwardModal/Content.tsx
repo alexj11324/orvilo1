@@ -77,6 +77,7 @@ export const TopicForwardContent = ({
             className="px-8"
             placeholder={t('messageForward.modal.searchPlaceholder')}
             value={keyword}
+            visualSize="compact"
             onChange={(event) => setKeyword(event.target.value)}
           />
           {keyword && (

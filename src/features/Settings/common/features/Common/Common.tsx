@@ -107,7 +107,11 @@ const Common = memo(() => {
                   if (value !== null) handleLangChange(value as LocaleMode);
                 }}
               >
-                <SelectTrigger aria-label={t('settingCommon.lang.title')} className="w-full">
+                <SelectTrigger
+                  aria-label={t('settingCommon.lang.title')}
+                  className="w-full"
+                  size="normal"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -225,6 +229,7 @@ const Common = memo(() => {
                 <SelectTrigger
                   aria-label={t('settingCommon.responseLanguage.title')}
                   className="w-full"
+                  size="normal"
                 >
                   <SelectValue placeholder={t('settingCommon.responseLanguage.placeholder')} />
                 </SelectTrigger>

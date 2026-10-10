@@ -237,7 +237,7 @@ const AcceptanceCheckInventory = ({
             ]}
             onValueChange={(value) => setFilter(value as CheckFilter)}
           >
-            <SelectTrigger className={styles.filterSelect}>
+            <SelectTrigger className={styles.filterSelect} size="compact">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -263,7 +263,7 @@ const AcceptanceCheckInventory = ({
               value={roundFilter === null ? 'all' : String(roundFilter)}
               onValueChange={(value) => setRoundFilter(value === 'all' ? null : Number(value))}
             >
-              <SelectTrigger className={styles.filterSelect}>
+              <SelectTrigger className={styles.filterSelect} size="compact">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

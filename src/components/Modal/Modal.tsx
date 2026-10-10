@@ -28,11 +28,12 @@ interface OkBtnProps {
 }
 
 const OkBtn = ({ confirmLoading, okButtonProps, okText, onOk }: OkBtnProps) => {
-  const { danger, disabled, loading, onClick: userOnClick, style } = okButtonProps ?? {};
+  const { danger, disabled, loading, onClick: userOnClick, size, style } = okButtonProps ?? {};
   return (
     <Button
       disabled={disabled}
       loading={confirmLoading || loading}
+      size={size}
       style={style}
       variant={danger ? 'destructive' : 'default'}
       onClick={(e: MouseEvent<HTMLButtonElement>) => {
@@ -52,11 +53,12 @@ interface CancelBtnProps {
 }
 
 const CancelBtn = ({ cancelButtonProps, cancelText, onCancel }: CancelBtnProps) => {
-  const { disabled, loading, onClick: userOnClick, style } = cancelButtonProps ?? {};
+  const { disabled, loading, onClick: userOnClick, size, style } = cancelButtonProps ?? {};
   return (
     <Button
       disabled={disabled}
       loading={loading}
+      size={size}
       style={style}
       variant="outline"
       onClick={(e: MouseEvent<HTMLButtonElement>) => {

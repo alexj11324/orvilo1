@@ -54,14 +54,6 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     line-height: 1.6;
     color: ${cssVar.colorTextSecondary};
   `,
-  cardSelected: css`
-    border-color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorPrimaryBg};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimary};
-    }
-  `,
   cardTitle: css`
     overflow: hidden;
     flex: 1;
@@ -118,15 +110,6 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     &:focus-visible {
       outline: 2px solid ${cssVar.colorPrimary};
       outline-offset: 2px;
-    }
-  `,
-  categoryItemActive: css`
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
     }
   `,
   empty: css`

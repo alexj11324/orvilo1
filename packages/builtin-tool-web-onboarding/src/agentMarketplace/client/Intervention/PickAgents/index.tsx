@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import type { KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -179,11 +178,14 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
                 return (
                   <button
                     aria-selected={isActive}
-                    className={cx(styles.categoryItem, isActive && styles.categoryItemActive)}
                     disabled={disabled}
                     key={category}
                     role="tab"
                     type="button"
+                    className={cn(
+                      styles.categoryItem,
+                      isActive && 'font-medium text-foreground bg-selected',
+                    )}
                     onClick={() => setActiveCategory(category)}
                   >
                     {tTool(CATEGORY_LABEL_I18N_KEYS[category])}
@@ -204,7 +206,7 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
                       <div
                         aria-disabled={disabled}
                         aria-pressed={isSelected}
-                        className={cx(styles.card, isSelected && styles.cardSelected)}
+                        className={cn(styles.card, isSelected && 'border-primary bg-primary-wash')}
                         key={tpl.id}
                         role="button"
                         tabIndex={disabled ? -1 : 0}

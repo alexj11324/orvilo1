@@ -1,4 +1,3 @@
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +19,7 @@ export const MinimapPreview = memo<MinimapPreviewProps>(
     const styles = previewStyles;
 
     return (
-      <div className={cx(styles.list, 'flex flex-col gap-0.5')}>
+      <div className={cn(styles.list, 'flex flex-col gap-0.5')}>
         {indicators.map(({ id, preview, virtuosoIndex, width }, position) => {
           const isActive = activePosition === position;
           const label = preview || t('minimap.emptyPreview');
@@ -31,16 +30,17 @@ export const MinimapPreview = memo<MinimapPreviewProps>(
               aria-current={isActive ? 'true' : undefined}
               key={id}
               className={cn(
-                cx(
-                  cx(styles.item, isActive && styles.itemActive),
-                  'flex items-center gap-2.5 justify-end',
-                ),
+                styles.item,
+                'flex items-center gap-2.5 justify-end',
+                isActive && 'text-primary [&:hover]:text-foreground',
                 CLICKABLE_FOCUS_RING,
               )}
               onClick={() => onJump(virtuosoIndex)}
             >
-              <span className={cx(styles.label, isActive && styles.labelActive)}>{label}</span>
-              <div className={cx(styles.dash, isActive && styles.dashActive)} style={{ width }} />
+              <span className={cn(styles.label, isActive && 'font-medium text-primary')}>
+                {label}
+              </span>
+              <div className={cn(styles.dash, isActive && 'bg-primary')} style={{ width }} />
             </div>
           );
         })}

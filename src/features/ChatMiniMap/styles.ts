@@ -51,11 +51,6 @@ export const minimapStyles = createStaticStyles(({ css, cssVar }) => ({
       opacity ${cssVar.motionDurationMid} ease,
       transform ${cssVar.motionDurationMid} ease;
   `,
-  previewPanelVisible: css`
-    pointer-events: auto;
-    transform: translateY(-50%) scale(1);
-    opacity: 1;
-  `,
   rail: css`
     scrollbar-width: none;
 
@@ -77,10 +72,6 @@ export const minimapStyles = createStaticStyles(({ css, cssVar }) => ({
       display: none;
     }
   `,
-  railFaded: css`
-    pointer-events: none;
-    opacity: 0;
-  `,
 }));
 
 export const indicatorStyles = createStaticStyles(({ css, cssVar }) => ({
@@ -99,9 +90,6 @@ export const indicatorStyles = createStaticStyles(({ css, cssVar }) => ({
     border-radius: 2px;
     background: ${cssVar.colorFillSecondary};
   `,
-  indicatorContentActive: css`
-    background: ${cssVar.colorPrimary};
-  `,
 }));
 
 export const previewStyles = createStaticStyles(({ css, cssVar }) => ({
@@ -110,9 +98,6 @@ export const previewStyles = createStaticStyles(({ css, cssVar }) => ({
     height: 2px;
     border-radius: 2px;
     background: ${cssVar.colorFillSecondary};
-  `,
-  dashActive: css`
-    background: ${cssVar.colorPrimary};
   `,
   item: css`
     cursor: pointer;
@@ -130,9 +115,6 @@ export const previewStyles = createStaticStyles(({ css, cssVar }) => ({
       background: ${cssVar.colorFillTertiary};
     }
   `,
-  itemActive: css`
-    color: ${cssVar.colorPrimary};
-  `,
   label: css`
     overflow: hidden;
     display: -webkit-box;
@@ -144,10 +126,6 @@ export const previewStyles = createStaticStyles(({ css, cssVar }) => ({
     text-align: end;
     text-overflow: ellipsis;
     word-break: break-word;
-  `,
-  labelActive: css`
-    font-weight: 500;
-    color: ${cssVar.colorPrimary};
   `,
   list: css`
     scrollbar-width: thin;

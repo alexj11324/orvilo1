@@ -30,7 +30,7 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
   if (!hasConfig && !hasMeta) return null;
 
   return (
-    <div className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
+    <div className="rounded-[var(--radius-card)] bg-fill-quaternary p-3">
       {meta?.title && (
         <div className="[margin-block-end:8px] last:[margin-block-end:0]">
           <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">

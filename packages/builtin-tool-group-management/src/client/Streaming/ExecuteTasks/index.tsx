@@ -35,7 +35,7 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
     <div className="flex flex-col gap-3">
       {tasksWithAgents.map((task, index) => (
         <div
-          className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3"
+          className="rounded-[var(--radius-card)] bg-fill-quaternary p-3"
           key={task.agentId || index}
         >
           <div className="flex flex-col gap-2">

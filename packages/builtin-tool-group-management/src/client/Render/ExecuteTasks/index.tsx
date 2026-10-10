@@ -21,10 +21,10 @@ import type { ExecuteTasksParams } from '../../../types';
 
 const styles = {
   assignee: 'flex shrink-0 items-center gap-1.5 text-[12px] text-muted-foreground',
-  index: 'shrink-0 text-[12px] text-[var(--ant-color-text-quaternary)]',
+  index: 'shrink-0 text-[12px] text-foreground-quaternary',
   instruction: 'text-[13px] leading-[1.6] text-muted-foreground',
   resultBox: 'overflow-hidden',
-  resultLabel: 'px-1 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  resultLabel: 'px-1 text-[12px] text-foreground-tertiary',
   taskTitle: 'truncate text-[14px]',
 };
 

@@ -63,7 +63,7 @@ export const UpdatePromptInspector = memo<
       )}
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
-        <span className="ms-1 font-mono rounded bg-muted px-1 text-[12px] text-[var(--ant-color-text-description)]">
+        <span className="ms-1 font-mono rounded bg-muted px-1 text-[12px] text-foreground-description">
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})
         </span>

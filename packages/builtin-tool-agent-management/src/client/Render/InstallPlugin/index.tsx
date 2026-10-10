@@ -16,7 +16,7 @@ export const InstallPluginRender = memo<
   if (!pluginState) return null;
 
   return (
-    <div className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
+    <div className="rounded-[var(--radius-card)] bg-fill-quaternary p-3">
       <div className="flex flex-col gap-2">
         <div className="flex flex-row items-center gap-2">
           <span className="text-xs leading-[inherit] font-medium text-muted-foreground">

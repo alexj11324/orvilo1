@@ -28,7 +28,7 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
     if (pluginState?.success && pluginState.agentId) {
       return (
         <div
-          className="flex flex-row items-center gap-3 cursor-pointer rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] py-2.5 ps-3 pe-3 [transition:background_0.2s] hover:bg-accent"
+          className="flex flex-row items-center gap-3 cursor-pointer rounded-[var(--radius-card)] bg-fill-quaternary py-2.5 ps-3 pe-3 [transition:background_0.2s] hover:bg-accent"
           onClick={handleNavigateToAgent}
         >
           <Avatar
@@ -46,7 +46,7 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
               </span>
             )}
           </div>
-          <ArrowRight className="text-[var(--ant-color-text-tertiary)]" size={16} />
+          <ArrowRight className="text-foreground-tertiary" size={16} />
         </div>
       );
     }

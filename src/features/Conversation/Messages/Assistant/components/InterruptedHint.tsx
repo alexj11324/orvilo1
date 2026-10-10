@@ -1,20 +1,11 @@
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
 
 const InterruptedHint = memo(() => {
   const { t } = useTranslation('chat');
 
   return (
-    <div className={styles.container}>
+    <div className={'py-1 text-xs leading-5 text-muted-foreground'}>
       {t('messageAction.interrupted')} · {t('messageAction.interruptedHint')}
     </div>
   );

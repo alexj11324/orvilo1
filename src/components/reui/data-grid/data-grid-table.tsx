@@ -1716,14 +1716,14 @@ function DataGridTableBodyRowCell<TData extends object>({
             className={cn(
               'absolute z-10 cursor-crosshair in-data-[cell-editing]:hidden in-data-[cell-selecting]:hidden',
               props.tableLayout?.cellFillHandleVariant === 'ring'
-                ? 'border-primary bg-background -end-[5px] -bottom-[5px] size-[11px] rounded-full border-2 in-[td:has(+[data-slot=data-grid-table-fill-body-cell]+td[data-pinned])]:end-0 in-[td:has(+[data-slot=data-grid-table-fill-body-cell]:last-child)]:end-0 in-[td:has(+td[data-pinned])]:end-0 in-[td:last-child]:end-0 in-[tr:last-child]:bottom-0'
+                ? 'border-primary bg-background -end-1.25 -bottom-1.25 size-2.75 rounded-full border-2 in-[td:has(+[data-slot=data-grid-table-fill-body-cell]+td[data-pinned])]:end-0 in-[td:has(+[data-slot=data-grid-table-fill-body-cell]:last-child)]:end-0 in-[td:has(+td[data-pinned])]:end-0 in-[td:last-child]:end-0 in-[tr:last-child]:bottom-0'
                 : props.tableLayout?.cellFillHandleVariant === 'square'
                   ? /* Abutting the cell borders from inside: no gap and no
                        overlap, so the square cannot merge with a gridline
                        into a wider-than-tall blob, and it can never leave
                        the grid, which is why it needs no boundary clamps. */
-                    'bg-primary end-0 bottom-0 size-[5px]'
-                  : 'bg-primary border-background end-0 bottom-0 size-[9px] rounded-full border',
+                    'bg-primary end-0 bottom-0 size-1.25'
+                  : 'bg-primary border-background end-0 bottom-0 size-2.25 rounded-full border',
               props.tableClassNames?.cellFillHandle,
             )}
           />

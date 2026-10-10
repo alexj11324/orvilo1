@@ -86,7 +86,7 @@ const CollapsedStatusBadges = memo<{ counts: ProjectTopicStatusCounts }>(({ coun
   if (items.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-[3px]">
+    <div className="flex items-center gap-0.75">
       {items.map(({ className, count, icon, label, loading }) => (
         <Tooltip key={label}>
           <TooltipTrigger
@@ -168,8 +168,8 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
             className={accordionStyles.trigger}
             style={{ paddingBlock: 4, paddingInline: 8 }}
           >
-            <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
-              <div className="flex flex-col items-center justify-center flex-none h-[16px] w-[16px]">
+            <div className="flex items-center gap-1.5 h-6" style={{ overflow: 'hidden' }}>
+              <div className="flex flex-col items-center justify-center flex-none h-4 w-4">
                 <ProjectFolderIcon color={cssVar.colorTextTertiary} size={15} strokeWidth={1.5} />
               </div>
               <div
@@ -184,7 +184,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
         {action && <div className="flex shrink-0 items-center">{action}</div>}
       </div>
       <AccordionContent className="p-0">
-        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+        <div className="flex flex-col gap-px" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
               agentId={topic.agentId}

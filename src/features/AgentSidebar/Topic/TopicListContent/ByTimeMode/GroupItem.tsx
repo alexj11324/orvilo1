@@ -24,7 +24,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
         className={accordionStyles.trigger}
         style={{ paddingBlock: 4, paddingInline: 8 }}
       >
-        <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
+        <div className="flex items-center gap-1.5 h-6" style={{ overflow: 'hidden' }}>
           <div
             className="truncate text-[12px] text-muted-foreground font-medium"
             style={{ flex: 1 }}
@@ -34,7 +34,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
         </div>
       </AccordionTrigger>
       <AccordionContent className="p-0">
-        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+        <div className="flex flex-col gap-px" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
               agentId={topic.agentId}

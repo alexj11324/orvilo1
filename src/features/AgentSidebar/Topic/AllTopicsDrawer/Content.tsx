@@ -161,7 +161,7 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
   // Show loading when searching
   if (showSearchLoading) {
     return (
-      <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1, paddingInline: 4 }}>
+      <div className="flex flex-col gap-px" style={{ paddingBlock: 1, paddingInline: 4 }}>
         <SkeletonList rows={5} />
       </div>
     );
@@ -175,7 +175,7 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
       onScroll={handleScroll}
     >
       {activeTopicList?.map((topic) => (
-        <div className="flex flex-col gap-[1px]" key={topic.id} style={{ paddingInline: 4 }}>
+        <div className="flex flex-col gap-px" key={topic.id} style={{ paddingInline: 4 }}>
           <TopicItem
             fav={topic.favorite}
             id={topic.id}

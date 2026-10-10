@@ -40,7 +40,7 @@ const FlatMode = memo(() => {
   const listRef = useScrollActiveTopicIntoView(activeTopicId, renderedTopicIds);
 
   return (
-    <div className="flex flex-col gap-[1px]" ref={listRef}>
+    <div className="flex flex-col gap-px" ref={listRef}>
       {activeTopicList?.map((topic) => (
         <TopicItem
           agentId={topic.agentId}

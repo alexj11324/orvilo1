@@ -30,9 +30,9 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
         className={accordionStyles.trigger}
         style={{ paddingBlock: 4, paddingInline: 8 }}
       >
-        <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
+        <div className="flex items-center gap-1.5 h-6" style={{ overflow: 'hidden' }}>
           {statusIcon && (
-            <div className="flex flex-col items-center justify-center flex-none h-[16px] w-[16px]">
+            <div className="flex flex-col items-center justify-center flex-none h-4 w-4">
               <statusIcon.icon color={statusIcon.color} size={13} />
             </div>
           )}
@@ -45,7 +45,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
         </div>
       </AccordionTrigger>
       <AccordionContent className="p-0">
-        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+        <div className="flex flex-col gap-px" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
               showWorkingDirectory

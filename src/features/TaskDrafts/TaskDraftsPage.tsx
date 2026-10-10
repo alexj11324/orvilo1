@@ -311,7 +311,7 @@ const TaskDraftsPage = () => {
   const isEmpty = drafts.length === 0 && issueDrafts.length === 0;
 
   return (
-    <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0 }}>
+    <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0 }}>
       <NavHeader
         className={styles.header}
         left={<div className="font-medium">{t('drafts.title')}</div>}

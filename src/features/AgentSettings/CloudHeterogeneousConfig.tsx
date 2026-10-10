@@ -196,16 +196,18 @@ const TokenSection = memo<TokenSectionProps>(({ existingCred, onSaved, onEnvChan
             style={{ flex: 1 }}
             type="password"
             value={tokenInput}
+            visualSize="normal"
             onChange={(e) => setTokenInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave();
             }}
           />
-          <Button disabled={!canEdit} loading={saving} onClick={handleSave}>
+          <Button disabled={!canEdit} loading={saving} size="lg" onClick={handleSave}>
             {t('heterogeneousStatus.cloud.tokenSave')}
           </Button>
           {existingCred && (
             <Button
+              size="lg"
               onClick={() => {
                 setEditing(false);
                 setTokenInput('');
@@ -282,12 +284,13 @@ const RepoListSection = memo<RepoListSectionProps>(({ repos, onReposChange }) =>
           placeholder={t('heterogeneousStatus.cloud.repoPlaceholder')}
           style={{ flex: 1 }}
           value={input}
+          visualSize="normal"
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') addRepo();
           }}
         />
-        <Button disabled={!canEdit} onClick={addRepo}>
+        <Button disabled={!canEdit} size="lg" onClick={addRepo}>
           {t('heterogeneousStatus.cloud.repoAdd')}
         </Button>
       </div>
@@ -391,7 +394,7 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
               value={storedGithubCredKey || null}
               onValueChange={(key) => saveEnv({ GITHUB_CRED_KEY: key ?? '' })}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full" size="normal">
                 <SelectValue
                   placeholder={
                     githubCredOptions.length > 0

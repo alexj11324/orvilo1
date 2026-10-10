@@ -807,7 +807,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                   if (typeof value === 'string') void handleApiProviderChange(value);
                 }}
               >
-                <SelectTrigger className={styles.apiModeSelect}>
+                <SelectTrigger className={styles.apiModeSelect} size="normal">
                   <SelectValue placeholder={t('heterogeneousStatus.apiMode.providerPlaceholder')}>
                     {(value: string) =>
                       flattenSelectOptions(providerOptions).find((option) => option.value === value)
@@ -838,7 +838,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                       if (typeof value === 'string') void handleServerDefaultModelChange(value);
                     }}
                   >
-                    <SelectTrigger className={styles.apiModeSelect}>
+                    <SelectTrigger className={styles.apiModeSelect} size="normal">
                       <SelectValue>
                         {(value: string) =>
                           flattenSelectOptions(serverDefaultModelOptions).find(

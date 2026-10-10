@@ -66,7 +66,7 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
           value={eventName ?? null}
           onValueChange={(value) => setEventName(value ?? undefined)}
         >
-          <SelectTrigger aria-label={t('events.event')}>
+          <SelectTrigger aria-label={t('events.event')} size="normal">
             <SelectValue placeholder={t('events.event')} />
           </SelectTrigger>
           <SelectContent>
@@ -110,12 +110,17 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
                     <Input
                       placeholder={'owner/repository'}
                       value={repository}
+                      visualSize="normal"
                       onChange={(event) => setRepository(event.target.value)}
                     />
                   </label>
                   <label className={'flex flex-col gap-2'}>
                     <span>{t('events.github.branch')}</span>
-                    <Input value={branch} onChange={(event) => setBranch(event.target.value)} />
+                    <Input
+                      value={branch}
+                      visualSize="normal"
+                      onChange={(event) => setBranch(event.target.value)}
+                    />
                     <span className={'text-muted-foreground'}>{t('events.github.branchHint')}</span>
                   </label>
                   {eventName &&
@@ -127,7 +132,7 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
                           value={action}
                           onValueChange={(value) => value && setAction(value)}
                         >
-                          <SelectTrigger aria-label={t('events.github.action')}>
+                          <SelectTrigger aria-label={t('events.github.action')} size="normal">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -150,7 +155,7 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
                           value={conclusion}
                           onValueChange={(value) => value && setConclusion(value)}
                         >
-                          <SelectTrigger aria-label={t('events.github.conclusion')}>
+                          <SelectTrigger aria-label={t('events.github.conclusion')} size="normal">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -173,6 +178,7 @@ function EventDefinitions({ connectorId, taskId }: { connectorId: string; taskId
               )}
               {!triggers.data?.data.canCreate && <span>{t('events.workspaceRequired')}</span>}
               <Button
+                size="lg"
                 disabled={
                   !eventName ||
                   pending ||
@@ -292,7 +298,7 @@ function GithubWebhookSetup({
       <span>{t('events.github.repositoryValue', { repository })}</span>
       <label className={'flex flex-col gap-2'}>
         <span>{t('events.github.payloadUrl')}</span>
-        <Input readOnly value={callbackUrl} />
+        <Input readOnly value={callbackUrl} visualSize="normal" />
       </label>
       <div className={'flex flex-wrap gap-2'}>
         <Button disabled={pending} variant={'outline'} onClick={() => void copy(false)}>
@@ -392,7 +398,7 @@ function SavedEventTrigger({ taskId }: { taskId: string }) {
                     setReadiness(undefined);
                   }}
                 >
-                  <SelectTrigger aria-label={t('events.device')}>
+                  <SelectTrigger aria-label={t('events.device')} size="normal">
                     <SelectValue placeholder={t('events.device')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -464,7 +470,7 @@ export default function McpEventTriggerSettings() {
           value={connectorId ?? null}
           onValueChange={(value) => setConnectorId(value ?? undefined)}
         >
-          <SelectTrigger aria-label={t('events.source')}>
+          <SelectTrigger aria-label={t('events.source')} size="normal">
             <SelectValue placeholder={t('events.source')} />
           </SelectTrigger>
           <SelectContent>

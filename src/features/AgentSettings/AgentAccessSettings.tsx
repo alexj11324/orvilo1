@@ -119,7 +119,7 @@ const AgentAccessSettings = memo<AgentAccessSettingsProps>(({ agentId }) => {
               if (value === 'member' || value === 'restricted') setTopicSharePolicy(value);
             }}
           >
-            <SelectTrigger className={settingsStyles.select}>
+            <SelectTrigger className={settingsStyles.select} size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

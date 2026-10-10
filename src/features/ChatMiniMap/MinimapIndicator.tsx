@@ -1,4 +1,3 @@
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +24,14 @@ export const MinimapIndicator = memo<MinimapIndicatorProps>(
         style={{ width }}
         onClick={() => onJump(virtuosoIndex)}
       >
-        <div className={cx(styles.indicatorContent, isActive && styles.indicatorContentActive)} />
+        <div
+          className={cn(
+            styles.indicatorContent,
+            isActive
+              ? '[background:var(--primary)]'
+              : '[background:var(--ant-color-fill-secondary)]',
+          )}
+        />
       </div>
     );
   },

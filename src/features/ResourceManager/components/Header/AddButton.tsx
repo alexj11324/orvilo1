@@ -354,7 +354,7 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
               <Plus data-icon="inline-start" />
             </Button>
           ) : (
-            <Button data-no-highlight disabled={!canCreate} variant="default">
+            <Button data-no-highlight disabled={!canCreate} size="compact" variant="default">
               <Plus data-icon="inline-start" /> {t('addLibrary')}
             </Button>
           )}

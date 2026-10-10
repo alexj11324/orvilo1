@@ -106,6 +106,7 @@ const AvailableAgentList = memo<AvailableAgentListProps>(({ agents, isLoading })
       <Input
         placeholder={t('memberSelection.searchAgents')}
         value={searchTerm}
+        visualSize="compact"
         onChange={handleSearchChange}
       />
 

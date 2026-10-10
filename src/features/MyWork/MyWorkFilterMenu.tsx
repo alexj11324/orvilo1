@@ -606,6 +606,7 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
                 className={styles.searchInput}
                 placeholder={t('myWork.filterSearchPlaceholder')}
                 value={keyword}
+                visualSize="compact"
                 onChange={(event) => setKeyword(event.target.value)}
               />
               <MenuRow

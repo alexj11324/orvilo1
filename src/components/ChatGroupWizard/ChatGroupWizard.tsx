@@ -527,6 +527,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                 className={'pl-8'}
                 placeholder={t('memberSelection.searchAgents')}
                 value={inputValue}
+                visualSize="compact"
                 onChange={handleSearchChange}
               />
             </div>

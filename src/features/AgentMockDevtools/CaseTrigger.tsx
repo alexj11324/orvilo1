@@ -159,6 +159,7 @@ const CasePanel = memo<CasePanelProps>(({ onClose, selectedCaseId, setSelectedCa
           autoFocus
           placeholder="Search cases…"
           value={query}
+          visualSize="compact"
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>

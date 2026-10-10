@@ -1,5 +1,4 @@
 
-import { cssVar } from 'antd-style';
 import { ListTodo } from 'lucide-react';
 import { type FC, type PropsWithChildren } from 'react';
 
@@ -12,7 +11,7 @@ const TaskAvatar: FC<PropsWithChildren> = ({ children }) => {
         style={{
           flex: 'none',
           height: 16,
-          border: `1px solid ${cssVar.colorBorder}`,
+          border: '1px solid var(--border)',
           width: 16,
           borderRadius: 4,
           position: 'absolute',
@@ -20,7 +19,7 @@ const TaskAvatar: FC<PropsWithChildren> = ({ children }) => {
           top: -4,
         }}
       >
-        <ListTodo color={cssVar.colorTextDescription} size={10} />
+        <ListTodo color={'var(--ant-color-text-description)'} size={10} />
       </div>
     </div>
   );

@@ -2,7 +2,6 @@
 
 
 import { type TaskDetail } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import type { LucideProps } from 'lucide-react';
 import { Footprints, Timer, Wrench } from 'lucide-react';
 import { type ComponentType, createElement, memo, useMemo } from 'react';
@@ -13,20 +12,10 @@ import { Badge } from '@/components/reui/badge';
 import Markdown from '../../../Markdown';
 import { formatCost, formatDuration } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  collapseContent: css`
-    padding-block: 8px;
-    padding-inline: 0;
-    font-size: 13px;
-    line-height: 1.6;
-  `,
-  separator: css`
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  collapseContent: 'px-0 py-2 text-[13px] leading-[1.6]',
+  separator: 'size-[3px] rounded-[50%] bg-[var(--ant-color-text-quaternary)]',
+};
 
 export type CompletedStateVariant = 'detail' | 'compact';
 
@@ -46,7 +35,7 @@ interface MetricItemProps {
 export const MetricItem = memo<MetricItemProps>(({ icon, label, value }) => (
   <Badge
     className="bg-transparent border-transparent"
-    style={{ color: cssVar.colorTextDescription, padding: 0 }}
+    style={{ color: 'var(--ant-color-text-description)', padding: 0 }}
     variant="secondary"
   >
     {icon && createElement(icon)}

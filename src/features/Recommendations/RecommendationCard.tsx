@@ -59,7 +59,7 @@ export const RecommendationCard = memo<RecommendationCardProps>(
           onClick={handleClick}
         >
           <div className="flex flex-row items-start gap-2.5" style={{ width: '100%' }}>
-            <div className="flex flex-col flex-none py-[2px]">
+            <div className="flex flex-col flex-none py-0.5">
               {renderIcon(RECOMMENDATION_ICON_SIZE.compact)}
             </div>
             <div className={cx(homeType.itemTitleProse, styles.compactTitle)} style={{ flex: 1 }}>

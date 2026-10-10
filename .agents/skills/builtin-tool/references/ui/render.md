@@ -75,7 +75,7 @@ if (pluginError) {
 - Use `pluginState` for server-truth (ids, counts, server-assigned status) and `args` for what the LLM asked. **Combine — neither alone is enough.**
 - For lists, summarize with a header line and show top N items with a "+N more" tail rather than rendering everything.
 - **Keep the Render single-layer** — the tool card is already your surface, so don't open with your own filled container and then nest more filled boxes inside it. See [shared-rules.md](shared-rules.md) → "Stay single-layer".
-- For modals from a Render, use `@lobehub/ui/base-ui` (`createModal`, `useModalContext`, `confirmModal`) — see the **modal** skill.
+- For modals from a Render, use `@/components/Modal` (`createModal`, `useModalContext`, `confirmModal`) — see the **modal** skill.
 
 ## Render registry — `client/Render/index.ts`
 

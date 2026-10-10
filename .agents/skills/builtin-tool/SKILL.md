@@ -49,7 +49,7 @@ A builtin tool is a package the agent runtime can call. It ships **five faces**:
    - `src/ExecutionRuntime/` — pure runtime, no React, no Zustand, accepts services via constructor. **The default place for new logic.**
    - `src/client/executor/` — `BaseExecutor` subclass that calls `ExecutionRuntime` (or stores/services directly when frontend-only).
 5. **UI defaults to "do nothing".** Inspector is required (the header strip). Render/Placeholder/Streaming/Intervention/Portal are added **only when there's something specific to show** — empty registries are fine.
-6. **Style with `createStaticStyles + cssVar.*`** (zero-runtime). Fall back to `createStyles + token` only when you genuinely need runtime values. Use `@lobehub/ui` components, not raw antd.
+6. **Follow the [React skill](../react/SKILL.md#styling) for component selection and styling**, including its [role lookup](../react/SKILL.md#role-lookup) and [native layout mapping](../react/references/layout-kit.md). This skill owns tool-specific states and composition, not another styling policy.
 7. **i18n keys live in `packages/locales/src/default/plugin.ts`.** Inspector titles must come from `t('builtins.<identifier>.apiName.<api>')` so something renders while args stream.
 
 ---

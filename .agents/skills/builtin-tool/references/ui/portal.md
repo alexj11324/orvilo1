@@ -57,7 +57,7 @@ export default Portal;
 
 - One Portal per tool — the file is the routing layer, subcomponents implement each API's view.
 - Portals can read the chat store directly to detect "still streaming" and render a Skeleton internally (see `Search/index.tsx:20-46`).
-- Layout assumes more space than the Render — use `Flexbox` with `height={'100%'}` and structure for a side panel viewport.
+- Layout assumes more space than the Render — use a native `div` with `flex h-full flex-col` and structure for a side panel viewport.
 
 ## Portal registry — `packages/builtin-tools/src/portals.ts`
 

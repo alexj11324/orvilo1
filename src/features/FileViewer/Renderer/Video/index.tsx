@@ -38,10 +38,7 @@ const VideoViewer = memo<VideoViewerProps>(({ url }) => {
 
   return (
     <div
-      className={cx(
-        'flex flex-col items-center justify-center h-[100%] w-[100%]',
-        styles.container,
-      )}
+      className={cx('flex flex-col items-center justify-center h-full w-full', styles.container)}
     >
       <video controls className={styles.video} height={'100%'} src={url} width={'100%'} />
     </div>

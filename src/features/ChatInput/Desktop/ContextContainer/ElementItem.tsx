@@ -1,5 +1,4 @@
 import type { ChatContextContent } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { SquareDashedMousePointer } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,41 +15,14 @@ import {
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
 
-const styles = createStaticStyles(({ css }) => ({
-  selector: css`
-    overflow: hidden;
-
-    max-width: min(420px, 70vw);
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  thumbnail: css`
-    display: block;
-
-    max-width: min(420px, 70vw);
-    max-height: 240px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 6px;
-
-    object-fit: contain;
-    background: ${cssVar.colorBgContainer};
-  `,
-  tooltip: css`
-    max-width: min(460px, 75vw);
-  `,
-  url: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  selector:
+    'overflow-hidden max-w-[min(420px,70vw)] font-mono text-[12px] text-muted-foreground text-ellipsis whitespace-nowrap',
+  thumbnail:
+    'block max-w-[min(420px,70vw)] max-h-60 border border-sidebar-border rounded-[6px] object-contain bg-card',
+  tooltip: 'max-w-[min(460px,75vw)]',
+  url: 'overflow-hidden text-[12px] text-(--ant-color-text-quaternary) text-ellipsis whitespace-nowrap',
+};
 
 /**
  * The chip for a DOM element picked from the in-app browser. Unlike a plain

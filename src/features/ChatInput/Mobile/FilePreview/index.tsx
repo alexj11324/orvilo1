@@ -1,5 +1,4 @@
 import { PreviewGroup } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -9,12 +8,9 @@ import { filesSelectors, useFileStore } from '@/store/file';
 
 import FileItem from './FileItem';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow-x: scroll;
-    width: 100%;
-  `,
-}));
+const styles = {
+  container: 'overflow-x-scroll w-full',
+};
 
 const FilePreview = memo(() => {
   const expand = useChatInputStore((s) => s.expand);

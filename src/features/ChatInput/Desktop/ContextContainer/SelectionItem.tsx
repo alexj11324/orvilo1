@@ -1,5 +1,4 @@
 import type { ChatContextContent } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Code2Icon, TextIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,62 +15,16 @@ import {
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { useFileStore } from '@/store/file';
 
-const styles = createStaticStyles(({ css }) => ({
-  codeLine: css`
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    gap: 10px;
-  `,
-  codePreview: css`
-    overflow: auto;
-
-    max-width: min(560px, 80vw);
-    max-height: 220px;
-    margin: 0;
-    padding-block: 8px;
-    padding-inline: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    line-height: 1.55;
-  `,
-  content: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: pre;
-  `,
-  lineNumber: css`
-    user-select: none;
-    color: ${cssVar.colorTextQuaternary};
-    text-align: end;
-  `,
-  meta: css`
-    overflow: hidden;
-
-    max-width: min(560px, 80vw);
-    padding-block-end: 6px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  textPreview: css`
-    max-width: min(420px, 70vw);
-    color: ${cssVar.colorText};
-    white-space: pre-wrap;
-  `,
-  truncated: css`
-    padding-block-start: 4px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  codeLine: 'grid grid-cols-[36px_minmax(0,1fr)] gap-2.5',
+  codePreview:
+    'overflow-auto max-w-[min(560px,80vw)] max-h-55 m-0 py-2 px-0 font-mono text-[12px] leading-[1.55]',
+  content: 'overflow-hidden min-w-0 text-foreground text-ellipsis whitespace-pre',
+  lineNumber: 'select-none text-(--ant-color-text-quaternary) text-end',
+  meta: 'overflow-hidden max-w-[min(560px,80vw)] pb-1.5 border-b border-sidebar-border font-mono text-[12px] text-muted-foreground text-ellipsis whitespace-nowrap',
+  textPreview: 'max-w-[min(420px,70vw)] text-foreground whitespace-pre-wrap',
+  truncated: 'pt-1 text-(--ant-color-text-quaternary)',
+};
 
 const MAX_CODE_PREVIEW_LINES = 8;
 

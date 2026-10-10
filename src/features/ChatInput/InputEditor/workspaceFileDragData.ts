@@ -1,5 +1,4 @@
 import { WORKSPACE_FILE_DRAG_MIME } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import type React from 'react';
 
 /**
@@ -51,7 +50,7 @@ export const readWorkspaceFileDragData = (
 };
 
 /**
- * Resolve a `var(--x)` reference (e.g. from antd-style `cssVar.*`) to its
+ * Resolve a `var(--x)` reference to its
  * concrete computed value in the context of `ctx`. Lets the drag preview live on
  * `document.body` (free of transformed ancestors that would break fixed-position
  * cursor tracking) while still picking up the themed token. Mirrors the skill
@@ -121,10 +120,10 @@ const setWorkspaceFileDragImage = (
   const preview = document.createElement('div');
   Object.assign(preview.style, {
     alignItems: 'center',
-    background: resolveCssVar(cssVar.colorBgElevated, host),
-    border: `1px solid ${resolveCssVar(cssVar.colorBorderSecondary, host)}`,
+    background: resolveCssVar('var(--popover)', host),
+    border: `1px solid ${resolveCssVar('var(--sidebar-border)', host)}`,
     borderRadius: '10px',
-    color: resolveCssVar(cssVar.colorText, host),
+    color: resolveCssVar('var(--foreground)', host),
     display: 'inline-flex',
     fontSize: '13px',
     gap: '8px',
@@ -140,7 +139,9 @@ const setWorkspaceFileDragImage = (
     zIndex: '9999',
   });
 
-  preview.append(buildIconSvg(payload.isDirectory, resolveCssVar(cssVar.colorTextTertiary, host)));
+  preview.append(
+    buildIconSvg(payload.isDirectory, resolveCssVar('var(--ant-color-text-tertiary)', host)),
+  );
 
   const text = document.createElement('span');
   text.textContent = payload.name;

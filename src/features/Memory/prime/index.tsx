@@ -1,9 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, confirmModal, Text } from '@lobehub/ui/base-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { confirmModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { useScopedMemoryEditor } from '@/features/Memory/useScopedMemoryEditor';
 import NavHeader from '@/features/NavHeader';
 import FilterBar from '@/routes/(main)/memory/features/FilterBar';
@@ -33,13 +33,21 @@ function ExperienceManager() {
       },
     });
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1 h-full">
       <NavHeader
-        left={<Text weight={'bold'}>{t('prime.title')}</Text>}
-        right={<Button onClick={() => edit()}>{t('prime.create')}</Button>}
+        left={<div className="font-bold text-foreground">{t('prime.title')}</div>}
+        right={
+          <Button
+            className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+            variant="outline"
+            onClick={() => edit()}
+          >
+            {t('prime.create')}
+          </Button>
+        }
       />
-      <Flexbox gap={20} padding={24} style={{ overflowY: 'auto' }}>
-        <Text>{t('prime.description')}</Text>
+      <div className="flex flex-col gap-5 p-6 overflow-y-auto">
+        <div className="text-foreground">{t('prime.description')}</div>
         <FilterBar
           searchValue={query}
           onSearch={(value) => {
@@ -47,27 +55,38 @@ function ExperienceManager() {
             setPage(1);
           }}
         />
-        {failed && <Text role={'alert'}>{t('manager.failed')}</Text>}
+        {failed && (
+          <div className="text-foreground" role={'alert'}>
+            {t('manager.failed')}
+          </div>
+        )}
         <AsyncBoundary
           data={memory.data}
-          empty={<Text>{t('empty.search')}</Text>}
+          empty={<div className="text-foreground">{t('empty.search')}</div>}
           error={memory.error}
           isEmpty={memory.data?.items.length === 0}
           isLoading={memory.isLoading}
           onRetry={() => void memory.mutate()}
         >
           {memory.data?.items.map((entry) => (
-            <Flexbox gap={12} key={entry.id}>
+            <div className="flex flex-col gap-3" key={entry.id}>
               <HighlightedContent>{entry.content}</HighlightedContent>
               {entry.source === 'legacy' ? (
-                <Text type={'secondary'}>{t('prime.legacy')}</Text>
+                <div className="text-(--ant-color-text-description)">{t('prime.legacy')}</div>
               ) : (
-                <Flexbox horizontal gap={8}>
-                  <Button disabled={pending === entry.id} onClick={() => edit(entry)}>
+                <div className="flex flex-row gap-2">
+                  <Button
+                    className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+                    disabled={pending === entry.id}
+                    variant="outline"
+                    onClick={() => edit(entry)}
+                  >
                     {t('manager.edit')}
                   </Button>
                   <Button
+                    className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
                     disabled={pending === entry.id}
+                    variant="outline"
                     onClick={() =>
                       confirmModal({
                         title: t('manager.deleteTitle'),
@@ -91,21 +110,28 @@ function ExperienceManager() {
                   >
                     {t('manager.delete')}
                   </Button>
-                </Flexbox>
+                </div>
               )}
-            </Flexbox>
+            </div>
           ))}
           {memory.data && 'truncated' in memory.data && memory.data.truncated && (
-            <Text>{t('prime.truncated')}</Text>
+            <div className="text-foreground">{t('prime.truncated')}</div>
           )}
         </AsyncBoundary>
         {!query && (
-          <Flexbox horizontal gap={12}>
-            <Button disabled={page === 1 || memory.isLoading} onClick={() => setPage(page - 1)}>
+          <div className="flex flex-row gap-3">
+            <Button
+              className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+              disabled={page === 1 || memory.isLoading}
+              variant="outline"
+              onClick={() => setPage(page - 1)}
+            >
               {t('manager.previous')}
             </Button>
-            <Text>{page}</Text>
+            <div className="text-foreground">{page}</div>
             <Button
+              className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+              variant="outline"
               disabled={
                 !memory.data ||
                 !('hasMore' in memory.data) ||
@@ -116,9 +142,9 @@ function ExperienceManager() {
             >
               {t('manager.next')}
             </Button>
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 }

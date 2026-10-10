@@ -1,8 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { Button } from '@/components/ui/button';
 import DetailLoading from '@/routes/(main)/memory/features/DetailLoading';
 import DetailNotFound from '@/routes/(main)/memory/features/DetailNotFound';
 import HighlightedContent from '@/routes/(main)/memory/features/HighlightedContent';
@@ -36,11 +35,17 @@ export default function MemoryDetail({
     'suggestions',
   ];
   return (
-    <Flexbox gap={12}>
-      <Flexbox horizontal justify={'space-between'}>
-        <Text weight={'bold'}>{data?.title || t('manager.details')}</Text>
-        <Button onClick={onClose}>{t('manager.close')}</Button>
-      </Flexbox>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-row justify-between w-full">
+        <div className="font-bold text-foreground">{data?.title || t('manager.details')}</div>
+        <Button
+          className="px-3.5 rounded-(--radius-input) text-[13px] leading-none"
+          variant="outline"
+          onClick={onClose}
+        >
+          {t('manager.close')}
+        </Button>
+      </div>
       <AsyncBoundary
         data={data}
         empty={<DetailNotFound />}
@@ -56,6 +61,6 @@ export default function MemoryDetail({
             <HighlightedContent key={field}>{data[field]}</HighlightedContent>
           ))}
       </AsyncBoundary>
-    </Flexbox>
+    </div>
   );
 }

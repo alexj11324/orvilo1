@@ -1,6 +1,6 @@
 import { FORM_STYLE } from '@orvilo/const';
 import { exportFile } from '@orvilo/utils/client';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { CopyIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -112,9 +112,9 @@ const ShareText = memo(() => {
 
   return (
     <>
-      <div className={cx('flex flex-row gap-4', styles.body)}>
+      <div className={cn('flex flex-row gap-4', styles.body)}>
         <Preview content={content} />
-        <div className={cx('flex flex-col gap-3', styles.sidebar)}>
+        <div className={cn('flex flex-col gap-3', styles.sidebar)}>
           <Form
             initialValues={DEFAULT_FIELD_VALUE}
             itemMinWidth={FORM_STYLE.itemMinWidth}
@@ -126,7 +126,7 @@ const ShareText = memo(() => {
           {!isMobile && button}
         </div>
       </div>
-      {isMobile && <div className={cx('flex flex-row gap-2', styles.footer)}>{button}</div>}
+      {isMobile && <div className={cn('flex flex-row gap-2', styles.footer)}>{button}</div>}
     </>
   );
 });

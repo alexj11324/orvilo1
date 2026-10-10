@@ -69,10 +69,10 @@ const AcceptContent = memo<AcceptContentProps>(({ exceptions, onConfirm, subject
         </div>
       )}
       <div className="flex gap-2 justify-end">
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {translate('acceptance.actions.cancel')}
         </Button>
-        <Button loading={loading} variant="outline" onClick={handleConfirm}>
+        <Button loading={loading} size="lg" variant="outline" onClick={handleConfirm}>
           {translate('acceptance.actions.confirmAccept')}
         </Button>
       </div>
@@ -128,12 +128,13 @@ const RejectContent = memo<RejectContentProps>(({ onConfirm }) => {
         onChange={(event) => setComment(event.target.value)}
       />
       <div className="flex gap-2 justify-end">
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {translate('acceptance.actions.cancel')}
         </Button>
         <Button
           disabled={!comment.trim()}
           loading={loading}
+          size="lg"
           variant="outline"
           onClick={handleConfirm}
         >
@@ -211,12 +212,13 @@ const GroupFeedbackContent = memo<GroupFeedbackContentProps>(
           </div>
         </div>
         <div className="flex items-center gap-2 justify-end">
-          <Button disabled={loading} onClick={close}>
+          <Button disabled={loading} size="lg" onClick={close}>
             {translate('acceptance.actions.cancel')}
           </Button>
           <Button
             disabled={!comment.trim() || uploading}
             loading={loading}
+            size="lg"
             variant="outline"
             onClick={handleConfirm}
           >

@@ -178,6 +178,7 @@ export const MobileEvidenceReview = memo<{ model: RejectReviewModel }>(({ model 
         <Button
           disabled={!canSubmit}
           loading={loading}
+          size="lg"
           variant="outline"
           onClick={model.submitReject}
         >

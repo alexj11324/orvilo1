@@ -166,12 +166,13 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                 onRemove={model.removeAttachment}
               />
             </div>
-            <Button disabled={loading} onClick={close}>
+            <Button disabled={loading} size="lg" onClick={close}>
               {t('acceptance.actions.cancel')}
             </Button>
             <Button
               disabled={!canSubmit}
               loading={loading}
+              size="lg"
               variant="outline"
               onClick={model.submitReject}
             >

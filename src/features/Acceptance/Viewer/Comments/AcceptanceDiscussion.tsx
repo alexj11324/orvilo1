@@ -44,6 +44,7 @@ const SignInPrompt = memo(() => {
         <Button
           nativeButton={false}
           render={<a href={buildAuthReturnUrl('signin', currentReturnPath())} />}
+          size="lg"
           variant="outline"
         >
           {t('acceptance.comments.signIn')}
@@ -51,6 +52,7 @@ const SignInPrompt = memo(() => {
         <Button
           nativeButton={false}
           render={<a href={buildAuthReturnUrl('signup', currentReturnPath())} />}
+          size="lg"
         >
           {t('acceptance.comments.signUp')}
         </Button>

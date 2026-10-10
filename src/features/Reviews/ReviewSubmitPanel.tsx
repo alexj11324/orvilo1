@@ -84,6 +84,7 @@ const ReviewSubmitPanel = memo<{
         <Button
           disabled={disabled || stale || busy || !body.trim()}
           loading={submitting === 'COMMENT'}
+          size="lg"
           onClick={() => void composer.submit('COMMENT', body.trim())}
         >
           {t('reviews.submitComment')}
@@ -91,6 +92,7 @@ const ReviewSubmitPanel = memo<{
         <Button
           disabled={disabled || stale || busy || commentOnly}
           loading={submitting === 'APPROVE'}
+          size="lg"
           title={commentOnly ? t('reviews.authorReviewCommentOnly') : undefined}
           onClick={() => void composer.submit('APPROVE', body.trim())}
         >
@@ -99,6 +101,7 @@ const ReviewSubmitPanel = memo<{
         <Button
           disabled={disabled || stale || busy || commentOnly}
           loading={submitting === 'REQUEST_CHANGES'}
+          size="lg"
           title={commentOnly ? t('reviews.authorReviewCommentOnly') : undefined}
           variant="destructive"
           onClick={() => void composer.submit('REQUEST_CHANGES', body.trim())}

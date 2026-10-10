@@ -39,14 +39,14 @@ export const ListTasksInspector = memo<BuiltinInspectorProps<ListTasksParams, Li
           {t('builtins.orvilo-task.apiName.listTasks')}
         </span>
         {filterText && (
-          <span className="text-[12px]" style={{ color: 'var(--ant-color-text-tertiary)' }}>
+          <span className="text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
             {' · '}
             {filterText}
           </span>
         )}
         {typeof count === 'number' && (
           <span
-            className="font-mono rounded bg-muted px-1 text-[12px]"
+            className="font-mono rounded bg-muted px-1 text-xs"
             style={{ color: 'var(--muted-foreground)' }}
           >
             {typeof total === 'number' && total !== count ? `${count}/${total}` : count}

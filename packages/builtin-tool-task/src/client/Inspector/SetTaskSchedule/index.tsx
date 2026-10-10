@@ -11,9 +11,8 @@ import type { SetTaskScheduleParams, SetTaskScheduleState } from '../../../types
 
 const styles = {
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
-  modeChip:
-    'shrink-0 rounded-[999px] bg-[var(--ant-color-info-bg)] px-2 py-0.5 text-[12px] text-info',
+    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
+  modeChip: 'shrink-0 rounded-[999px] bg-[var(--ant-color-info-bg)] px-2 py-0.5 text-xs text-info',
   separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
 };
 

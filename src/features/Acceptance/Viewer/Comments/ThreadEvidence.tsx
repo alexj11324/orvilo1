@@ -1,7 +1,6 @@
 'use client';
 
 import type { AcceptanceCommentItem } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,15 +10,10 @@ import { useAcceptanceAuthorColor } from './authorColor';
 
 const THUMBNAIL_WIDTH = 220;
 
-const styles = createStaticStyles(({ css }) => ({
-  caption: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  wrapper: css`
-    align-self: flex-start;
-  `,
-}));
+const styles = {
+  caption: 'text-[12px] text-(--ant-color-text-tertiary)',
+  wrapper: 'self-start',
+};
 
 interface ThreadEvidenceProps {
   comment: AcceptanceCommentItem;

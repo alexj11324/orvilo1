@@ -1,7 +1,7 @@
 'use client';
 
 import type { AcceptanceCommentItem } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { BadgeCheck, GitCommitHorizontal } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { createElement, memo, useMemo } from 'react';
@@ -61,28 +61,18 @@ const SignInPrompt = memo(() => {
 
 SignInPrompt.displayName = 'AcceptanceDiscussionSignInPrompt';
 
-const local = createStaticStyles(({ css }) => ({
-  empty: css`
-    padding-block: 16px;
-    font-size: 13px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  signInPrompt: css`
-    padding-block: 16px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const local = {
+  empty: 'py-4 text-[13px] text-(--ant-color-text-tertiary)',
+  signInPrompt:
+    'p-4 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary)',
+};
 
 /** A round landing or an approval — a dot on the rail and one line of text. */
 const TimelineEvent = memo<{ at: Date; icon: typeof BadgeCheck; text: string }>(
   ({ at, icon, text }) => {
     const time = useActivityTime(at);
     return (
-      <div className={`flex items-center gap-3 ${cx(styles.timelineEntry, styles.eventEntry)}`}>
+      <div className={`flex items-center gap-3 ${cn(styles.timelineEntry, styles.eventEntry)}`}>
         <span className={styles.eventDot}>{createElement(icon, { size: 12 })}</span>
         <div className={`flex items-center gap-2 flex-wrap ${styles.event}`}>
           <span>{text}</span>
@@ -128,7 +118,7 @@ const TimelineRound = memo<{
       <span className={styles.timelineNode}>
         <CommentAvatar comment={proposal} size={TIMELINE_NODE} />
       </span>
-      <div className={`flex flex-col ${cx(styles.box, anchored && styles.boxAnchored)}`}>
+      <div className={`flex flex-col ${cn(styles.box, anchored && styles.boxAnchored)}`}>
         <CommentCard
           anchored
           comment={proposal}
@@ -164,7 +154,7 @@ const TimelineMessage = memo<{
       <CommentAvatar comment={comment} size={TIMELINE_NODE} />
     </span>
     <div
-      className={`flex flex-col ${cx(styles.box, self && styles.boxSelf, anchored && styles.boxAnchored)}`}
+      className={`flex flex-col ${cn(styles.box, self && styles.boxSelf, anchored && styles.boxAnchored)}`}
     >
       <CommentCard
         anchored
@@ -282,7 +272,7 @@ const AcceptanceDiscussion = memo(() => {
       {/* Last, like GitHub's Conversation: you read the thread, then answer it. */}
       {canComment ? (
         <div
-          className={`flex flex-col ${cx(styles.timelineEntry, styles.nodelessEntry, styles.tailEntry)}`}
+          className={`flex flex-col ${cn(styles.timelineEntry, styles.nodelessEntry, styles.tailEntry)}`}
         >
           <div className={`flex flex-col ${styles.composerBlock}`}>
             <CommentComposer

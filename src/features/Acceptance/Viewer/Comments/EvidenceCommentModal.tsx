@@ -1,7 +1,7 @@
 'use client';
 
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,42 +15,14 @@ import type { AcceptanceEvidence } from '../Checks/types';
 import { AnnotationCanvas } from '../Evidence/Annotation';
 import { isAnnotatable } from '../Evidence/evidence';
 
-const styles = createStaticStyles(({ css }) => ({
-  hint: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  stage: css`
-    overflow: auto;
-
-    max-height: min(60vh, 640px);
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  thumb: css`
-    cursor: pointer;
-
-    overflow: hidden;
-
-    width: 64px;
-    height: 44px;
-    border: 2px solid transparent;
-    border-radius: 6px;
-
-    background: ${cssVar.colorFillTertiary};
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  `,
-  thumbActive: css`
-    border-color: ${cssVar.colorPrimary};
-  `,
-}));
+const styles = {
+  hint: 'text-[12px] text-(--ant-color-text-tertiary)',
+  stage:
+    'overflow-auto max-h-[min(60vh,640px)] border border-sidebar-border rounded-[8px] bg-(--ant-color-fill-quaternary)',
+  thumb:
+    'cursor-pointer overflow-hidden w-16 h-11 border-2 border-transparent rounded-[6px] bg-accent [&_img]:w-full [&_img]:h-full [&_img]:object-cover',
+  thumbActive: 'border-primary',
+};
 
 export interface EvidenceCommentValue {
   content: string;
@@ -106,7 +78,7 @@ const EvidenceCommentContent = memo<EvidenceCommentModalProps>(
             {images.map((item) => (
               <div
                 aria-pressed={item.id === active.id}
-                className={cx(styles.thumb, item.id === active.id && styles.thumbActive)}
+                className={cn(styles.thumb, item.id === active.id && styles.thumbActive)}
                 key={item.id}
                 role={'button'}
                 onClick={() => {

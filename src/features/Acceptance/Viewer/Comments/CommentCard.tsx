@@ -1,7 +1,6 @@
 'use client';
 
 import type { AcceptanceCommentItem } from '@orvilo/types';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { Link2, MoreHorizontal, Trash2 } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
@@ -174,7 +173,7 @@ const CommentCard = memo<CommentCardProps>(
              * want is the link to paste somewhere else.
              */
             <button
-              className={cx(styles.meta, styles.timeLink)}
+              className={cn(styles.meta, styles.timeLink)}
               title={t('acceptance.comments.copyLinkHint', { time: time.title })}
               type={'button'}
               onClick={(event) => {

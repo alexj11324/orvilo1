@@ -1057,9 +1057,19 @@ describe('AgentWorkingSidebar — tab strip', () => {
 
     const groups = dropdownMenuState.items.filter((item) => item.type === 'group');
 
+    const expectedLabels: Record<string, string> = {
+      configuration: 'workingPanel.openMenu.configuration',
+      tools: 'workingPanel.openMenu.tools',
+      workspace: 'workingPanel.openMenu.workspace',
+    };
+
     expect(groups.length).toBeGreaterThan(0);
     for (const group of groups) {
-      expect(group.label.props.style).toEqual({ textTransform: 'none' });
+      const { container, unmount } = render(group.label);
+
+      expect(expectedLabels[group.key]).toBeDefined();
+      expect(container.textContent).toBe(expectedLabels[group.key]);
+      unmount();
     }
   });
 

@@ -1,141 +1,27 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { ChevronRightIcon, FoldVerticalIcon, UnfoldVerticalIcon } from 'lucide-react';
 import { type KeyboardEvent, memo, type MouseEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  // Sticky group header — appears once per repo (parent + each dirty submodule)
-  // when the working tree spans multiple repositories. Mirrors WebStorm's
-  // per-repo grouping: collapse chevron + name + file count + totals + branch
-  // all left-aligned. Position: sticky keeps the header pinned while scrolling
-  // within its group's rows. The whole header is a button — click anywhere to
-  // collapse/expand the group's rows. Top-only border (no bottom border) so
-  // collapsing a group can't produce a doubled-up line against the next
-  // header's top border.
-  header: css`
-    cursor: pointer;
-    user-select: none;
-
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 0;
-
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    /* Fixed height accommodates the ActionIcon (size='small' is ~24px tall)
-       so the header stays the same size whether or not the fold button is
-       rendered. Without this, expanding/collapsing a group would jitter the
-       sticky header height because the button toggles between rendered and
-       not. flex:none keeps the column flex list from compressing the sticky
-       header during expand/collapse. padding-inline keeps the left-edge
-       alignment with file rows. */
-    block-size: 32px;
-    padding-inline: 10px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-
-    transition: background 0.12s;
-
-    /* Separate non-first groups from the preceding group's last row.
-       The first header sits against the list's own top border. */
-    &:not(:first-child) {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-  `,
-  chevron: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-    transition: transform 0.2s;
-
-    &[data-expanded='true'] {
-      transform: rotate(90deg);
-    }
-  `,
-  meta: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex: 1 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  name: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-
-    font-weight: 600;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  fileCount: css`
-    flex-shrink: 0;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  stats: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  `,
-  additions: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  deletions: css`
-    color: ${cssVar.colorError};
-  `,
-  branch: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  // Hover-revealed fold-all-diffs button. Uses the standard ActionIcon, so
-  // hover/focus visuals match the rest of the panel — we just gate visibility
-  // via opacity bound to the parent header's hover/focus-within state.
-  foldButton: css`
-    margin-inline-start: auto;
-    opacity: 0;
-    transition: opacity 0.15s;
-
-    [data-review-group-header]:hover &,
-    [data-review-group-header]:focus-within & {
-      opacity: 1;
-    }
-  `,
-}));
+const styles = {
+  header:
+    'cursor-pointer select-none sticky z-1 top-0 flex flex-none gap-1.5 items-center h-8 px-2.5 text-xs leading-5 text-muted-foreground bg-card wash-fill-quaternary transition-colors duration-(--orvilo-motion-fast) [&:not(:first-child)]:border-t [&:not(:first-child)]:border-divider hover:wash-muted focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2',
+  chevron:
+    'flex-none text-foreground-tertiary transition-transform duration-(--orvilo-motion-fast) data-[expanded=true]:rotate-90',
+  meta: 'overflow-hidden inline-flex flex-[1_1_auto] gap-1.5 items-center min-w-0',
+  name: 'overflow-hidden flex-[0_1_auto] min-w-0 font-semibold text-sm leading-5.5 text-foreground text-ellipsis whitespace-nowrap',
+  fileCount: 'shrink-0 tabular-nums text-foreground-tertiary text-xs leading-5',
+  stats: 'inline-flex shrink-0 gap-1.5 items-center font-mono text-xs leading-5 tabular-nums',
+  additions: 'text-success-text',
+  deletions: 'text-destructive-text',
+  branch:
+    'overflow-hidden flex-[0_1_auto] min-w-0 font-mono text-xs leading-5 text-foreground-tertiary text-ellipsis whitespace-nowrap',
+  foldButton:
+    'ms-auto opacity-0 transition-opacity duration-(--orvilo-motion-fast) [[data-review-group-header]:hover_&]:opacity-100 [[data-review-group-header]:focus-within_&]:opacity-100',
+};
 
 export interface GroupHeaderProps {
   branch?: string;
@@ -224,7 +110,7 @@ const GroupHeader = memo<GroupHeaderProps>(
             aria-pressed={diffsAllExpanded}
             className={styles.foldButton}
             icon={diffsAllExpanded ? FoldVerticalIcon : UnfoldVerticalIcon}
-            size={'small'}
+            size={{ blockSize: 32, borderRadius: 8, size: 14 }}
             title={foldLabel}
             onClick={handleFoldClick}
           />

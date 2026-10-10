@@ -2,7 +2,6 @@
 
 import type { ProjectFileIndexEntry } from '@orvilo/electron-client-ipc';
 import type { GitStatusEntry } from '@pierre/trees';
-import { createStaticStyles } from 'antd-style';
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -64,37 +63,11 @@ interface FilesProps {
   workingDirectory: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  tree: css`
-    --trees-bg-override: transparent;
-    --trees-border-color-override: transparent;
-    --trees-selected-bg-override: ${cssVar.colorFillSecondary};
-    --trees-selected-fg-override: ${cssVar.colorText};
-    --trees-bg-muted-override: ${cssVar.colorFillTertiary};
-    --trees-fg-override: ${cssVar.colorTextSecondary};
-    --trees-fg-muted-override: ${cssVar.colorTextSecondary};
-    --trees-accent-override: ${cssVar.colorPrimary};
-    --trees-padding-inline-override: 0px;
-    --trees-font-size-override: 12px;
-    --trees-border-radius-override: 6px;
-
-    flex: 1;
-    min-height: 0;
-  `,
-  subheader: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 6px 8px;
-    padding-inline: 12px;
-  `,
-  search: css`
-    flex: 1;
-    min-width: 0;
-  `,
-}));
+const styles = {
+  tree: '[--trees-bg-override:transparent] [--trees-border-color-override:transparent] [--trees-selected-bg-override:var(--selected)] [--trees-selected-fg-override:var(--foreground)] [--trees-bg-muted-override:var(--accent)] [--trees-fg-override:var(--muted-foreground)] [--trees-fg-muted-override:var(--muted-foreground)] [--trees-accent-override:var(--primary)] [--trees-padding-inline-override:0px] [--trees-font-size-override:var(--text-sm)] [--trees-border-radius-override:var(--radius-button)] flex-1 min-h-0',
+  subheader: 'flex shrink-0 gap-1 items-center pt-1.5 pb-2 px-3',
+  search: 'flex-1 min-w-0',
+};
 
 const stripTrailingSlash = (value: string) => (value.endsWith('/') ? value.slice(0, -1) : value);
 
@@ -111,6 +84,7 @@ const FILE_TREE_UNSAFE_CSS = [
   FOLDER_ICON_CSS,
   HIDE_POINTER_FOCUS_RING_CSS,
   IGNORED_FILE_OPACITY_CSS,
+  `[data-item-section='content'] { line-height: 22px; }`,
 ].join('\n');
 const FILE_SEARCH_DEBOUNCE_MS = 180;
 const PROJECT_FILE_TREE_SEARCH_LIMIT = 200;
@@ -199,7 +173,7 @@ const FilesSearchBar = memo<FilesSearchBarProps>(({ onClose, onDebouncedChange }
   }, [onDebouncedChange, searchQuery]);
 
   return (
-    <InputGroup className="h-8 w-full">
+    <InputGroup className="w-full" visualSize="compact">
       <InputGroupAddon align="inline-start">
         <SearchIcon size={13} />
       </InputGroupAddon>
@@ -577,7 +551,7 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
   }
 
   return (
-    <div className="flex flex-col" style={{ height: '100%', width: '100%', overflow: 'hidden' }}>
+    <div className="flex h-full w-full flex-col overflow-hidden">
       <div className={styles.subheader}>
         {searchExpanded ? (
           <div className={styles.search}>
@@ -590,8 +564,8 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
           <>
             <DropdownMenu items={viewItems} placement={'bottomLeft'}>
               <Button
-                size="sm"
-                style={{ maxWidth: 'calc(100% - 84px)' }}
+                className="min-w-0 max-w-[calc(100%-108px)]"
+                size="compact"
                 title={t('workingPanel.files.views.title')}
                 variant="ghost"
               >
@@ -608,13 +582,13 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
                 <ChevronDownIcon size={12} />
               </Button>
             </DropdownMenu>
-            <div style={{ flex: 1 }} />
+            <div className="flex-1" />
           </>
         )}
         {!searchExpanded && (
           <ActionIcon
             icon={SearchIcon}
-            size={'small'}
+            size={{ blockSize: 32, borderRadius: 8, size: 14 }}
             title={t('workingPanel.files.search')}
             onClick={() => setSearchExpanded(true)}
           />
@@ -623,14 +597,14 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
           <ActionIcon
             active={hideIgnored}
             icon={ListFilterIcon}
-            size={'small'}
+            size={{ blockSize: 32, borderRadius: 8, size: 14 }}
             title={t('workingPanel.files.filters.title')}
           />
         </DropdownMenu>
         <ActionIcon
           disabled={nodes.length === 0}
           icon={FoldVerticalIcon}
-          size={'small'}
+          size={{ blockSize: 32, borderRadius: 8, size: 14 }}
           title={t('workingPanel.files.collapseAll')}
           onClick={handleCollapseAll}
         />
@@ -660,13 +634,14 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
         <div className={styles.tree} style={treeStyleVars}>
           <ExplorerTree<ProjectFileIndexEntry>
             iconsColored
+            className="h-full"
             defaultExpandedIds={defaultExpandedIds}
             getContextMenuItems={getContextMenuItems}
             gitStatus={gitStatus}
             iconSet="complete"
+            itemHeight={32}
             nodes={nodes}
             ref={treeRef}
-            style={{ height: '100%' }}
             unsafeCSS={FILE_TREE_UNSAFE_CSS}
             onExpandedChange={setExpandedIds}
             onNodeClick={handleNodeClick}

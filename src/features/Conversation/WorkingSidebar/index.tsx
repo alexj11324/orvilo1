@@ -1,7 +1,6 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { getWorkingDirEffectivePath } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { LucideProps } from 'lucide-react';
 import {
@@ -85,95 +84,23 @@ import WorksSection from './WorksSection';
 const ParamsSection = lazy(() => import('./ParamsSection'));
 const BrowserPane = lazy(() => import('./Browser'));
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  close: css`
-    flex-shrink: 0;
-  `,
-  header: css`
-    flex-shrink: 0;
-    min-width: 0;
-  `,
-  pane: css`
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  paneHidden: css`
-    display: none;
-  `,
-  paramsLoading: css`
-    width: 100%;
-    padding: 16px;
-  `,
-  add: css`
-    flex-shrink: 0;
-  `,
-  favicon: css`
-    width: 14px;
-    height: 14px;
-    border-radius: 2px;
-    object-fit: contain;
-  `,
-  overviewBody: css`
-    overflow-y: auto;
-    min-height: 0;
-  `,
-  overviewPanel: css`
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-
-    max-height: calc(100% - 32px);
-    margin: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowTertiary};
-  `,
-  overviewSlot: css`
-    overflow: hidden;
-    display: flex;
-    flex-shrink: 0;
-    align-items: flex-start;
-
-    height: 100%;
-
-    @container agent-chat-layout (min-width: 1200px) {
-      padding-block-start: 44px;
-    }
-  `,
-  tabs: css`
-    overflow-anchor: none;
-    scrollbar-width: none;
-
-    overflow-x: auto;
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  `,
-  /* keeps the add button glued to the last tab while the strip itself scrolls */
-  tabsArea: css`
-    display: flex;
-    flex: 1;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-}));
+const styles = {
+  body: 'overflow-y-auto flex-1 min-h-0',
+  close: 'shrink-0',
+  header: 'shrink-0 min-w-0 h-11',
+  pane: 'overflow-y-auto flex-1 min-h-0',
+  paneHidden: 'hidden',
+  paramsLoading: 'w-full p-4',
+  add: 'shrink-0',
+  favicon: 'size-3.5 rounded-(--radius-chip) object-contain',
+  overviewBody: 'overflow-y-auto min-h-0',
+  overviewPanel:
+    'overflow-hidden flex flex-col shrink-0 max-h-[calc(100%-32px)] m-4 border border-divider rounded-(--radius-card) bg-card shadow-(--ant-box-shadow-tertiary)',
+  overviewSlot:
+    'overflow-hidden flex shrink-0 items-start h-full [@container_agent-chat-layout_(width>=1200px)]:pt-11',
+  tabs: '[overflow-anchor:none] [scrollbar-width:none] overflow-x-auto flex gap-1 items-center min-w-0 [&::-webkit-scrollbar]:hidden',
+  tabsArea: 'flex flex-1 gap-1 items-center min-w-0',
+};
 
 const REVIEW_TREE_STORAGE_KEY = 'orvilo-review-tree';
 const OPEN_TABS_STORAGE_KEY = 'orvilo-working-sidebar-open-tabs-v1';
@@ -861,7 +788,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
         },
       };
     };
-    const groupLabel = (label: string) => <span style={{ textTransform: 'none' }}>{label}</span>;
+    const groupLabel = (label: string) => <span className="normal-case">{label}</span>;
     const group = (key: string, label: string, keys: string[]): DropdownItem | undefined => {
       const children = keys.map(itemOf).filter((item): item is DropdownItem => Boolean(item));
       return children.length
@@ -976,11 +903,8 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
           updateSystemStatus({ workingSidebarWidth: w });
         }}
       >
-        <div className="flex flex-col" style={{ height: '100%', width: '100%' }}>
-          <div
-            className={cn('flex items-center gap-1 justify-between px-1', styles.header)}
-            style={{ height: 44 }}
-          >
+        <div className="flex h-full w-full flex-col">
+          <div className={cn('flex items-center gap-1 justify-between px-1', styles.header)}>
             <div className={styles.tabsArea}>
               <div className={styles.tabs} ref={tabsRef}>
                 {displayedTabs.map((tab, index) => (
@@ -1025,17 +949,14 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
               onClick={() => toggleRightPanel(false)}
             />
           </div>
-          <div className={cn('flex flex-col', styles.body)} style={{ width: '100%' }}>
-            {!contentReady && (
-              <SkeletonList rows={6} style={{ paddingBlock: 8, paddingInline: 8 }} />
-            )}
+          <div className={cn('flex w-full flex-col', styles.body)}>
+            {!contentReady && <SkeletonList className="flex flex-col p-2" rows={6} />}
             {contentReady && (
               <>
                 {commentsAvailable && (
                   <div
-                    style={{ overflow: 'hidden' }}
                     className={cn(
-                      'flex flex-col',
+                      'flex flex-col overflow-hidden',
                       activeTab === 'comments' ? styles.pane : styles.paneHidden,
                     )}
                   >
@@ -1129,7 +1050,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                     key={resourceTab}
                     mode={showRightPanel && activeTab === resourceTab ? 'visible' : 'hidden'}
                   >
-                    <div className={cn('flex flex-col', styles.pane)} style={{ width: '100%' }}>
+                    <div className={cn('flex w-full flex-col', styles.pane)}>
                       <ResourcesSection
                         deviceId={remoteDeviceId}
                         enabled={showRightPanel && activeTab === resourceTab}

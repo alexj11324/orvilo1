@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { BanIcon, CheckIcon, HandIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,49 +6,6 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { ConnectorToolPermission } from '@/database/schemas';
 import type { ConnectorTool } from '@/store/tool/slices/connector';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  description: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  nameCell: css`
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  `,
-  row: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  toolName: css`
-    overflow: hidden;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 14px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
 
 const PERMISSION_OPTIONS = [
   {
@@ -84,12 +40,18 @@ const ToolPermissionRow = memo<ToolPermissionRowProps>(({ disabled, tool, onPerm
   };
 
   return (
-    <div className={styles.row}>
-      <div className={styles.nameCell}>
-        <div className={styles.toolName}>{tool.toolName}</div>
+    <div
+      className={
+        'flex items-center gap-2 border-be border-sidebar-border px-3 py-2 last:border-be-0 hover:bg-(--ant-color-fill-quaternary)'
+      }
+    >
+      <div className={'min-w-0 flex-1 overflow-hidden'}>
+        <div className={'truncate font-mono text-[14px] text-foreground'}>{tool.toolName}</div>
         {tool.description && (
           <SimpleTooltip title={tool.description}>
-            <div className={styles.description}>{tool.description}</div>
+            <div className={'truncate text-[12px] leading-[1.4] text-(--ant-color-text-tertiary)'}>
+              {tool.description}
+            </div>
           </SimpleTooltip>
         )}
       </div>

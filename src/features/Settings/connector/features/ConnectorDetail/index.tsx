@@ -2,7 +2,6 @@
 
 import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { SquareArrowOutUpRight, Unplug, Wrench } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useState } from 'react';
@@ -35,27 +34,6 @@ const PresetConnectButton = lazy(() => import('./PresetConnectButton'));
 const McpPresetDetail = lazy(() => import('./McpPresetDetail'));
 
 export type { ConnectorDetailType };
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  noPermissions: css`
-    padding: 24px;
-    font-size: 14px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  noPermissionsHeader: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    margin-block-end: 8px;
-  `,
-  noPermissionsTitle: css`
-    font-size: 16px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-}));
 
 interface ConnectorDetailProps {
   identifier: string;
@@ -316,9 +294,9 @@ const ConnectorDetailBody = memo<ConnectorDetailProps>(
 
     if (noManifest || !connector) {
       return (
-        <div className={styles.noPermissions}>
-          <div className={styles.noPermissionsHeader}>
-            <div className={styles.noPermissionsTitle}>
+        <div className={'p-6 text-[14px] text-(--ant-color-text-tertiary)'}>
+          <div className={'mbe-2 flex items-center justify-between gap-3'}>
+            <div className={'text-[16px] font-semibold text-foreground'}>
               {type === 'orvilo-connector' ? orviloLabel : noPermissionsTitle}
             </div>
             {canMigrateLegacy ? (

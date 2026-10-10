@@ -1,7 +1,6 @@
 'use client';
 
 import { type McpPresetConnector } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { CircleCheck, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -124,7 +123,7 @@ const McpPresetItem = memo<McpPresetItemProps>(
     const renderIcon = () => {
       const { icon, label } = preset;
       if (typeof icon === 'string') return <Avatar alt={label} avatar={icon} size={18} />;
-      return createElement(icon, { fill: cssVar.colorText, size: 18 });
+      return createElement(icon, { fill: 'var(--foreground)', size: 18 });
     };
 
     return (

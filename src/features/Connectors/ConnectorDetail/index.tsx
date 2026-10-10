@@ -1,5 +1,4 @@
 import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import { PencilIcon, RefreshCwIcon, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
@@ -19,55 +18,6 @@ import CustomConnectorModal from '../CustomConnectorModal';
 import { getConnectorLifecycleActions } from './lifecycleActions';
 import { getLocalizedConnectorDetail } from './localization';
 import ToolPermissionGroup from './ToolPermissionGroup';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  actions: css`
-    display: flex;
-    gap: 8px;
-  `,
-  body: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    min-height: 0;
-    padding: 16px;
-  `,
-  description: css`
-    margin-block-end: 16px;
-    font-size: 14px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  empty: css`
-    font-size: 14px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  header: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    height: 42px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  root: css`
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  `,
-  title: css`
-    font-size: 14px;
-    font-weight: 500;
-  `,
-  toolList: css`
-    overflow-y: auto;
-    flex: 1;
-  `,
-}));
 
 interface ConnectorDetailProps {
   /**
@@ -284,11 +234,15 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
     };
 
     return (
-      <div className={styles.root}>
+      <div className={'flex h-full flex-col'}>
         {/* Header — full-bleed bar with bottom border, aligned with the left pane's header */}
-        <div className={styles.header}>
-          <div className={styles.title}>{connectorName}</div>
-          <div className={styles.actions}>
+        <div
+          className={
+            'flex h-10.5 shrink-0 items-center justify-between gap-2 border-be border-sidebar-border px-4'
+          }
+        >
+          <div className={'text-[14px] font-medium'}>{connectorName}</div>
+          <div className={'flex gap-2'}>
             {/* Reset permissions: restore all tools to auto (fully open) */}
             <ManageTooltip title={manageTooltip}>
               <Button
@@ -394,14 +348,18 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
         </div>
 
         {/* Body */}
-        <div className={styles.body}>
+        <div className={'flex min-h-0 flex-1 flex-col p-4'}>
           {/* Description */}
-          {connectorDescription && <div className={styles.description}>{connectorDescription}</div>}
+          {connectorDescription && (
+            <div className={'mbe-4 text-[14px] leading-[1.6] text-muted-foreground'}>
+              {connectorDescription}
+            </div>
+          )}
 
           {middleSlot}
 
           {hasTools ? (
-            <div className={styles.toolList}>
+            <div className={'flex-1 overflow-y-auto'}>
               <ToolPermissionGroup
                 disabled={!canManage}
                 label={t('connector.readOnlyTools', 'Read-only tools')}
@@ -432,7 +390,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
               />
             </div>
           ) : (
-            <div className={styles.empty}>
+            <div className={'text-[14px] text-(--ant-color-text-tertiary)'}>
               {t('connector.noTools', 'No tool permissions to configure.')}
             </div>
           )}

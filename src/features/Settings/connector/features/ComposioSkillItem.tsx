@@ -1,7 +1,6 @@
 'use client';
 
 import { type ComposioAppType } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { CircleCheck, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -270,7 +269,7 @@ const ComposioSkillItem = memo<ComposioSkillItemProps>(
     const renderNavIcon = () => {
       const { icon, label } = serverType;
       if (typeof icon === 'string') return <Avatar alt={label} avatar={icon} size={18} />;
-      return createElement(icon, { fill: cssVar.colorText, size: 18 });
+      return createElement(icon, { fill: 'var(--foreground)', size: 18 });
     };
 
     return (

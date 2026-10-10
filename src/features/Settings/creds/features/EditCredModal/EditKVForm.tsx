@@ -88,6 +88,7 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
                     <Input
                       disabled={!canManageCredentials}
                       placeholder={cred.type === 'kv-env' ? 'ENV_VAR_NAME' : 'Header-Name'}
+                      visualSize="normal"
                     />
                   </Form.Item>
                   <Form.Item
@@ -101,6 +102,7 @@ const EditKVForm: FC<EditKVFormProps> = ({ cred, credsApi, onCancel, onSuccess }
                       autoComplete="new-password"
                       disabled={!canManageCredentials}
                       placeholder={t('creds.form.valuePlaceholder')}
+                      visualSize="normal"
                     />
                   </Form.Item>
                   {fields.length > 1 && (

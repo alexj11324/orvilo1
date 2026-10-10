@@ -2,7 +2,6 @@
 
 import type { InitDocumentArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Plus } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,12 +11,9 @@ import { oneLineEllipsis, shinyTextStyles } from '@/styles';
 import type { InitDocumentState } from '../../../types';
 import { AnimatedNumber } from '../../components/AnimatedNumber';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  title: css`
-    margin-inline-end: 8px;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  title: 'me-2 text-foreground',
+};
 
 export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, InitDocumentState>>(
   ({ args, partialArgs, isArgumentsStreaming, pluginState }) => {
@@ -52,7 +48,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
           {displayLines > 0 && (
             <span
               className="font-mono rounded bg-muted px-1 text-[12px]"
-              style={{ color: cssVar.colorSuccess }}
+              style={{ color: 'var(--success)' }}
             >
               {' '}
               <Plus size={12} />
@@ -63,7 +59,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
           {chars > 0 && (
             <span
               className="font-mono rounded bg-muted px-1 text-[12px]"
-              style={{ color: cssVar.colorTextDescription }}
+              style={{ color: 'var(--ant-color-text-description)' }}
             >
               {' '}
               <AnimatedNumber value={chars} />
@@ -82,7 +78,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
         {displayLines > 0 && (
           <span
             className="font-mono rounded bg-muted px-1 text-[12px]"
-            style={{ color: cssVar.colorSuccess }}
+            style={{ color: 'var(--success)' }}
           >
             <Plus size={12} />
             <AnimatedNumber value={displayLines} />
@@ -92,7 +88,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
         {chars > 0 && (
           <span
             className="font-mono rounded bg-muted px-1 text-[12px]"
-            style={{ color: cssVar.colorTextDescription }}
+            style={{ color: 'var(--ant-color-text-description)' }}
           >
             {' '}
             <AnimatedNumber value={chars} />

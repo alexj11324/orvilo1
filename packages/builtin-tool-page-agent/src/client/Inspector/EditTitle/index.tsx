@@ -2,7 +2,7 @@
 
 import type { EditTitleArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -18,7 +18,7 @@ export const EditTitleInspector = memo<BuiltinInspectorProps<EditTitleArgs, Edit
 
     return (
       <div
-        className={cx(inspectorTextStyles.root, isArgumentsStreaming && shinyTextStyles.shinyText)}
+        className={cn(inspectorTextStyles.root, isArgumentsStreaming && shinyTextStyles.shinyText)}
       >
         {title ? (
           <Trans

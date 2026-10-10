@@ -2,7 +2,6 @@
 
 import type { InitDocumentArgs } from '@orvilo/editor-runtime';
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { FileText, Hash, ListTree } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -14,43 +13,14 @@ import { AnimatedNumber } from '../../components/AnimatedNumber';
 
 const MAX_PREVIEW_CHARS = 4000;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  header: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  icon: css`
-    color: ${cssVar.colorPrimary};
-  `,
-  meta: css`
-    color: ${cssVar.colorTextDescription};
-  `,
-  preview: css`
-    overflow: auto;
-    max-height: 360px;
-    padding-block: 8px;
-    padding-inline: 12px;
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  container: 'w-full overflow-hidden rounded-[8px] border border-sidebar-border bg-card',
+  header: 'px-3 py-2.5 [border-block-end:1px_solid_var(--sidebar-border)]',
+  icon: 'text-primary',
+  meta: 'text-[var(--ant-color-text-description)]',
+  preview: 'max-h-[360px] overflow-auto px-3 py-2',
+  title: 'line-clamp-1 font-medium text-foreground',
+};
 
 const extractTitle = (markdown: string) => {
   const titleLine = markdown
@@ -89,11 +59,11 @@ export const InitPageStreaming = memo<BuiltinStreamingProps<InitDocumentArgs>>((
             {title || t('builtins.orvilo-page-agent.apiName.initPage.creating')}
           </div>
           <div className={cn('flex', 'items-center', 'gap-[10px]', styles.meta)}>
-            <span className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+            <span className="text-[12px]" style={{ color: 'var(--ant-color-text-description)' }}>
               <ListTree size={12} /> <AnimatedNumber value={lines} />
               {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
             </span>
-            <span className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+            <span className="text-[12px]" style={{ color: 'var(--ant-color-text-description)' }}>
               <Hash size={12} /> <AnimatedNumber value={chars} />
               {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
             </span>

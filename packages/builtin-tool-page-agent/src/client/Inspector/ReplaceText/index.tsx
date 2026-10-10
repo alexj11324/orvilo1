@@ -2,7 +2,7 @@
 
 import type { ReplaceTextArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,20 +11,11 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 
 import type { ReplaceTextState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  arrow: css`
-    margin-inline: 4px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  from: css`
-    color: ${cssVar.colorTextSecondary};
-    text-decoration: line-through;
-  `,
-  title: css`
-    margin-inline-end: 8px;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  arrow: 'mx-1 text-[var(--ant-color-text-quaternary)]',
+  from: 'text-muted-foreground line-through',
+  title: 'me-2 text-foreground',
+};
 
 export const ReplaceTextInspector = memo<BuiltinInspectorProps<ReplaceTextArgs, ReplaceTextState>>(
   ({ args, partialArgs, isArgumentsStreaming, pluginState }) => {
@@ -49,7 +40,7 @@ export const ReplaceTextInspector = memo<BuiltinInspectorProps<ReplaceTextArgs, 
 
     return (
       <div className={inspectorTextStyles.root}>
-        <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
+        <span className={cn(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-page-agent.apiName.replaceText')}
         </span>
         {hasResult && (

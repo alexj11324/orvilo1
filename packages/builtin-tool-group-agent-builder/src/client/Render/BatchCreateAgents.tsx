@@ -12,7 +12,7 @@ import ToolTag from '@/features/ToolTag';
 import type { BatchCreateAgentsParams, BatchCreateAgentsState } from '../../types';
 
 const styles = {
-  container: 'rounded-[8px] bg-(--ant-color-fill-quaternary) px-4 py-1',
+  container: 'rounded-(--radius-card) bg-(--ant-color-fill-quaternary) px-4 py-1',
   description:
     'line-clamp-1 text-ellipsis text-[12px] leading-[1.5] text-(--ant-color-text-description)',
   empty: 'p-4 text-(--ant-color-text-tertiary)',

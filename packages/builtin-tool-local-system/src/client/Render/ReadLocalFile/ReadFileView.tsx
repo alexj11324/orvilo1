@@ -18,7 +18,7 @@ const styles = {
   header: 'cursor-pointer',
   imageList: 'flex-wrap',
   path: 'mt-1 px-1 text-[12px] text-muted-foreground break-all',
-  previewBox: 'relative overflow-hidden rounded-[8px] bg-card px-2 py-0',
+  previewBox: 'relative overflow-hidden rounded-(--radius-card) bg-card px-2 py-0',
   previewText: 'overflow-auto font-mono text-[12px] leading-[1.6] break-all whitespace-pre-wrap',
 };
 

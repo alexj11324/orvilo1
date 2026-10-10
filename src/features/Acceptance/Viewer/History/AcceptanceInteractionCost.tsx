@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,24 +26,11 @@ import { buildCheckLabels, selectPricedRound } from './interactionCost';
  * seeing at a glance; the breakdown is one click away.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    padding-block-end: 4px;
-    padding-inline-start: 24px;
-  `,
-  chevron: css`
-    transition: transform 0.15s ease;
-
-    &[data-open='true'] {
-      transform: rotate(90deg);
-    }
-  `,
-  total: css`
-    margin-inline-start: 6px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  body: 'pb-1 ps-6',
+  chevron: 'transition-transform duration-150 ease-[ease] data-[open=true]:rotate-90',
+  total: 'ms-1.5 tabular-nums text-(--ant-color-text-tertiary)',
+};
 
 interface AcceptanceInteractionCostProps {
   data: AcceptanceBundle;

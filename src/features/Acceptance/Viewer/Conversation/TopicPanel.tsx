@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { PanelRightClose } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,30 +20,14 @@ const TopicPanel = memo<OriginTopicPanelProps>(
     const { t } = useTranslation('verify');
 
     return (
-      <div
-        className="flex flex-col h-full"
-        style={{ background: cssVar.colorBgContainer, minHeight: 0, overflow: 'hidden' }}
-      >
-        <div
-          className="flex items-center gap-2"
-          style={{
-            paddingBlock: 12,
-            paddingInline: 12,
-            borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
-            flexShrink: 0,
-          }}
-        >
+      <div className="flex flex-col h-full min-h-0 overflow-hidden bg-card">
+        <div className="flex shrink-0 items-center gap-2 p-3 border-b border-sidebar-border">
           <Avatar
             avatar={agentAvatar ?? undefined}
             background={agentBackgroundColor ?? undefined}
             size={20}
           />
-          <div
-            className="truncate min-w-0 font-semibold"
-            style={{ flex: 1, minWidth: 0, fontSize: 13 }}
-          >
-            {title}
-          </div>
+          <div className="truncate min-w-0 flex-1 font-semibold text-[13px]">{title}</div>
           <ActionIcon
             icon={PanelRightClose}
             size={'small'}
@@ -52,7 +35,7 @@ const TopicPanel = memo<OriginTopicPanelProps>(
             onClick={onCollapse}
           />
         </div>
-        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           <TopicChatDrawerBody
             defaultInputExpanded
             disableInputCollapse

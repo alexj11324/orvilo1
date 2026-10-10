@@ -381,6 +381,7 @@ const SavedViewsPage = memo(() => {
           </div>
           <Select
             aria-label={t('savedViews.ordering')}
+            size="compact"
             style={{ width: '100%' }}
             value={prefs.ordering}
             options={(['name', 'owner', 'updated', 'created'] as const).map((value) => ({
@@ -399,6 +400,7 @@ const SavedViewsPage = memo(() => {
           />
           <Select
             aria-label={t('savedViews.direction')}
+            size="compact"
             style={{ width: '100%' }}
             value={prefs.direction}
             options={(['asc', 'desc'] as const).map((value) => ({

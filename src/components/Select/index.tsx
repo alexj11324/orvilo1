@@ -58,7 +58,7 @@ interface SelectProps<Value = string> {
   'placeholder'?: ReactNode;
   'popupClassName'?: string;
   'showSearch'?: boolean;
-  'size'?: 'sm' | 'default' | 'small' | 'middle' | 'large' | 'lg';
+  'size'?: 'sm' | 'default' | 'small' | 'middle' | 'large' | 'lg' | 'compact';
   'style'?: CSSProperties;
   'value'?: Value | Value[] | null;
 }
@@ -188,7 +188,7 @@ const Select = <Value extends string | number = string>({
         aria-label={ariaLabel}
         className={className}
         id={id}
-        size={size === 'small' || size === 'sm' ? 'sm' : 'default'}
+        size={size === 'small' || size === 'sm' ? 'sm' : size === 'compact' ? 'compact' : 'default'}
         style={style}
       >
         <SelectValue placeholder={placeholder} />

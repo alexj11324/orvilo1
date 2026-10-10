@@ -18,7 +18,7 @@ import { isAnnotatable } from '../Evidence/evidence';
 const styles = {
   hint: 'text-[12px] text-(--ant-color-text-tertiary)',
   stage:
-    'overflow-auto max-h-[min(60vh,640px)] border border-sidebar-border rounded-[8px] bg-(--ant-color-fill-quaternary)',
+    'overflow-auto max-h-[min(60vh,640px)] border border-sidebar-border rounded-(--radius-card) bg-(--ant-color-fill-quaternary)',
   thumb:
     'cursor-pointer overflow-hidden w-16 h-11 border-2 border-transparent rounded-[6px] bg-accent [&_img]:w-full [&_img]:h-full [&_img]:object-cover',
   thumbActive: 'border-primary',

@@ -7,7 +7,7 @@ import { memo } from 'react';
 // Selection keeps the same fill on hover; the inset border marks the keyboard cursor.
 const styles = {
   option:
-    'cursor-pointer rounded-[8px] px-3 py-2.5 transition-[background] duration-[120ms] ease-[ease] hover:bg-[var(--ant-color-fill-quaternary)]',
+    'cursor-pointer rounded-(--radius-card) px-3 py-2.5 transition-[background] duration-[120ms] ease-[ease] hover:bg-[var(--ant-color-fill-quaternary)]',
   optionCheck: 'shrink-0 text-primary',
   optionDescription: 'text-[12px] leading-[1.45] text-muted-foreground',
   optionIndex:

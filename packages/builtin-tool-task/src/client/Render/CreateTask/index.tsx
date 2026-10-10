@@ -16,7 +16,7 @@ import type { CreateTaskParams, CreateTaskState } from '../../../types';
 const styles = {
   description: 'line-clamp-3 text-[12px] leading-[1.5] text-[var(--ant-color-text-tertiary)]',
   identifier:
-    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
   // Fade the model-facing markdown preview; the detail panel contains the full content.
   instruction:
     'max-h-[132px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_78%,transparent)]',

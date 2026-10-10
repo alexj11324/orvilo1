@@ -12,7 +12,7 @@ import { type UploadFileItem } from '@/types/files';
 const styles = {
   actions: 'absolute top-0 end-0',
   container:
-    'cursor-pointer relative overflow-hidden w-[250px] h-16 py-1 ps-2 pe-6 border border-border rounded-[8px] bg-accent',
+    'cursor-pointer relative overflow-hidden w-[250px] h-16 py-1 ps-2 pe-6 border border-border rounded-(--radius-card) bg-accent',
   deleteButton:
     'text-white hover:text-white active:text-white bg-(--ant-color-bg-mask) hover:bg-destructive',
 };

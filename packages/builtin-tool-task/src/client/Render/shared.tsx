@@ -22,7 +22,7 @@ const styles = {
   header: 'flex items-center gap-2 px-3 py-2.5',
   headerDivider: '[border-block-end:1px_solid_var(--sidebar-border)]',
   identifier:
-    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
   inlineRow: 'flex min-w-0 items-center gap-2',
   inlineValue: 'min-w-0 flex-1 overflow-hidden text-[13px] text-foreground',
   label: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',

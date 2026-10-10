@@ -13,7 +13,7 @@ import { LocalFile, LocalFolder } from '@/features/LocalFile';
 
 const styles = {
   container: 'py-1',
-  previewBox: 'overflow-hidden rounded-[8px] bg-accent',
+  previewBox: 'overflow-hidden rounded-(--radius-card) bg-accent',
 };
 
 type WriteFileArgs = WriteLocalFileParams & {

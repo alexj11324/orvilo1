@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { CircleAlertIcon, CircleCheckIcon, RotateCwIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -50,7 +49,7 @@ const ContextItem = memo<FileItemProps>((props) => {
     <div className="flex flex-col gap-1">
       <span>{file.name}</span>
       {status === 'error' && error ? (
-        <div className="flex flex-row items-start gap-1" style={{ color: cssVar.colorError }}>
+        <div className="flex flex-row items-start gap-1 text-destructive">
           <div className="flex flex-col items-center justify-center" style={{ height: '1lh' }}>
             <span className="anticon" role="img">
               <CircleAlertIcon fill={'transparent'} height={12} size={12} width={12} />
@@ -94,9 +93,8 @@ const ContextItem = memo<FileItemProps>((props) => {
                   {showCompletion ? (
                     <span
                       aria-label={t('upload.preview.status.success')}
-                      className="anticon"
+                      className="anticon text-success"
                       role="img"
-                      style={{ color: cssVar.colorSuccess }}
                     >
                       <CircleCheckIcon fill={'transparent'} height={12} size={12} width={12} />
                     </span>
@@ -126,7 +124,7 @@ const ContextItem = memo<FileItemProps>((props) => {
                           cy={6}
                           fill={'none'}
                           r={5}
-                          stroke={cssVar.colorFillSecondary}
+                          stroke="var(--selected)"
                           strokeWidth={2}
                         />
                         <circle
@@ -134,7 +132,7 @@ const ContextItem = memo<FileItemProps>((props) => {
                           cy={6}
                           fill={'none'}
                           r={5}
-                          stroke={cssVar.colorPrimary}
+                          stroke="var(--primary)"
                           strokeDasharray={2 * Math.PI * 5}
                           strokeLinecap={'round'}
                           strokeWidth={2}
@@ -146,7 +144,7 @@ const ContextItem = memo<FileItemProps>((props) => {
                       </svg>
                     </span>
                   ) : (
-                    <span className="anticon" role="img" style={{ color: cssVar.colorError }}>
+                    <span className="anticon text-destructive" role="img">
                       <CircleAlertIcon fill={'transparent'} height={12} size={12} width={12} />
                     </span>
                   )}

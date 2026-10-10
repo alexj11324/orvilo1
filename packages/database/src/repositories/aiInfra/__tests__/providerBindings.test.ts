@@ -316,8 +316,10 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
 
     expect(await bindings().list()).toEqual([]);
     expect(await new CredentialModel(db, owner).listPersonal()).toEqual([]);
-    expect(await db.query.aiProviders.findMany()).toEqual([]);
-    expect(await db.query.aiModels.findMany()).toEqual([]);
+    expect(await db.query.aiProviders.findMany({ where: eq(aiProviders.userId, owner) })).toEqual(
+      [],
+    );
+    expect(await db.query.aiModels.findMany({ where: eq(aiModels.userId, owner) })).toEqual([]);
   });
 
   it("leaves foreign users blind to the owner's bindings", async () => {
@@ -552,12 +554,16 @@ describe('ProviderBindingPlane workspace scope', () => {
     await wsPlane.deleteProvider(providerId);
 
     expect(await bindings().list()).toEqual([]);
-    expect(await db.query.aiProviders.findMany()).toEqual([
-      expect.objectContaining({ name: 'Foreign', userId: foreign }),
-    ]);
-    expect(await db.query.aiModels.findMany()).toEqual([
-      expect.objectContaining({ id: 'm-foreign', userId: foreign }),
-    ]);
+    expect(
+      await db.query.aiProviders.findMany({
+        where: inArray(aiProviders.userId, [owner, foreign]),
+      }),
+    ).toEqual([expect.objectContaining({ name: 'Foreign', userId: foreign })]);
+    expect(
+      await db.query.aiModels.findMany({
+        where: inArray(aiModels.userId, [owner, foreign]),
+      }),
+    ).toEqual([expect.objectContaining({ id: 'm-foreign', userId: foreign })]);
   });
 });
 

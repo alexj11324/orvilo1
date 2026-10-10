@@ -755,7 +755,7 @@ describe('Project and Issue collaboration boundaries', () => {
     expect(await new TeamModel(db, member, workspaceId).listReadable()).toEqual([]);
   });
 
-  it('allows ordinary Issue comments without Agent Use, author-only edits and governance deletes', async () => {
+  it('allows ordinary Issue comments without Agent Use and keeps edits/deletes author-only', async () => {
     await db.insert(tasks).values({
       id: 'collab-task',
       identifier: 'COLLAB-1',
@@ -771,6 +771,7 @@ describe('Project and Issue collaboration boundaries', () => {
       taskId: 'collab-task',
       userId: member,
       content: 'Ordinary comment',
+      authorUserId: member,
     });
     expect((await taskModel(member).getComments('collab-task'))[0].capabilities).toEqual({
       canEdit: true,
@@ -778,26 +779,38 @@ describe('Project and Issue collaboration boundaries', () => {
     });
     expect((await taskModel(manager).getComments('collab-task'))[0].capabilities).toEqual({
       canEdit: false,
-      canDelete: true,
+      canDelete: false,
     });
     expect((await taskModel(owner).getComments('collab-task'))[0].capabilities).toEqual({
       canEdit: false,
-      canDelete: true,
+      canDelete: false,
     });
     expect((await taskModel(viewer).getComments('collab-task'))[0].capabilities).toEqual({
       canEdit: false,
       canDelete: false,
     });
-    expect(await taskModel(manager).updateComment(comment.id, 'Not my words')).toBeUndefined();
+    await expect(
+      taskModel(manager).updateComment(comment.id, 'Not my words'),
+    ).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
     expect(await taskModel(member).updateComment(comment.id, 'My revision')).toMatchObject({
       content: 'My revision',
     });
-    expect(await taskModel(viewer).deleteComment(comment.id)).toBe(false);
-    expect(await taskModel(manager).deleteComment(comment.id)).toBe(true);
+    for (const actor of [viewer, manager, owner]) {
+      await expect(taskModel(actor).deleteComment(comment.id)).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    }
+    expect(await taskModel(member).findCommentById(comment.id)).toMatchObject({
+      content: 'My revision',
+    });
+    expect(await taskModel(member).deleteComment(comment.id)).toBe(true);
     const authorComment = await taskModel(member).addComment({
       taskId: 'collab-task',
       userId: member,
       content: 'Author removes',
+      authorUserId: member,
     });
     expect(await taskModel(member).deleteComment(authorComment.id)).toBe(true);
     await expect(taskModel(member).delete('collab-task')).rejects.toThrow(

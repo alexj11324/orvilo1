@@ -185,6 +185,7 @@ export const useTaskIssueDates = ({
             aria-label={t('taskDetail.menu.dateSearch')}
             placeholder={t('taskDetail.menu.dateSearch')}
             value={dateQuery}
+            visualSize="small"
             onChange={(event) => setDateQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Escape') return;
@@ -233,6 +234,7 @@ export const useTaskIssueDates = ({
             aria-label={t('taskDetail.menu.reminderSearch')}
             placeholder={t('taskDetail.menu.reminderSearch')}
             value={reminderQuery}
+            visualSize="small"
             onChange={(event) => setReminderQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Escape') return;

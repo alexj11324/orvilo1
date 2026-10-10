@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { snakeCase } from 'es-toolkit/compat';
 import { memo, useMemo } from 'react';
@@ -11,47 +10,13 @@ import { type FeatureFlagKey } from '@/store/serverConfig/slices/featureFlagOver
 
 type SegmentedValue = 'true' | 'false' | 'inherit';
 
-const styles = createStaticStyles(({ css }) => ({
-  control: css`
-    flex: none;
-  `,
-  meta: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 10px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  name: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  row: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    border-inline-start: 2px solid transparent;
-
-    transition: background 120ms ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  rowOverridden: css`
-    border-inline-start-color: ${cssVar.colorWarning};
-    background: ${cssVar.colorWarningBg};
-
-    &:hover {
-      background: ${cssVar.colorWarningBgHover};
-    }
-  `,
-}));
+const styles = {
+  control: 'flex-none',
+  meta: 'font-mono text-xs leading-5 text-foreground-description',
+  name: 'font-mono text-sm leading-5.5 font-medium text-foreground',
+  row: 'flex gap-3 items-center justify-between py-1.5 px-3 border-b border-divider border-s-2 border-s-transparent transition-[background-color] duration-(--orvilo-motion-fast) ease-[ease] hover:bg-accent',
+  rowOverridden: 'border-s-warning bg-warning-wash hover:bg-(--ant-color-warning-bg-hover)',
+};
 
 const segmentOptions = [
   { label: 'true', value: 'true' as const },
@@ -87,8 +52,8 @@ const FlagRow = memo<FlagRowProps>(({ flagKey }) => {
   };
 
   return (
-    <div className={cx(styles.row, isOverridden && styles.rowOverridden)}>
-      <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
+    <div className={cn(styles.row, isOverridden && styles.rowOverridden)}>
+      <div className="flex flex-1 flex-col gap-0.5 min-w-0">
         <div className={cn('truncate', 'block', styles.name)}>{snakeCase(flagKey as string)}</div>
         <span className={styles.meta}>server: {String(original)}</span>
       </div>

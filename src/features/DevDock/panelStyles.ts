@@ -1,47 +1,6 @@
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 
-export const devDockPanelStyles = createStaticStyles(({ css }) => ({
-  flatSection: css`
-    flex-shrink: 0;
-    padding: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  paneDividerEnd: css`
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  paneDividerStart: css`
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  paneHeader: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-
-    height: 36px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  paneSearch: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: stretch;
-
-    height: 44px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  root: css`
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-  `,
+const retainedSearchStyles = createStaticStyles(({ css }) => ({
   searchInput: css`
     flex: 1;
 
@@ -52,28 +11,18 @@ export const devDockPanelStyles = createStaticStyles(({ css }) => ({
     background: transparent !important;
     box-shadow: none !important;
   `,
-  statusBar: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: space-between;
-
-    height: 28px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM};
-    color: ${cssVar.colorTextTertiary};
-  `,
-  toolbar: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 8px;
-    align-items: center;
-
-    height: 44px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
 }));
+
+export const devDockPanelStyles = {
+  flatSection: 'shrink-0 p-3 border-b border-divider',
+  paneDividerEnd: 'border-e border-divider',
+  paneDividerStart: 'border-s border-divider',
+  paneHeader:
+    'flex shrink-0 items-center h-9 px-3 border-b border-divider text-sm leading-5.5 font-semibold text-foreground',
+  paneSearch: 'flex shrink-0 items-stretch h-11 border-b border-divider',
+  root: 'overflow-hidden flex flex-col w-full h-full min-h-0',
+  statusBar:
+    'flex shrink-0 items-center justify-between h-7 px-3 border-t border-divider font-mono text-xs leading-5 text-foreground-tertiary',
+  toolbar: 'flex shrink-0 gap-2 items-center h-11 px-3 border-b border-divider',
+  searchInput: retainedSearchStyles.searchInput,
+};

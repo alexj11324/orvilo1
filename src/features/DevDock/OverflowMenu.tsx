@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import { Ellipsis, Pin } from 'lucide-react';
 import { memo } from 'react';
@@ -20,86 +20,23 @@ const PIN_CLASS = 'devdock-pin';
 
 const itemIcon = (Icon: LucideIcon) => <Icon size={14} />;
 
-const styles = createStaticStyles(({ css }) => ({
-  pinButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    border: none;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextQuaternary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &[data-pinned='true'] {
-      color: ${cssVar.colorText};
-    }
-  `,
-  popup: css`
-    min-width: 224px;
-
-    .${PIN_CLASS} {
-      opacity: 0;
-    }
-
-    [role^='menuitem']:hover .${PIN_CLASS},
-    .${PIN_CLASS}:focus-visible,
-    .${PIN_CLASS}[data-pinned='true'] {
-      opacity: 1;
-    }
-  `,
-  submenuLabel: css`
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  trigger: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: transparent;
-
-    &:hover,
-    &[data-popup-open] {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  valueHint: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 10px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  pinButton:
+    'cursor-pointer inline-flex items-center justify-center size-8 p-0 border-0 rounded-(--radius-button) text-foreground-quaternary bg-transparent hover:text-foreground hover:bg-accent data-[pinned=true]:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  popup:
+    "min-w-56 [&_.devdock-pin]:opacity-0 [&_[role^='menuitem']:hover_.devdock-pin]:opacity-100 [&_.devdock-pin:focus-visible]:opacity-100 [&_.devdock-pin[data-pinned='true']]:opacity-100",
+  submenuLabel: 'inline-flex gap-2 items-center',
+  trigger:
+    'cursor-pointer inline-flex items-center justify-center size-8 border-0 rounded-(--radius-button) text-foreground-tertiary bg-transparent hover:text-foreground hover:bg-accent data-popup-open:text-foreground data-popup-open:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  valueHint: 'font-mono text-xs leading-5 text-foreground-tertiary',
+};
 
 const PinToggle = memo<{ item: DevDockItem }>(({ item }) => {
   const pinned = useDevDockStore((s) => isItemPinned(item, s.pinOverrides));
   const setPinned = useDevDockStore((s) => s.setPinned);
   return (
     <button
-      className={cx(PIN_CLASS, styles.pinButton)}
+      className={cn(PIN_CLASS, styles.pinButton)}
       data-pinned={pinned}
       title={pinned ? 'Unpin from bar' : 'Pin to bar'}
       type={'button'}

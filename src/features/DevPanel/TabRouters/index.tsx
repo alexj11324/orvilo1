@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
@@ -8,95 +8,23 @@ import { useElectronStore } from '@/store/electron';
 
 import { type TabRouterRow, useTabRouterDebug } from './useTabRouterDebug';
 
-const styles = createStaticStyles(({ css }) => ({
-  cell: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  cold: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  drift: css`
-    color: ${cssVar.colorWarning};
-  `,
-  empty: css`
-    padding: 24px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  head: css`
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 0;
-
-    color: ${cssVar.colorTextQuaternary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  legend: css`
-    flex-shrink: 0;
-
-    padding-block: 8px 12px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 10px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  muted: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  next: css`
-    color: ${cssVar.colorError};
-  `,
-  ok: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  row: css`
-    cursor: pointer;
-
-    display: grid;
-    grid-template-columns: 24px 96px 68px 1fr 1fr 44px 76px 52px;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 5px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    font-feature-settings: 'tnum';
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  rowActive: css`
-    background: ${cssVar.colorFillTertiary};
-  `,
-  rows: css`
-    overflow: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  summary: css`
-    flex-shrink: 0;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  cell: 'truncate',
+  cold: 'text-foreground-quaternary',
+  drift: 'text-warning-text',
+  empty: 'p-6 text-sm leading-5.5 text-foreground-tertiary text-center',
+  head: 'sticky z-1 top-0 text-foreground-quaternary uppercase tracking-[0.04em] bg-card hover:bg-card',
+  legend:
+    'shrink-0 pt-2 pb-3 px-3 border-t border-divider text-xs leading-5 text-foreground-quaternary',
+  muted: 'text-foreground-tertiary',
+  next: 'text-destructive-text',
+  ok: 'text-success-text',
+  row: 'cursor-pointer grid grid-cols-[24px_96px_68px_1fr_1fr_44px_76px_52px] gap-2 items-center min-h-8 py-1.5 px-3 border-b border-divider font-mono text-xs leading-5 tabular-nums hover:bg-fill-quaternary focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  rowActive: 'bg-selected hover:bg-selected',
+  rows: 'overflow-auto flex-1 min-h-0',
+  summary:
+    'shrink-0 py-2 px-3 border-b border-divider font-mono text-xs leading-5 text-muted-foreground',
+};
 
 const formatAge = (timestamp: number): string => {
   const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
@@ -113,14 +41,14 @@ const Row = memo<{ index: number; nextEvicted: boolean; row: TabRouterRow }>(
 
     return (
       <div
-        className={cx(styles.row, row.active && styles.rowActive)}
+        className={cn(styles.row, row.active && styles.rowActive)}
         role={'button'}
         tabIndex={0}
         onClick={() => activateTab(row.id)}
         onKeyDown={(e) => e.key === 'Enter' && activateTab(row.id)}
       >
         <span className={styles.muted}>{index + 1}</span>
-        <span className={cx(styles.cell, styles.muted)} title={row.id}>
+        <span className={cn(styles.cell, styles.muted)} title={row.id}>
           {row.id}
         </span>
         <span className={row.live ? styles.ok : styles.cold}>
@@ -134,7 +62,7 @@ const Row = memo<{ index: number; nextEvicted: boolean; row: TabRouterRow }>(
           {row.storeUrl}
         </span>
         <span
-          className={cx(styles.cell, row.drift ? styles.drift : styles.muted)}
+          className={cn(styles.cell, row.drift ? styles.drift : styles.muted)}
           title={row.routerUrl ?? 'router disposed'}
         >
           {row.live ? (row.drift ? row.routerUrl : '=') : '—'}
@@ -165,7 +93,7 @@ const TabRouters = memo(() => {
       : null;
 
   return (
-    <div className={cx(devDockPanelStyles.root, 'flex flex-col')}>
+    <div className={cn(devDockPanelStyles.root, 'flex flex-col')}>
       <div className={styles.summary}>
         scope <b>{scopeKey}</b> · tabs <b>{rows.length}</b> · live routers{' '}
         <b className={liveCount > cap ? styles.drift : undefined}>
@@ -179,7 +107,7 @@ const TabRouters = memo(() => {
         <div className={styles.empty}>No tabs in this scope.</div>
       ) : (
         <div className={styles.rows}>
-          <div className={cx(styles.row, styles.head)}>
+          <div className={cn(styles.row, styles.head)}>
             <span>#</span>
             <span>tab id</span>
             <span>state</span>

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useLocation } from 'react-router';
 
@@ -10,20 +9,9 @@ import { useElectronStore } from '@/store/electron';
 
 import { readableRoutePath } from './routePathDisplay';
 
-const styles = createStaticStyles(({ css }) => ({
-  path: css`
-    overflow: hidden;
-    display: block;
-
-    max-width: 100%;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  path: 'block max-w-full truncate font-mono text-xs leading-5 text-foreground-tertiary',
+};
 
 const RoutePathWidget = memo(() => {
   const { pathname } = useLocation();

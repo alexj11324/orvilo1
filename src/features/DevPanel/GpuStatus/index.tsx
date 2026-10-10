@@ -1,81 +1,27 @@
 'use client';
 
 import type { GpuStatus } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Fragment, memo, useEffect, useState } from 'react';
 
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
 import { electronDevtoolsService } from '@/services/electron/devtools';
 
-const styles = createStaticStyles(({ css }) => ({
-  device: css`
-    display: grid;
-    grid-template-columns: 96px 1fr;
-    flex-shrink: 0;
-    gap: 4px 8px;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  empty: css`
-    padding: 24px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  error: css`
-    color: ${cssVar.colorError};
-  `,
-  key: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  legend: css`
-    flex-shrink: 0;
-
-    padding-block: 8px 12px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 10px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  muted: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  ok: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  rows: css`
-    overflow: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  row: css`
-    display: grid;
-    grid-template-columns: 1fr 200px;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 5px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-  `,
-  value: css`
-    overflow-wrap: anywhere;
-  `,
-  warn: css`
-    color: ${cssVar.colorWarning};
-  `,
-}));
+const styles = {
+  device:
+    'grid grid-cols-[96px_1fr] shrink-0 gap-y-1 gap-x-2 py-2.5 px-3 border-b border-divider font-mono text-xs leading-5 text-muted-foreground',
+  empty: 'p-6 text-sm leading-5.5 text-foreground-tertiary text-center',
+  error: 'text-destructive-text',
+  key: 'text-foreground-quaternary',
+  legend:
+    'shrink-0 pt-2 pb-3 px-3 border-t border-divider text-xs leading-5 text-foreground-quaternary',
+  muted: 'text-foreground-tertiary',
+  ok: 'text-success-text',
+  rows: 'overflow-auto flex-1 min-h-0',
+  row: 'grid grid-cols-[1fr_200px] gap-2 items-center py-1.5 px-3 border-b border-divider font-mono text-xs leading-5',
+  value: 'wrap-anywhere',
+  warn: 'text-warning-text',
+};
 
 const statusClass = (status: string): string => {
   if (status.startsWith('enabled')) return styles.ok;
@@ -123,12 +69,12 @@ const GpuStatusPanel = memo(() => {
   const features = Object.entries(status.featureStatus).sort(([a], [b]) => a.localeCompare(b));
 
   return (
-    <div className={cx(devDockPanelStyles.root, 'flex flex-col')}>
+    <div className={cn(devDockPanelStyles.root, 'flex flex-col')}>
       <div className={styles.device}>
         {DEVICE_LABELS.map(([label, key]) => (
           <Fragment key={key}>
             <span className={styles.key}>{label}</span>
-            <span className={cx(styles.value, !status[key] && styles.muted)}>
+            <span className={cn(styles.value, !status[key] && styles.muted)}>
               {status[key] ?? '—'}
             </span>
           </Fragment>

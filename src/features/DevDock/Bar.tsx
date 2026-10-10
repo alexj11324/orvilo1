@@ -1,10 +1,9 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, Wrench } from 'lucide-react';
 import { Fragment, memo } from 'react';
 
-import { BAR_HEIGHT, BAR_OVERLAP, DOCK_Z_INDEX } from './const';
 import OverflowMenu from './OverflowMenu';
 import { PinnedAction, PinnedSelect, PinnedToggle, WidgetSlot } from './pinnedItems';
 import {
@@ -15,109 +14,18 @@ import {
 } from './registry';
 import { useDevDockStore } from './store';
 
-const styles = createStaticStyles(({ css }) => ({
-  bar: css`
-    flex-shrink: 0;
-
-    width: 100%;
-    height: ${BAR_HEIGHT}px;
-    margin-block-start: -${BAR_OVERLAP}px;
-    padding-inline: 8px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  center: css`
-    display: flex;
-    flex: 1;
-    align-items: center;
-    min-width: 0;
-  `,
-  divider: css`
-    flex-shrink: 0;
-    width: 1px;
-    height: 12px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  iconButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  pill: css`
-    cursor: pointer;
-
-    position: fixed;
-    z-index: ${DOCK_Z_INDEX};
-    inset-block-end: 0;
-    inset-inline-start: 16px;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    height: 18px;
-    padding-inline: 8px;
-    border: none;
-    border-start-start-radius: 6px;
-    border-start-end-radius: 6px;
-
-    font-size: 10px;
-    color: ${cssVar.colorBgContainer};
-
-    background: ${cssVar.colorText};
-
-    &:hover {
-      opacity: 0.85;
-    }
-  `,
-  tab: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 4px;
-    align-items: center;
-
-    height: 20px;
-    padding-inline: 6px;
-    border: none;
-    border-radius: 4px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  tabActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-}));
+const styles = {
+  // Matches BAR_HEIGHT32 and BAR_OVERLAP8 in the dock geometry owner.
+  bar: 'shrink-0 w-full h-8 -mt-2 px-2 text-xs leading-5 text-muted-foreground whitespace-nowrap',
+  center: 'flex flex-1 items-center min-w-0',
+  divider: 'shrink-0 w-px h-3 bg-divider',
+  iconButton:
+    'cursor-pointer inline-flex shrink-0 items-center justify-center size-8 border-0 rounded-(--radius-button) text-foreground-tertiary bg-transparent hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  // Shares DOCK_Z_INDEX1100 with the memory popup stack.
+  pill: 'cursor-pointer fixed z-[1100] bottom-0 start-4 inline-flex gap-1 items-center h-8 px-2 border-0 rounded-t-(--radius-button) text-sm leading-5.5 text-card bg-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  tab: 'cursor-pointer inline-flex shrink-0 gap-1 items-center h-8 px-1.5 border-0 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground whitespace-nowrap bg-transparent hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  tabActive: 'text-foreground bg-selected',
+};
 
 const PanelTab = memo<{ item: DevDockPanelItem }>(({ item }) => {
   const active = useDevDockStore((s) => s.activePanelId === item.id);
@@ -126,7 +34,7 @@ const PanelTab = memo<{ item: DevDockPanelItem }>(({ item }) => {
   const Badge = item.badge;
   return (
     <button
-      className={cx(styles.tab, active && styles.tabActive)}
+      className={cn(styles.tab, active && styles.tabActive)}
       type={'button'}
       onClick={() => togglePanel(item.id)}
     >
@@ -181,7 +89,7 @@ const Bar = memo(() => {
   const { center, right, tabs } = selectBarLayout(items, pinOverrides, activePanelId);
 
   return (
-    <div className={cx(styles.bar, 'flex items-center gap-0.75')}>
+    <div className={cn(styles.bar, 'flex items-center gap-1')}>
       <button
         className={styles.iconButton}
         title={'Collapse DevDock'}
@@ -192,7 +100,7 @@ const Bar = memo(() => {
       </button>
       {/* Tabs don't shrink below their label width — clip the row on narrow
           viewports instead of letting it push the page into horizontal scroll. */}
-      <div className="flex items-center gap-0.5" style={{ minWidth: 0, overflow: 'hidden' }}>
+      <div className="flex items-center gap-0.5 min-w-0 overflow-hidden">
         {tabs.map((item) => (
           <PanelTab item={item} key={item.id} />
         ))}
@@ -202,7 +110,7 @@ const Bar = memo(() => {
           <WidgetSlot item={center} />
         </div>
       ) : (
-        <span style={{ flex: 1 }} />
+        <span className="flex-1" />
       )}
       {right.map((item, index) => {
         const previous = right[index - 1];

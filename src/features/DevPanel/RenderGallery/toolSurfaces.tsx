@@ -1,7 +1,6 @@
 'use client';
 
 import type { UIChatMessage } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Component, memo, type ReactNode, useMemo } from 'react';
 
 import { type ConversationContext, ConversationProvider } from '@/features/Conversation';
@@ -15,17 +14,10 @@ import {
 } from './lifecycleMode';
 import type { ApiEntry } from './useDevtoolsEntries';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  missingShell: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-    border: 1px dashed ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  missingShell:
+    'py-3 px-4 border border-dashed border-divider rounded-(--radius-card) text-sm leading-5.5 text-foreground-tertiary',
+};
 
 /** Catches a render/inspector crash so one bad fixture can't blank the page. */
 export class RenderBoundary extends Component<
@@ -45,13 +37,12 @@ export class RenderBoundary extends Component<
     if (!this.state.error) return this.props.children;
 
     return (
-      <div
-        className="flex flex-col p-4 border"
-        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
-      >
+      <div className="flex flex-col p-4 border border-divider bg-card">
         <div className="flex flex-col gap-2">
-          <div className="text-sm text-destructive font-medium">{this.props.label} crashed</div>
-          <div className="text-xs text-muted-foreground">{this.state.error.message}</div>
+          <div className="text-sm leading-5.5 text-destructive-text font-medium">
+            {this.props.label} crashed
+          </div>
+          <div className="text-xs leading-5 text-muted-foreground">{this.state.error.message}</div>
         </div>
       </div>
     );

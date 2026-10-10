@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -8,32 +7,10 @@ import { memo } from 'react';
  * Shared with the dropdown-style widgets (locale / workspace role), whose
  * trigger has to be a plain element instead of a `<button>` with `onClick`.
  */
-export const barButtonStyles = createStaticStyles(({ css }) => ({
-  button: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 4px;
-    align-items: center;
-
-    height: 20px;
-    padding-inline: 4px;
-    border: none;
-    border-radius: 4px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+export const barButtonStyles = {
+  button:
+    'cursor-pointer inline-flex shrink-0 gap-1 items-center h-8 px-1 border-0 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground whitespace-nowrap bg-transparent hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+};
 
 interface BarButtonProps {
   icon: LucideIcon;

@@ -106,7 +106,7 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
             {t('apikey.created.title')}
           </span>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
+        <div className="flex items-center gap-2 rounded-(--radius-card) border border-border bg-muted/50 px-3 py-2.5">
           <span className="flex-1 break-all font-mono text-xs">{createdKey}</span>
           <Button
             size="icon-sm"

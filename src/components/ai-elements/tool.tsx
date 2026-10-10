@@ -95,7 +95,7 @@ export const ToolHeader = ({
   return (
     <CollapsibleTrigger
       className={cn(
-        'flex w-full items-center justify-between gap-4 p-3 text-left rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex w-full items-center justify-between gap-4 p-3 text-left rounded-(--radius-button) outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
       {...props}

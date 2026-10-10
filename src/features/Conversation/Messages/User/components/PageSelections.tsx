@@ -1,119 +1,9 @@
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { Code2Icon, SquareDashedMousePointer } from 'lucide-react';
 import { memo } from 'react';
 
 import type { ContextSelection, ElementContextSelection, PageSelection } from '@/types/index';
 
 type UserContextSelection = ContextSelection | PageSelection;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  codeContainer: css`
-    cursor: pointer;
-
-    overflow: hidden;
-
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    :hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  codeContent: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-
-    margin: 0;
-    padding-block: 8px;
-    padding-inline: 10px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    line-height: 1.55;
-    color: ${cssVar.colorTextSecondary};
-    white-space: pre;
-  `,
-  codeHeader: css`
-    overflow: hidden;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 10px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    color: ${cssVar.colorTextTertiary};
-  `,
-  codeMeta: css`
-    overflow: hidden;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  container: css`
-    cursor: pointer;
-    position: relative;
-    border-radius: 8px;
-
-    :hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  content: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-    white-space: pre-wrap;
-  `,
-  elementText: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    padding-block: 8px;
-    padding-inline: 10px;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  elementThumbnail: css`
-    display: block;
-
-    max-width: 100%;
-    max-height: 200px;
-    margin-block: 8px;
-    margin-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 6px;
-
-    object-fit: contain;
-    background: ${cssVar.colorBgContainer};
-  `,
-  quote: css`
-    inset-block-start: 2px;
-    inset-inline-start: 0;
-
-    font-family: Georgia, serif;
-    font-size: 28px;
-    line-height: 1;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  wrapper: css``,
-}));
 
 interface PageSelectionsProps {
   selections: UserContextSelection[];
@@ -141,12 +31,14 @@ const getCodeSelectionMeta = (selection: ContextSelection): string => {
 };
 
 const CodeSelection = memo<{ selection: ContextSelection }>(({ selection }) => (
-  <div className={cn('flex flex-col', styles.codeContainer)}>
-    <div className={cn('flex gap-1.5', styles.codeHeader)}>
+  <div className="flex cursor-pointer flex-col overflow-hidden rounded-(--radius-card) border border-divider bg-fill-quaternary hover:border-border hover:bg-accent">
+    <div className="flex items-center gap-1.5 overflow-hidden border-b border-divider px-2.5 py-1.5 text-foreground-tertiary">
       <Code2Icon size={14} />
-      <div className={styles.codeMeta}>{getCodeSelectionMeta(selection)}</div>
+      <div className="truncate font-mono text-xs leading-5">{getCodeSelectionMeta(selection)}</div>
     </div>
-    <pre className={styles.codeContent}>{selection.content}</pre>
+    <pre className="m-0 line-clamp-4 px-2.5 py-2 font-mono text-xs leading-5 whitespace-pre text-muted-foreground">
+      {selection.content}
+    </pre>
   </div>
 ));
 
@@ -154,21 +46,23 @@ CodeSelection.displayName = 'UserMessageCodeSelection';
 
 /** A picked DOM element renders as what it is — its crop and locator, not a quote. */
 const ElementSelection = memo<{ selection: ElementContextSelection }>(({ selection }) => (
-  <div className={cn('flex flex-col', styles.codeContainer)}>
-    <div className={cn('flex gap-1.5', styles.codeHeader)}>
+  <div className="flex cursor-pointer flex-col overflow-hidden rounded-(--radius-card) border border-divider bg-fill-quaternary hover:border-border hover:bg-accent">
+    <div className="flex items-center gap-1.5 overflow-hidden border-b border-divider px-2.5 py-1.5 text-foreground-tertiary">
       <SquareDashedMousePointer size={14} />
-      <div className={styles.codeMeta}>
+      <div className="truncate font-mono text-xs leading-5">
         {selection.element.selector || `<${selection.element.tag}>`}
       </div>
     </div>
     {selection.element.thumbnailUrl ? (
       <img
         alt={selection.element.selector || selection.element.tag}
-        className={styles.elementThumbnail}
+        className="mx-2.5 my-2 block max-h-50 max-w-full rounded-(--radius-input) border border-divider bg-card object-contain"
         src={selection.element.thumbnailUrl}
       />
     ) : (
-      <div className={styles.elementText}>{selection.preview || selection.content}</div>
+      <div className="line-clamp-3 px-2.5 py-2 text-xs leading-5 text-muted-foreground">
+        {selection.preview || selection.content}
+      </div>
     )}
   </div>
 ));
@@ -176,10 +70,12 @@ const ElementSelection = memo<{ selection: ElementContextSelection }>(({ selecti
 ElementSelection.displayName = 'UserMessageElementSelection';
 
 const QuoteSelection = memo<{ selection: UserContextSelection }>(({ selection }) => (
-  <div className={cn('flex flex-col', styles.container)}>
-    <div className={cn('flex gap-1 p-1', styles.wrapper)}>
-      <span className={styles.quote}>"</span>
-      <div className={styles.content}>{selection.content}</div>
+  <div className="relative flex cursor-pointer flex-col rounded-(--radius-card) hover:bg-accent">
+    <div className="flex gap-1 p-1">
+      <span className="start-0 top-0.5 text-2xl leading-none text-foreground-quaternary">"</span>
+      <div className="line-clamp-3 text-xs leading-5 whitespace-pre-wrap text-muted-foreground">
+        {selection.content}
+      </div>
     </div>
   </div>
 ));

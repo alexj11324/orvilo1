@@ -1,7 +1,5 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CircleAlert, CircleCheck, CircleSlash, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -11,23 +9,6 @@ import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 
 import { dataSelectors, useConversationStore } from '../../store';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    overflow: hidden;
-
-    padding-block: 12px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgElevated};
-  `,
-  identifier: css`
-    font-family: ${cssVar.fontFamilyCode};
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
 
 interface TaskCallbackMessageProps {
   id: string;
@@ -39,14 +20,18 @@ type CallbackReason = 'done' | 'error' | 'interrupted';
 const reasonMeta: Record<
   CallbackReason,
   {
-    color: keyof typeof cssVar;
+    className: string;
     i18nKey: 'taskCallback.done' | 'taskCallback.error' | 'taskCallback.interrupted';
     icon: typeof CircleCheck;
   }
 > = {
-  done: { color: 'colorSuccess', i18nKey: 'taskCallback.done', icon: CircleCheck },
-  error: { color: 'colorError', i18nKey: 'taskCallback.error', icon: CircleAlert },
-  interrupted: { color: 'colorWarning', i18nKey: 'taskCallback.interrupted', icon: CircleSlash },
+  done: { className: 'text-success-text', i18nKey: 'taskCallback.done', icon: CircleCheck },
+  error: { className: 'text-destructive-text', i18nKey: 'taskCallback.error', icon: CircleAlert },
+  interrupted: {
+    className: 'text-warning-text',
+    i18nKey: 'taskCallback.interrupted',
+    icon: CircleSlash,
+  },
 };
 
 /**
@@ -67,7 +52,7 @@ const TaskCallbackMessage = memo<TaskCallbackMessageProps>(({ id }) => {
   if (!callback) return null;
 
   const reason = (callback.reason ?? 'done') as CallbackReason;
-  const { color, i18nKey, icon } = reasonMeta[reason] ?? reasonMeta.done;
+  const { className, i18nKey, icon } = reasonMeta[reason] ?? reasonMeta.done;
   const content = typeof item?.content === 'string' ? item.content : '';
   const openTask = () => openTaskDetail(callback.identifier);
 
@@ -79,12 +64,12 @@ const TaskCallbackMessage = memo<TaskCallbackMessageProps>(({ id }) => {
 
   return (
     <div className="flex flex-col py-2">
-      <div className={cn('flex flex-col gap-2', styles.card)}>
+      <div className="flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border border-divider bg-card px-4 py-3 text-sm leading-5.5">
         <div className="flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
-            {createElement(icon, { color: cssVar[color], size: 18 })}
+            {createElement(icon, { className, size: 18 })}
             <div className="font-semibold">{t(i18nKey)}</div>
-            <span className={styles.identifier}>{callback.identifier}</span>
+            <span className="font-mono text-muted-foreground">{callback.identifier}</span>
           </div>
           {viewTaskButton}
         </div>

@@ -1,6 +1,5 @@
 import { HETEROGENEOUS_TYPE_LABELS, isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type { ModelPerformance, ModelUsage } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CircleDollarSignIcon } from 'lucide-react';
@@ -20,12 +19,9 @@ import { formatNumber } from '@/utils/format';
 import { contextSelectors, useConversationStore } from '../../../../store';
 import TokenDetail from './UsageDetail';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+export const styles = {
+  container: 'text-xs leading-5 text-muted-foreground',
+};
 
 // Cheap messages don't need a cost callout — only surface it once it's
 // expensive enough to matter.
@@ -71,7 +67,7 @@ const Usage = memo<UsageProps>(({ model, usage, performance, provider }) => {
           neighbouring coin, so the reader can't tell what the number measures.
           TTFT rides in the hover instead of taking a second inline slot — it's a
           diagnostic, not an at-a-glance metric. */}
-      <div className="flex items-center justify-center gap-1.5" style={{ fontSize: 12 }}>
+      <div className="flex items-center justify-center gap-1.5 text-xs leading-5">
         <div className="flex items-center justify-center gap-1">
           {heteroName || (
             <>
@@ -87,7 +83,7 @@ const Usage = memo<UsageProps>(({ model, usage, performance, provider }) => {
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <span style={{ display: 'inline-flex' }}>
+                    <span className="inline-flex">
                       <div className="flex items-center justify-center gap-1">
                         <span>{formatNumber(performance.tps, 1)}</span>
                         <span>{t('messages.tokenDetails.speed.tps.title')}</span>

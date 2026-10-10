@@ -34,7 +34,7 @@ const buttonVariants = cva(
         // Existing normal controls use lg; large names the 40px role.
         'lg': 'h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         'large':
-          'h-10 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+          'h-10 gap-1.5 px-2.5 text-base has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         'icon': 'size-8',
         'icon-xs':
           "size-6 rounded-(--radius-input) in-data-[slot=button-group]:rounded-(--radius-button) [&_svg:not([class*='size-'])]:size-3",

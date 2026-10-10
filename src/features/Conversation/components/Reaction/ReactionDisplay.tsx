@@ -1,50 +1,19 @@
 'use client';
 
 import type { EmojiReaction } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
 import { usePermission } from '@/hooks/usePermission';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  active: css`
-    background: ${cssVar.colorFillTertiary};
-  `,
-  container: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  `,
-  count: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  reactionTag: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    height: 28px;
-    padding-block: 0;
-    padding-inline: 10px;
-    border-radius: 14px;
-
-    font-size: 14px;
-    line-height: 1;
-
-    background: ${cssVar.colorFillSecondary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  active: 'bg-selected hover:bg-selected',
+  container: 'flex flex-wrap gap-1',
+  count: 'text-xs leading-5 text-muted-foreground',
+  reactionTag:
+    'cursor-pointer inline-flex gap-1 items-center h-8 py-0 px-2.5 rounded-(--radius-button) text-sm leading-5.5 bg-fill-quaternary transition-[background-color] duration-(--orvilo-motion-fast) hover:bg-accent motion-reduce:transition-none',
+};
 
 interface ReactionDisplayProps {
   /**
@@ -74,7 +43,7 @@ const ReactionDisplay = memo<ReactionDisplayProps>(({ reactions, onReactionClick
           key={reaction.emoji}
           style={{ cursor: canEdit ? undefined : 'default' }}
           className={cn(
-            cx(styles.reactionTag, isActive?.(reaction.emoji) && styles.active),
+            cn(styles.reactionTag, isActive?.(reaction.emoji) && styles.active),
             CLICKABLE_FOCUS_RING,
           )}
           onClick={canEdit ? () => onReactionClick?.(reaction.emoji) : undefined}

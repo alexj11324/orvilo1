@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowDownToLine } from 'lucide-react';
 import { memo, useCallback, useRef } from 'react';
@@ -10,30 +9,12 @@ import { Button } from '@/components/ui/button';
 
 import { messageStateSelectors, useConversationStore } from '../store';
 
-const styles = createStaticStyles(({ css }) => ({
-  button: css`
-    pointer-events: auto;
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  line: css`
-    flex: 1;
-    block-size: 0;
-    border-block-start: 1px dashed ${cssVar.colorBorder};
-  `,
-  // The "here" marker: a dashed rule across the chat area at ~25% from the
-  // bottom edge, with the trigger centered on it. Purely a visual guide except
-  // for the button, so it never blocks scrolling or message clicks.
-  wrap: css`
-    pointer-events: none;
-
-    position: absolute;
-    z-index: 20;
-    inset-block-start: 75%;
-    inset-inline: 0;
-    transform: translateY(-50%);
-  `,
-}));
+const styles = {
+  button:
+    'pointer-events-auto bg-popover text-popover-foreground hover:bg-accent hover:text-foreground shadow-(--shadow-popover)',
+  line: 'flex-1 [block-size:0] [border-block-start:1px_dashed_var(--border)]',
+  wrap: 'pointer-events-none absolute z-20 [inset-block-start:75%] inset-x-0 [transform:translateY(-50%)]',
+};
 
 /**
  * "Select to here" marker shown while multi-selecting: a dashed line across the
@@ -70,8 +51,12 @@ const SelectToHereButton = memo(() => {
   return (
     <div className={cn('flex items-center gap-3 px-4', styles.wrap)} ref={wrapRef}>
       <div className={styles.line} />
-      <Button className={cn(styles.button, 'rounded-full')} size="sm" onClick={handleClick}>
-        <ArrowDownToLine /> {t('messageForward.bar.selectToHere')}
+      <Button
+        className={cn(styles.button, 'rounded-(--radius-button) leading-5.5')}
+        size="compact"
+        onClick={handleClick}
+      >
+        <ArrowDownToLine className="size-3.5" /> {t('messageForward.bar.selectToHere')}
       </Button>
       <div className={styles.line} />
     </div>

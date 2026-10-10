@@ -1,7 +1,7 @@
 'use client';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { createStaticStyles, useTheme } from 'antd-style';
+import { useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { type FC, isValidElement, memo, type ReactNode, useState } from 'react';
@@ -20,51 +20,13 @@ import { useConversationStore } from '../../store';
 
 const QUICK_REACTIONS = ['👍', '👎', '❤️', '😄', '😂', '😅', '🎉', '😢', '🤔', '🚀'];
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  emojiButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 18px;
-
-    transition: all 0.2s;
-
-    &:hover {
-      transform: scale(1.1);
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  moreButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  pickerContainer: css`
-    padding: 4px;
-  `,
-}));
+const styles = {
+  emojiButton:
+    'cursor-pointer flex items-center justify-center size-8 rounded-(--radius-button) [font-size:18px] transition-[background-color,transform] duration-(--orvilo-motion-fast) hover:[transform:scale(1.1)] hover:bg-accent motion-reduce:transition-none motion-reduce:hover:transform-none',
+  moreButton:
+    'cursor-pointer flex items-center justify-center size-8 rounded-(--radius-button) text-foreground-tertiary transition-[color,background-color] duration-(--orvilo-motion-fast) hover:text-foreground hover:bg-accent motion-reduce:transition-none',
+  pickerContainer: 'p-1',
+};
 
 interface ReactionPickerProps {
   messageId: string;
@@ -139,11 +101,11 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
+                      <span className="inline-flex">
                         <ActionIcon
                           aria-label={t('messageAction.reaction')}
                           icon={SmilePlus}
-                          size="small"
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
                         />
                       </span>
                     }

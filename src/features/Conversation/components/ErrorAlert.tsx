@@ -94,7 +94,7 @@ const ErrorAlert = memo<ErrorAlertProps>(
             {closable ? (
               <ActionIcon
                 icon={X}
-                size="small"
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
                 title={t('close', { ns: 'common' })}
                 onClick={handleClose}
               />
@@ -106,7 +106,7 @@ const ErrorAlert = memo<ErrorAlertProps>(
             <AlertDescription className="col-start-1 col-span-3 mt-2">{extra}</AlertDescription>
           ) : (
             <Collapsible className="col-start-2" defaultOpen={extraDefaultExpand}>
-              <CollapsibleTrigger className="text-xs text-muted-foreground">
+              <CollapsibleTrigger className="min-h-8 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2">
                 {text?.detail ?? t('appLoading.showDetail', { ns: 'common' })}
               </CollapsibleTrigger>
               <CollapsibleContent>

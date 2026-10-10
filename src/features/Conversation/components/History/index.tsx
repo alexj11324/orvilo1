@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ScrollText } from 'lucide-react';
 import { memo } from 'react';
@@ -12,20 +11,11 @@ import { useAgentStore } from '@/store/agent/store';
 import { contextSelectors, dataSelectors, useConversationStore } from '../../store';
 import HistoryDivider from './HistoryDivider';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-inline: 12px;
-    border-radius: 12px;
-  `,
-  content: css`
-    color: ${cssVar.colorTextDescription};
-  `,
-  line: css`
-    width: 3px;
-    height: 100%;
-    background: ${cssVar.colorBorder};
-  `,
-}));
+const styles = {
+  container: 'px-3 rounded-(--radius-card)',
+  content: 'text-foreground-description',
+  line: 'w-0.75 h-full bg-border',
+};
 
 const History = memo(() => {
   const { t } = useTranslation('chat');
@@ -40,18 +30,15 @@ const History = memo(() => {
   );
 
   return (
-    <div className="flex flex-col px-4" style={{ paddingBottom: 8 }}>
+    <div className="flex flex-col px-4 pb-2">
       <HistoryDivider enable />
       {enableCompressHistory && !!content && (
         <div className={cn('flex flex-col gap-2', styles.container)}>
           <div className="flex items-start gap-2">
-            <div
-              className="flex flex-col items-center justify-center"
-              style={{ height: 20, width: 20 }}
-            >
-              <ScrollText size={16} style={{ color: cssVar.colorTextDescription }} />
+            <div className="flex flex-col items-center justify-center size-5">
+              <ScrollText className="text-foreground-description" size={16} />
             </div>
-            <div className="text-muted-foreground">{t('historySummary')}</div>
+            <div className="text-sm leading-5.5 text-muted-foreground">{t('historySummary')}</div>
             {model && (
               <div>
                 <ModelTag model={model} />
@@ -59,7 +46,7 @@ const History = memo(() => {
             )}
           </div>
           <div className="flex items-start gap-2">
-            <div className="flex flex-col items-center p-2" style={{ width: 20 }}>
+            <div className="flex flex-col items-center w-5 p-2">
               <div className={styles.line} />
             </div>
             <Markdown className={styles.content} variant={'chat'}>

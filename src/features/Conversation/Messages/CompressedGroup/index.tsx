@@ -1,7 +1,7 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import type { CompressionGroupMetadata, UIChatMessage } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronUp, History, Sparkles, Undo2 } from 'lucide-react';
@@ -42,28 +42,11 @@ const setStoredTab = (id: string, tab: string) => {
   localStorage.setItem(`${STORAGE_KEY_PREFIX}${id}`, tab);
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    margin-block-end: 8px;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  contentScroll: css`
-    max-height: min(40vh, 400px);
-  `,
-  header: css`
-    .ant-tabs-nav {
-      margin-block-end: 0;
-    }
-  `,
-  messagesContainer: css`
-    padding-block: 8px;
-  `,
-}));
+const styles = {
+  container: 'mb-2 py-2 px-3 border border-divider rounded-(--radius-card) bg-card',
+  contentScroll: '[max-height:min(40vh,400px)]',
+  messagesContainer: 'py-2',
+};
 
 export interface CompressedGroupMessageProps {
   id: string;
@@ -154,14 +137,15 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
         </>
       ) : (
         <div className="flex items-center justify-between" style={{ width: '100%' }}>
-          <Tabs
-            className={styles.header}
-            value={isGeneratingSummary ? 'summary' : activeTab}
-            onValueChange={handleTabChange}
-          >
-            <TabsList>
+          <Tabs value={isGeneratingSummary ? 'summary' : activeTab} onValueChange={handleTabChange}>
+            <TabsList className="rounded-(--radius-button)">
               {tabItems.map((item) => (
-                <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
+                <TabsTrigger
+                  className="rounded-(--radius-input) leading-5.5"
+                  disabled={item.disabled}
+                  key={item.key}
+                  value={item.key}
+                >
                   {item.icon}
                   {item.label}
                 </TabsTrigger>
@@ -179,14 +163,14 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
           <div className="flex gap-1">
             <ActionIcon
               icon={Undo2}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
               title={t('compression.cancel')}
               onClick={handleCancelCompression}
             />
             <ActionIcon
               aria-label={t('toggle', { ns: 'common' })}
               icon={expanded ? ChevronUp : ChevronDown}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
               onClick={() => toggleCompressedGroupExpanded(id)}
             />
           </div>

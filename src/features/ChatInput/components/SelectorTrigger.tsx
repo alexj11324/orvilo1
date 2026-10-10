@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 
 const styles = {
   label: 'overflow-hidden min-w-0 max-w-50 text-ellipsis whitespace-nowrap',
-  secondary: 'flex-none text-[var(--ant-color-text-tertiary)] [transition:color_0.2s]',
+  secondary: 'flex-none text-(--ant-color-text-tertiary) [transition:color_0.2s]',
   trigger:
     "cursor-pointer flex flex-initial gap-1.5 items-center min-w-0 max-w-full h-7 px-2 border-0 rounded-(--radius-input) text-xs [font-weight:inherit] text-muted-foreground whitespace-nowrap bg-transparent bg-none [transition:all_0.2s] hover:text-foreground hover:bg-selected hover:bg-none hover:[&_[data-secondary]]:text-muted-foreground [&[aria-expanded='true']]:text-foreground [&[aria-expanded='true']]:bg-selected [&[aria-expanded='true']]:bg-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-muted-foreground focus-visible:outline-offset-2",
 };

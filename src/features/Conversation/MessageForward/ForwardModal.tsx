@@ -34,14 +34,14 @@ const styles = {
   divider: 'self-stretch [inline-size:1px] bg-sidebar-border',
   list: 'flex-1 overflow-y-auto -mx-1 px-1',
   preview:
-    'overflow-hidden border border-sidebar-border rounded-(--ant-border-radius-lg) bg-[var(--ant-color-fill-quaternary)]',
+    'overflow-hidden border border-sidebar-border rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary)',
   previewLines: 'flex-1 overflow-y-auto p-3',
   note: 'bg-transparent dark:bg-transparent disabled:bg-transparent dark:disabled:bg-transparent',
   noteDivider: '[block-size:1px] bg-sidebar-border',
   previewLine: 'truncate text-[12px] text-muted-foreground',
-  previewMore: '[padding-block-start:2px] text-[12px] text-[var(--ant-color-text-tertiary)]',
-  row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--ant-border-radius-lg) transition-[background-color] duration-100 ease-[var(--ant-motion-ease-in-out)] hover:bg-accent',
-  rowSelected: 'bg-[var(--ant-color-fill-quaternary)]',
+  previewMore: '[padding-block-start:2px] text-[12px] text-(--ant-color-text-tertiary)',
+  row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--ant-border-radius-lg) transition-[background-color] duration-100 ease-(--ant-motion-ease-in-out) hover:bg-accent',
+  rowSelected: 'bg-(--ant-color-fill-quaternary)',
 };
 
 const ForwardModalContent = memo(() => {

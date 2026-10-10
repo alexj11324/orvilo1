@@ -14,7 +14,7 @@ import { ResourceSourceFilter } from '@/types/files';
 
 const styles = {
   option:
-    'flex-none h-6 px-2.5 rounded-[999px] text-xs text-[var(--ant-color-text-description)] hover:text-[var(--ant-color-text-description)]',
+    'flex-none h-6 px-2.5 rounded-[999px] text-xs text-(--ant-color-text-description) hover:text-(--ant-color-text-description)',
   optionActive: 'text-foreground hover:text-foreground bg-selected hover:bg-selected',
 };
 

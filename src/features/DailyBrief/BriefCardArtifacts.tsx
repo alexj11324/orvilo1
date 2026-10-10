@@ -30,7 +30,7 @@ const BriefArtifactCard = memo<{ doc: BriefArtifactDocument }>(({ doc }) => {
       {...clickableProps()}
       style={{ background: cssVar.colorFillTertiary, borderRadius: cssVar.borderRadius }}
       className={cn(
-        'flex items-center gap-3 py-[10px] px-3 cursor-pointer hover:bg-[var(--ant-color-fill-secondary)]',
+        'flex items-center gap-3 py-[10px] px-3 cursor-pointer hover:bg-(--ant-color-fill-secondary)',
         CLICKABLE_FOCUS_RING,
       )}
       onClick={() => void openDocumentModal(doc.id)}

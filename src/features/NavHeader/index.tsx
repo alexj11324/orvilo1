@@ -45,7 +45,7 @@ const NavHeader = memo<NavHeaderProps>(
 
     return (
       <div
-        className="flex h-[44px] flex-none items-center justify-between gap-1 p-2"
+        className="flex h-11 flex-none items-center justify-between gap-1 p-2"
         style={{ minWidth: 0, ...style }}
         {...rest}
       >

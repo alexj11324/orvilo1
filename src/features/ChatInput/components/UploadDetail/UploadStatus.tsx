@@ -45,7 +45,9 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
       return (
         <div className="flex flex-row items-center gap-1">
           <Spinner className="size-3" />
-          <div className="text-muted-foreground text-xs">{t('upload.preview.status.pending')}</div>
+          <div className="text-muted-foreground text-xs leading-5">
+            {t('upload.preview.status.pending')}
+          </div>
         </div>
       );
     }
@@ -54,7 +56,7 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
       return (
         <div className="flex flex-row items-center gap-1">
           <ProgressRing percent={uploadState?.progress ?? 0} />
-          <div className="text-muted-foreground text-xs">
+          <div className="text-muted-foreground text-xs leading-5">
             {formatSize(size * ((uploadState?.progress || 0) / 100), 0)}
           </div>
         </div>
@@ -65,7 +67,7 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
       return (
         <div className="flex flex-row items-center gap-1">
           <ProgressRing percent={uploadState?.progress ?? 0} />
-          <div className="text-muted-foreground text-xs">{formatSize(size)}</div>
+          <div className="text-muted-foreground text-xs leading-5">{formatSize(size)}</div>
         </div>
       );
     }
@@ -73,19 +75,22 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
     case 'success': {
       return (
         <div className="flex flex-row items-center gap-1">
-          <CircleCheck className="text-success" size={12} />
-          <div className="text-muted-foreground text-xs">{formatSize(size)}</div>
+          <CircleCheck className="text-success-text" size={12} />
+          <div className="text-muted-foreground text-xs leading-5">{formatSize(size)}</div>
         </div>
       );
     }
 
     case 'error': {
       return (
-        <div className="flex flex-row items-center gap-1" style={{ minWidth: 0 }}>
-          <span className="anticon text-destructive" role="img">
+        <div className="flex min-w-0 flex-row items-center gap-1">
+          <span className="anticon text-destructive-text" role="img">
             <CircleAlertIcon fill={'transparent'} height={12} size={12} width={12} />
           </span>
-          <div className="truncate text-destructive text-xs max-w-27.5" title={error}>
+          <div
+            className="truncate text-destructive-text text-xs leading-5 max-w-27.5"
+            title={error}
+          >
             {error || t('upload.preview.status.error')}
           </div>
         </div>
@@ -94,7 +99,9 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
 
     case 'cancelled': {
       return (
-        <div className="text-muted-foreground text-xs">{t('upload.preview.status.cancelled')}</div>
+        <div className="text-muted-foreground text-xs leading-5">
+          {t('upload.preview.status.cancelled')}
+        </div>
       );
     }
   }

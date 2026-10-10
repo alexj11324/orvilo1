@@ -3,7 +3,7 @@
 import { isDesktop } from '@orvilo/const';
 import type { WorkingDirEntry } from '@orvilo/types';
 import { getWorkingDirSourcePath } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -52,174 +52,28 @@ import { useMigrateDeviceRecents } from './useMigrateDeviceRecents';
 // gets tedious — a short list doesn't need the extra chrome.
 const SEARCH_THRESHOLD = 8;
 
-const styles = createStaticStyles(({ css }) => ({
-  badge: css`
-    flex: none;
-
-    padding-inline: 5px;
-    border-radius: 999px;
-
-    font-size: 10px;
-    line-height: 15px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  button: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    transition: background 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  buttonOpen: css`
-    &&,
-    &&:hover {
-      color: var(--foreground);
-      background: var(--muted);
-    }
-  `,
-  buttonLabel: css`
-    overflow: hidden;
-    max-width: 140px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  chooseFolderItem: css`
-    cursor: pointer;
-
-    justify-content: flex-start;
-
-    width: 100%;
-    height: auto;
-    padding-block: 8px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-
-    transition: background-color 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  clearText: css`
-    cursor: pointer;
-
-    height: auto;
-    padding-block: 6px 2px;
-    padding-inline: 8px;
-
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-
-    transition: color 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  dirItem: css`
-    cursor: pointer;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: calc(var(--radius) - 2px);
-
-    transition: background-color 0.2s;
-
-    &:focus-visible {
-      outline: 2px solid var(--ring);
-      outline-offset: -2px;
-    }
-
-    &:focus-within .wd-row-actions {
-      display: flex;
-    }
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    /* Reveal the row actions (set-default / remove) only on hover. */
-    &:hover .wd-row-actions {
-      display: flex;
-    }
-  `,
-  dirItemActive: css`
-    &&,
-    &&:hover {
-      background: var(--muted);
-    }
-  `,
-  dirName: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  dirPath: css`
-    overflow: hidden;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextDescription};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  rowActions: css`
-    display: none;
-    flex: none;
-    gap: 2px;
-    align-items: center;
-  `,
-  scrollContainer: css`
-    overflow-y: auto;
-    max-height: 320px;
-  `,
-  searchBar: css`
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorSplit};
-
-    .ant-input-affix-wrapper {
-      padding-inline: 0;
-    }
-
-    .ant-input-prefix {
-      margin-inline-end: 8px;
-    }
-  `,
-  sectionTitle: css`
-    padding-block: 6px 2px;
-    padding-inline: 8px;
-
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+const styles = {
+  badge: 'flex-none px-1 rounded-full text-xs leading-5 text-foreground-tertiary bg-selected',
+  button:
+    'cursor-pointer flex flex-none gap-1.5 items-center min-h-8 py-1 px-1 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground whitespace-nowrap transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  buttonOpen: 'text-foreground bg-selected hover:bg-selected',
+  buttonLabel: 'overflow-hidden max-w-35 text-ellipsis whitespace-nowrap',
+  chooseFolderItem:
+    'cursor-pointer justify-start w-full rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground transition-colors duration-(--orvilo-motion-fast) hover:text-foreground hover:bg-accent',
+  clearText:
+    'cursor-pointer px-2 text-xs leading-5 font-medium text-foreground-tertiary transition-colors duration-(--orvilo-motion-fast) hover:text-foreground',
+  dirItem:
+    'cursor-pointer min-h-8 py-1.5 px-2 rounded-(--radius-button) transition-colors duration-(--orvilo-motion-fast) focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2 focus-within:[&_.wd-row-actions]:flex hover:bg-accent hover:[&_.wd-row-actions]:flex',
+  dirItemActive: 'bg-selected hover:bg-selected',
+  dirName:
+    'overflow-hidden text-sm leading-5.5 font-medium text-foreground text-ellipsis whitespace-nowrap',
+  dirPath:
+    'overflow-hidden text-xs leading-5 text-foreground-description text-ellipsis whitespace-nowrap',
+  rowActions: 'hidden flex-none gap-0.5 items-center',
+  scrollContainer: 'overflow-y-auto max-h-80',
+  searchBar: 'py-0.5 px-2 border-b border-divider',
+  sectionTitle: 'pt-1.5 pb-0.5 px-2 text-xs leading-5 font-medium text-foreground-tertiary',
+};
 
 const isValidWorkingDirEntry = (entry: WorkingDirEntry): boolean =>
   !!getWorkingDirectoryPathString(entry.path);
@@ -242,7 +96,8 @@ const ChooseLocalFolderRow = memo<{ defaultPath?: string; onPick: (entry: Folder
     };
     return (
       <Button
-        className={cx('flex flex-row items-center gap-2', styles.chooseFolderItem)}
+        className={cn('flex flex-row items-center gap-2', styles.chooseFolderItem)}
+        size="compact"
         variant="ghost"
         onClick={handleClick}
       >
@@ -289,7 +144,8 @@ const AddRemoteFolderRow = memo<{
   };
   return (
     <Button
-      className={cx('flex flex-row items-center gap-2', styles.chooseFolderItem)}
+      className={cn('flex flex-row items-center gap-2', styles.chooseFolderItem)}
+      size="compact"
       variant="ghost"
       onClick={handleClick}
     >
@@ -477,9 +333,9 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
         ref={isActive ? activeRowRef : undefined}
         role="button"
         tabIndex={0}
-        className={cx(
+        className={cn(
           'flex flex-row items-center gap-2',
-          cx(styles.dirItem, isActive && styles.dirItemActive),
+          cn(styles.dirItem, isActive && styles.dirItemActive),
         )}
         onClick={() => void pick(entry)}
         onKeyDown={(event) => {
@@ -490,7 +346,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
         }}
       >
         <DirIcon repoType={entry.repoType} />
-        <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex flex-row items-center gap-1.5">
             <div className={styles.dirName}>
               {getWorkingDirectoryName(entry.path) ?? entry.path}
@@ -501,17 +357,17 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
           </div>
           <div className={styles.dirPath}>{entry.path}</div>
         </div>
-        <div className="flex flex-row items-center gap-0.5" style={{ flex: 'none' }}>
+        <div className="flex flex-none flex-row items-center gap-0.5">
           {/* The same Star toggles the device default in both directions. Remove
               (X) is hidden on the active row: you can't remove the selection out
               from under yourself. */}
-          <div className={cx('wd-row-actions', styles.rowActions)}>
+          <div className={cn('wd-row-actions', styles.rowActions)}>
             <ActionIcon
               active={isDefault}
               aria-label={defaultActionLabel}
               aria-pressed={isDefault}
               icon={StarIcon}
-              size={{ blockSize: 20, size: 13 }}
+              size={{ blockSize: 28, borderRadius: 6, size: 13 }}
               title={defaultActionLabel}
               onClick={(e) => void handleToggleDefault(e, entry, isDefault)}
             />
@@ -519,18 +375,14 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
               <ActionIcon
                 aria-label={t('workingDirectory.removeRecent')}
                 icon={XIcon}
-                size={{ blockSize: 20, size: 12 }}
+                size={{ blockSize: 28, borderRadius: 6, size: 12 }}
                 title={t('workingDirectory.removeRecent')}
                 onClick={(e) => handleRemoveRecent(e, entry)}
               />
             )}
           </div>
           {isActive && (
-            <span
-              className="anticon"
-              role="img"
-              style={{ color: cssVar.colorSuccess, flex: 'none' }}
-            >
+            <span className="anticon flex-none text-success-text" role="img">
               <CheckIcon fill={'transparent'} height={16} size={16} width={16} />
             </span>
           )}
@@ -540,7 +392,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
   };
 
   const content = (
-    <div className="flex flex-col gap-1" style={{ maxWidth: 'calc(100vw - 48px)', width: 320 }}>
+    <div className="flex w-80 max-w-[calc(100vw-48px)] flex-col gap-1">
       {showSearch && (
         <div className={styles.searchBar}>
           <div className="flex flex-row items-center gap-1.5 px-1.5">
@@ -553,8 +405,9 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
               autoFocus
               placeholder={t('workingDirectory.searchPlaceholder')}
               value={search}
+              visualSize="compact"
               className={
-                'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
+                'border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
               }
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -566,6 +419,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
         {hasClearableSelection && (
           <Button
             className={styles.clearText}
+            size="sm"
             variant="ghost"
             onClick={() => void clear().then(() => setOpen(false))}
           >
@@ -575,10 +429,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
       </div>
       <div className={styles.scrollContainer}>
         {filtered.length === 0 ? (
-          <div
-            className="flex flex-col items-center justify-center"
-            style={{ color: cssVar.colorTextQuaternary, fontSize: 12, padding: '12px 8px' }}
-          >
+          <div className="flex flex-col items-center justify-center py-3 px-2 text-sm leading-5.5 text-foreground-description">
             {search.trim() ? t('workingDirectory.noMatch') : t('workingDirectory.noRecent')}
           </div>
         ) : (
@@ -604,7 +455,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
     : t('workingDirectory.title');
 
   const trigger = (
-    <div className={cx(styles.button, open && styles.buttonOpen)}>
+    <div className={cn(styles.button, open && styles.buttonOpen)}>
       {selectedDir ? (
         <DirIcon repoType={recents.find((r) => r.path === selectedDir)?.repoType} />
       ) : (
@@ -638,7 +489,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
           </SimpleTooltip>
         )}
       </PopoverTrigger>
-      <PopoverContent align={'start'} className={'w-auto'} side={'bottom'} style={{ padding: 4 }}>
+      <PopoverContent align={'start'} className={'w-auto p-1'} side={'bottom'}>
         {content}
       </PopoverContent>
     </Popover>

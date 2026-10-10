@@ -14,7 +14,7 @@ const styles = {
   container:
     'cursor-pointer relative overflow-hidden w-62.5 h-16 py-1 ps-2 pe-6 border border-border rounded-(--radius-card) bg-accent',
   deleteButton:
-    'text-white hover:text-white active:text-white bg-(--ant-color-bg-mask) hover:bg-destructive',
+    'text-invert-foreground bg-invert/70 hover:bg-destructive hover:text-destructive-on-fill active:text-destructive-on-fill',
 };
 
 interface FileItemProps extends UploadFileItem {
@@ -28,8 +28,8 @@ const FileItem = memo<FileItemProps>(
     return (
       <div className={cn('flex flex-row items-center gap-3', styles.container)} key={id}>
         <FileIcon fileName={file.name} fileType={file.type} />
-        <div className="flex flex-col" style={{ overflow: 'hidden' }}>
-          <div className="truncate">{file.name}</div>
+        <div className="flex min-w-0 flex-col overflow-hidden">
+          <div className="truncate text-sm leading-5.5">{file.name}</div>
           <UploadDetail
             error={error}
             size={file.size}
@@ -46,7 +46,7 @@ const FileItem = memo<FileItemProps>(
               aria-label={tCommon('refresh')}
               className={styles.deleteButton}
               icon={RotateCw}
-              size={'small'}
+              size={{ blockSize: 28, borderRadius: 6, size: 14 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onRetry?.();
@@ -57,7 +57,7 @@ const FileItem = memo<FileItemProps>(
             aria-label={tCommon('delete')}
             className={styles.deleteButton}
             icon={Trash}
-            size={'small'}
+            size={{ blockSize: 28, borderRadius: 6, size: 14 }}
             onClick={(e) => {
               e.stopPropagation();
               onRemove?.();

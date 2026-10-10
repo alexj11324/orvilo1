@@ -1,5 +1,5 @@
 import { Image } from '@lobehub/ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { RotateCw, Trash } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,25 +9,12 @@ import ActionIcon from '@/components/ActionIcon';
 
 import { MIN_IMAGE_SIZE } from './style';
 
-const styles = createStaticStyles(({ css }) => ({
-  deleteButton: css`
-    color: #fff;
-    background: ${cssVar.colorBgMask};
-
-    &:hover {
-      background: ${cssVar.colorError};
-    }
-  `,
-  editableImage: css`
-    background: ${cssVar.colorBgContainer};
-    box-shadow: 0 0 0 1px ${cssVar.colorFill} inset;
-  `,
-  image: css`
-    width: 64px !important;
-    height: 64px !important;
-    margin-block: 0 !important;
-  `,
-}));
+const styles = {
+  deleteButton:
+    'text-invert-foreground bg-invert/70 hover:bg-destructive hover:text-destructive-on-fill active:text-destructive-on-fill',
+  editableImage: 'bg-card ring-1 ring-inset ring-border',
+  image: 'w-16',
+};
 
 interface FileItemProps {
   alt?: string;
@@ -48,7 +35,7 @@ const FileItem = memo<FileItemProps>(
       <Image
         alwaysShowActions
         alt={alt || ''}
-        classNames={{ wrapper: cx(styles.image, styles.editableImage) }}
+        classNames={{ wrapper: cn(styles.image, styles.editableImage) }}
         height={64}
         isLoading={loading}
         objectFit={'cover'}
@@ -64,7 +51,7 @@ const FileItem = memo<FileItemProps>(
                 aria-label={tCommon('refresh')}
                 className={styles.deleteButton}
                 icon={RotateCw}
-                size={'small'}
+                size={{ blockSize: 28, borderRadius: 6, size: 14 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   onRetry?.();
@@ -75,7 +62,7 @@ const FileItem = memo<FileItemProps>(
               aria-label={tCommon('delete')}
               className={styles.deleteButton}
               icon={Trash}
-              size={'small'}
+              size={{ blockSize: 28, borderRadius: 6, size: 14 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove?.();

@@ -1,5 +1,5 @@
 import { deriveWorktreePath, type DeviceGitWorktreeListItem } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckIcon,
   FolderPlusIcon,
@@ -40,309 +40,42 @@ import { useCommitWorkingDirectory } from './useCommitWorkingDirectory';
 import { useSwitchWorktree } from './useSwitchWorktree';
 import { getPathName, isDisabled, normalizeDisplayPath } from './worktreeHelpers';
 
-const styles = createStaticStyles(({ css }) => ({
-  badge: css`
-    flex: none;
-
-    padding-block: 1px;
-    padding-inline: 5px;
-    border-radius: 999px;
-
-    font-size: 11px;
-    line-height: 15px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  branch: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 40px;
-    max-width: 300px;
-
-    font-size: 13px;
-    line-height: 18px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  check: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 18px;
-
-    color: ${cssVar.colorPrimary};
-  `,
-  actionCell: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-  `,
-  container: css`
-    display: flex;
-    flex-direction: column;
-
-    width: 100%;
-    height: 380px;
-
-    /* Cancel DropdownMenuPopup's default 4px padding so our sections align edge-to-edge */
-    margin: -4px;
-  `,
-  diffStat: css`
-    display: inline-flex;
-    flex: none;
-    gap: 3px;
-    justify-content: flex-end;
-
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-  `,
-  diffStatAdded: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  diffStatDeleted: css`
-    color: ${cssVar.colorError};
-  `,
-  diffStatModified: css`
-    color: ${cssVar.colorWarning};
-  `,
-  emptyState: css`
-    padding-block: 16px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  searchBar: css`
-    padding-block: 4px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorSplit};
-
-    .ant-input-affix-wrapper {
-      padding-inline: 0;
-    }
-
-    .ant-input-prefix {
-      margin-inline-end: 8px;
-    }
-  `,
-  section: css`
-    flex: 1;
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  sectionRow: css`
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 4px 2px;
-    padding-inline: 8px;
-  `,
-  refreshButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  spinning: css`
-    animation: worktree-switcher-spin 0.8s linear infinite;
-
-    @keyframes worktree-switcher-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-  `,
-  item: css`
-    cursor: pointer;
-
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(44px, auto) 20px;
-    gap: 10px;
-    align-items: center;
-
-    min-height: 48px;
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: 8px;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:hover .worktree-row-action {
-      display: flex;
-    }
-
-    &[data-current='true'],
-    &[data-current='true']:hover {
-      background: var(--muted);
-    }
-
-    &[aria-disabled='true'] {
-      cursor: not-allowed;
-      opacity: 0.55;
-    }
-  `,
-  itemMain: css`
-    overflow: hidden;
-    min-width: 0;
-  `,
-  dirtyCell: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: flex-end;
-
-    min-width: 44px;
-  `,
-  list: css`
-    overflow-y: auto;
-    flex: 1;
-    max-height: 320px;
-    padding: 6px;
-  `,
-  createItemWrapper: css`
-    padding: 6px;
-    border-block-start: 1px solid ${cssVar.colorSplit};
-  `,
-  createItem: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: 8px;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  createItemIcon: css`
-    flex: none;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  name: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    max-width: 240px;
-
-    font-size: 13px;
-    font-weight: 400;
-    line-height: 18px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  path: css`
-    overflow: hidden;
-
-    margin-block-start: 1px;
-
-    font-size: 11px;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  rowTitle: css`
-    overflow: hidden;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-
-    white-space: nowrap;
-  `,
-  rowAction: css`
-    cursor: pointer;
-
-    display: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorError};
-      background: ${cssVar.colorErrorBg};
-    }
-  `,
-  trigger: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 22px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    transition: background 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  triggerAnchor: css`
-    display: inline-flex;
-    flex: none;
-  `,
-  /* Custom row triggers (overview panel) must fill the stretched trigger, or the
-     popup-open background paints wider than the row's own hover background. */
-  triggerFill: css`
-    display: flex;
-    width: 100%;
-
-    > * {
-      flex: 1;
-    }
-  `,
-}));
+const styles = {
+  badge: 'flex-none px-1 rounded-full text-xs leading-5 text-muted-foreground bg-selected',
+  branch:
+    'overflow-hidden flex-[0_1_auto] min-w-10 max-w-75 text-sm leading-5.5 text-muted-foreground text-ellipsis whitespace-nowrap',
+  check: 'flex flex-none items-center justify-center w-7 text-primary',
+  actionCell: 'flex flex-none items-center justify-center w-7',
+  container: 'flex flex-col w-full h-95 -m-1',
+  diffStat: 'inline-flex flex-none gap-1 justify-end tabular-nums text-xs leading-5',
+  diffStatAdded: 'text-success-text',
+  diffStatDeleted: 'text-destructive-text',
+  diffStatModified: 'text-warning-text',
+  emptyState: 'py-4 text-sm leading-5.5 text-foreground-description text-center',
+  searchBar: 'py-1 px-3 border-b border-divider',
+  section: 'flex-1 text-xs leading-5 font-medium text-foreground-tertiary',
+  sectionRow: 'flex gap-1 items-center pt-1 pb-0.5 px-2',
+  refreshButton:
+    'cursor-pointer flex items-center justify-center size-8 rounded-(--radius-button) text-foreground-tertiary transition-colors duration-(--orvilo-motion-fast) hover:text-foreground hover:bg-accent',
+  spinning: 'animate-spin [animation-duration:0.8s] motion-reduce:animate-none',
+  item: 'cursor-pointer grid grid-cols-[minmax(0,1fr)_minmax(44px,auto)_28px] gap-2.5 items-center min-h-12 py-1.5 px-2 rounded-(--radius-button) text-sm leading-5.5 text-foreground hover:bg-accent hover:[&_.worktree-row-action]:flex focus-within:[&_.worktree-row-action]:flex data-[current=true]:bg-selected data-[current=true]:hover:bg-selected aria-disabled:cursor-not-allowed aria-disabled:opacity-55',
+  itemMain: 'overflow-hidden min-w-0',
+  dirtyCell: 'flex flex-none items-center justify-end min-w-11',
+  list: 'overflow-y-auto flex-1 max-h-80 p-1.5',
+  createItemWrapper: 'p-1.5 border-t border-divider',
+  createItem:
+    'cursor-pointer flex gap-2 items-center min-h-8 py-1.5 px-2 rounded-(--radius-button) text-sm leading-5.5 text-foreground hover:bg-accent',
+  createItemIcon: 'flex-none text-muted-foreground',
+  name: 'overflow-hidden flex-[0_1_auto] max-w-60 text-sm leading-5.5 font-normal text-ellipsis whitespace-nowrap',
+  path: 'overflow-hidden mt-0.5 text-xs leading-5 text-foreground-tertiary text-ellipsis whitespace-nowrap',
+  rowTitle: 'overflow-hidden flex gap-1.5 items-center min-w-0 whitespace-nowrap',
+  rowAction:
+    'cursor-pointer hidden items-center justify-center size-7 rounded-(--radius-input) text-foreground-tertiary transition-colors duration-(--orvilo-motion-fast) hover:text-destructive-text hover:bg-destructive-wash',
+  trigger:
+    'cursor-pointer inline-flex flex-none items-center justify-center size-8 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground whitespace-nowrap transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  triggerAnchor: 'inline-flex flex-none',
+  triggerFill: 'flex w-full [&>*]:flex-1',
+};
 
 const TEMP_PATH_PREFIXES = ['/tmp', '/var/tmp', '/private/tmp'];
 
@@ -665,9 +398,9 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align={placement === 'bottomRight' ? 'end' : 'start'}
+          className="w-115 max-w-[calc(100vw-48px)] min-w-0"
           side={placement === 'topLeft' ? 'top' : 'bottom'}
           sideOffset={8}
-          style={{ maxWidth: 'calc(100vw - 48px)', minWidth: 0, width: 460 }}
         >
           <div className={styles.container}>
             <div className={styles.searchBar}>
@@ -681,8 +414,9 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
                   autoFocus
                   placeholder={t('workingDirectory.worktreeSearchPlaceholder')}
                   value={search}
+                  visualSize="compact"
                   className={
-                    'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
+                    'border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
                   }
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()}
@@ -694,7 +428,7 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
               <div className={styles.sectionRow}>
                 <div className={styles.section}>{t('workingDirectory.worktreesHeading')}</div>
                 <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
-                  <span className={cx('anticon', cx(isRefreshing && styles.spinning))} role="img">
+                  <span className={cn('anticon', cn(isRefreshing && styles.spinning))} role="img">
                     <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
                   </span>
                 </div>
@@ -775,7 +509,7 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
                             />
                           </span>
                         ) : worktree.current ? (
-                          <span className={cx('anticon', styles.check)} role="img">
+                          <span className={cn('anticon', styles.check)} role="img">
                             <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
                           </span>
                         ) : (
@@ -812,7 +546,7 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
                 closeOnClick={false}
                 onClick={openCreateWorktree}
               >
-                <span className={cx('anticon', styles.createItemIcon)} role="img">
+                <span className={cn('anticon', styles.createItemIcon)} role="img">
                   <FolderPlusIcon fill={'transparent'} height={14} size={14} width={14} />
                 </span>
                 <div>{t('workingDirectory.createWorktreeAction')}</div>

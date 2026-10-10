@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -21,12 +20,6 @@ import {
 } from '@/components/ui/code-block';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const styles = createStaticStyles(({ css }) => ({
-  steps: css`
-    margin-block-start: 32px;
-  `,
-}));
-
 const SetupGuide = memo(() => {
   const { t } = useTranslation('components');
 
@@ -41,7 +34,7 @@ const SetupGuide = memo(() => {
           <TabsTrigger value={'docker'}>Docker</TabsTrigger>
         </TabsList>
         <TabsContent value="macos">
-          <Stepper className={styles.steps} orientation={'vertical'} value={1}>
+          <Stepper className={'mbs-8'} orientation={'vertical'} value={1}>
             <StepperNav>
               <StepperItem step={1}>
                 <div className="flex items-start gap-2">
@@ -100,7 +93,7 @@ const SetupGuide = memo(() => {
           </Stepper>
         </TabsContent>
         <TabsContent value="windows">
-          <Stepper className={styles.steps} orientation={'vertical'} value={1}>
+          <Stepper className={'mbs-8'} orientation={'vertical'} value={1}>
             <StepperNav>
               <StepperItem step={1}>
                 <div className="flex items-start gap-2">
@@ -149,7 +142,7 @@ const SetupGuide = memo(() => {
           </Stepper>
         </TabsContent>
         <TabsContent value="linux">
-          <Stepper className={styles.steps} orientation={'vertical'} value={1}>
+          <Stepper className={'mbs-8'} orientation={'vertical'} value={1}>
             <StepperNav>
               <StepperItem step={1}>
                 <div className="flex items-start gap-2">
@@ -230,7 +223,7 @@ const SetupGuide = memo(() => {
           </Stepper>
         </TabsContent>
         <TabsContent value="docker">
-          <Stepper className={styles.steps} orientation={'vertical'} value={1}>
+          <Stepper className={'mbs-8'} orientation={'vertical'} value={1}>
             <StepperNav>
               <StepperItem step={1}>
                 <div className="flex items-start gap-2">

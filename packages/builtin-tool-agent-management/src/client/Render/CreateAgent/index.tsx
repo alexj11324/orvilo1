@@ -3,7 +3,6 @@
 import { Markdown } from '@lobehub/ui';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { ArrowRight } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
@@ -12,58 +11,6 @@ import Avatar from '@/components/Avatar';
 import { Badge as Tag } from '@/components/reui/badge';
 
 import type { CreateAgentParams, CreateAgentState } from '../../../types';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  agentCard: css`
-    cursor: pointer;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-radius: 8px;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    transition: background 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  agentDescription: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  agentTitle: css`
-    font-size: 13px;
-    font-weight: 500;
-  `,
-  arrowIcon: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  container: css`
-    padding-block: 4px;
-  `,
-  field: css`
-    margin-block-end: 8px;
-
-    &:last-child {
-      margin-block-end: 0;
-    }
-  `,
-  label: css`
-    margin-block-end: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  value: css`
-    font-size: 13px;
-  `,
-}));
 
 export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, CreateAgentState>>(
   ({ args, pluginState }) => {
@@ -81,7 +28,7 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
     if (pluginState?.success && pluginState.agentId) {
       return (
         <div
-          className={cx('flex flex-row items-center gap-3', styles.agentCard)}
+          className="flex flex-row items-center gap-3 cursor-pointer rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] py-2.5 ps-3 pe-3 [transition:background_0.2s] hover:bg-accent"
           onClick={handleNavigateToAgent}
         >
           <Avatar
@@ -92,10 +39,14 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
             title={title || undefined}
           />
           <div className="flex flex-col flex-1 gap-0.5">
-            <span className={styles.agentTitle}>{title}</span>
-            {description && <span className={styles.agentDescription}>{description}</span>}
+            <span className="text-[13px] font-medium">{title}</span>
+            {description && (
+              <span className="truncate text-xs leading-[inherit] text-muted-foreground">
+                {description}
+              </span>
+            )}
           </div>
-          <ArrowRight className={styles.arrowIcon} size={16} />
+          <ArrowRight className="text-[var(--ant-color-text-tertiary)]" size={16} />
         </div>
       );
     }
@@ -104,31 +55,39 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
     if (!title && !description && !systemRole && !plugins?.length) return null;
 
     return (
-      <div className={styles.container}>
+      <div className="py-1">
         {title && (
-          <div className={styles.field}>
-            <div className={styles.label}>Title</div>
-            <div className={styles.value}>{title}</div>
+          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+              Title
+            </div>
+            <div className="text-[13px]">{title}</div>
           </div>
         )}
         {description && (
-          <div className={styles.field}>
-            <div className={styles.label}>Description</div>
-            <div className={styles.value}>{description}</div>
+          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+              Description
+            </div>
+            <div className="text-[13px]">{description}</div>
           </div>
         )}
         {(model || provider) && (
-          <div className={styles.field}>
-            <div className={styles.label}>Model</div>
-            <div className={styles.value}>
+          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+              Model
+            </div>
+            <div className="text-[13px]">
               {provider && `${provider}/`}
               {model}
             </div>
           </div>
         )}
         {plugins && plugins.length > 0 && (
-          <div className={styles.field}>
-            <div className={styles.label}>Plugins</div>
+          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+              Plugins
+            </div>
             <div className="flex flex-row gap-1 flex-wrap">
               {plugins.map((plugin) => (
                 <Tag key={plugin}>{plugin}</Tag>
@@ -137,8 +96,10 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
           </div>
         )}
         {systemRole && (
-          <div className={styles.field}>
-            <div className={styles.label}>System Prompt</div>
+          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
+            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+              System Prompt
+            </div>
             <div
               className="rounded-md border bg-card"
               style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}

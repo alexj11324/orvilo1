@@ -1,5 +1,4 @@
 import { formatUsageValue } from '@orvilo/utils';
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { Separator } from '@/components/ui/separator';
@@ -24,7 +23,7 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) =
       <div
         className="flex flex-row h-[6px] w-[100%]"
         style={{
-          background: total === 0 ? cssVar.colorFill : undefined,
+          background: total === 0 ? 'var(--ant-color-fill)' : undefined,
           borderRadius: 3,
           overflow: 'hidden',
           position: 'relative',
@@ -53,7 +52,7 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) =
                   }}
                 />
               )}
-              <div style={{ color: cssVar.colorTextSecondary }}>{item.title}</div>
+              <div className="text-muted-foreground">{item.title}</div>
             </div>
             <div style={{ fontWeight: 500 }}>{formatUsageValue(item.value)}</div>
           </div>
@@ -62,7 +61,7 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) =
           <>
             <Separator style={{ marginBlock: 8 }} />
             <div className="flex flex-row items-center gap-1 justify-between">
-              <div style={{ color: cssVar.colorTextSecondary }}>{showTotal}</div>
+              <div className="text-muted-foreground">{showTotal}</div>
               <div style={{ fontWeight: 500 }}>{formatUsageValue(total)}</div>
             </div>
           </>

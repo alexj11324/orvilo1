@@ -1,6 +1,5 @@
 import { BrainOffIcon } from '@lobehub/ui/icons';
 import { type UserMemoryEffort } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type LucideIcon } from 'lucide-react';
 import { Brain } from 'lucide-react';
@@ -20,39 +19,14 @@ import { useMemoryEnabled } from './useMemoryEnabled';
 
 const MEMORY_EFFORT_LEVELS: readonly UserMemoryEffort[] = ['low', 'medium', 'high'];
 
-const styles = createStaticStyles(({ css }) => ({
-  active: css`
-    background: ${cssVar.colorFillTertiary};
-  `,
-  description: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  icon: css`
-    border: 1px solid ${cssVar.colorFillTertiary};
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorBgElevated};
-  `,
-  option: css`
-    cursor: pointer;
-
-    width: 100%;
-    padding-block: 8px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: background-color 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  title: css`
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  active: 'bg-accent',
+  description: 'text-[12px] text-(--ant-color-text-description)',
+  icon: 'border border-accent rounded-(--ant-border-radius) bg-popover',
+  option:
+    'cursor-pointer w-full p-2 rounded-(--ant-border-radius) transition-[background-color] duration-200 ease-[ease] hover:bg-accent',
+  title: 'text-[14px] font-medium text-foreground',
+};
 
 interface ToggleOption {
   description: string;
@@ -73,7 +47,7 @@ const ToggleItem = memo<ToggleOption>(({ value, description, icon, label }) => {
     <div
       {...clickableProps()}
       className={cn(
-        cx('flex flex-row items-start gap-3', cx(styles.option, isActive && styles.active)),
+        cn('flex flex-row items-start gap-3', cn(styles.option, isActive && styles.active)),
         CLICKABLE_FOCUS_RING,
       )}
       style={{
@@ -86,7 +60,7 @@ const ToggleItem = memo<ToggleOption>(({ value, description, icon, label }) => {
       }}
     >
       <div
-        className={cx(
+        className={cn(
           'flex flex-col items-center justify-center flex-none h-[32px] w-[32px]',
           styles.icon,
         )}

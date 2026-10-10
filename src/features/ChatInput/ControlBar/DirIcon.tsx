@@ -1,5 +1,4 @@
 import { Github } from '@lobehub/icons';
-import { cssVar } from 'antd-style';
 import { FolderGit2Icon, FolderIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 
@@ -18,7 +17,7 @@ interface DirIconProps {
  * which owns the branch glyph. Two identical branch icons side by side read as one
  * control repeated rather than "repo" followed by "branch". */
 const DirIcon = memo<DirIconProps>(({ repoType, size = 16 }) => {
-  const iconStyle = { color: cssVar.colorTextTertiary, flex: 'none' as const };
+  const iconStyle = { color: 'var(--ant-color-text-tertiary)', flex: 'none' as const };
   if (repoType === 'github') return <Github size={size} style={iconStyle} />;
   return (
     <span className="anticon" role="img" style={iconStyle}>

@@ -1,5 +1,4 @@
 import { type ComposioAppType } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { createElement, memo } from 'react';
 
 export const SKILL_ICON_SIZE = 20;
@@ -21,7 +20,7 @@ const ComposioSkillIcon = memo<Pick<ComposioAppType, 'icon' | 'label'> & { size:
 
     return (
       <span className="anticon" role="img">
-        {createElement(icon, { size, width: size, height: size, fill: cssVar.colorText })}
+        {createElement(icon, { size, width: size, height: size, fill: 'var(--foreground)' })}
       </span>
     );
   },

@@ -108,7 +108,7 @@ const TaskIssueRelationPicker = ({
         </p>
       ) : null}
       <div className="flex justify-end">
-        <Button disabled={pending} type="button" variant="outline" onClick={close}>
+        <Button disabled={pending} size="lg" type="button" variant="outline" onClick={close}>
           {t('cancel', { ns: 'common' })}
         </Button>
       </div>

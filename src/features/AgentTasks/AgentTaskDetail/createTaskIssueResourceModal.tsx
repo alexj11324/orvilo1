@@ -151,6 +151,7 @@ export const TaskIssueResourcePicker = ({
               placeholder={t('taskDetail.resources.url')}
               type="url"
               value={url}
+              visualSize="normal"
               onChange={(event) => setUrl(event.target.value)}
             />
           ) : null}
@@ -159,6 +160,7 @@ export const TaskIssueResourcePicker = ({
             disabled={!editable || pending || !!createdDocumentId}
             maxLength={255}
             value={title}
+            visualSize="normal"
             aria-label={t(
               `taskDetail.resources.${kind === 'document' ? 'documentTitle' : 'titleInput'}`,
             )}
@@ -180,6 +182,7 @@ export const TaskIssueResourcePicker = ({
             <p className="text-sm">{t('taskDetail.resources.createdUnattached')}</p>
           ) : null}
           <Button
+            size="lg"
             type="button"
             variant="outline"
             onClick={() =>
@@ -193,11 +196,11 @@ export const TaskIssueResourcePicker = ({
         </div>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button disabled={pending} type="button" variant="outline" onClick={close}>
+        <Button disabled={pending} size="lg" type="button" variant="outline" onClick={close}>
           {t('cancel', { ns: 'common' })}
         </Button>
         {kind !== 'pull_request' ? (
-          <Button disabled={!editable} form={formId} loading={pending} type="submit">
+          <Button disabled={!editable} form={formId} loading={pending} size="lg" type="submit">
             {createdDocumentId
               ? t('taskDetail.resources.retryAttach')
               : t(`taskDetail.menu.add.${kind}`)}

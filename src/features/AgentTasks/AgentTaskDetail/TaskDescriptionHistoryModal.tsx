@@ -221,12 +221,13 @@ const TaskDescriptionHistory = ({ taskId, canEdit, onChanged }: HistoryModalProp
         </div>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button disabled={pending} type="button" variant="outline" onClick={close}>
+        <Button disabled={pending} size="lg" type="button" variant="outline" onClick={close}>
           {t('close', { ns: 'common' })}
         </Button>
         <Button
           disabled={!canEdit || index === 0 || !selected}
           loading={pending}
+          size="lg"
           title={index === 0 ? t('taskDetail.menu.currentVersionHint') : undefined}
           type="button"
           onClick={() => void restore()}

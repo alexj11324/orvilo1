@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
 import * as m from 'motion/react-m';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,31 +15,6 @@ interface MCPConfigFormProps {
   onCancel?: () => void;
   onSubmit?: (config: Record<string, any>) => Promise<void>;
 }
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    margin-block-start: ${cssVar.marginXS};
-    padding: ${cssVar.padding};
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadius};
-
-    background-color: ${cssVar.colorBgContainer};
-  `,
-  footer: css`
-    display: flex;
-    gap: ${cssVar.marginXS};
-    justify-content: flex-end;
-
-    margin-block-start: ${cssVar.margin};
-    padding-block-start: ${cssVar.paddingXS};
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  markdown: css`
-    p {
-      color: ${cssVar.colorTextDescription};
-    }
-  `,
-}));
 
 const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCancel }) => {
   const { t } = useTranslation(['plugin', 'common']);
@@ -74,7 +48,7 @@ const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCa
   return (
     <m.div
       animate={{ y: 0 }}
-      className={styles.container}
+      className="mt-2 w-full max-w-160 rounded-(--radius-card) border border-border bg-card p-4 text-sm leading-5.5"
       initial={{ y: 8 }}
       transition={{ delay: 0.1, duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
     >
@@ -84,8 +58,10 @@ const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCa
         transition={{ delay: 0.15, duration: 0.2 }}
       >
         <div className="flex flex-col gap-2">
-          <strong>{t('mcpInstall.configurationRequired')}</strong>
-          <span style={{ fontSize: 12, opacity: 0.7 }}>
+          <strong className="text-sm leading-5.5 font-semibold">
+            {t('mcpInstall.configurationRequired')}
+          </strong>
+          <span className="text-sm leading-5.5 text-muted-foreground">
             {t('mcpInstall.configurationDescription')}
           </span>
         </div>
@@ -115,7 +91,12 @@ const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCa
                 />
               ),
               desc: item.desc && (
-                <Markdown className={styles.markdown} variant={'chat'}>
+                <Markdown
+                  className="text-foreground-description"
+                  fontSize={14}
+                  lineHeight={22 / 14}
+                  variant={'chat'}
+                >
                   {item.desc as string}
                 </Markdown>
               ),
@@ -132,14 +113,14 @@ const MCPConfigForm = memo<MCPConfigFormProps>(({ configSchema, identifier, onCa
 
       <m.div
         animate={{ opacity: 1, y: 0 }}
-        className={styles.footer}
+        className="mt-4 flex flex-wrap justify-end gap-2 border-t border-divider pt-2"
         initial={{ opacity: 0, y: 4 }}
         transition={{ delay: 0.25, duration: 0.2 }}
       >
-        <Button size="sm" onClick={handleCancel}>
+        <Button size="lg" onClick={handleCancel}>
           {t('common:cancel')}
         </Button>
-        <Button loading={loading} size="sm" variant="default" onClick={() => form.submit()}>
+        <Button loading={loading} size="lg" variant="default" onClick={() => form.submit()}>
           {t('mcpInstall.continueInstall')}
         </Button>
       </m.div>

@@ -1,7 +1,6 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { EMPTY_ARRAY } from '@orvilo/const';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRightIcon, FileIcon, FolderIcon, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -81,125 +80,27 @@ interface SkillsListProps {
   onSkillDragStart?: (item: SkillListItem, event: React.DragEvent) => void;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chevron: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-    transition: transform ${cssVar.motionDurationFast} ${cssVar.motionEaseInOut};
-  `,
-  chevronExpanded: css`
-    transform: rotate(90deg);
-  `,
-  childItem: css`
-    cursor: pointer;
-
-    height: 26px;
-    padding-inline-end: 8px;
-    border-radius: 6px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  childItemIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  description: css`
-    max-width: 320px;
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  item: css`
-    cursor: pointer;
-
-    height: 28px;
-    padding-inline: 4px 8px;
-    border-radius: 6px;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    /* Swap the file count for the row actions while hovering the row. */
-    &:hover .skill-row-actions {
-      display: flex;
-    }
-
-    &:hover .skill-row-count {
-      display: none;
-    }
-  `,
-  itemCount: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  rowAction: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  rowActionDanger: css`
-    &:hover {
-      color: ${cssVar.colorError};
-      background: ${cssVar.colorErrorBg};
-    }
-  `,
-  rowActionDisabled: css`
-    cursor: not-allowed;
-    color: ${cssVar.colorTextQuaternary};
-
-    &:hover {
-      color: ${cssVar.colorTextQuaternary};
-      background: transparent;
-    }
-  `,
-  rowActions: css`
-    display: none;
-    flex: none;
-    gap: 2px;
-    align-items: center;
-  `,
-  itemIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  treeChevronSlot: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 14px;
-    height: 14px;
-  `,
-}));
+const styles = {
+  chevron:
+    'shrink-0 text-muted-foreground transition-transform duration-(--orvilo-motion-fast) ease-in-out motion-reduce:transition-none',
+  chevronExpanded: 'rotate-90',
+  childItem:
+    'cursor-pointer h-8 pe-2 rounded-(--radius-button) text-sm leading-5.5 text-foreground hover:bg-accent',
+  childItemIcon: 'shrink-0 text-muted-foreground',
+  description: 'max-w-80 text-xs leading-5',
+  item: 'group/skill-row cursor-pointer h-8 ps-1 pe-2 rounded-(--radius-button) text-sm leading-5.5 text-foreground hover:bg-accent',
+  itemCount:
+    'shrink-0 text-xs leading-5 tabular-nums text-muted-foreground group-hover/skill-row:hidden group-focus-within/skill-row:hidden',
+  rowAction:
+    'cursor-pointer flex size-8 items-center justify-center rounded-(--radius-button) text-muted-foreground transition-colors duration-(--orvilo-motion-mid) hover:text-foreground hover:bg-selected motion-reduce:transition-none',
+  rowActionDanger: 'hover:text-destructive-text hover:bg-destructive-wash',
+  rowActionDisabled:
+    'cursor-not-allowed text-foreground-quaternary hover:text-foreground-quaternary hover:bg-transparent',
+  rowActions:
+    'hidden flex-none items-center gap-0.5 group-hover/skill-row:flex group-focus-within/skill-row:flex',
+  itemIcon: 'shrink-0 text-muted-foreground',
+  treeChevronSlot: 'flex shrink-0 items-center justify-center size-3.5',
+};
 
 interface TreeNode {
   children: TreeNode[];
@@ -262,7 +163,7 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
       <>
         <div
           {...clickableProps()}
-          className={cn(cn('flex items-center gap-1.5', styles.childItem), CLICKABLE_FOCUS_RING)}
+          className={cn('flex items-center gap-1.5', styles.childItem, CLICKABLE_FOCUS_RING)}
           style={{ paddingInlineStart }}
           onClick={() => onToggleFolder(node.path)}
         >
@@ -273,12 +174,7 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
             />
           </span>
           <FolderIcon className={styles.childItemIcon} size={12} />
-          <div
-            className="truncate min-w-0"
-            style={{ color: 'inherit', flex: 1, fontSize: 12, minWidth: 0 }}
-          >
-            {node.name}
-          </div>
+          <div className="min-w-0 flex-1 truncate text-inherit">{node.name}</div>
         </div>
         {isOpen &&
           node.children.map((child) => (
@@ -298,19 +194,14 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
   return (
     <div
       {...clickableProps()}
-      className={cn(cn('flex items-center gap-1.5', styles.childItem), CLICKABLE_FOCUS_RING)}
+      className={cn('flex items-center gap-1.5', styles.childItem, CLICKABLE_FOCUS_RING)}
       style={{ paddingInlineStart }}
       title={node.path}
       onClick={() => onOpenFile(node.path)}
     >
       <span className={styles.treeChevronSlot} />
       <FileIcon className={styles.childItemIcon} size={12} />
-      <div
-        className="truncate min-w-0"
-        style={{ color: 'inherit', flex: 1, fontSize: 12, minWidth: 0 }}
-      >
-        {node.name}
-      </div>
+      <div className="min-w-0 flex-1 truncate text-inherit">{node.name}</div>
     </div>
   );
 });
@@ -384,8 +275,7 @@ const SkillRow = memo<SkillRowProps>(
     const nameNode = (
       <div
         {...clickableProps(onOpenSkill)}
-        className={cn('truncate min-w-0', CLICKABLE_FOCUS_RING)}
-        style={{ color: 'inherit', flex: 1, minWidth: 0 }}
+        className={cn('min-w-0 flex-1 truncate text-inherit', CLICKABLE_FOCUS_RING)}
         onClick={onOpenSkill ? () => onOpenSkill(item) : undefined}
       >
         {item.name}
@@ -402,8 +292,10 @@ const SkillRow = memo<SkillRowProps>(
           <div
             {...clickableProps()}
             aria-expanded={expanded}
-            className={cn('flex flex-col items-center justify-center', CLICKABLE_FOCUS_RING)}
-            style={{ cursor: 'pointer', flexShrink: 0, height: 20, width: 20 }}
+            className={cn(
+              'flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-(--radius-button)',
+              CLICKABLE_FOCUS_RING,
+            )}
             onClick={(e) => {
               e.stopPropagation();
               onToggle(item.id);
@@ -415,13 +307,15 @@ const SkillRow = memo<SkillRowProps>(
             />
           </div>
         ) : reserveChevronSlot ? (
-          <span style={{ flexShrink: 0, height: 20, width: 20 }} />
+          <span className="size-8 shrink-0" />
         ) : null}
         <SkillsIcon className={styles.itemIcon} size={14} />
         {item.description ? (
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger render={<span style={{ display: 'inline-flex' }}>{nameNode}</span>} />
+              <TooltipTrigger
+                render={<span className="inline-flex min-w-0 flex-1">{nameNode}</span>}
+              />
               <TooltipContent side="left">
                 <span className={styles.description}>{item.description}</span>
               </TooltipContent>
@@ -431,19 +325,19 @@ const SkillRow = memo<SkillRowProps>(
           nameNode
         )}
         {typeof item.fileCount === 'number' && item.fileCount > 0 && (
-          <span className={cx('skill-row-count', styles.itemCount)}>{item.fileCount}</span>
+          <span className={cn('skill-row-count', styles.itemCount)}>{item.fileCount}</span>
         )}
         {hasActions && (
-          <div className={cx('skill-row-actions', styles.rowActions)} draggable={false}>
+          <div className={cn('skill-row-actions', styles.rowActions)} draggable={false}>
             {actions.map((action) => (
               <TooltipProvider key={action.key}>
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
+                      <span className="inline-flex min-w-0">
                         <div
                           role={'button'}
-                          className={cx(
+                          className={cn(
                             styles.rowAction,
                             action.danger && !action.disabled && styles.rowActionDanger,
                             action.disabled && styles.rowActionDisabled,
@@ -454,7 +348,7 @@ const SkillRow = memo<SkillRowProps>(
                             action.onClick(item);
                           }}
                         >
-                          <action.icon size={13} />
+                          <action.icon size={14} />
                         </div>
                       </span>
                     }

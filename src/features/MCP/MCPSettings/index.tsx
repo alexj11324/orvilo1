@@ -1,5 +1,3 @@
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { EditIcon, LinkIcon, Settings2Icon, TerminalIcon } from 'lucide-react';
 import { useImperativeHandle, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,142 +12,20 @@ import ArgsInput from '@/features/PluginDevModal/MCPManifestForm/ArgsInput';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  compactForm: css`
-    .ant-form-item {
-      margin-block-end: ${cssVar.marginSM};
-    }
-
-    .ant-form-item-label {
-      padding-block-end: ${cssVar.paddingXXS};
-
-      label {
-        height: auto;
-        font-size: ${cssVar.fontSizeSM};
-      }
-    }
-  `,
-
-  configFormContainer: css`
-    padding: ${cssVar.paddingLG};
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillAlter};
-  `,
-
-  configHeader: css`
-    margin-block-end: ${cssVar.marginLG};
-
-    h5 {
-      margin-block-end: ${cssVar.marginXS} !important;
-      color: ${cssVar.colorTextHeading};
-    }
-  `,
-
-  connectionForm: css`
-    padding: ${cssVar.paddingMD};
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillAlter};
-  `,
-
-  connectionPreview: css`
-    padding: ${cssVar.paddingMD};
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillAlter};
-  `,
-
-  editButton: css`
-    position: absolute;
-    inset-block-start: ${cssVar.paddingXS};
-    inset-inline-end: ${cssVar.paddingXS};
-  `,
-
-  emptyState: css`
-    padding: ${cssVar.paddingXL};
-    border: 1px dashed ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-
-  footer: css`
-    display: flex;
-    gap: ${cssVar.marginSM};
-    margin-block-start: ${cssVar.marginLG};
-  `,
-
-  markdown: css`
-    p {
-      margin-block-end: ${cssVar.marginXS};
-      color: ${cssVar.colorTextDescription};
-    }
-  `,
-
-  previewItem: css`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: ${cssVar.paddingXS};
-    padding-inline: 0;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-
-  previewLabel: css`
-    display: flex;
-    gap: ${cssVar.marginXS};
-    align-items: center;
-
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-
-  previewValue: css`
-    padding-block: ${cssVar.paddingXXS};
-    padding-inline: ${cssVar.paddingXS};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 600;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-
-  sectionTitle: css`
-    position: relative;
-
-    display: flex;
-    gap: ${cssVar.marginXS};
-    align-items: center;
-
-    height: 32px;
-
-    font-size: ${cssVar.fontSizeLG};
-    font-weight: 600;
-    color: ${cssVar.colorTextHeading};
-
-    &::after {
-      content: '';
-
-      flex: 1;
-
-      height: 1px;
-      margin-inline-start: ${cssVar.marginMD};
-
-      background: linear-gradient(to right, ${cssVar.colorBorder}, transparent);
-    }
-  `,
-}));
+const styles = {
+  connectionForm: 'rounded-(--radius-card) border border-border bg-fill-quaternary p-5',
+  editButton: 'order-1',
+  emptyState:
+    'rounded-(--radius-card) border border-dashed border-border bg-fill-quaternary p-8 text-center text-sm leading-5.5 text-muted-foreground',
+  footer: 'flex flex-wrap gap-3 mt-6',
+  previewItem:
+    'flex flex-wrap items-center justify-between gap-2 py-2 not-last:border-b not-last:border-divider',
+  previewLabel: 'flex items-center gap-2 text-sm leading-5.5 font-medium text-muted-foreground',
+  previewValue:
+    'min-w-0 max-w-full wrap-anywhere bg-fill-quaternary px-2 py-1 font-mono text-sm leading-5.5 font-semibold text-foreground',
+  sectionTitle:
+    "relative flex min-h-9 items-center gap-2 text-base leading-6 font-semibold text-foreground after:content-[''] after:flex-1 after:h-px after:ms-5 after:bg-linear-to-r after:from-border after:to-transparent",
+};
 
 export interface SettingsRef {
   reset: () => void;
@@ -237,7 +113,7 @@ const Settings = ({
   };
 
   return (
-    <div className="flex flex-col py-2 px-3">
+    <div className="flex w-full max-w-160 flex-col px-3 py-2 text-sm leading-5.5">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-6">
           <div className={styles.sectionTitle}>
@@ -246,7 +122,7 @@ const Settings = ({
             {!isEditingConnection && (
               <Button
                 className={styles.editButton}
-                size="sm"
+                size="lg"
                 variant="ghost"
                 onClick={() => setIsEditingConnection(true)}
               >
@@ -300,7 +176,6 @@ const Settings = ({
             // Edit mode
             <div className={styles.connectionForm}>
               <Form
-                className={styles.compactForm}
                 form={connectionForm}
                 initialValues={customParams}
                 layout="vertical"
@@ -312,7 +187,10 @@ const Settings = ({
                     name={'url'}
                     rules={[{ message: t('settings.rules.urlRequired'), required: true }]}
                   >
-                    <Input placeholder="https://mcp.example.com/server" />
+                    <Input
+                      className="h-9 text-sm leading-5.5"
+                      placeholder="https://mcp.example.com/server"
+                    />
                   </Form.Item>
                 )}
 
@@ -324,6 +202,7 @@ const Settings = ({
                       rules={[{ message: t('settings.rules.commandRequired'), required: true }]}
                     >
                       <MCPStdioCommandInput
+                        className="h-9 text-sm leading-5.5"
                         placeholder="npx, uv, python..."
                         onParsedArgs={(args) => {
                           const existing: string[] = connectionForm.getFieldValue('args') ?? [];
@@ -340,15 +219,20 @@ const Settings = ({
                       name={'args'}
                       rules={[{ message: t('settings.rules.argsRequired'), required: true }]}
                     >
-                      <ArgsInput placeholder="e.g: mcp-hello-world" />
+                      <ArgsInput
+                        className="h-9 text-sm leading-5.5"
+                        placeholder="e.g: mcp-hello-world"
+                      />
                     </Form.Item>
                   </>
                 )}
-                <div className={cn('flex gap-2', styles.footer)}>
-                  <Button loading={connectionLoading} type="submit" variant="default">
+                <div className={styles.footer}>
+                  <Button loading={connectionLoading} size="lg" type="submit" variant="default">
                     {t('common:save')}
                   </Button>
-                  <Button onClick={handleCancelEdit}>{t('common:cancel')}</Button>
+                  <Button size="lg" onClick={handleCancelEdit}>
+                    {t('common:cancel')}
+                  </Button>
                 </div>
               </Form>
             </div>
@@ -362,7 +246,7 @@ const Settings = ({
               <Settings2Icon size={16} />
               {t('settings.configuration.title')}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-sm leading-5.5 text-muted-foreground">
               {t('settings.envConfigDescription')}
             </div>
             <Form
@@ -371,18 +255,20 @@ const Settings = ({
               layout="vertical"
               onFinish={handleEnvSubmit}
             >
-              <Form.Item name="env" style={{ marginBottom: 0 }}>
+              <Form.Item name="env">
                 <KeyValueEditor
                   addButtonText={t('dev.mcp.env.add')}
                   keyPlaceholder="VARIABLE_NAME"
                 />
               </Form.Item>
               {!hideFooter && (
-                <div className={cn('flex gap-2', styles.footer)}>
-                  <Button loading={loading} type="submit" variant="default">
+                <div className={styles.footer}>
+                  <Button loading={loading} size="lg" type="submit" variant="default">
                     {t('common:save')}
                   </Button>
-                  <Button onClick={() => envForm.resetFields()}>{t('common:reset')}</Button>
+                  <Button size="lg" onClick={() => envForm.resetFields()}>
+                    {t('common:reset')}
+                  </Button>
                 </div>
               )}
             </Form>

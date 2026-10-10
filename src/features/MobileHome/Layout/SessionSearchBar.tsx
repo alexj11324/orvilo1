@@ -74,6 +74,7 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
         placeholder={t('searchTopicPlaceholder')}
         ref={inputRef}
         value={keywords ?? ''}
+        visualSize="compact"
         onChange={handleChange}
       />
       <div className="absolute right-3 flex items-center gap-2">

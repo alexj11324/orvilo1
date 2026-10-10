@@ -183,6 +183,7 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
                 min={1}
                 type="number"
                 value={pageNumber}
+                visualSize="compact"
                 onChange={(e) => {
                   const value = parseInt(e.target.value);
                   if (!isNaN(value)) goToPage(value);
@@ -353,6 +354,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
                 min={1}
                 type="number"
                 value={pageNumber}
+                visualSize="compact"
                 onChange={(e) => {
                   const value = parseInt(e.target.value);
                   if (!isNaN(value)) goToPage(value);

@@ -1,22 +1,26 @@
 'use client';
 
 import { cssVar, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import { type HTMLAttributes, type PropsWithChildren, type ReactNode, type Ref } from 'react';
 import { memo } from 'react';
+
+import { type SettingsContentWidth } from './settingsWidth';
 
 interface SettingContainerProps extends HTMLAttributes<HTMLDivElement> {
   addonAfter?: ReactNode;
   addonBefore?: ReactNode;
-  maxWidth?: number | string;
   paddingBlock?: string | number;
   paddingInline?: string | number;
   ref?: Ref<HTMLDivElement>;
   variant?: 'default' | 'secondary';
+  width?: SettingsContentWidth;
 }
 const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
   ({
     variant,
-    maxWidth = 1024,
+    width = 'form',
+    className,
     children,
     addonAfter,
     addonBefore,
@@ -29,7 +33,7 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
     const theme = useTheme(); // Keep for colorBgContainerSecondary (not in cssVar)
     return (
       <div
-        className="flex flex-col items-center h-full w-full"
+        className={cn('flex h-full w-full flex-col items-center', className)}
         {...rest}
         ref={ref}
         style={{
@@ -44,10 +48,10 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
       >
         {addonBefore}
         <div
-          className="flex flex-col flex-1 gap-[36px] w-full"
-          style={{
-            maxWidth,
-          }}
+          className={cn(
+            'flex w-full flex-1 flex-col gap-9',
+            width === 'form' ? 'max-w-160' : 'max-w-256',
+          )}
         >
           {children}
         </div>

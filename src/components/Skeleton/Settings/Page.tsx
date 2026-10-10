@@ -4,6 +4,7 @@ import { useLocation } from 'react-router';
 
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
+import { getSettingsContentWidth } from '@/features/Setting/settingsWidth';
 import type { RouteSkeletonProps } from '@/spa/router/routeMeta';
 
 import SkeletonBar from '../Bar';
@@ -26,7 +27,10 @@ const SettingsPageSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => {
           <SkeletonBar height={16} width={profile ? 52 : 88} />
         </NavHeader>
       )}
-      <SettingContainer maxWidth={1024} style={{ paddingBlock: '24px 128px', paddingInline: 24 }}>
+      <SettingContainer
+        style={{ paddingBlock: '24px 128px', paddingInline: 24 }}
+        width={getSettingsContentWidth(tab)}
+      >
         {profile ? <SettingsProfileSkeleton /> : <SettingsSectionSkeleton />}
       </SettingContainer>
     </div>

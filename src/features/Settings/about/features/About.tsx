@@ -33,7 +33,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
     <Form.Group
       collapsible={false}
       gap={16}
-      style={{ maxWidth: '1024px', width: '100%' }}
+      style={{ width: '100%' }}
       title={`${t('about')} ${BRANDING_NAME}`}
       variant={'filled'}
     >

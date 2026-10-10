@@ -4,6 +4,7 @@ import { type FC, memo } from 'react';
 import { Outlet, useMatch } from 'react-router';
 
 import NavHeader from '@/features/NavHeader';
+import { getSettingsContentWidth } from '@/features/Setting/settingsWidth';
 import { useCategory } from '@/features/Settings/hooks/useCategory';
 import SideBar from '@/features/Settings/Layout/SideBar';
 import { RouteSkeletonChromeProvider } from '@/spa/router/routeSkeletonChrome';
@@ -60,7 +61,11 @@ const WorkspaceSettingsContentLayout: FC = memo(() => {
     : undefined;
 
   const content = (
-    <Container maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
+    <Container
+      paddingBlock={'24px 128px'}
+      paddingInline={24}
+      width={getSettingsContentWidth(activeTab)}
+    >
       <Outlet />
     </Container>
   );

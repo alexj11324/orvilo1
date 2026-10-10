@@ -1,6 +1,5 @@
 'use client';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Trash2 } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
@@ -10,27 +9,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import type { ClearTodosParams } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding: 12px;
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  dangerText: css`
-    font-size: 13px;
-    color: ${cssVar.colorError};
-  `,
-  header: css`
-    color: ${cssVar.colorWarning};
-  `,
-  label: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  normalText: css`
-    font-size: 13px;
-  `,
-}));
+const styles = {
+  container: 'rounded-(--ant-border-radius) bg-accent p-3',
+  dangerText: 'text-[13px] text-destructive',
+  header: 'text-warning',
+  label: 'text-[13px] text-muted-foreground',
+  normalText: 'text-[13px]',
+};
 
 /**
  * ClearTodos Intervention component

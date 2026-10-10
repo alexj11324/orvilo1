@@ -1,8 +1,7 @@
 'use client';
-
 import { TodoPanelHeader } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleArrowRight } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,33 +20,13 @@ export interface TodoListRenderState {
 }
 
 // Styles matching TodoItemRow in SortableTodoList
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  itemRow: css`
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  processingRow: css`
-    display: flex;
-    gap: 7px;
-    align-items: center;
-  `,
-  textCompleted: css`
-    color: ${cssVar.colorTextQuaternary};
-    text-decoration: line-through;
-  `,
-  textProcessing: css`
-    color: ${cssVar.colorText};
-  `,
-  textTodo: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  itemRow: 'w-full border-b border-dashed border-sidebar-border px-3 py-2.5 last:border-b-0',
+  processingRow: 'flex items-center gap-[7px]',
+  textCompleted: 'text-(--ant-color-text-quaternary) line-through',
+  textProcessing: 'text-foreground',
+  textTodo: 'text-muted-foreground',
+};
 
 interface ReadOnlyTodoItemProps {
   status: TodoStatus;
@@ -64,8 +43,8 @@ const ReadOnlyTodoItem = memo<ReadOnlyTodoItemProps>(({ text, status }) => {
   // Processing state uses CircleArrowRight icon
   if (isProcessing) {
     return (
-      <div className={cx(styles.itemRow, styles.processingRow)}>
-        <CircleArrowRight size={17} style={{ color: cssVar.colorInfo }} />
+      <div className={cn(styles.itemRow, styles.processingRow)}>
+        <CircleArrowRight size={17} style={{ color: 'var(--info)' }} />
         <span className={styles.textProcessing}>{text}</span>
       </div>
     );
@@ -73,14 +52,14 @@ const ReadOnlyTodoItem = memo<ReadOnlyTodoItemProps>(({ text, status }) => {
 
   // Todo and completed states use Checkbox
   return (
-    <label className={cx('flex flex-row items-center gap-2', styles.itemRow)}>
+    <label className={cn('flex flex-row items-center gap-2', styles.itemRow)}>
       <Checkbox
         checked={isCompleted}
         className="rounded-full"
-        style={{ borderWidth: 1.5, cursor: 'default', borderColor: cssVar.colorSuccess }}
+        style={{ borderWidth: 1.5, cursor: 'default', borderColor: 'var(--success)' }}
       />
       <span
-        className={cx(styles.textTodo, isCompleted && styles.textCompleted)}
+        className={cn(styles.textTodo, isCompleted && styles.textCompleted)}
         style={{ color: isCompleted ? 'var(--muted-foreground)' : undefined }}
       >
         {text}
@@ -111,9 +90,9 @@ const TodoListUI = memo<TodoListUIProps>(({ items }) => {
     // Outer container with background - matches AddTodoIntervention
     <div
       style={{
-        background: cssVar.colorBgContainer,
-        border: `1px solid ${cssVar.colorBorderSecondary}`,
-        borderRadius: cssVar.borderRadius,
+        background: 'var(--card)',
+        border: `1px solid var(--sidebar-border)`,
+        borderRadius: 'var(--ant-border-radius)',
         width: '100%',
       }}
     >

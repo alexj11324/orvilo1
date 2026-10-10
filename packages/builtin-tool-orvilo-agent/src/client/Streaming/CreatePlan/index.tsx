@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ListChecksIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -10,33 +9,12 @@ import StreamingMarkdown from '@/components/StreamingMarkdown';
 
 import type { CreatePlanParams } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 8px;
-  `,
-  description: css`
-    font-size: 14px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  header: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding-block: 4px;
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 16px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  container: 'overflow-hidden rounded-(--radius-card) border border-border p-3',
+  description: 'text-[14px] text-muted-foreground',
+  header: 'flex items-center gap-2 py-1',
+  title: 'truncate text-[16px] font-medium text-foreground',
+};
 
 export const CreatePlanStreaming = memo<BuiltinStreamingProps<CreatePlanParams>>(({ args }) => {
   const { goal, description, context } = args || {};

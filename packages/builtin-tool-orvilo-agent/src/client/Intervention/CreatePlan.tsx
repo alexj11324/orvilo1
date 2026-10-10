@@ -11,7 +11,6 @@ import {
 } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,16 +19,12 @@ import { Textarea } from '@/components/ui/textarea';
 
 import type { CreatePlanParams } from '../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  description: css`
-    font-size: 14px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    font-size: 28px;
-    font-weight: 600;
-  `,
-}));
+const styles = {
+  description:
+    'text-[14px] leading-(--text-base--line-height) text-muted-foreground md:text-[14px] md:leading-(--text-sm--line-height)',
+  title:
+    'text-[28px] leading-(--text-base--line-height) font-semibold md:text-[28px] md:leading-(--text-sm--line-height)',
+};
 
 const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
   ({ args, onArgsChange, registerBeforeApprove }) => {

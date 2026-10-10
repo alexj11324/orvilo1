@@ -1,6 +1,5 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ListChecksIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -9,29 +8,11 @@ import { useChatStore } from '@/store/chat';
 
 import type { Plan } from '../../../types';
 
-const MAX_CONTENT_HEIGHT = 100;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  content: css`
-    overflow: hidden auto;
-
-    max-height: ${MAX_CONTENT_HEIGHT}px;
-    padding: 12px;
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  header: css`
-    cursor: pointer;
-    padding-block: 4px;
-    padding-inline: 0;
-    transition: opacity 0.2s;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  `,
-}));
+const styles = {
+  content:
+    'max-h-[100px] overflow-x-hidden overflow-y-auto rounded-(--ant-border-radius) bg-(--ant-color-fill-quaternary) p-3',
+  header: 'cursor-pointer px-0 py-1 transition-opacity duration-200 ease-[ease] hover:opacity-80',
+};
 
 interface PlanCardProps {
   plan: Plan;
@@ -51,9 +32,9 @@ const PlanCard = memo<PlanCardProps>(({ plan }) => {
       className="flex flex-col gap-2 p-3"
       style={{
         overflow: 'hidden',
-        background: cssVar.colorBgContainer,
-        border: `1px solid ${cssVar.colorBorderSecondary}`,
-        borderRadius: cssVar.borderRadius,
+        background: 'var(--card)',
+        border: `1px solid var(--sidebar-border)`,
+        borderRadius: 'var(--ant-border-radius)',
       }}
     >
       {/* Header - clickable to open document */}

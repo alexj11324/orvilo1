@@ -2,27 +2,15 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
 import type { CallSubAgentParams } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding: 12px;
-    border-radius: 8px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  description: css`
-    margin-block-end: 8px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  instruction: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  container: 'rounded-(--radius-card) bg-(--ant-color-fill-quaternary) p-3',
+  description: 'mb-2 font-medium text-foreground',
+  instruction: 'text-[13px] text-muted-foreground',
+};
 
 export const CallSubAgentStreaming = memo<BuiltinStreamingProps<CallSubAgentParams>>(({ args }) => {
   const { instruction } = args || {};

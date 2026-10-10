@@ -65,7 +65,7 @@ const EditMetaForm: FC<EditMetaFormProps> = ({ cred, credsApi, onCancel, onSucce
         name="name"
         rules={[{ required: true, message: t('creds.form.nameRequired') }]}
       >
-        <Input disabled={!canManageCredentials} />
+        <Input disabled={!canManageCredentials} visualSize="normal" />
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">

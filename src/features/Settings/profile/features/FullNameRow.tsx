@@ -44,6 +44,7 @@ const FullNameRow = () => {
           placeholder={t('profile.fullName')}
           ref={inputRef}
           style={{ width: 180, maxWidth: '100%' }}
+          visualSize="normal"
           onBlur={handleSave}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.nativeEvent.isComposing) {

@@ -122,8 +122,9 @@ const InterestsRow = () => {
           <Input
             placeholder={tOnboarding('interests.placeholder')}
             style={{ width: 200 }}
-
             value={customInput}
+
+            visualSize="normal"
             onChange={(e) => setCustomInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) {

@@ -69,7 +69,7 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
           { pattern: /^[\w-]+$/, message: t('creds.form.keyPattern') },
         ]}
       >
-        <Input disabled={disabled} placeholder="e.g., openai" />
+        <Input disabled={disabled} placeholder="e.g., openai" visualSize="normal" />
       </Form.Item>
 
       <Form.Item
@@ -77,7 +77,7 @@ const KVCredForm: FC<KVCredFormProps> = ({ credsApi, type, disabled, onBack, onS
         name="name"
         rules={[{ required: true, message: t('creds.form.nameRequired') }]}
       >
-        <Input disabled={disabled} placeholder="e.g., OpenAI API Key" />
+        <Input disabled={disabled} placeholder="e.g., OpenAI API Key" visualSize="normal" />
       </Form.Item>
 
       <Form.Item label={t('creds.form.values')}>

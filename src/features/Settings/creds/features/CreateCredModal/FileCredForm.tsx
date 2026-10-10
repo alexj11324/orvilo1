@@ -143,7 +143,7 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
           { pattern: /^[\w-]+$/, message: t('creds.form.keyPattern') },
         ]}
       >
-        <Input disabled={disabled} placeholder="e.g., gcp-service-account" />
+        <Input disabled={disabled} placeholder="e.g., gcp-service-account" visualSize="normal" />
       </Form.Item>
 
       <Form.Item
@@ -151,7 +151,7 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
         name="name"
         rules={[{ required: true, message: t('creds.form.nameRequired') }]}
       >
-        <Input disabled={disabled} placeholder="e.g., GCP Service Account" />
+        <Input disabled={disabled} placeholder="e.g., GCP Service Account" visualSize="normal" />
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">

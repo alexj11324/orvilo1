@@ -1,4 +1,7 @@
+import { cn } from 'cn';
+
 import { FormGroup } from '@/components/GroupForm';
+import { settingWidthClassNames } from '@/features/Setting/settingWidth';
 
 import SkeletonBar from '../Bar';
 
@@ -40,7 +43,7 @@ const NotificationSettingsSkeleton = () => (
 
 /** Workspace settings: the narrow column with an in-page title. */
 export const WorkspaceNotificationSkeleton = () => (
-  <div aria-busy className="mx-auto flex w-full max-w-160 flex-col gap-6">
+  <div aria-busy className={cn('mx-auto flex w-full flex-col gap-6', settingWidthClassNames.form)}>
     <SkeletonBar height={24} width={152} />
     <FormGroup collapsible={false} title={<SkeletonBar height={16} width={120} />}>
       <MatrixRows />

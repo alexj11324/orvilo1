@@ -1,38 +1,12 @@
 'use client';
 
-import { type CSSProperties, type HTMLAttributes, memo, type ReactNode } from 'react';
+import SettingContainer, { type SettingContainerProps } from '@/features/Setting/SettingContainer';
 
-interface WorkspaceSettingsContainerProps extends HTMLAttributes<HTMLDivElement> {
-  addonAfter?: ReactNode;
-  addonBefore?: ReactNode;
-  maxWidth?: number | string;
-  paddingBlock?: CSSProperties['paddingBlock'];
-  paddingInline?: CSSProperties['paddingInline'];
-}
+type WorkspaceSettingsContainerProps = Omit<SettingContainerProps, 'variant'>;
 
-const WorkspaceSettingsContainer = memo<WorkspaceSettingsContainerProps>(
-  ({
-    maxWidth = 1024,
-    children,
-    addonAfter,
-    addonBefore,
-    paddingBlock,
-    paddingInline,
-    style,
-    ...rest
-  }) => (
-    <div
-      className="flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto bg-card"
-      style={{ paddingBlock, paddingInline, ...style }}
-      {...rest}
-    >
-      {addonBefore}
-      <div className="flex w-full flex-1 flex-col gap-9" style={{ maxWidth }}>
-        {children}
-      </div>
-      {addonAfter}
-    </div>
-  ),
+/** Shared width and DOM owner, retaining the workspace's CSS-only card surface. */
+const WorkspaceSettingsContainer = (props: WorkspaceSettingsContainerProps) => (
+  <SettingContainer {...props} variant="workspace" />
 );
 
 export default WorkspaceSettingsContainer;

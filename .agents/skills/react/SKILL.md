@@ -99,6 +99,7 @@ Use plain Tailwind flex utilities — no `Flexbox`/`Center` imports. See `refere
 - `gap-*` instead of `margin` for spacing between flex children
 - `flex-1` to fill available space; `flex-none` for fixed-size items
 - Nest flex containers for complex layouts; `overflow-auto` for scrollable regions
+- Settings content width belongs to [SettingContainer](../../../src/features/Setting/SettingContainer.tsx) and its [named role map](../../../src/features/Setting/settingWidth.ts), with approved values in [DESIGN.md](../../../DESIGN.md#density-and-exceptions). Select `form` or `wide`; do not repeat a numeric page cap. A page that owns its panes, or a mobile content branch, consumes the same role without moving headers or adding a second scroll owner. Workspace settings use the shared wrapper's workspace surface rather than replacing its background.
 
 ## Related Skills
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from 'cn';
 import { Fragment, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +13,7 @@ import {
 } from '@/config/routes/settings';
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
+import { getSettingsWidth, settingWidthClassNames } from '@/features/Setting/settingWidth';
 import { useSettingsAnchorScroll } from '@/features/SettingsSearch/anchor';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { SettingsTabs } from '@/store/global/initialState';
@@ -39,7 +41,11 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Storage,
 ] as const;
 
-/** Tabs whose pages own their internal layout and must not be wrapped. */
+/**
+ * Tabs whose pages own their internal layout and must not be wrapped.
+ * Every rendered opted-out page must supply a SettingContainer or consume its
+ * named width cap while retaining its own panes and scroll ownership.
+ */
 const FULL_WIDTH_TABS: readonly string[] = [
   // Agents hosts the full per-agent config surface (index list + the exiled
   // profile page) — it owns its layout end to end.
@@ -146,7 +152,22 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
   }
 
   if (mobile) {
-    return activeTab ? renderComponent(activeTab) : renderComponent(SettingsTabs.Profile);
+    const tab = activeTab || SettingsTabs.Profile;
+    const content = renderComponent(tab);
+    if (FULL_WIDTH_TABS.includes(tab)) return content;
+
+    // MobileNavLayout keeps its header and scroll region; only the content cap
+    // belongs here, so this wrapper does not introduce a second scroll owner.
+    return (
+      <div
+        className={cn(
+          'mx-auto flex w-full flex-col',
+          settingWidthClassNames[getSettingsWidth(tab)],
+        )}
+      >
+        {content}
+      </div>
+    );
   }
 
   if (!activeTab) return null;
@@ -165,7 +186,11 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
       >
         {compactHeaderTitle && <span style={{ fontWeight: 500 }}>{compactHeaderTitle}</span>}
       </NavHeader>
-      <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
+      <SettingContainer
+        paddingBlock={'24px 128px'}
+        paddingInline={24}
+        width={getSettingsWidth(activeTab)}
+      >
         {content}
       </SettingContainer>
     </Fragment>

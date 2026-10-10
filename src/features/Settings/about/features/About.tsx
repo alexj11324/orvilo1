@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import Form from '@/components/GroupForm';
 import { Separator } from '@/components/ui/separator';
 import { DOWNLOAD_URL, mailTo, OFFICIAL_SITE } from '@/const/url';
+import { settingWidthClassNames } from '@/features/Setting/settingWidth';
 import { getHostContext } from '@/platform';
 
 import AboutList from './AboutList';
@@ -31,9 +32,10 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   return (
     <Form.Group
+      className={settingWidthClassNames.form}
       collapsible={false}
       gap={16}
-      style={{ maxWidth: '1024px', width: '100%' }}
+      style={{ width: '100%' }}
       title={`${t('about')} ${BRANDING_NAME}`}
       variant={'filled'}
     >

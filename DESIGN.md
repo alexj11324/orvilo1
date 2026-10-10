@@ -177,6 +177,17 @@ Optical corrections require a local explanation and evidence. Keep ProjectSidePa
 
 Work surfaces use the existing [WorkSurface](src/features/WorkSurface/WorkSurface.tsx) geometry: fixed 16px gutters, a 960px document cap, and surface-container responsiveness. Collections use available width; document reading lanes center within the cap. Keep each pane's scroll ownership and the toolbar overflow mechanism. Do not apply the chat wide-screen preference to work pages. Adapt supported mobile layouts and overflow deliberately.
 
+Settings content uses the shared [SettingContainer](src/features/Setting/SettingContainer.tsx)
+width owner: configuration forms use `width="form"` (640px), and wide lists or
+provider management use an explicit `width="wide"` (1024px). Both caps shrink to
+the available content width on narrow screens. The named roles and tab assignments
+live in [settingWidth](src/features/Setting/settingWidth.ts); new configuration
+pages default to `form`. Personal and workspace settings share this implementation
+while retaining their own surface backgrounds, padding, headers, and scroll
+owners. Pages that opt out of the settings shell must supply the shared container
+or consume its named cap in their own layout, including supported mobile layouts.
+These settings roles do not change WorkSurface's document geometry above.
+
 ## Shapes and elevation
 
 Map shape by purpose and **resolved pixels**, not by assumptions about Tailwind class names:

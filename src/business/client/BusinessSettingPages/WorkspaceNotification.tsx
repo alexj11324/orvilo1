@@ -1,11 +1,13 @@
 'use client';
 
+import { cn } from 'cn';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import { FormGroup } from '@/components/GroupForm';
 import { WorkspaceNotificationSkeleton } from '@/components/Skeleton/Settings/Notification';
+import { settingWidthClassNames } from '@/features/Setting/settingWidth';
 import NotificationPreferences from '@/features/Settings/notification/NotificationPreferences';
 import { useSaveState } from '@/hooks/useSaveState';
 import { useUserStore } from '@/store/user';
@@ -26,7 +28,9 @@ export const WorkspaceNotification = () => {
       loading={<WorkspaceNotificationSkeleton />}
       onRetry={() => void preferenceQuery.mutate()}
     >
-      <div className="mx-auto flex w-full min-w-0 max-w-160 flex-col gap-6">
+      <div
+        className={cn('mx-auto flex w-full min-w-0 flex-col gap-6', settingWidthClassNames.form)}
+      >
         <h1 className="m-0 text-xl font-semibold">{t('workspaceSetting.notification.title')}</h1>
         <FormGroup
           collapsible={false}

@@ -2,6 +2,7 @@
 
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +28,7 @@ import {
   ComboboxList,
 } from '@/components/ui/combobox';
 import { newOAuthAttempt, waitForOAuthSession } from '@/features/Connectors/oauthSession';
+import { settingWidthClassNames } from '@/features/Setting/settingWidth';
 import LinearIcon from '@/features/Work/icons/LinearIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -65,7 +67,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     background: ${cssVar.colorBgContainer};
   `,
   wrap: css`
-    width: min(100%, 1313px);
+    width: 100%;
     margin-block: 0;
     margin-inline: auto;
   `,
@@ -341,7 +343,7 @@ export function LinearImportCatalog() {
   const { allowed, reason } = usePermission('manage_settings');
   return (
     <main className={styles.page}>
-      <div className={styles.wrap}>
+      <div className={cn(styles.wrap, settingWidthClassNames.wide)}>
         <h1 className={styles.title}>{t('workspaceSetting.import.title')}</h1>
         <p className={styles.description}>{t('workspaceSetting.import.catalogDescription')}</p>
         {allowed ? (
@@ -678,7 +680,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
 
   return (
     <main className={styles.page}>
-      <div className={styles.wrap}>
+      <div className={cn(styles.wrap, settingWidthClassNames.wide)}>
         <div className={styles.heading}>
           <Link className={styles.backLink} to={`/${workspaceSlug}/settings/imports`}>
             <ArrowLeft size={16} /> {t('workspaceSetting.import.backToImports')}

@@ -813,9 +813,9 @@ export const workAttentionRouter = router({
         input.eligibleFor?.relation === 'child'
           ? [...new Set(taskRows.flatMap((row) => (row.parentTaskId ? [row.parentTaskId] : [])))]
           : [];
-      const parentIdentifierById = new Map(
-        (await ctx.taskModel.findByIds(parentIds)).map((task) => [task.id, task.identifier]),
-      );
+      // Read through the search's own visibility rule: a parent the caller
+      // cannot see yields no label, exactly like an Issue with no parent.
+      const parentIdentifierById = await ctx.workQueryModel.readableTaskIdentifiers(parentIds);
 
       const items = [
         ...taskRows.map((row) => {

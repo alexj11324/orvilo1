@@ -3422,7 +3422,8 @@ export class TaskModel {
       })
       .where(and(eq(tasks.id, taskId), this.ownership()))
       .returning(taskRowColumns);
-    if (!updated) throw new TaskDependencyError('Task not found or unavailable.');
+    if (!updated)
+      throw new TaskDependencyError('Task not found or unavailable.', 'BAD_REQUEST', 'UNAVAILABLE');
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],
@@ -3463,7 +3464,8 @@ export class TaskModel {
       );
     }
     const currentTask = await this.findById(taskId);
-    if (!currentTask) throw new TaskDependencyError('Task not found.');
+    if (!currentTask)
+      throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     const deleted = await this.db
       .delete(taskDependencies)
       .where(
@@ -3548,7 +3550,7 @@ export class TaskModel {
       })
       .where(and(eq(tasks.id, eventTaskId), this.ownership()))
       .returning(taskRowColumns);
-    if (!updated) throw new TaskDependencyError('Task not found.');
+    if (!updated) throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     if (syncModel && !mutation.suppressDomainEvent) {
       await syncModel.recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],
@@ -3588,14 +3590,15 @@ export class TaskModel {
         model.removeDependencyByRelationId(taskId, relationId, mutation),
       );
     }
-    if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
+    if (!(await this.findById(taskId)))
+      throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     const [relation] = await this.db
       .select()
       .from(taskDependencies)
       .where(and(eq(taskDependencies.id, relationId), this.issueRelationOwnership()))
       .limit(1);
     if (!relation || (relation.taskId !== taskId && relation.dependsOnId !== taskId)) {
-      throw new TaskDependencyError('Relation not found.');
+      throw new TaskDependencyError('Relation not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     }
     const peerId = relation.taskId === taskId ? relation.dependsOnId : relation.taskId;
     // A "blocking" row is stored on the other issue. Remove it from that

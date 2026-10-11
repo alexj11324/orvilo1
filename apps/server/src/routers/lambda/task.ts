@@ -44,6 +44,7 @@ import { automationResultDeliveries, taskTopics } from '@/database/schemas/task'
 import { topics } from '@/database/schemas/topic';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentVisibleTo } from '@/database/utils/agent-access';
+import { lockTaskDependencyGraph } from '@/database/utils/taskDependencyLock';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
@@ -2407,11 +2408,6 @@ export const taskRouter = router({
           parentTaskId === undefined
             ? undefined
             : await resolveSafeParentTaskId(model, resolved.id, parentTaskId);
-        // The check above only sees Issues the caller can read; this one walks
-        // the raw parent chain, so a hidden Issue in between cannot hide a cycle.
-        if (resolvedParentTaskId) {
-          await assertParentChainExcludes(ctx.serverDB, resolvedParentTaskId, [resolved.id]);
-        }
 
         const updateData = {
           ...data,
@@ -2448,23 +2444,43 @@ export const taskRouter = router({
         // assignment activity is written inside this update's own transaction
         // (see `TaskModel.updateWithLog`), so a concurrent reassignment cannot
         // interleave between reading the old assignee and recording it.
-        const task = status
-          ? await ctx.serverDB.transaction(async (tx) => {
-              const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
-              const updated = await taskService.updateTaskWithAssigneeLock(
-                resolved.id,
-                finalUpdateData,
-                actor,
-                { expectedDomainRevision },
-              );
-              if (!updated) return null;
+        const commit = (db: OrviloDatabase) =>
+          status
+            ? db.transaction(async (tx) => {
+                const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
+                const updated = await taskService.updateTaskWithAssigneeLock(
+                  resolved.id,
+                  finalUpdateData,
+                  actor,
+                  { expectedDomainRevision },
+                );
+                if (!updated) return null;
 
-              const result = await taskService.updateStatus({ id: resolved.id, status }, actor);
-              return result.task;
+                const result = await taskService.updateStatus({ id: resolved.id, status }, actor);
+                return result.task;
+              })
+            : new TaskService(
+                db,
+                ctx.userId,
+                ctx.workspaceId ?? undefined,
+              ).updateTaskWithAssigneeLock(resolved.id, finalUpdateData, actor, {
+                expectedDomainRevision,
+              });
+        // Giving an Issue a parent re-validates under the scope's graph lock,
+        // in the transaction that writes it. The checks above ran on a snapshot
+        // a concurrent parent change could already have invalidated.
+        const task = resolvedParentTaskId
+          ? await ctx.serverDB.transaction(async (tx) => {
+              await lockTaskDependencyGraph(tx, ctx.userId, ctx.workspaceId ?? undefined);
+              await resolveSafeParentTaskId(
+                new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined),
+                resolved.id,
+                resolvedParentTaskId,
+              );
+              await assertParentChainExcludes(tx, resolvedParentTaskId, [resolved.id]);
+              return commit(tx);
             })
-          : await ctx.taskService.updateTaskWithAssigneeLock(resolved.id, finalUpdateData, actor, {
-              expectedDomainRevision,
-            });
+          : await commit(ctx.serverDB);
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         // Only an actual assignee change notifies — re-saving the same assignee
         // stays silent (self-assignment is filtered inside the helper).
@@ -2539,11 +2555,15 @@ export const taskRouter = router({
         }
 
         const updated = await ctx.serverDB.transaction(async (tx) => {
+          // Serialize with every other tree and graph write in this scope
+          // before reading: two requests that would each pass alone cannot
+          // both validate against the same stale tree and then both write.
+          await lockTaskDependencyGraph(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const model = new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const rows: TaskItem[] = [];
           // Validate the selection as a set against the rows this transaction
-          // sees, before any of them is written.
+          // sees under that lock, before any of them is written.
           await assertParentChainExcludes(
             tx,
             parent.id,

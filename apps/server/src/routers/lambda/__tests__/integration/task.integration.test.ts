@@ -999,6 +999,90 @@ describe('Task Router Integration', () => {
       expect((await caller.find({ id: top.data.id })).data.parentTaskId).toBeNull();
     });
 
+    it('never lets two concurrent parent writes close a loop', async () => {
+      const left = await caller.create({ instruction: 'Left', name: 'Left' });
+      const right = await caller.create({ instruction: 'Right', name: 'Right' });
+
+      // Each write is legal alone; together they would make each the other's parent.
+      const outcomes = await Promise.allSettled([
+        caller.update({ id: left.data.id, parentTaskId: right.data.id }),
+        caller.setParentBatch({ parentTaskId: left.data.id, taskIds: [right.data.id] }),
+      ]);
+
+      expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+      const parents = [
+        (await caller.find({ id: left.data.id })).data.parentTaskId,
+        (await caller.find({ id: right.data.id })).data.parentTaskId,
+      ];
+      expect(parents.filter(Boolean)).toHaveLength(1);
+    });
+
+    it('answers the same for an issue that is hidden and one that does not exist', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const otherCaller = taskRouter.createCaller(createTestContext(otherUserId));
+      const foreign = await otherCaller.create({ instruction: 'Foreign', name: 'Secret title' });
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const failure = (write: Promise<unknown>) =>
+        write.then(
+          () => undefined,
+          (error: { code?: string; message?: string }) => ({
+            code: error.code,
+            message: error.message,
+          }),
+        );
+
+      const hidden = await failure(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [foreign.data.id] }),
+      );
+      const missing = await failure(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: ['task_does_not_exist'] }),
+      );
+      expect(hidden).toEqual({ code: 'NOT_FOUND', message: 'Task not found' });
+      expect(hidden).toEqual(missing);
+      expect(
+        await failure(
+          // By database id: identifiers are numbered per owner, so the other
+          // user's `T-n` would resolve to one of the caller's own Issues.
+          caller.setParentBatch({ parentTaskId: foreign.data.id, taskIds: [parent.data.id] }),
+        ),
+      ).toEqual(missing);
+    });
+
+    it('keeps hidden issues out of a relation search, as hits and as parent labels', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const otherCaller = taskRouter.createCaller(createTestContext(otherUserId));
+      const search = workAttentionRouter.createCaller(createTestContext(userId)).search;
+      const foreign = await otherCaller.create({ instruction: 'Foreign', name: 'Scope foreign' });
+      const anchor = await caller.create({ instruction: 'Anchor', name: 'Scope anchor' });
+      const candidate = await caller.create({ instruction: 'Mine', name: 'Scope mine' });
+      // The candidate hangs under an Issue the caller cannot read.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: foreign.data.id })
+        .where(eq(tasks.id, candidate.data.id));
+
+      const hits = (
+        await search({
+          eligibleFor: { relation: 'child', taskId: anchor.data.id },
+          limitPerType: 50,
+          query: 'Scope',
+          type: 'task',
+        })
+      ).data;
+      expect(hits.map((hit) => hit.title)).toEqual(['Scope mine']);
+      expect(hits[0]).toMatchObject({ parentIdentifier: null });
+      expect(JSON.stringify(hits)).not.toContain(foreign.data.id);
+
+      // Anchoring the search on a hidden Issue reads like anchoring it on nothing.
+      const anchored = (taskId: string) =>
+        search({ eligibleFor: { relation: 'child', taskId }, query: 'Scope', type: 'task' }).then(
+          () => undefined,
+          (error: { code?: string; message?: string }) => [error.code, error.message],
+        );
+      expect(await anchored(foreign.data.id)).toEqual(['NOT_FOUND', 'Task not found']);
+      expect(await anchored(foreign.data.id)).toEqual(await anchored('task_does_not_exist'));
+    });
+
     it('refuses to extend a parent chain that never reaches a root', async () => {
       const first = await caller.create({ instruction: 'First', name: 'First' });
       const second = await caller.create({ instruction: 'Second', name: 'Second' });

@@ -2104,6 +2104,20 @@ export class WorkQueryModel {
       .limit(Math.min(Math.max(limit, 1), WORK_SEARCH_MAX_PER_TYPE));
   };
 
+  /**
+   * Identifiers for the given task ids, under the same readable-task rule the
+   * search applies — an Issue the caller cannot read is simply absent, so a
+   * hit never names a parent the caller could not have found themselves.
+   */
+  readableTaskIdentifiers = async (ids: string[]): Promise<Map<string, string>> => {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: tasks.id, identifier: tasks.identifier })
+      .from(tasks)
+      .where(and(this.ownership(), inArray(tasks.id, ids)));
+    return new Map(rows.map((row) => [row.id, row.identifier]));
+  };
+
   /** Name match for CommandMenu. Project ACL matches `ProjectModel.readable`. */
   searchProjects = async (needle: string, limit = 8) => {
     const q = needle.trim();

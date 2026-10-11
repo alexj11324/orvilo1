@@ -208,16 +208,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      # 下载所有平台的构建产物
+      # Keep Windows/Linux build artifacts for acceptance; only approved platforms reach Releases.
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
           path: release
-          pattern: release-*
+          pattern: release-macos-*
           merge-multiple: true
 
       - name: Validate platform renderer hashes
-        run: node apps/desktop/scripts/validateMainHash.mjs release release-macos-latest release-macos-15-intel release-windows-2025 release-ubuntu-latest
+        run: node apps/desktop/scripts/validateMainHash.mjs release release-macos-latest release-macos-15-intel
 
       # 列出下载的构建产物
       - name: List downloaded artifacts
@@ -243,7 +243,7 @@ jobs:
           path: release/
           retention-days: 1
 
-  # 发布所有平台构建产物
+  # Publish approved macOS release artifacts
   publish-release:
     needs: [merge-mac-files]
     name: Publish Beta Release
@@ -268,15 +268,9 @@ jobs:
         with:
           tag_name: ${{ github.event.release.tag_name }}
           files: |
-            release/latest*
+            release/latest-mac.yml
             release/*.dmg*
             release/*.zip*
-            release/*.exe*
-            release/*.AppImage
-            release/*.deb*
-            release/*.snap*
-            release/*.rpm*
-            release/*.tar.gz*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

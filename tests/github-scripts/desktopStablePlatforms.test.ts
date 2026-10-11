@@ -33,3 +33,33 @@ it.each(['release', 'workflow_dispatch'])(
     }
   },
 );
+
+it.each(['beta', 'canary'])('does not publish unapproved platforms through %s', async (channel) => {
+  const workflow = parse(
+    await readFile(`.github/workflows/release-desktop-${channel}.yml`, 'utf8'),
+  );
+  const runners: string[] = workflow.jobs.build.strategy.matrix.os;
+  expect(runners).toContain('windows-2025');
+  expect(runners).toContain('ubuntu-latest');
+  const downloadStep = workflow.jobs['merge-mac-files'].steps.find((step: { uses?: string }) =>
+    step.uses?.startsWith('actions/download-artifact@'),
+  );
+  expect(downloadStep.with.pattern).toBe('release-macos-*');
+
+  const integrityStep = workflow.jobs['merge-mac-files'].steps.find((step: { run?: string }) =>
+    step.run?.includes('validateMainHash.mjs'),
+  );
+  const expectedArtifacts = integrityStep.run.trim().split(/\s+/).slice(3);
+  expect(expectedArtifacts).toEqual(
+    runners.filter((runner) => runner.startsWith('macos-')).map((runner) => `release-${runner}`),
+  );
+
+  const publishStep = workflow.jobs['publish-release'].steps.find((step: { uses?: string }) =>
+    step.uses?.startsWith('softprops/action-gh-release@'),
+  );
+  expect(publishStep.with.files.trim().split('\n')).toEqual([
+    'release/latest-mac.yml',
+    'release/*.dmg*',
+    'release/*.zip*',
+  ]);
+});

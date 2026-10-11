@@ -13,14 +13,11 @@ export interface ItemLinkProps {
 
 const ItemLink = memo<ItemLinkProps>(({ label, href }) => {
   return (
-    <a href={href} rel="noreferrer" style={{ color: 'inherit' }} target="_blank">
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-      >
+    <a href={href} rel="noreferrer" target="_blank">
+      <div className="flex min-w-0 items-center gap-2 text-sm leading-5.5 text-foreground">
         {label}
         {createElement(SquareArrowOutUpRight, {
-          color: 'var(--ant-color-text-description)',
+          className: 'text-foreground-description',
           size: 14,
         })}
       </div>

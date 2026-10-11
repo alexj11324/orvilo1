@@ -2,7 +2,6 @@
 
 import { Markdown } from '@lobehub/ui';
 import { Select } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
 import { VertexAIProviderCard } from 'model-bank/modelProviders';
 import { useTranslation } from 'react-i18next';
 
@@ -15,17 +14,10 @@ import { KeyVaultsConfigKey, LLMProviderApiTokenKey } from '../../const';
 import { type ProviderItem } from '../../type';
 import ProviderDetail from '../default';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  markdown: css`
-    p {
-      color: ${cssVar.colorTextDescription} !important;
-    }
-  `,
-  tip: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-}));
+const styles = {
+  markdown: '[&_p]:text-foreground-description',
+  tip: 'text-xs leading-5 text-foreground-description',
+};
 
 const providerKey: GlobalLLMProviderKey = 'vertexai';
 
@@ -89,7 +81,7 @@ const useProviderCard = (): ProviderItem => {
           />
         ),
         desc: (
-          <Markdown className={styles.markdown} fontSize={12} variant={'chat'}>
+          <Markdown className={styles.markdown} fontSize={12} lineHeight={20 / 12} variant={'chat'}>
             {t('vertexai.apiKey.desc')}
           </Markdown>
         ),
@@ -110,7 +102,7 @@ const useProviderCard = (): ProviderItem => {
           />
         ),
         desc: (
-          <Markdown className={styles.markdown} fontSize={12} variant={'chat'}>
+          <Markdown className={styles.markdown} fontSize={12} lineHeight={20 / 12} variant={'chat'}>
             {t('vertexai.region.desc')}
           </Markdown>
         ),

@@ -6,7 +6,6 @@ import {
   confirmModal,
   createModal,
   Input,
-  ModalFooter,
   type ModalInstance,
   Select,
   Text,
@@ -20,6 +19,7 @@ import { BrainIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ModalFooter } from '@/components/Modal';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAiInfraStore } from '@/store/aiInfra/store';
@@ -34,7 +34,7 @@ interface SettingContentProps {
 }
 
 const SectionTitle = memo<{ children: ReactNode }>(({ children }) => (
-  <Text fontSize={13} type={'secondary'} weight={500}>
+  <Text fontSize={14} lineHeight={22 / 14} type={'secondary'} weight={500}>
     {children}
   </Text>
 ));
@@ -173,17 +173,32 @@ const SettingContent = memo<SettingContentProps>(({ initialValues, id }) => {
           </Form.Item>
         </Flexbox>
       </Form>
-      <ModalFooter
-        style={{
-          borderBlockStart: `1px solid ${'var(--ant-color-border-secondary)'}`,
-          marginTop: 16,
-          padding: 0,
-        }}
-      >
-        <Button danger disabled={loading} type={'primary'} onClick={handleDelete}>
+      <ModalFooter className="mbs-4 border-bs border-divider p-0">
+        <Button
+          danger
+          disabled={loading}
+          type={'primary'}
+          style={{
+            borderRadius: 'var(--radius-button)',
+            fontSize: 'var(--text-sm)',
+            height: 36,
+            lineHeight: 22 / 14,
+          }}
+          onClick={handleDelete}
+        >
           {t('delete', { ns: 'common' })}
         </Button>
-        <Button loading={loading} type={'primary'} onClick={() => form.submit()}>
+        <Button
+          loading={loading}
+          type={'primary'}
+          style={{
+            borderRadius: 'var(--radius-button)',
+            fontSize: 'var(--text-sm)',
+            height: 36,
+            lineHeight: 22 / 14,
+          }}
+          onClick={() => form.submit()}
+        >
           {t('update', { ns: 'common' })}
         </Button>
       </ModalFooter>

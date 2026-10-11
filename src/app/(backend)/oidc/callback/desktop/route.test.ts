@@ -9,9 +9,10 @@ import { GET } from './route';
 const mocks = vi.hoisted(() => ({
   cleanupExpired: vi.fn(),
   create: vi.fn(),
+  log: vi.fn(),
 }));
 
-vi.mock('debug', () => ({ default: () => vi.fn() }));
+vi.mock('debug', () => ({ default: () => mocks.log }));
 
 vi.mock('next/server', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -35,6 +36,14 @@ const createRequest = (search: string) => {
 describe('GET /oidc/callback/desktop', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('keeps exception details in server logs and redirects with only a stable reason', async () => {
+    const error = new Error('database password=private host=internal');
+    mocks.create.mockRejectedValue(error);
+    const response = await GET(createRequest('?code=secret&state=handoff'));
+    expect(response.headers.get('location')).toBe('/oauth/callback/error?reason=internal_error');
+    expect(mocks.log).toHaveBeenCalledWith('Error in OIDC callback: %O', error);
   });
 
   it('stores the handoff and redirects to the success page on the current origin', async () => {

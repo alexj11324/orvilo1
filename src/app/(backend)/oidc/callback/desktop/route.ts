@@ -51,7 +51,6 @@ export const GET = async (req: NextRequest) => {
 
     return redirectTo(errorPathname, {
       reason: 'internal_error',
-      ...(error instanceof Error && { errorMessage: error.message }),
     });
   }
 };

@@ -2092,10 +2092,24 @@ export class TopicModel {
   recomputeUsage = async (id: string) =>
     this.db.transaction((trx) => recomputeTopicUsage(trx, this.userId, id, this.workspaceId));
 
-  /**
-   * Update topic metadata with merge logic
-   * This method merges new metadata with existing metadata instead of replacing it
-   */
+  /** Atomically preserve human titles and merge the agent marker without losing metadata. */
+  updateAgentTitle = async (id: string, title: string) =>
+    this.db
+      .update(topics)
+      .set({
+        title,
+        metadata: sql`COALESCE(${topics.metadata}, '{}'::jsonb) || '{"titleSource":"agent"}'::jsonb`,
+      })
+      .where(
+        and(
+          eq(topics.id, id),
+          this.ownership(),
+          sql`${topics.metadata}->>'titleSource' IS DISTINCT FROM 'user'`,
+        ),
+      )
+      .returning();
+
+  /** Merge topic metadata under a row lock. */
   updateMetadata = async (
     id: string,
     metadata: TopicMetadataPatch,

@@ -1,109 +1,30 @@
 'use client';
 
 import type { BuiltinInspector, BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { GitBranch, Hash } from 'lucide-react';
 import { memo } from 'react';
 
 import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 import { parseGitHubToolName, staticGitHubLabelFor } from './labels';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  branchBadge: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 4px;
-    align-items: center;
+const styles = {
+  chip: 'ms-1.5 inline-flex min-w-0 shrink items-stretch overflow-hidden rounded-(--radius-chip) bg-muted text-xs leading-5',
+  chipAction: 'shrink-0 px-2.5 py-0.5 text-foreground',
+  chipDivider: 'w-px shrink-0 self-stretch bg-divider',
+  chipKey: 'text-muted-foreground',
+  chipValue:
+    'inline-flex min-w-0 shrink items-center gap-1 overflow-hidden px-2.5 py-0.5 font-mono text-foreground',
+  chipValueText: 'min-w-0 truncate',
+  icon: 'me-1.5 shrink-0 text-muted-foreground',
+  productPrefix: 'me-0.5 shrink-0 text-sm font-medium leading-5.5 text-muted-foreground',
+  chipIcon: 'shrink-0 text-muted-foreground',
+  branchBadge:
+    'ms-1.5 inline-flex min-w-0 shrink-0 items-center gap-1 rounded-(--radius-chip) bg-muted px-2 py-0.5 font-mono text-xs leading-5 text-foreground',
+  branchBadgeText: 'max-w-55 truncate',
+};
 
-    min-width: 0;
-    margin-inline-start: 6px;
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  branchBadgeText: css`
-    overflow: hidden;
-    max-width: 220px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    align-items: stretch;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    line-height: 18px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  chipAction: css`
-    flex-shrink: 0;
-    padding-block: 2px;
-    padding-inline: 10px;
-    color: ${cssVar.colorText};
-  `,
-  chipDivider: css`
-    flex-shrink: 0;
-    align-self: stretch;
-    width: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  chipIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
-  chipKey: css`
-    color: ${cssVar.colorTextDescription};
-  `,
-  chipValue: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 10px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    color: ${cssVar.colorText};
-  `,
-  chipValueText: css`
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  icon: css`
-    flex-shrink: 0;
-    margin-inline-end: 6px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  productPrefix: css`
-    flex-shrink: 0;
-
-    margin-inline-end: 2px;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
-
-const GitHubMark = memo<{ size?: number }>(({ size = 14 }) => (
+const GitHubMark = memo<{ size?: number }>(({ size = 16 }) => (
   <svg
     aria-hidden="true"
     className={styles.icon}
@@ -237,7 +158,7 @@ const GitHubInspectorImpl = memo<BuiltinInspectorProps<Record<string, unknown>>>
               <span className={styles.chipDivider} />
               <span className={styles.chipValue}>
                 {primary.iconType === 'number' ? (
-                  <Hash className={styles.chipIcon} size={12} />
+                  <Hash className={styles.chipIcon} size={16} />
                 ) : (
                   primary.key && <span className={styles.chipKey}>{primary.key}:</span>
                 )}
@@ -248,7 +169,7 @@ const GitHubInspectorImpl = memo<BuiltinInspectorProps<Record<string, unknown>>>
         </span>
         {branch && (
           <span className={styles.branchBadge} title={branch}>
-            <GitBranch className={styles.chipIcon} size={12} />
+            <GitBranch className={styles.chipIcon} size={16} />
             <span className={styles.branchBadgeText}>{branch}</span>
           </span>
         )}

@@ -1,5 +1,5 @@
 import type { BuiltinPlaceholderProps, SearchQuery } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -7,26 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { shinyTextStyles } from '@/styles';
 
-const ITEM_HEIGHT = 80;
-const ITEM_WIDTH = 160;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
+const styles = {
   query: cx(
-    css`
-      padding-block: 4px;
-      padding-inline: 8px;
-      border-radius: 8px;
-
-      font-size: 12px;
-      color: ${cssVar.colorTextSecondary};
-
-      &:hover {
-        background: ${cssVar.colorFillTertiary};
-      }
-    `,
+    'rounded-(--radius-chip) px-2 py-1 text-xs leading-5 text-muted-foreground hover:bg-accent',
     shinyTextStyles.shinyText,
   ),
-}));
+};
 
 export const Search = memo<BuiltinPlaceholderProps<SearchQuery>>(({ args }) => {
   const { query } = args || {};
@@ -35,25 +21,23 @@ export const Search = memo<BuiltinPlaceholderProps<SearchQuery>>(({ args }) => {
   return (
     <div className="flex flex-col gap-2">
       <div
-        className="flex flex-row justify-between"
-        style={{
-          alignItems: isMobile ? 'flex-start' : 'center',
-          gap: isMobile ? 8 : 40,
-          height: isMobile ? undefined : 32,
-        }}
+        className={cx(
+          'flex flex-row justify-between',
+          isMobile ? 'items-start gap-2' : 'h-8 items-center gap-10',
+        )}
       >
         <div className={cx('flex flex-row items-center gap-2', styles.query)}>
           <span className="anticon" role="img">
-            <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            <SearchIcon fill={'transparent'} height={16} size={16} width={16} />
           </span>
-          {query || <Skeleton style={{ height: 20, width: 40 }} />}
+          {query || <Skeleton className="h-5 w-10" />}
         </div>
 
-        <Skeleton style={{ height: 20, width: 40 }} />
+        <Skeleton className="h-5 w-10" />
       </div>
       <div className="flex flex-row gap-3">
         {['1', '2', '3', '4', '5'].map((id) => (
-          <Skeleton key={id} style={{ height: ITEM_HEIGHT, width: ITEM_WIDTH }} />
+          <Skeleton className="h-20 w-40" key={id} />
         ))}
       </div>
     </div>

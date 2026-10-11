@@ -3,32 +3,18 @@
 import { FilePathDisplay } from '@orvilo/shared-tool-ui/components';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type CodexFileChangeArgs, type CodexFileChangeState, getFileChangeStats } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  count: css`
-    margin-inline-start: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  lineAdded: css`
-    margin-inline-start: 6px;
-    font-size: 12px;
-    color: ${cssVar.colorSuccess};
-  `,
-  lineDeleted: css`
-    margin-inline-start: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorError};
-  `,
-  summary: css`
-    margin-inline-end: 6px;
-  `,
-}));
+const styles = {
+  count: 'ms-1 text-xs leading-5 text-muted-foreground',
+  lineAdded: 'ms-1.5 text-xs leading-5 text-success-text',
+  lineDeleted: 'ms-1 text-xs leading-5 text-destructive-text',
+  summary: 'me-1.5',
+};
 
 const FileChangeInspector = memo<BuiltinInspectorProps<CodexFileChangeArgs, CodexFileChangeState>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading, pluginState }) => {

@@ -38,6 +38,9 @@ export interface AiGenerationObjectInput {
   tools?: ChatCompletionTool[];
 }
 
+type AiGenerationJudgmentInput = Omit<AiGenerationObjectInput, 'model' | 'provider'> &
+  Partial<Pick<AiGenerationObjectInput, 'model' | 'provider'>>;
+
 interface AiGenerationObjectContext {
   /**
    * Free-form context forwarded to non-tracing hooks (billing, routing). Use
@@ -145,7 +148,15 @@ export class AiGenerationService {
   }
 
   async generateObject<T = unknown>(
+    input: AiGenerationJudgmentInput,
+    options: AiGenerationJudgmentOptions,
+  ): Promise<T>;
+  async generateObject<T = unknown>(
     input: AiGenerationObjectInput,
+    options: AiGenerationObjectOptions,
+  ): Promise<T>;
+  async generateObject<T = unknown>(
+    input: AiGenerationJudgmentInput,
     options: AiGenerationObjectOptions,
   ): Promise<T> {
     if (options.kind === 'judgment') {
@@ -178,6 +189,9 @@ export class AiGenerationService {
 
     if (!BASIC_GENERATION_CALLERS.includes(options.caller)) {
       throw new Error(`"${String(options.caller)}" is not an enumerated basic-generation caller`);
+    }
+    if (!input.model || !input.provider) {
+      throw new Error('Basic generation requires an explicit model and provider');
     }
     const runtime = await initModelRuntimeFromDeploymentConfig(
       this.userId,

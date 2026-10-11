@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { MarketSDK } from '@lobehub/market-sdk';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { generateTrustedClientToken, getTrustedClientTokenForSession } from '@/libs/trusted-client';
 
@@ -103,7 +103,9 @@ describe('extractAccessToken', () => {
 });
 
 describe('MarketService', () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
+    vi.stubEnv('MARKET_BASE_URL', 'https://market.example.test');
     vi.clearAllMocks();
   });
 
@@ -305,6 +307,16 @@ describe('MarketService', () => {
   });
 
   describe('executeOrviloSkill', () => {
+    it('preserves Market unavailability for execution callers', async () => {
+      vi.stubEnv('MARKET_BASE_URL', undefined);
+      const result = await new MarketService().executeOrviloSkill({
+        provider: 'github',
+        toolName: 'list',
+        args: {},
+      });
+      expect(result).toMatchObject({ success: false, error: { code: 'MARKET_UNAVAILABLE' } });
+    });
+
     it('should return success result with string content', async () => {
       const service = new MarketService();
       const mockCallTool = vi.fn().mockResolvedValue({ data: 'tool result', success: true });

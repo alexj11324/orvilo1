@@ -106,7 +106,7 @@ export const workspaceRouter = router({
           // taken by someone else stays a real CONFLICT.
           const existing = await model.findBySlug(input.slug);
           if (existing?.primaryOwnerId === ctx.userId) return existing;
-          throw new TRPCError({ code: 'CONFLICT', message: 'Workspace slug is already taken' });
+          throw new TRPCError({ code: 'CONFLICT', message: 'WORKSPACE_SLUG_TAKEN' });
         }
         console.error('[workspace:create]', error);
         throw new TRPCError({
@@ -327,7 +327,7 @@ export const workspaceRouter = router({
         await model.update(workspace.id, input);
       } catch (error) {
         if (isUniqueViolation(error))
-          throw new TRPCError({ code: 'CONFLICT', message: 'Workspace slug is already taken' });
+          throw new TRPCError({ code: 'CONFLICT', message: 'WORKSPACE_SLUG_TAKEN' });
         throw error;
       }
       return { ...workspace, ...input };

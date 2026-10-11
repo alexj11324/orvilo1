@@ -255,6 +255,13 @@ const createStandardAcpProc = ({
                 },
               },
             });
+            send({
+              method: 'session/update',
+              params: {
+                sessionId,
+                update: { sessionUpdate: 'session_info_update', title: '  Agent title  ' },
+              },
+            });
             send({ id: message.id, result: { stopReason: 'end_turn' } });
           }
         }
@@ -393,6 +400,13 @@ describe('spawnAgent', () => {
       });
       expect(handle.sessionId).toBe('cc-acp-session');
       expect(events.some(({ data }) => data?.content === 'ACP response')).toBe(true);
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: 'session_title',
+          data: { title: 'Agent title' },
+          operationId: 'op-1',
+        }),
+      );
       expect(events).toContainEqual(expect.objectContaining({ type: 'agent_runtime_end' }));
       for (const event of events) expect(event.operationId).toBe('op-1');
     } finally {

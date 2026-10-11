@@ -95,6 +95,7 @@ const mockRemoteServerConfigCtr = {
 } as unknown as RemoteServerConfigCtr;
 
 const mockApp = {
+  browserManager: { showMainWindow: vi.fn() },
   getController: vi.fn((ControllerClass) => {
     if (ControllerClass === RemoteServerConfigCtr) {
       return mockRemoteServerConfigCtr;
@@ -161,6 +162,7 @@ describe('AuthCtr', () => {
       ).searchParams.get('state')!;
       await vi.advanceTimersByTimeAsync(3_000);
       expect(mockWindow.webContents.send).toHaveBeenCalledWith('authorizationFailed', {
+        code: 'denied',
         error: 'Invalid state parameter',
       });
       const output = JSON.stringify([...debugOutput.mock.calls, ...errorOutput.mock.calls]);
@@ -175,6 +177,44 @@ describe('AuthCtr', () => {
       debug.enable(previousDebug);
       vi.useRealTimers();
     }
+  });
+
+  describe('stable authorization failure codes', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('brings the main window forward after successful authorization', () => {
+      (authCtr as any).broadcastAuthorizationSuccessful();
+      expect(mockApp.browserManager.showMainWindow).toHaveBeenCalledOnce();
+    });
+
+    it('returns invalid_url without opening the browser for an invalid server URL', async () => {
+      const result = await authCtr.requestAuthorization({
+        active: false,
+        remoteServerUrl: 'not a URL',
+        storageMode: 'selfHost',
+      });
+      expect(result).toMatchObject({ code: 'invalid_url', success: false });
+      expect(shell.openExternal).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['timeout', () => Promise.resolve({ ok: false, status: 404 })],
+      ['network', () => Promise.reject(new TypeError('fetch failed'))],
+      ['denied', () => Promise.resolve({ ok: false, status: 403, statusText: 'Forbidden' })],
+      [
+        'server_error',
+        () => Promise.resolve({ ok: false, status: 503, statusText: 'Unavailable' }),
+      ],
+    ])('broadcasts %s independently of English error text', async (code, response) => {
+      vi.useFakeTimers();
+      mockFetch.mockImplementation(response);
+      await authCtr.requestAuthorization({ active: false, storageMode: 'cloud' });
+      await vi.advanceTimersByTimeAsync(123_000);
+      expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+        'authorizationFailed',
+        expect.objectContaining({ code }),
+      );
+    });
   });
 
   describe('Basic functionality', () => {
@@ -475,6 +515,7 @@ describe('AuthCtr', () => {
 
         // Verify authorizationFailed was broadcast with state error
         expect(mockWindow.webContents.send).toHaveBeenCalledWith('authorizationFailed', {
+          code: 'denied',
           error: 'Invalid state parameter',
         });
       }, 6000);

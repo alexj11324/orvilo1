@@ -132,12 +132,11 @@ describe('settings useCategory', () => {
   it('never lists OAuth Apps, even while the retired Labs preference is still set', () => {
     // The console is retired, but `enableOAuthApps` survives in users'
     // persisted preferences. A stored `true` must not resurrect the row.
-    useUserStore.setState({
-      preference: {
-        ...initialUserStoreState.preference,
-        lab: { ...initialUserStoreState.preference.lab, enableOAuthApps: true },
-      },
-    });
+    const legacyPreference = {
+      ...initialUserStoreState.preference,
+      lab: { enableOAuthApps: true },
+    };
+    useUserStore.setState({ preference: legacyPreference });
 
     const { result } = renderHook(() => useCategory(), {
       wrapper: createWrapper(true),

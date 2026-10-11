@@ -20,6 +20,10 @@ runs:
         set -euo pipefail
         pnpm install --node-linker=hoisted
 
+    - name: Assert open-source desktop business features are disabled
+      shell: bash
+      run: bun run scripts/electronWorkflow/assertOpenSourceDesktop.ts
+
     # 移除国内 electron 镜像配置，GitHub Actions 使用官方源更快
     - name: Remove China electron mirror from .npmrc
       shell: bash

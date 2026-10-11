@@ -1,3 +1,6 @@
+export type AuthorizationErrorCode =
+  'timeout' | 'network' | 'invalid_url' | 'denied' | 'server_error';
+
 export interface MarketAuthorizationParams {
   authUrl: string;
 }
@@ -27,7 +30,7 @@ export interface AuthorizationProgress {
  * Remote server related events broadcast from main process
  */
 export interface RemoteServerBroadcastEvents {
-  authorizationFailed: (params: { error: string }) => void;
+  authorizationFailed: (params: { code: AuthorizationErrorCode; error: string }) => void;
   /** Broadcast authorization progress for UI updates */
   authorizationProgress: (params: AuthorizationProgress) => void;
   /**

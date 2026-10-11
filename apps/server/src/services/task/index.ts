@@ -45,6 +45,7 @@ import {
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
+import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 
 import { assertCanUseWorkspaceAgent } from '../../routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '../aiAgent';
@@ -1551,6 +1552,8 @@ export class TaskService {
       workspace,
       acceptance,
       taskLabels,
+      admitted,
+      activeDispatch,
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
       this.taskModel.getIssueRelations(task.id),
@@ -1561,6 +1564,8 @@ export class TaskService {
       this.taskModel.getTreePinnedDocuments(task.id).catch(() => emptyWorkspace),
       resolveTaskAcceptance(this.db, this.userId, task.id, this.workspaceId).catch(() => undefined),
       this.taskLabelModel.listForTask(task.id).catch(() => []),
+      isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }),
+      new TaskDispatchModel(this.db, this.workspaceId).findActiveByTaskId(task.id),
     ]);
 
     // What the reader is shown, not what was written: a burst of edits to one
@@ -1993,6 +1998,9 @@ export class TaskService {
     const scheduleConfig = (taskConfig?.schedule ?? {}) as { maxExecutions?: number | null };
 
     return {
+      orchestrationAdmission: admitted ? 'enabled' : 'disabled',
+      orchestrationAdmissionReason: admitted ? null : 'caid_dispatch_disabled',
+      dispatchWaitingReason: activeDispatch?.waitingReason ?? null,
       capabilities: await this.taskModel.getCapabilities(task),
       agentId: task.assigneeAgentId,
       automationMode: task.automationMode ?? null,

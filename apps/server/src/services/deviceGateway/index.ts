@@ -149,7 +149,7 @@ export class DeviceGateway {
 
   async queryDeviceStatus(userId: string, workspaceId?: string): Promise<DeviceStatusResult> {
     const client = this.getClient();
-    if (!client) return { deviceCount: 0, online: false };
+    if (!client) return { deviceCount: 0, errorCode: 'GATEWAY_NOT_CONFIGURED', online: false };
 
     return this.readDevices(
       'queryDeviceStatus',

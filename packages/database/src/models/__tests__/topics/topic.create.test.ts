@@ -34,6 +34,34 @@ describe('TopicModel - Create', () => {
     await serverDB.delete(users);
   });
 
+  it('accepts agent titles atomically while preserving user titles and ownership', async () => {
+    await serverDB.insert(topics).values([
+      {
+        id: 'auto-title',
+        title: 'First message',
+        metadata: { titleSource: 'auto', heteroSessionId: 'session' },
+        userId,
+      },
+      { id: 'user-title', title: 'My title', metadata: { titleSource: 'user' }, userId },
+      { id: 'foreign-title', title: 'Foreign title', userId: userId2 },
+    ]);
+    await topicModel.updateAgentTitle('auto-title', 'Agent title');
+    await topicModel.updateAgentTitle('user-title', 'Agent title');
+    await topicModel.updateAgentTitle('foreign-title', 'Agent title');
+    const own = await topicModel.findById('auto-title');
+    expect(own).toMatchObject({
+      title: 'Agent title',
+      metadata: { titleSource: 'agent', heteroSessionId: 'session' },
+    });
+    expect(await topicModel.findById('user-title')).toMatchObject({
+      title: 'My title',
+      metadata: { titleSource: 'user' },
+    });
+    expect(await new TopicModel(serverDB, userId2).findById('foreign-title')).toMatchObject({
+      title: 'Foreign title',
+    });
+  });
+
   describe('create', () => {
     it('should create a new topic and associate messages', async () => {
       const topicData = {

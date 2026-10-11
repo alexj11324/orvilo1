@@ -41,10 +41,15 @@ const AuthRequiredModalContent = memo<AuthRequiredModalContentProps>(
       setIsSigningIn(true);
       clearRemoteServerSyncError();
 
-      await connectRemoteServer({
-        remoteServerUrl: dataSyncConfig?.remoteServerUrl,
-        storageMode: dataSyncConfig?.storageMode || 'cloud',
-      });
+      try {
+        await connectRemoteServer({
+          remoteServerUrl: dataSyncConfig?.remoteServerUrl,
+          storageMode: dataSyncConfig?.storageMode || 'cloud',
+        });
+      } catch {
+        // The store retains the typed failure; allow another attempt.
+        setIsSigningIn(false);
+      }
     }, [clearRemoteServerSyncError, connectRemoteServer, dataSyncConfig]);
 
     useEffect(() => {

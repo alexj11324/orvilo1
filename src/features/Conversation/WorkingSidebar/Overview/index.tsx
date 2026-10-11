@@ -1,7 +1,6 @@
 'use client';
 
 import { SkillsIcon } from '@lobehub/ui/icons';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import {
   ArrowDownIcon,
@@ -60,52 +59,16 @@ import { collectChangeStats, isLinkedWorktreeCheckout, shouldShowCiLabel } from 
 import OverviewHeader from './OverviewHeader';
 import { ChevronRight, OverviewRow, PickerGlyph, rowStyles } from './OverviewRow';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  body: css`
-    overflow-y: auto;
-  `,
-  emptyWorkspace: css`
-    padding-block: 28px 30px;
-    padding-inline: 20px;
-  `,
-  pill: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    height: 20px;
-    padding-inline: 7px;
-    border-radius: 6px;
-
-    font-size: 11.5px;
-    font-weight: 500;
-    line-height: 20px;
-  `,
-  section: css`
-    flex-shrink: 0;
-    padding-block: 8px;
-    padding-inline: 8px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  sectionHeader: css`
-    padding-block: 0 4px;
-    padding-inline: 8px;
-  `,
-  sectionTitle: css`
-    font-size: 10.5px;
-    font-weight: 600;
-    color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  `,
-  skeleton: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-  `,
-}));
+const styles = {
+  body: 'overflow-y-auto',
+  emptyWorkspace: 'pbs-7 pbe-8 px-5',
+  pill: 'inline-flex gap-1 items-center min-h-5 px-2 rounded-(--radius-chip) text-xs leading-5 font-medium',
+  section: 'shrink-0 p-2 [&+&]:border-bs [&+&]:border-divider',
+  sectionHeader: 'pbe-1 px-2',
+  sectionTitle:
+    'text-xs leading-5 font-semibold text-foreground-tertiary uppercase tracking-normal',
+  skeleton: 'py-1 px-2',
+};
 
 interface OverviewProps {
   active: boolean;
@@ -303,9 +266,7 @@ const Overview = memo<OverviewProps>(
 
         {showBehind && (
           <OverviewRow
-            icon={ArrowDownIcon}
-            iconColor={cssVar.colorError}
-            iconSize={14}
+            iconNode={<ArrowDownIcon className="shrink-0 text-destructive-text" size={14} />}
             value={t('workingPanel.overview.sync.behind', { count: aheadBehind!.behind })}
             trailing={
               pulling ? (
@@ -319,9 +280,7 @@ const Overview = memo<OverviewProps>(
         )}
         {showAhead && (
           <OverviewRow
-            icon={ArrowUpIcon}
-            iconColor={cssVar.colorInfo}
-            iconSize={14}
+            iconNode={<ArrowUpIcon className="shrink-0 text-info-text" size={14} />}
             value={t('workingPanel.overview.sync.ahead', { count: aheadBehind!.ahead })}
             trailing={
               pushing ? (
@@ -380,18 +339,23 @@ const Overview = memo<OverviewProps>(
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <span style={{ display: 'inline-flex' }}>
+                  <span className="inline-flex">
                     <div>
                       <OverviewRow
                         icon={prVisual.icon}
                         iconColor={prVisual.color}
                         trailing={
                           <span
-                            className={styles.pill}
-                            style={{
-                              background: `color-mix(in srgb,  12%, transparent)`,
-                              color: ci.color,
-                            }}
+                            className={cn(
+                              styles.pill,
+                              ciStatus === 'success'
+                                ? 'bg-success-wash text-success-text'
+                                : ciStatus === 'failure'
+                                  ? 'bg-destructive-wash text-destructive-text'
+                                  : ciStatus === 'pending'
+                                    ? 'bg-warning-wash text-warning-text'
+                                    : 'bg-fill-quaternary text-foreground-tertiary',
+                            )}
                           >
                             <ci.icon size={12} />
                             {shouldShowCiLabel(ciStatus)
@@ -436,11 +400,10 @@ const Overview = memo<OverviewProps>(
       ) : gitError ? (
         <OverviewRow
           danger
-          icon={TriangleAlertIcon}
-          iconColor={cssVar.colorError}
+          iconNode={<TriangleAlertIcon className="shrink-0 text-destructive-text" size={16} />}
           value={t('workingPanel.overview.environmentError')}
           trailing={
-            <Button size="sm" onClick={() => void refreshGit()}>
+            <Button size="compact" onClick={() => void refreshGit()}>
               <RefreshCwIcon size={12} /> {tCommon('retry')}
             </Button>
           }
@@ -474,7 +437,7 @@ const Overview = memo<OverviewProps>(
         )}
 
         {environmentAvailable && !workingDirectory && (
-          <Empty className={cx(styles.section, styles.emptyWorkspace)}>
+          <Empty className={cn(styles.section, styles.emptyWorkspace)}>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <LaptopIcon />
@@ -491,7 +454,7 @@ const Overview = memo<OverviewProps>(
           <div className={cn('flex flex-col', styles.section)}>
             <div className={cn('flex items-center justify-between', styles.sectionHeader)}>
               <span className={styles.sectionTitle}>{t('workingPanel.overview.outputs')}</span>
-              <Button size="sm" variant="ghost" onClick={() => onOpenTab('works')}>
+              <Button size="compact" variant="ghost" onClick={() => onOpenTab('works')}>
                 {t('workingPanel.overview.viewAll')}
               </Button>
             </div>
@@ -510,7 +473,7 @@ const Overview = memo<OverviewProps>(
               <EmptyTitle>{t('workingPanel.overview.emptyTitle')}</EmptyTitle>
               <EmptyDescription>{t('workingPanel.overview.empty')}</EmptyDescription>
               <Button
-                size="sm"
+                size="lg"
                 variant="outline"
                 onClick={() =>
                   navigate(agentId ? `/agent/${agentId}/profile` : '/settings/devices')
@@ -526,7 +489,7 @@ const Overview = memo<OverviewProps>(
           <OverviewRow
             weak
             icon={SkillsIcon}
-            iconSize={15}
+            iconSize={16}
             trailing={<ChevronRight />}
             value={t('workingPanel.resources.filter.skills')}
             onClick={() => onOpenTab('skills')}
@@ -535,7 +498,7 @@ const Overview = memo<OverviewProps>(
             <OverviewRow
               weak
               icon={FileTextIcon}
-              iconSize={15}
+              iconSize={16}
               trailing={<ChevronRight />}
               value={t('workingPanel.resources.filter.documents')}
               onClick={() => onOpenTab('documents')}

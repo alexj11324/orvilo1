@@ -1,5 +1,4 @@
 import type { TaskStatus, WorkListItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -26,36 +25,13 @@ const TASK_STATUS_SET = new Set<TaskStatus>([
 const toTaskStatus = (status?: string | null): TaskStatus =>
   status && TASK_STATUS_SET.has(status as TaskStatus) ? (status as TaskStatus) : 'backlog';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  context: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  header: css`
-    cursor: pointer;
-    user-select: none;
-    padding-block: 10px;
-    padding-inline: 8px;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  title: css`
-    min-width: 0;
-    font-size: 14px;
-    font-weight: 500;
-  `,
-  toggle: css`
-    flex-shrink: 0;
-  `,
-  workCard: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  context: 'shrink-0 text-foreground-tertiary text-xs leading-5',
+  header: 'cursor-pointer select-none min-h-8 py-2.5 px-2 hover:bg-accent',
+  title: 'min-w-0 text-sm leading-5.5 font-medium',
+  toggle: 'shrink-0',
+  workCard: 'overflow-hidden border border-divider rounded-(--radius-card) bg-fill-quaternary',
+};
 
 const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
   const [expanded, setExpanded] = useState(false);
@@ -125,9 +101,7 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
         ) : (
           <TypeIcon className={styles.context} size={16} />
         )}
-        <div className={styles.context} style={{ flexShrink: 0 }}>
-          {label}
-        </div>
+        <div className={styles.context}>{label}</div>
         {title && (
           <div
             className={cn('truncate', styles.title)}

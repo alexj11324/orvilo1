@@ -1,5 +1,4 @@
 import type { WorkVersionItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,32 +10,14 @@ import { workKeys } from '@/libs/swr/keys';
 import { workService } from '@/services/work';
 import { computeWorkVersionCostDeltas, formatWorkVersionCost } from '@/utils/workVersionCost';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  context: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  error: css`
-    padding-block: 8px;
-    padding-inline: 36px 8px;
-    color: ${cssVar.colorError};
-  `,
-  versionCost: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  versionList: css`
-    margin-inline-start: 34px;
-    padding-block: 6px 10px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  versionRow: css`
-    padding-block: 6px;
-    font-size: 12px;
-  `,
-  versionTitle: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  context: 'shrink-0 text-foreground-tertiary text-xs leading-5',
+  error: 'py-2 ps-9 pe-2 text-sm leading-5.5 text-destructive-text',
+  versionCost: 'text-foreground-tertiary text-xs leading-5',
+  versionList: 'ms-8 pbs-1.5 pbe-2.5 border-bs border-divider',
+  versionRow: 'py-1.5 text-xs leading-5',
+  versionTitle: 'text-muted-foreground text-sm leading-5.5',
+};
 
 const VersionList = memo<{ workId: string }>(({ workId }) => {
   const { i18n, t } = useTranslation(['chat', 'common']);
@@ -55,7 +36,7 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center" style={{ height: 56 }}>
+      <div className="flex h-14 flex-col items-center justify-center">
         <NeuralNetworkLoading size={18} />
       </div>
     );
@@ -68,7 +49,9 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
   if (data.length === 0) {
     return (
       <div className={cn('flex flex-col', styles.versionList)}>
-        <div className="text-muted-foreground">{t('workingPanel.works.emptyVersions')}</div>
+        <div className="text-sm leading-5.5 text-muted-foreground">
+          {t('workingPanel.works.emptyVersions')}
+        </div>
       </div>
     );
   }
@@ -90,17 +73,22 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
         return (
           <div className={cn('flex flex-col gap-1', styles.versionRow)} key={version.id}>
             <div className="flex items-center gap-2 justify-between">
-              <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-                <div className="font-mono rounded bg-muted px-1 text-xs">v{version.version}</div>
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs leading-5">
+                  v{version.version}
+                </div>
                 <div className={cn('truncate', styles.versionTitle)}>
                   {t(`workingPanel.works.changeType.${version.changeType}` as never)}
                 </div>
               </div>
-              <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+              <div className="flex shrink-0 items-center gap-2">
                 {cost && (
                   <div
-                    className={cn('font-mono rounded bg-muted px-1 text-xs', styles.versionCost)}
                     title={t('workingPanel.works.versionCost', { cost })}
+                    className={cn(
+                      'font-mono rounded-(--radius-chip) bg-muted px-1 text-xs leading-5',
+                      styles.versionCost,
+                    )}
                   >
                     {cost}
                   </div>

@@ -1,7 +1,6 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { getWorkingDirEffectivePath } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { LucideProps } from 'lucide-react';
 import {
@@ -39,6 +38,7 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import { useBusinessWorkingSidebarTabs } from '@/business/client/features/WorkingSidebarTabs';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -46,7 +46,6 @@ import ActionIcon from '@/components/ActionIcon';
 import type { DropdownItem } from '@/components/ItemsMenu';
 import { DropdownMenu } from '@/components/ItemsMenu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { isDesktop } from '@/const/version';
 import { useRepoType } from '@/features/ChatInput/ControlBar/useRepoType';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -71,6 +70,8 @@ import { deviceSelectors, useDeviceStore } from '@/store/device';
 import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { type ComposerTarget, createComposerTarget, resolveThreadComposerTarget } from '../types';
 import Files from './Files';
@@ -85,101 +86,29 @@ import WorksSection from './WorksSection';
 const ParamsSection = lazy(() => import('./ParamsSection'));
 const BrowserPane = lazy(() => import('./Browser'));
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  close: css`
-    flex-shrink: 0;
-  `,
-  header: css`
-    flex-shrink: 0;
-    min-width: 0;
-  `,
-  pane: css`
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  paneHidden: css`
-    display: none;
-  `,
-  paramsLoading: css`
-    width: 100%;
-    padding: 16px;
-  `,
-  add: css`
-    flex-shrink: 0;
-  `,
-  favicon: css`
-    width: 14px;
-    height: 14px;
-    border-radius: 2px;
-    object-fit: contain;
-  `,
-  overviewBody: css`
-    overflow-y: auto;
-    min-height: 0;
-  `,
-  overviewPanel: css`
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-
-    max-height: calc(100% - 32px);
-    margin: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowTertiary};
-  `,
-  overviewSlot: css`
-    overflow: hidden;
-    display: flex;
-    flex-shrink: 0;
-    align-items: flex-start;
-
-    height: 100%;
-
-    @container agent-chat-layout (min-width: 1200px) {
-      padding-block-start: 44px;
-    }
-  `,
-  tabs: css`
-    overflow-anchor: none;
-    scrollbar-width: none;
-
-    overflow-x: auto;
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  `,
-  /* keeps the add button glued to the last tab while the strip itself scrolls */
-  tabsArea: css`
-    display: flex;
-    flex: 1;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-}));
+const styles = {
+  body: 'overflow-y-auto flex-1 min-h-0',
+  close: 'shrink-0',
+  header: 'shrink-0 min-w-0 h-11',
+  pane: 'overflow-y-auto flex-1 min-h-0',
+  paneHidden: 'hidden',
+  paramsLoading: 'w-full p-4',
+  add: 'shrink-0',
+  favicon: 'size-3.5 rounded-(--radius-chip) object-contain',
+  overviewBody: 'overflow-y-auto min-h-0',
+  overviewPanel:
+    'overflow-hidden flex flex-col shrink-0 max-h-[calc(100%-32px)] m-4 border border-divider rounded-(--radius-card) bg-card shadow-(--shadow-raised)',
+  overviewSlot:
+    'overflow-hidden flex shrink-0 items-start h-full [@container_agent-chat-layout_(width>=1200px)]:pbs-11',
+  tabs: '[overflow-anchor:none] [scrollbar-width:none] overflow-x-auto flex gap-1 items-center min-w-0 [&::-webkit-scrollbar]:hidden',
+  tabsArea: 'flex flex-1 gap-1 items-center min-w-0',
+};
 
 const REVIEW_TREE_STORAGE_KEY = 'orvilo-review-tree';
 const OPEN_TABS_STORAGE_KEY = 'orvilo-working-sidebar-open-tabs-v1';
 const PINNED_TABS_STORAGE_KEY = 'orvilo-working-sidebar-pinned-tabs-v1';
 const OVERVIEW_PANEL_WIDTH = 340;
-const OVERVIEW_TRANSITION = { duration: 0.25, ease: [0.32, 0.72, 0, 1] } as const;
+const OVERVIEW_TRANSITION = { duration: 0.2, ease: [0.32, 0.72, 0, 1] } as const;
 const MIN_PANEL_WIDTH = 300;
 const MAX_PANEL_WIDTH = 1200;
 // Two-pane Review (diff list + file-tree rail) is cramped below this.
@@ -245,9 +174,17 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
     s.status.workingSidebarTab,
     s.status.workingSidebarTabRequest,
   ]);
-  const overviewExitTransition = showRightPanel
-    ? { ...OVERVIEW_TRANSITION, duration: 0.1 }
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const motionDisabled = animationMode === 'disabled' || reducedMotion;
+  const overviewTransition = motionDisabled
+    ? { ...OVERVIEW_TRANSITION, duration: 0 }
     : OVERVIEW_TRANSITION;
+  const overviewExitTransition = motionDisabled
+    ? overviewTransition
+    : showRightPanel
+      ? { ...OVERVIEW_TRANSITION, duration: 0.1 }
+      : OVERVIEW_TRANSITION;
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
   const workspaceId = useActiveWorkspaceId();
   const [
@@ -861,7 +798,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
         },
       };
     };
-    const groupLabel = (label: string) => <span style={{ textTransform: 'none' }}>{label}</span>;
+    const groupLabel = (label: string) => <span className="normal-case">{label}</span>;
     const group = (key: string, label: string, keys: string[]): DropdownItem | undefined => {
       const children = keys.map(itemOf).filter((item): item is DropdownItem => Boolean(item));
       return children.length
@@ -927,7 +864,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
             className={styles.overviewSlot}
             exit={{ transition: overviewExitTransition, width: 0 }}
             initial={{ width: 0 }}
-            transition={OVERVIEW_TRANSITION}
+            transition={overviewTransition}
           >
             <m.div
               animate={{ opacity: 1, x: 0 }}
@@ -936,7 +873,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
               initial={{ opacity: 0, x: 12 }}
               role={'complementary'}
               style={{ width: overviewWidth }}
-              transition={OVERVIEW_TRANSITION}
+              transition={overviewTransition}
             >
               <div className={cn('flex flex-col', styles.overviewBody)}>
                 <Overview
@@ -976,11 +913,8 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
           updateSystemStatus({ workingSidebarWidth: w });
         }}
       >
-        <div className="flex flex-col" style={{ height: '100%', width: '100%' }}>
-          <div
-            className={cn('flex items-center gap-1 justify-between px-1', styles.header)}
-            style={{ height: 44 }}
-          >
+        <div className="flex h-full w-full flex-col">
+          <div className={cn('flex items-center gap-1 justify-between px-1', styles.header)}>
             <div className={styles.tabsArea}>
               <div className={styles.tabs} ref={tabsRef}>
                 {displayedTabs.map((tab, index) => (
@@ -1012,7 +946,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                 <ActionIcon
                   className={styles.add}
                   icon={PlusIcon}
-                  size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('workingPanel.openMenu.title')}
                 />
               </DropdownMenu>
@@ -1021,21 +955,18 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
               aria-label={t('close', { ns: 'common' })}
               className={styles.close}
               icon={PanelRightCloseIcon}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               onClick={() => toggleRightPanel(false)}
             />
           </div>
-          <div className={cn('flex flex-col', styles.body)} style={{ width: '100%' }}>
-            {!contentReady && (
-              <SkeletonList rows={6} style={{ paddingBlock: 8, paddingInline: 8 }} />
-            )}
+          <div className={cn('flex w-full flex-col', styles.body)}>
+            {!contentReady && <SkeletonList className="flex flex-col p-2" rows={6} />}
             {contentReady && (
               <>
                 {commentsAvailable && (
                   <div
-                    style={{ overflow: 'hidden' }}
                     className={cn(
-                      'flex flex-col',
+                      'flex flex-col overflow-hidden',
                       activeTab === 'comments' ? styles.pane : styles.paneHidden,
                     )}
                   >
@@ -1129,7 +1060,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                     key={resourceTab}
                     mode={showRightPanel && activeTab === resourceTab ? 'visible' : 'hidden'}
                   >
-                    <div className={cn('flex flex-col', styles.pane)} style={{ width: '100%' }}>
+                    <div className={cn('flex w-full flex-col', styles.pane)}>
                       <ResourcesSection
                         deviceId={remoteDeviceId}
                         enabled={showRightPanel && activeTab === resourceTab}

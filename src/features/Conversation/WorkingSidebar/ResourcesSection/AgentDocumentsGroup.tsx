@@ -5,7 +5,6 @@ import {
   buildAgentSkillIdentifier,
   EMPTY_ARRAY,
 } from '@orvilo/const';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -52,65 +51,16 @@ dayjs.extend(relativeTime);
 export type ResourceFilter = 'skills' | 'documents' | 'web';
 type DocumentOpenMode = 'portal' | 'route';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    cursor: pointer;
-    padding: 12px;
-    border-radius: 8px;
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  containerActive: css`
-    background: ${cssVar.colorFillSecondary};
-  `,
-  description: css`
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  meta: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  pillActive: css`
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  pillTab: css`
-    cursor: pointer;
-    user-select: none;
-
-    padding-block: 4px;
-    padding-inline: 12px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    transition:
-      background ${cssVar.motionDurationFast} ${cssVar.motionEaseInOut},
-      color ${cssVar.motionDurationFast} ${cssVar.motionEaseInOut};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  title: css`
-    font-weight: 500;
-  `,
-}));
+const styles = {
+  container: 'cursor-pointer p-3 rounded-(--radius-card) bg-muted hover:bg-selected',
+  containerActive: 'bg-selected hover:bg-selected',
+  description: 'text-sm leading-5.5 text-muted-foreground',
+  meta: 'text-xs leading-5 text-foreground-tertiary',
+  pillActive: 'font-medium text-foreground bg-selected hover:bg-selected',
+  pillTab:
+    'cursor-pointer select-none min-h-8 py-1 px-3 rounded-full text-sm leading-5.5 text-muted-foreground bg-transparent transition-colors duration-(--orvilo-motion-fast) hover:text-foreground hover:bg-accent',
+  title: 'text-sm leading-5.5 font-medium',
+};
 
 const FILTER_OPTIONS = [
   { labelKey: 'workingPanel.resources.filter.skills', value: 'skills' },
@@ -211,15 +161,15 @@ const DocumentItem = memo<DocumentItemProps>(
         )}
         onClick={handleOpen}
       >
-        <IconComponent size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-        <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
+        <IconComponent className="mt-0.5 shrink-0" size={16} />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between">
             <div className={cn('truncate', styles.title)}>{title}</div>
             {!hideDelete && (
               <ActionIcon
                 icon={Trash2Icon}
                 loading={deleting}
-                size={'small'}
+                size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
                 title={t('delete', { ns: 'common' })}
                 onClick={handleDelete}
               />
@@ -606,7 +556,7 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
       const flat = activeCount === 1;
 
       return (
-        <div className="flex flex-col gap-4" style={{ paddingBottom: 16 }}>
+        <div className="flex flex-col gap-4 pb-4">
           {hasAgent &&
             (flat ? (
               renderAgentSkillsList()
@@ -642,7 +592,7 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
     const renderDocuments = () => (
       // Always render the tree for the Documents tab even when empty, so the
       // toolbar (new folder / new doc) stays reachable.
-      <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
+      <div className="flex min-h-0 flex-1 flex-col">
         <DocumentExplorerTree
           agentId={agentId}
           data={documentsData}
@@ -694,7 +644,7 @@ const AgentDocumentsGroup = memo<AgentDocumentsGroupProps>(
               return (
                 <div
                   aria-selected={active}
-                  className={cx(styles.pillTab, active && styles.pillActive)}
+                  className={cn(styles.pillTab, active && styles.pillActive)}
                   key={option.value}
                   role={'tab'}
                   onClick={() => setFilter(option.value)}

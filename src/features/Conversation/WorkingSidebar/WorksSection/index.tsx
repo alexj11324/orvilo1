@@ -1,5 +1,4 @@
 import type { WorkListItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ClipboardListIcon, HistoryIcon, ListIcon } from 'lucide-react';
@@ -24,23 +23,11 @@ type WorksViewMode = 'history' | 'summary';
 
 const WORKS_VIEW_MODE_STORAGE_KEY = 'orvilo-working-panel-works-view-mode';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    min-height: 0;
-    padding-block: 8px;
-    padding-inline: 8px 12px;
-  `,
-  modeToolbar: css`
-    flex-shrink: 0;
-    align-self: flex-end;
-  `,
-  workCard: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  container: 'min-h-0 py-2 ps-2 pe-3',
+  modeToolbar: 'shrink-0 self-end',
+  workCard: 'overflow-hidden border border-divider rounded-(--radius-card) bg-fill-quaternary',
+};
 
 const WorksModeToolbar = memo<{
   mode: WorksViewMode;
@@ -53,14 +40,14 @@ const WorksModeToolbar = memo<{
       <ActionIcon
         active={mode === 'summary'}
         icon={ListIcon}
-        size={'small'}
+        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
         title={t('workingPanel.works.viewMode.summary')}
         onClick={() => setMode('summary')}
       />
       <ActionIcon
         active={mode === 'history'}
         icon={HistoryIcon}
-        size={'small'}
+        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
         title={t('workingPanel.works.viewMode.history')}
         onClick={() => setMode('history')}
       />

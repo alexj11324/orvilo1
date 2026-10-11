@@ -1,76 +1,18 @@
 import { Github } from '@lobehub/icons';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { FolderGit2Icon, FolderIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  dot: css`
-    flex-shrink: 0;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorSuccess};
-  `,
-  header: css`
-    cursor: pointer;
-    flex-shrink: 0;
-    padding-block: 14px 2px;
-    padding-inline: 16px 14px;
-  `,
-  identity: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 1px;
-
-    min-width: 0;
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 18px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  sub: css`
-    overflow: hidden;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  subText: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  tile: css`
-    display: grid;
-    flex-shrink: 0;
-    place-items: center;
-
-    width: 32px;
-    height: 32px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 9px;
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  dot: 'shrink-0 size-1.5 rounded-full bg-success',
+  header: 'cursor-pointer shrink-0 pbs-3.5 pbe-0.5 ps-4 pe-3.5',
+  identity: 'overflow-hidden flex flex-1 flex-col gap-0.5 min-w-0',
+  name: 'overflow-hidden text-sm leading-5.5 font-semibold text-ellipsis whitespace-nowrap',
+  sub: 'overflow-hidden flex gap-1.5 items-center text-xs leading-5 text-foreground-tertiary text-ellipsis whitespace-nowrap',
+  subText: 'overflow-hidden text-ellipsis whitespace-nowrap',
+  tile: 'grid shrink-0 place-items-center size-8 border border-divider rounded-(--radius-card) text-foreground bg-muted',
+};
 
 interface OverviewHeaderProps {
   deviceId?: string;
@@ -84,7 +26,6 @@ interface OverviewHeaderProps {
 const OverviewHeader = memo<OverviewHeaderProps>(
   ({ deviceId, error, name, onClick, path, repoType }) => {
     const { t } = useTranslation('chat');
-    const dotColor = error ? cssVar.colorError : deviceId ? cssVar.colorInfo : undefined;
 
     return (
       <div
@@ -95,15 +36,20 @@ const OverviewHeader = memo<OverviewHeaderProps>(
       >
         <span className={styles.tile}>
           {repoType === 'github' ? (
-            <Github size={18} />
+            <Github size={16} />
           ) : (
-            createElement(repoType ? FolderGit2Icon : FolderIcon, { size: 18 })
+            createElement(repoType ? FolderGit2Icon : FolderIcon, { size: 16 })
           )}
         </span>
         <span className={styles.identity}>
           <span className={styles.name}>{name}</span>
           <span className={styles.sub}>
-            <i className={cx(styles.dot)} style={dotColor ? { background: dotColor } : undefined} />
+            <i
+              className={cn(
+                styles.dot,
+                error ? 'bg-destructive' : deviceId ? 'bg-info' : undefined,
+              )}
+            />
             <span className={styles.subText}>
               {t(
                 deviceId

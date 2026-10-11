@@ -26,6 +26,8 @@ const HTTP_CALL_TIMEOUT_PADDING_MS = 30_000;
 
 export interface DeviceStatusResult {
   deviceCount: number;
+  /** Deployment availability, distinct from a configured gateway with no online devices. */
+  errorCode?: 'GATEWAY_NOT_CONFIGURED';
   online: boolean;
 }
 

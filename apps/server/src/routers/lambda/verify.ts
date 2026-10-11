@@ -578,6 +578,7 @@ export const verifyRouter = router({
   generateGoalCriteria: verifyWriteProcedure
     .input(
       z.object({
+        agentId: z.string().min(1).optional(),
         context: z.string().optional(),
         goal: z.string().min(1),
         maxCriteria: z.number().int().min(1).max(8).optional(),
@@ -617,6 +618,7 @@ export const verifyRouter = router({
   generateGoalPlan: verifyWriteProcedure
     .input(
       z.object({
+        agentId: z.string().min(1).optional(),
         context: z.string().optional(),
         goal: z.string().min(1),
         maxCriteria: z.number().int().min(1).max(8).optional(),

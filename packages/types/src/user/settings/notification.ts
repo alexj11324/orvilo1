@@ -6,6 +6,7 @@ export interface NotificationChannelSettings {
 
 export interface NotificationSettings {
   email?: NotificationChannelSettings;
+  /** Legacy field retained for compatibility; does not suppress durable Inbox records. */
   inbox?: NotificationChannelSettings;
   /**
    * Mobile push notifications (delivered via Expo Push Service → APNs/FCM).
@@ -15,7 +16,7 @@ export interface NotificationSettings {
   push?: NotificationChannelSettings;
 }
 
-/** Event switches shared by inbox projection and the settings surfaces. */
+/** Work event names shared by external notification delivery and settings surfaces. */
 export const WORK_NOTIFICATION_EVENTS = [
   'task_assigned',
   'task_review',

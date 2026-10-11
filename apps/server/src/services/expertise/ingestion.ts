@@ -24,8 +24,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { notShareVisitorMessage, notShareVisitorTopic } from '@/database/utils/shareVisitor';
 import type { CompletionCallbackParams } from '@/server/services/agentSignal/policies/completionPolicy';
 import { AiGenerationService } from '@/server/services/aiGeneration';
-
-import { resolveExpertiseModelConfig } from './modelConfig';
+import { resolveLightweightJudgment } from '@/server/services/systemAgent/lightweightJudgment';
 
 const MAX_CONTEXT_MESSAGES = 24;
 const MAX_CONTEXT_CHARS = 24_000;
@@ -272,12 +271,14 @@ export class ExpertiseIngestionService {
     const context = topicContext.serializedContext.slice(-MAX_CONTEXT_CHARS);
     if (!context.trim()) return { ingested: 0, reason: 'empty-context' } as const;
 
-    const modelConfig = await resolveExpertiseModelConfig(
+    const modelConfig = await resolveLightweightJudgment(
       this.db,
       this.userId,
+      'expertise',
       input.agentId,
       this.workspaceId,
     );
+    if (!modelConfig) return { ingested: 0, reason: 'EXPERTISE_UNAVAILABLE' } as const;
 
     const domains = await Promise.all(
       bound.map(async ({ domain }) => ({
@@ -308,7 +309,7 @@ export class ExpertiseIngestionService {
       {
         judgment: {
           // Ingestion judges as the agent whose expertise is being updated.
-          binding: { agentId: input.agentId },
+          binding: modelConfig.binding,
           purpose: 'expertise.topicIngestion',
         },
         kind: 'judgment',

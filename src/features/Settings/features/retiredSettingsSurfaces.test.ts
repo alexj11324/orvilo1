@@ -385,3 +385,13 @@ describe('the topic auto-naming service-model row stays retired', () => {
     );
   });
 });
+
+it('guards saved memory-manager URLs before mounting the retained page', () => {
+  const source = read('src/routes/(main)/memory/_layout/index.tsx');
+  const guard = source.indexOf('!isSettingsTabAvailable(SettingsTabs.Memory, capabilityContext)');
+  expect(guard).toBeGreaterThan(-1);
+  expect(guard).toBeLessThan(source.indexOf('<Sidebar />'));
+  expect(guard).toBeLessThan(source.indexOf('<Outlet />'));
+  expect(source).toContain('return <NotFound />');
+  expect(exists('src/features/Settings/memory/features/Memory.tsx')).toBe(true);
+});

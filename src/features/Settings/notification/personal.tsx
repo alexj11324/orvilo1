@@ -24,6 +24,7 @@ const PersonalNotificationSettings = () => {
   return (
     <FormGroup
       collapsible={false}
+      desc={t('notification.matrix.desc')}
       variant={'filled'}
       extra={
         status !== 'idle' && (

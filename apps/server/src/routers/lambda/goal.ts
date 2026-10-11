@@ -11,6 +11,7 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { GoalService } from '@/server/services/goal';
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { GoalManagerService, goalPlanSchema } from '@/server/services/goal/manager';
+import { submitPlanningResult } from '@/server/services/goal/planningSubmission';
 import { scheduleGoalAdvance } from '@/server/services/goal/scheduler';
 import {
   HeteroOperationPrincipalError,
@@ -48,7 +49,47 @@ function mapGoalError(error: unknown, operation: string): never {
   });
 }
 
+const planningResultInput = z.object({
+  operationId: z.string().min(1),
+  token: z.string().min(1),
+  result: z.unknown(),
+});
+
 export const goalRouter = router({
+  submitOperationDraft: heteroAuthedProcedure
+    .use(serverDatabase)
+    .input(planningResultInput)
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.heteroAuthKind !== 'operation' || !ctx.heteroOperation) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'An operation-bound token is required',
+        });
+      }
+      let principal;
+      try {
+        principal = await resolveActiveHeteroOperationPrincipal({
+          capability: 'hetero:ingest',
+          claims: ctx.heteroOperation,
+          db: ctx.serverDB,
+          operationId: input.operationId,
+        });
+      } catch (error) {
+        if (!(error instanceof HeteroOperationPrincipalError)) throw error;
+        throw new TRPCError({
+          cause: error,
+          code:
+            error.status === 401 ? 'UNAUTHORIZED' : error.status === 409 ? 'CONFLICT' : 'FORBIDDEN',
+          message: error.message,
+        });
+      }
+      return submitPlanningResult(ctx.serverDB, principal.userId, principal.workspaceId, input);
+    }),
+  submitDraft: goalWriteProcedure
+    .input(planningResultInput)
+    .mutation(({ ctx, input }) =>
+      submitPlanningResult(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined, input),
+    ),
   // A plan is an operation result; the turn token further restricts ingestion to its Goal.
   submitOperationPlan: heteroAuthedProcedure
     .use(serverDatabase)

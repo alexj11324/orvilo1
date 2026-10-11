@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DomainDraft } from './domain';
 import { EditableDomainDraftSchema, ExpertiseDomainService } from './domain';
 
-const { resolveExpertiseModelConfig } = vi.hoisted(() => ({
-  resolveExpertiseModelConfig: vi.fn(),
+const { resolveLightweightJudgment } = vi.hoisted(() => ({
+  resolveLightweightJudgment: vi.fn(),
 }));
 const generateObject = vi.fn();
 const createDomain = vi.fn();
@@ -20,7 +20,9 @@ vi.mock('@/server/services/aiGeneration', () => ({
     generateObject = generateObject;
   },
 }));
-vi.mock('./modelConfig', () => ({ resolveExpertiseModelConfig }));
+vi.mock('@/server/services/systemAgent/lightweightJudgment', () => ({
+  resolveLightweightJudgment,
+}));
 
 const draft = {
   canonEntries: [
@@ -46,7 +48,7 @@ const draft = {
 describe('ExpertiseDomainService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resolveExpertiseModelConfig.mockResolvedValue({
+    resolveLightweightJudgment.mockResolvedValue({
       model: 'service-model',
       provider: 'service-provider',
     });

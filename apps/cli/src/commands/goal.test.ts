@@ -9,6 +9,8 @@ const { mockClient } = vi.hoisted(() => ({
     goal: {
       create: { mutate: vi.fn() },
       submitPlan: { mutate: vi.fn() },
+      submitDraft: { mutate: vi.fn() },
+      submitOperationDraft: { mutate: vi.fn() },
       submitOperationPlan: { mutate: vi.fn() },
       graph: { query: vi.fn() },
       supervision: { query: vi.fn() },
@@ -488,4 +490,42 @@ describe('goal supervision command', () => {
     expect(JSON.parse(String(vi.mocked(console.log).mock.calls.at(-1)?.[0]))).toEqual(data);
     expect(mockClient.goal.tick.mutate).not.toHaveBeenCalled();
   });
+});
+
+describe('ACP planning draft submission', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+  it.each(['hetero-operation', 'cli-sandbox'])(
+    'submits with %s credentials and the runtime operation ID',
+    async (purpose) => {
+      vi.clearAllMocks();
+      vi.stubEnv('ORVILO_OPERATION_ID', 'planning-op');
+      vi.stubEnv(
+        'ORVILO_JWT',
+        `header.${Buffer.from(JSON.stringify({ purpose })).toString('base64url')}.signature`,
+      );
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      await createProgram().parseAsync([
+        'node',
+        'test',
+        'goal',
+        'submit-draft',
+        '--token',
+        'round',
+        '--file',
+        'draft.json',
+      ]);
+      const selected =
+        purpose === 'hetero-operation'
+          ? mockClient.goal.submitOperationDraft
+          : mockClient.goal.submitDraft;
+      expect(selected.mutate).toHaveBeenCalledWith({
+        operationId: 'planning-op',
+        token: 'round',
+        result: { action: 'verify', reason: 'Ready' },
+      });
+    },
+  );
 });

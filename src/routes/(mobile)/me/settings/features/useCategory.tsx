@@ -151,7 +151,8 @@ export const useCategory = (): CategoryGroup[] => {
         key: SettingsTabs.ServiceModel,
         label: t('setting:tab.serviceModel'),
       }),
-      makeItem({ icon: BrainCircuit, key: SettingsTabs.Memory, label: t('setting:tab.memory') }),
+      offered(SettingsTabs.Memory) &&
+        makeItem({ icon: BrainCircuit, key: SettingsTabs.Memory, label: t('setting:tab.memory') }),
       // Agent profile/model/tools configuration lives here in settings, never
       // on the 会话 tab — `/agents` is the management surface.
       makeItem({

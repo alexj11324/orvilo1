@@ -41,8 +41,6 @@ import { processUsersHandler } from '@/server/router-hono/workflows/memory-user-
 import { processUserTopicsHandler } from '@/server/router-hono/workflows/memory-user-memory/workflows/processUserTopics';
 import { onCreatorComplete } from '@/server/router-hono/workflows/task/handlers/onCreatorComplete';
 import { onTopicComplete } from '@/server/router-hono/workflows/task/handlers/onTopicComplete';
-import { dispatchTopicAutoSummary } from '@/server/router-hono/workflows/topic-auto-summary/dispatch';
-import { executeTopicAutoSummary } from '@/server/router-hono/workflows/topic-auto-summary/execute';
 import { onEvidenceComplete } from '@/server/router-hono/workflows/verify/handlers/onEvidenceComplete';
 import { onVerifierComplete } from '@/server/router-hono/workflows/verify/handlers/onVerifierComplete';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
@@ -495,10 +493,6 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
     invoke(executeLinearSyncWorkflow, input, stepStore),
   '/api/workflows/task/on-creator-complete': (input) => invokeHonoHandler(onCreatorComplete, input),
   '/api/workflows/task/on-topic-complete': (input) => invokeHonoHandler(onTopicComplete, input),
-  '/api/workflows/topic-auto-summary/dispatch': (input, stepStore) =>
-    invoke(dispatchTopicAutoSummary, input, stepStore),
-  '/api/workflows/topic-auto-summary/execute': (input, stepStore) =>
-    invoke(executeTopicAutoSummary, input, stepStore),
   '/api/workflows/verify/on-evidence-complete': (input) =>
     invokeHonoHandler(onEvidenceComplete, input),
   '/api/workflows/verify/on-verifier-complete': (input) =>

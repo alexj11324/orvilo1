@@ -155,6 +155,19 @@ describe('verifyRouter', () => {
   });
 
   describe('generateGoalCriteria', () => {
+    it('preserves the selected ACP agent for both drafting endpoints', async () => {
+      await createCaller().generateGoalCriteria({ goal: 'Ship it', agentId: 'codex' });
+      await createCaller().generateGoalPlan({ goal: 'Ship it', agentId: 'codex' });
+      expect(modelMocks.generateGoalCriteria).toHaveBeenCalledWith({
+        goal: 'Ship it',
+        agentId: 'codex',
+      });
+      expect(modelMocks.generateGoalPlan).toHaveBeenCalledWith({
+        goal: 'Ship it',
+        agentId: 'codex',
+      });
+    });
+
     it('does not accept a caller-selected model config', async () => {
       modelMocks.generateGoalCriteria.mockResolvedValueOnce([]);
 

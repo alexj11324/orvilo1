@@ -6,8 +6,8 @@ import { expertiseHits, expertiseLessons, expertiseRuns } from '@/database/schem
 import type { SelfIterationCompletionPayload } from '../agentSignal/services/selfIteration/completion';
 import { ExpertiseIngestionService, normalizeLessonTitle } from './ingestion';
 
-const { resolveExpertiseModelConfig } = vi.hoisted(() => ({
-  resolveExpertiseModelConfig: vi.fn(),
+const { resolveLightweightJudgment } = vi.hoisted(() => ({
+  resolveLightweightJudgment: vi.fn(),
 }));
 const generateObject = vi.fn();
 const listDomainsForAgent = vi.fn();
@@ -24,7 +24,9 @@ vi.mock('@/server/services/aiGeneration', () => ({
     generateObject = generateObject;
   },
 }));
-vi.mock('./modelConfig', () => ({ resolveExpertiseModelConfig }));
+vi.mock('@/server/services/systemAgent/lightweightJudgment', () => ({
+  resolveLightweightJudgment,
+}));
 
 const completion = (selfIteration: SelfIterationCompletionPayload) => ({
   agentId: 'agent-signal-reflection',
@@ -130,7 +132,7 @@ describe('ExpertiseIngestionService.ingestCompletion', () => {
       },
     ] as never);
     listLessons.mockResolvedValue([]);
-    resolveExpertiseModelConfig.mockResolvedValue({
+    resolveLightweightJudgment.mockResolvedValue({
       model: 'service-model',
       provider: 'service-provider',
     });

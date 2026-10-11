@@ -1,12 +1,23 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { FtsSearchResult } from '@/database/repositories/ftsSearch';
 
 import SearchResults from './SearchResults';
 
 const navigate = vi.hoisted(() => vi.fn());
+const memoryVisibility = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@/config/routes/settings', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  get BUILTIN_MEMORY_UI_ENABLED() {
+    return memoryVisibility.enabled;
+  },
+}));
+afterEach(() => {
+  memoryVisibility.enabled = true;
+  navigate.mockClear();
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -63,7 +74,8 @@ describe('SearchResults', () => {
     expect(navigate).toHaveBeenCalledWith('/resource?file=docs_resource-note');
   });
 
-  it('routes memory results to the retained preferences manager, never a retired surface', () => {
+  it.each([true, false])('only offers the retained memory manager when enabled=%s', (enabled) => {
+    memoryVisibility.enabled = enabled;
     const result = {
       createdAt: new Date('2026-09-16T00:00:00Z'),
       description: null,
@@ -89,6 +101,11 @@ describe('SearchResults', () => {
       />,
     );
 
+    if (!enabled) {
+      expect(screen.queryByRole('button', { name: /Likes concise answers/ })).toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
+      return;
+    }
     fireEvent.click(screen.getByRole('button', { name: /Likes concise answers/ }));
 
     expect(navigate).toHaveBeenCalledWith('/memory/preferences?preferenceId=pref_1');

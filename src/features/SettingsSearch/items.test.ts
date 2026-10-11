@@ -2,15 +2,21 @@ import { describe, expect, it } from 'vitest';
 
 import { SettingsTabs } from '@/store/global/initialState';
 
-import {
-  SETTINGS_SEARCH_ITEMS,
-  TAB_SEARCH_EN_KEYWORDS,
-  TAB_SEARCH_KEYWORDS_KEYS,
-} from './items';
+import { SETTINGS_SEARCH_ITEMS, TAB_SEARCH_EN_KEYWORDS, TAB_SEARCH_KEYWORDS_KEYS } from './items';
 
 describe('settings search index', () => {
-  it('indexes the inbox notification channel', () => {
-    expect(SETTINGS_SEARCH_ITEMS.some((item) => item.anchor === 'notification-inbox')).toBe(true);
+  it('indexes the event notification controls and none of the retired channel entries', () => {
+    // Inbox records are always kept and Issue email has no sender, so their
+    // switches were removed; a stale entry would promise a control that is gone.
+    const anchors = SETTINGS_SEARCH_ITEMS.filter(
+      (item) => item.tab === SettingsTabs.Notification,
+    ).map((item) => item.anchor);
+
+    expect(anchors).toContain('notification-events');
+    expect(anchors).not.toContain('notification-inbox');
+    expect(anchors).not.toContain('notification-email');
+    expect(anchors).not.toContain('notification-push');
+    expect(TAB_SEARCH_EN_KEYWORDS[SettingsTabs.Notification]).not.toContain('email');
   });
 
   it('indexes personal collaboration visibility under appearance', () => {

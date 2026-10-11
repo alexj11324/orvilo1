@@ -597,14 +597,25 @@ export class GoalService {
 
   graph = async (goalId: string) => {
     const graph = await this.requireGraph(goalId);
-    const [runHeartbeats, deliveredAt, acceptances, integrations, spend] = await Promise.all([
-      this.collectRunHeartbeats(graph),
-      this.collectDeliveredAt(graph),
-      this.collectAcceptances(graph),
-      this.collectIntegrations(graph),
-      this.resolveSpend(graph),
-    ]);
-    return { ...graph, acceptances, deliveredAt, integrations, runHeartbeats, spend };
+    const [runHeartbeats, deliveredAt, acceptances, integrations, spend, admitted] =
+      await Promise.all([
+        this.collectRunHeartbeats(graph),
+        this.collectDeliveredAt(graph),
+        this.collectAcceptances(graph),
+        this.collectIntegrations(graph),
+        this.resolveSpend(graph),
+        isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }),
+      ]);
+    return {
+      ...graph,
+      acceptances,
+      deliveredAt,
+      integrations,
+      runHeartbeats,
+      spend,
+      orchestrationAdmission: admitted ? ('enabled' as const) : ('disabled' as const),
+      orchestrationAdmissionReason: admitted ? null : ('caid_dispatch_disabled' as const),
+    };
   };
 
   /**
@@ -1895,6 +1906,7 @@ export class GoalService {
       return {
         goalId,
         message: 'CAID dispatch admission is disabled for this deployment/workspace',
+        reason: 'caid_dispatch_disabled',
         nodeId,
         outcome: 'waiting_external',
         taskId: task.id,

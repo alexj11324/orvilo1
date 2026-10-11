@@ -26,8 +26,39 @@ describe('AiGenerationService.generateObject', () => {
     mocks.runAcpJudgment.mockResolvedValue({ data: { verdict: 'passed' }, run: {} });
   });
 
+  it('allows an agent-bound judgment without a global model/provider hint', async () => {
+    const ai = new AiGenerationService({} as never, 'user-1');
+    await ai.generateObject(
+      { messages: [] },
+      {
+        kind: 'judgment',
+        judgment: { binding: { agentId: 'owner' }, purpose: 'skill.meta' },
+      },
+    );
+    expect(mocks.runAcpJudgment).toHaveBeenCalledWith(
+      {},
+      'user-1',
+      expect.objectContaining({
+        judgment: expect.objectContaining({
+          binding: { agentId: 'owner' },
+          model: undefined,
+          provider: undefined,
+        }),
+      }),
+    );
+    expect(initSpy).not.toHaveBeenCalled();
+  });
+
   describe('kind: "basic" — enumerated non-agent exceptions', () => {
     const basicOptions = { caller: 'asr', kind: 'basic' } as const;
+
+    it('rejects missing basic model/provider before touching deployment credentials', async () => {
+      const ai = new AiGenerationService({} as never, 'user-1');
+      await expect(ai.generateObject({ messages: [] } as never, basicOptions)).rejects.toThrow(
+        'Basic generation requires an explicit model and provider',
+      );
+      expect(initSpy).not.toHaveBeenCalled();
+    });
 
     it('initialises the runtime from deployment config with the caller-supplied provider', async () => {
       generateObject.mockResolvedValue({ ok: true });

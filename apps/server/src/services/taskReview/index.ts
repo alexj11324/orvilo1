@@ -1,14 +1,13 @@
+import { DEFAULT_MINI_SYSTEM_AGENT_ITEM } from '@orvilo/const';
 import type { EvaluateResult, RubricResult } from '@orvilo/eval-rubric';
 import { evaluate } from '@orvilo/eval-rubric';
 import type { GenerateObjectSchema } from '@orvilo/model-runtime';
-import type { EvalBenchmarkRubric, UserSystemAgentConfig } from '@orvilo/types';
+import type { EvalBenchmarkRubric } from '@orvilo/types';
 import debug from 'debug';
 
-import { UserModel } from '@/database/models/user';
+import { AgentModel } from '@/database/models/agent';
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
-
-import { resolveSystemAgentModelConfig } from '../systemAgent/modelConfig';
 
 const log = debug('task-review');
 
@@ -56,8 +55,16 @@ export class TaskReviewService {
   }): Promise<ReviewResult> {
     const { content, rubrics, judge, taskName, iteration = 1 } = params;
 
-    // 1. Resolve model/provider
-    const { model, provider } = await this.resolveModelConfig(judge);
+    // The rubric library needs a model hint; execution still uses the bound
+    // agent's runtime. Never load the retired global topic-naming preference.
+    const agentModel = params.judgeAgentId
+      ? await new AgentModel(this.db, this.userId, this.workspaceId).getAgentModelConfig(
+          params.judgeAgentId,
+        )
+      : null;
+    const model = judge.model || agentModel?.model || DEFAULT_MINI_SYSTEM_AGENT_ITEM.model;
+    const provider =
+      judge.provider || agentModel?.provider || DEFAULT_MINI_SYSTEM_AGENT_ITEM.provider;
 
     log(
       'Starting review for task %s (iteration %d, model=%s, provider=%s, rubrics=%d)',
@@ -117,27 +124,5 @@ export class TaskReviewService {
       rubricResults: result.rubricResults,
       suggestions: [],
     };
-  }
-
-  private async resolveModelConfig(
-    judge: ReviewJudge,
-  ): Promise<{ model: string; provider: string }> {
-    if (judge.model && judge.provider) {
-      return resolveSystemAgentModelConfig({
-        override: judge,
-        taskKey: 'topic',
-      });
-    }
-
-    const userModel = new UserModel(this.db, this.userId);
-    const settings = await userModel.getUserSettings();
-    const systemAgent = settings?.systemAgent as Partial<UserSystemAgentConfig> | undefined;
-    const topicConfig = systemAgent?.topic;
-
-    return resolveSystemAgentModelConfig({
-      override: judge,
-      taskConfig: topicConfig,
-      taskKey: 'topic',
-    });
   }
 }

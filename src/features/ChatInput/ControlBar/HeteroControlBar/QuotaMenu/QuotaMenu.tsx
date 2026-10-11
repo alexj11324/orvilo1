@@ -19,7 +19,7 @@ const QUOTA_RETRY_COOLDOWN_MS = 60_000;
 
 const styles = {
   compactItem: 'text-inherit data-[quota-level=low]:text-warning-text',
-  compactItems: 'inline-flex gap-1 items-center',
+  compactItems: 'inline-flex gap-1 items-center text-xs leading-5',
   compactSeparator: 'text-foreground-quaternary',
   emptyState: 'py-2.5 text-sm leading-5.5 text-foreground-description',
   error:
@@ -608,7 +608,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       }
     >
       <span className="anticon" role="img">
-        <GaugeIcon fill={'transparent'} height={16} size={16} width={16} />
+        <GaugeIcon className="size-4" fill={'transparent'} height={16} size={16} width={16} />
       </span>
       {compactItems.length > 0 && (
         <span className={styles.compactItems}>
@@ -639,7 +639,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
         </span>
       )}
       <span className="anticon" role="img">
-        <ChevronDownIcon fill={'transparent'} height={16} size={16} width={16} />
+        <ChevronDownIcon className="size-4" fill={'transparent'} height={16} size={16} width={16} />
       </span>
     </Button>
   );

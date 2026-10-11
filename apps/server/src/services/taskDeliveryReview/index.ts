@@ -554,6 +554,15 @@ export const runTaskDeliveryReviewSweep = async (
           result[outcome === 'blocked' ? 'paused' : 'waiting'].push(task.identifier);
           continue;
         }
+        // A PR created after completion still belongs to the accepted run head.
+        // Do not silently adopt commits pushed after the completion boundary.
+        if (record.expectedHeadSha && remoteHead !== record.expectedHeadSha) {
+          await taskModel.update(task.id, {
+            error: `Delivery branch head ${remoteHead} does not match accepted delivery ${record.expectedHeadSha}.`,
+          });
+          result.waiting.push(task.identifier);
+          continue;
+        }
         const existing = await findBranchPr(repo, record.branch, record.baseBranch, token);
         const bound =
           existing ??

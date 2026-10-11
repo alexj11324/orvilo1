@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { IntegrationLeasePhase, TaskItem, TaskTopicIntegration } from '@orvilo/types';
-import { cloudSandboxRepoPath, deriveWorktreePath } from '@orvilo/types';
+import { deriveWorktreePath } from '@orvilo/types';
 import debug from 'debug';
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 
@@ -464,14 +464,7 @@ export class TaskIntegrationService {
               : activeRecord.role === 'task'
                 ? activeRecord.state === 'merging'
                   ? activeRecord.repo
-                    ? await this.dispatchCorrective(
-                        task,
-                        topicId,
-                        activeRecord,
-                        undefined,
-                        params.completionReservationId,
-                        lease,
-                      )
+                    ? await this.integrateRemoteRun(task, topicId, activeRecord)
                     : activeRecord.integratedSha
                       ? await this.publishAndCleanup(
                           task.id,
@@ -481,13 +474,7 @@ export class TaskIntegrationService {
                         )
                       : 'blocked'
                   : activeRecord.repo
-                    ? await this.integrateRemoteRun(
-                        task,
-                        topicId,
-                        activeRecord,
-                        params.completionReservationId,
-                        lease,
-                      )
+                    ? await this.integrateRemoteRun(task, topicId, activeRecord)
                     : await this.integrateTaskRun(
                         task,
                         topicId,
@@ -496,13 +483,7 @@ export class TaskIntegrationService {
                         lease,
                       )
                 : activeRecord.repo
-                  ? await this.finalizeRemoteCorrectiveRun(
-                      task,
-                      topicId,
-                      activeRecord,
-                      params.completionReservationId,
-                      lease,
-                    )
+                  ? await this.finalizeRemoteCorrectiveRun(task, topicId, activeRecord)
                   : await this.finalizeCorrectiveRun(
                       task,
                       topicId,
@@ -1263,17 +1244,14 @@ export class TaskIntegrationService {
   }
 
   /**
-   * Sandbox-contract integration: the run's branch lives on the remote, not a
-   * device worktree. Verify whether it already landed (the agent may have
-   * merged its own PR); otherwise hand the merge to a corrective run — itself
-   * a sandbox run, since the original sandbox is long gone.
+   * Repository-bound delivery (including ACP device worktrees): observe any
+   * existing merge proof, otherwise hand off to the deterministic delivery
+   * review controller. Only that controller may authorize the final PR merge.
    */
   private async integrateRemoteRun(
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    completionReservationId: string | undefined,
-    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     if (!parseGithubRepo(record.repo!)) {
       // An unparseable coordinate can never verify or merge — block now rather
@@ -1310,14 +1288,11 @@ export class TaskIntegrationService {
       });
       return check.fatal ? 'blocked' : 'hold';
     }
-    return this.dispatchCorrective(
-      task,
-      topicId,
-      { ...record, ...historyPatch },
-      undefined,
-      completionReservationId,
-      lease,
-    );
+    await this.updateIntegrationOrThrow(task.id, topicId, {
+      ...historyPatch,
+      state: 'verification_pending',
+    });
+    return 'hold';
   }
 
   /** Check the remote merge state after an integrator run returned. */
@@ -1325,8 +1300,6 @@ export class TaskIntegrationService {
     task: TaskItem,
     topicId: string,
     record: TaskTopicIntegration,
-    completionReservationId: string | undefined,
-    lease: RepoRefLeaseHandle,
   ): Promise<IntegrationOutcome> {
     const check = await this.verifyRemoteMerge(record, task);
     const patch: Partial<TaskTopicIntegration> = {};
@@ -1377,14 +1350,13 @@ export class TaskIntegrationService {
     if (Object.keys(patch).length > 0) {
       await this.updateIntegrationOrThrow(task.id, topicId, patch);
     }
-    return this.dispatchCorrective(
-      task,
-      topicId,
-      record,
-      undefined,
-      completionReservationId,
-      lease,
-    );
+    // Adopt persisted legacy integrator runs without asking another agent to
+    // merge. Existing attempt exhaustion above remains fail closed.
+    await this.updateIntegrationOrThrow(task.id, topicId, {
+      ...patch,
+      state: 'verification_pending',
+    });
+    return 'hold';
   }
 
   /**
@@ -1829,8 +1801,6 @@ export class TaskIntegrationService {
    *
    * - Device records: bound to the run-owned integration worktree via
    *   `workspaceOverride`; the agent resolves the open conflict there.
-   * - Remote records (sandbox contract): bound to a fresh sandbox pre-clone of
-   *   `record.repo`; the agent performs the whole merge and pushes the base.
    */
   private async dispatchCorrective(
     task: TaskItem,
@@ -1853,10 +1823,9 @@ export class TaskIntegrationService {
       return 'blocked';
     }
 
-    const isRemote = !!record.repo;
     const integrationWorktreePath =
       context?.integrationWorktreePath ?? record.integrationWorktreePath;
-    if (!isRemote && !integrationWorktreePath) {
+    if (!integrationWorktreePath) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
         lastError: 'No integration worktree to correct in',
         state: 'blocked',
@@ -1864,59 +1833,36 @@ export class TaskIntegrationService {
       return 'blocked';
     }
 
-    let extraPrompt: string;
-    let workspaceOverride: NonNullable<
+    const workspaceOverride: NonNullable<
       Parameters<TaskRunnerService['runTask']>[0]['workspaceOverride']
-    >;
-    let seedOverrides: Partial<TaskTopicIntegration>;
+    > = {
+      workingDirectory: integrationWorktreePath!,
+      workingDirectoryConfig: {
+        git: { detached: true, isWorktree: true },
+        path: integrationWorktreePath!,
+        repoType: 'git',
+      },
+    };
 
-    if (isRemote) {
-      const workingDirectory = cloudSandboxRepoPath(record.repo!);
-      workspaceOverride = {
-        repos: [record.repo!],
-        workingDirectory,
-        workingDirectoryConfig: {
-          git: {
-            branch: record.baseBranch,
-            upstream: { branch: record.baseBranch, remote: 'origin' },
-          },
-          path: workingDirectory,
-          repoType: 'git',
-        },
-      };
-      extraPrompt = buildRemoteMergePrompt(record, context?.conflicts);
-      seedOverrides = {};
-    } else {
-      workspaceOverride = {
-        workingDirectory: integrationWorktreePath!,
-        workingDirectoryConfig: {
-          git: { detached: true, isWorktree: true },
-          path: integrationWorktreePath!,
-          repoType: 'git',
-        },
-      };
-
-      const conflictList = context?.conflicts?.length
-        ? `Conflicting paths:\n${context.conflicts.map((f) => `- ${f}`).join('\n')}`
-        : 'A merge is in progress in this worktree.';
-      extraPrompt = [
-        `[Workspace integration] Your previous run finished on branch \`${record.branch}\`.`,
-        `Merging it into \`${record.baseBranch}\` hit conflicts in this run's integration worktree — the working directory you are in now.`,
-        conflictList,
-        'Resolve the conflicts (look for <<<<<<< conflict markers), `git add` the resolved files, and commit to complete the merge. Do not start unrelated work.',
-      ].join('\n');
-      seedOverrides = {
-        integrationWorktreePath: integrationWorktreePath!,
-        worktreePath: integrationWorktreePath!,
-      };
-    }
-
+    const conflictList = context?.conflicts?.length
+      ? `Conflicting paths:\n${context.conflicts.map((f) => `- ${f}`).join('\n')}`
+      : 'A merge is in progress in this worktree.';
+    const extraPrompt = [
+      `[Workspace integration] Your previous run finished on branch \`${record.branch}\`.`,
+      `Merging it into \`${record.baseBranch}\` hit conflicts in this run's integration worktree — the working directory you are in now.`,
+      conflictList,
+      'Resolve the conflicts (look for <<<<<<< conflict markers), `git add` the resolved files, and commit to complete the merge. Do not start unrelated work.',
+    ].join('\n');
+    const seedOverrides = {
+      integrationWorktreePath: integrationWorktreePath!,
+      worktreePath: integrationWorktreePath!,
+    };
     await this.updateIntegrationOrThrow(task.id, topicId, {
       attempts,
       // Persist the parent state before dispatch. A very fast corrective run
       // can finish inside runTask's callback replay; writing this afterward
       // would regress an already integrated row back to merging/conflict.
-      state: isRemote ? 'merging' : 'conflict',
+      state: 'conflict',
       verifyOperationId: record.verifyOperationId,
     });
 
@@ -2217,16 +2163,3 @@ export class TaskIntegrationService {
     });
   }
 }
-
-/** Merge instructions for a remote (sandbox-contract) integrator run. */
-const buildRemoteMergePrompt = (record: TaskTopicIntegration, conflicts?: string[]): string =>
-  [
-    `[Workspace integration] Land the task branch onto the base branch of \`${record.repo}\`.`,
-    `- The repo should be pre-cloned at \`${cloudSandboxRepoPath(record.repo!)}\` — clone it there yourself if it is missing.`,
-    `- Steps: \`git fetch origin\` → \`git checkout -B ${record.baseBranch} origin/${record.baseBranch}\` → \`git merge --no-ff origin/${record.branch}\` → resolve any conflicts → \`git push origin ${record.baseBranch}\`.`,
-    `- If a pull request exists for \`${record.branch}\`, landing it with \`gh pr merge --merge\` is equivalent.`,
-    ...(conflicts?.length
-      ? [`The previous attempt reported conflicts:\n${conflicts.map((f) => `- ${f}`).join('\n')}`]
-      : []),
-    'Do not start unrelated work. The run is complete only once the merge is pushed to the remote.',
-  ].join('\n');

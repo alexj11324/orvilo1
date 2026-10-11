@@ -2,24 +2,10 @@
 
 import { ScrollArea } from '@base-ui/react/scroll-area';
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
 import type { RefObject } from 'react';
 import { memo, useEffect } from 'react';
 
 import { useAutoScroll } from '@/hooks/useAutoScroll';
-
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-radius: 8px;
-    font-size: 14px;
-  `,
-  scrollRoot: css`
-    border-radius: 0;
-    background: transparent;
-  `,
-}));
 
 interface StreamingMarkdownProps {
   children?: string;
@@ -41,9 +27,9 @@ const StreamingMarkdown = memo<StreamingMarkdownProps>(({ children, maxHeight = 
   if (!children) return null;
 
   return (
-    <ScrollArea.Root className={styles.scrollRoot}>
+    <ScrollArea.Root className={'rounded-none bg-transparent'}>
       <ScrollArea.Viewport
-        className={styles.container}
+        className={'py-3 px-4 rounded-(--radius-card) text-sm'}
         ref={ref as RefObject<HTMLDivElement>}
         style={{ maxHeight }}
         onScroll={handleScroll}

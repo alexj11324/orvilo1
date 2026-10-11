@@ -1,7 +1,6 @@
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { extractHtmlTitle } from '@orvilo/html-artifact';
 import { exportFile } from '@orvilo/utils/client';
-import { createStaticStyles } from 'antd-style';
 import { Code2, Download, Eye, RotateCw } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,12 +17,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { isDesktop } from '@/const/version';
 
 import InlineHtmlPreview from './InlinePreview';
-
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    height: 100%;
-  `,
-}));
 
 interface HtmlPreviewDrawerProps {
   content: string;
@@ -91,7 +84,7 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
         </SheetHeader>
         <div className="min-h-0 flex-1">
           {mode === 'preview' ? (
-            <div className={styles.container}>
+            <div className={'h-full'}>
               <WebPreview>
                 <WebPreviewNavigation>
                   <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
@@ -109,7 +102,7 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
               </WebPreview>
             </div>
           ) : (
-            <div className={styles.container}>
+            <div className={'h-full'}>
               <CodeBlock
                 code={content}
                 language={'html'}

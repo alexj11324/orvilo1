@@ -2,7 +2,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-const check = (env: Record<string, string>) =>
+const check = (env: NodeJS.ProcessEnv) =>
   promisify(execFile)('bun', ['run', 'scripts/electronWorkflow/assertOpenSourceDesktop.ts'], {
     env: { ...process.env, CLOUD_DESKTOP: '', ORVILO_DESKTOP_VITE_CONFIG_EXTENSION: '', ...env },
   });

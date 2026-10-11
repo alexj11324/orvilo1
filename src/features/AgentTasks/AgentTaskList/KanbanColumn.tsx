@@ -28,11 +28,9 @@ import TaskItemSkeleton from './TaskItemSkeleton';
 
 export const COLUMN_WIDTH = 320;
 
-const cardStyles = createStaticStyles(({ css }) => ({
-  dragging: css`
-    opacity: 0.3;
-  `,
-}));
+const cardStyles = {
+  dragging: 'opacity-30',
+};
 
 const SortableTaskCard = memo<{
   hiddenProperties?: ReadonlySet<string>;
@@ -86,169 +84,35 @@ const SortableTaskCard = memo<{
   );
 });
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  /**
-   * Cordy rail: a collapsed column folds into a 40px vertical card at the
-   * board's end — icon, rotated title, count — and stays a live drop target.
-   */
-  collapsed: css`
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-
-    width: 40px;
-    max-height: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  collapsedButton: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 8px;
-    align-items: center;
-    justify-content: flex-start;
-
-    padding-block: 10px;
-    padding-inline: 0;
-    border: none;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
-    transition: background 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  collapsedCount: css`
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-  `,
-  collapsedDropOver: css`
-    border-color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorPrimaryBg};
-    box-shadow: 0 0 0 1px ${cssVar.colorPrimary};
-  `,
-  collapsedLabel: css`
-    writing-mode: vertical-rl;
-    font-size: 12px;
-    font-weight: 500;
-  `,
-  /* Same flip as Cordy: LTR rails read bottom-to-top, upright scripts don't. */
-  collapsedLabelRotated: css`
-    transform: rotate(180deg);
-  `,
-  addPill: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-
-    height: 36px;
-    border: 1px dashed ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition:
-      border-color 0.2s,
-      color 0.2s,
-      background 0.2s;
-
-    &:hover {
-      border-color: ${cssVar.colorPrimaryBorder};
-      color: ${cssVar.colorPrimary};
-      background: ${cssVar.colorBgContainer};
-    }
-  `,
-  body: css`
-    overflow-y: auto;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 8px;
-
-    min-height: 120px;
-    padding-block: 4px 12px;
-    padding-inline: 8px;
-    border-radius: 0 0 ${cssVar.borderRadiusLG} ${cssVar.borderRadiusLG};
-
-    transition: background 0.2s;
-  `,
-  bodyDropActive: css`
-    background: ${cssVar.colorFillSecondary};
-  `,
-  column: css`
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-
-    width: ${COLUMN_WIDTH}px;
-    max-height: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-
-    transition:
-      box-shadow 0.2s,
-      border-color 0.2s;
-
-    .kanban-col-action {
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    &:hover .kanban-col-action,
-    &:focus-within .kanban-col-action,
-    &:has([data-open]) .kanban-col-action {
-      opacity: 1;
-    }
-  `,
+const stylesRetained = createStaticStyles(({ css, cssVar }) => ({
   columnDropActive: css`
     border-color: ${cssVar.colorPrimaryBorderHover};
     box-shadow: inset 0 0 0 1px ${cssVar.colorPrimaryBorderHover};
   `,
-  count: css`
-    flex: none;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  `,
-  header: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    min-height: 40px;
-    padding-block: 10px;
-    padding-inline: 12px 8px;
-  `,
-  headerActions: css`
-    display: flex;
-    gap: 2px;
-    align-items: center;
-  `,
-  headerTitle: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    min-width: 0;
-  `,
-  notDroppable: css`
-    opacity: 0.45;
-  `,
 }));
+
+const styles = {
+  collapsed:
+    'flex flex-col shrink-0 w-10 max-h-full border border-divider rounded-(--radius-card) bg-card',
+  collapsedButton:
+    'cursor-pointer flex flex-1 flex-col gap-2 items-center justify-start py-2.5 px-0 border-0 rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2 text-foreground bg-transparent transition-[background-color] duration-(--orvilo-motion-mid) hover:bg-accent motion-reduce:transition-none',
+  collapsedCount: 'text-xs leading-5 tabular-nums',
+  collapsedDropOver: 'border-primary bg-primary-wash ring-1 ring-primary',
+  collapsedLabel: '[writing-mode:vertical-rl] text-xs leading-5 font-medium',
+  collapsedLabelRotated: 'rotate-180',
+  addPill:
+    'cursor-pointer flex gap-1.5 items-center justify-center min-h-9 border border-dashed border-border rounded-(--radius-button) text-foreground-tertiary transition-[border-color,color,background-color] duration-(--orvilo-motion-mid) hover:border-primary-border hover:text-primary-text hover:bg-card motion-reduce:transition-none',
+  body: 'overflow-y-auto flex flex-1 flex-col gap-2 min-h-30 pbs-1 pbe-3 px-2 rounded-b-(--radius-card) transition-[background-color] duration-(--orvilo-motion-mid) motion-reduce:transition-none',
+  bodyDropActive: 'bg-selected',
+  column:
+    'flex flex-col shrink-0 w-80 max-h-full border border-divider rounded-(--radius-card) bg-card transition-[box-shadow,border-color] duration-(--orvilo-motion-mid) [&_.kanban-col-action]:opacity-0 [&_.kanban-col-action]:transition-opacity [&_.kanban-col-action]:duration-(--orvilo-motion-mid) hover:[&_.kanban-col-action]:opacity-100 focus-within:[&_.kanban-col-action]:opacity-100 has-[[data-open]]:[&_.kanban-col-action]:opacity-100 motion-reduce:transition-none motion-reduce:[&_.kanban-col-action]:transition-none',
+  columnDropActive: stylesRetained.columnDropActive,
+  count: 'flex-none text-xs leading-5 tabular-nums',
+  header: 'flex gap-2 items-center justify-between min-h-10 py-2.5 ps-3 pe-2',
+  headerActions: 'flex gap-0.5 items-center',
+  headerTitle: 'flex gap-1.5 items-center min-w-0',
+  notDroppable: 'opacity-45',
+};
 
 // The column presentation maps moved to the board model — every surface
 // that mirrors a column (headers, collapsed rails, status pickers, view
@@ -294,8 +158,11 @@ export const CollapsedKanbanColumn = memo<CollapsedKanbanColumnProps>(
         >
           {statusIcon && createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
           <span
-            className={cx(styles.collapsedLabel, !upright && styles.collapsedLabelRotated)}
-            style={{ flex: 1, minHeight: 0 }}
+            className={cx(
+              'flex-1 min-h-0',
+              styles.collapsedLabel,
+              !upright && styles.collapsedLabelRotated,
+            )}
           >
             {label}
           </span>
@@ -377,11 +244,8 @@ const KanbanColumn = memo<KanbanColumnProps>(
           <div className={styles.headerTitle}>
             {headerVariant === 'loading' ? (
               <>
-                <Skeleton
-                  className="rounded-md shrink-0"
-                  style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
-                />
-                <Skeleton style={{ minWidth: 64, height: 14, width: 64 }} />
+                <Skeleton className="flex-none size-4 rounded-(--radius-chip)" />
+                <Skeleton className="min-w-16 w-16 h-5.5" />
               </>
             ) : headerVariant === 'group' && groupMeta ? (
               <TaskGroupLabel group={groupMeta} />
@@ -400,7 +264,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             {onHide && (
               <ActionIcon
                 icon={ChevronLeft}
-                size={'small'}
+                size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
                 title={t('taskList.kanban.hideColumn')}
                 onClick={onHide}
               />
@@ -408,7 +272,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             {onCreate && (
               <ActionIcon
                 icon={Plus}
-                size={'small'}
+                size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
                 title={t('taskList.kanban.addTask')}
                 onClick={onCreate}
               />

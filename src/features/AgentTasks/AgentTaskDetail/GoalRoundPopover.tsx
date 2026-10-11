@@ -1,21 +1,15 @@
 'use client';
 
 import { PreviewCard } from '@base-ui/react/preview-card';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 
-const styles = createStaticStyles(({ css }) => ({
-  label: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  value: css`
-    font-size: 12px;
-  `,
-}));
+const styles = {
+  label: 'text-xs leading-5 text-foreground-tertiary',
+  value: 'text-xs leading-5',
+};
 
 /** Cost is fractions of a cent per round — two decimals would read as "$0.00". */
 export const formatRoundCost = (cost: number): string =>
@@ -88,9 +82,9 @@ const GoalRoundPopover = memo<GoalRoundPopoverProps>(
         <PreviewCard.Portal>
           <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
             <PreviewCard.Popup
-              className={`${POPUP_Z_CLASS} flex flex-col rounded-(--radius-overlay) bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
+              className={`${POPUP_Z_CLASS} flex flex-col rounded-(--radius-overlay) bg-popover p-2.5 text-sm text-popover-foreground shadow-(--shadow-popover) ring-1 ring-foreground/10`}
             >
-              <div className="flex flex-col gap-1.5" style={{ minWidth: 140 }}>
+              <div className="flex flex-col min-w-35 gap-1.5">
                 <div className="text-sm font-medium">
                   {t('taskDetail.goalTimeline.round', { index })}
                 </div>

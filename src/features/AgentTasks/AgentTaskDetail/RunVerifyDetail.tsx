@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { Check, ChevronDown, ChevronRight, CircleDashed, X } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
@@ -9,45 +8,17 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useVerifyResults } from '@/features/Acceptance';
 
-const styles = createStaticStyles(({ css }) => ({
-  check: css`
-    padding-block: 6px;
-    padding-inline: 10px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  header: css`
-    justify-content: flex-start;
-
-    width: 100%;
-    height: auto;
-    margin: -4px;
-    padding: 4px;
-    border-radius: ${cssVar.borderRadius};
-
-    text-align: start;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  list: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  reason: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  check: 'py-1.5 px-2.5 [&+&]:border-bs [&+&]:border-divider',
+  header: 'justify-start w-full -m-1 p-1 text-start hover:bg-accent',
+  list: 'overflow-hidden border border-divider rounded-(--radius-card)',
+  reason: 'text-xs leading-5 text-muted-foreground whitespace-pre-wrap',
+};
 
 const verdictIcon = (verdict: string | null) => {
-  if (verdict === 'passed') return { color: cssVar.colorSuccess, icon: Check };
-  if (verdict) return { color: cssVar.colorError, icon: X };
-  return { color: cssVar.colorTextQuaternary, icon: CircleDashed };
+  if (verdict === 'passed') return { className: 'text-success-text', icon: Check };
+  if (verdict) return { className: 'text-destructive-text', icon: X };
+  return { className: 'text-foreground-quaternary', icon: CircleDashed };
 };
 
 /**
@@ -71,15 +42,16 @@ const RunVerifyDetail = memo<{
       <Button
         aria-expanded={expanded}
         className={cn(styles.header)}
+        size="compact"
         title={t(expanded ? 'taskDetail.runCollapse' : 'taskDetail.runExpand')}
         variant="ghost"
         onClick={() => setExpanded((open) => !open)}
       >
         <div className="flex items-center gap-2">
           {expanded ? (
-            <ChevronDown color={cssVar.colorTextQuaternary} size={12} />
+            <ChevronDown className="size-3 text-foreground-quaternary" size={12} />
           ) : (
-            <ChevronRight color={cssVar.colorTextQuaternary} size={12} />
+            <ChevronRight className="size-3 text-foreground-quaternary" size={12} />
           )}
           <div className="text-xs text-muted-foreground">{t('taskDetail.runVerify.checklist')}</div>
           {extra}
@@ -96,16 +68,12 @@ const RunVerifyDetail = memo<{
             return (
               <div className={`flex flex-col gap-1 ${styles.check}`} key={result.id}>
                 <div className="flex items-center gap-2">
-                  <meta.icon color={meta.color} size={14} style={{ flex: 'none' }} />
-                  <div className="truncate block text-sm" style={{ flex: 1, minWidth: 0 }}>
+                  <meta.icon className={cn('flex-none size-3.5', meta.className)} size={14} />
+                  <div className="truncate block flex-1 min-w-0 text-sm leading-5.5">
                     {result.checkItemTitle}
                   </div>
                 </div>
-                {reasoning && (
-                  <div className={cn(styles.reason)} style={{ whiteSpace: 'pre-wrap' }}>
-                    {reasoning}
-                  </div>
-                )}
+                {reasoning && <div className={cn(styles.reason)}>{reasoning}</div>}
               </div>
             );
           })}

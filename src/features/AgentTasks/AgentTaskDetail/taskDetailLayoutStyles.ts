@@ -1,245 +1,34 @@
-import { createStaticStyles, cssVar } from 'antd-style';
-
 export const TASK_DETAIL_SIDEBAR_MIN_WIDTH = 720;
-
-const SIDEBAR_WIDTH = 232;
 
 // One header, two forms, chosen by the column width rather than the viewport:
 // the same sections mount in the full page, the chat-side Portal and beside
 // the task-agent panel. One mounted property set wraps beneath the title in
 // narrow panes and stays in the right rail when that same container is wide.
-export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
-  root: css`
-    container-name: task-detail;
-    container-type: inline-size;
-  `,
-  header: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 16px;
-    padding-block: 24px 36px;
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      grid-template-columns: minmax(0, 1fr) ${SIDEBAR_WIDTH}px;
-      column-gap: 40px;
-    }
-  `,
-  /**
-   * The properties follow the title in DOM order, so on a narrow pane they
-   * stay above the issue text; the wide grid moves them into the right rail
-   * without mounting a second copy of the controls.
-   */
-  description: css`
-    grid-column: 1;
-    min-width: 0;
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      grid-row: 2;
-    }
-  `,
-  main: css`
-    min-width: 0;
-  `,
-  /**
-   * The prose column — instruction, sub-issues, artifacts, activity. Pinned to
-   * the grid's first track so in the wide layout it stays bounded beside the
-   * rail instead of running underneath it (the reference keeps two columns for
-   * the whole page; the space under the rail stays empty). In the narrow
-   * single-column grid this is simply the next block after the rail groups.
-   */
-  body: css`
-    grid-column: 1;
-    min-width: 0;
-    padding-block-end: 120px;
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      grid-row: 3;
-    }
-  `,
-  side: css`
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-width: 0;
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      position: sticky;
-      inset-block-start: 16px;
-
-      grid-column: 2;
-      grid-row: 1 / 4;
-      align-self: start;
-
-      padding-block-start: 0;
-    }
-  `,
-  /**
-   * Narrow: every property is a pill in one wrapping strip (the groups and
-   * their list wrappers dissolve into it). Wide: the labeled rail column.
-   */
-  propertyGroups: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-
-    > div {
-      display: contents;
-    }
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      flex-flow: column nowrap;
-      gap: 24px;
-      align-items: stretch;
-
-      > div {
-        display: flex;
-      }
-    }
-  `,
-  /**
-   * One labeled rail group ("Properties", "Project"). The heading stays
-   * visible at every width — Plane's properties block always titles itself.
-   */
-  railSection: css`
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-width: 0;
-  `,
-  railSectionLabel: css`
-    display: none;
-
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      display: block;
-    }
-  `,
-  /**
-   * A stacked row inside a rail section — same hit area as a property cell.
-   * Doubled class: the row is also drawn on the Button primitive, whose
-   * padding, radius and width utilities must not win.
-   */
-  railRow: css`
-    && {
-      width: fit-content;
-      max-width: 100%;
-      height: 28px;
-      padding-inline: 8px 10px;
-      border-radius: ${cssVar.borderRadius};
-
-      white-space: nowrap;
-
-      background: ${cssVar.colorFillTertiary};
-
-      @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-        width: 100%;
-
-        /* Same left edge as the value-only property rows above. */
-        padding-inline: 0;
-        background: transparent;
-      }
-    }
-  `,
-  properties: css`
-    display: contents;
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: stretch;
-
-      max-width: 100%;
-    }
-  `,
-  /** One value-only property. */
-  propertyRow: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 100%;
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      width: 100%;
-    }
-  `,
-  propertyValue: css`
-    display: flex;
-    flex: none;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 100%;
-    min-height: 28px;
-
-    font-size: 13px;
-    font-weight: 400;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-    letter-spacing: 0.13px;
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      flex: 1;
-    }
-  `,
-  /**
-   * The due-date value as a Button. It keeps the value's own type and the
-   * rail's left edge (the 6px hover inset is pulled back out); the Button
-   * contributes focus, keyboard and hover only. Doubled class so these beat
-   * the Button's own size utilities.
-   */
-  propertyButton: css`
-    && {
-      height: 28px;
-      margin-inline: -6px;
-      padding-inline: 6px;
-      border: 0;
-
-      font-size: inherit;
-      line-height: inherit;
-      letter-spacing: inherit;
-    }
-  `,
-  /**
-   * "Add property" keeps the Button's own ghost chrome. In the wide rail its
-   * icon lines up with the value-only rows above by pulling the button back by
-   * its inline-start padding (6px for a 28px Button with a leading icon).
-   */
-  addProperty: css`
-    width: fit-content;
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      margin-inline-start: -6px;
-    }
-  `,
-  propertyDanger: css`
-    color: ${cssVar.colorError};
-  `,
-  propertyItem: css`
-    max-width: 100%;
-    height: 28px;
-    padding-inline: 8px 10px;
-    border-radius: ${cssVar.borderRadius};
-
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      width: 100%;
-      background: transparent;
-    }
-  `,
-}));
+export const taskDetailLayoutStyles = {
+  root: '[container-name:task-detail] [container-type:inline-size]',
+  header:
+    'grid grid-cols-[minmax(0,1fr)] gap-y-4 pbs-6 pbe-9 [@container_task-detail_(width>=720px)]:grid-cols-[minmax(0,1fr)_232px] [@container_task-detail_(width>=720px)]:gap-x-10',
+  description: 'col-start-1 min-w-0 [@container_task-detail_(width>=720px)]:row-start-2',
+  main: 'min-w-0',
+  body: 'col-start-1 min-w-0 pbe-30 [@container_task-detail_(width>=720px)]:row-start-3',
+  side: 'flex flex-col gap-4 min-w-0 [@container_task-detail_(width>=720px)]:sticky [@container_task-detail_(width>=720px)]:top-4 [@container_task-detail_(width>=720px)]:col-start-2 [@container_task-detail_(width>=720px)]:row-span-3 [@container_task-detail_(width>=720px)]:row-start-1 [@container_task-detail_(width>=720px)]:self-start [@container_task-detail_(width>=720px)]:pbs-0',
+  propertyGroups:
+    'flex flex-wrap gap-2 items-center min-w-0 [&>div]:contents [@container_task-detail_(width>=720px)]:flex-col [@container_task-detail_(width>=720px)]:flex-nowrap [@container_task-detail_(width>=720px)]:gap-6 [@container_task-detail_(width>=720px)]:items-stretch [@container_task-detail_(width>=720px)]:[&>div]:flex',
+  railSection: 'flex flex-col gap-4 min-w-0',
+  railSectionLabel:
+    'hidden text-xs leading-5 font-medium text-foreground [@container_task-detail_(width>=720px)]:block',
+  railRow:
+    'w-fit max-w-full min-h-7 ps-2 pe-2.5 rounded-(--radius-input) whitespace-nowrap bg-muted [@container_task-detail_(width>=720px)]:w-full [@container_task-detail_(width>=720px)]:px-0 [@container_task-detail_(width>=720px)]:bg-transparent',
+  properties:
+    'contents [@container_task-detail_(width>=720px)]:flex [@container_task-detail_(width>=720px)]:flex-col [@container_task-detail_(width>=720px)]:gap-2.5 [@container_task-detail_(width>=720px)]:items-stretch [@container_task-detail_(width>=720px)]:max-w-full',
+  propertyRow:
+    'flex flex-none gap-2 items-center min-w-0 max-w-full [@container_task-detail_(width>=720px)]:w-full',
+  propertyValue:
+    'flex flex-none flex-wrap gap-1 items-center min-w-0 max-w-full min-h-7 text-(length:--text-dense) leading-5 font-normal text-foreground tracking-normal [@container_task-detail_(width>=720px)]:flex-1',
+  propertyButton:
+    '-mx-1.5 px-1.5 border-0 [font-size:inherit] [line-height:inherit] [letter-spacing:inherit]',
+  addProperty: 'w-fit [@container_task-detail_(width>=720px)]:-ms-1.5',
+  propertyDanger: 'text-destructive-text',
+  propertyItem:
+    'max-w-full min-h-7 ps-2 pe-2.5 rounded-(--radius-input) whitespace-nowrap bg-muted [@container_task-detail_(width>=720px)]:w-full [@container_task-detail_(width>=720px)]:bg-transparent',
+};

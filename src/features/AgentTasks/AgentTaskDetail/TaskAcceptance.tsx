@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import {
   ChevronRight,
   ChevronsDownUp,
@@ -47,27 +46,12 @@ import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskVerifyConfig from './TaskVerifyConfig';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    padding-inline: 12px;
-  `,
-  error: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorErrorBg};
-  `,
-  group: css`
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  groupHeader: css`
-    cursor: pointer;
-    padding-block: 9px;
-    padding-inline: 12px;
-  `,
-}));
+const styles = {
+  body: 'px-3',
+  error: 'py-2.5 px-3 rounded-(--radius-card) bg-destructive-wash',
+  group: '[&+&]:border-bs [&+&]:border-divider',
+  groupHeader: 'cursor-pointer py-2.25 px-3',
+};
 
 interface AcceptanceErrorProps {
   onRetry: () => void;
@@ -78,10 +62,10 @@ const AcceptanceError = memo<AcceptanceErrorProps>(({ onRetry }) => {
 
   return (
     <div className={`flex items-center gap-2 ${styles.error}`}>
-      <div className="text-xs text-destructive" style={{ flex: 1 }}>
+      <div className="flex-1 text-xs leading-5 text-destructive-text">
         {t('taskDetail.acceptance.loadError')}
       </div>
-      <Button size="sm" variant="ghost" onClick={onRetry}>
+      <Button size="compact" variant="ghost" onClick={onRetry}>
         {<RotateCcw />}
         {t('taskDetail.acceptance.retry')}
       </Button>
@@ -103,7 +87,7 @@ const CompactCheckRow = memo<CompactCheckRowProps>(({ check, onOpen }) => {
   return (
     <CriterionRow
       data-task-acceptance-check={check.id}
-      icon={<meta.icon color={meta.color} size={16} style={{ flex: 'none' }} />}
+      icon={<meta.icon className="flex-none size-4" color={meta.color} size={16} />}
       seq={check.seq}
       title={checkDisplayTitle(check.title, t('acceptance.checks.holisticTitle'))}
       onOpen={onOpen}
@@ -223,14 +207,14 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   // follows the bundle's isOwner rather than dead-ending in FORBIDDEN.
   const reportButton = acceptanceSubject && (
     <div className="flex items-center gap-1">
-      <Button size="sm" variant="ghost" onClick={() => openReport(acceptanceSubject.id)}>
+      <Button size="compact" variant="ghost" onClick={() => openReport(acceptanceSubject.id)}>
         {<ExternalLink />}
         {t('taskDetail.acceptance.openReport')}
       </Button>
       {canEditTask && bundle?.isOwner && (
         <ActionIcon
           icon={Trash}
-          size={'small'}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
           title={t('taskDetail.acceptance.remove')}
           onClick={handleRemoveAcceptance}
         />
@@ -299,8 +283,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                       the checks — the thing the reader came for — below the
                       fold. Two lines, and the rest on demand. */}
                     <div
-                      className={requirementExpanded ? undefined : 'line-clamp-2'}
-                      style={{ cursor: 'pointer' }}
+                      className={`cursor-pointer ${requirementExpanded ? '' : 'line-clamp-2'}`}
                       title={requirement}
                       onClick={() => setRequirementExpanded((open) => !open)}
                     >
@@ -317,7 +300,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                     {grouped && groupKeys.length > 0 && (
                       <ActionIcon
                         icon={allGroupsCollapsed ? ChevronsUpDown : ChevronsDownUp}
-                        size={'small'}
+                        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
                         title={
                           allGroupsCollapsed
                             ? t('taskDetail.acceptance.expandAll')
@@ -353,9 +336,9 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                                 </div>
                                 <div className="flex-1" />
                                 <ChevronRight
+                                  className="size-3.25 text-foreground-description"
                                   size={13}
                                   style={{
-                                    color: cssVar.colorTextDescription,
                                     transform: collapsed ? 'none' : 'rotate(90deg)',
                                     transition: 'transform 0.2s',
                                   }}

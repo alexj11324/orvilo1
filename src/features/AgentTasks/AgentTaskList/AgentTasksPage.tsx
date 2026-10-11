@@ -1,5 +1,4 @@
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon, Plus, XIcon } from 'lucide-react';
 import { memo, use, useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -14,7 +13,6 @@ import { PriorityIcon } from '@/components/PriorityIcon';
 import TablePagination from '@/components/TablePagination';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import {
   AutomationScopeSwitch,
@@ -104,41 +102,10 @@ import TaskList from './TaskList';
 import TaskListVisibilityFilter from './TaskListVisibilityFilter';
 import TasksGroupConfig from './TasksGroupConfig';
 
-const styles = createStaticStyles(({ css }) => ({
-  /**
-   * The project issues peek pane — same 400px column My issues and Team issues
-   * hold. While it is open the project layout hides its properties panel (see
-   * `useSuppressProjectPanel`), so the surface is wide enough for list + pane
-   * side by side. Only when the surface is still under 900px does it overlay
-   * the list instead of taking its width; the list then keeps the full width
-   * underneath. It sits above the list's stacking context (`isolate` on the
-   * list wrapper) so a focused row's ring can never paint over it.
-   */
-  detailPane: css`
-    position: relative;
-    z-index: 10;
-
-    overflow-y: auto;
-    flex: none;
-
-    width: 400px;
-    padding-block-end: 12px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgLayout};
-
-    @container work-surface (max-width: 900px) {
-      position: absolute;
-      z-index: 10;
-      inset-block: 0;
-      inset-inline-end: 0;
-
-      width: min(400px, calc(100% - 40px));
-
-      box-shadow: ${cssVar.boxShadowSecondary};
-    }
-  `,
-}));
+const styles = {
+  detailPane:
+    'relative z-10 overflow-y-auto flex-none w-100 pbe-3 border-s border-divider bg-background [@container_work-surface_(width<=900px)]:absolute [@container_work-surface_(width<=900px)]:inset-y-0 [@container_work-surface_(width<=900px)]:end-0 [@container_work-surface_(width<=900px)]:w-[min(400px,calc(100%_-_40px))] [@container_work-surface_(width<=900px)]:shadow-(--shadow-popover)',
+};
 
 interface TaskCreateActionBehaviorParams {
   canCreateTask: boolean;
@@ -890,8 +857,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
             <ActionIcon
               disabled={createActionBehavior.disabled}
               icon={Plus}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-              style={{ borderRadius: 9999 }}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={createActionBehavior.disabled ? reason : undefined}
               onClick={handleCreateTask}
             />
@@ -958,10 +924,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
         <WorkSurface>
           {projectId && projectToolbar ? createPortal(pageHeader, projectToolbar) : pageHeader}
           {isMineBoard ? (
-            <div
-              className="flex flex-1 flex-col"
-              style={{ overflowX: 'auto', overflowY: 'hidden' }}
-            >
+            <div className="flex flex-1 flex-col overflow-x-auto overflow-y-hidden">
               <KanbanBoard
                 myTaskScope={myTaskScope}
                 options={viewOptions}
@@ -1027,10 +990,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               )}
             </WorkSurfaceCollection>
           ) : ordinarySurface === 'board' ? (
-            <div
-              className="flex flex-1 flex-col"
-              style={{ overflowX: 'auto', overflowY: 'hidden' }}
-            >
+            <div className="flex flex-1 flex-col overflow-x-auto overflow-y-hidden">
               <KanbanBoard
                 agentId={agentId}
                 options={viewOptions}
@@ -1062,8 +1022,8 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
               />
             </div>
           ) : (
-            <div className="relative flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
-              <div className="isolate flex min-w-0 flex-1 flex-col" style={{ minHeight: 0 }}>
+            <div className="relative flex flex-1 min-h-0 min-w-0">
+              <div className="isolate flex min-w-0 flex-1 min-h-0 flex-col">
                 <WorkSurfaceCollection className="flex flex-col gap-4">
                   {projectId && (
                     <IssueFilterChips

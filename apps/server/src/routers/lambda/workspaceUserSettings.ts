@@ -108,9 +108,10 @@ export const workspaceUserSettingsRouter = router({
             code: 'FORBIDDEN',
             message: 'Agent runtime configuration is unavailable',
           });
-        // Seeing a workspace Agent is not being allowed to run it, and a default
-        // Agent the member cannot use would open onto a conversation they cannot send in.
-        if (agentId === input.defaultAgentId && ctx.workspaceId && access !== 'full') {
+        // Neither seeing nor configuring a workspace Agent is being allowed to run
+        // it, and a default Agent the member cannot use would open onto a
+        // conversation they cannot send in.
+        if (agentId === input.defaultAgentId && ctx.workspaceId) {
           const meta = await getResourceMeta(ctx.serverDB, 'agent', agentId);
           const usable =
             !!meta &&

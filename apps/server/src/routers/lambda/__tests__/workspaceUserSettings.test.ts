@@ -141,6 +141,26 @@ describe('workspaceUserSettingsRouter.updatePreference', () => {
     expect(mockUpdatePreference).not.toHaveBeenCalled();
   });
 
+  // An admin can configure another member's Agent without being on its Use roster.
+  it('does not save a default Agent an admin can configure but not use', async () => {
+    mockConfigAccess.mockResolvedValue('full');
+    mockCanPerform.mockResolvedValue(false);
+    await expect(
+      workspaceUserSettingsRouter.createCaller(ctx).updatePreference({ defaultAgentId: 'agt_1' }),
+    ).rejects.toThrow('Agent is not available to use');
+    expect(mockUpdatePreference).not.toHaveBeenCalled();
+  });
+
+  it('does not save a default Agent the member cannot reach at all', async () => {
+    mockConfigAccess.mockResolvedValue('none');
+    await expect(
+      workspaceUserSettingsRouter
+        .createCaller(ctx)
+        .updatePreference({ defaultAgentId: 'agt_gone' }),
+    ).rejects.toThrow('Agent runtime configuration is unavailable');
+    expect(mockUpdatePreference).not.toHaveBeenCalled();
+  });
+
   it('saves a default Agent the member may use without reading its configuration', async () => {
     mockConfigAccess.mockResolvedValue('profile');
     await workspaceUserSettingsRouter

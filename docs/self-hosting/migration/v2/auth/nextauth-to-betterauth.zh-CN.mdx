@@ -10,6 +10,10 @@ tags:
 
 # 从 NextAuth 迁移到 Better Auth
 
+<Callout type={'warning'}>
+  **历史文档**：Better Auth 已从 Orvilo 中移除，按本指南操作已无法得到可用的部署。登录现由 Clerk 账户门户负责，请参阅[身份验证服务](/zh/docs/self-hosting/auth)。本页仅作历史参考保留。
+</Callout>
+
 本指南帮助您将现有的基于 NextAuth 的 Orvilo 部署迁移到 Better Auth。
 
 <Callout type={'info'}>
@@ -91,7 +95,7 @@ Better Auth 支持更多功能，以下是新增的环境变量：
 
 <Callout type={'tip'}>
   **Casdoor 用户注意**：如果你使用 Casdoor 作为身份提供商，请先阅读
-  [email\_not\_found 错误](#email_not_found-错误) 部分，了解邮箱配置要求。
+  [email_not_found 错误](#email_not_found-错误) 部分，了解邮箱配置要求。
 </Callout>
 
 <Callout type={'warning'}>
@@ -331,7 +335,7 @@ bun run scripts/nextauth-to-betterauth/verify.ts
 
 这是因为数据库 schema 未更新。请先运行 `pnpm db:migrate` 更新数据库结构，然后再执行迁移脚本。
 
-### email\_not\_found 错误
+### email_not_found 错误
 
 如果登录时跳转到 `signin?callbackUrl=...&error=email_not_found`，说明 Orvilo 无法获取用户邮箱。
 

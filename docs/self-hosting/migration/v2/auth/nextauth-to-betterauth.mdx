@@ -12,6 +12,10 @@ tags:
 
 # Migrating from NextAuth to Better Auth
 
+<Callout type={'warning'}>
+  **Legacy Notice**: Better Auth has been removed from Orvilo, so this guide no longer leads to a working setup. Sign-in runs through the Clerk accounts portal — see [Authentication Service](/docs/self-hosting/auth). This page is kept for historical reference only.
+</Callout>
+
 This guide helps you migrate your existing NextAuth-based Orvilo deployment to Better Auth.
 
 <Callout type={'info'}>
@@ -93,7 +97,7 @@ For small self-hosted deployments, the simplest approach is to let users re-logi
 
 <Callout type={'tip'}>
   **Casdoor Users**: If you use Casdoor as your identity provider, please read
-  the [email\_not\_found Error](#email_not_found-error) section first to
+  the [email_not_found Error](#email_not_found-error) section first to
   understand email configuration requirements.
 </Callout>
 
@@ -334,7 +338,7 @@ After migration, if you encounter login issues, try clearing your browser's site
 
 This error occurs because the database schema is outdated. Run `pnpm db:migrate` to update the database structure before running the migration script.
 
-### email\_not\_found error
+### email_not_found error
 
 If you see a redirect to `signin?callbackUrl=...&error=email_not_found`, it means Orvilo cannot get the user's email.
 

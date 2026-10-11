@@ -32,7 +32,7 @@ const TaskDispatchNotice = memo(() => {
     <div className="flex min-w-0 max-w-full flex-col gap-1" data-testid="task-dispatch-notice">
       {notices.map((notice) => (
         <p className="text-xs text-muted-foreground" key={notice.key}>
-          {t(notice.key as never, notice.params as never) as string}
+          {String(t(notice.key as never, notice.params as never))}
         </p>
       ))}
     </div>

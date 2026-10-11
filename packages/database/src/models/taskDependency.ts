@@ -6,6 +6,7 @@ export type TaskRelationRejectionReason =
   | 'ALREADY_BLOCKING'
   | 'BROKEN_PARENT_CHAIN'
   | 'CROSS_PROJECT'
+  | 'CROSS_SCOPE'
   | 'CYCLE'
   | 'SELF'
   | 'UNAVAILABLE'

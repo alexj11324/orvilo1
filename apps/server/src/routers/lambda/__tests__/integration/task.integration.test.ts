@@ -1083,6 +1083,210 @@ describe('Task Router Integration', () => {
       expect(await anchored(foreign.data.id)).toEqual(await anchored('task_does_not_exist'));
     });
 
+    describe('scope of a parent link', () => {
+      const workspaceId = 'task-parent-scope-workspace';
+      let wsCaller: ReturnType<typeof taskRouter.createCaller>;
+      const setParentRaw = (id: string, parentTaskId: string | null) =>
+        serverDB.update(tasks).set({ parentTaskId }).where(eq(tasks.id, id));
+      const parentOf = async (id: string) =>
+        (await serverDB.select({ p: tasks.parentTaskId }).from(tasks).where(eq(tasks.id, id)))[0]
+          ?.p;
+
+      beforeEach(async () => {
+        const { workspaces, workspaceMembers } = await import('@/database/schemas');
+        await serverDB.insert(workspaces).values({
+          id: workspaceId,
+          name: 'Parent scope workspace',
+          primaryOwnerId: userId,
+          slug: workspaceId,
+        });
+        await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+        wsCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
+      });
+
+      it('refuses a new link between an unfiled issue and a workspace issue', async () => {
+        const unfiled = await caller.create({ instruction: 'Unfiled', name: 'Unfiled' });
+        const filed = await wsCaller.create({ instruction: 'Filed', name: 'Filed' });
+
+        // The workspace context can read both, so only the scope rule stops it.
+        expect(
+          await rejectionCode(
+            wsCaller.update({ id: filed.data.id, parentTaskId: unfiled.data.id }),
+          ),
+        ).toBe('CROSS_SCOPE');
+        expect(
+          await rejectionCode(
+            wsCaller.update({ id: unfiled.data.id, parentTaskId: filed.data.id }),
+          ),
+        ).toBe('CROSS_SCOPE');
+        expect(
+          await rejectionCode(
+            wsCaller.setParentBatch({ parentTaskId: filed.data.id, taskIds: [unfiled.data.id] }),
+          ),
+        ).toBe('CROSS_SCOPE');
+        expect(
+          await rejectionCode(
+            wsCaller.setParentBatch({ parentTaskId: unfiled.data.id, taskIds: [filed.data.id] }),
+          ),
+        ).toBe('CROSS_SCOPE');
+        expect(await parentOf(filed.data.id)).toBeNull();
+        expect(await parentOf(unfiled.data.id)).toBeNull();
+      });
+
+      it('refuses to create a sub-issue under a parent filed elsewhere', async () => {
+        const unfiled = await caller.create({ instruction: 'Unfiled', name: 'Unfiled' });
+
+        expect(
+          await rejectionCode(
+            wsCaller.create({ instruction: 'Child', name: 'Child', parentTaskId: unfiled.data.id }),
+          ),
+        ).toBe('CROSS_SCOPE');
+      });
+
+      it('still links two issues of one scope, in a workspace and in personal mode', async () => {
+        const wsParent = await wsCaller.create({ instruction: 'P', name: 'Workspace parent' });
+        const wsChild = await wsCaller.create({ instruction: 'C', name: 'Workspace child' });
+        const wsOther = await wsCaller.create({ instruction: 'O', name: 'Workspace other' });
+        const parent = await caller.create({ instruction: 'P', name: 'Personal parent' });
+        const child = await caller.create({ instruction: 'C', name: 'Personal child' });
+
+        await wsCaller.update({ id: wsChild.data.id, parentTaskId: wsParent.data.id });
+        await wsCaller.setParentBatch({
+          parentTaskId: wsParent.data.id,
+          taskIds: [wsOther.data.id],
+        });
+        await caller.update({ id: child.data.id, parentTaskId: parent.data.id });
+        // Two unfiled issues link from the workspace context too: same scope.
+        const second = await caller.create({ instruction: 'S', name: 'Personal second' });
+        await wsCaller.update({ id: second.data.id, parentTaskId: parent.data.id });
+        await wsCaller.create({ instruction: 'N', name: 'New', parentTaskId: wsParent.data.id });
+
+        expect(await parentOf(wsChild.data.id)).toBe(wsParent.data.id);
+        expect(await parentOf(wsOther.data.id)).toBe(wsParent.data.id);
+        expect(await parentOf(child.data.id)).toBe(parent.data.id);
+        expect(await parentOf(second.data.id)).toBe(parent.data.id);
+      });
+
+      it('lets an existing cross-scope parent be removed or replaced', async () => {
+        const unfiled = await caller.create({ instruction: 'Unfiled', name: 'Unfiled' });
+        const filed = await wsCaller.create({ instruction: 'Filed', name: 'Filed' });
+        const sameScope = await wsCaller.create({ instruction: 'Same', name: 'Same scope' });
+        // Written before the rule existed.
+        await setParentRaw(filed.data.id, unfiled.data.id);
+
+        const replaced = await wsCaller.update({
+          id: filed.data.id,
+          parentTaskId: sameScope.data.id,
+        });
+        expect(replaced.data.parentTaskId).toBe(sameScope.data.id);
+
+        await setParentRaw(filed.data.id, unfiled.data.id);
+        const removed = await wsCaller.update({ id: filed.data.id, parentTaskId: null });
+        expect(removed.data.parentTaskId).toBeNull();
+      });
+
+      it('offers only same-scope issues as sub-issue or parent candidates', async () => {
+        const search = workAttentionRouter.createCaller({
+          ...createTestContext(userId),
+          workspaceId,
+        }).search;
+        await caller.create({ instruction: 'Unfiled', name: 'Reach unfiled' });
+        const anchor = await wsCaller.create({ instruction: 'Anchor', name: 'Reach anchor' });
+        await wsCaller.create({ instruction: 'Filed', name: 'Reach filed' });
+        const titles = async (relation: 'child' | 'parent') =>
+          (
+            await search({
+              eligibleFor: { relation, taskId: anchor.data.id },
+              limitPerType: 50,
+              query: 'Reach',
+              type: 'task',
+            })
+          ).data.map((hit) => hit.title);
+
+        // The unfiled issue is readable here — an unscoped search returns it —
+        // but it is never offered as a parent or a child.
+        const unscoped = (await search({ limitPerType: 50, query: 'Reach', type: 'task' })).data;
+        expect(unscoped.map((hit) => hit.title).sort()).toEqual([
+          'Reach anchor',
+          'Reach filed',
+          'Reach unfiled',
+        ]);
+        expect(await titles('child')).toEqual(['Reach filed']);
+        expect(await titles('parent')).toEqual(['Reach filed']);
+      });
+
+      it('refuses with CONFLICT when an issue changed scope after it was read', async () => {
+        const parent = await wsCaller.create({ instruction: 'P', name: 'Parent' });
+        const child = await wsCaller.create({ instruction: 'C', name: 'Child' });
+        // The request reads both rows as workspace issues and picks its locks
+        // from them. Right after its last read before the transaction (the
+        // second time it resolves the parent), a transfer moves the child to
+        // the caller's unfiled issues.
+        const realResolve = TaskModel.prototype.resolve;
+        let parentReads = 0;
+        const resolve = vi.spyOn(TaskModel.prototype, 'resolve').mockImplementation(async function (
+          this: TaskModel,
+          id: string,
+        ) {
+          const row = await realResolve.call(this, id);
+          if (row?.id === parent.data.id && ++parentReads === 2) {
+            await serverDB
+              .update(tasks)
+              .set({ workspaceId: null })
+              .where(eq(tasks.id, child.data.id));
+          }
+          return row;
+        });
+
+        try {
+          await expect(
+            wsCaller.update({ id: child.data.id, parentTaskId: parent.data.id }),
+          ).rejects.toMatchObject({ code: 'CONFLICT' });
+        } finally {
+          resolve.mockRestore();
+        }
+        expect(await parentOf(child.data.id)).toBeNull();
+      });
+
+      it('returns from both tree reads on a tree whose parent pointers loop', async () => {
+        const first = await caller.create({ instruction: 'First', name: 'First' });
+        const second = await caller.create({ instruction: 'Second', name: 'Second' });
+        const leaf = await caller.create({
+          instruction: 'Leaf',
+          name: 'Leaf',
+          parentTaskId: second.data.id,
+        });
+        await setParentRaw(first.data.id, second.data.id);
+        await setParentRaw(second.data.id, first.data.id);
+
+        const tree = await caller.getTaskTree({ id: first.data.id });
+        expect(tree.data.map((task) => task.id).sort()).toEqual(
+          [first.data.id, second.data.id, leaf.data.id].sort(),
+        );
+
+        // The project move walks the same subtree. It only checks that the
+        // root's parent is already in the target project, so file that one there.
+        const projectId = await seedProject('loop');
+        await serverDB.update(tasks).set({ projectId }).where(eq(tasks.id, second.data.id));
+        const moved = await new ProjectModel(serverDB, userId).moveTaskTree(
+          projectId,
+          first.data.id,
+        );
+        expect(moved?.map((row) => row.id).sort()).toEqual(
+          [first.data.id, second.data.id, leaf.data.id].sort(),
+        );
+      });
+
+      it('leaves a normal tree read unchanged', async () => {
+        const root = await caller.create({ instruction: 'Root', name: 'Root' });
+        const a = await caller.create({ instruction: 'A', name: 'A', parentTaskId: root.data.id });
+        const b = await caller.create({ instruction: 'B', name: 'B', parentTaskId: a.data.id });
+
+        const tree = await caller.getTaskTree({ id: root.data.id });
+        expect(tree.data.map((task) => task.id)).toEqual([root.data.id, a.data.id, b.data.id]);
+      });
+    });
+
     it('walks descendants of a looping tree once and stops', async () => {
       const first = await caller.create({ instruction: 'First', name: 'First' });
       const second = await caller.create({ instruction: 'Second', name: 'Second' });

@@ -2463,7 +2463,9 @@ export class TaskModel {
     const result = await this.db.execute(sql`
       WITH RECURSIVE task_tree AS (
         SELECT * FROM tasks WHERE id = ${rootTaskId} AND ${ownership}
-        UNION ALL
+        -- UNION, not UNION ALL: a row already in the tree is not added again,
+        -- so a corrupt tree whose parent pointers loop still terminates.
+        UNION
         SELECT t.* FROM tasks t
         JOIN task_tree tt ON t.parent_task_id = tt.id
         WHERE ${childOwnership}

@@ -2054,6 +2054,8 @@ export default {
     'The parent issue sits in a chain of parents that is too deep or loops back on itself, so nothing can be put under it. Pick a different parent.',
   'taskDetail.relationError.crossProject':
     'That issue is in another project. Move it into this project first, then link it.',
+  'taskDetail.relationError.crossScope':
+    'That issue is filed in a different workspace from this one, so one cannot be the other’s sub-issue. Pick an issue from the same workspace.',
   'taskDetail.relationError.dependencyCycle':
     'That would make these issues wait on each other in a loop. Remove one of the existing blocking relations first.',
   'taskDetail.relationError.parentCycle':

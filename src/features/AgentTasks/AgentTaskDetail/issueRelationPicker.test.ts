@@ -90,6 +90,12 @@ describe('relationRejectionKey', () => {
     );
   });
 
+  it('names a link between two workspaces as its own reason', () => {
+    expect(relationRejectionKey(rejected('CROSS_SCOPE'), 'parent')).toBe(
+      'taskDetail.relationError.crossScope',
+    );
+  });
+
   it('words a cycle for the link that was attempted', () => {
     expect(relationRejectionKey(rejected('CYCLE'), 'dependency')).toBe(
       'taskDetail.relationError.dependencyCycle',

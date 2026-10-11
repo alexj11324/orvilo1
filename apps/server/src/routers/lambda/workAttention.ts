@@ -323,6 +323,11 @@ const resolveRelationSearchScope = async (
         ? [anchor.id, ...(anchor.parentTaskId ? [anchor.parentTaskId] : [])]
         : [],
     projectId,
+    // A parent link may not cross workspaces, so neither may its candidates.
+    sameScopeAs: {
+      createdByUserId: anchor.createdByUserId ?? null,
+      workspaceId: anchor.workspaceId ?? null,
+    },
   };
 };
 

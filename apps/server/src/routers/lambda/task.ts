@@ -40,11 +40,16 @@ import { UserModel } from '@/database/models/user';
 import { resolveWorkflowCreatePreset } from '@/database/models/workflowMove';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 import { agentOperations } from '@/database/schemas/agentOperations';
-import { automationResultDeliveries, taskTopics } from '@/database/schemas/task';
+import { automationResultDeliveries, tasks, taskTopics } from '@/database/schemas/task';
 import { topics } from '@/database/schemas/topic';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentVisibleTo } from '@/database/utils/agent-access';
-import { lockTaskDependencyGraphForRows } from '@/database/utils/taskDependencyLock';
+import {
+  lockTaskDependencyGraphForRows,
+  taskDependencyLockScopes,
+  taskDependencyRequestScope,
+  taskDependencyRowScope,
+} from '@/database/utils/taskDependencyLock';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
@@ -738,6 +743,40 @@ async function assertParentChainExcludes(
   }
 }
 
+/**
+ * Take the graph locks for a parent write, then confirm they are still the
+ * right ones. The lock set comes from rows read before the transaction; a
+ * workspace transfer could have moved one of them since, leaving this write
+ * holding the wrong scope. Re-read the rows' scope columns under the lock and
+ * refuse with CONFLICT if the set changed, so the caller retries on fresh rows.
+ */
+async function lockParentWrite(
+  tx: OrviloDatabase,
+  request: { userId: string; workspaceId?: string | null },
+  rows: Pick<TaskItem, 'createdByUserId' | 'id' | 'workspaceId'>[],
+) {
+  const locked = await lockTaskDependencyGraphForRows(tx, request, rows);
+  const ids = [...new Set(rows.map((row) => row.id))];
+  const current = await tx
+    .select({
+      createdByUserId: tasks.createdByUserId,
+      id: tasks.id,
+      workspaceId: tasks.workspaceId,
+    })
+    .from(tasks)
+    .where(inArray(tasks.id, ids));
+  const now = taskDependencyLockScopes(
+    taskDependencyRequestScope(request.userId, request.workspaceId),
+    current,
+  );
+  if (current.length !== ids.length || now.join('\n') !== locked.join('\n')) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'An issue in this change was moved or deleted. Reload and try again.',
+    });
+  }
+}
+
 async function resolveSafeParentTaskId(
   model: TaskModel,
   taskId: string,
@@ -759,6 +798,17 @@ async function resolveSafeParentTaskId(
   // is the same fact as "the parent is not a descendant of the task", without
   // loading the task's whole subtree.
   const task = await resolveOrThrow(model, taskId);
+  // A sub-issue tree stays inside one scope — one workspace, or one person's
+  // unfiled Issues. That is what makes the two rows' scope locks cover the
+  // whole ancestor chain the cycle check reads. Links that already cross
+  // scopes are left alone; only new ones are refused.
+  if (taskDependencyRowScope(task) !== taskDependencyRowScope(parent)) {
+    throw new TRPCError({
+      cause: { data: { code: 'CROSS_SCOPE' satisfies TaskRelationRejectionReason } },
+      code: 'BAD_REQUEST',
+      message: 'Parent task must belong to the same workspace',
+    });
+  }
   if (task.projectId !== parent.projectId) {
     throw new TRPCError({
       cause: { data: { code: 'CROSS_PROJECT' satisfies TaskRelationRejectionReason } },
@@ -2486,10 +2536,7 @@ export const taskRouter = router({
               await ctx.taskService.lockAssigneeUser(tx, data.assigneeUserId);
               // Keyed by the rows' own scopes as well as the request's — see
               // `taskDependencyRowScope`.
-              await lockTaskDependencyGraphForRows(tx, ctx, [
-                resolved,
-                ...(parentRow ? [parentRow] : []),
-              ]);
+              await lockParentWrite(tx, ctx, [resolved, ...(parentRow ? [parentRow] : [])]);
               await resolveSafeParentTaskId(
                 new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined),
                 resolved.id,
@@ -2578,7 +2625,7 @@ export const taskRouter = router({
           // both validate against the same stale tree and then both write.
           // The rows' own scopes as well as the request's: the caller's unfiled
           // Issues are writable from several contexts — see `taskDependencyRowScope`.
-          await lockTaskDependencyGraphForRows(tx, ctx, [parent, ...children]);
+          await lockParentWrite(tx, ctx, [parent, ...children]);
           const model = new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const rows: TaskItem[] = [];

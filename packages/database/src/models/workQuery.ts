@@ -2043,6 +2043,12 @@ export class WorkQueryModel {
       /** A handful of known ids; tree-sized sets use the two walks above. */
       excludeIds?: string[];
       projectId: string | null;
+      /**
+       * Only Issues filed where this row is: its workspace, or — for an
+       * unfiled row — its owner's other unfiled Issues. Parent links may not
+       * cross that boundary.
+       */
+      sameScopeAs?: { createdByUserId: string | null; workspaceId: string | null };
     },
   ) => {
     const q = needle.trim();
@@ -2067,6 +2073,16 @@ export class WorkQueryModel {
               : eq(tasks.projectId, scope.projectId)
             : undefined,
           scope?.excludeIds?.length ? notInArray(tasks.id, scope.excludeIds) : undefined,
+          scope?.sameScopeAs
+            ? scope.sameScopeAs.workspaceId
+              ? eq(tasks.workspaceId, scope.sameScopeAs.workspaceId)
+              : scope.sameScopeAs.createdByUserId
+                ? and(
+                    isNull(tasks.workspaceId),
+                    eq(tasks.createdByUserId, scope.sameScopeAs.createdByUserId),
+                  )
+                : sql`false`
+            : undefined,
           // Both walks run inside this one statement, so a large subtree is
           // never loaded into memory or sent back as a parameter list. UNION
           // (not UNION ALL) ends the recursion even on a corrupt cyclic tree.

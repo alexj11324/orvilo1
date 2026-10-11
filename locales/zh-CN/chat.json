@@ -2128,6 +2128,7 @@
   "taskDetail.relationError.alreadyBlocking": "这两个 Issue 之间已有阻塞关系。先移除它，再标记为相关。",
   "taskDetail.relationError.brokenParentChain": "这个父 Issue 所在的父级链层数过深，或绕回了自身，所以不能再往它下面添加。请换一个父 Issue。",
   "taskDetail.relationError.crossProject": "该 Issue 属于另一个项目。先把它移入本项目，再建立关联。",
+  "taskDetail.relationError.crossScope": "该 Issue 与此 Issue 不在同一个工作区，不能互为父子。请选择同一工作区内的 Issue。",
   "taskDetail.relationError.dependencyCycle": "这样会让这些 Issue 互相等待，形成循环。请先移除其中一条已有的阻塞关系。",
   "taskDetail.relationError.parentCycle": "该 Issue 在子 Issue 层级中已位于此 Issue 的上方，不能再放到它下面。请先把它从这条链上移出。",
   "taskDetail.relationError.self": "Issue 不能关联到自己。",

@@ -58,6 +58,7 @@ const RELATION_REJECTION_CODES = [
   'ALREADY_BLOCKING',
   'BROKEN_PARENT_CHAIN',
   'CROSS_PROJECT',
+  'CROSS_SCOPE',
   'CYCLE',
   'SELF',
   'UNAVAILABLE',
@@ -77,6 +78,7 @@ export type RelationRejectionKey =
   | 'taskDetail.relationError.alreadyBlocking'
   | 'taskDetail.relationError.brokenParentChain'
   | 'taskDetail.relationError.crossProject'
+  | 'taskDetail.relationError.crossScope'
   | 'taskDetail.relationError.dependencyCycle'
   | 'taskDetail.relationError.parentCycle'
   | 'taskDetail.relationError.self'
@@ -102,6 +104,9 @@ export const relationRejectionKey = (
     }
     case 'CROSS_PROJECT': {
       return 'taskDetail.relationError.crossProject';
+    }
+    case 'CROSS_SCOPE': {
+      return 'taskDetail.relationError.crossScope';
     }
     case 'CYCLE': {
       return link === 'parent'

@@ -53,9 +53,11 @@ Repository-bound ACP/device and sandbox completion enter existing `verification_
 
 `task.setParentBatch` takes `{ parentTaskId, taskIds }` (1–50 Issues) and needs the same permission as `task.update`. It validates the selection as a set and writes it in one transaction; one refusal rolls the whole batch back. `task.update` with a parent and `task.setParentBatch` both re-validate in the writing transaction under the graph lock of the request's scope and of each linked Issue's own scope (its workspace, or its owner when it has none), taken in sorted order; an assignee's membership row is locked before any graph lock. A parent chain that does not reach a root within 200 levels is refused with `BROKEN_PARENT_CHAIN`.
 
-`workAttention.search` accepts optional `eligibleFor: { taskId, relation }` with `relation` of `child`, `parent` or `dependency`. Task hits are then limited to the anchor Issue's project and to Issues that can take that link. Task hits also carry `parentIdentifier`, which is `null` when there is no parent or the caller cannot read it.
+A new parent link must stay inside one scope: both Issues in the same workspace, or both unfiled and owned by the same person. `task.update`, `task.setParentBatch` and `task.create` with a `parentTaskId` refuse anything else with `CROSS_SCOPE`. Links that already cross scopes are not rewritten; removing such a parent, or replacing it with a same-scope one, works. If an Issue in the write changed scope or was deleted between the read and the lock, the write is refused with `CONFLICT`.
 
-Refused parent and relation writes carry a stable `code` in the error data: `CYCLE`, `CROSS_PROJECT`, `UNFINISHED_PREREQUISITE`, `SELF`, `ALREADY_BLOCKING`, `UNAVAILABLE` or `BROKEN_PARENT_CHAIN`. Clients word the refusal from the code, not from the message text. An Issue the caller cannot read and an Issue that does not exist both return `NOT_FOUND`.
+`workAttention.search` accepts optional `eligibleFor: { taskId, relation }` with `relation` of `child`, `parent` or `dependency`. Task hits are then limited to the anchor Issue's project and to Issues that can take that link; for `child` and `parent` they are also limited to the anchor's scope. Task hits also carry `parentIdentifier`, which is `null` when there is no parent or the caller cannot read it.
+
+Refused parent and relation writes carry a stable `code` in the error data: `CYCLE`, `CROSS_PROJECT`, `UNFINISHED_PREREQUISITE`, `SELF`, `ALREADY_BLOCKING`, `UNAVAILABLE`, `BROKEN_PARENT_CHAIN` or `CROSS_SCOPE`. Clients word the refusal from the code, not from the message text. An Issue the caller cannot read and an Issue that does not exist both return `NOT_FOUND`.
 
 Deleting a parent Issue does not delete its sub-issues; they become top-level Issues.
 

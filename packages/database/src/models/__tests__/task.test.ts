@@ -2547,11 +2547,7 @@ describe('TaskModel', () => {
       expect(await types()).toEqual(['description', 'title', 'description']);
 
       // Someone else edits.
-      await model.updateWithLog(
-        task.id,
-        { instruction: 'Draft 3' },
-        { activityActor: { agentId: 'agt_log_writer' } },
-      );
+      await model.updateWithLog(task.id, { instruction: 'Draft 3' }, { agentId: 'agt_log_writer' });
       expect(await types()).toEqual(['description', 'title', 'description', 'description']);
 
       // The same actor again, but the sitting ended long ago.
@@ -2559,11 +2555,7 @@ describe('TaskModel', () => {
         .update(taskActivities)
         .set({ createdAt: new Date(Date.now() - 31 * 60_000) })
         .where(eq(taskActivities.taskId, task.id));
-      await model.updateWithLog(
-        task.id,
-        { instruction: 'Draft 4' },
-        { activityActor: { agentId: 'agt_log_writer' } },
-      );
+      await model.updateWithLog(task.id, { instruction: 'Draft 4' }, { agentId: 'agt_log_writer' });
       expect(await types()).toHaveLength(5);
     });
 

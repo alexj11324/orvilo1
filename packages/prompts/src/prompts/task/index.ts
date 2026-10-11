@@ -110,6 +110,65 @@ export const formatPropertyValue = (field: string | undefined, value: unknown): 
   return String(value);
 };
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * One activity-feed property change as a line fragment for an agent prompt,
+ * or `null` for a change the prompt leaves out.
+ *
+ * Only changes whose values come from a fixed vocabulary are rendered:
+ * status, priority, automation, the workflow category and a due date. A
+ * rename, a label, a link, a project / milestone / team move or a relation
+ * carries text somebody typed — often on another Issue — and a prompt has
+ * no way to mark it as quoted data rather than an instruction. Those rows
+ * are omitted; what they changed is already in the detail's own fields.
+ * A team's own name for a workflow state is user text too, so a move reads
+ * by category.
+ */
+export const formatPropertyChange = (
+  change: TaskDetailActivity['propertyChange'],
+): string | null => {
+  if (!change) return null;
+  switch (change.field) {
+    case 'automation':
+    case 'priority':
+    case 'status': {
+      return `${change.field}: ${formatPropertyValue(change.field, change.from)} → ${formatPropertyValue(change.field, change.to)}`;
+    }
+    case 'workflow': {
+      return `workflow: ${formatWorkflowCategory(change.from?.category)} → ${formatWorkflowCategory(change.to.category)}`;
+    }
+    case 'dueDate': {
+      const date = (value: string | null) =>
+        value === null ? 'none' : ISO_DATE.test(value) ? value : null;
+      const from = date(change.from);
+      const to = date(change.to);
+      return from && to ? `due date: ${from} → ${to}` : null;
+    }
+    default: {
+      return null;
+    }
+  }
+};
+
+const WORKFLOW_CATEGORIES = new Set([
+  'backlog',
+  'canceled',
+  'done',
+  'in_progress',
+  'in_review',
+  'todo',
+  'triage',
+]);
+
+/** A workflow category from the fixed vocabulary; anything else is not echoed. */
+const formatWorkflowCategory = (category: unknown): string =>
+  category === null || category === undefined
+    ? 'none'
+    : typeof category === 'string' && WORKFLOW_CATEGORIES.has(category)
+      ? category
+      : 'unknown';
+
 export const taskDetailHref = (identifier: string, baseUrl?: string): string => {
   const path = `/task/${identifier}`;
   return baseUrl ? `${baseUrl.replace(/\/$/, '')}${path}` : path;
@@ -347,10 +406,8 @@ export const formatTaskDetail = (t: TaskDetailData): string => {
         lines.push(`  💭 ${act.time || ''} ${author} ${truncated}${idSuffix}`);
       } else if (act.type === 'property') {
         const actor = assignmentParticipantLabel(act.author, 'system');
-        const change = act.propertyChange;
-        lines.push(
-          `  🔁 ${act.time || ''} ${actor} changed ${change?.field}: ${formatPropertyValue(change?.field, change?.from)} → ${formatPropertyValue(change?.field, change?.to)}${idSuffix}`,
-        );
+        const change = formatPropertyChange(act.propertyChange);
+        if (change) lines.push(`  🔁 ${act.time || ''} ${actor} changed ${change}${idSuffix}`);
       } else if (act.type === 'assignment') {
         // Who owns the task changed hands; a formatter that drops the event
         // shows a reader an assignee they cannot account for.

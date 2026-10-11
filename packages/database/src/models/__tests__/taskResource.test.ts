@@ -85,6 +85,38 @@ describe('TaskResourceModel', () => {
     expect(await model.remove(task.id, link.id)).toBe(true);
     expect(await reload.list(task.id)).toHaveLength(1);
   });
+  it('records links and pull requests added and removed in the Issue feed', async () => {
+    const task = await create();
+    const link = await model.add(task.id, { kind: 'link', title: 'Spec', url: 'https://x.test/a' });
+    // The same URL again only retitles the resource: nothing new was attached.
+    await model.add(task.id, { kind: 'link', title: 'Spec v2', url: 'https://x.test/a' });
+    const pr = await model.add(task.id, {
+      kind: 'pull_request',
+      url: 'https://github.com/acme/app/pull/7',
+    });
+    await model.remove(task.id, link.id);
+    await model.remove(task.id, link.id);
+
+    const activities = await new TaskModel(db, userId, workspaceId).getActivities(task.id);
+    expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
+      [
+        'resource_added',
+        userId,
+        { actorKind: 'user', resourceKind: 'link', toLabel: 'Spec', url: 'https://x.test/a' },
+      ],
+      [
+        'resource_added',
+        userId,
+        { actorKind: 'user', resourceKind: 'pull_request', toLabel: pr.title, url: pr.url },
+      ],
+      [
+        'resource_removed',
+        userId,
+        { actorKind: 'user', resourceKind: 'link', toLabel: 'Spec v2', url: 'https://x.test/a' },
+      ],
+    ]);
+  });
+
   it('shares legacy-private workspace Issue resources with active members', async () => {
     const task = await create('private');
     await model.add(task.id, { kind: 'link', url: 'https://example.com/private' });

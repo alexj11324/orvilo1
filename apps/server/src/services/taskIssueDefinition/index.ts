@@ -214,18 +214,19 @@ export class TaskIssueDefinitionService {
         },
       );
       const taskModel = new TaskModel(db, this.userId, this.workspaceId);
+      // A person chose this from the Issue menu: both Issues' feeds say so.
+      const actor = { userId: this.userId };
       if (input.kind === 'parent')
-        await taskModel.update(
-          source.id,
-          { parentTaskId: created.id },
-          { expectedDomainRevision: input.expectedDomainRevision, source: 'user' },
-        );
+        await taskModel.updateWithLog(source.id, { parentTaskId: created.id }, actor, {
+          expectedDomainRevision: input.expectedDomainRevision,
+          source: 'user',
+        });
       else if (input.kind === 'blocked')
-        await taskModel.addDependency(created.id, source.id, 'blocks');
+        await taskModel.addDependency(created.id, source.id, 'blocks', { activityActor: actor });
       else if (input.kind === 'blocking')
-        await taskModel.addDependency(source.id, created.id, 'blocks');
+        await taskModel.addDependency(source.id, created.id, 'blocks', { activityActor: actor });
       else if (input.kind === 'related')
-        await taskModel.addDependency(source.id, created.id, 'relates');
+        await taskModel.addDependency(source.id, created.id, 'relates', { activityActor: actor });
       return created;
     });
   }
@@ -253,7 +254,8 @@ export class TaskIssueDefinitionService {
         },
         workflow: { workflowCategory: 'canceled', workflowStateId: null, workflowStateRefId: null },
       },
-      undefined,
+      // The person marking the duplicate also cancels it: the move is theirs.
+      { userId: this.userId },
       undefined,
       {
         beforeMutation: async (db) => {
@@ -274,9 +276,10 @@ export class TaskIssueDefinitionService {
           if (!(await new TaskModel(db, this.userId, this.workspaceId).findById(target.id)))
             throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
           return Boolean(
-            await new TaskModel(db, this.userId, this.workspaceId).update(
+            await new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
               source.id,
               { duplicateOfTaskId: target.id, triageStatus: 'duplicate' },
+              { userId: this.userId },
               { expectedDomainRevision: input.expectedDomainRevision, source: 'user' },
             ),
           );
@@ -291,12 +294,13 @@ export class TaskIssueDefinitionService {
       const db = tx as OrviloDatabase;
       const service = new TaskIssueDefinitionService(db, this.userId, this.workspaceId);
       const source = await service.lockSource(input.id, input.expectedDomainRevision);
-      return new TaskModel(db, this.userId, this.workspaceId).update(
+      return new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
         source.id,
         {
           duplicateOfTaskId: null,
           ...(source.triageStatus === 'duplicate' ? { triageStatus: null } : {}),
         },
+        { userId: this.userId },
         { expectedDomainRevision: input.expectedDomainRevision, source: 'user' },
       );
     });
@@ -333,13 +337,14 @@ export class TaskIssueDefinitionService {
       });
       const model = new TaskModel(db, this.userId, this.workspaceId);
       for (const issue of issues) {
-        await model.update(
+        await model.updateWithLog(
           issue.id,
           {
             parentTaskId: null,
             projectId: project.id,
             ...(issue.id === source.id ? { name: input.issueName } : {}),
           },
+          { userId: this.userId },
           { expectedDomainRevision: issue.domainRevision, source: 'user' },
         );
       }

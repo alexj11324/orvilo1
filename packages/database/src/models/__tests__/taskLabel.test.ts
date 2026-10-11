@@ -134,6 +134,34 @@ describe('TaskLabelModel', () => {
       expect(again.map((label) => label.id)).toEqual([keep.id]);
     });
 
+    it('records a label being added and removed in the Issue feed, once per real change', async () => {
+      const task = await createTask(userId, workspaceId);
+      const label = await workspaceModel.create({ name: 'bug' });
+      const actor = { userId };
+
+      await workspaceModel.assign(task.id, label.id, actor);
+      await workspaceModel.assign(task.id, label.id, actor);
+      await workspaceModel.unassign(task.id, label.id, actor);
+      await workspaceModel.unassign(task.id, label.id, actor);
+
+      const activities = await new TaskModel(serverDB, userId, workspaceId).getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
+        ['label_added', userId, { actorKind: 'user', toId: label.id, toLabel: 'bug' }],
+        ['label_removed', userId, { actorKind: 'user', toId: label.id, toLabel: 'bug' }],
+      ]);
+    });
+
+    it('writes no feed row for a label set without an actor', async () => {
+      const task = await createTask(userId, workspaceId);
+      const label = await workspaceModel.create({ name: 'at-creation' });
+
+      await workspaceModel.assign(task.id, label.id);
+
+      expect(
+        await new TaskModel(serverDB, userId, workspaceId).getActivities(task.id),
+      ).toHaveLength(0);
+    });
+
     it('rejects a label that belongs to another scope', async () => {
       const task = await createTask(userId, workspaceId);
       const foreign = await new TaskLabelModel(serverDB, otherUserId, otherWorkspaceId).create({

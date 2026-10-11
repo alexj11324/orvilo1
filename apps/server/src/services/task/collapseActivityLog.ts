@@ -1,4 +1,8 @@
-import type { TaskActivityLogPayload, TaskActivityLogType } from '@orvilo/types';
+import {
+  TASK_ACTIVITY_LOG_BEHAVIOR,
+  type TaskActivityLogPayload,
+  type TaskActivityLogType,
+} from '@orvilo/types';
 
 /**
  * How long a run of edits to one property by one person stays a single line.
@@ -27,16 +31,31 @@ const sameValue = (a: unknown, b: unknown): boolean =>
  * between, the chain is broken and the same person's next edit is a fresh
  * decision — otherwise A's 2→4 and 3→2 around B's 4→3 would fold into a
  * hidden no-op and leave B's row telling a story that never happened.
+ *
+ * A `session` kind (the description body) has no values to chain: every save
+ * by the same actor inside the window is the same sitting. An `event` kind
+ * (a relation, a label, a link) is never a continuation of another one.
  */
-const continues = (prev: CollapsibleRow, next: CollapsibleRow): boolean =>
-  sameValue(prev.payload?.to, next.payload?.from) &&
-  (prev.payload?.toId ?? null) === (next.payload?.fromId ?? null);
+const continues = (prev: CollapsibleRow, next: CollapsibleRow): boolean => {
+  const behavior = TASK_ACTIVITY_LOG_BEHAVIOR[next.type];
+  if (behavior === 'session') return true;
+  if (behavior === 'event') return false;
+  return (
+    sameValue(prev.payload?.to, next.payload?.from) &&
+    (prev.payload?.toId ?? null) === (next.payload?.fromId ?? null)
+  );
+};
 
-/** True when the row's start and end are the same value — nothing to tell. */
-const isNetNoop = (payload: TaskActivityLogPayload | null): boolean =>
-  !!payload &&
-  sameValue(payload.from, payload.to) &&
-  (payload.fromId ?? null) === (payload.toId ?? null);
+/**
+ * True when the row's start and end are the same value — nothing to tell.
+ * Only a `value` kind can cancel out: a session or an event carries no
+ * before/after pair, and must not be mistaken for one that matched.
+ */
+const isNetNoop = (row: CollapsibleRow): boolean =>
+  TASK_ACTIVITY_LOG_BEHAVIOR[row.type] === 'value' &&
+  !!row.payload &&
+  sameValue(row.payload.from, row.payload.to) &&
+  (row.payload.fromId ?? null) === (row.payload.toId ?? null);
 
 /**
  * Fold a burst of edits to the same property by the same person into one
@@ -76,6 +95,7 @@ export const collapseActivityLog = <T extends CollapsibleRow>(
           ...run.first.payload,
           to: row.payload?.to,
           toId: row.payload?.toId,
+          toLabel: row.payload?.toLabel,
         },
       };
       run.last = row;
@@ -93,5 +113,5 @@ export const collapseActivityLog = <T extends CollapsibleRow>(
     open.set(key, { first: row, index: out.length - 1, last: row });
   }
 
-  return out.filter((row) => !isNetNoop(row.payload));
+  return out.filter((row) => !isNetNoop(row));
 };

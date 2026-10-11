@@ -3,7 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { taskResources } from '../schemas/taskResource';
 import type { OrviloDatabase } from '../type';
-import { TaskModel } from './task';
+import { taskActivityActor, TaskModel } from './task';
 
 export class TaskResourceModel {
   constructor(
@@ -47,6 +47,17 @@ export class TaskResourceModel {
       throw new Error('Use a GitHub pull request URL');
     }
     const normalizedUrl = url.href;
+    const [existing] = await this.db
+      .select({ id: taskResources.id })
+      .from(taskResources)
+      .where(
+        and(
+          eq(taskResources.taskId, task.id),
+          eq(taskResources.kind, input.kind),
+          eq(taskResources.url, normalizedUrl),
+        ),
+      )
+      .limit(1);
     const [row] = await this.db
       .insert(taskResources)
       .values({
@@ -61,7 +72,33 @@ export class TaskResourceModel {
         set: { title: input.title?.trim() || normalizedUrl, updatedAt: new Date() },
       })
       .returning();
+    // Adding the same URL again only refreshes its title — nothing new was attached.
+    if (!existing) await this.logResourceChange('resource_added', task.id, row);
     return row;
+  }
+
+  /**
+   * Every caller of this model is the signed-in person acting on their own
+   * request, so the row is theirs. Title and URL are copied in: once the
+   * resource is removed there is nothing left to look them up from.
+   */
+  private async logResourceChange(
+    type: 'resource_added' | 'resource_removed',
+    taskId: string,
+    resource: { kind: string; title: string | null; url: string },
+  ) {
+    const { actorKind, ...actorColumns } = taskActivityActor({ userId: this.userId });
+    await new TaskModel(this.db, this.userId, this.workspaceId).addActivity({
+      ...actorColumns,
+      payload: {
+        actorKind,
+        resourceKind: resource.kind === 'pull_request' ? 'pull_request' : 'link',
+        toLabel: resource.title,
+        url: resource.url,
+      },
+      taskId,
+      type,
+    });
   }
 
   async remove(taskId: string, resourceId: string) {
@@ -69,7 +106,13 @@ export class TaskResourceModel {
     const rows = await this.db
       .delete(taskResources)
       .where(and(eq(taskResources.taskId, task.id), eq(taskResources.id, resourceId)))
-      .returning({ id: taskResources.id });
+      .returning({
+        id: taskResources.id,
+        kind: taskResources.kind,
+        title: taskResources.title,
+        url: taskResources.url,
+      });
+    for (const row of rows) await this.logResourceChange('resource_removed', task.id, row);
     return rows.length > 0;
   }
 }

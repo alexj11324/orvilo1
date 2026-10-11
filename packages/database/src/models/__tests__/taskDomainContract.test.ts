@@ -361,6 +361,47 @@ describe('task domain contract', () => {
     expect(lastWrite).toMatchObject({ domainRevision: 3, teamId: 'team-cas-a' });
   });
 
+  it('records a team move in the Issue feed, crediting a person only when one made it', async () => {
+    await db.insert(teams).values([
+      { id: 'team-feed-a', key: 'TFA', name: 'Feed A', workspaceId },
+      { id: 'team-feed-b', key: 'TFB', name: 'Feed B', workspaceId },
+    ]);
+    const model = new TaskModel(db, userId, workspaceId);
+    const task = await model.create({ instruction: 'Move between teams', teamId: 'team-feed-a' });
+
+    await model.moveToTeam(task.id, 'team-feed-b', { source: 'user' });
+    // Same team again: nothing moved, nothing logged.
+    await model.moveToTeam(task.id, 'team-feed-b', { source: 'user' });
+    // A sync-driven move is the system's, not the session owner's.
+    await model.moveToTeam(task.id, null, { source: 'linear' });
+
+    const activities = await model.getActivities(task.id);
+    expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
+      [
+        'team',
+        userId,
+        {
+          actorKind: 'user',
+          fromId: 'team-feed-a',
+          fromLabel: 'Feed A',
+          toId: 'team-feed-b',
+          toLabel: 'Feed B',
+        },
+      ],
+      [
+        'team',
+        null,
+        {
+          actorKind: 'system',
+          fromId: 'team-feed-b',
+          fromLabel: 'Feed B',
+          toId: null,
+          toLabel: null,
+        },
+      ],
+    ]);
+  });
+
   it('records a duplicate pointer without deleting either task', async () => {
     const model = new TaskModel(db, userId, workspaceId);
     const canonical = await model.create({ instruction: 'Canonical work' });

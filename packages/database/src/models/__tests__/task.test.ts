@@ -13,6 +13,7 @@ import {
   tasks,
   teamMembers,
   teams,
+  teamWorkflowStates,
   topics,
   users,
   workspaceMembers,
@@ -2372,6 +2373,53 @@ describe('TaskModel', () => {
     });
   });
 
+  describe('completion time', () => {
+    const completedAtOf = async (id: string) =>
+      (await serverDB.select({ at: tasks.completedAt }).from(tasks).where(eq(tasks.id, id)))[0].at;
+
+    it("stamps a person's move to Done or Canceled and clears it on reopen", async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+      expect(await completedAtOf(task.id)).toBeNull();
+
+      await model.updateWithLog(task.id, { workflowCategory: 'done' }, { userId });
+      expect(await completedAtOf(task.id)).toBeInstanceOf(Date);
+
+      await model.updateWithLog(task.id, { workflowCategory: 'todo' }, { userId });
+      expect(await completedAtOf(task.id)).toBeNull();
+
+      await model.update(task.id, { workflowCategory: 'canceled' });
+      expect(await completedAtOf(task.id)).toBeInstanceOf(Date);
+    });
+
+    it('keeps the original completion time when a terminal Issue is saved again', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+      const settledAt = new Date('2024-03-01T10:00:00.000Z');
+      // Settlement passes its own instant, and that always wins.
+      await model.updateStatus(task.id, 'completed', { completedAt: settledAt });
+      expect((await completedAtOf(task.id))?.toISOString()).toBe(settledAt.toISOString());
+
+      await model.update(task.id, { workflowCategory: 'done' });
+      await model.update(task.id, { workflowCategory: 'canceled' });
+
+      expect((await completedAtOf(task.id))?.toISOString()).toBe(settledAt.toISOString());
+    });
+
+    it('leaves the time alone for a write that does not touch the workflow', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+      const failedAt = new Date('2024-03-01T10:00:00.000Z');
+      // A parked failure records when it failed without leaving its category.
+      await model.updateStatus(task.id, 'failed', { completedAt: failedAt });
+
+      await model.update(task.id, { name: 'Renamed' });
+      await model.update(task.id, { workflowCategory: 'in_progress' });
+
+      expect((await completedAtOf(task.id))?.toISOString()).toBe(failedAt.toISOString());
+    });
+  });
+
   describe('activities', () => {
     it('records assignment events and returns them oldest first', async () => {
       const model = new TaskModel(serverDB, userId);
@@ -2441,9 +2489,246 @@ describe('TaskModel', () => {
       const task = await model.create({ assigneeAgentId: 'agt_log_same', instruction: 'Test' });
 
       await model.updateWithLog(task.id, { assigneeAgentId: 'agt_log_same' }, { userId });
-      await model.updateWithLog(task.id, { name: 'Renamed' }, { userId });
+      // A field the feed does not track (a rename is tracked now — see below).
+      await model.updateWithLog(task.id, { sortOrder: 3 }, { userId });
 
       expect(await model.getActivities(task.id)).toHaveLength(0);
+    });
+
+    it('logs a title change with both titles, and nothing when it is re-saved', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test', name: 'Old title' });
+
+      await model.updateWithLog(task.id, { name: 'New title' }, { userId });
+      await model.updateWithLog(task.id, { name: 'New title' }, { userId });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.payload])).toEqual([
+        ['title', { actorKind: 'user', from: 'Old title', to: 'New title' }],
+      ]);
+    });
+
+    it('logs a description edit once per changed save, without copying the text', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'First draft' });
+
+      await model.updateWithLog(task.id, { instruction: 'Second draft' }, { userId });
+      // An autosave that changes nothing writes neither a history version nor a row.
+      await model.updateWithLog(task.id, { instruction: 'Second draft' }, { userId });
+      await model.updateWithLog(task.id, { instruction: 'Third draft' }, { userId });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.payload])).toEqual([
+        ['description', { actorKind: 'user' }],
+        ['description', { actorKind: 'user' }],
+      ]);
+    });
+
+    it('logs a due date being set, changed and cleared', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+
+      await model.updateWithLog(task.id, { dueDate: '2026-08-15' }, { userId });
+      await model.updateWithLog(task.id, { dueDate: '2026-09-01' }, { userId });
+      await model.updateWithLog(task.id, { dueDate: null }, { userId });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.payload?.from, a.payload?.to])).toEqual([
+        ['due_date', null, '2026-08-15'],
+        ['due_date', '2026-08-15', '2026-09-01'],
+        ['due_date', '2026-09-01', null],
+      ]);
+    });
+
+    it('logs a parent change on the child and on both parents', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const first = await model.create({ instruction: 'First parent' });
+      const second = await model.create({ instruction: 'Second parent' });
+      const child = await model.create({ instruction: 'Child' });
+      await createAgent('agt_parent_actor');
+      const actor = { agentId: 'agt_parent_actor', userId };
+
+      await model.updateWithLog(child.id, { parentTaskId: first.id }, actor);
+      await model.updateWithLog(child.id, { parentTaskId: second.id }, actor);
+      await model.updateWithLog(child.id, { parentTaskId: null }, actor);
+
+      const rows = async (id: string) =>
+        (await model.getActivities(id)).map((a) => [a.type, a.payload?.fromId, a.payload?.toId]);
+      expect(await rows(child.id)).toEqual([
+        ['parent', null, first.id],
+        ['parent', first.id, second.id],
+        ['parent', second.id, null],
+      ]);
+      expect(await rows(first.id)).toEqual([
+        ['sub_issue_added', undefined, child.id],
+        ['sub_issue_removed', undefined, child.id],
+      ]);
+      expect(await rows(second.id)).toEqual([
+        ['sub_issue_added', undefined, child.id],
+        ['sub_issue_removed', undefined, child.id],
+      ]);
+      // The far end is attributed exactly like the near end.
+      const [onParent] = await model.getActivities(first.id);
+      expect(onParent).toMatchObject({
+        actorAgentId: 'agt_parent_actor',
+        actorUserId: null,
+        payload: { actorKind: 'agent' },
+      });
+    });
+
+    it('records a blocking dependency on both Issues, each from its own side', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const blocked = await model.create({ instruction: 'Blocked' });
+      const blocker = await model.create({ instruction: 'Blocker' });
+
+      await model.addDependency(blocked.id, blocker.id, 'blocks', { source: 'user' });
+      // Adding the same edge again changes nothing and says nothing.
+      await model.addDependency(blocked.id, blocker.id, 'blocks', { source: 'user' });
+      await model.removeDependency(blocked.id, blocker.id, { source: 'user' });
+      // Removing an edge that is not there says nothing either.
+      await model.removeDependency(blocked.id, blocker.id, { source: 'user' });
+
+      const rows = async (id: string) =>
+        (await model.getActivities(id)).map((a) => [a.type, a.payload?.relation, a.payload?.toId]);
+      expect(await rows(blocked.id)).toEqual([
+        ['relation_added', 'blocked_by', blocker.id],
+        ['relation_removed', 'blocked_by', blocker.id],
+      ]);
+      expect(await rows(blocker.id)).toEqual([
+        ['relation_added', 'blocking', blocked.id],
+        ['relation_removed', 'blocking', blocked.id],
+      ]);
+      const [row] = await model.getActivities(blocker.id);
+      expect(row).toMatchObject({ actorUserId: userId, payload: { actorKind: 'user' } });
+    });
+
+    it('records a related link once per Issue, also when removed by its relation id', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const a = await model.create({ instruction: 'A' });
+      const b = await model.create({ instruction: 'B' });
+
+      await model.addDependency(a.id, b.id, 'relates', { source: 'user' });
+      const [relation] = await model.getIssueRelations(b.id);
+      await model.removeDependencyByRelationId(b.id, relation.id, { source: 'user' });
+
+      const rows = async (id: string) =>
+        (await model.getActivities(id)).map((x) => [x.type, x.payload?.relation, x.payload?.toId]);
+      expect(await rows(a.id)).toEqual([
+        ['relation_added', 'related', b.id],
+        ['relation_removed', 'related', b.id],
+      ]);
+      expect(await rows(b.id)).toEqual([
+        ['relation_added', 'related', a.id],
+        ['relation_removed', 'related', a.id],
+      ]);
+    });
+
+    it('attributes a relation to the acting agent or to the system, never to a person by default', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const a = await model.create({ instruction: 'A' });
+      const b = await model.create({ instruction: 'B' });
+      const c = await model.create({ instruction: 'C' });
+      await createAgent('agt_relation_actor');
+
+      await model.addDependency(a.id, b.id, 'blocks', {
+        actorAgentId: 'agt_relation_actor',
+        source: 'agent',
+      });
+      // No source: a planner or sync write, made on nobody's behalf.
+      await model.addDependency(a.id, c.id, 'blocks');
+
+      const activities = await model.getActivities(a.id);
+      expect(activities.map((x) => [x.actorAgentId, x.actorUserId, x.payload?.actorKind])).toEqual([
+        ['agt_relation_actor', null, 'agent'],
+        [null, null, 'system'],
+      ]);
+    });
+
+    it('keeps the project feed to the kinds it can word, across pages', async () => {
+      const project = await new ProjectModel(serverDB, userId).create({
+        identifier: 'PFD',
+        name: 'Feed project',
+      });
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test', projectId: project.id });
+
+      await model.updateWithLog(task.id, { name: 'Renamed' }, { userId });
+      await model.updateWithLog(task.id, { workflowCategory: 'in_progress' }, { userId });
+      await model.updateWithLog(task.id, { dueDate: '2026-08-15' }, { userId });
+      await model.updateWithLog(task.id, { priority: 2 }, { userId });
+
+      const firstPage = await model.getProjectActivities(project.id, 1);
+      const secondPage = await model.getProjectActivities(project.id, 1, firstPage.nextCursor);
+      expect(
+        [...firstPage.items, ...secondPage.items].map((item) => item.activity.type).sort(),
+      ).toEqual(['priority', 'workflow_state']);
+      expect(secondPage.nextCursor).toBeUndefined();
+      // The Issue's own feed still has all four.
+      expect(await model.getActivities(task.id)).toHaveLength(4);
+    });
+
+    it('records a created sub-issue on its parent', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const parent = await model.create({ instruction: 'Parent' });
+      const child = await model.create({ instruction: 'Child', parentTaskId: parent.id });
+
+      await model.logSubIssueAdded(parent.id, child.id, { userId });
+      // A parent that does not exist in this scope is skipped, not an error.
+      await model.logSubIssueAdded('task_missing', child.id, { userId });
+
+      const activities = await model.getActivities(parent.id);
+      expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
+        ['sub_issue_added', userId, { actorKind: 'user', toId: child.id }],
+      ]);
+    });
+
+    it('logs a duplicate mark and its removal', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const canonical = await model.create({ instruction: 'Canonical' });
+      const task = await model.create({ instruction: 'Duplicate' });
+
+      await model.updateWithLog(task.id, { duplicateOfTaskId: canonical.id }, { userId });
+      await model.updateWithLog(task.id, { duplicateOfTaskId: null }, { userId });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.payload?.fromId, a.payload?.toId])).toEqual([
+        ['duplicate', null, canonical.id],
+        ['duplicate', canonical.id, null],
+      ]);
+    });
+
+    it('logs a project change with the project names as they read at the time', async () => {
+      const projectModel = new ProjectModel(serverDB, userId);
+      const project = await projectModel.create({ identifier: 'ACT', name: 'Activity project' });
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+
+      await model.updateWithLog(task.id, { projectId: project.id }, { userId });
+      await model.updateWithLog(task.id, { projectId: null }, { userId });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.payload])).toEqual([
+        [
+          'project',
+          {
+            actorKind: 'user',
+            fromId: null,
+            fromLabel: null,
+            toId: project.id,
+            toLabel: 'Activity project',
+          },
+        ],
+        [
+          'project',
+          {
+            actorKind: 'user',
+            fromId: project.id,
+            fromLabel: 'Activity project',
+            toId: null,
+            toLabel: null,
+          },
+        ],
+      ]);
     });
 
     it('records an actorless row for a system assignment', async () => {
@@ -2460,18 +2745,117 @@ describe('TaskModel', () => {
       expect(activity.actorAgentId).toBeNull();
     });
 
-    it('logs a status change made by a person, from the locked previous value', async () => {
+    it('logs a workflow move made by a person, from the locked previous value', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Test' });
 
       const updated = await model.updateWithLog(task.id, { workflowCategory: 'done' }, { userId });
 
       expect(updated!.workflowCategory).toBe('done');
-      const [activity] = await model.getActivities(task.id);
-      expect(activity).toMatchObject({
+      // One line, in the words the board uses — not a second one repeating
+      // the move in the retired status vocabulary.
+      const activities = await model.getActivities(task.id);
+      expect(activities).toHaveLength(1);
+      expect(activities[0]).toMatchObject({
         actorUserId: userId,
-        payload: { from: 'backlog', to: 'completed' },
-        type: 'status',
+        payload: { actorKind: 'user', from: 'backlog', to: 'done' },
+        type: 'workflow_state',
+      });
+    });
+
+    it('logs a move between two open workflow categories', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+
+      // Both sides derive the same legacy status ('backlog'), which is why
+      // this move used to leave no trace at all.
+      await model.updateWithLog(task.id, { workflowCategory: 'in_progress' }, { userId });
+      await model.updateWithLog(task.id, { workflowCategory: 'in_review' }, { userId });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.payload?.from, a.payload?.to])).toEqual([
+        ['workflow_state', 'backlog', 'in_progress'],
+        ['workflow_state', 'in_progress', 'in_review'],
+      ]);
+    });
+
+    it('names the team states of a workflow move, including one inside a single category', async () => {
+      await serverDB
+        .insert(workspaces)
+        .values({ id: 'ws_flow', name: 'WS', primaryOwnerId: userId, slug: 'ws-flow' })
+        .onConflictDoNothing();
+      await seedWorkspaceReaders();
+      await serverDB
+        .insert(teams)
+        .values({ id: 'team_flow', key: 'FLW', name: 'Flow', workspaceId: 'ws_flow' });
+      const [doing, qa] = await serverDB
+        .insert(teamWorkflowStates)
+        .values([
+          { category: 'in_progress', name: 'Doing', teamId: 'team_flow', workspaceId: 'ws_flow' },
+          { category: 'in_progress', name: 'QA', teamId: 'team_flow', workspaceId: 'ws_flow' },
+        ])
+        .returning();
+      const model = new TaskModel(serverDB, userId, 'ws_flow');
+      const task = await model.create({ instruction: 'Test', teamId: 'team_flow' });
+
+      await model.updateWithLog(
+        task.id,
+        { workflowCategory: 'in_progress', workflowStateRefId: doing.id },
+        { userId },
+      );
+      // Same category, different state: only the state columns change.
+      await model.updateWithLog(task.id, { workflowStateRefId: qa.id }, { userId });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => a.payload)).toEqual([
+        {
+          actorKind: 'user',
+          from: 'backlog',
+          fromId: null,
+          fromLabel: null,
+          to: 'in_progress',
+          toId: doing.id,
+          toLabel: 'Doing',
+        },
+        {
+          actorKind: 'user',
+          from: 'in_progress',
+          fromId: doing.id,
+          fromLabel: 'Doing',
+          to: 'in_progress',
+          toId: qa.id,
+          toLabel: 'QA',
+        },
+      ]);
+    });
+
+    it('keeps the execution-side status row when the Issue itself did not move', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+
+      await model.updateWithLog(task.id, { status: 'paused' }, { userId });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.payload?.from, a.payload?.to])).toEqual([
+        ['status', 'backlog', 'paused'],
+      ]);
+    });
+
+    it('records a system workflow move without an actor, and nothing when the Issue stayed put', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+      const moved = await model.updateStatus(task.id, 'completed');
+
+      await model.logWorkflowMove(task.id, task, moved!, {});
+      await model.logWorkflowMove(task.id, moved!, moved!, {});
+
+      const activities = await model.getActivities(task.id);
+      expect(activities).toHaveLength(1);
+      expect(activities[0]).toMatchObject({
+        actorAgentId: null,
+        actorUserId: null,
+        payload: { actorKind: 'system', from: 'backlog', to: 'done' },
+        type: 'workflow_state',
       });
     });
 
@@ -4120,10 +4504,11 @@ describe('TaskModel', () => {
         type: 'assignee_user',
       });
 
+      // Two rows: the dependency itself is now recorded, plus the explicit one.
       expect(await alice.getDependencies(secret.id)).toHaveLength(1);
-      expect(await alice.getActivities(secret.id)).toHaveLength(1);
+      expect(await alice.getActivities(secret.id)).toHaveLength(2);
       expect(await bob.getDependencies(secret.id)).toHaveLength(1);
-      expect(await bob.getActivities(secret.id)).toHaveLength(1);
+      expect(await bob.getActivities(secret.id)).toHaveLength(2);
     });
 
     it('shares private-team Issue batch dependencies and dependents with active workspace members', async () => {

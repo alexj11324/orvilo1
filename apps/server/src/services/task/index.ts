@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { TASK_ASSIGNEE_PERMISSION_CODES } from '@orvilo/const/rbac';
 import type {
   TaskAssignmentKind,
-  TaskAutomationSnapshot,
   TaskContext,
   TaskDetailActivity,
   TaskDetailActivityAuthor,
@@ -41,6 +40,7 @@ import { VerifyRunModel } from '@/database/models/verifyRun';
 import {
   resolveWorkflowMove,
   workflowCategoryForLegacyStatus,
+  workflowStatePayload,
 } from '@/database/models/workflowMove';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { TaskDispatchItem } from '@/database/schemas/task';
@@ -62,6 +62,11 @@ import { TaskRunnerService } from '../taskRunner';
 import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { createTaskSchedulerModule } from '../taskScheduler';
 import { resolveTaskAcceptance } from '../verify/taskAcceptance';
+import {
+  activityLogPropertyChange,
+  collectActivityIssueIds,
+  type ReadableIssueRefs,
+} from './activityLogChange';
 import { collapseActivityLog } from './collapseActivityLog';
 
 const emptyWorkspace: WorkspaceData = { nodeMap: {}, tree: [] };
@@ -264,6 +269,21 @@ export class TaskService {
       : (createData.visibility ?? parentVisibility ?? 'public');
 
     const task = await this.createTaskWithAssigneeLock(createData, mutation);
+
+    // The parent's feed says it gained a sub-issue, credited to whoever the
+    // new Issue itself records as its creator — the same identity its own
+    // "created the issue" row shows, so the two can never disagree.
+    // Best-effort: the Issue exists and must not be reported as failed.
+    if (task.parentTaskId) {
+      try {
+        await this.taskModel.logSubIssueAdded(task.parentTaskId, task.id, {
+          agentId: task.createdByAgentId,
+          userId: task.createdByUserId,
+        });
+      } catch (error) {
+        console.error('[TaskService:createTask] failed to log sub-issue on parent', error);
+      }
+    }
 
     return task;
   }
@@ -711,6 +731,22 @@ export class TaskService {
     }
     options?.onStatusCommitted?.();
 
+    // A person's plain move is logged inside `updateWithLog`. Every other
+    // write went through an unlogged writer: the system reacting to a run
+    // (settlement, delivery review, lifecycle), or a contract-fenced move.
+    // When that moved the Issue, the feed says so — under the system's name
+    // unless the caller named who did it — otherwise an Issue arrives in
+    // In Review or Done with no trace of how. Best-effort: the transition is
+    // already committed and must not be reported as failed because its feed
+    // line could not be written.
+    if (expectedContract || !actor) {
+      try {
+        await this.taskModel.logWorkflowMove(task.id, resolved, task, actor ?? {});
+      } catch (error) {
+        console.error('[TaskService:updateStatus] failed to log workflow move', error);
+      }
+    }
+
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
     // must never break the status change itself.
@@ -967,11 +1003,9 @@ export class TaskService {
       // the interruption passes. A competing run must cross the same
       // task-status boundary, so no new execution can slip between this check
       // and the terminal status update.
+      // `locked` also carries where each Issue sits in its workflow right
+      // now — what the activity feed names as the state it is leaving.
       const locked = await taskModel.lockForStatusChange(targetIds);
-      // What each task is leaving, derived before the interrupt passes below
-      // disturb the execution rows — the activity feed logs this, not the
-      // frozen `tasks.status` column.
-      const statusBeforeById = await taskModel.derivedStatusByIds(locked.map((task) => task.id));
       const transactionRunningTopics = await taskTopicModel.findRunningByTaskIds(targetIds);
       if (transactionRunningTopics.some((topic) => !topic.operationId)) {
         throw new TRPCError({
@@ -1051,23 +1085,29 @@ export class TaskService {
       }
 
       // A person confirmed this for the whole family, so every member that
-      // moved gets its own row — one INSERT, not one per task.
+      // moved gets its own row — one INSERT, not one per task — named the way
+      // the board names the move (the team state where the Issue has one).
       if (actor) {
+        const afterById = new Map(updatedTasks.map((task) => [task.id, task]));
+        const stateNames = await taskModel.workflowStateNames(
+          [...locked, ...updatedTasks].map((task) => task.workflowStateRefId),
+        );
         const { actorKind, ...actorColumns } = taskActivityActor(actor);
         await taskModel.addActivities(
-          locked
-            .filter((before) => statusBeforeById[before.id] !== input.status)
-            .map((before) => ({
-              ...actorColumns,
-              payload: {
-                actorKind,
-                from: statusBeforeById[before.id] ?? 'backlog',
-                to: input.status,
+          locked.flatMap((before) => {
+            const after = afterById.get(before.id);
+            const payload = after && workflowStatePayload(before, after, stateNames);
+            if (!payload) return [];
+            return [
+              {
+                ...actorColumns,
+                payload: { ...payload, actorKind },
+                taskId: before.id,
+                type: 'workflow_state' as const,
+                visibility: before.visibility,
               },
-              taskId: before.id,
-              type: 'status' as const,
-              visibility: before.visibility,
-            })),
+            ];
+          }),
         );
       }
     });
@@ -1864,6 +1904,20 @@ export class TaskService {
       .findByOperations(topics.map((t) => t.operationId).filter((id): id is string => Boolean(id)))
       .catch(() => new Map());
 
+    // Other Issues named by relation / parent / duplicate rows. One lookup
+    // through the model's own read scope, so a row never names an Issue this
+    // reader could not open — it reads as "an Issue that is no longer
+    // available" instead.
+    const activityIssueIds = collectActivityIssueIds(shownLogs);
+    const activityIssueRefs: ReadableIssueRefs = new Map(
+      (activityIssueIds.length > 0
+        ? await this.taskModel.findByIds(activityIssueIds).catch(() => [])
+        : []
+      )
+        .filter((row) => !row.isDeleted && !row.deletedAt)
+        .map((row) => [row.id, { identifier: row.identifier, name: row.name }]),
+    );
+
     const creatorId = task.createdByAgentId ?? task.createdByUserId;
     const createdActivity: TaskDetailActivity | null =
       task.createdAt && creatorId
@@ -1953,7 +2007,7 @@ export class TaskService {
           type: 'comment' as const,
         };
       }),
-      ...shownLogs.map((log): TaskDetailActivity => {
+      ...shownLogs.flatMap((log): TaskDetailActivity[] => {
         const stub = (id: string, type: 'agent' | 'user'): TaskDetailActivityAuthor => ({
           id,
           name: null,
@@ -1973,27 +2027,27 @@ export class TaskService {
               : // Genuinely nobody: the runner's system fallback.
                 undefined;
 
-        if (log.type === 'status' || log.type === 'priority' || log.type === 'automation') {
-          const from = log.payload?.from ?? null;
-          const to = log.payload?.to ?? null;
-          const propertyChange: NonNullable<TaskDetailActivity['propertyChange']> =
-            log.type === 'status'
-              ? { field: 'status', from: from as TaskStatus | null, to: to as TaskStatus }
-              : log.type === 'priority'
-                ? { field: 'priority', from: from as number | null, to: to as number | null }
-                : {
-                    field: 'automation',
-                    from: from as TaskAutomationSnapshot | null,
-                    to: to as TaskAutomationSnapshot | null,
-                  };
-          return {
-            author,
-            id: log.id,
-            propertyChange,
-            time: toISO(log.createdAt),
-            type: 'property',
-          };
+        const propertyChange = activityLogPropertyChange(log, activityIssueRefs);
+        if (propertyChange) {
+          return [
+            {
+              author,
+              id: log.id,
+              propertyChange,
+              time: toISO(log.createdAt),
+              type: 'property',
+            },
+          ];
         }
+        // A kind this build cannot describe (written by a newer server, or a
+        // malformed payload) is left out rather than dressed up as an
+        // assignment it never was.
+        if (
+          log.type !== 'assignee_agent' &&
+          log.type !== 'assignee_user' &&
+          log.type !== 'reviewer'
+        )
+          return [];
 
         const kind: TaskAssignmentKind =
           log.type === 'assignee_agent' ? 'agent' : log.type === 'reviewer' ? 'reviewer' : 'member';
@@ -2006,17 +2060,19 @@ export class TaskService {
           if (!id) return null;
           return authorMap.get(id) ?? stub(id, kind === 'agent' ? 'agent' : 'user');
         };
-        return {
-          assignment: {
-            from: resolveSide(log.payload?.fromId),
-            kind,
-            to: resolveSide(log.payload?.toId),
+        return [
+          {
+            assignment: {
+              from: resolveSide(log.payload?.fromId),
+              kind,
+              to: resolveSide(log.payload?.toId),
+            },
+            author,
+            id: log.id,
+            time: toISO(log.createdAt),
+            type: 'assignment' as const,
           },
-          author,
-          id: log.id,
-          time: toISO(log.createdAt),
-          type: 'assignment' as const,
-        };
+        ];
       }),
     ].sort((a, b) => {
       if (!a.time) return 1;

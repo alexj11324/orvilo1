@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   findByOperationId: vi.fn(),
   findByTopicId: vi.fn(),
   listWorkflowStates: vi.fn(),
+  logWorkflowMove: vi.fn(),
   resolveTaskReviewRequirement: vi.fn(),
   updateStatus: vi.fn(),
   updateStatusForExecutionContract: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock('@/database/models/task', () => ({
     return {
       findById: mocks.findById,
       hasUnresolvedInput: mocks.hasUnresolvedInput,
+      logWorkflowMove: mocks.logWorkflowMove,
       resolveTaskReviewRequirement: mocks.resolveTaskReviewRequirement,
       updateStatus: mocks.updateStatus,
       updateStatusForExecutionContract: mocks.updateStatusForExecutionContract,
@@ -101,6 +103,29 @@ describe('settleTaskExecution', () => {
       'completed',
       expect.objectContaining({ workflowCategory: 'done' }),
     );
+  });
+
+  it('records the settlement move in the Issue feed as the system, never as a person', async () => {
+    const before = runningTask();
+    const after = { id: 'task-1', workflowCategory: 'done' };
+    mocks.findById.mockResolvedValue(before);
+    mocks.updateStatus.mockResolvedValue(after);
+
+    await settle({ outcome: 'succeeded' });
+
+    expect(mocks.logWorkflowMove).toHaveBeenCalledTimes(1);
+    expect(mocks.logWorkflowMove).toHaveBeenCalledWith('task-1', before, after, {});
+  });
+
+  it('still settles when the feed line cannot be written', async () => {
+    mocks.logWorkflowMove.mockRejectedValueOnce(new Error('insert failed'));
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await settle({ outcome: 'succeeded' });
+
+    expect(result).toMatchObject({ applied: true, workflowCategory: 'done' });
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
   });
 
   it('keeps a terminal run with unanswered input open and persists its parked reason', async () => {

@@ -22,6 +22,7 @@ import { BriefModel } from '@/database/models/brief';
 import { CredentialModel } from '@/database/models/credential';
 import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
 import {
+  taskActivityActor,
   TaskHandoffRequiredError,
   TaskModel,
   TaskRevisionConflictError,
@@ -68,6 +69,7 @@ import { automationResultWebhookConfigSchema } from '@/server/services/automatio
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
+import { acceptancePolicyChanged } from '@/server/services/task/activityLogChange';
 import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
 import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
@@ -780,6 +782,16 @@ async function lockParentWrite(
   }
 }
 
+/**
+ * Mutation context for a relation write. The agent is named only from
+ * `ctx.actingAgentId` — set by trusted server callers, never by a request —
+ * so the feed row credits the agent that made the change, not its owner.
+ */
+const relationMutation = (ctx: { actingAgentId?: string | null }) => ({
+  ...(ctx.actingAgentId ? { actorAgentId: ctx.actingAgentId } : {}),
+  source: 'user' as const,
+});
+
 async function resolveSafeParentTaskId(
   model: TaskModel,
   taskId: string,
@@ -1152,7 +1164,7 @@ export const taskRouter = router({
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
         const dep = await resolveOrThrow(model, input.dependsOnId);
-        await model.addDependency(task.id, dep.id, input.type, { source: 'user' });
+        await model.addDependency(task.id, dep.id, input.type, relationMutation(ctx));
         return { message: 'Dependency added', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -2009,7 +2021,11 @@ export const taskRouter = router({
         const model = ctx.taskModel;
         const task = await resolveOrThrow(model, input.taskId);
         if (input.relationId) {
-          await model.removeDependencyByRelationId(task.id, input.relationId, { source: 'user' });
+          await model.removeDependencyByRelationId(
+            task.id,
+            input.relationId,
+            relationMutation(ctx),
+          );
           return { message: 'Dependency removed', success: true };
         }
         if (!input.dependsOnId) {
@@ -2031,7 +2047,7 @@ export const taskRouter = router({
         ) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Relation not found' });
         }
-        await model.removeDependency(task.id, depId, { source: 'user' }, input.type);
+        await model.removeDependency(task.id, depId, relationMutation(ctx), input.type);
         return { message: 'Dependency removed', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -2275,6 +2291,29 @@ export const taskRouter = router({
         });
         if (!updated) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Acceptance policy not found' });
+        }
+        // What an agent's work is accepted against changed: the Issue's feed
+        // says who changed it. Best-effort — the policy is already saved and
+        // must not be reported as failed because its feed line could not be.
+        if (
+          acceptancePolicyChanged(
+            { config: acceptance.config, requirement: acceptance.requirement },
+            { config: nextConfig, requirement },
+          )
+        ) {
+          try {
+            const { actorKind, ...actorColumns } = taskActivityActor(
+              await resolveActivityActor(ctx),
+            );
+            await model.addActivity({
+              ...actorColumns,
+              payload: { actorKind },
+              taskId: task.id,
+              type: 'verify_config',
+            });
+          } catch (error) {
+            console.error('[task:updateVerifyConfig] failed to log activity', error);
+          }
         }
         const data: TaskVerifyConfig = {
           ...(nextConfig as TaskVerifyConfig),

@@ -15,7 +15,7 @@ const styles = {
   bordered:
     'overflow-hidden rounded-(--radius-card) border border-divider [@media(width<=575.98px)]:bg-card',
   cell: 'overflow-hidden [box-shadow:0_0_0_0.5px_var(--divider)]',
-  label: 'overflow-hidden border-e border-divider bg-muted',
+  label: 'overflow-hidden border-e border-divider bg-fill-quaternary',
 };
 
 export interface DescriptionItem {

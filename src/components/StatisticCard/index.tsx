@@ -103,7 +103,7 @@ const StatisticCard = memo<StatisticCardProps>(
             border: '1px solid var(--divider)',
             borderRadius: 'var(--radius-card)',
           }),
-          ...(variant === 'filled' && { background: 'var(--muted)' }),
+          ...(variant === 'filled' && { background: 'var(--fill-quaternary)' }),
           padding,
           paddingBlock,
           paddingInline,

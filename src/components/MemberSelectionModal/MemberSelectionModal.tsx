@@ -2,8 +2,7 @@
 
 import { agentDisplayName } from '@orvilo/types';
 import { useHover } from 'ahooks';
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { SearchIcon, X } from 'lucide-react';
 import { type ChangeEvent } from 'react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
@@ -43,7 +42,11 @@ const AvailableAgentItem = memo<{
   if (!_agentId) return null;
 
   return (
-    <div className={cx(styles.listItem)} ref={ref} onClick={() => onToggle(_agentId)}>
+    <div
+      className={cx(styles.listItem, isSelected ? styles.selectedItem : 'hover:bg-accent')}
+      ref={ref}
+      onClick={() => onToggle(_agentId)}
+    >
       <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
@@ -54,11 +57,11 @@ const AvailableAgentItem = memo<{
             e.stopPropagation();
           }}
         />
-        <div className={'flex flex-col'} style={{ flexShrink: 0 }}>
+        <div className={'flex flex-none flex-col'}>
           <Avatar animation={isHovering} avatar={avatar} background={avatarBackground} size={40} />
         </div>
-        <div className={'flex flex-1 flex-col'} style={{ gap: 2, minWidth: 0 }}>
-          <div className={cn('font-medium', styles.title)}>{title}</div>
+        <div className={'flex min-w-0 flex-1 flex-col gap-0.5'}>
+          <div className={styles.title}>{title}</div>
           {description && (
             <div className={cn('truncate min-w-0', styles.description)}>{description}</div>
           )}
@@ -68,63 +71,17 @@ const AvailableAgentItem = memo<{
   );
 });
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    display: flex;
-    flex-direction: row;
-
-    height: 500px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-  `,
-  description: css`
-    font-size: 11px;
-    line-height: 1.2;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  hostCard: css`
-    margin-block-end: ${cssVar.paddingSM};
-    padding: ${cssVar.padding};
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  leftColumn: css`
-    user-select: none;
-
-    overflow-y: auto;
-    flex: 1;
-
-    padding-block: ${cssVar.paddingSM} 0;
-    padding-inline: ${cssVar.paddingSM};
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  listItem: css`
-    cursor: pointer;
-
-    position: relative;
-
-    margin-block: 2px;
-    padding: ${cssVar.paddingSM} !important;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  rightColumn: css`
-    overflow-y: auto;
-    flex: 1;
-    padding: ${cssVar.paddingSM};
-  `,
-  selectedItem: css`
-    opacity: 0.6;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  container: 'flex h-125 flex-row rounded-(--radius-card) border border-divider',
+  description: 'text-xs leading-5 text-muted-foreground',
+  hostCard: 'mbe-3 rounded-(--radius-card) border border-divider bg-muted p-4',
+  leftColumn: 'flex-1 select-none overflow-y-auto border-e border-divider px-3 pbs-3 pbe-0',
+  listItem:
+    'relative my-0.5 cursor-pointer rounded-(--radius-card) p-3 transition-[background-color] duration-(--orvilo-motion-mid) ease-[ease]',
+  rightColumn: 'flex-1 overflow-y-auto p-3',
+  selectedItem: 'bg-selected hover:bg-selected',
+  title: 'text-sm leading-5.5 font-semibold',
+};
 
 export type MemberSelectionMode = 'create' | 'add';
 
@@ -255,9 +212,9 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
             actions: (
               <ActionIcon
                 aria-label={t('remove', { ns: 'common' })}
+                className="text-muted-foreground"
                 icon={X}
-                size="small"
-                style={{ color: '#999' }}
+                size={{ blockSize: 28, borderRadius: 6, size: 14 }}
                 onClick={() => handleRemoveAgent(agentId)}
               />
             ),
@@ -318,11 +275,18 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
         allowFullscreen
         open={open}
         title={modalTitle}
-        width={800}
+        width={1024}
         footer={
           <div className={'flex gap-2 justify-end'}>
-            <Button onClick={handleCancel}>{t('cancel', { ns: 'common' })}</Button>
-            <Button disabled={isConfirmDisabled} loading={isAdding} onClick={handleConfirm}>
+            <Button size="lg" onClick={handleCancel}>
+              {t('cancel', { ns: 'common' })}
+            </Button>
+            <Button
+              disabled={isConfirmDisabled}
+              loading={isAdding}
+              size="lg"
+              onClick={handleConfirm}
+            >
               {confirmButtonText} ({totalMemberCount})
             </Button>
           </div>
@@ -347,7 +311,7 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
               />
             </div>
 
-            <div className={'flex flex-1 flex-col'} style={{ overflowY: 'auto' }}>
+            <div className={'flex flex-1 flex-col overflow-y-auto'}>
               {filteredAvailableAgents.length === 0 ? (
                 <AgentSelectionEmpty
                   search={Boolean(searchTerm)}
@@ -384,19 +348,11 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
               {/* Host Card - Only show in create mode or when host is disabled in add mode */}
               {!isHostCurrentlyEnabled && (
                 <div className={cn('flex gap-3 items-center', styles.hostCard)}>
-                  <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
-                    <div
-                      className={isHostRemoved ? 'text-muted-foreground' : undefined}
-                      style={{ fontSize: 14, fontWeight: 500 }}
-                    >
+                  <div className={'flex flex-1 flex-col gap-0.5'}>
+                    <div className={cn(styles.title, isHostRemoved && 'text-muted-foreground')}>
                       {t('groupWizard.host.title')}
                     </div>
-                    <div
-                      className={isHostRemoved ? 'text-muted-foreground' : undefined}
-                      style={{ color: isHostRemoved ? undefined : '#999', fontSize: 12 }}
-                    >
-                      {t('groupWizard.host.description')}
-                    </div>
+                    <div className={styles.description}>{t('groupWizard.host.description')}</div>
                   </div>
                   <div className={'flex gap-3 items-center'}>
                     <Tooltip>
@@ -423,8 +379,8 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
                       <div className={'flex items-center gap-3 py-2'} key={item.key}>
                         {item.avatar}
                         <div className={'flex flex-1 flex-col'}>
-                          {item.title}
-                          {item.description}
+                          <span className={styles.title}>{item.title}</span>
+                          <span className={styles.description}>{item.description}</span>
                         </div>
                         {item.showAction !== false && item.actions}
                       </div>

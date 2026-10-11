@@ -1,7 +1,7 @@
 'use client';
 
 import { createGlobalStyle, createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx } from 'cn';
 import { memo, type ReactNode } from 'react';
 
 /**
@@ -18,10 +18,6 @@ const BorderAngleProperty = createGlobalStyle`
 `;
 
 const styles = createStaticStyles(({ css }) => ({
-  shell: css`
-    position: relative;
-    border-radius: 8px;
-  `,
   // `overflow: hidden` belongs to the generating state only: on the resting
   // shell it clips the wrapped input's own focus glow while the user types.
   shellGenerating: css`
@@ -100,10 +96,12 @@ const GeneratingBorder = memo<GeneratingBorderProps>(
     <>
       <BorderAngleProperty />
       <div
+        data-slot="generating-border"
         style={{ ...style }}
-        className={cn(
-          'flex flex-col',
-          [styles.shell, generating && styles.shellGenerating, className].filter(Boolean).join(' '),
+        className={cx(
+          'relative flex flex-col rounded-(--radius-card)',
+          generating && styles.shellGenerating,
+          className,
         )}
       >
         {children}

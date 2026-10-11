@@ -1,7 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { omit } from 'es-toolkit/compat';
 import { SearchIcon, Users } from 'lucide-react';
 import { type ChangeEvent, type ReactNode } from 'react';
@@ -41,7 +40,13 @@ const TemplateItem = memo<{
   const { t } = useTranslation('chat');
 
   return (
-    <div className={cx(styles.listItem)} onClick={() => onToggle(template.id)}>
+    <div
+      className={cx(
+        styles.listItem,
+        isSelected ? 'bg-selected hover:bg-selected' : 'hover:bg-accent',
+      )}
+      onClick={() => onToggle(template.id)}
+    >
       <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
@@ -57,12 +62,12 @@ const TemplateItem = memo<{
               background: member.backgroundColor || undefined,
             }))}
         />
-        <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
+        <div className={'flex flex-1 flex-col gap-0.5'}>
           <div className={cn(styles.title)}>{template.title}</div>
           <div className={cn('truncate min-w-0', styles.description)}>{template.description}</div>
           <div className={'flex gap-1 items-center'}>
-            <Users size={11} style={{ color: '#999' }} />
-            <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+            <Users className="text-muted-foreground" size={11} />
+            <div className="text-xs leading-5 text-muted-foreground">
               {t('groupWizard.memberCount', {
                 count: template.members.filter((member) => member !== null && member !== undefined)
                   .length,
@@ -92,7 +97,13 @@ const ExistingMemberItem = memo<{
   if (!agentId) return null;
 
   return (
-    <div className={cx(styles.listItem)} onClick={() => onToggle(agentId)}>
+    <div
+      className={cx(
+        styles.listItem,
+        isSelected ? 'bg-selected hover:bg-selected' : 'hover:bg-accent',
+      )}
+      onClick={() => onToggle(agentId)}
+    >
       <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
@@ -100,7 +111,7 @@ const ExistingMemberItem = memo<{
           onClick={(e) => e.stopPropagation()}
         />
         <Avatar avatar={avatar} background={avatarBackground} size={40} />
-        <div className={'flex flex-1 flex-col'} style={{ gap: 2, minWidth: 0 }}>
+        <div className={'flex min-w-0 flex-1 flex-col gap-0.5'}>
           <div className={cn(styles.title)}>{title}</div>
           {description && (
             <div className={cn('truncate min-w-0', styles.description)}>{description}</div>
@@ -111,74 +122,18 @@ const ExistingMemberItem = memo<{
   );
 });
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    display: flex;
-    flex-direction: row;
-
-    height: 500px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-  `,
-  description: css`
-    font-size: 12px;
-    line-height: 1.2;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  hostCard: css`
-    margin-block-start: ${cssVar.paddingSM};
-    margin-inline: ${cssVar.paddingSM};
-    padding: ${cssVar.padding};
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  leftColumn: css`
-    user-select: none;
-
-    overflow-y: auto;
-    flex: 1;
-
-    padding: 0;
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  listHeader: css`
-    padding: 0;
-    color: ${cssVar.colorTextDescription};
-  `,
-  listItem: css`
-    cursor: pointer;
-
-    position: relative;
-
-    margin-block: 2px;
-    padding: ${cssVar.paddingSM} !important;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  memberDescription: css`
-    display: block;
-    padding-inline-end: 48px;
-  `,
-  rightColumn: css`
-    overflow-y: auto;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    padding: 0;
-  `,
-  title: css`
-    font-size: 14px;
-    font-weight: 500;
-  `,
-}));
+const styles = {
+  container: 'flex h-125 flex-row rounded-(--radius-card) border border-divider',
+  description: 'text-xs leading-5 text-muted-foreground',
+  hostCard: 'mx-3 mbs-3 rounded-(--radius-card) border border-divider bg-muted p-4',
+  leftColumn: 'flex-1 select-none overflow-y-auto border-e border-divider p-0',
+  listHeader: 'p-0 text-foreground-description',
+  listItem:
+    'relative my-0.5 cursor-pointer rounded-(--radius-card) p-3 transition-[background-color] duration-(--orvilo-motion-mid) ease-[ease]',
+  memberDescription: 'block pe-12',
+  rightColumn: 'flex flex-1 flex-col overflow-y-auto p-0',
+  title: 'text-sm leading-5.5 font-semibold',
+};
 
 export interface ChatGroupWizardProps {
   /**
@@ -501,11 +456,18 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
       <ImperativeModal
         open={open}
         title={t('groupWizard.title')}
-        width={900}
+        width={1024}
         footer={
           <div className={'flex gap-2 justify-end'}>
-            <Button onClick={handleCancel}>{t('cancel', { ns: 'common' })}</Button>
-            <Button disabled={confirmDisabled} loading={confirmLoading} onClick={handleConfirm}>
+            <Button size="lg" onClick={handleCancel}>
+              {t('cancel', { ns: 'common' })}
+            </Button>
+            <Button
+              disabled={confirmDisabled}
+              loading={confirmLoading}
+              size="lg"
+              onClick={handleConfirm}
+            >
               {t('groupWizard.createGroup')}
             </Button>
           </div>
@@ -514,10 +476,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
       >
         <div className={cn('flex', styles.container)}>
           <div className={cn('flex flex-col gap-3 flex-1', styles.leftColumn)}>
-            <div
-              className={'relative'}
-              style={{ margin: `${cssVar.paddingSM} ${cssVar.paddingSM} 0 ${cssVar.paddingSM}` }}
-            >
+            <div className={'relative mx-3 mbs-3 mbe-0'}>
               <SearchIcon
                 className={
                   'text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2'
@@ -531,22 +490,19 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                 onChange={handleSearchChange}
               />
             </div>
-            <div
-              className={'flex flex-1 flex-col'}
-              style={{ overflowY: 'auto', padding: `0 ${cssVar.paddingSM}` }}
-            >
+            <div className={'flex flex-1 flex-col overflow-y-auto px-3 py-0'}>
               <Accordion value={[activePanel]} onValueChange={handlePanelChange}>
                 {(
                   [
                     {
                       children:
                         filteredTemplates.length === 0 ? (
-                          <Empty style={{ maxWidth: 400 }}>
+                          <Empty className="max-w-100">
                             <EmptyHeader>
                               <EmptyMedia variant={'icon'}>
                                 <Users />
                               </EmptyMedia>
-                              <EmptyDescription style={{ fontSize: 14 }}>
+                              <EmptyDescription className="text-sm leading-5.5">
                                 {searchTerm
                                   ? t('groupWizard.noMatchingTemplates')
                                   : t('groupWizard.noTemplates')}
@@ -573,12 +529,12 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                     {
                       children:
                         filteredAgents.length === 0 ? (
-                          <Empty style={{ maxWidth: 400 }}>
+                          <Empty className="max-w-100">
                             <EmptyHeader>
                               <EmptyMedia variant={'icon'}>
                                 <Users />
                               </EmptyMedia>
-                              <EmptyDescription style={{ fontSize: 14 }}>
+                              <EmptyDescription className="text-sm leading-5.5">
                                 {searchTerm
                                   ? t('noMatchingAgents', { ns: 'chat' })
                                   : t('noAvailableAgents', { ns: 'chat' })}
@@ -614,21 +570,13 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
           </div>
 
           <div className={cn('flex flex-1 flex-col', styles.rightColumn)}>
-            <div className={'flex flex-col gap-4 flex-1'} style={{ overflowY: 'auto' }}>
+            <div className={'flex flex-1 flex-col gap-4 overflow-y-auto'}>
               <div className={cn('flex gap-3 items-center', styles.hostCard)}>
-                <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
-                  <div
-                    className={isHostRemoved ? 'text-muted-foreground' : undefined}
-                    style={{ fontSize: 14, fontWeight: 500 }}
-                  >
+                <div className={'flex flex-1 flex-col gap-0.5'}>
+                  <div className={cn(styles.title, isHostRemoved && 'text-muted-foreground')}>
                     {t('groupWizard.host.title')}
                   </div>
-                  <div
-                    className={isHostRemoved ? 'text-muted-foreground' : undefined}
-                    style={{ color: isHostRemoved ? undefined : '#999', fontSize: 12 }}
-                  >
-                    {t('groupWizard.host.description')}
-                  </div>
+                  <div className={styles.description}>{t('groupWizard.host.description')}</div>
                 </div>
                 <div className={'flex gap-3 items-center'}>
                   <Tooltip>
@@ -644,7 +592,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                 </div>
               </div>
 
-              <div className={'flex flex-col'} style={{ padding: `0 ${cssVar.paddingSM}` }}>
+              <div className={'flex flex-col px-3 py-0'}>
                 {selectedTemplate ? (
                   templateMemberItems.length > 0 ? (
                     <div className={'flex w-full flex-col'}>
@@ -693,7 +641,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                         .map((item) => (
                           <div className={'flex items-center gap-3 py-2'} key={item.key}>
                             {item.avatar}
-                            <div className={'flex flex-1 flex-col'}>
+                            <div className={'flex flex-1 flex-col text-sm leading-5.5'}>
                               {item.title}
                               {item.description}
                             </div>
@@ -702,12 +650,12 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                         ))}
                     </div>
                   ) : (
-                    <Empty style={{ maxWidth: 400 }}>
+                    <Empty className="max-w-100">
                       <EmptyHeader>
                         <EmptyMedia variant={'icon'}>
                           <Users />
                         </EmptyMedia>
-                        <EmptyDescription style={{ fontSize: 14 }}>
+                        <EmptyDescription className="text-sm leading-5.5">
                           {t('groupWizard.noTemplateMembers')}
                         </EmptyDescription>
                       </EmptyHeader>
@@ -718,7 +666,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                     {selectedAgentListItems.map((item) => (
                       <div className={'flex items-center gap-3 py-2'} key={item.key}>
                         {item.avatar}
-                        <div className={'flex flex-1 flex-col'}>
+                        <div className={'flex flex-1 flex-col text-sm leading-5.5'}>
                           {item.title}
                           {item.description}
                         </div>
@@ -727,12 +675,12 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                     ))}
                   </div>
                 ) : (
-                  <Empty style={{ maxWidth: 400 }}>
+                  <Empty className="max-w-100">
                     <EmptyHeader>
                       <EmptyMedia variant={'icon'}>
                         <Users />
                       </EmptyMedia>
-                      <EmptyDescription style={{ fontSize: 14 }}>
+                      <EmptyDescription className="text-sm leading-5.5">
                         {t('memberSelection.noSelectedAgents')}
                       </EmptyDescription>
                     </EmptyHeader>

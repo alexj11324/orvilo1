@@ -5,24 +5,8 @@ import { createStaticStyles, cssVar } from 'antd-style';
  * emits (`.cm-editor.cm-editor`) so these rules win regardless of which style
  * sheet the browser inserted last.
  */
-export const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    width: 100%;
-    height: 100%;
-
-    background: ${cssVar.colorBgContainer};
-
-    .cm-textarea {
-      height: 0;
-      opacity: 0;
-    }
-  `,
-
-  editorArea: css`
+const editorAreaStyle = createStaticStyles(
+  ({ css }) => css`
     overflow: hidden;
     flex: 1;
     min-height: 0;
@@ -173,4 +157,10 @@ export const styles = createStaticStyles(({ css }) => ({
       background: ${cssVar.colorFillTertiary};
     }
   `,
-}));
+);
+
+export const styles = {
+  container:
+    'flex h-full w-full flex-col overflow-hidden bg-card [&_.cm-textarea]:h-0 [&_.cm-textarea]:opacity-0',
+  editorArea: editorAreaStyle,
+};

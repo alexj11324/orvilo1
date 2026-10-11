@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import fastDeepEqual from 'fast-deep-equal';
 import { LucidePlus, LucideTrash } from 'lucide-react';
@@ -14,31 +13,12 @@ import { Button } from '@/components/ui/button';
 import { type KeyValueItem } from './utils';
 import { localListToRecord, recordToLocalList } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    position: relative;
-
-    width: 100%;
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  input: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-  `,
-  row: css`
-    margin-block-end: 8px;
-
-    &:last-child {
-      margin-block-end: 0;
-    }
-  `,
-  title: css`
-    margin-block-end: 8px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  container: 'relative w-full rounded-(--radius-card) border border-divider p-4',
+  input: 'font-mono text-sm leading-5.5',
+  row: 'mbe-2 last:mbe-0',
+  title: 'mbe-2 text-sm leading-5.5 text-foreground-tertiary',
+};
 
 export interface KeyValueEditorProps {
   addButtonText?: string;
@@ -145,21 +125,17 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
           <div className={'flex flex-1 flex-col'}>
             {keyPlaceholder || t('KeyValueEditor.keyPlaceholder')}
           </div>
-          <div className={'flex flex-col'} style={{ flex: 2 }}>
+          <div className={'flex flex-2 flex-col'}>
             {valuePlaceholder || t('KeyValueEditor.valuePlaceholder')}
           </div>
-          <div className="flex flex-col" style={{ width: 30 }} />
+          <div className="flex w-9 flex-col" />
         </div>
-        <div className={'flex flex-col'} style={{ width: '100%' }}>
+        <div className={'flex w-full flex-col'}>
           {items.map((item) => {
             const isDuplicate = item.key.trim() && duplicateKeys.has(item.key.trim());
             return (
-              <div
-                className={cn('flex items-start gap-2', styles.row)}
-                key={item.id}
-                style={{ width: '100%' }}
-              >
-                <div className={'flex flex-1 flex-col'} style={{ position: 'relative' }}>
+              <div className={cn('flex w-full items-start gap-2', styles.row)} key={item.id}>
+                <div className={'relative flex flex-1 flex-col'}>
                   <FormInput
                     className={styles.input}
                     disabled={disabled}
@@ -170,19 +146,12 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
                     onChange={(e) => handleKeyChange(item.id, e)}
                   />
                   {isDuplicate && (
-                    <div
-                      style={{
-                        bottom: '-16px',
-                        color: 'red',
-                        fontSize: '12px',
-                        position: 'absolute',
-                      }}
-                    >
+                    <div className="mt-1 text-xs leading-5 text-destructive-text">
                       {duplicateKeyErrorText || t('KeyValueEditor.duplicateKeyError')}
                     </div>
                   )}
                 </div>
-                <div className={'flex flex-col'} style={{ flex: 2 }}>
+                <div className={'flex flex-2 flex-col'}>
                   <FormInput
                     className={styles.input}
                     disabled={disabled}
@@ -195,8 +164,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
                 <ActionIcon
                   disabled={disabled}
                   icon={LucideTrash}
-                  size={'small'}
-                  style={{ marginTop: 4 }}
+                  size={{ blockSize: 36, borderRadius: 8, size: 14 }}
                   title={deleteTooltip || t('KeyValueEditor.deleteTooltip')}
                   onClick={() => handleRemove(item.id)}
                 />
@@ -204,10 +172,9 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
             );
           })}
           <Button
-            className="w-full border-dashed"
+            className={cn('w-full border-dashed', items.length > 0 ? 'mt-4' : 'mt-2')}
             disabled={disabled}
-            size="sm"
-            style={{ marginTop: items.length > 0 ? 16 : 8 }}
+            size="lg"
             variant="outline"
             onClick={handleAdd}
           >

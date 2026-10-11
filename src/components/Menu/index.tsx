@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import {
   createElement,
   type CSSProperties,
@@ -18,64 +18,15 @@ export type MenuItemType = ActionMenuItem;
 
 export type { MenuInfo };
 
-const styles = createStaticStyles(({ css }) => ({
-  compact: css`
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  `,
-  item: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-
-    height: unset;
-    min-height: 2rem;
-    padding-block: 0.375rem;
-    padding-inline: 0.75rem;
-    border-radius: 8px;
-
-    line-height: 2;
-
-    &:hover {
-      background: var(--ant-color-fill-tertiary);
-    }
-  `,
-  groupLabel: css`
-    padding-block: 0.375rem;
-    padding-inline: 0.75rem;
-    font-size: 12px;
-    color: var(--ant-color-text-tertiary);
-  `,
-  icon: css`
-    display: inline-flex;
-    color: var(--ant-color-text-secondary);
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  `,
-  label: css`
-    flex: 1;
-    min-width: 0;
-  `,
-  menu: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    background: transparent;
-  `,
-  selected: css`
-    background: var(--ant-color-fill-secondary);
-
-    &:hover {
-      background: var(--ant-color-fill-secondary);
-    }
-  `,
-}));
+const styles = {
+  compact: 'flex flex-col gap-0.5',
+  item: 'flex h-auto cursor-pointer items-center gap-3 rounded-(--radius-button) px-3 text-sm leading-5.5',
+  groupLabel: 'px-3 py-1.5 text-xs leading-5 text-foreground-tertiary',
+  icon: 'inline-flex text-muted-foreground [&_svg]:size-4',
+  label: 'min-w-0 flex-1',
+  menu: 'flex flex-1 flex-col bg-transparent',
+  selected: 'bg-selected hover:bg-selected',
+};
 
 export interface MenuProps {
   className?: string;
@@ -121,10 +72,10 @@ const renderItems = (
         className={cx(
           styles.item,
           CLICKABLE_FOCUS_RING,
-          selected && styles.selected,
-          item.danger && 'text-destructive-text',
+          selected ? styles.selected : 'hover:bg-accent',
+          item.danger ? 'text-destructive-text' : 'text-foreground',
           item.disabled && 'opacity-50 pointer-events-none',
-          props.compact ? 'min-h-8 py-1' : undefined,
+          props.compact ? 'min-h-8 py-1' : 'min-h-9 py-1.5',
         )}
         onKeyDown={clickable ? activateOnKey : undefined}
         onClick={(event: SyntheticEvent) => {

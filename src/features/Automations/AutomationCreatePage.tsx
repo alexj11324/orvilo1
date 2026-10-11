@@ -183,6 +183,7 @@ const AutomationCreatePage = memo(() => {
           <Button
             disabled={!canCreate}
             loading={submitting}
+            size="compact"
             title={canCreate ? undefined : reason}
             variant="outline"
             onClick={submit}

@@ -207,7 +207,7 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
       <div className="flex flex-col gap-6 px-6" style={{ paddingBlock: '16px 24px' }}>
         {/* Header: Start Blank + Close */}
         <div className="flex items-center gap-1 justify-end">
-          <Button variant="ghost" onClick={handleCreateBlank}>
+          <Button size="compact" variant="ghost" onClick={handleCreateBlank}>
             <PencilLineIcon data-icon="inline-start" size={14} />
             {t('createModal.createBlank')}
           </Button>

@@ -244,9 +244,11 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
         disabled={disabled}
         placeholder={t('settingAgent.name.placeholder', { ns: 'setting' })}
         value={localTitle}
+        visualSize="large"
         style={{
-          fontSize: 36,
+          fontSize: 30,
           fontWeight: 600,
+          lineHeight: '36px',
           padding: 0,
           width: '100%',
         }}

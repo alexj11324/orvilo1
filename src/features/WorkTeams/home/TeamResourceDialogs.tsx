@@ -30,18 +30,18 @@ const styles = createStaticStyles(({ css }) => ({
   field: css`
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
 
     label {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 500;
     }
 
     input {
-      height: 34px;
+      height: 36px;
       padding-inline: 10px;
       border: 1px solid ${cssVar.colorBorder};
-      border-radius: 7px;
+      border-radius: var(--radius-input);
 
       color: ${cssVar.colorText};
 

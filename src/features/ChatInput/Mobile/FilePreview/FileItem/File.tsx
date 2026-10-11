@@ -10,11 +10,11 @@ import UploadDetail from '@/features/ChatInput/components/UploadDetail';
 import { type UploadFileItem } from '@/types/files';
 
 const styles = {
-  actions: 'absolute top-0 end-0',
+  actions: 'flex-none self-start',
   container:
-    'cursor-pointer relative overflow-hidden w-62.5 h-16 py-1 ps-2 pe-6 border border-border rounded-(--radius-card) bg-accent',
+    'cursor-pointer relative overflow-hidden w-62.5 h-16 py-1 px-2 border border-border rounded-(--radius-card) bg-accent',
   deleteButton:
-    'text-white hover:text-white active:text-white bg-(--ant-color-bg-mask) hover:bg-destructive',
+    'text-foreground hover:bg-destructive-wash hover:text-destructive-text active:text-destructive-text',
 };
 
 interface FileItemProps extends UploadFileItem {
@@ -28,8 +28,8 @@ const FileItem = memo<FileItemProps>(
     return (
       <div className={cn('flex flex-row items-center gap-3', styles.container)} key={id}>
         <FileIcon fileName={file.name} fileType={file.type} />
-        <div className="flex flex-col" style={{ overflow: 'hidden' }}>
-          <div className="truncate">{file.name}</div>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="truncate text-sm leading-5.5">{file.name}</div>
           <UploadDetail
             error={error}
             size={file.size}
@@ -46,7 +46,7 @@ const FileItem = memo<FileItemProps>(
               aria-label={tCommon('refresh')}
               className={styles.deleteButton}
               icon={RotateCw}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onRetry?.();
@@ -57,7 +57,7 @@ const FileItem = memo<FileItemProps>(
             aria-label={tCommon('delete')}
             className={styles.deleteButton}
             icon={Trash}
-            size={'small'}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             onClick={(e) => {
               e.stopPropagation();
               onRemove?.();

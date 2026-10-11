@@ -1,7 +1,6 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CheckIcon, ChevronDownIcon, SquircleDashed } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
@@ -18,92 +17,22 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { SimpleTooltip } from '../SimpleTooltip';
 
-const styles = createStaticStyles(({ css }) => ({
-  button: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    transition: background 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  buttonDisabled: css`
-    cursor: not-allowed;
-    opacity: 0.5;
-
-    &:hover {
-      background: transparent;
-    }
-  `,
-  checkIndicator: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border: 1.5px solid ${cssVar.colorBorder};
-    border-radius: 4px;
-  `,
-  checkIndicatorChecked: css`
-    border-color: ${cssVar.colorPrimary};
-    color: #fff;
-    background: ${cssVar.colorPrimary};
-  `,
-  repoItem: css`
-    cursor: pointer;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: background-color 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  repoName: css`
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-  repoUrl: css`
-    overflow: hidden;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextDescription};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  scrollContainer: css`
-    overflow-y: auto;
-    max-height: 360px;
-  `,
-  sectionTitle: css`
-    padding-block: 6px 2px;
-    padding-inline: 8px;
-
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextQuaternary};
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  `,
-}));
+const styles = {
+  button:
+    'cursor-pointer flex gap-1.5 items-center min-h-8 py-1 px-1 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  buttonDisabled: 'cursor-not-allowed opacity-50 hover:bg-transparent',
+  checkIndicator:
+    'flex flex-none items-center justify-center size-5 border border-border rounded-(--radius-chip)',
+  checkIndicatorChecked: 'border-primary text-primary-foreground bg-primary',
+  repoItem:
+    'cursor-pointer min-h-8 py-1.5 px-2 rounded-(--radius-button) transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  repoName: 'text-sm leading-5.5 font-medium text-foreground',
+  repoUrl:
+    'overflow-hidden text-xs leading-5 text-foreground-description text-ellipsis whitespace-nowrap',
+  scrollContainer: 'overflow-y-auto max-h-90',
+  sectionTitle:
+    'pbs-1.5 pbe-0.5 px-2 text-xs leading-5 font-medium text-foreground-tertiary uppercase tracking-normal',
+};
 
 const getRepoName = (repo: string) => repo.split('/').findLast(Boolean) || repo;
 
@@ -207,7 +136,7 @@ const CloudRepoSwitcher = memo<CloudRepoSwitcherProps>(({ agentId }) => {
         : t('heteroAgent.cloudRepo.multiSelected', { count: displayRepos.length });
 
   const content = (
-    <div className="flex flex-col gap-1" style={{ minWidth: 280 }}>
+    <div className="flex min-w-70 flex-col gap-1">
       <div className={styles.sectionTitle}>{t('heteroAgent.cloudRepo.sectionTitle')}</div>
       <div className={styles.scrollContainer}>
         {availableRepos.map((repo) => {
@@ -217,7 +146,7 @@ const CloudRepoSwitcher = memo<CloudRepoSwitcherProps>(({ agentId }) => {
               {...clickableProps()}
               key={repo}
               className={cn(
-                cx('flex flex-row items-center gap-2', styles.repoItem),
+                cn('flex flex-row items-center gap-2', styles.repoItem),
                 CLICKABLE_FOCUS_RING,
               )}
               onClick={() => toggleRepo(repo)}
@@ -227,12 +156,14 @@ const CloudRepoSwitcher = memo<CloudRepoSwitcherProps>(({ agentId }) => {
               >
                 {isChecked && (
                   <span className="anticon" role="img">
-                    <CheckIcon fill={'transparent'} height={12} size={12} width={12} />
+                    <CheckIcon fill={'transparent'} height={16} size={16} width={16} />
                   </span>
                 )}
               </div>
-              <Github size={16} style={{ color: cssVar.colorTextTertiary, flex: 'none' }} />
-              <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+              <span className="flex-none text-foreground-tertiary">
+                <Github size={16} />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col">
                 <div className={styles.repoName}>{getRepoName(repo)}</div>
                 <div className={styles.repoUrl}>{repo}</div>
               </div>
@@ -244,17 +175,17 @@ const CloudRepoSwitcher = memo<CloudRepoSwitcherProps>(({ agentId }) => {
   );
 
   const button = (
-    <div className={cx(styles.button, !canCreateContent && styles.buttonDisabled)}>
+    <div className={cn(styles.button, !canCreateContent && styles.buttonDisabled)}>
       {displayRepos.length > 0 ? (
-        <Github size={14} />
+        <Github size={16} />
       ) : (
         <span className="anticon" role="img">
-          <SquircleDashed fill={'transparent'} height={14} size={14} width={14} />
+          <SquircleDashed fill={'transparent'} height={16} size={16} width={16} />
         </span>
       )}
       <span>{buttonLabel}</span>
       <span className="anticon" role="img">
-        <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+        <ChevronDownIcon fill={'transparent'} height={16} size={16} width={16} />
       </span>
     </div>
   );
@@ -269,7 +200,7 @@ const CloudRepoSwitcher = memo<CloudRepoSwitcherProps>(({ agentId }) => {
   return (
     <Popover open={canCreateContent && open} onOpenChange={handleOpenChange}>
       <PopoverTrigger render={button} />
-      <PopoverContent align={'start'} className={'w-auto'} side={'bottom'} style={{ padding: 4 }}>
+      <PopoverContent align={'start'} className={'w-auto p-1'} side={'bottom'}>
         {content}
       </PopoverContent>
     </Popover>

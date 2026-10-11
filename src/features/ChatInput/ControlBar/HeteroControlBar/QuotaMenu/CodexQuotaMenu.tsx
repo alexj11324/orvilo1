@@ -36,17 +36,16 @@ const isConnectionError = (quota: CodexQuotaSnapshot) =>
   );
 
 const styles = {
-  credit:
-    'min-w-0 py-2 px-2.5 [&:not(:last-child)]:[border-block-end:1px_solid_var(--ant-color-border-secondary)]',
+  credit: 'min-w-0 py-2 px-2.5 [&:not(:last-child)]:border-be [&:not(:last-child)]:border-divider',
   creditCollapse: 'w-full',
-  creditExpiry: 'flex-none text-end whitespace-nowrap',
-  creditIndex: '[flex:0_0_20px] tabular-nums text-foreground-tertiary text-center',
+  creditExpiry: 'flex-none text-end whitespace-nowrap text-xs leading-5',
+  creditIndex: 'flex-none w-5 tabular-nums text-foreground-tertiary text-center text-xs leading-5',
   creditList:
-    'overflow-hidden border border-solid border-sidebar-border rounded-(--radius-card) bg-fill-quaternary bg-none',
-  creditTitle: 'overflow-hidden flex-1 min-w-0 text-ellipsis whitespace-nowrap',
+    'overflow-hidden border border-solid border-divider rounded-(--radius-card) bg-fill-quaternary bg-none',
+  creditTitle: 'overflow-hidden flex-1 min-w-0 text-ellipsis whitespace-nowrap text-xs leading-5',
   feedback:
-    "p-2 border border-solid border-info-border rounded-(--radius-card) text-(--ant-color-info-text) bg-info-wash bg-none [&[data-kind='error']]:border-destructive-border [&[data-kind='error']]:text-(--ant-color-error-text) [&[data-kind='error']]:bg-destructive-wash [&[data-kind='error']]:bg-none [&[data-kind='success']]:border-success-border [&[data-kind='success']]:text-(--ant-color-success-text) [&[data-kind='success']]:bg-success-wash [&[data-kind='success']]:bg-none",
-  resetCredits: 'pbs-2 [border-block-start:1px_solid_var(--ant-color-border-secondary)]',
+    "p-2 border border-solid border-info-border rounded-(--radius-card) text-info-text bg-info-wash bg-none [&[data-kind='error']]:border-destructive-border [&[data-kind='error']]:text-destructive-text [&[data-kind='error']]:bg-destructive-wash [&[data-kind='error']]:bg-none [&[data-kind='success']]:border-success-border [&[data-kind='success']]:text-success-text [&[data-kind='success']]:bg-success-wash [&[data-kind='success']]:bg-none text-sm leading-5.5",
+  resetCredits: 'pbs-2 border-bs border-divider',
 };
 
 const createErrorSnapshot = (error: unknown): CodexQuotaSnapshot => ({
@@ -276,9 +275,9 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
           <div className={cn('flex flex-col gap-1', styles.resetCredits)}>
             <div className="flex flex-row items-center gap-1">
               <span className="anticon" role="img">
-                <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
+                <RotateCcwIcon fill={'transparent'} height={16} size={16} width={16} />
               </span>
-              <div className="text-muted-foreground" style={{ fontSize: 12 }}>
+              <div className="text-muted-foreground text-xs leading-5">
                 {t('heteroAgent.codexQuota.resetCreditsUnavailable')}
               </div>
             </div>
@@ -308,14 +307,14 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
                 <div className="flex flex-col gap-0.5">
                   <div className="flex flex-row items-center gap-1">
                     <span className="anticon" role="img">
-                      <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
+                      <RotateCcwIcon fill={'transparent'} height={16} size={16} width={16} />
                     </span>
-                    <div className="font-semibold" style={{ fontSize: 12 }}>
+                    <div className="font-semibold text-xs leading-5">
                       {t('heteroAgent.codexQuota.resetCredits', { count: resetCreditCount })}
                     </div>
                   </div>
                   {resetCredits.totalEarnedCount !== undefined && (
-                    <div style={{ fontSize: 12, color: 'var(--ant-color-text-tertiary)' }}>
+                    <div className="text-xs leading-5 text-foreground-tertiary">
                       {t('heteroAgent.codexQuota.totalEarned', {
                         count: resetCredits.totalEarnedCount,
                       })}
@@ -337,19 +336,11 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
                             className={cn('flex flex-row items-center gap-2', styles.credit)}
                             key={credit?.id ?? `reset-credit-${index}`}
                           >
-                            <div className={styles.creditIndex} style={{ fontSize: 12 }}>
-                              {`#${index}`}
-                            </div>
-                            <div
-                              className={cn('font-semibold', styles.creditTitle)}
-                              style={{ fontSize: 12 }}
-                            >
+                            <div className={styles.creditIndex}>{`#${index}`}</div>
+                            <div className={cn('font-semibold', styles.creditTitle)}>
                               {credit?.title || t('heteroAgent.codexQuota.resetCreditTitle')}
                             </div>
-                            <div
-                              className={cn('text-muted-foreground', styles.creditExpiry)}
-                              style={{ fontSize: 12 }}
-                            >
+                            <div className={cn('text-muted-foreground', styles.creditExpiry)}>
                               {expiresAt
                                 ? expiresIn
                                   ? t('heteroAgent.codexQuota.expiresIn', {
@@ -381,7 +372,7 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
                     <Button
                       className="w-full"
                       loading={resetting}
-                      size={'sm'}
+                      size={'lg'}
                       variant="default"
                       onClick={() => confirmReset(nextCredit?.id ?? undefined, applyQuota)}
                     >

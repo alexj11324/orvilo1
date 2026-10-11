@@ -1,5 +1,5 @@
 import type { DeviceGitWorktreeListItem } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   CheckIcon,
   CopyIcon,
@@ -59,185 +59,31 @@ const copyToClipboard = async (text: string) => {
   }
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  branchLabel: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  triggerAnchor: css`
-    display: inline-flex;
-    flex: none;
-  `,
-  /* See WorktreeSwitcher.triggerFill — keeps a full-row custom trigger's hover
-     background aligned with the popup-open background. */
-  triggerFill: css`
-    display: flex;
-    width: 100%;
-
-    > * {
-      flex: 1;
-    }
-  `,
-  footer: css`
-    border-block-start: 1px solid ${cssVar.colorSplit};
-  `,
-  header: css`
-    padding: 0;
-  `,
-  emptyState: css`
-    padding-block: 12px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  item: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    height: auto;
-    min-height: 32px;
-    padding-block: 4px;
-    padding-inline: 8px;
-    border-radius: 4px;
-
-    font-size: 14px;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-
-    &[data-current='true'],
-    &[data-current='true']:hover,
-    &[data-current='true']:focus {
-      background: var(--muted);
-    }
-
-    /* Swap the checkmark for the row actions while hovering the row. */
-    &:hover .branch-row-actions {
-      display: flex;
-    }
-
-    &:hover .branch-row-check {
-      display: none;
-    }
-  `,
-  itemCheck: css`
-    flex: none;
-    color: ${cssVar.colorPrimary};
-  `,
-  rowAction: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  rowActionDanger: css`
-    &:hover {
-      color: ${cssVar.colorError};
-      background: ${cssVar.colorErrorBg};
-    }
-  `,
-  rowActions: css`
-    display: none;
-    flex: none;
-    gap: 2px;
-    align-items: center;
-  `,
-  itemIcon: css`
-    flex: none;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  itemMain: css`
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  `,
-  itemMeta: css`
-    font-size: 12px;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  list: css`
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-    max-height: 320px;
-  `,
-  popup: css`
-    width: 300px;
-    height: 360px;
-  `,
-  searchBar: css`
-    padding-block: 4px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorSplit};
-
-    .ant-input-affix-wrapper {
-      padding-inline: 0;
-    }
-
-    .ant-input-prefix {
-      margin-inline-end: 8px;
-    }
-  `,
-  refreshButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  section: css`
-    flex: 1;
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  sectionRow: css`
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 4px 2px;
-    padding-inline: 8px;
-  `,
-  spinning: css`
-    animation: branch-switcher-spin 0.8s linear infinite;
-
-    @keyframes branch-switcher-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-  `,
-}));
+const styles = {
+  branchLabel: 'overflow-hidden text-ellipsis whitespace-nowrap',
+  triggerAnchor: 'inline-flex flex-none',
+  triggerFill: 'flex w-full [&>*]:flex-1',
+  footer: 'border-bs border-divider',
+  header: 'p-0',
+  emptyState: 'py-3 text-sm leading-5.5 text-foreground-description text-center',
+  item: 'flex gap-2 items-center h-auto min-h-8 py-0 px-2 rounded-(--radius-button) text-sm leading-5.5 text-foreground data-[current=true]:bg-selected data-[current=true]:hover:bg-selected data-[current=true]:focus:bg-selected hover:[&_.branch-row-actions]:flex focus-within:[&_.branch-row-actions]:flex hover:[&_.branch-row-check]:hidden focus-within:[&_.branch-row-check]:hidden',
+  itemCheck: 'flex-none text-primary',
+  rowAction:
+    'cursor-pointer flex items-center justify-center size-8 rounded-(--radius-button) text-foreground-tertiary transition-colors duration-(--orvilo-motion-fast) hover:text-foreground hover:bg-accent',
+  rowActionDanger: 'hover:text-destructive-text hover:bg-destructive-wash',
+  rowActions: 'hidden flex-none gap-0.5 items-center',
+  itemIcon: 'flex-none text-muted-foreground',
+  itemMain: 'overflow-hidden flex-1 min-w-0',
+  itemMeta: 'text-xs leading-5 text-foreground-tertiary',
+  list: 'overflow-y-auto flex-1 min-h-0 max-h-80',
+  popup: 'w-75 h-90',
+  searchBar: 'py-1 px-3 border-be border-divider',
+  refreshButton:
+    'cursor-pointer flex items-center justify-center size-8 rounded-(--radius-button) text-foreground-tertiary transition-colors duration-(--orvilo-motion-fast) hover:text-foreground hover:bg-accent',
+  section: 'flex-1 text-xs leading-5 font-medium text-foreground-tertiary',
+  sectionRow: 'flex gap-1 items-center pbs-1 pbe-0.5 px-2',
+  spinning: 'animate-spin [animation-duration:0.8s] motion-reduce:animate-none',
+};
 
 interface BranchSwitcherProps {
   agentId: string;
@@ -516,16 +362,15 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
               <div className="flex flex-row items-center gap-1.5 px-1.5">
                 <span className="flex items-center">
                   <span className="anticon" role="img">
-                    <SearchIcon fill={'transparent'} height={14} size={14} width={14} />
+                    <SearchIcon fill={'transparent'} height={16} size={16} width={16} />
                   </span>
                 </span>
                 <Input
                   autoFocus
+                  className={'border-0 px-0 shadow-none'}
                   placeholder={t('workingDirectory.branchSearchPlaceholder')}
                   value={search}
-                  className={
-                    'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
-                  }
+                  visualSize="compact"
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()}
                 />
@@ -534,8 +379,8 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
             <div className={styles.sectionRow}>
               <div className={styles.section}>{t('workingDirectory.branchesHeading')}</div>
               <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
-                <span className={cx('anticon', cx(isRefreshing && styles.spinning))} role="img">
-                  <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
+                <span className={cn('anticon', cn(isRefreshing && styles.spinning))} role="img">
+                  <RefreshCwIcon fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               </div>
             </div>
@@ -569,13 +414,13 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                     onClick={() => handleCheckout(branch.name)}
                   >
                     <span
-                      className={cx('anticon', cx(styles.itemIcon, isBusy && styles.spinning))}
+                      className={cn('anticon', cn(styles.itemIcon, isBusy && styles.spinning))}
                       role="img"
                     >
                       {createElement(isBusy ? LoaderIcon : owner ? GitForkIcon : GitBranchIcon, {
-                        size: 14,
-                        width: 14,
-                        height: 14,
+                        size: 16,
+                        width: 16,
+                        height: 16,
                         fill: 'transparent',
                       })}
                     </span>
@@ -598,13 +443,13 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                     </div>
                     {isCurrent && (
                       <span
-                        className={cx('anticon', cx('branch-row-check', styles.itemCheck))}
+                        className={cn('anticon', cn('branch-row-check', styles.itemCheck))}
                         role="img"
                       >
-                        <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+                        <CheckIcon fill={'transparent'} height={16} size={16} width={16} />
                       </span>
                     )}
-                    <div className={cx('branch-row-actions', styles.rowActions)}>
+                    <div className={cn('branch-row-actions', styles.rowActions)}>
                       <SimpleTooltip title={tCommon('copy')}>
                         <div
                           aria-label={tCommon('copy')}
@@ -613,7 +458,7 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                           onClick={(e) => void handleCopy(e, branch.name)}
                         >
                           <span className="anticon" role="img">
-                            <CopyIcon fill={'transparent'} height={13} size={13} width={13} />
+                            <CopyIcon fill={'transparent'} height={16} size={16} width={16} />
                           </span>
                         </div>
                       </SimpleTooltip>
@@ -624,19 +469,19 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                           onClick={(e) => handleRename(e, branch.name)}
                         >
                           <span className="anticon" role="img">
-                            <PencilIcon fill={'transparent'} height={13} size={13} width={13} />
+                            <PencilIcon fill={'transparent'} height={16} size={16} width={16} />
                           </span>
                         </div>
                       </SimpleTooltip>
                       {!isCurrent && !owner && (
                         <SimpleTooltip title={t('workingDirectory.deleteBranchAction')}>
                           <div
-                            className={cx(styles.rowAction, styles.rowActionDanger)}
+                            className={cn(styles.rowAction, styles.rowActionDanger)}
                             role="button"
                             onClick={(e) => handleDelete(e, branch.name)}
                           >
                             <span className="anticon" role="img">
-                              <Trash2Icon fill={'transparent'} height={13} size={13} width={13} />
+                              <Trash2Icon fill={'transparent'} height={16} size={16} width={16} />
                             </span>
                           </div>
                         </SimpleTooltip>
@@ -650,8 +495,8 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
 
           <div className={styles.footer}>
             <DropdownMenuItem className={styles.item} onClick={openCreateBranch}>
-              <span className={cx('anticon', styles.itemIcon)} role="img">
-                <GitBranchPlusIcon fill={'transparent'} height={14} size={14} width={14} />
+              <span className={cn('anticon', styles.itemIcon)} role="img">
+                <GitBranchPlusIcon fill={'transparent'} height={16} size={16} width={16} />
               </span>
               <div className={styles.itemMain}>{t('workingDirectory.createBranchAction')}</div>
             </DropdownMenuItem>

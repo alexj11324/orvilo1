@@ -1,5 +1,5 @@
 import type { WorkingDirGitState } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowDownIcon, ArrowUpIcon, GitPullRequest } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,85 +26,20 @@ import { gitChipStyles } from './gitChipStyles';
 import StaleGitSnapshot from './StaleGitSnapshot';
 import WorktreeSwitcher from './WorktreeSwitcher';
 
-const styles = createStaticStyles(({ css }) => {
-  return {
-    aheadBehindStat: css`
-      display: inline-flex;
-      gap: 0;
-      align-items: center;
-
-      margin-inline-start: -2px;
-
-      font-variant-numeric: tabular-nums;
-      line-height: 1;
-    `,
-    aheadStat: css`
-      color: ${cssVar.colorInfo};
-    `,
-    behindStat: css`
-      color: ${cssVar.colorError};
-    `,
-    branchGroup: css`
-      display: flex;
-      flex: none;
-      gap: 2px;
-      align-items: center;
-    `,
-    branchLabel: css`
-      overflow: hidden;
-      max-width: 160px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    `,
-    diffStat: css`
-      display: inline-flex;
-      flex-shrink: 0;
-      gap: 4px;
-      align-items: center;
-
-      font-variant-numeric: tabular-nums;
-    `,
-    diffStatAdded: css`
-      color: ${cssVar.colorSuccess};
-    `,
-    diffStatDeleted: css`
-      color: ${cssVar.colorError};
-    `,
-    diffStatModified: css`
-      color: ${cssVar.colorWarning};
-    `,
-    syncTrigger: css`
-      cursor: pointer;
-
-      display: inline-flex;
-      flex: none;
-      gap: 2px;
-      align-items: center;
-
-      padding-block: 2px;
-      padding-inline: 4px;
-      border-radius: 4px;
-
-      font-size: 12px;
-      font-variant-numeric: tabular-nums;
-      line-height: 1;
-
-      transition: background 0.2s;
-
-      &:hover {
-        background: ${cssVar.colorFillTertiary};
-      }
-    `,
-    syncTriggerDisabled: css`
-      cursor: progress;
-      opacity: 0.6;
-
-      &:hover {
-        background: transparent;
-      }
-    `,
-  };
-});
+const styles = {
+  aheadBehindStat: 'inline-flex gap-0 items-center tabular-nums text-xs leading-5',
+  aheadStat: 'text-info-text',
+  behindStat: 'text-destructive-text',
+  branchGroup: 'flex flex-none gap-0.5 items-center',
+  branchLabel: 'overflow-hidden max-w-40 text-sm leading-5.5 text-ellipsis whitespace-nowrap',
+  diffStat: 'inline-flex shrink-0 gap-1 items-center tabular-nums text-xs leading-5',
+  diffStatAdded: 'text-success-text',
+  diffStatDeleted: 'text-destructive-text',
+  diffStatModified: 'text-warning-text',
+  syncTrigger:
+    'cursor-pointer inline-flex flex-none gap-0.5 items-center min-h-8 py-1 px-1 rounded-(--radius-button) text-xs leading-5 tabular-nums transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  syncTriggerDisabled: 'cursor-progress opacity-60 hover:bg-transparent',
+};
 
 interface GitStatusProps {
   /** When set, git status / branch switch / pull / push all run against this
@@ -330,7 +265,9 @@ const GitStatus = memo<GitStatusProps>(
     const pushTargetExists = !!aheadBehind?.pushTargetExists;
 
     const branchTrigger = (
-      <div className={gitChipStyles.trigger}>
+      <div
+        className={cn(gitChipStyles.trigger, 'min-h-8 rounded-(--radius-button) text-xs leading-5')}
+      >
         <span data-workspace-label className={styles.branchLabel}>
           {branch}
         </span>
@@ -409,10 +346,10 @@ const GitStatus = memo<GitStatusProps>(
         >
           <span className={styles.aheadBehindStat}>
             {pulling ? (
-              <RingLoadingIcon size={10} />
+              <RingLoadingIcon size={16} />
             ) : (
               <span className="anticon" role="img">
-                <ArrowDownIcon fill={'transparent'} height={10} size={10} width={10} />
+                <ArrowDownIcon fill={'transparent'} height={16} size={16} width={16} />
               </span>
             )}
             {aheadBehind!.behind}
@@ -432,10 +369,10 @@ const GitStatus = memo<GitStatusProps>(
         >
           <span className={styles.aheadBehindStat}>
             {pushing ? (
-              <RingLoadingIcon size={10} />
+              <RingLoadingIcon size={16} />
             ) : (
               <span className="anticon" role="img">
-                <ArrowUpIcon fill={'transparent'} height={10} size={10} width={10} />
+                <ArrowUpIcon fill={'transparent'} height={16} size={16} width={16} />
               </span>
             )}
             {aheadBehind!.ahead}
@@ -447,7 +384,14 @@ const GitStatus = memo<GitStatusProps>(
     const diffNode = (() => {
       if (!hasChanges) return null;
       const diffButton = (
-        <div className={gitChipStyles.trigger} role="button" onClick={handleToggleReview}>
+        <div
+          role="button"
+          className={cn(
+            gitChipStyles.trigger,
+            'min-h-8 rounded-(--radius-button) text-xs leading-5',
+          )}
+          onClick={handleToggleReview}
+        >
           <span className={styles.diffStat}>
             {diffStats.additions > 0 && (
               <span className={styles.diffStatAdded}>+{diffStats.additions}</span>
@@ -480,9 +424,16 @@ const GitStatus = memo<GitStatusProps>(
           <>
             <div className={gitChipStyles.separator} />
             <SimpleTooltip title={prTooltip}>
-              <div className={gitChipStyles.prTrigger} role="button" onClick={handleOpenPr}>
+              <div
+                role="button"
+                className={cn(
+                  gitChipStyles.prTrigger,
+                  'min-h-8 rounded-(--radius-button) text-xs leading-5',
+                )}
+                onClick={handleOpenPr}
+              >
                 <span className="anticon" role="img">
-                  <GitPullRequest fill={'transparent'} height={12} size={12} width={12} />
+                  <GitPullRequest fill={'transparent'} height={16} size={16} width={16} />
                 </span>
                 <span>#{prData.pullRequest.number}</span>
               </div>

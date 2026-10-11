@@ -1370,6 +1370,8 @@ export interface TaskDetailData {
   description?: string | null;
   /** Latest durable dispatch phase; execution display truth, separate from reservation ownership. */
   dispatchPhase?: TaskDispatchPhase | null;
+  /** Durable reason on the active dispatch, including caid_dispatch_disabled. */
+  dispatchWaitingReason?: string | null;
   /** Observed version used as expectedDomainRevision for optimistic-concurrency edits. */
   domainRevision?: number;
   /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
@@ -1396,6 +1398,10 @@ export interface TaskDetailData {
   /** Labels assigned to the task (Linear-style issue labels). */
   labels?: TaskLabelSummary[];
   name?: string | null;
+  /** Final admission for the requesting user and active workspace; does not gate manual runs. */
+  orchestrationAdmission?: 'enabled' | 'disabled';
+  /** Current admission gate reason, not the execution state of an existing run. */
+  orchestrationAdmissionReason?: 'caid_dispatch_disabled' | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
   priority?: number | null;
   /** Owning project; drives the automation detail's project picker. */

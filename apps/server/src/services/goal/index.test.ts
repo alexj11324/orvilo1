@@ -437,6 +437,15 @@ describe('GoalService', () => {
 
       // No claim, no run, no error — the node just waits for admission to open.
       expect(result.outcome).toBe('waiting_external');
+      expect(result.reason).toBe('caid_dispatch_disabled');
+      expect(await service.graph(graph.goal.id)).toMatchObject({
+        orchestrationAdmission: 'disabled',
+        orchestrationAdmissionReason: 'caid_dispatch_disabled',
+      });
+      expect(await new TaskService(serverDB, userId).getTaskDetail(result.taskId!)).toMatchObject({
+        orchestrationAdmission: 'disabled',
+        orchestrationAdmissionReason: 'caid_dispatch_disabled',
+      });
       expect(result.message).toContain('CAID dispatch admission');
       expect(runSpy).not.toHaveBeenCalled();
       expect(await derivedStatus(result.taskId!)).not.toBe('running');

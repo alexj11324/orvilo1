@@ -378,7 +378,7 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
         role="button"
       >
         <span className="anticon" role="img">
-          {createElement(triggerIcon, { size: 13, width: 13, height: 13, fill: 'transparent' })}
+          {createElement(triggerIcon, { size: 16, width: 16, height: 16, fill: 'transparent' })}
         </span>
       </div>
     );

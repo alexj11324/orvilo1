@@ -40,7 +40,7 @@ const stopLocalMotion = css`
 
   .text-shiny,
   .orvilo-shiny {
-    color: var(--shiny-color);
+    color: var(--shiny-rest-color, var(--shiny-color));
     background: none;
   }
 
@@ -90,6 +90,7 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --secondary-foreground: ${theme.colorText};
       --muted: ${theme.colorFillTertiary};
       --muted-foreground: ${theme.colorTextSecondary};
+      --loading-ring-fill: ${theme.colorFill};
       --foreground-tertiary: ${theme.colorTextTertiary};
       --foreground-quaternary: ${theme.colorTextQuaternary};
       --foreground-description: ${theme.colorTextDescription};
@@ -131,6 +132,8 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --sidebar-group: ${theme.colorTextSecondary};
       --orvilo-motion-fast: ${theme.motionDurationFast};
       --orvilo-motion-mid: ${theme.motionDurationMid};
+      --orvilo-motion-ease-out: ${theme.motionEaseOut};
+      --orvilo-motion-ease-in-out: ${theme.motionEaseInOut};
       --orvilo-motion-slow: ${theme.motionDurationSlow};
       ${status('primary', theme.colorPrimary, theme.colorPrimaryText)}
       ${status('success', theme.colorSuccess, theme.colorSuccessText)}

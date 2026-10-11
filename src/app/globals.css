@@ -14,6 +14,11 @@
 @custom-variant dark (&:is(.dark *, [data-theme='dark'] *));
 
 @theme inline {
+    --animate-dots-loading-fade: dots-loading-fade 1.2s ease-in-out infinite;
+    --animate-neural-pulse: dots-loading-fade 2s infinite;
+    --animate-neural-flow: neural-flow 2s infinite;
+    --animate-neural-scale: neural-scale 2s infinite;
+    --animate-neural-rotate: spin 20s infinite linear;
     /* DESIGN.md metadata and body line boxes; font sizes remain 0.75/0.875rem. */
     --text-xs--line-height: calc(1.25 / 0.75);
     --text-sm--line-height: calc(1.375 / 0.875);
@@ -120,6 +125,7 @@
     --secondary-foreground: var(--foreground);
     --muted: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --muted-foreground: var(--ant-color-text-secondary, #666666);
+    --loading-ring-fill: var(--ant-color-fill);
     --accent: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --accent-foreground: var(--foreground);
     --border: var(--ant-color-border, #e3e3e3);
@@ -198,6 +204,7 @@
     --secondary-foreground: var(--foreground);
     --muted: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
     --muted-foreground: var(--ant-color-text-secondary, #aaaaaa);
+    --loading-ring-fill: var(--ant-color-fill);
     --accent: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
     --accent-foreground: var(--foreground);
     --border: var(--ant-color-border, #202020);
@@ -319,7 +326,7 @@
 
     user-select: none;
 
-    color: color-mix(in srgb, var(--shiny-color) 28%, transparent);
+    color: var(--shiny-rest-color, color-mix(in srgb, var(--shiny-color) 28%, transparent));
 
     background: linear-gradient(120deg, transparent 25%, var(--shiny-color) 50%, transparent 75%);
     background-clip: text;
@@ -427,5 +434,76 @@
     to {
         width: 36%;
         transform: translateX(310%);
+    }
+}
+
+@keyframes op-status-tray-phrase-enter {
+    from {
+        transform: translateY(calc(var(--spacing) * 0.75));
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes op-status-tray-glyph-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes op-status-tray-glyph-core {
+    0%,
+    100% {
+        transform: scale(0.86);
+        opacity: 0.9;
+    }
+
+    50% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes dots-loading-fade {
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes neural-flow {
+    0% {
+        transform: translateX(0);
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(var(--flow-distance));
+        opacity: 0.5;
+    }
+}
+
+@keyframes neural-scale {
+    0%,
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: scale(1);
+        opacity: 1;
     }
 }

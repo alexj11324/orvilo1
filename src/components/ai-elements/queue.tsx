@@ -113,7 +113,7 @@ export const QueueItemAction = ({ className, ...props }: QueueItemActionProps) =
     type="button"
     variant="ghost"
     className={cn(
-      'size-auto rounded p-1 text-muted-foreground opacity-100 transition-opacity hover:bg-muted-foreground/10 hover:text-foreground group-hover:opacity-100',
+      'p-1 text-muted-foreground opacity-100 transition-opacity hover:bg-muted-foreground/10 hover:text-foreground group-hover:opacity-100',
       className,
     )}
     {...props}

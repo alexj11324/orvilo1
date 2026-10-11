@@ -410,3 +410,20 @@
         opacity: 0.6;
     }
 }
+/* Browser indeterminate work: either motion gate retains the native full-width
+   progress paint and unchanged progressbar semantics. */
+@theme {
+    --animate-orvilo-working-browser-loading-progress: orvilo-working-browser-loading-progress 1.15s ease-in-out infinite;
+}
+
+@keyframes orvilo-working-browser-loading-progress {
+    from {
+        width: 36%;
+        transform: translateX(-110%);
+    }
+
+    to {
+        width: 36%;
+        transform: translateX(310%);
+    }
+}

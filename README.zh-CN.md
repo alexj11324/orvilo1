@@ -28,7 +28,7 @@ Electron 桌面客户端，以及 CLI。
 | `packages/`                                    | 共享 workspace 包                   |
 | `e2e/`                                         | 端到端测试（Cucumber + Playwright） |
 
-智能体可以接入聊天平台（Slack、Discord、Telegram、微信等）、Git 托管服务，
+智能体可以接入 Slack、Git 托管服务，
 以及你自己配置的模型供应商。
 
 ## 本地开发
@@ -58,7 +58,7 @@ Cloudflare 账户操作是可选流程。新版 `cf` CLI 需要 Node.js 22 或�
 ### 质量检查
 
 ```bash
-pnpm run type-check # tsgo --noEmit
+pnpm run type-check # tsgo --noEmit（仅在 CI 中运行，本地会直接退出）
 pnpm run test-app   # vitest run
 pnpm run lint       # eslint + stylelint + 类型检查 + 循环依赖
 

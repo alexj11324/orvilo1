@@ -301,7 +301,6 @@ tests/                                       # 集成测试
 
 ```bash
 pnpm test       # 运行所有测试
-pnpm test:watch # 监视模式
 pnpm type-check # 类型验证
 ```
 

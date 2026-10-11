@@ -10,7 +10,7 @@ user-invocable: false
 
 ### 1. Update Hotkey Constant
 
-In `src/types/hotkey.ts`:
+In `packages/const/src/hotkeys.ts`:
 
 ```typescript
 export const HotkeyEnum = {
@@ -21,7 +21,7 @@ export const HotkeyEnum = {
 
 ### 2. Register Default Hotkey
 
-In `src/const/hotkeys.ts`:
+In `packages/const/src/hotkeys.ts`:
 
 ```typescript
 import { KeyMapEnum as Key, combineKeys } from '@lobehub/ui';
@@ -86,6 +86,6 @@ const clearChatHotkey = useUserStore(settingsSelectors.getHotkeyById(HotkeyEnum.
 ## Troubleshooting
 
 - **Not working**: Check scope and RegisterHotkeys hook
-- **Not in settings**: Verify HOTKEYS\_REGISTRATION config
+- **Not in settings**: Verify HOTKEYS_REGISTRATION config
 - **Conflict**: HotkeyInput component shows warnings
 - **Page-specific**: Ensure correct scope activation

@@ -14,7 +14,7 @@ The Page Agent is a specialized AI agent that helps users create, read, update, 
 - **Plugin**: `orvilo-page-agent` (Document manipulation tools)
 - **System Role**: Document editing assistant
 
-### 2. **Document Tools** (`src/tools/document/`)
+### 2. **Document Tools** (`packages/builtin-tool-page-agent/src/`)
 
 - **Identifier**: `orvilo-page-agent`
 - **Type**: Built-in tool
@@ -293,7 +293,7 @@ Currently disabled for MVP, but will support:
 ## Related Files
 
 - **Agent Definition**: `packages/builtin-agents/src/agents/page-agent/`
-- **Document Tools**: `src/tools/document/`
+- **Document Tools**: `packages/builtin-tool-page-agent/src/`
 - **Context Injector**: `packages/context-engine/src/providers/PageEditorContextInjector.ts`
 - **Chat Service**: `src/services/chat/index.ts`
 - **Store Updater**: `src/features/PageEditor/StoreUpdater.tsx`

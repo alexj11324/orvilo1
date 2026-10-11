@@ -102,7 +102,7 @@ const styles = {
   fileCardBody: 'flex min-w-0 flex-col',
   fileCardDesc: 'mt-0.5 truncate text-xs leading-5 text-foreground-tertiary',
   fileCardIcon: 'flex text-foreground-tertiary',
-  fileCardName: 'truncate text-sm leading-[22px] text-foreground',
+  fileCardName: 'truncate text-sm leading-5.5 text-foreground',
 } as const;
 
 /** Content small enough that folding it would cost more than it saves. */

@@ -109,7 +109,12 @@ const seedTask = (patch: Partial<TaskDetailData> = {}) => {
 };
 
 const renderExecution = () =>
-  render(createElement(TaskDetailScope, { taskId: 'T-5' }, createElement(TaskExecutionSection)));
+  render(
+    createElement(TaskDetailScope, {
+      children: createElement(TaskExecutionSection),
+      taskId: 'T-5',
+    }),
+  );
 
 // Starting, retrying and resuming moved out of the Issue header into the
 // Execution area. Every one of them still takes the contract-checked run.

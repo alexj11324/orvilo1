@@ -4,9 +4,9 @@ import { parseSystemAgent } from './parseSystemAgent';
 
 describe('parseSystemAgent', () => {
   it('should parse a valid environment variable string correctly', () => {
-    const envValue = 'topic=openai/gpt-3.5-turbo,goal=anthropic/claude-1';
+    const envValue = 'thread=openai/gpt-3.5-turbo,goal=anthropic/claude-1';
     const expected = {
-      topic: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
       goal: { provider: 'anthropic', model: 'claude-1' },
     };
 
@@ -21,41 +21,41 @@ describe('parseSystemAgent', () => {
   });
 
   it('should ignore unknown keys in environment variable string', () => {
-    const envValue = 'topic=openai/gpt-3.5-turbo,unknown=test/model';
+    const envValue = 'thread=openai/gpt-3.5-turbo,unknown=test/model';
     const expected = {
-      topic: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
     };
 
     expect(parseSystemAgent(envValue)).toEqual(expected);
   });
 
   it('should throw an error for missing model or provider values', () => {
-    const envValue1 = 'topic=openai,goal=/claude-1';
-    const envValue2 = 'topic=/gpt-3.5-turbo,goal=anthropic/';
+    const envValue1 = 'thread=openai,goal=/claude-1';
+    const envValue2 = 'thread=/gpt-3.5-turbo,goal=anthropic/';
 
     expect(() => parseSystemAgent(envValue1)).toThrowError(/Missing model or provider/);
     expect(() => parseSystemAgent(envValue2)).toThrowError(/Missing model or provider/);
   });
 
   it('should throw an error for invalid environment variable format', () => {
-    const envValue = 'topic-openai/gpt-3.5-turbo';
+    const envValue = 'thread-openai/gpt-3.5-turbo';
 
     expect(() => parseSystemAgent(envValue)).toThrowError(/Invalid environment variable format/);
   });
 
   it('should handle provider or model names with special characters', () => {
-    const envValue = 'topic=openrouter/mistralai/mistral-7b-instruct:free';
+    const envValue = 'thread=openrouter/mistralai/mistral-7b-instruct:free';
     const expected = {
-      topic: { provider: 'openrouter', model: 'mistralai/mistral-7b-instruct:free' },
+      thread: { provider: 'openrouter', model: 'mistralai/mistral-7b-instruct:free' },
     };
 
     expect(parseSystemAgent(envValue)).toEqual(expected);
   });
 
   it('should handle extra whitespace in environment variable string', () => {
-    const envValue = '  topic = openai/gpt-3.5-turbo , goal = anthropic/claude-1 ';
+    const envValue = '  thread = openai/gpt-3.5-turbo , goal = anthropic/claude-1 ';
     const expected = {
-      topic: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
       goal: { provider: 'anthropic', model: 'claude-1' },
     };
 
@@ -63,9 +63,9 @@ describe('parseSystemAgent', () => {
   });
 
   it('should handle full-width comma in environment variable string', () => {
-    const envValue = 'topic=openai/gpt-3.5-turbo，goal=anthropic/claude-1';
+    const envValue = 'thread=openai/gpt-3.5-turbo，goal=anthropic/claude-1';
     const expected = {
-      topic: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
       goal: { provider: 'anthropic', model: 'claude-1' },
     };
 
@@ -73,9 +73,9 @@ describe('parseSystemAgent', () => {
   });
 
   it('should handle extra whitespace around provider and model names', () => {
-    const envValue = 'topic= openai / gpt-3.5-turbo ,goal= anthropic / claude-1 ';
+    const envValue = 'thread= openai / gpt-3.5-turbo ,goal= anthropic / claude-1 ';
     const expected = {
-      topic: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
       goal: { provider: 'anthropic', model: 'claude-1' },
     };
 
@@ -85,9 +85,9 @@ describe('parseSystemAgent', () => {
   it('should handle an excessively long environment variable string', () => {
     const longProviderName = 'a'.repeat(100);
     const longModelName = 'b'.repeat(100);
-    const envValue = `topic=${longProviderName}/${longModelName}`;
+    const envValue = `thread=${longProviderName}/${longModelName}`;
     const expected = {
-      topic: { provider: longProviderName, model: longModelName },
+      thread: { provider: longProviderName, model: longModelName },
     };
 
     expect(parseSystemAgent(envValue)).toEqual(expected);
@@ -98,9 +98,9 @@ describe('parseSystemAgent', () => {
 
     const result = parseSystemAgent(envValue);
 
-    expect(result.topic).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.onboardingTaskRecommender).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.goal).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
-    expect(result.agentMeta).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.onboardingUnderstanding).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.expertise).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.expertise).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.onboardingUnderstanding).toEqual({
@@ -111,7 +111,7 @@ describe('parseSystemAgent', () => {
       provider: 'ollama',
       model: 'deepseek-v3',
     });
-    expect(result.thread).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.onboardingTaskRecommender).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.userMemoryEmbedding).toBeUndefined();
     expect(result.memoryAnalysisAgentConfig).toBeUndefined();
     expect(result.userMemoryPersonaWriter).toBeUndefined();
@@ -151,32 +151,32 @@ describe('parseSystemAgent', () => {
   });
 
   it('should override default setting with specific settings', () => {
-    const envValue = 'default=ollama/deepseek-v3,topic=openai/gpt-4';
+    const envValue = 'default=ollama/deepseek-v3,thread=openai/gpt-4';
 
     const result = parseSystemAgent(envValue);
 
-    expect(result.topic).toEqual({ provider: 'openai', model: 'gpt-4' });
+    expect(result.thread).toEqual({ provider: 'openai', model: 'gpt-4' });
 
     expect(result.goal).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
-    expect(result.agentMeta).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.onboardingUnderstanding).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.expertise).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
-    expect(result.thread).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.onboardingTaskRecommender).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
   });
 
-  it('should properly handle priority when topic appears before default in the string', () => {
-    // 即使 topic 在 default 之前出现，topic 的设置仍然应该优先
-    const envValue = 'topic=openai/gpt-4,default=ollama/deepseek-v3';
+  it('should properly handle priority when thread appears before default in the string', () => {
+    // 即使 thread 在 default 之前出现，thread 的设置仍然应该优先
+    const envValue = 'thread=openai/gpt-4,default=ollama/deepseek-v3';
 
     const result = parseSystemAgent(envValue);
 
-    // topic 应该保持自己的设置而不被 default 覆盖
-    expect(result.topic).toEqual({ provider: 'openai', model: 'gpt-4' });
+    // thread 应该保持自己的设置而不被 default 覆盖
+    expect(result.thread).toEqual({ provider: 'openai', model: 'gpt-4' });
 
     // 其他系统智能体应该使用默认配置
     expect(result.goal).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
-    expect(result.agentMeta).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.onboardingUnderstanding).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.expertise).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
-    expect(result.thread).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.onboardingTaskRecommender).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
   });
 });
 
@@ -184,7 +184,7 @@ describe('retired system agent settings', () => {
   it('ignores obsolete assignments and keeps active model assignments', () => {
     expect(
       parseSystemAgent(
-        'topicAutoSummary=openai/old,inputCompletion=openai/old,goal=openai/current',
+        'topicAutoSummary=openai/old,inputCompletion=openai/old,topic=openai/old,agentMeta=openai/old,goal=openai/current',
       ),
     ).toEqual({ goal: { provider: 'openai', model: 'current' } });
   });

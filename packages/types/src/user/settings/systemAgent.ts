@@ -7,7 +7,6 @@ export interface SystemAgentItem {
 }
 
 export interface UserSystemAgentConfig {
-  agentMeta: SystemAgentItem;
   /** Model used to draft expertise domains and extract reusable experience from conversations. */
   expertise: SystemAgentItem;
   /** Model used to turn a persistent goal into its standing acceptance criteria. */
@@ -17,7 +16,6 @@ export interface UserSystemAgentConfig {
   /** Model used to synthesize connector evidence into the onboarding understanding. */
   onboardingUnderstanding: SystemAgentItem;
   thread: SystemAgentItem;
-  topic: SystemAgentItem;
 }
 
 export interface UserMemoryServiceModelConfig {

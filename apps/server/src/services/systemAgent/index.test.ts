@@ -7,12 +7,13 @@ import { SystemAgentService } from './index';
 
 const mocks = vi.hoisted(() => ({
   generateObject: vi.fn(),
+  getUserSettings: vi.fn().mockResolvedValue({}),
   topicFindById: vi.fn(),
 }));
 
 vi.mock('@/database/models/user', () => ({
   UserModel: class {
-    getUserSettings = async () => ({});
+    getUserSettings = mocks.getUserSettings;
 
     static getInfoForAIGeneration = async () => ({ responseLanguage: 'en-US' });
   },
@@ -66,5 +67,27 @@ describe('SystemAgentService.generateTopicTitle', () => {
         },
       );
     }
+  });
+});
+
+describe('agent-owned maintenance judgments', () => {
+  it('does not load retired global models for skill metadata', async () => {
+    mocks.generateObject.mockResolvedValue({
+      name: 'skill',
+      title: 'Skill',
+      description: 'Useful',
+    });
+    await new SystemAgentService({} as OrviloDatabase, 'user-1').generateSkillMeta({
+      agentId: 'skill-owner',
+      content: 'A skill document',
+    });
+    expect(mocks.getUserSettings).not.toHaveBeenCalled();
+    expect(mocks.generateObject).toHaveBeenCalledWith(
+      expect.not.objectContaining({ model: expect.any(String) }),
+      expect.objectContaining({
+        judgment: { binding: { agentId: 'skill-owner' }, purpose: 'skill.meta' },
+        kind: 'judgment',
+      }),
+    );
   });
 });

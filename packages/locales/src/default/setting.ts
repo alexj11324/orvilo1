@@ -4256,9 +4256,10 @@ export default {
   'settingAgent.list.error': 'Could not load configuration',
   'settingAgent.useMembers.title': 'Who can use this agent',
   'settingAgent.useMembers.hint':
-    'Selected members can send messages, run this agent, and answer its questions. Viewers remain read-only. Workspace members can read Issue conversations.',
+    'The creator and the selected members can send messages, run this agent, and answer its questions. Viewers remain read-only. Workspace members can read Issue conversations.',
   'settingAgent.useMembers.add': 'Select members who can use this agent',
   'settingAgent.useMembers.empty': 'No members can use this agent',
+  'settingAgent.useMembers.creator': 'Creator',
   'permission.configAccess.agentManageRequired':
     'Agent configuration requires its creator or a workspace admin. You can still read Issue conversations.',
   'settingAgent.deviceSettings.runtimeUnverifiedTitle': 'Device runtime verification incomplete',

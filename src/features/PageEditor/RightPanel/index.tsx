@@ -60,19 +60,23 @@ const PageEditorRightPanelContent = memo(() => {
     [rightPanelMode],
   );
 
+  if (!shouldUseMotion) {
+    return <div className={styles.layer}>{activeContent.node}</div>;
+  }
+
   return (
     <AnimatePresence custom={directionRef.current} initial={false} mode="sync">
       <m.div
-        animate={shouldUseMotion ? 'animate' : { opacity: 1, x: 0 }}
-        className={cn(styles.layer, shouldUseMotion && 'will-change-[opacity,transform]')}
+        animate="animate"
+        className={cn(styles.layer, 'will-change-[opacity,transform]')}
         custom={directionRef.current}
-        exit={shouldUseMotion ? 'exit' : { opacity: 0, x: 0 }}
-        initial={shouldUseMotion ? 'initial' : false}
+        exit="exit"
+        initial="initial"
         key={activeContent.key}
         variants={panelSlideMotionVariantsLeft}
         transition={{
           ...panelSlideMotionVariantsLeft.transition,
-          duration: shouldUseMotion ? 0.2 : 0,
+          duration: 0.2,
         }}
       >
         <ExitingFrozenContent>{activeContent.node}</ExitingFrozenContent>

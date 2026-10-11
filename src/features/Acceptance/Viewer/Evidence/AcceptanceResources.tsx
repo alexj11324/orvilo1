@@ -2,7 +2,7 @@
 
 import { Image } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
+import { useResponsive } from 'antd-style';
 import { cn } from 'cn';
 import { FileText, Film, Paperclip } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,60 +15,6 @@ import { useAcceptanceScope } from '../AcceptanceScope';
 import { checksForTurn } from '../turnChecks';
 import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import { useAcceptanceTurn } from '../useAcceptanceTurn';
-
-const styles = createStaticStyles(({ css }) => ({
-  /**
-   * Masonry by explicit column assignment, not CSS `column-count`.
-   *
-   * The native version balances columns ONCE, during layout — and evidence
-   * images arrive after it, so every tile had already piled into the first
-   * column and stayed there. Reserving each tile's aspect ratio did not help:
-   * the balancing pass happens before the ratios matter. Dealing the tiles out
-   * ourselves is deterministic and independent of when the bytes land.
-   */
-  column: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 12px;
-
-    min-inline-size: 0;
-  `,
-  grid: css`
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-  `,
-  item: css`
-    cursor: pointer;
-
-    overflow: hidden;
-
-    inline-size: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-    }
-  `,
-  meta: css`
-    padding-block: 8px;
-    padding-inline: 10px;
-  `,
-  nonVisual: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 18px;
-    padding-inline: 12px;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
 
 const isVisual = (type: string) => type === 'screenshot' || type === 'gif';
 
@@ -108,7 +54,7 @@ const AcceptanceResources = () => {
 
   if (items.length === 0)
     return (
-      <div className="flex flex-col" style={{ paddingBlock: 32 }}>
+      <div className="flex flex-col py-8">
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant={'icon'}>
@@ -125,9 +71,9 @@ const AcceptanceResources = () => {
   items.forEach((entry, index) => columns[index % columnCount]!.push(entry));
 
   return (
-    <div className={styles.grid}>
+    <div className="flex items-start gap-3">
       {columns.map((column, columnIndex) => (
-        <div className={styles.column} key={columnIndex}>
+        <div className="flex flex-1 flex-col gap-3 [min-inline-size:0]" key={columnIndex}>
           {column.map(({ check, evidence }) => {
             const href = evidence.fileUrl ?? undefined;
             const name = evidence.fileName ?? evidence.description ?? check;
@@ -140,8 +86,11 @@ const AcceptanceResources = () => {
             return (
               <div
                 {...clickableProps(href)}
-                className={cn(styles.item, CLICKABLE_FOCUS_RING)}
                 key={evidence.id}
+                className={cn(
+                  'cursor-pointer overflow-hidden [inline-size:100%] border border-solid border-divider rounded-(--radius-card) bg-card hover:border-border',
+                  CLICKABLE_FOCUS_RING,
+                )}
                 onClick={href ? () => window.open(href, '_blank', 'noreferrer') : undefined}
               >
                 {visual ? (
@@ -150,13 +99,12 @@ const AcceptanceResources = () => {
                  an image that arrives afterwards has already lost its place —
                  every tile piles into the first column. */
                   <div
+                    className="w-full bg-fill-quaternary"
                     style={{
                       aspectRatio:
                         evidence.fileWidth && evidence.fileHeight
                           ? `${evidence.fileWidth} / ${evidence.fileHeight}`
                           : '16 / 10',
-                      background: cssVar.colorFillQuaternary,
-                      width: '100%',
                     }}
                   >
                     <Image
@@ -167,16 +115,16 @@ const AcceptanceResources = () => {
                     />
                   </div>
                 ) : (
-                  <div className={styles.nonVisual}>
+                  <div className="flex items-center gap-2 py-4.5 px-3 bg-fill-quaternary">
                     {evidence.type === 'video' ? (
-                      <Film size={16} style={{ color: cssVar.colorTextTertiary }} />
+                      <Film className="text-foreground-tertiary" size={16} />
                     ) : (
-                      <FileText size={16} style={{ color: cssVar.colorTextTertiary }} />
+                      <FileText className="text-foreground-tertiary" size={16} />
                     )}
-                    <div className="truncate min-w-0 text-(length:--text-dense)">{name}</div>
+                    <div className="truncate min-w-0 text-sm leading-5.5">{name}</div>
                   </div>
                 )}
-                <div className={`flex flex-col gap-0.5 ${styles.meta}`}>
+                <div className="flex flex-col gap-0.5 py-2 px-2.5">
                   <div className="truncate min-w-0 text-xs">{name}</div>
                   <div className="truncate min-w-0 text-xs text-muted-foreground">
                     {[check, captured].filter(Boolean).join(' · ')}

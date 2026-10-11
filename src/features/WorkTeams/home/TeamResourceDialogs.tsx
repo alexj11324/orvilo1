@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { t as translate } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,68 +12,6 @@ import { lambdaClient } from '@/libs/trpc/client';
 
 import { isPublicDocument } from './teamResourcePicker';
 import type { TeamResource } from './useTeamResources';
-
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-block-start: 20px;
-  `,
-  body: css`
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 20px;
-  `,
-  field: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    label {
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    input {
-      height: 36px;
-      padding-inline: 10px;
-      border: 1px solid ${cssVar.colorBorder};
-      border-radius: var(--radius-input);
-
-      color: ${cssVar.colorText};
-
-      background: ${cssVar.colorBgContainer};
-      outline-color: ${cssVar.colorPrimary};
-    }
-  `,
-  picker: css`
-    overflow: auto;
-    max-height: 330px;
-  `,
-  pickerRow: css`
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: space-between;
-
-    width: 100%;
-    min-height: 38px;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 6px;
-
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
 
 interface DialogOptions {
   onChanged: () => Promise<unknown>;
@@ -130,8 +67,8 @@ function LinkForm({
     }
   };
   return (
-    <form className={styles.body} onSubmit={submit}>
-      <div className={styles.field}>
+    <form className="flex flex-col gap-3.5 p-5" onSubmit={submit}>
+      <div className="flex flex-col gap-1.5 [&_label]:text-sm [&_label]:leading-5.5 [&_label]:font-medium [&_input]:h-9 [&_input]:px-2.5 [&_input]:border [&_input]:border-solid [&_input]:border-border [&_input]:rounded-(--radius-input) [&_input]:text-sm [&_input]:leading-5.5 [&_input]:text-foreground [&_input]:bg-card [&_input]:outline-primary">
         <label htmlFor="team-resource-url">{t('teams.resources.url')}</label>
         <Input
           autoFocus
@@ -144,7 +81,7 @@ function LinkForm({
           onChange={(event) => setUrl(event.target.value)}
         />
       </div>
-      <div className={styles.field}>
+      <div className="flex flex-col gap-1.5 [&_label]:text-sm [&_label]:leading-5.5 [&_label]:font-medium [&_input]:h-9 [&_input]:px-2.5 [&_input]:border [&_input]:border-solid [&_input]:border-border [&_input]:rounded-(--radius-input) [&_input]:text-sm [&_input]:leading-5.5 [&_input]:text-foreground [&_input]:bg-card [&_input]:outline-primary">
         <label htmlFor="team-resource-title">{t('teams.resources.titleOptional')}</label>
         <Input
           id="team-resource-title"
@@ -154,7 +91,7 @@ function LinkForm({
         />
       </div>
       <ErrorLine error={error} />
-      <div className={styles.actions}>
+      <div className="flex justify-end gap-2 mbs-5">
         <Button disabled={pending} onClick={close}>
           {t('cancel')}
         </Button>
@@ -179,7 +116,7 @@ function SectionForm({
   const [error, setError] = useState<unknown>();
   return (
     <form
-      className={styles.body}
+      className="flex flex-col gap-3.5 p-5"
       onSubmit={async (event) => {
         event.preventDefault();
         if (pending || !name.trim()) return;
@@ -204,7 +141,7 @@ function SectionForm({
         }
       }}
     >
-      <div className={styles.field}>
+      <div className="flex flex-col gap-1.5 [&_label]:text-sm [&_label]:leading-5.5 [&_label]:font-medium [&_input]:h-9 [&_input]:px-2.5 [&_input]:border [&_input]:border-solid [&_input]:border-border [&_input]:rounded-(--radius-input) [&_input]:text-sm [&_input]:leading-5.5 [&_input]:text-foreground [&_input]:bg-card [&_input]:outline-primary">
         <label htmlFor="team-resource-section-name">{t('teams.resources.sectionName')}</label>
         <Input
           autoFocus
@@ -216,7 +153,7 @@ function SectionForm({
         />
       </div>
       <ErrorLine error={error} />
-      <div className={styles.actions}>
+      <div className="flex justify-end gap-2 mbs-5">
         <Button disabled={pending} onClick={close}>
           {t('cancel')}
         </Button>
@@ -266,12 +203,12 @@ function ExistingDocumentPicker({
   }, [load]);
   const eligible = items.filter(isPublicDocument);
   return (
-    <div className={styles.body}>
+    <div className="flex flex-col gap-3.5 p-5">
       <ErrorLine error={error} />
-      <div className={styles.picker}>
+      <div className="overflow-auto max-h-82.5">
         {eligible.map((document) => (
           <button
-            className={styles.pickerRow}
+            className="flex w-full min-h-9 items-center justify-between gap-2.5 px-2 border-0 rounded-(--radius-button) text-sm leading-5.5 text-foreground text-start bg-transparent hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={pendingId === document.id || attachedIds.has(document.id)}
             key={document.id}
             type="button"

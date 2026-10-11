@@ -4,7 +4,7 @@ description: 本文详细介绍如何在 Dokploy 中部署 Orvilo，包括数据
 tags:
   - 服务端数据库
   - Postgres
-  - Better Auth
+  - Clerk
   - Dokploy部署
   - 数据库配置
   - 身份验证服务
@@ -43,7 +43,7 @@ S3_BUCKET=
 S3_ENABLE_PATH_STYLE=
 ```
 
-### 配置 KEY\_VAULTS\_SECRET 环境变量
+### 配置 KEY_VAULTS_SECRET 环境变量
 
 `KEY_VAULTS_SECRET` 用于加密用户存储的 API Key 等敏感信息。点击下方按钮一键生成：
 
@@ -51,13 +51,9 @@ S3_ENABLE_PATH_STYLE=
 
 ### 配置身份验证环境变量
 
-准备以下身份验证环境变量（基于 [Better Auth](https://www.better-auth.com)）：
+准备以下身份验证环境变量（登录由 Clerk 账户门户负责，参见[身份验证服务](/zh/docs/self-hosting/auth)）：
 
-点击下方按钮一键生成 `AUTH_SECRET`（会话加密密钥）：
-
-<GenerateSecret envName="AUTH_SECRET" />
-
-同时需要配置 `JWKS_KEY` 环境变量，用于签名和验证 JWT。点击下方按钮一键生成：
+配置 `JWKS_KEY` 环境变量，用于签名和验证 JWT。点击下方按钮一键生成：
 
 <GenerateJWKSKey />
 
@@ -110,7 +106,8 @@ DATABASE_URL=
 
 # 使用上方生成的值
 KEY_VAULTS_SECRET=
-AUTH_SECRET=
+AUTH_ACCOUNTS_URL=https://accounts.example.com
+CLERK_SECRET_KEY=your-clerk-secret-key
 JWKS_KEY=
 
 # S3 相关配置

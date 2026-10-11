@@ -54,8 +54,6 @@ tags:
 
   <GenerateSecret envName="KEY_VAULTS_SECRET" />
 
-  <GenerateSecret envName="AUTH_SECRET" />
-
   点击下方按钮一键生成 `JWKS_KEY`（用于签名和验证 JWT）：
 
   <GenerateJWKSKey />
@@ -71,9 +69,9 @@ tags:
   # 格式：postgres://username:password@host:port/dbname，如果你的 pg 实例为 Docker 容器，请使用容器名
   DATABASE_URL=postgres://postgres:mysecretpassword@my-postgres:5432/postgres
 
-  # 身份验证（Better Auth）
-  # 会话加密密钥（使用以下命令生成：openssl rand -base64 32）
-  AUTH_SECRET=jgwsK28dspyVQoIf8/M3IIHl1h6LYYceSYNXeLpy6uk=
+  # 身份验证（Clerk 账户门户）
+  AUTH_ACCOUNTS_URL=https://accounts.example.com
+  CLERK_SECRET_KEY=your-clerk-secret-key
   # JWKS 密钥，用于签名和验证 JWT
   JWKS_KEY='{"keys":[...]}'
 
@@ -133,7 +131,8 @@ Orvilo 也支持直接在本地的 Mac/Windows 本地使用。
 $ docker run -it -d --name orvilo -p 3210:3210 \
   -e DATABASE_URL=postgres://postgres:mysecretpassword@host.docker.internal:5432/postgres \
   -e KEY_VAULTS_SECRET=jgwsK28dspyVQoIf8/M3IIHl1h6LYYceSYNXeLpy6uk= \
-  -e AUTH_SECRET=jgwsK28dspyVQoIf8/M3IIHl1h6LYYceSYNXeLpy6uk= \
+  -e AUTH_ACCOUNTS_URL=https://accounts.example.com \
+  -e CLERK_SECRET_KEY=your-clerk-secret-key \
   -e JWKS_KEY='{"keys":[...]}' \
   -e APP_URL=http://localhost:3210 \
   -e S3_ACCESS_KEY_ID=xxxxxxxxxx \

@@ -134,13 +134,13 @@ Essential security measures:
 1. **Use HTTPS** — Always deploy with SSL/TLS certificates
 2. **Secure your database** — Use strong passwords and restrict network access
 3. **Environment variables** — Store secrets securely (never in code)
-4. **Authentication** — Enable Better Auth for multi-user deployments
+4. **Authentication** — Connect the deployment to a Clerk accounts portal
 5. **Regular updates** — Keep Orvilo and dependencies up to date
 
 Authentication options:
 
 - **Open access** — No authentication (single-user deployments only)
-- **Better Auth** — Built-in auth with email/password, OAuth, magic links
+- **Clerk accounts portal** — Email/password, OAuth, magic links and MFA, configured in Clerk
 - **Reverse proxy** — Use Authelia, Authentik, or similar
 
 ## Next Steps
@@ -150,4 +150,4 @@ Authentication options:
 3. **Set up infrastructure** — Provision database, Redis, and storage as needed
 4. **Configure environment variables** — See the [environment variable reference](/docs/self-hosting/environment-variables)
 5. **Deploy** — Follow the platform-specific guide above
-6. **Configure authentication** — Set up [Better Auth](/docs/self-hosting/auth) for multi-user access
+6. **Configure authentication** — Set up the [authentication service](/docs/self-hosting/auth) for multi-user access

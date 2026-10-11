@@ -14,7 +14,7 @@ tags:
 # Configuring Casdoor Authentication Service
 
 <Callout type={'warning'}>
-  NextAuth (Auth.js) has been fully removed from Orvilo. The `NEXT_AUTH_SSO_PROVIDERS` and `AUTH_URL` variables shown below will now cause the deployment to fail at build/startup. This page is kept for historical reference only — use the [Better Auth provider guides](/docs/self-hosting/auth) and the [NextAuth to Better Auth migration guide](/docs/self-hosting/migration/v2/auth/nextauth-to-betterauth) instead.
+  NextAuth (Auth.js) has been fully removed from Orvilo. The `NEXT_AUTH_SSO_PROVIDERS` and `AUTH_URL` variables shown below will now cause the deployment to fail at build/startup. This page is kept for historical reference only — sign-in now runs through the Clerk accounts portal; see [Authentication Service](/docs/self-hosting/auth).
 </Callout>
 
 [Casdoor](https://github.com/casdoor/casdoor) is an open-source authentication service that is rich in features and easy to use.
@@ -125,7 +125,7 @@ If you are deploying using a public network, the following assumptions apply:
 
   - Event: `update-user`
 
-  Save and Exit, then copy the Webhook secret and fill it in the environment variable \`CASDOOR\_WEBHOOK\_SECRET.
+  Save and Exit, then copy the Webhook secret and fill it in the environment variable \`CASDOOR_WEBHOOK_SECRET.
 
   ### Configure Environment Variables
 

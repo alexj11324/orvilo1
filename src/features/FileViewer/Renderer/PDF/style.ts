@@ -1,21 +1,6 @@
-import { createStaticStyles } from 'antd-style';
-
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    height: 100%;
-  `,
-  document: css`
-    position: relative;
-  `,
-  documentContainer: css`
-    flex: 1;
-    padding-block: 10px;
-    background-color: ${cssVar.colorBgLayout};
-  `,
-  page: css`
-    overflow: hidden;
-    margin-block-end: 12px;
-    border-radius: 4px;
-    box-shadow: ${cssVar.boxShadowTertiary};
-  `,
-}));
+export const styles = {
+  container: 'h-full',
+  document: 'relative',
+  documentContainer: 'flex-1 py-2.5 bg-background',
+  page: 'overflow-hidden mbe-3 rounded-(--radius-card) shadow-(--shadow-raised)',
+};

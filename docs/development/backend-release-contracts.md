@@ -11,6 +11,8 @@ This handoff records the backend contracts delivered for [#715](https://github.c
 - Authorization codes are `timeout`, `network`, `invalid_url`, `denied`, and `server_error`. Pending handoff expiry is `timeout`; HTTP 401/403 and state mismatch are `denied`. Do not parse localized messages for classification.
 - Successful authorization foregrounds the main window. The stable protocol remains `orvilo://`; existing channel-specific schemes remain unchanged.
 
+**Client status.** Workspace settings and the onboarding wizard attach `WORKSPACE_SLUG_TAKEN` to the URL field. The invitation page refreshes user state and the workspace list before navigating. The desktop sign-in failure page maps `reason` to a localized explanation and renders no URL text. The login step, the session-expired dialog and the local device status choose their message from the authorization `code`. Invitation failures still show the server's English sentence because no code is sent for them.
+
 ## ACP planning and optional model work
 
 Pass optional `agentId: string` to `verify.generateGoalCriteria`, `verify.generateGoalPlan`, `task.analyzeIntent`, and `task.synthesizeInstruction`. Criteria, decomposition, and exploration for ACP use one tracked ACP round. The CLI must submit the validated result; prose alone is not accepted.

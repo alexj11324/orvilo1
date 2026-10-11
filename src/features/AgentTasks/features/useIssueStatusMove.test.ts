@@ -5,6 +5,8 @@ import type { IssueStatusMoveTarget } from './useIssueStatusMove';
 import { useIssueStatusMove } from './useIssueStatusMove';
 
 const mocks = vi.hoisted(() => ({
+  confirmModal: vi.fn(),
+  contractContext: vi.fn(),
   find: vi.fn(),
   moveBoardMaybePickingState: vi.fn(),
   mutate: vi.fn(),
@@ -22,6 +24,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/services/task', () => ({
   taskService: { find: mocks.find },
 }));
+
+vi.mock('@/libs/trpc/client', () => ({
+  lambdaClient: { task: { contractContext: { query: mocks.contractContext } } },
+}));
+vi.mock('@/components/Modal', () => ({ confirmModal: mocks.confirmModal }));
 
 vi.mock('@/features/MyWork/workQueryBoardMove', () => ({
   moveBoardMaybePickingState: mocks.moveBoardMaybePickingState,
@@ -69,6 +76,7 @@ const target = (overrides: Partial<IssueStatusMoveTarget> = {}): IssueStatusMove
 describe('useIssueStatusMove', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.contractContext.mockResolvedValue({ data: {} });
     mocks.find.mockResolvedValue(teamTask());
     mocks.moveBoardMaybePickingState.mockResolvedValue(true);
     mocks.mutate.mockResolvedValue(undefined);
@@ -163,6 +171,44 @@ describe('useIssueStatusMove', () => {
       target: target({ category: 'in_progress' }),
     });
     expect(mocks.runTask).toHaveBeenCalledWith('T-9');
+  });
+
+  // The move is how an Issue starts, so it takes the same contract check as
+  // the Issue's own Start / Retry / Resume.
+  it('confirms pending constraint edits before the move starts a repair run', async () => {
+    mocks.contractContext.mockResolvedValue({
+      data: { contract: { revision: 3 }, pendingConstraintEdits: true },
+    });
+    mocks.confirmModal.mockImplementation((options: { onOk: () => void }) => options.onOk());
+    mocks.find.mockResolvedValue(
+      teamTask({ automationMode: null, status: 'backlog', workflowCategory: 'todo' }),
+    );
+    const { result } = renderHook(() => useIssueStatusMove());
+    await result.current({ taskIdentifier: 'T-9', target: target({ category: 'in_progress' }) });
+
+    expect(mocks.confirmModal).toHaveBeenCalledTimes(1);
+    expect(mocks.runTask).toHaveBeenCalledWith('T-9', { intent: 'repair' });
+  });
+
+  it('keeps the move and starts nothing when that confirmation is declined', async () => {
+    mocks.contractContext.mockResolvedValue({
+      data: { contract: { revision: 3 }, pendingConstraintEdits: true },
+    });
+    mocks.confirmModal.mockImplementation((options: { onCancel: () => void }) =>
+      options.onCancel(),
+    );
+    mocks.find.mockResolvedValue(
+      teamTask({ automationMode: null, status: 'backlog', workflowCategory: 'todo' }),
+    );
+    const { result } = renderHook(() => useIssueStatusMove());
+    const moved = await result.current({
+      taskIdentifier: 'T-9',
+      target: target({ category: 'in_progress' }),
+    });
+
+    expect(moved).toBe(true);
+    expect(mocks.runTask).not.toHaveBeenCalled();
+    expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
   it('does not start a run while an open blocker is still on the issue', async () => {

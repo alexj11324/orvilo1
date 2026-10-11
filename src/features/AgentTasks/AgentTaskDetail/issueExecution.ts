@@ -72,6 +72,8 @@ export interface IssueExecutionInput {
 
 const HINT = (name: string): DispatchNoticeCopy => ({ key: `taskDetail.execution.hint.${name}` });
 
+const STOPPED_HINT = HINT('stopped');
+
 /** Legacy statuses from which the server accepts a new run (`canRunTask`). */
 const RUNNABLE_STATUSES = new Set(['backlog', 'completed', 'failed', 'paused']);
 
@@ -103,8 +105,14 @@ export const resolveIssueExecution = (input: IssueExecutionInput): IssueExecutio
     view: Omit<IssueExecutionView, 'action' | 'actionBlocked'>,
     action: IssueExecutionAction,
   ): IssueExecutionView => {
-    // A finished Issue is not waiting on a retry; reopening it is the way back.
-    if (workflowCategory === 'done') return { ...view, actionBlocked: false };
+    // A finished or canceled Issue is not waiting on a retry; reopening it is
+    // the way back, and the page says so instead of naming a missing button.
+    if (workflowCategory === 'done' || workflowCategory === 'canceled')
+      return {
+        ...view,
+        actionBlocked: false,
+        hints: [...view.hints.filter((hint) => hint.key !== STOPPED_HINT.key), HINT('reopenToRun')],
+      };
     if (!runnable) {
       return {
         ...view,
@@ -167,6 +175,10 @@ export const resolveIssueExecution = (input: IssueExecutionInput): IssueExecutio
     };
   }
 
+  // A canceled Issue projects as canceled execution whether or not anything
+  // ever ran. With no dispatch there is no execution to explain.
+  if (workflowCategory === 'canceled' && !dispatchPhase) return null;
+
   switch (execution) {
     case 'queued':
     case 'provisioning':
@@ -197,7 +209,7 @@ export const resolveIssueExecution = (input: IssueExecutionInput): IssueExecutio
 
     case 'canceled': {
       return withAction(
-        { badge: execution, hints: [HINT('stopped')], kind: 'stopped', showFailureReason: false },
+        { badge: execution, hints: [STOPPED_HINT], kind: 'stopped', showFailureReason: false },
         'resume',
       );
     }
@@ -209,7 +221,7 @@ export const resolveIssueExecution = (input: IssueExecutionInput): IssueExecutio
         return withAction(
           {
             badge: 'canceled',
-            hints: [HINT('stopped')],
+            hints: [STOPPED_HINT],
             kind: 'stopped',
             showFailureReason: false,
           },

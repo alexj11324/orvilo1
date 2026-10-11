@@ -217,6 +217,34 @@ describe('resolveIssueExecution', () => {
       );
       expect(view?.kind).toBe('failed');
       expect(view?.action).toBeUndefined();
+      expect(view?.hints).toEqual([hint('reopenToRun')]);
+    });
+
+    // A canceled Issue projects as canceled execution even if nothing ever ran.
+    it('says nothing about execution on a canceled Issue that was never dispatched', () => {
+      expect(
+        resolveIssueExecution(withAgent({ status: 'canceled', workflowCategory: 'canceled' })),
+      ).toBeNull();
+      expect(
+        resolveIssueExecution({ status: 'canceled', workflowCategory: 'canceled' }),
+      ).toBeNull();
+    });
+
+    it('does not promise Resume on a canceled Issue whose run was stopped', () => {
+      const view = resolveIssueExecution(
+        withAgent({ dispatchPhase: 'canceled', status: 'canceled', workflowCategory: 'canceled' }),
+      );
+      expect(view?.kind).toBe('stopped');
+      expect(view?.action).toBeUndefined();
+      expect(view?.hints).toEqual([hint('reopenToRun')]);
+    });
+
+    it('tells the reader to reopen a Done Issue whose last run failed', () => {
+      const view = resolveIssueExecution(
+        withAgent({ dispatchPhase: 'failed', status: 'completed', workflowCategory: 'done' }),
+      );
+      expect(view?.action).toBeUndefined();
+      expect(view?.hints).toEqual([hint('reopenToRun')]);
     });
   });
 

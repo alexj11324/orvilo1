@@ -26,23 +26,23 @@ interface TaskExecutionActionProps {
 }
 
 /**
- * Start / Retry / Resume. Mounted only when the state calls for one, so an
- * Issue that needs no action does not resolve run permissions at all.
+ * Start / Retry / Resume. A disabled button cannot show a tooltip, so the
+ * reason it is unavailable is written next to it.
  */
 export const TaskExecutionAction = memo<TaskExecutionActionProps>(({ action, blocked }) => {
   const { t } = useTranslation('chat');
   const taskId = useTaskDetailTaskId();
-  const { canEditTask, canExecuteTask, permissionReason, runWithContractCheck } =
+  const { accessResolved, canEditTask, canExecuteTask, permissionReason, runWithContractCheck } =
     useRunWithContractCheck();
   const [pending, setPending] = useState(false);
 
-  const disabledReason = !canEditTask
+  // Unfinished prerequisites are already explained by the section's own hint.
+  // While access is still loading the button waits without claiming a refusal.
+  const deniedReason = !canEditTask
     ? permissionReason
-    : !canExecuteTask
+    : !canExecuteTask && accessResolved
       ? t('taskDetail.execution.noAgentAccess')
-      : blocked
-        ? t('taskDetail.prerequisites.blocked')
-        : undefined;
+      : undefined;
 
   const handleClick = async () => {
     if (!taskId || !canExecuteTask || blocked || pending) return;
@@ -58,17 +58,19 @@ export const TaskExecutionAction = memo<TaskExecutionActionProps>(({ action, blo
   };
 
   return (
-    <Button
-      className="self-start"
-      disabled={!canExecuteTask || blocked}
-      loading={pending}
-      size="sm"
-      title={disabledReason}
-      variant="outline"
-      onClick={() => void handleClick()}
-    >
-      {t(`taskDetail.execution.action.${action}`)}
-    </Button>
+    <>
+      {deniedReason && <p className="text-xs leading-5 text-muted-foreground">{deniedReason}</p>}
+      <Button
+        className="self-start"
+        disabled={!canExecuteTask || blocked}
+        loading={pending}
+        size="sm"
+        variant="outline"
+        onClick={() => void handleClick()}
+      >
+        {t(`taskDetail.execution.action.${action}`)}
+      </Button>
+    </>
   );
 });
 

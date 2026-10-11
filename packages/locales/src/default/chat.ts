@@ -1826,10 +1826,11 @@ export default {
   'taskDetail.execution.action.retry': 'Retry',
   'taskDetail.execution.action.start': 'Start',
   'taskDetail.execution.hint.assignAgentToRun': 'Assign an agent to run this Issue again.',
+  'taskDetail.execution.hint.reopenToRun':
+    'This Issue is closed. Reopen it to run the agent again.',
   'taskDetail.execution.hint.awaitingAcceptance':
     'The agent finished its run. Review the result to accept it or send it back.',
-  'taskDetail.execution.hint.inProgressNoRun':
-    'This Issue is In Progress, but no run has started. Start it here.',
+  'taskDetail.execution.hint.inProgressNoRun': 'This Issue is In Progress, but no run has started.',
   'taskDetail.execution.hint.moveToStart':
     'The agent starts when you move this Issue to In Progress.',
   'taskDetail.execution.hint.needsAgent':

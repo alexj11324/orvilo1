@@ -12,6 +12,7 @@ import { TaskDetailScope } from './TaskDetailScope';
 import TaskExecutionSection from './TaskExecutionSection';
 
 const api = vi.hoisted(() => ({
+  access: { canUseResource: true, isAccessResolved: true },
   contractContext: vi.fn(),
   confirmModal: vi.fn((options: { onOk: () => void }) => options.onOk()),
   runMutation: vi.fn(),
@@ -30,6 +31,9 @@ vi.mock('@/components/Modal', async (importOriginal) => ({
   confirmModal: api.confirmModal,
 }));
 vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
+  useResourceAccess: () => api.access,
+}));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/store/agent', () => ({ useAgentStore: () => undefined }));
 vi.mock('@/store/global', () => ({
@@ -121,6 +125,7 @@ const renderExecution = () =>
 describe('Issue execution recovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    api.access = { canUseResource: true, isAccessResolved: true };
     api.runMutation.mockResolvedValue({ success: true });
     seedTask();
   });
@@ -195,6 +200,27 @@ describe('Issue execution recovery', () => {
 
     const retry = await screen.findByRole('button', { name: 'taskDetail.execution.action.retry' });
     expect(retry).toBeDisabled();
+  });
+
+  // A disabled button shows no tooltip, so the reason has to be on the page.
+  it('writes out why the action is unavailable when the viewer may not run the agent', async () => {
+    api.access = { canUseResource: false, isAccessResolved: true };
+    seedTask();
+    renderExecution();
+
+    const retry = await screen.findByRole('button', { name: 'taskDetail.execution.action.retry' });
+    expect(retry).toBeDisabled();
+    expect(screen.getByText('taskDetail.execution.noAgentAccess')).toBeInTheDocument();
+  });
+
+  it('does not claim a refusal while agent access is still loading', async () => {
+    api.access = { canUseResource: false, isAccessResolved: false };
+    seedTask();
+    renderExecution();
+
+    const retry = await screen.findByRole('button', { name: 'taskDetail.execution.action.retry' });
+    expect(retry).toBeDisabled();
+    expect(screen.queryByText('taskDetail.execution.noAgentAccess')).not.toBeInTheDocument();
   });
 });
 

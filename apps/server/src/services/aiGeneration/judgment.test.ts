@@ -1149,3 +1149,44 @@ describe('isAcpJudgmentBindingError', () => {
     expect(isAcpJudgmentBindingError(new Error('nope'))).toBe(false);
   });
 });
+
+describe('planning tool submissions (#623)', () => {
+  it('enables the CLI tool and consumes the durable submission instead of assistant text', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    mocks.operationFindById.mockResolvedValue({
+      ...doneOperation,
+      metadata: { ...doneOperation.metadata, planningResult: { verdict: 'submitted' } },
+    });
+    const result = await runAcpJudgment(db, 'u1', {
+      input: JUDGMENT_INPUT,
+      judgment: {
+        binding: { agentId: 'agent-1' },
+        purpose: 'goal.criteriaDraft',
+        outputMode: 'tool',
+      },
+    });
+    expect(result.data).toEqual({ verdict: 'submitted' });
+    expect(mocks.execAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        disableTools: false,
+        appContext: expect.objectContaining({
+          judgment: expect.objectContaining({ outputMode: 'tool' }),
+        }),
+        prompt: expect.stringContaining('orvilo goal submit-draft'),
+      }),
+    );
+  });
+  it('refuses a JSON reply when the required tool submission is missing', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    await expect(
+      runAcpJudgment(db, 'u1', {
+        input: JUDGMENT_INPUT,
+        judgment: {
+          binding: { agentId: 'agent-1' },
+          purpose: 'goal.criteriaDraft',
+          outputMode: 'tool',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_RUN_FAILED' });
+  });
+});

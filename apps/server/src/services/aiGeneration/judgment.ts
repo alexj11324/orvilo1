@@ -300,6 +300,8 @@ export interface AcpJudgmentRunParams {
   maxSteps?: number;
   /** Advisory model/provider override — applied to slug-bound runs only. */
   model?: string;
+  /** Require a durable operation-bound submission instead of parsing assistant prose. */
+  outputMode?: 'tool';
   /** Parent operation this judgment serves (verified run, task op, ...). */
   parentOperationId?: string;
   /** Internal: polling cadence for the operation row (tests shrink this). */
@@ -589,6 +591,7 @@ export const runAcpJudgment = async <T = unknown>(
           ...(judgment.sourceTopicId ? { sourceTopicId: judgment.sourceTopicId } : {}),
           fileIds: judgment.fileIds ?? null,
           messages: input.messages,
+          outputMode: judgment.outputMode,
           model: judgment.model ?? null,
           parentOperationId: judgment.parentOperationId ?? null,
           provider: judgment.provider ?? null,
@@ -765,7 +768,12 @@ export const runAcpJudgment = async <T = unknown>(
 
     const reply = run.assistantMessageId ? await messages.findById(run.assistantMessageId) : null;
     const content = typeof reply?.content === 'string' ? reply.content : '';
-    const data = content ? extractJudgmentJson(content) : undefined;
+    const data =
+      judgment.outputMode === 'tool'
+        ? operation.metadata?.planningResult
+        : content
+          ? extractJudgmentJson(content)
+          : undefined;
     // Server-side contract check: a `done` operation with no parseable payload
     // or a malformed one is still a FAILED judgment — the trace records
     // succeeded=false with a distinct error code BEFORE the throw.
@@ -986,13 +994,14 @@ export const runAcpJudgment = async <T = unknown>(
             attempt: judgment.attempt,
             budget: { maxSteps, maxWaitMs: timeoutMs },
             intentKey,
+            outputMode: judgment.outputMode,
             purpose: judgment.purpose,
           },
           suppressSignal: true,
           taskId: judgment.taskId ?? null,
         },
         autoStart: true,
-        disableTools: true,
+        disableTools: judgment.outputMode !== 'tool',
         fileIds: judgment.fileIds,
         instructions,
         // Advisory override: a slug-bound builtin has no user tuning, so it takes
@@ -1001,7 +1010,17 @@ export const runAcpJudgment = async <T = unknown>(
         ...(slugBound && judgment.provider ? { provider: judgment.provider } : {}),
         maxSteps,
         parentOperationId: judgment.parentOperationId,
-        prompt: body,
+        prompt:
+          judgment.outputMode === 'tool'
+            ? [
+                prompt,
+                '## Output contract',
+                'Write a JSON file matching this schema, then submit it using the built-in Orvilo CLI tool:',
+                `orvilo goal submit-draft --token ${JSON.stringify(intentKey)} --file <path>`,
+                'The CLI uses ORVILO_OPERATION_ID. Submit exactly once and then finish the turn. A prose or JSON reply alone does not record a result.',
+                JSON.stringify(input.schema),
+              ].join('\n\n')
+            : body,
         signal: dispatchController.signal,
         taskId: judgment.taskId,
         title: `[judgment] ${judgment.purpose}`,

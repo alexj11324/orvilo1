@@ -714,6 +714,7 @@ export const taskRouter = router({
   analyzeIntent: taskProcedureWrite
     .input(
       z.object({
+        agentId: z.string().min(1).optional(),
         context: z.string().optional(),
         instruction: z.string().min(1).max(20_000),
       }),
@@ -758,6 +759,7 @@ export const taskRouter = router({
         answers: z
           .array(z.object({ answer: z.string().min(1), question: z.string().min(1) }))
           .max(3),
+        agentId: z.string().min(1).optional(),
         context: z.string().optional(),
         instruction: z.string().min(1).max(20_000),
       }),

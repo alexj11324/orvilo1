@@ -166,6 +166,30 @@ function printTick(result: GoalTickResult) {
 export function registerGoalCommand(program: Command) {
   const goal = program.command('goal').description('Run long-horizon Goal Graphs');
   goal
+    .command('submit-draft')
+    .description('Submit the current ACP planning round result')
+    .requiredOption('--file <path>', 'JSON result matching the server-issued planning schema')
+    .requiredOption('--token <token>', 'Server-issued planning round token')
+    .option('--operation <id>', 'Defaults to ORVILO_OPERATION_ID')
+    .action(async (options: { file: string; token: string; operation?: string }) => {
+      const operationId = options.operation ?? process.env.ORVILO_OPERATION_ID;
+      if (!operationId) throw new Error('Current planning operation ID required');
+      const client = await getTrpcClient();
+      const jwt = process.env.ORVILO_JWT;
+      const operationToken =
+        jwt &&
+        JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString()).purpose ===
+          'hetero-operation';
+      const endpoint = operationToken ? client.goal.submitOperationDraft : client.goal.submitDraft;
+      await endpoint.mutate({
+        operationId,
+        token: options.token,
+        result: JSON.parse(await readFile(options.file, 'utf8')),
+      });
+      console.log('Planning result recorded.');
+    });
+
+  goal
     .command('plan <id>')
     .description('Atomically submit the current main Agent plan')
     .requiredOption(

@@ -2,8 +2,7 @@
 
 import { Github } from '@lobehub/icons';
 import { type HeterogeneousProviderConfig, type OwnCredSummary } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckCircle2, KeyRound, X, XIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,19 +24,6 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 const CLAUDE_TOKEN_CRED_KEY = 'CLAUDE_CODE_OAUTH_TOKEN';
 
 const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    padding-block: 16px 12px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  credOption: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
   manageLink: css`
     cursor: pointer;
     font-size: 12px;
@@ -47,74 +33,21 @@ const styles = createStaticStyles(({ css }) => ({
       text-decoration: underline;
     }
   `,
-  repoItem: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    min-height: 36px;
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-
-      .repo-delete-btn {
-        opacity: 1;
-      }
-    }
-  `,
-  repoItemActive: css`
-    background: ${cssVar.colorFillSecondary};
-  `,
-  repoDeleteBtn: css`
-    cursor: pointer;
-
-    flex-shrink: 0;
-
-    margin-inline-start: auto;
-    padding: 2px;
-    border: none;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    opacity: 0;
-    background: transparent;
-
-    transition:
-      opacity 0.15s,
-      color 0.15s;
-
-    &:hover {
-      color: ${cssVar.colorError};
-    }
-  `,
-  repoList: css`
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  `,
-  sectionDesc: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  sectionDivider: css`
-    margin-block: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  sectionLabel: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  `,
 }));
+
+const twStyles = {
+  card: 'rounded-(--radius-card) border border-divider bg-card px-4 pt-4 pb-3',
+  credOption: 'flex items-center gap-2',
+  repoItem:
+    'group/repo flex min-h-9 cursor-pointer items-center gap-2 rounded-(--radius-input) px-2 py-1.5 transition-[background] duration-150 ease-[ease] motion-reduce:transition-none hover:bg-accent',
+  repoItemActive: 'bg-selected',
+  repoDeleteBtn:
+    'ms-auto shrink-0 cursor-pointer border-0 bg-transparent p-0.5 text-foreground-tertiary opacity-0 transition-[opacity,color] duration-150 ease-[ease] motion-reduce:transition-none hover:text-destructive-text focus-visible:opacity-100 group-hover/repo:opacity-100 group-focus-within/repo:opacity-100',
+  repoList: 'flex flex-col gap-0.5',
+  sectionDesc: 'text-xs leading-5 text-muted-foreground',
+  sectionDivider: 'my-3 border-t border-divider',
+  sectionLabel: 'text-xs leading-5 tracking-[0.04em] text-foreground-tertiary uppercase',
+};
 
 interface CloudHeterogeneousConfigProps {
   onEnvChange: (env: Record<string, string>) => Promise<void> | void;
@@ -162,12 +95,12 @@ const TokenSection = memo<TokenSectionProps>(({ existingCred, onSaved, onEnvChan
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <KeyRound size={12} />
-          <span className={styles.sectionLabel}>{t('heterogeneousStatus.cloud.tokenLabel')}</span>
+          <span className={twStyles.sectionLabel}>{t('heterogeneousStatus.cloud.tokenLabel')}</span>
         </div>
         {existingCred && !editing && (
           <span
             {...clickableProps()}
-            className={cn(styles.manageLink, CLICKABLE_FOCUS_RING)}
+            className={cx(styles.manageLink, CLICKABLE_FOCUS_RING)}
             onClick={() => {
               if (!canEdit) return;
 
@@ -219,7 +152,7 @@ const TokenSection = memo<TokenSectionProps>(({ existingCred, onSaved, onEnvChan
         </div>
       )}
 
-      <span className={styles.sectionDesc}>{t('heterogeneousStatus.cloud.tokenDesc')}</span>
+      <span className={twStyles.sectionDesc}>{t('heterogeneousStatus.cloud.tokenDesc')}</span>
     </div>
   );
 });
@@ -255,22 +188,22 @@ const RepoListSection = memo<RepoListSectionProps>(({ repos, onReposChange }) =>
 
   return (
     <div className="flex flex-col gap-2">
-      <span className={styles.sectionLabel}>{t('heterogeneousStatus.cloud.repoLabel')}</span>
+      <span className={twStyles.sectionLabel}>{t('heterogeneousStatus.cloud.repoLabel')}</span>
 
       {repos.length > 0 && (
-        <div className={styles.repoList}>
+        <div className={twStyles.repoList}>
           {repos.map((repo) => (
-            <div className={styles.repoItem} key={repo}>
+            <div className={twStyles.repoItem} key={repo}>
               <Github size={14} style={{ flexShrink: 0 }} />
               <div className="truncate" style={{ flex: 1, fontSize: 13 }}>
                 {repo}
               </div>
               <ActionIcon
                 aria-label={t('delete', { ns: 'common' })}
-                className={`${styles.repoDeleteBtn} repo-delete-btn`}
+                className={`${twStyles.repoDeleteBtn} repo-delete-btn`}
                 disabled={!canEdit}
                 icon={X}
-                size="small"
+                size={{ blockSize: 28, borderRadius: 6, size: 14 }}
                 onClick={(e) => removeRepo(repo, e)}
               />
             </div>
@@ -295,7 +228,7 @@ const RepoListSection = memo<RepoListSectionProps>(({ repos, onReposChange }) =>
         </Button>
       </div>
 
-      <span className={styles.sectionDesc}>{t('heterogeneousStatus.cloud.repoDesc')}</span>
+      <span className={twStyles.sectionDesc}>{t('heterogeneousStatus.cloud.repoDesc')}</span>
     </div>
   );
 });
@@ -326,7 +259,7 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
     );
     const githubCredOptions = githubCreds.map((cred) => ({
       label: (
-        <span className={styles.credOption}>
+        <span className={twStyles.credOption}>
           {cred.oauthAvatar ? <Avatar avatar={cred.oauthAvatar} size={16} /> : <Github size={14} />}
           <span>{cred.name}</span>
           {cred.oauthUsername && (
@@ -359,7 +292,7 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
     }
 
     return (
-      <div className={styles.card}>
+      <div className={twStyles.card}>
         <div className="flex flex-col gap-4">
           {/* ── Claude Code OAuth Token ── */}
           <TokenSection
@@ -368,20 +301,20 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
             onSaved={() => refetch()}
           />
 
-          <div className={styles.sectionDivider} />
+          <div className={twStyles.sectionDivider} />
 
           {/* ── GitHub OAuth Credential ── */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Github size={12} />
-                <span className={styles.sectionLabel}>
+                <span className={twStyles.sectionLabel}>
                   {t('heterogeneousStatus.cloud.githubLabel')}
                 </span>
               </div>
               <span
                 {...clickableProps()}
-                className={cn(styles.manageLink, CLICKABLE_FOCUS_RING)}
+                className={cx(styles.manageLink, CLICKABLE_FOCUS_RING)}
                 onClick={() => navigate('/settings/credential')}
               >
                 {t('heterogeneousStatus.cloud.manageCredentials')}
@@ -417,10 +350,12 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
               </SelectContent>
             </Select>
 
-            <span className={styles.sectionDesc}>{t('heterogeneousStatus.cloud.githubDesc')}</span>
+            <span className={twStyles.sectionDesc}>
+              {t('heterogeneousStatus.cloud.githubDesc')}
+            </span>
           </div>
 
-          <div className={styles.sectionDivider} />
+          <div className={twStyles.sectionDivider} />
 
           {/* ── Repository list ── */}
           <RepoListSection repos={repos} onReposChange={handleReposChange} />

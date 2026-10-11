@@ -3,7 +3,7 @@
 import { McpIcon } from '@lobehub/ui/icons';
 import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { AlertCircle, Square, SquareCheckBig, SquareMinus, X } from 'lucide-react';
 import React, { memo, useMemo } from 'react';
@@ -36,7 +36,7 @@ const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon: Icon
     return <img alt={label} height={16} src={Icon} style={{ flexShrink: 0 }} width={16} />;
   }
 
-  return <Icon fill={cssVar.colorText} size={16} />;
+  return <Icon fill={'var(--foreground)'} size={16} />;
 });
 
 /**
@@ -48,7 +48,7 @@ const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'>>(
       return <img alt={label} height={16} src={Icon} style={{ flexShrink: 0 }} width={16} />;
     }
 
-    return <Icon fill={cssVar.colorText} size={16} />;
+    return <Icon fill={'var(--foreground)'} size={16} />;
   },
 );
 
@@ -57,20 +57,11 @@ const OrviloSkillIcon = memo<Pick<OrviloSkillProviderType, 'icon' | 'label'>>(
 const EMPTY_CONNECTORS: ReturnType<typeof connectorSelectors.connectorList> = [];
 const emptyConnectorList = () => EMPTY_CONNECTORS;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  notInstalledTag: css`
-    border-color: ${cssVar.colorWarningBorder};
-    background: ${cssVar.colorWarningBg};
-  `,
-  tag: css`
-    height: 28px !important;
-    border-radius: ${cssVar.borderRadiusSM} !important;
-  `,
-  warningIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorWarning};
-  `,
-}));
+const styles = {
+  notInstalledTag: 'border-warning-border bg-warning-wash',
+  tag: 'rounded-(--radius-chip)',
+  warningIcon: 'shrink-0 text-destructive-on-fill',
+};
 
 export interface PluginTagProps {
   /**
@@ -345,7 +336,7 @@ const PluginTag = memo<PluginTagProps>(
 
       // Custom connector type
       if (meta.type === 'custom-connector') {
-        return <McpIcon fill={cssVar.colorText} size={16} />;
+        return <McpIcon fill={'var(--foreground)'} size={16} />;
       }
 
       // Builtin type has avatar
@@ -379,7 +370,7 @@ const PluginTag = memo<PluginTagProps>(
 
     return (
       <Badge
-        className={styles.tag}
+        className={cn(styles.tag, selectable ? 'h-9 text-sm leading-5.5' : 'h-7 text-xs leading-5')}
         style={selectable ? { cursor: 'pointer' } : undefined}
         variant={showErrorState ? 'destructive' : isDarkMode ? 'secondary' : 'outline'}
         title={
@@ -393,12 +384,29 @@ const PluginTag = memo<PluginTagProps>(
           <div className="flex items-center gap-1.5">
             {selected ? (
               indeterminate ? (
-                <SquareMinus size={14} style={{ color: cssVar.colorPrimary }} />
+                <SquareMinus
+                  size={14}
+                  style={{
+                    color: showErrorState ? 'var(--destructive-on-fill)' : 'var(--primary-text)',
+                  }}
+                />
               ) : (
-                <SquareCheckBig size={14} style={{ color: cssVar.colorPrimary }} />
+                <SquareCheckBig
+                  size={14}
+                  style={{
+                    color: showErrorState ? 'var(--destructive-on-fill)' : 'var(--primary-text)',
+                  }}
+                />
               )
             ) : (
-              <Square size={14} style={{ color: cssVar.colorTextQuaternary }} />
+              <Square
+                size={14}
+                style={{
+                  color: showErrorState
+                    ? 'var(--destructive-on-fill)'
+                    : 'var(--foreground-quaternary)',
+                }}
+              />
             )}
             {renderIcon()}
           </div>

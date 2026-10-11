@@ -2,6 +2,7 @@ import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
 import type { TaskAttentionReason } from './stateModel';
 
+export * from './activityLine';
 export * from './result';
 export * from './stateModel';
 

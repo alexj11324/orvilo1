@@ -2495,6 +2495,33 @@ describe('TaskModel', () => {
       expect(await model.getActivities(task.id)).toHaveLength(0);
     });
 
+    // Goal supervision asks who authored the latest status change. Other
+    // kinds of row must not be able to push that row out of its lookup.
+    it('finds the latest row of a kind however many other rows came after it', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+      await model.addActivity({
+        actorUserId: userId,
+        payload: { actorKind: 'user', from: 'running', to: 'paused' },
+        taskId: task.id,
+        type: 'status',
+      });
+      for (let i = 0; i < 25; i++) {
+        await model.addActivity({
+          actorUserId: userId,
+          payload: { labelId: `lbl_${i}` },
+          taskId: task.id,
+          type: 'label_added',
+        });
+      }
+
+      expect((await model.getActivities(task.id, 20)).some((row) => row.type === 'status')).toBe(
+        false,
+      );
+      const [latestStatus] = await model.getActivities(task.id, 1, ['status']);
+      expect(latestStatus?.payload).toMatchObject({ to: 'paused' });
+    });
+
     it('logs a title change with both titles, and nothing when it is re-saved', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Test', name: 'Old title' });

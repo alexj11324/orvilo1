@@ -4983,9 +4983,18 @@ export class TaskModel {
    * oldest-first) so a long-lived task does not ship its whole history on
    * every detail poll; the table itself is the full audit trail.
    */
-  async getActivities(taskId: string, limit?: number): Promise<TaskActivityItem[]> {
+  async getActivities(
+    taskId: string,
+    limit?: number,
+    /** Only rows of these kinds — so a row a caller looks for cannot be pushed out of `limit` by other kinds. */
+    types?: string[],
+  ): Promise<TaskActivityItem[]> {
     if (!(await this.findById(taskId))) return [];
-    const where = and(eq(taskActivities.taskId, taskId), this.activitiesOwnership());
+    const where = and(
+      eq(taskActivities.taskId, taskId),
+      this.activitiesOwnership(),
+      types?.length ? inArray(taskActivities.type, types) : undefined,
+    );
     if (limit === undefined) {
       return this.db.select().from(taskActivities).where(where).orderBy(taskActivities.createdAt);
     }

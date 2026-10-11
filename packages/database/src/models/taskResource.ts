@@ -80,6 +80,8 @@ export class TaskResourceModel {
           ),
         )
         .returning();
+      // The row this add collided with was removed before the title refresh.
+      if (!refreshed) throw new Error('Task resource changed while it was being added');
       return refreshed;
     });
   }

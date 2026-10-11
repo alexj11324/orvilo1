@@ -1,7 +1,7 @@
 import { userService } from '@/services/user';
 import { type StoreSetter } from '@/store/types';
 import { type UserStore } from '@/store/user';
-import { type UserGuide, type UserLab, type UserPreference } from '@/types/user';
+import { type UserGuide, type UserPreference } from '@/types/user';
 import { merge } from '@/utils/merge';
 import { setNamespace } from '@/utils/storeDebug';
 
@@ -27,12 +27,6 @@ export class PreferenceActionImpl {
     const { updatePreference } = this.#get();
     const nextGuide = merge(this.#get().preference.guide, guide);
     await updatePreference({ guide: nextGuide }, action);
-  };
-
-  updateLab = async (lab: Partial<UserLab>, action?: any): Promise<void> => {
-    const { updatePreference } = this.#get();
-    const nextLab = merge(this.#get().preference.lab, lab);
-    await updatePreference({ lab: nextLab }, action || n('updateLab'));
   };
 
   updatePreference = async (preference: Partial<UserPreference>, action?: any): Promise<void> => {

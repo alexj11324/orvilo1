@@ -204,3 +204,10 @@ describe('WORKSPACE_SETTINGS_ALIASES', () => {
     expect(aliases).toContain('service-model');
   });
 });
+
+it('withholds builtin memory settings in every deployment and platform', () => {
+  for (const ctx of contextMatrix()) {
+    expect(isSettingsTabOffered('memory', ctx)).toBe(false);
+    expect(resolveSettingsCapability('memory', ctx).status).toBe('unavailable');
+  }
+});

@@ -8,9 +8,8 @@ import {
 import { z } from 'zod';
 
 import type { OrviloDatabase } from '@/database/type';
-import { AiGenerationService } from '@/server/services/aiGeneration';
 
-import { resolveGoalModelConfig } from './modelConfig';
+import { generateGoalObject } from './generation';
 
 const planSchema = z
   .object({
@@ -53,20 +52,13 @@ export class GoalExplorationPlanner {
     input: GoalExploreInput,
     options?: { agentId?: string | null },
   ): Promise<GoalExplorationPlan> {
-    const model = await resolveGoalModelConfig(
+    const result = await generateGoalObject(
       this.db,
       this.userId,
+      this.workspaceId,
       options?.agentId,
-      this.workspaceId,
-    );
-    const result = await new AiGenerationService(
-      this.db,
-      this.userId,
-      this.workspaceId,
-    ).generateObject(
       {
         ...chainGoalExplore(input),
-        ...model,
         schema: GOAL_EXPLORE_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       },

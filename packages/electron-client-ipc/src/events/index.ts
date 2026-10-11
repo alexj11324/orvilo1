@@ -51,6 +51,7 @@ export type {
   OpenInAppResult,
 } from './openInApp';
 export type {
+  AuthorizationErrorCode,
   AuthorizationPhase,
   AuthorizationProgress,
   MarketAuthorizationParams,

@@ -54,14 +54,14 @@ describe('createPreferenceSlice', () => {
 
       await act(async () => {
         await useUserStore.getState().updatePreference({
-          lab: { enableProjects: true },
+          defaultOpenInApp: 'terminal',
         });
       });
 
       expect(updatePreferenceSpy).toHaveBeenCalled();
       expect(readUserDisplaySnapshot('user-a')).toEqual({
         preference: expect.objectContaining({
-          lab: expect.objectContaining({ enableProjects: true }),
+          defaultOpenInApp: 'terminal',
         }),
       });
     });
@@ -157,7 +157,7 @@ describe('createPreferenceSlice', () => {
 
       let updatePromise: Promise<void> | undefined;
       act(() => {
-        updatePromise = useUserStore.getState().updatePreference({ lab: { enableProjects: true } });
+        updatePromise = useUserStore.getState().updatePreference({ defaultOpenInApp: 'terminal' });
       });
       writeUserDisplaySnapshot('user-a', { avatar: 'updated-avatar' });
 
@@ -175,7 +175,7 @@ describe('createPreferenceSlice', () => {
       expect(readUserDisplaySnapshot('user-a')).toEqual({
         avatar: 'updated-avatar',
         preference: expect.objectContaining({
-          lab: expect.objectContaining({ enableProjects: true }),
+          defaultOpenInApp: 'terminal',
         }),
       });
       expect(readUserDisplaySnapshot('user-b')).toBeUndefined();

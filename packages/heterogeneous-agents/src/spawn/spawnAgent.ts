@@ -160,7 +160,9 @@ const teeAcpRawStdout =
  *   policy; transport failures with no terminal event still throw from the
  *   iterator.
  */
-const createAcpSpawnBridge = () => {
+const createAcpSpawnBridge = (operationId: string) => {
+  let lastStepIndex = 0;
+  let lastTitleTimestamp = 0;
   const stderr = new PassThrough();
   const queue: AgentStreamEvent[] = [];
   let emittedTerminalError = false;
@@ -178,9 +180,23 @@ const createAcpSpawnBridge = () => {
     hostSignal ? { code: null, signal: hostSignal } : undefined;
 
   const onEvents = (events: AgentStreamEvent[]): void => {
+    for (const event of events) lastStepIndex = Math.max(lastStepIndex, event.stepIndex);
     if (events.some(({ type }) => type === 'error')) emittedTerminalError = true;
     queue.push(...events);
     wake();
+  };
+  const onSessionTitle = (title: string): void => {
+    // Preserve event identity when two updates arrive in the same millisecond.
+    lastTitleTimestamp = Math.max(Date.now(), lastTitleTimestamp + 1);
+    onEvents([
+      {
+        data: { title },
+        operationId,
+        stepIndex: lastStepIndex,
+        timestamp: lastTitleTimestamp,
+        type: 'session_title',
+      },
+    ]);
   };
   const onStderr = (data: string): void => {
     stderr.write(data);
@@ -235,7 +251,7 @@ const createAcpSpawnBridge = () => {
     return { exit, kill };
   };
 
-  return { attach, events, onEvents, onStderr, stderr };
+  return { attach, events, onEvents, onSessionTitle, onStderr, stderr };
 };
 
 interface AcpSpawnSession {
@@ -277,7 +293,7 @@ const spawnGrokAcpAgent = async (
   cwd: string,
 ): Promise<SpawnAgentHandle> => {
   const prompt = await buildGrokAcpPrompt(options.prompt, options.inputOptions);
-  const bridge = createAcpSpawnBridge();
+  const bridge = createAcpSpawnBridge(options.operationId);
   const session = new GrokAcpSession({
     args: options.extraArgs ?? [],
     clientVersion: 'orvilo-cli',
@@ -286,6 +302,7 @@ const spawnGrokAcpAgent = async (
     detached: options.detached,
     env: { ...process.env, ...options.env },
     onEvents: bridge.onEvents,
+    onSessionTitle: bridge.onSessionTitle,
     onRawMessage: teeAcpRawStdout(options.onRawStdout),
     onRuntimeStatus: () => {},
     onSessionId: () => {},
@@ -304,7 +321,7 @@ const spawnCursorAcpAgent = async (
   cwd: string,
 ): Promise<SpawnAgentHandle> => {
   const prompt = buildCursorAcpPrompt(options.prompt);
-  const bridge = createAcpSpawnBridge();
+  const bridge = createAcpSpawnBridge(options.operationId);
   const session = new CursorAcpSession({
     args: options.extraArgs ?? [],
     askUserBridge: options.askUserBridge,
@@ -314,6 +331,7 @@ const spawnCursorAcpAgent = async (
     detached: options.detached,
     env: { ...process.env, ...options.env },
     onEvents: bridge.onEvents,
+    onSessionTitle: bridge.onSessionTitle,
     onRawMessage: teeAcpRawStdout(options.onRawStdout),
     onRuntimeStatus: () => {},
     onSessionId: () => {},
@@ -332,7 +350,7 @@ const spawnDroidAcpAgent = async (
   cwd: string,
 ): Promise<SpawnAgentHandle> => {
   const prompt = await buildDroidAcpPrompt(options.prompt, options.inputOptions);
-  const bridge = createAcpSpawnBridge();
+  const bridge = createAcpSpawnBridge(options.operationId);
   const session = new DroidAcpSession({
     args: options.extraArgs ?? [],
     askUserBridge: options.askUserBridge,
@@ -342,6 +360,7 @@ const spawnDroidAcpAgent = async (
     env: { ...process.env, ...options.env },
     initialModel: options.initialModel,
     onEvents: bridge.onEvents,
+    onSessionTitle: bridge.onSessionTitle,
     onRawMessage: teeAcpRawStdout(options.onRawStdout),
     onRuntimeStatus: () => {},
     onSessionId: () => {},
@@ -360,7 +379,7 @@ const spawnDevinAcpAgent = async (
   cwd: string,
 ): Promise<SpawnAgentHandle> => {
   const prompt = await buildDevinAcpPrompt(options.prompt, options.inputOptions);
-  const bridge = createAcpSpawnBridge();
+  const bridge = createAcpSpawnBridge(options.operationId);
   const session = new DevinAcpSession({
     args: options.extraArgs ?? [],
     askUserBridge: options.askUserBridge,
@@ -375,6 +394,7 @@ const spawnDevinAcpAgent = async (
     env: { ...process.env, ...options.env },
     initialModel: options.initialModel,
     onEvents: bridge.onEvents,
+    onSessionTitle: bridge.onSessionTitle,
     permissionMode: options.permissionMode,
     onRawMessage: teeAcpRawStdout(options.onRawStdout),
     onRuntimeStatus: () => {},
@@ -414,7 +434,7 @@ const spawnStandardAcpAgent = async (
   const selectors = extractStandardAcpSelectors(options.agentType, options.extraArgs);
   const configOptions = [...selectors.configOptions, ...(options.configOptions ?? [])];
 
-  const bridge = createAcpSpawnBridge();
+  const bridge = createAcpSpawnBridge(options.operationId);
   const session = createStandardAcpSession(options.agentType, {
     args: selectors.args,
     askUserBridge: options.askUserBridge,
@@ -435,6 +455,7 @@ const spawnStandardAcpAgent = async (
     inputOptions: options.inputOptions,
     mcpServers: options.mcpServers,
     onEvents: bridge.onEvents,
+    onSessionTitle: bridge.onSessionTitle,
     onRawMessage: teeAcpRawStdout(options.onRawStdout),
     onRuntimeStatus: () => {},
     onSessionId: () => {},
@@ -511,7 +532,7 @@ export const spawnTraeAcpAgent = async (options: SpawnAgentOptions): Promise<Spa
     throw new Error(`TRAE command does not expose the required ACP runtime: ${requestedCommand}`);
   }
 
-  const bridge = createAcpSpawnBridge();
+  const bridge = createAcpSpawnBridge(options.operationId);
   const session = new TraeAcpSession({
     args: options.extraArgs ?? [],
     clientVersion: '1.0.0',
@@ -524,6 +545,7 @@ export const spawnTraeAcpAgent = async (options: SpawnAgentOptions): Promise<Spa
     },
     initialModel: options.initialModel,
     onEvents: bridge.onEvents,
+    onSessionTitle: bridge.onSessionTitle,
     onRawMessage: teeAcpRawStdout(options.onRawStdout),
     onRuntimeStatus: () => {},
     onSessionId: () => {},

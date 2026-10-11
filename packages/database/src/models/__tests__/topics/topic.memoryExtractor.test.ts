@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
-import { topics, users } from '../../../schemas';
+import { agents, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { TopicModel } from '../../topic';
 
@@ -137,5 +137,52 @@ describe('TopicModel - listTopicsForMemoryExtractor', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe('t1');
+  });
+});
+
+describe('TopicModel - memory runtime ownership', () => {
+  beforeEach(async () => {
+    await serverDB.delete(users);
+    await serverDB.insert(users).values({ id: userId });
+  });
+  afterEach(async () => {
+    await serverDB.delete(users);
+  });
+
+  it('keeps builtin and legacy unbound topics but excludes ACP even during forced extraction', async () => {
+    await serverDB.insert(agents).values([
+      { id: 'builtin', userId, model: 'gpt-4o' },
+      {
+        id: 'explicit-builtin',
+        userId,
+        model: 'codex',
+        agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
+      },
+      { id: 'acp', userId, agencyConfig: { heterogeneousProvider: { type: 'codex' } } },
+      { id: 'legacy-acp', userId, model: 'opencode' },
+      {
+        id: 'legacy-config',
+        userId,
+        agencyConfig: { heterogeneousProvider: { command: 'claude' } } as any,
+      },
+    ]);
+    await serverDB.insert(topics).values([
+      { id: 'builtin-topic', agentId: 'builtin', userId },
+      { id: 'explicit-builtin-topic', agentId: 'explicit-builtin', userId },
+      { id: 'unbound-topic', userId },
+      { id: 'acp-topic', agentId: 'acp', userId },
+      { id: 'legacy-acp-topic', agentId: 'legacy-acp', userId },
+      { id: 'legacy-config-topic', agentId: 'legacy-config', userId },
+      { id: 'native-session-topic', userId, metadata: { heteroSessionId: 'native-session' } },
+    ]);
+    for (const ignoreExtracted of [false, true]) {
+      const rows = await topicModel.listTopicsForMemoryExtractor({ ignoreExtracted });
+      expect(rows.map((row) => row.id).sort()).toEqual([
+        'builtin-topic',
+        'explicit-builtin-topic',
+        'unbound-topic',
+      ]);
+      expect(await topicModel.countTopicsForMemoryExtractor({ ignoreExtracted })).toBe(3);
+    }
   });
 });

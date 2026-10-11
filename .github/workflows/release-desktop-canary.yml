@@ -190,8 +190,6 @@ jobs:
             echo "|----------|------|"
             echo "| macOS (Apple Silicon) | \`.dmg\` (arm64) |"
             echo "| macOS (Intel) | \`.dmg\` (x64) |"
-            echo "| Windows | \`.exe\` |"
-            echo "| Linux | \`.AppImage\` / \`.deb\` |"
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
@@ -376,15 +374,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      # Keep Windows/Linux build artifacts for acceptance; only approved platforms reach Releases.
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
           path: release
-          pattern: release-*
+          pattern: release-macos-*
           merge-multiple: true
 
       - name: Validate platform renderer hashes
-        run: node apps/desktop/scripts/validateMainHash.mjs release release-macos-15 release-macos-15-intel release-windows-2025 release-ubuntu-latest
+        run: node apps/desktop/scripts/validateMainHash.mjs release release-macos-15 release-macos-15-intel
 
       - name: List downloaded artifacts
         run: ls -R release
@@ -435,15 +434,9 @@ jobs:
           prerelease: true
           body: ${{ needs.calculate-version.outputs.release_notes }}
           files: |
-            release/latest*
+            release/latest-mac.yml
             release/*.dmg*
             release/*.zip*
-            release/*.exe*
-            release/*.AppImage
-            release/*.deb*
-            release/*.snap*
-            release/*.rpm*
-            release/*.tar.gz*
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 

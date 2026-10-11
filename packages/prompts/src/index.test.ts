@@ -14,6 +14,20 @@ describe('Main Index Export', () => {
     expect(mainExports).toEqual(expect.objectContaining(chains));
   });
 
+  it('does not expose retired chat and profile generation chains', () => {
+    for (const name of [
+      'chainFollowUpAction',
+      'chainInputCompletion',
+      'chainTopicAutoSummary',
+      'chainPickEmoji',
+      'chainSummaryAgentName',
+      'chainSummaryDescription',
+      'chainSummaryTags',
+    ]) {
+      expect(mainExports).not.toHaveProperty(name);
+    }
+  });
+
   it('should export all prompts', () => {
     expect(mainExports).toEqual(expect.objectContaining(prompts));
   });
@@ -22,12 +36,8 @@ describe('Main Index Export', () => {
     const chainExports = [
       'chainAbstractChunkText',
       'chainAnswerWithContext',
-      'chainPickEmoji',
-      'chainSummaryAgentName',
-      'chainSummaryDescription',
       'chainSummaryGenerationTitle',
       'chainSummaryHistory',
-      'chainSummaryTags',
       'chainSummaryTitle',
     ];
 

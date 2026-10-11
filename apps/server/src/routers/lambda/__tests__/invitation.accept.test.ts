@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { invitationRouter } from '@/business/server/lambda-routers/invitation';
 
 const {
+  userModel,
   memberModel,
   projectMemberModel,
   queries,
@@ -12,6 +13,7 @@ const {
   invitationQueries,
   workspaceModel,
 } = vi.hoisted(() => ({
+  userModel: { updateUser: vi.fn() },
   audit: {
     emitWorkspaceEvent: vi.fn(),
     recordAudit: vi.fn(),
@@ -119,7 +121,12 @@ vi.mock('@/database/models/workspace', () => ({
 }));
 
 vi.mock('@/database/models/user', () => ({
-  UserModel: { getDisplayInfoByIds: vi.fn(async () => []) },
+  UserModel: Object.assign(
+    vi.fn(function () {
+      return userModel;
+    }),
+    { getDisplayInfoByIds: vi.fn(async () => []) },
+  ),
 }));
 
 vi.mock('@/libs/trpc/lambda/middleware', () => ({
@@ -196,6 +203,57 @@ describe('invitationRouter.accept', () => {
       { invitationId: 'inv-1', projectId: 'proj-1', projectName: 'Alpha', role: 'contributor' },
     ]);
     workspaceModel.findById.mockResolvedValue({ avatar: null, id: 'ws-1', name: 'Team' });
+  });
+
+  it('completes onboarding when the invitation is accepted', async () => {
+    await createCaller().accept({ token: 'raw-token' });
+    expect(userModel.updateUser).toHaveBeenCalledWith({
+      onboarding: expect.objectContaining({ finishedAt: expect.any(String) }),
+    });
+  });
+
+  it('writes onboarding using the acceptance transaction and preserves existing progress', async () => {
+    const tx = {};
+    fakeDb.transaction.mockImplementation(async (cb: any) => cb(tx));
+    queries.findUserById.mockResolvedValue({
+      ...verifiedAccount(),
+      onboarding: { currentStep: 2, version: 1 },
+    });
+    await createCaller().accept({ token: 'raw-token' });
+    const { UserModel } = await import('@/database/models/user');
+    expect(UserModel).toHaveBeenCalledWith(tx, 'u-invitee');
+    expect(userModel.updateUser).toHaveBeenCalledWith({
+      onboarding: expect.objectContaining({ currentStep: 2, finishedAt: expect.any(String) }),
+    });
+  });
+
+  it('does not overwrite a previously completed onboarding timestamp', async () => {
+    queries.findUserById.mockResolvedValue({
+      ...verifiedAccount(),
+      onboarding: { finishedAt: '2026-01-01T00:00:00.000Z', version: 1 },
+    });
+    await createCaller().accept({ token: 'raw-token' });
+    expect(userModel.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('does not complete onboarding if consuming the invitation fails', async () => {
+    invitationModel.markAccepted.mockResolvedValue(false);
+    await expect(createCaller().accept({ token: 'raw-token' })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+    expect(userModel.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('repairs onboarding on a retry of an invitation previously accepted by this account', async () => {
+    invitationModel.findByToken.mockResolvedValue({
+      ...baseInvitation(),
+      status: 'accepted',
+      acceptedBy: 'u-invitee',
+    });
+    await createCaller().accept({ token: 'raw-token' });
+    expect(userModel.updateUser).toHaveBeenCalledWith({
+      onboarding: expect.objectContaining({ finishedAt: expect.any(String) }),
+    });
   });
 
   it('joins the workspace, materializes project grants and consumes the token', async () => {

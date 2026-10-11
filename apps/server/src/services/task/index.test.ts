@@ -12,6 +12,11 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { TaskService } from './index';
 
+const admissionFlags = vi.hoisted(() => ({ read: vi.fn(async () => ({})) }));
+vi.mock('@/server/featureFlags', () => ({
+  getServerFeatureFlagsFromRuntimeConfig: admissionFlags.read,
+}));
+
 const { cancelScheduled, scheduleNextTopic } = vi.hoisted(() => ({
   cancelScheduled: vi.fn(),
   scheduleNextTopic: vi.fn(),
@@ -247,6 +252,8 @@ describe('TaskService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    admissionFlags.read.mockResolvedValue({});
+    findActiveDispatchMock.mockResolvedValue(undefined);
     mockTaskModel.areAllDependenciesCompleted.mockResolvedValue(true);
     mockTaskModel.derivedStatusByIds.mockResolvedValue({});
     mockTaskModel.findBlockedTaskIds.mockResolvedValue([]);
@@ -348,6 +355,46 @@ describe('TaskService', () => {
   });
 
   describe('getTaskDetail', () => {
+    it.each([
+      [{}, 'disabled', 'caid_dispatch_disabled'],
+      [{ caid_dispatch: [userId] }, 'enabled', null],
+      [{ caid_dispatch: false, caid_dispatch_workspaces: ['workspace-1'] }, 'enabled', null],
+      [
+        { caid_dispatch: false, caid_dispatch_workspaces: ['other-workspace'] },
+        'disabled',
+        'caid_dispatch_disabled',
+      ],
+    ])(
+      'exposes final admission and the durable dispatch reason for %j',
+      async (flags, admission, reason) => {
+        admissionFlags.read.mockResolvedValue(flags);
+        mockTaskModel.resolve.mockResolvedValue({
+          id: 'task_001',
+          identifier: 'TASK-1',
+          totalTopics: 0,
+        });
+        mockTaskModel.findAllDescendants.mockResolvedValue([]);
+        mockTaskModel.getDependencies.mockResolvedValue([]);
+        mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+        mockTaskModel.getComments.mockResolvedValue([]);
+        mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+        mockTaskModel.findByIds.mockResolvedValue([]);
+        mockTaskModel.getCheckpointConfig.mockReturnValue({});
+        mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+        findActiveDispatchMock.mockResolvedValue({
+          phase: 'waiting',
+          waitingReason: 'caid_dispatch_disabled',
+        });
+        const result = await new TaskService(db, userId, 'workspace-1').getTaskDetail('TASK-1');
+        expect(result).toMatchObject({
+          orchestrationAdmission: admission,
+          orchestrationAdmissionReason: reason,
+          dispatchWaitingReason: 'caid_dispatch_disabled',
+        });
+        expect(admissionFlags.read).toHaveBeenCalledWith(userId);
+      },
+    );
+
     it.each([
       [
         { identifier: 'TASK-2', name: 'Canonical', isDeleted: false },

@@ -73,6 +73,7 @@ import { UserMemorySourceBenchmarkLoCoMoModel } from '@/database/models/userMemo
 import { AiInfraCatalogRepos } from '@/database/repositories/aiInfra';
 import { asyncTasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
+import { builtinMemoryTopic } from '@/database/utils/memoryRuntime';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { type MemoryAgentConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
@@ -1540,6 +1541,7 @@ export class MemoryExtractionExecutor {
             columns: { createdAt: true, id: true, metadata: true, updatedAt: true, userId: true },
             where: and(
               eq(topics.id, job.topicId),
+              builtinMemoryTopic(),
               buildWorkspaceWhere({ userId: job.userId, workspaceId: job.workspaceId }, topics),
             ),
           });

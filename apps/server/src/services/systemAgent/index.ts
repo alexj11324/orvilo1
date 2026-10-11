@@ -11,7 +11,6 @@ import {
   TOPIC_TITLE_JSON_SCHEMA,
   TOPIC_TITLE_PROMPT_VERSION,
 } from '@orvilo/prompts';
-import type { UserSystemAgentConfig, UserSystemAgentConfigKey } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 import debug from 'debug';
 
@@ -20,18 +19,13 @@ import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
-import { resolveSystemAgentModelConfig } from './modelConfig';
-
 const log = debug('orvilo-server:system-agent-service');
 
 /**
  * Server-side service for SystemAgent automated tasks.
  *
- * Encapsulates the common pattern: read user's systemAgent config → build chain prompt
- * → call LLM via generateObject → return structured result.
- *
- * Each public method corresponds to a `UserSystemAgentConfigKey` task type
- * (topic, translation, agentMeta, etc.).
+ * Builds prompts and dispatches judgments using the owning agent's runtime/model.
+ * Maintenance tasks do not read retired global service-model preferences.
  */
 export class SystemAgentService {
   private readonly db: OrviloDatabase;
@@ -57,10 +51,9 @@ export class SystemAgentService {
     const { userPrompt, lastAssistantContent, topicId } = params;
 
     try {
-      const { model, provider } = await this.getTaskModelConfig('topic');
       const locale = await this.getUserLocale();
 
-      log('generateTopicTitle: locale=%s, model=%s, provider=%s', locale, model, provider);
+      log('generateTopicTitle: locale=%s', locale);
 
       const messages = [
         { content: userPrompt, role: 'user' as const },
@@ -78,8 +71,6 @@ export class SystemAgentService {
       ).generateObject(
         {
           messages: payload.messages,
-          model,
-          provider,
           schema: TOPIC_TITLE_JSON_SCHEMA,
         },
         {
@@ -130,10 +121,9 @@ export class SystemAgentService {
     if (!content.trim()) return null;
 
     try {
-      const { model, provider } = await this.getTaskModelConfig('agentMeta');
       const locale = await this.getUserLocale();
 
-      log('generateSkillMeta: locale=%s, model=%s, provider=%s', locale, model, provider);
+      log('generateSkillMeta: locale=%s', locale);
 
       const payload = chainGenerateSkillMeta({ content, responseLanguage: locale });
       const tracingId = randomUUID();
@@ -145,8 +135,6 @@ export class SystemAgentService {
       ).generateObject(
         {
           messages: payload.messages as any[],
-          model,
-          provider,
           schema: GENERATE_SKILL_META_SCHEMA,
         },
         {
@@ -185,21 +173,6 @@ export class SystemAgentService {
   }
 
   // ============== Private Helpers ============== //
-
-  /**
-   * Get the model/provider config for a specific systemAgent task type.
-   * Falls back to DEFAULT_SYSTEM_AGENT_CONFIG when user has no custom settings.
-   */
-  private async getTaskModelConfig(
-    taskKey: UserSystemAgentConfigKey,
-  ): Promise<{ model: string; provider: string }> {
-    const userModel = new UserModel(this.db, this.userId);
-    const settings = await userModel.getUserSettings();
-    const systemAgent = settings?.systemAgent as Partial<UserSystemAgentConfig> | undefined;
-
-    const taskConfig = systemAgent?.[taskKey];
-    return resolveSystemAgentModelConfig({ taskConfig, taskKey });
-  }
 
   /**
    * Get the user's preferred response language (locale).

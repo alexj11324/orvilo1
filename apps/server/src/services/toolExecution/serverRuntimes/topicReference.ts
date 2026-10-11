@@ -1,5 +1,6 @@
 import { TopicReferenceIdentifier } from '@orvilo/builtin-tool-topic-reference';
 import type { OrviloDatabase } from '@orvilo/database';
+import { escapeXml } from '@orvilo/prompts';
 import type { BuiltinServerRuntimeOutput } from '@orvilo/types';
 
 import { MessageModel } from '@/database/models/message';
@@ -45,7 +46,7 @@ class TopicReferenceExecutionRuntime {
       // If topic has a summary, prefer it
       if (topic.historySummary) {
         const result = [
-          `# Topic: ${topic.title || 'Untitled'}`,
+          `# Topic: ${escapeXml(topic.title || 'Untitled')}`,
           '',
           '## Summary',
           topic.historySummary,
@@ -65,7 +66,12 @@ class TopicReferenceExecutionRuntime {
 
       const recentMessages = messages.slice(-MAX_MESSAGES);
 
-      const lines = [`# Topic: ${topic.title || 'Untitled'}`, '', '## Recent Messages', ''];
+      const lines = [
+        `# Topic: ${escapeXml(topic.title || 'Untitled')}`,
+        '',
+        '## Recent Messages',
+        '',
+      ];
 
       for (const msg of recentMessages) {
         const role =

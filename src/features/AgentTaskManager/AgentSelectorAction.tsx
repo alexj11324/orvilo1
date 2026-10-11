@@ -1,10 +1,10 @@
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import { memo, Suspense, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type SidebarAgentItem } from '@/database/repositories/home';
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
@@ -18,32 +18,11 @@ import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chevron: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  container: css`
-    cursor: pointer;
-
-    border-radius: 12px;
-    border-start-start-radius: 8px;
-    border-end-start-radius: 8px;
-
-    background: ${cssVar.colorFillTertiary};
-
-    :hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  sectionHeader: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  chevron: 'size-3.5 text-foreground-quaternary',
+  container: 'cursor-pointer gap-1 bg-accent px-1.5 hover:bg-selected',
+  sectionHeader: 'px-2 py-1 text-xs leading-5 text-foreground-tertiary',
+};
 
 interface AgentSelectorActionProps {
   onAgentChange: (id: string) => void;
@@ -167,10 +146,11 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <button
-            className={cx('flex items-center justify-center gap-1 px-1.5', styles.container)}
-            style={{ height: 28 }}
+          <Button
+            className={styles.container}
+            size="compact"
             type={'button'}
+            variant="ghost"
             aria-label={
               activeAgent
                 ? t('taskDetail.fieldValue', {
@@ -181,11 +161,11 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
             }
           >
             <AgentRuntimeIcon
-              size={22}
+              size={16}
               type={activeAgent && (activeAgent.heterogeneousType || 'orvilo')}
             />
             <ChevronsUpDownIcon className={styles.chevron} size={14} />
-          </button>
+          </Button>
         }
       />
       <PopoverContent align={'start'} className="w-60 p-0" side={'top'}>

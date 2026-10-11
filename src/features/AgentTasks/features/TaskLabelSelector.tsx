@@ -1,5 +1,4 @@
 import type { TaskLabelSummary } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { CheckIcon, PlusIcon } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -7,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { toast } from '@/components/toast';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { resolveLabelColor } from '@/features/Labels/labelColor';
 import NavItem from '@/features/NavPanel/components/NavItem';
@@ -42,26 +42,10 @@ type LabelOption =
   | { key: string; kind: 'create'; name: string }
   | { key: string; kind: 'label'; label: TaskLabelSummary };
 
-const styles = createStaticStyles(({ css }) => ({
-  searchInput: css`
-    width: 100%;
-    padding-block: 6px;
-    padding-inline: 10px;
-    border: none;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: inherit;
-    font-size: 13px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-    outline: none;
-
-    &::placeholder {
-      color: ${cssVar.colorTextPlaceholder};
-    }
-  `,
-}));
+const styles = {
+  searchInput:
+    'w-full rounded-(--radius-input) border-0 border-b border-divider bg-transparent dark:bg-transparent px-2.5 py-1.5 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--ant-color-text-placeholder)',
+};
 
 /** tRPC surfaces the router's CONFLICT as `error.data.code`. */
 const isConflictError = (error: unknown): boolean =>
@@ -239,12 +223,13 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
           className="w-65 gap-0 p-0"
           onClick={(event) => event.stopPropagation()}
         >
-          <input
+          <Input
             autoFocus
             aria-label={t('taskDetail.labels.searchPlaceholder')}
             className={styles.searchInput}
             placeholder={t('taskDetail.labels.searchPlaceholder')}
             value={search}
+            visualSize="normal"
             onChange={(event) => setSearch(event.target.value)}
             onKeyDown={handleSearchKeyDown}
           />
@@ -282,7 +267,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
                       title={option.label.name}
                       extra={
                         assignedIds.has(option.label.id) ? (
-                          <CheckIcon size={14} style={{ color: cssVar.colorTextDescription }} />
+                          <CheckIcon className="text-foreground-description" size={14} />
                         ) : undefined
                       }
                       slots={{

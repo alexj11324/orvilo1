@@ -1,6 +1,7 @@
 import { type AiProviderRuntimeState, MemorySourceType } from '@orvilo/types';
+import { eq } from 'drizzle-orm';
 import { type EnabledAiModel } from 'model-bank';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { agents, topics, users } from '@/database/schemas';
@@ -533,8 +534,14 @@ describe('makeTaskErrorItem', () => {
 });
 
 describe('MemoryExtractionExecutor runtime ownership', () => {
+  let db: Awaited<ReturnType<typeof getTestDB>>;
+
+  beforeAll(async () => {
+    // PGlite startup and schema migrations are suite setup, not extraction work.
+    db = await getTestDB();
+  });
+
   it('does not read or extract an ACP transcript on direct or forced requests', async () => {
-    const db = await getTestDB();
     const userId = 'memory-runtime-owner';
     await db.insert(users).values({ id: userId });
     try {
@@ -565,7 +572,7 @@ describe('MemoryExtractionExecutor runtime ownership', () => {
       });
       expect(topic?.metadata?.userMemoryExtractStatus).toBeUndefined();
     } finally {
-      const { eq } = await import('drizzle-orm');
+      vi.restoreAllMocks();
       await db.delete(users).where(eq(users.id, userId));
     }
   });

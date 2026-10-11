@@ -39,6 +39,6 @@ export const generateGoalObject = async (
   const model = await resolveGoalModelConfig(db, userId, agentId, workspaceId);
   return new AiGenerationService(db, userId, workspaceId).generateObject(
     { ...input, ...model },
-    options,
+    { ...options, kind: 'judgment' },
   );
 };

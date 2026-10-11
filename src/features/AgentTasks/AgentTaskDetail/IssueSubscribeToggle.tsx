@@ -39,11 +39,13 @@ const IssueSubscribeToggle = () => {
     try {
       if (view.subscribed) await workAttentionService.unsubscribe(taskUuid);
       else await workAttentionService.subscribe(taskUuid);
-      await refreshTaskDetail(taskId);
+      // The write is done; a failed re-read is not a failed subscription.
+      await refreshTaskDetail(taskId).catch(() => {});
     } catch {
       toast.error(t(view.failedKey, { ns: 'common' }));
     } finally {
-      setPending(undefined);
+      // Leave a request made since on another Issue alone.
+      setPending((current) => (current?.taskUuid === taskUuid ? undefined : current));
     }
   };
 

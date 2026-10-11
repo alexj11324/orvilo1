@@ -2234,6 +2234,49 @@ describe('Task Router Integration', () => {
       };
     };
 
+    it('toggles the reader own subscription through the router and refuses an Issue they cannot read', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { wsCaller, wsOtherCaller, workspaceId } = await setupWorkspace();
+      const { workAttentionRouter } = await import('../../workAttention');
+      const attention = (id: string, scoped = true) =>
+        workAttentionRouter.createCaller({
+          ...createTestContext(id),
+          ...(scoped ? { workspaceId } : {}),
+        });
+      const task = await wsCaller.create({ instruction: 'Follow me', name: 'Followed' });
+      const subscribed = async (reader: typeof wsCaller) =>
+        (await reader.detail({ id: task.data.id })).data?.isSubscribed;
+
+      // The creator follows their own Issue from the start; a bystander does not.
+      expect(await subscribed(wsCaller)).toBe(true);
+      expect(await subscribed(wsOtherCaller)).toBe(false);
+
+      await attention(userId).unsubscribe({ taskId: task.data.id });
+      expect(await subscribed(wsCaller)).toBe(false);
+      await attention(otherUserId).subscribe({ taskId: task.data.id });
+      expect(await subscribed(wsOtherCaller)).toBe(true);
+      // One person's toggle never moves another's.
+      expect(await subscribed(wsCaller)).toBe(false);
+      await attention(userId).subscribe({ taskId: task.data.id });
+      expect(await subscribed(wsCaller)).toBe(true);
+
+      // A personal Issue of someone else is not readable, so not followable.
+      const personal = await caller.create({ instruction: 'Mine alone', name: 'Personal' });
+      await expect(
+        attention(otherUserId, false).subscribe({ taskId: personal.data.id }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(
+        attention(otherUserId, false).unsubscribe({ taskId: personal.data.id }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      const { taskSubscriptions } = await import('@/database/schemas');
+      expect(
+        await serverDB
+          .select()
+          .from(taskSubscriptions)
+          .where(eq(taskSubscriptions.taskId, personal.data.id)),
+      ).toEqual([]);
+    });
+
     it('subscribes people who comment, are mentioned, are assigned or review, but never over an unsubscribe', async () => {
       otherUserId = await createTestUser(serverDB);
       const thirdUserId = await createTestUser(serverDB);
@@ -2261,7 +2304,8 @@ describe('Task Router Integration', () => {
       await wsOtherCaller.addComment({ content: 'I am in', id: task.data.id });
       expect(await subscriptionsOf(task.data.id)).toEqual({ [otherUserId!]: 'commented' });
       expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(true);
-      expect((await wsCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(false);
+      // The creator has no row and still follows their own Issue.
+      expect((await wsCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(true);
 
       // A mention subscribes the mentioned member, and the author as a commenter.
       await wsCaller.addComment({

@@ -72,6 +72,7 @@ import {
   topics,
   workspaceMembers,
 } from '../schemas';
+import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase, Transaction } from '../type';
 import {
   collectBoundDeviceIds,
@@ -3095,6 +3096,11 @@ export class AgentModel {
           .set({ ...ownershipUpdate, ...visibilityUpdate, updatedAt: taskComments.updatedAt })
           .where(inArray(taskComments.taskId, movedTaskIds));
         await trx.update(briefs).set(ownershipUpdate).where(inArray(briefs.taskId, movedTaskIds));
+        // Only the scope moves; the row stays its subscriber's.
+        await trx
+          .update(taskSubscriptions)
+          .set({ updatedAt: taskSubscriptions.updatedAt, workspaceId: ownershipUpdate.workspaceId })
+          .where(inArray(taskSubscriptions.taskId, movedTaskIds));
       }
 
       await trx.update(briefs).set(ownershipUpdate).where(inArray(briefs.agentId, agentIds));

@@ -70,6 +70,7 @@ import { teams, teamWorkflowStates } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
+import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { lockTaskDependencyGraph } from '../utils/taskDependencyLock';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
@@ -5233,6 +5234,12 @@ export class TaskModel {
         .update(taskActivities)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskActivities.taskId, ids));
+      // A subscription belongs to its subscriber, so only the scope moves:
+      // recipients are matched on it when a notification is projected.
+      await (trx as OrviloDatabase)
+        .update(taskSubscriptions)
+        .set({ updatedAt: taskSubscriptions.updatedAt, workspaceId: targetWorkspaceId })
+        .where(inArray(taskSubscriptions.taskId, ids));
 
       return { taskIds: ids };
     });

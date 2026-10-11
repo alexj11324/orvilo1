@@ -1643,7 +1643,13 @@ export class TaskService {
       // Rides on the detail read so the header toggle needs no request of its own.
       new TaskSubscriptionModel(this.db, this.userId, this.workspaceId)
         .isSubscribed(task.id)
-        .catch(() => false),
+        .catch((error) => {
+          console.warn(
+            '[TaskService] reading the Issue subscription failed:',
+            error instanceof Error ? error.name : 'unknown error',
+          );
+          return false;
+        }),
     ]);
 
     // What the reader is shown, not what was written: a burst of edits to one

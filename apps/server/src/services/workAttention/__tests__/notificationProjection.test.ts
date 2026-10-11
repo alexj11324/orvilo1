@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EventConsumerReceiptModel } from '@/database/models/eventConsumerReceipt';
 import { NotificationModel } from '@/database/models/notification';
 import { TaskModel } from '@/database/models/task';
+import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import {
   agents,
@@ -350,6 +351,28 @@ describe('real Issue notification producers and projection', () => {
     ]);
     expect(await feed(author)).toEqual([]);
     expect(await feed(outsider)).toEqual([]);
+  });
+
+  it('stops notifying a creator and an assignee who unsubscribed', async () => {
+    const comment = (userId: string, content: string) =>
+      new TaskModel(db, userId, wsId).addComment({
+        authorUserId: userId,
+        content,
+        taskId: 'projection-issue',
+        userId,
+      });
+    // Neither has a subscription row: they are notified as creator and assignee.
+    await new TaskSubscriptionModel(db, owner, wsId).unsubscribe('projection-issue');
+    await comment(subscriber, 'First');
+    await project();
+    expect(await feed(owner)).toEqual([]);
+    expect(await feed(author)).toHaveLength(1);
+
+    await new TaskSubscriptionModel(db, author, wsId).unsubscribe('projection-issue');
+    await comment(subscriber, 'Second');
+    await project();
+    expect(await feed(owner)).toEqual([]);
+    expect(await feed(author)).toHaveLength(1);
   });
 
   it('projects manual and scheduled Agent completion without excluding its human owner or changing Issue status', async () => {

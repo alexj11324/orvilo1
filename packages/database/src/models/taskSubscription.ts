@@ -1,5 +1,6 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm';
 
+import { tasks } from '../schemas/task';
 import type { TaskSubscriptionItem } from '../schemas/workAttention';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
@@ -24,7 +25,9 @@ export class TaskSubscriptionModel {
         workspaceId: this.workspaceId ?? null,
       })
       .onConflictDoUpdate({
-        set: { unsubscribedAt: null, updatedAt: new Date() },
+        // The workspace is rewritten too: recipients are matched on it, and a
+        // row written under another scope would otherwise never notify.
+        set: { unsubscribedAt: null, updatedAt: new Date(), workspaceId: this.workspaceId ?? null },
         target: [taskSubscriptions.taskId, taskSubscriptions.userId],
       })
       .returning();
@@ -61,17 +64,26 @@ export class TaskSubscriptionModel {
   isSubscribed = async (taskId: string): Promise<boolean> =>
     (await this.listActiveForTaskIds([taskId])).length > 0;
 
+  /**
+   * Record the caller's opt-out. The Issue's creator and assignee are notified
+   * without a row (see {@link listActiveForTaskIds}), so this writes one when
+   * none exists; otherwise there would be nothing to switch off.
+   */
   unsubscribe = async (taskId: string): Promise<boolean> => {
+    const now = new Date();
     const updated = await this.db
-      .update(taskSubscriptions)
-      .set({ unsubscribedAt: new Date(), updatedAt: new Date() })
-      .where(
-        and(
-          eq(taskSubscriptions.taskId, taskId),
-          eq(taskSubscriptions.userId, this.userId),
-          isNull(taskSubscriptions.unsubscribedAt),
-        ),
-      )
+      .insert(taskSubscriptions)
+      .values({
+        taskId,
+        unsubscribedAt: now,
+        userId: this.userId,
+        workspaceId: this.workspaceId ?? null,
+      })
+      .onConflictDoUpdate({
+        set: { unsubscribedAt: now, updatedAt: now },
+        setWhere: isNull(taskSubscriptions.unsubscribedAt),
+        target: [taskSubscriptions.taskId, taskSubscriptions.userId],
+      })
       .returning({ id: taskSubscriptions.id });
     return updated.length > 0;
   };
@@ -86,16 +98,30 @@ export class TaskSubscriptionModel {
     return rows.map((row) => row.taskId);
   };
 
+  /**
+   * The Issues among `taskIds` the caller is notified about: those with an
+   * active row, plus those they created or are assigned to and have not opted
+   * out of. This is the same rule the notification projection applies.
+   */
   listActiveForTaskIds = async (taskIds: string[]): Promise<string[]> => {
     if (taskIds.length === 0) return [];
     const rows = await this.db
-      .select({ taskId: taskSubscriptions.taskId })
-      .from(taskSubscriptions)
+      .select({ taskId: tasks.id })
+      .from(tasks)
+      .leftJoin(
+        taskSubscriptions,
+        and(eq(taskSubscriptions.taskId, tasks.id), eq(taskSubscriptions.userId, this.userId)),
+      )
       .where(
         and(
-          eq(taskSubscriptions.userId, this.userId),
-          isNull(taskSubscriptions.unsubscribedAt),
-          inArray(taskSubscriptions.taskId, taskIds),
+          inArray(tasks.id, taskIds),
+          or(
+            and(isNotNull(taskSubscriptions.id), isNull(taskSubscriptions.unsubscribedAt)),
+            and(
+              isNull(taskSubscriptions.id),
+              or(eq(tasks.createdByUserId, this.userId), eq(tasks.assigneeUserId, this.userId)),
+            ),
+          ),
         ),
       );
     return rows.map((row) => row.taskId);

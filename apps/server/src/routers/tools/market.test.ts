@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as WorkspaceModel from '@/database/models/workspace';
 
@@ -77,6 +77,30 @@ vi.mock('debug', () => ({
 describe('tools marketRouter', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('MARKET_BASE_URL', 'https://market.test');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns a stable unavailable code before sandbox execution when Market is unconfigured', async () => {
+    vi.stubEnv('MARKET_BASE_URL', '');
+    const caller = marketRouter.createCaller({ serverDB: {}, userId: 'user-1' } as any);
+
+    await expect(
+      caller.execInSandbox({
+        params: { command: 'orvilo agent view agt_1' },
+        toolName: 'runCommand',
+        topicId: 'topic-1',
+      }),
+    ).rejects.toMatchObject({
+      cause: { data: { code: 'MARKET_UNAVAILABLE' } },
+      code: 'SERVICE_UNAVAILABLE',
+    });
+    expect(mockPreprocessLhCommand).not.toHaveBeenCalled();
+    expect(mockCreateSandboxService).not.toHaveBeenCalled();
+    expect(mockSandboxCallTool).not.toHaveBeenCalled();
   });
 
   it('should pass workspace scope when preprocessing sandbox orvilo commands', async () => {

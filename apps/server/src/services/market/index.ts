@@ -1,5 +1,6 @@
 import { MarketSDK, type OrgRef, orgRefToPathSegment } from '@lobehub/market-sdk';
 import { type OrviloToolManifest } from '@orvilo/context-engine';
+import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { type NextRequest } from 'next/server';
 
@@ -7,6 +8,7 @@ import { type TrustedClientUserInfo } from '@/libs/trusted-client';
 import { generateTrustedClientToken, getTrustedClientTokenForSession } from '@/libs/trusted-client';
 import { getToolAccessDeniedError } from '@/server/services/toolExecution/errorClassification';
 
+import { assertMarketConfigured } from './availability';
 import { listSkillToolsWithLiveFallback } from './listSkillToolsWithLiveFallback';
 
 const log = debug('orvilo-server:market-service');
@@ -125,7 +127,12 @@ export interface MarketServiceOptions {
  * ```
  */
 export class MarketService {
-  market: MarketSDK;
+  private readonly marketClient: MarketSDK;
+
+  get market(): MarketSDK {
+    assertMarketConfigured();
+    return this.marketClient;
+  }
 
   private readonly oauthProxyHeaders: Record<string, string>;
 
@@ -145,7 +152,7 @@ export class MarketService {
       ...(resolvedTrustedClientToken ? { 'x-orvilo-trust-token': resolvedTrustedClientToken } : {}),
     };
 
-    this.market = new MarketSDK({
+    this.marketClient = new MarketSDK({
       accessToken,
       baseURL: MARKET_BASE_URL,
       clientId: clientCredentials?.clientId,
@@ -201,6 +208,7 @@ export class MarketService {
     parameters,
     provider,
   }: MarketOAuthProxyRequest): Promise<MarketOAuthProxyResponse> => {
+    assertMarketConfigured();
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = new URL(
       `/api/v1/proxy/${encodeURIComponent(provider)}${normalizedEndpoint}`,
@@ -601,6 +609,14 @@ export class MarketService {
     } catch (error) {
       const err = error as Error;
       console.error('MarketService.executeOrviloSkill error %s/%s: %O', provider, toolName, err);
+
+      if (error instanceof TRPCError && error.code === 'SERVICE_UNAVAILABLE') {
+        return {
+          content: err.message,
+          error: { code: 'MARKET_UNAVAILABLE', message: err.message },
+          success: false,
+        };
+      }
 
       if (err.name === 'TimeoutError') {
         return {

@@ -33,3 +33,11 @@ describe('UserPreferenceSchema', () => {
     expect(parsed.showInCollaboration).toBe(showInCollaboration);
   });
 });
+
+describe('retired Labs preferences', () => {
+  it('accepts legacy stored preferences without exposing Labs as writable settings', () => {
+    expect(
+      UserPreferenceSchema.parse({ lab: { enableProjects: true }, showInCollaboration: false }),
+    ).toEqual({ showInCollaboration: false });
+  });
+});

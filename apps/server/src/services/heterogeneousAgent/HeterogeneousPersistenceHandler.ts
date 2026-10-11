@@ -23,6 +23,7 @@ import {
   reduceMainAgent,
   rehydrateSubagentRunsState,
 } from '@orvilo/heterogeneous-agents';
+import { parseAcpSessionTitle } from '@orvilo/heterogeneous-agents/protocol';
 import {
   type ChatToolPayload,
   getWorkingDirEffectivePath,
@@ -1098,6 +1099,16 @@ export class HeterogeneousPersistenceHandler {
   // ─── Event dispatch ──────────────────────────────────────────────────────
 
   private async handleEvent(state: OperationState, event: AgentStreamEvent): Promise<void> {
+    if (event.type === 'session_title') {
+      const title = parseAcpSessionTitle({
+        sessionUpdate: 'session_info_update',
+        title: event.data?.title,
+      });
+      // A child run must not rename the parent conversation.
+      if (title && !state.threadId)
+        await this.deps.topicModel.updateAgentTitle(state.topicId, title);
+      return;
+    }
     await this.reduceAndApply(state, event);
   }
 

@@ -1,4 +1,5 @@
 import {
+  type AuthorizationErrorCode,
   type DataSyncConfig,
   type ElectronAppState,
   type GatewayConnectionStatus,
@@ -40,7 +41,11 @@ export interface ElectronState extends CurrentRouteMetaState, RecentPagesState, 
   isInitRemoteServerConfig: boolean;
   isSyncActive?: boolean;
   proxySettings: NetworkProxySettings;
-  remoteServerSyncError?: { message?: string; type: RemoteServerError };
+  remoteServerSyncError?: {
+    code?: AuthorizationErrorCode;
+    message?: string;
+    type: RemoteServerError;
+  };
 }
 
 export const initialState: ElectronState = {

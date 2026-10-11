@@ -288,7 +288,7 @@ describe('createCommonSlice', () => {
       const { result } = renderHook(() => useUserStore());
       const mockUserState: UserInitializationState = {
         avatar: 'avatar-a',
-        preference: { lab: { enableProjects: true } },
+        preference: { showInCollaboration: false },
         settings: {},
         userId: 'user-a',
       };
@@ -302,7 +302,7 @@ describe('createCommonSlice', () => {
       await waitFor(() => {
         expect(readUserDisplaySnapshot('user-a')).toEqual({
           avatar: 'avatar-a',
-          preference: { lab: { enableProjects: true } },
+          preference: { showInCollaboration: false },
         });
       });
       expect(readUserDisplaySnapshot('user-b')).toBeUndefined();
@@ -311,7 +311,7 @@ describe('createCommonSlice', () => {
     it('should clear a previously cached avatar when the authoritative state has none', async () => {
       const { result } = renderHook(() => useUserStore());
       const mockUserState: UserInitializationState = {
-        preference: { lab: { enableProjects: true } },
+        preference: { showInCollaboration: false },
         settings: {},
         userId: 'user-a',
       };

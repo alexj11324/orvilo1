@@ -163,6 +163,7 @@ const createHarness = (params: {
   };
 
   const topicModel = {
+    updateAgentTitle: vi.fn().mockResolvedValue([]),
     findById: vi.fn(async (id: string): Promise<FakeTopic | null> => {
       if (id !== params.topicId) return null;
       return {
@@ -210,6 +211,38 @@ describe('HeterogeneousPersistenceHandler', () => {
 
   afterEach(() => {
     __resetOperationStatesForTesting();
+  });
+
+  it('sanitizes ingested titles and ignores invalid title payloads', async () => {
+    const h = createHarness({
+      assistantMessageId: 'asst-init',
+      operationId: 'op-1',
+      topicId: 'topic-1',
+    });
+    await h.handler.ingest({
+      operationId: 'op-1',
+      topicId: 'topic-1',
+      events: [
+        buildEvent('session_title', 0, { title: '  Fix\n\u202Elogin  ' }),
+        buildEvent('session_title', 1, { title: 42 }),
+      ],
+    });
+    expect(h.topicModel.updateAgentTitle).toHaveBeenCalledExactlyOnceWith('topic-1', 'Fix login');
+  });
+
+  it('does not let a child session rename the parent topic', async () => {
+    const h = createHarness({
+      assistantMessageId: 'asst-init',
+      operationId: 'op-1',
+      topicId: 'topic-1',
+      threadId: 'child-1',
+    });
+    await h.handler.ingest({
+      operationId: 'op-1',
+      topicId: 'topic-1',
+      events: [buildEvent('session_title', 0, { title: 'Child title' })],
+    });
+    expect(h.topicModel.updateAgentTitle).not.toHaveBeenCalled();
   });
 
   it.each([undefined, 'group-1'])(

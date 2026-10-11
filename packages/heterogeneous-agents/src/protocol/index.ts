@@ -13,6 +13,7 @@ export type {
 } from './cancellation';
 export { buildHeteroExecStdinPayload, type HeteroExecImageRef } from './execStdinPayload';
 export const HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV = 'ORVILO_HETERO_EXEC_INHERIT_PROCESS_GROUP';
+export { parseAcpSessionTitle } from '../adapters/acpCommon';
 export {
   buildHeterogeneousPrompt,
   type HeterogeneousPromptContextProvider,

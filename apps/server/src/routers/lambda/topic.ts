@@ -1,4 +1,5 @@
 import { PERMISSION_ACTIONS } from '@orvilo/const/rbac';
+import { escapeXml } from '@orvilo/prompts';
 import {
   canPublishAgentTopicLink,
   chatTopicCreateMetadataSchema,
@@ -299,7 +300,7 @@ export const topicRouter = router({
         return { content: `Topic not found: ${input.topicId}`, success: false };
       }
 
-      const title = topic.title || 'Untitled';
+      const title = escapeXml(topic.title || 'Untitled');
 
       // Prefer historySummary if available
       if (topic.historySummary) {

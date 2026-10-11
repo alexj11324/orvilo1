@@ -4,11 +4,11 @@ import { createElement, memo, type ReactNode } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const typeClasses: Record<SpendTypeValue, string> = {
-  chat: 'text-info',
-  embedding: 'text-(--ant-purple)',
-  imageGeneration: 'text-success',
-  speechRecognition: 'text-info',
-  videoGeneration: 'text-warning',
+  chat: 'text-muted-foreground',
+  embedding: 'text-muted-foreground',
+  imageGeneration: 'text-muted-foreground',
+  speechRecognition: 'text-muted-foreground',
+  videoGeneration: 'text-muted-foreground',
 };
 
 export type SpendTypeValue =

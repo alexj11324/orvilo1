@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { LucidePlus, LucideTrash } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -10,30 +9,12 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  form: css`
-    position: relative;
-
-    width: 100%;
-    min-width: 600px;
-    padding: 8px;
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  formItem: css`
-    margin-block-end: 4px !important;
-  `,
-  input: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-  `,
-  row: css`
-    position: relative;
-  `,
-  title: css`
-    margin-block-end: 4px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  form: 'relative w-full min-w-0 max-w-160 rounded-(--radius-card) p-2 text-sm leading-5.5',
+  input: 'font-mono text-sm leading-5.5',
+  row: 'relative',
+  title: 'mbe-1 text-sm leading-5.5 text-foreground-tertiary',
+};
 
 interface KeyValueItem {
   id: string;
@@ -118,24 +99,17 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
     >
       <div className={cn('flex gap-2', styles.title)}>
         <div className="flex flex-col flex-1">key</div>
-        <div className="flex flex-col" style={{ flex: 4 }}>
-          value
-        </div>
+        <div className="flex flex-4 flex-col">value</div>
       </div>
       <Form.List name="items">
         {(fields, { add, remove }) => (
-          <div className="flex flex-col" style={{ width: '100%' }}>
+          <div className="flex w-full flex-col">
             {fields.map(({ key, name, ...restField }, index) => (
-              <div
-                className={cn('flex items-center gap-2', styles.row)}
-                key={key}
-                style={{ width: '100%' }}
-              >
+              <div className={cn('flex w-full items-start gap-2', styles.row)} key={key}>
                 <Form.Item
                   {...restField}
-                  className={styles.formItem}
                   name={[name, 'key']}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, marginBlockEnd: 4 }}
                   validateTrigger={['onChange', 'onBlur']}
                   rules={[
                     { message: t('updateArgs.keyRequired'), required: true },
@@ -157,9 +131,8 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                 </Form.Item>
                 <Form.Item
                   {...restField}
-                  className={styles.formItem}
                   name={[name, 'value']}
-                  style={{ flex: 4 }}
+                  style={{ flex: 4, marginBlockEnd: 4 }}
                 >
                   <Input
                     className={styles.input}
@@ -169,19 +142,17 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                 </Form.Item>
                 <ActionIcon
                   icon={LucideTrash}
-                  size={'small'}
+                  size={{ blockSize: 36, borderRadius: 'var(--radius-button)', size: 20 }}
                   title={t('delete', { ns: 'common' })}
-                  style={{
-                    marginBottom: 6,
-                  }}
                   onClick={() => remove(name)}
                 />
               </div>
             ))}
             <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
-              <div className="flex gap-2 justify-between">
+              <div className="flex flex-wrap justify-between gap-2">
                 <Button
-                  size="sm"
+                  className="leading-5.5"
+                  size="lg"
                   variant="secondary"
                   onClick={() => add({ id: `new-${Date.now()}`, key: '', value: '' })}
                 >
@@ -189,10 +160,16 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
                 </Button>
 
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleCancel}>
+                  <Button className="leading-5.5" size="lg" onClick={handleCancel}>
                     {t('cancel', { ns: 'common' })}
                   </Button>
-                  <Button loading={updating} size="sm" variant="default" onClick={handleFinish}>
+                  <Button
+                    className="leading-5.5"
+                    loading={updating}
+                    size="lg"
+                    variant="default"
+                    onClick={handleFinish}
+                  >
                     {t('save', { ns: 'common' })}
                   </Button>
                 </div>

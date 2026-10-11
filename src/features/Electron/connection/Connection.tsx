@@ -34,7 +34,7 @@ const Connection = () => {
       />
       <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <SheetContent
-          className="bg-background p-0 data-[side=top]:h-screen"
+          className="bg-background p-0 data-[side=top]:h-screen data-[side=top]:rounded-none"
           showCloseButton={false}
           side={'top'}
         >

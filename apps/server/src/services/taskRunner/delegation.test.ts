@@ -15,6 +15,10 @@ import { buildTaskPrompt } from './buildTaskPrompt';
 import { TaskRunnerService } from './index';
 
 vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn() }));
+const harness = vi.hoisted(() => ({ offered: true }));
+vi.mock('@/server/featureFlags/builtinHarness', () => ({
+  isBuiltinHarnessOffered: async () => harness.offered,
+}));
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
 vi.mock('@/database/utils/agent-access', () => ({
   assertAgentVisibleTo: vi.fn().mockResolvedValue(undefined),
@@ -193,6 +197,35 @@ describe('TaskRunnerService delegated runs', () => {
     });
     expect(TaskDispatchService.prototype.prepare).not.toHaveBeenCalled();
     expect(TaskModel.prototype.claimRunKickoff).not.toHaveBeenCalled();
+  });
+
+  // The inbox Agent runs on the built-in harness. While that is withheld, an
+  // Issue with no Agent has nobody to run it; it must not acquire the inbox
+  // Agent as its assignee.
+  it('refuses the inbox fallback while the built-in harness is withheld', async () => {
+    harness.offered = false;
+    try {
+      const task = baseTask({
+        assigneeAgentId: null,
+        assigneeUserId: null,
+        assignmentMode: 'manual',
+        orchestrationOwner: 'manual',
+        createdBySubjectKind: 'user',
+      });
+      setupHappyPath(task, { operationId: 'op-1', success: true, topicId: 'tpc_1' });
+      const getBuiltinAgent = vi.fn().mockResolvedValue({ id: 'agt_inbox' });
+      const { service } = newRunner({ getBuiltinAgent });
+
+      await expect(service.runTask({ ...runParams, delegation: undefined })).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+      });
+      expect(getBuiltinAgent).not.toHaveBeenCalled();
+      expect(TaskDispatchService.prototype.prepare).not.toHaveBeenCalled();
+      expect(TaskModel.prototype.claimRunKickoff).not.toHaveBeenCalled();
+      expect(AiAgentService.prototype.execAgent).not.toHaveBeenCalled();
+    } finally {
+      harness.offered = true;
+    }
   });
 
   it('authorizes the actual delegated executor rather than the task assignee', async () => {

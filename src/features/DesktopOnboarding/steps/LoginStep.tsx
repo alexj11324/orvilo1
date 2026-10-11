@@ -1,6 +1,10 @@
 'use client';
 
-import { type AuthorizationPhase, type AuthorizationProgress } from '@orvilo/electron-client-ipc';
+import {
+  type AuthorizationErrorCode,
+  type AuthorizationPhase,
+  type AuthorizationProgress,
+} from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { ArrowLeft, ArrowRight, Cloud, ExternalLink, LogOutIcon, Server } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -22,6 +26,10 @@ import { getHostPort } from '@/platform';
 import { remoteServerService } from '@/services/electron/remoteServer';
 import { electronSystemService } from '@/services/electron/system';
 import { useElectronStore } from '@/store/electron';
+import {
+  AUTHORIZATION_ERROR_I18N_KEY,
+  readAuthorizationErrorCode,
+} from '@/utils/electron/authorizationError';
 import { setDesktopAutoOidcFirstOpenHandled } from '@/utils/electron/autoOidc';
 
 const LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL = urlJoin(
@@ -34,6 +42,10 @@ type LoginMethod = 'cloud' | 'selfhost';
 
 // Login status type
 type LoginStatus = 'idle' | 'loading' | 'success' | 'error';
+
+// An authorization failure is kept as its code and localized at render; only
+// failures raised in this step carry ready-made copy.
+type LoginFailure = { code: AuthorizationErrorCode } | { message: string };
 
 const authorizationPhaseI18nKeyMap = {
   browser_opened: 'screen5.auth.phase.browserOpened',
@@ -60,7 +72,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
   const [selfhostLoginStatus, setSelfhostLoginStatus] = useState<LoginStatus>('idle');
   const [pendingLoginMethod, setPendingLoginMethod] = useState<LoginMethod | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [remoteError, setRemoteError] = useState<LoginFailure | null>(null);
   const [showEndpoint, setShowEndpoint] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const [hasLegacyLocalDb, setHasLegacyLocalDb] = useState(false);
@@ -134,7 +146,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
   // Handle cloud login
   const handleCloudLogin = async () => {
     if (!isDesktop) {
-      setRemoteError(t('screen5.errors.desktopOnlyOidc'));
+      setRemoteError({ message: t('screen5.errors.desktopOnlyOidc') });
       setCloudLoginStatus('error');
       return;
     }
@@ -152,7 +164,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
         storageMode: 'cloud',
       });
     } catch (error) {
-      setRemoteError(error instanceof Error ? error.message : t('authResult.failed.desc'));
+      setRemoteError({ code: readAuthorizationErrorCode(error) ?? 'server_error' });
       setCloudLoginStatus('error');
       setPendingLoginMethod(null);
     }
@@ -161,7 +173,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
   // Handle self-hosted server connection
   const handleSelfhostConnect = async () => {
     if (!isDesktop) {
-      setRemoteError(t('screen5.errors.desktopOnlyOidc'));
+      setRemoteError({ message: t('screen5.errors.desktopOnlyOidc') });
       setSelfhostLoginStatus('error');
       return;
     }
@@ -178,7 +190,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     try {
       await connectRemoteServer({ remoteServerUrl: url, storageMode: 'selfHost' });
     } catch (error) {
-      setRemoteError(error instanceof Error ? error.message : t('authResult.failed.desc'));
+      setRemoteError({ code: readAuthorizationErrorCode(error) ?? 'server_error' });
       setSelfhostLoginStatus('error');
       setPendingLoginMethod(null);
     }
@@ -220,13 +232,13 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
 
   // Surface requestAuthorization errors reported via store
   useEffect(() => {
-    const message = remoteServerSyncError?.message;
-    if (!message) return;
-    setRemoteError(message);
+    if (!remoteServerSyncError) return;
+    // Without a code (a failed disconnect) the generic failure copy is shown.
+    setRemoteError(remoteServerSyncError.code ? { code: remoteServerSyncError.code } : null);
     setPendingLoginMethod(null);
     if (cloudLoginStatus === 'loading') setCloudLoginStatus('error');
     if (selfhostLoginStatus === 'loading') setSelfhostLoginStatus('error');
-  }, [remoteServerSyncError?.message, cloudLoginStatus, selfhostLoginStatus]);
+  }, [remoteServerSyncError, cloudLoginStatus, selfhostLoginStatus]);
 
   // Watch broadcasts from main process (polling result)
   useWatchBroadcast('authorizationSuccessful', async () => {
@@ -244,8 +256,8 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
     await refreshServerConfig();
   });
 
-  useWatchBroadcast('authorizationFailed', ({ error }) => {
-    setRemoteError(error);
+  useWatchBroadcast('authorizationFailed', (failure) => {
+    setRemoteError({ code: readAuthorizationErrorCode(failure) ?? 'server_error' });
     setAuthProgress(null);
     setPendingLoginMethod(null);
     if (cloudLoginStatus === 'loading') setCloudLoginStatus('error');
@@ -300,8 +312,9 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
       setPendingLoginMethod(null);
       setAuthProgress(null);
       setCancelled(true);
-    } catch (error) {
-      setRemoteError(error instanceof Error ? error.message : t('authResult.failed.desc'));
+    } catch {
+      // Cancelling is not an authorization failure and has no code: generic copy.
+      setRemoteError(null);
       if (pendingLoginMethod === 'selfhost') setSelfhostLoginStatus('error');
       else setCloudLoginStatus('error');
     }
@@ -350,9 +363,11 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
 
   const busy = cloudLoginStatus === 'loading' || selfhostLoginStatus === 'loading';
   const failed = cloudLoginStatus === 'error' || selfhostLoginStatus === 'error';
-  const errorMessage = remoteError?.toLowerCase().includes('timed out')
-    ? t('screen5.errors.timedOut')
-    : remoteError || t('authResult.failed.desc');
+  const errorMessage = !remoteError
+    ? t('authResult.failed.desc')
+    : 'code' in remoteError
+      ? t(AUTHORIZATION_ERROR_I18N_KEY[remoteError.code])
+      : remoteError.message;
 
   return (
     <EntryPanel className="orvilo-entry-surface text-foreground">

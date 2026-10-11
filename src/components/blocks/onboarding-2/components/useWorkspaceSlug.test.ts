@@ -30,6 +30,17 @@ describe('useWorkspaceSlug', () => {
     expect(result.current.workspaceSlugError).toBeUndefined();
   });
 
+  it('flags the URL the server reported as taken until the user changes it', () => {
+    const { result } = renderHook(() => useWorkspaceSlug('Acme Inc', 'acme'));
+    act(() => result.current.markWorkspaceSlugTaken());
+    expect(result.current.workspaceSlugError).toBe('taken');
+    expect(result.current.workspaceName).toBe('Acme Inc');
+    expect(result.current.workspaceSlug).toBe('acme');
+
+    act(() => result.current.onWorkspaceSlugChange('acme-team'));
+    expect(result.current.workspaceSlugError).toBeUndefined();
+  });
+
   it('resumes the checkpointed workspace name and custom slug', () => {
     const { result } = renderHook(() => useWorkspaceSlug('Saved Team', 'saved-custom-url'));
     expect(result.current.workspaceName).toBe('Saved Team');

@@ -11,11 +11,15 @@ import Avatar from '@/components/Avatar';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import Form from '@/components/GroupForm';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import UnsavedChangesGuard from '@/features/EditorCanvas/UnsavedChangesGuard';
 import { useSaveState } from '@/hooks/useSaveState';
 import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
+import { isWorkspaceSlugTakenError } from '@/utils/workspaceSlugError';
+
+const SLUG_ERROR_ID = 'workspace-general-url-error';
 
 const WorkspaceGeneral = () => {
   const { t } = useTranslation(['setting', 'common']);
@@ -25,6 +29,9 @@ const WorkspaceGeneral = () => {
   const { status, save, retry, lastSavedAt } = useSaveState();
   const [draft, setDraft] = useState<{ id: string; name: string; slug: string; avatar: string }>();
   const current = draft?.id === workspace?.id ? draft : undefined;
+  // The URL the server last rejected as taken; the error shows only while the field still holds it.
+  const [takenSlug, setTakenSlug] = useState<string>();
+  const slugTaken = !!current && current.slug === takenSlug;
   const canEdit = workspace?.role === 'owner' || workspace?.role === 'admin';
 
   // Only the fields this form changed are sent. Sending the whole snapshot
@@ -45,9 +52,12 @@ const WorkspaceGeneral = () => {
     // `save` reports failure through its status, not by throwing.
     let savedSlug: string | undefined;
     await save(async () => {
-      const updated = await createWorkspaceLambdaClient(current.id).workspace.update.mutate(
-        changed,
-      );
+      const updated = await createWorkspaceLambdaClient(current.id)
+        .workspace.update.mutate(changed)
+        .catch((error: unknown) => {
+          if (isWorkspaceSlugTakenError(error)) setTakenSlug(current.slug);
+          throw error;
+        });
       await mutate();
       setDraft(undefined);
       savedSlug = updated.slug;
@@ -58,6 +68,8 @@ const WorkspaceGeneral = () => {
   };
   const field = (key: 'name' | 'slug' | 'avatar', label: string) => (
     <Input
+      aria-describedby={key === 'slug' && slugTaken ? SLUG_ERROR_ID : undefined}
+      aria-invalid={key === 'slug' && slugTaken}
       aria-label={label}
       className="h-9 text-sm"
       disabled={!canEdit || status === 'saving'}
@@ -114,7 +126,14 @@ const WorkspaceGeneral = () => {
                 label: t('workspaceSetting.general.name', { defaultValue: 'Name' }),
               },
               {
-                children: field('slug', t('workspaceSetting.general.url')),
+                children: (
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    {field('slug', t('workspaceSetting.general.url'))}
+                    {slugTaken && (
+                      <FieldError id={SLUG_ERROR_ID}>{t('workspace.general.url.taken')}</FieldError>
+                    )}
+                  </div>
+                ),
                 label: t('workspaceSetting.general.url', { defaultValue: 'URL' }),
               },
               {

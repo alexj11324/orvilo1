@@ -7,13 +7,17 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import useSWR from 'swr';
 
+import { WORKSPACE_LIST_KEY } from '@/business/client/hooks/useFetchWorkspaces';
 import Avatar from '@/components/Avatar';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { mutate } from '@/libs/swr';
+import { useUserStore } from '@/store/user';
 
 import { teammatesClient } from '../api/client';
 import type { WorkspaceRole } from '../api/contract';
+import { acceptInviteAndResolvePath, resolveWorkspacePath } from './acceptInvite';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -68,16 +72,13 @@ const InviteAcceptPage = memo(() => {
       : (preview?.role ?? '');
   }, [preview?.role, t]);
 
-  /** After accept, land the invitee inside the joined workspace. */
+  /** Land an already-joined invitee inside the workspace. */
   const goToWorkspace = useCallback(
     async (workspaceId: string) => {
-      try {
-        const memberships = await teammatesClient.workspace.list.query();
-        const slug = memberships.find((m) => m.id === workspaceId)?.slug;
-        navigate(slug ? `/${slug}` : '/', { replace: true });
-      } catch {
-        navigate('/', { replace: true });
-      }
+      const path = await resolveWorkspacePath(workspaceId, () =>
+        teammatesClient.workspace.list.query(),
+      );
+      navigate(path, { replace: true });
     },
     [navigate],
   );
@@ -87,13 +88,23 @@ const InviteAcceptPage = memo(() => {
     setAccepting(true);
     setAcceptError(null);
     try {
-      const { workspaceId } = await teammatesClient.invitation.accept.mutate({ token });
-      await goToWorkspace(workspaceId);
+      const path = await acceptInviteAndResolvePath(token, {
+        accept: (inviteToken) => teammatesClient.invitation.accept.mutate({ token: inviteToken }),
+        listWorkspaces: () => teammatesClient.workspace.list.query(),
+        // The joined workspace is new to the cached membership list as well.
+        refreshUserState: async () => {
+          await Promise.all([
+            useUserStore.getState().refreshUserState(),
+            mutate(WORKSPACE_LIST_KEY),
+          ]);
+        },
+      });
+      navigate(path, { replace: true });
     } catch (acceptErr) {
       setAcceptError((acceptErr as Error)?.message || t('workspaceSetting.invite.acceptFailed'));
       setAccepting(false);
     }
-  }, [accepting, goToWorkspace, t, token]);
+  }, [accepting, navigate, t, token]);
 
   if (!token) {
     return (

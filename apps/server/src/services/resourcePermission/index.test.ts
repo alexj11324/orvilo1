@@ -124,6 +124,24 @@ describe('canPerformResourceAction', () => {
     await expect(canPerformResourceAction(params)).resolves.toBe(true);
   });
 
+  // A shared builtin's row is created by whoever reaches the feature first, so
+  // its `userId` is an accident of timing rather than authorship.
+  it('does not treat the member who provisioned a shared builtin as its creator', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+    const params = {
+      action: 'use' as const,
+      db,
+      meta: { ...meta, slug: 'inbox', virtual: true },
+      resourceId: 'builtin-1',
+      resourceType: 'agent' as const,
+      userId: 'creator',
+      workspaceId: 'ws-1',
+    };
+    await expect(canPerformResourceAction(params)).resolves.toBe(false);
+    grantedLevelMock.mockResolvedValue('use');
+    await expect(canPerformResourceAction(params)).resolves.toBe(true);
+  });
+
   it('still needs a Use row from everyone but the creator', async () => {
     permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
     const params = {

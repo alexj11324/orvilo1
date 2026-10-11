@@ -157,6 +157,18 @@ export const isCollaborativeBuiltinAgent = (
   meta: ResourceMeta,
 ): boolean => resourceType === 'agent' && isCollaborativeBuiltinAgentRow(meta);
 
+/**
+ * Whether `userId` authored this Agent and so can run it without a Use row.
+ * A collaborative builtin has no author: its row belongs to whichever member
+ * reached the feature first.
+ */
+export const isAgentCreator = (
+  resourceType: PermissionResourceType,
+  meta: ResourceMeta,
+  userId: string,
+): boolean =>
+  resourceType === 'agent' && meta.userId === userId && !isCollaborativeBuiltinAgentRow(meta);
+
 const getRbacAction = (
   resourceType: PermissionResourceType,
   action: ResourceAccessAction,
@@ -252,7 +264,7 @@ export const canPerformResourceAction = async (params: {
       if (!capability.hasAllScope && !capability.hasOwnerScope) return false;
       // Whoever created the Agent can run it while they are an active, writable
       // member. Everyone else needs an explicit per-member row.
-      if (meta.userId === userId) return true;
+      if (isAgentCreator(resourceType, meta, userId)) return true;
       const grant = await new ResourcePermissionModel(db, workspaceId).getCollaboratorLevel(
         resourceType,
         resourceId,

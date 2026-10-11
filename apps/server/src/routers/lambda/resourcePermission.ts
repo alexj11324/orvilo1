@@ -23,6 +23,7 @@ import {
   canPerformResourceAction,
   getResourceMeta,
   isAccessLevelAllowed,
+  isAgentCreator,
   isCollaborativeBuiltinAgent,
   isWorkspaceScopedMeta,
 } from '@/server/services/resourcePermission';
@@ -141,7 +142,7 @@ const canUseAgentResource = async (
 export const resourcePermissionRouter = router({
   /**
    * Grant a batch of workspace members a collaborator level on one resource.
-   * Agent creators receive the same removable Use row as other members.
+   * An Agent's creator is skipped: they can use it without a row.
    * Every target must currently be an active workspace member.
    */
   addCollaborators: permissionProcedure
@@ -164,8 +165,10 @@ export const resourcePermissionRouter = router({
         });
       }
 
-      const targetIds = [...new Set(input.userIds)].filter(
-        (id) => input.resourceType === 'agent' || id !== meta.userId,
+      const targetIds = [...new Set(input.userIds)].filter((id) =>
+        input.resourceType === 'agent'
+          ? !isAgentCreator(input.resourceType, meta, id)
+          : id !== meta.userId,
       );
       if (targetIds.length === 0) return { success: true };
 
@@ -312,7 +315,8 @@ export const resourcePermissionRouter = router({
    */
   listCollaborators: permissionProcedure.input(resourceInput).query(async ({ ctx, input }) => {
     const meta = await loadManageableResource(ctx, input);
-    const creatorId = input.resourceType === 'agent' ? (meta.userId ?? null) : null;
+    const creatorId =
+      meta.userId && isAgentCreator(input.resourceType, meta, meta.userId) ? meta.userId : null;
 
     // The model only returns per-member rows, so `userId` is always set — the
     // filter narrows the nullable column type, not the data.
@@ -384,7 +388,7 @@ export const resourcePermissionRouter = router({
       const meta = await loadManageableResource(ctx, input);
       // Removing the row would change nothing: the creator can use the Agent
       // without one. Refuse rather than report a removal that did not happen.
-      if (input.resourceType === 'agent' && meta.userId === input.userId) {
+      if (isAgentCreator(input.resourceType, meta, input.userId)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: 'The creator of an Agent can always use it',

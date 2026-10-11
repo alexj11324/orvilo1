@@ -503,6 +503,7 @@ const SliderField = ({
         onValueChange={(v) => onChange(Array.isArray(v) ? v[0] : v)}
       />
       <InputNumber
+        controls={false}
         disabled={disabled}
         max={unlimitedInput ? undefined : max}
         min={min}

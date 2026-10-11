@@ -252,6 +252,7 @@ const TaskProperties = memo(() => {
             <Button
               className={cn(styles.propertyButton, 'min-w-0 justify-start font-normal')}
               disabled={readOnly}
+              size="sm"
               variant="ghost"
               onClick={() =>
                 openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })

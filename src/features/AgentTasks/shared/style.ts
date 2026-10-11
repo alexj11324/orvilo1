@@ -53,7 +53,7 @@ export const styles = {
   breadcrumb: stylesRetained.breadcrumb,
   subtaskTreeTitle: 'text-muted-foreground',
   activityLine:
-    "relative py-1.25 ps-3 before:content-[''] before:absolute before:inset-y-0 before:start-4.875 before:w-px before:bg-divider first:before:top-1/2 last:before:bottom-1/2 only:before:hidden",
+    "relative py-1.25 ps-3 before:content-[''] before:absolute before:inset-y-0 before:start-[calc(var(--spacing)*4.875)] before:w-px before:bg-divider first:before:top-1/2 last:before:bottom-1/2 only:before:hidden",
   activityMark:
     'relative z-1 flex shrink-0 items-center justify-center size-4 rounded-full bg-card',
   activityTimeline: '-my-1',

@@ -264,7 +264,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             {onHide && (
               <ActionIcon
                 icon={ChevronLeft}
-                size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
                 title={t('taskList.kanban.hideColumn')}
                 onClick={onHide}
               />
@@ -272,7 +272,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             {onCreate && (
               <ActionIcon
                 icon={Plus}
-                size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
                 title={t('taskList.kanban.addTask')}
                 onClick={onCreate}
               />

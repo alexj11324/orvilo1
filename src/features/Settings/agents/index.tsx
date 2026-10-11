@@ -72,7 +72,7 @@ const AgentSettingsIndex = memo(() => {
   const { error, mutate } = useFetchAgentList();
 
   return (
-    <SettingContainer maxWidth={640} paddingBlock={'24px 128px'} paddingInline={24}>
+    <SettingContainer paddingBlock={'24px 128px'} paddingInline={24} width="form">
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">

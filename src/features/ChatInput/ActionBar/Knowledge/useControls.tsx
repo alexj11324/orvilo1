@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { LibraryBig } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -18,44 +18,20 @@ import CheckboxItem from '../components/CheckboxWithLoading';
 // growing past it.
 const labelMaxWidth = 'min(210px, 45vw)';
 
-const styles = createStaticStyles(({ css }) => ({
+// Keep exact engine easing until the shared semantic motion owner exposes it.
+const themeStyles = createStaticStyles(({ css, cssVar }) => ({
   viewMore: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    /* width 320 + margin-inline -12 anchors the submenu to 320px (matching the skill
-       submenu) and lets the row span full width; padding-inline 12 lines its icon/text
-       up with the menu items above. */
-    width: 320px;
-    min-height: 32px;
-
-    /* The footer wrapper adds padding-block: 8px top & bottom; the top keeps it separated
-       from the list, but the bottom leaves a dead gap against the popup edge — cancel it. */
-    margin-block-end: -8px;
-    margin-inline: -12px;
-    padding-inline: 12px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 14px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
     transition: background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  viewMoreLabel: css`
-    flex: 1;
-    text-align: start;
   `,
 }));
+
+const styles = {
+  viewMore: cx(
+    'cursor-pointer flex w-80 min-h-9 items-center gap-3 -mbe-2 -mx-3 px-3 border-0 rounded-(--radius-button) text-sm leading-5.5 text-foreground bg-transparent transition-[background] [&:hover]:bg-accent',
+    themeStyles.viewMore,
+  ),
+  viewMoreLabel: 'flex-1 text-start',
+};
 
 export interface KnowledgeControls {
   enabledCount: number;
@@ -140,7 +116,7 @@ export const useControls = ({
     >
       <span className="anticon" role="img">
         <LibraryBig
-          color={cssVar.colorTextSecondary}
+          className="text-muted-foreground"
           fill={'transparent'}
           height={14}
           size={14}

@@ -3,6 +3,7 @@ import { Pin, Search, Settings, X, Zap } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
@@ -12,57 +13,23 @@ import { ScrollSignalProvider } from './ScrollSignalContext';
 import SkillActivateMode from './SkillActivateMode';
 import ToolsList from './ToolsList';
 
-const styles = createStaticStyles(({ css }) => ({
+// colorFill has no exact local semantic alias; retain these divider color contracts.
+const themeStyles = createStaticStyles(({ css }) => ({
   footer: css`
-    display: flex;
-    gap: 14px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 12px;
     border-block-start: 1px solid ${cssVar.colorFill};
   `,
   header: css`
-    padding-block: 8px;
-    padding-inline: 8px;
     border-block-end: 1px solid ${cssVar.colorFill};
   `,
-  iconButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-    border: 0;
-    border-radius: 6px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: transparent;
-
-    transition:
-      color 0.2s,
-      background 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  statsItem: css`
-    display: inline-flex;
-    gap: 5px;
-    align-items: center;
-
-    font-size: 12px;
-    line-height: 18px;
-    color: ${cssVar.colorTextTertiary};
-  `,
 }));
+
+const styles = {
+  footer: cx('flex items-center gap-3.5 py-1.5 px-3', themeStyles.footer),
+  header: cx('py-2 px-2', themeStyles.header),
+  iconButton:
+    'cursor-pointer inline-flex flex-none items-center justify-center p-0 border-0 rounded-(--radius-button) text-foreground-tertiary bg-transparent transition-[color,background] duration-200 ease-[ease] active:not-aria-[haspopup]:translate-y-0 [&:hover]:text-muted-foreground [&:hover]:bg-accent',
+  statsItem: 'inline-flex items-center gap-1.25 text-xs leading-5 text-foreground-tertiary',
+};
 
 const filterItems = (items: ActionMenuItem[], keyword: string): ActionMenuItem[] => {
   const lower = keyword.toLowerCase();
@@ -113,37 +80,35 @@ const PopoverContent = memo<PopoverContentProps>(
       <div className="flex flex-col gap-0">
         <div className={cx('flex flex-row items-center gap-1', styles.header)}>
           <div className="flex flex-1 flex-row items-center gap-1.5 px-1.5">
-            <span className="flex items-center" style={{ color: cssVar.colorTextTertiary }}>
+            <span className="flex items-center text-foreground-tertiary">
               <Search size={14} />
             </span>
             <Input
-              className="h-7 flex-1 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+              className="flex-1 border-0 px-0 text-sm leading-5.5 shadow-none focus-visible:border-transparent focus-visible:ring-0"
               placeholder={t('tools.search')}
               value={searchKeyword}
+              visualSize="compact"
               onChange={(e) => setSearchKeyword(e.target.value)}
               onKeyDown={(event) => {
                 if (event.key !== 'Escape') event.stopPropagation();
               }}
             />
             {searchKeyword ? (
-              <button
+              <Button
                 aria-label={t('tools.search')}
                 className={styles.iconButton}
+                size="icon"
                 type="button"
+                variant="ghost"
                 onClick={() => setSearchKeyword('')}
               >
-                <X size={12} />
-              </button>
+                <X className="size-3" size={12} />
+              </Button>
             ) : null}
           </div>
           <SkillActivateMode />
         </div>
-        <ScrollSignalProvider
-          style={{
-            height: 480,
-            overflowY: 'auto',
-          }}
-        >
+        <ScrollSignalProvider className="h-120 overflow-y-auto">
           <ToolsList detailPopoverDisabled={detailPopoverDisabled} items={filteredItems} />
         </ScrollSignalProvider>
         <div className={styles.footer}>
@@ -159,20 +124,28 @@ const PopoverContent = memo<PopoverContentProps>(
             </span>
             {autoCount}
           </span>
-          <div className="flex flex-row items-center gap-0.5" style={{ marginInlineStart: 'auto' }}>
-            <button
+          <div className="flex flex-row items-center gap-0.5 ms-auto">
+            <Button
               aria-label={t('tools.plugins.management')}
               className={styles.iconButton}
+              size="icon"
               type="button"
+              variant="ghost"
               onClick={() => {
                 closePopover();
                 navigate('/settings/connector');
               }}
             >
               <span className="anticon" role="img">
-                <Settings fill={'transparent'} height={14} size={14} width={14} />
+                <Settings
+                  className="size-3.5"
+                  fill={'transparent'}
+                  height={14}
+                  size={14}
+                  width={14}
+                />
               </span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>

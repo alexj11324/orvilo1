@@ -1,5 +1,4 @@
 import { validateVideoFileSize } from '@orvilo/utils/client';
-import { css, cx } from 'antd-style';
 import { FileUp, FolderUp, ImageUp, Paperclip } from 'lucide-react';
 import { memo, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,14 +21,7 @@ import { type ActionDropdownMenuItems } from '../components/ActionDropdown';
 import { ChatInputAction } from '../components/ChatInputAction';
 import { MENU_ICON_SIZE, useKnowledgeMenuItems } from './useKnowledgeMenuItems';
 
-const hotArea = css`
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-color: transparent;
-  }
-`;
+const hotArea = "before:content-[''] before:absolute before:inset-0 before:bg-transparent";
 
 const FileUpload = memo(() => {
   const { t } = useTranslation('chat');
@@ -108,11 +100,11 @@ const FileUpload = memo(() => {
             return false;
           }}
         >
-          <div className={cx(hotArea)}>{t('upload.action.imageUpload')}</div>
+          <div className={hotArea}>{t('upload.action.imageUpload')}</div>
         </Upload>
       ) : (
         <SimpleTooltip side={'right'} title={t('upload.action.imageDisabled')}>
-          <div className={cx(hotArea)}>{t('upload.action.imageUpload')}</div>
+          <div className={hotArea}>{t('upload.action.imageUpload')}</div>
         </SimpleTooltip>
       ),
     },
@@ -160,7 +152,7 @@ const FileUpload = memo(() => {
             return false;
           }}
         >
-          <div className={cx(hotArea)}>{t('upload.action.fileUpload')}</div>
+          <div className={hotArea}>{t('upload.action.fileUpload')}</div>
         </Upload>
       ),
     },
@@ -209,7 +201,7 @@ const FileUpload = memo(() => {
             return false;
           }}
         >
-          <div className={cx(hotArea)}>{t('upload.action.folderUpload')}</div>
+          <div className={hotArea}>{t('upload.action.folderUpload')}</div>
         </Upload>
       ),
     },

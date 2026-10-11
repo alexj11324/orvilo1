@@ -1,7 +1,7 @@
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog, RECOMMENDED_SKILLS, RecommendedSkillType } from '@orvilo/const';
 import { type AgentPluginMode, getDisabledPluginIds } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import {
   BadgeCheck,
@@ -24,6 +24,7 @@ import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
 import SearchBar from '@/components/SearchBar';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { openConnectorEditDrawer } from '@/features/Connectors/CustomConnectorModal/imperative';
@@ -54,7 +55,7 @@ import { SimpleTooltip } from '../../SimpleTooltip';
 import { closeToolDetailPopovers } from '../components/useDetailPopoverState';
 import ComposioServerItem from './ComposioServerItem';
 import ComposioSkillIcon from './ComposioSkillIcon';
-import { SKILL_ICON_GAP, SKILL_ICON_SIZE, SKILL_TRAILING_CONTROL_SIZE } from './constants';
+import { SKILL_ICON_SIZE } from './constants';
 import OrviloSkillIcon from './OrviloSkillIcon';
 import OrviloSkillServerItem from './OrviloSkillServerItem';
 import SkillRow from './SkillRow';
@@ -88,353 +89,74 @@ type SkillMenuItem = NonNullable<ActionMenuItem> & {
   searchText?: string;
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  activationGroupHeader: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    width: 100%;
-    min-width: 0;
-    padding-block: 4px;
-  `,
-  activationGroupChevron: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: ${SKILL_TRAILING_CONTROL_SIZE}px;
-    height: ${SKILL_TRAILING_CONTROL_SIZE}px;
-
-    color: ${cssVar.colorTextTertiary};
-  `,
-  activationGroupTitle: css`
-    display: flex;
-    gap: 7px;
-    align-items: center;
-
-    min-width: 0;
-    min-height: 18px;
-  `,
-  activationGroupTitleBlock: css`
-    display: flex;
-    gap: ${SKILL_ICON_GAP}px;
-    align-items: center;
-    min-width: 0;
-  `,
-  activationGroupIcon: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: ${SKILL_ICON_SIZE}px;
-  `,
-  activationGroupTitleBody: css`
-    display: flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  activationGroupTitleText: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    text-transform: none;
-    white-space: nowrap;
-  `,
-  count: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  activationGroupActions: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-  `,
-  switchWrap: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-  `,
-  iconAuto: css`
-    color: ${cssVar.colorInfo};
-  `,
-  iconDefault: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  iconDisabled: css`
-    color: ${cssVar.colorError};
-  `,
-  iconPinned: css`
-    color: ${cssVar.colorInfo};
-  `,
-  policyButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    /* Connector rows hand this button to the menu's extra slot, a plain block
-       wrapper — without vertical-align its strut adds descender space below the
-       button and pushes those rows taller than the rest. */
-    width: ${SKILL_TRAILING_CONTROL_SIZE}px;
-    height: ${SKILL_TRAILING_CONTROL_SIZE}px;
-    padding: 0;
-    border: 0;
-    border-radius: 6px;
-
-    color: ${cssVar.colorTextTertiary};
-    vertical-align: top;
-
-    background: transparent;
-
-    transition:
-      color 0.2s,
-      background 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-      background: transparent;
-    }
-  `,
+// Exact engine easing is not yet exposed by the shared semantic motion owner.
+const themeStyles = createStaticStyles(({ css, cssVar }) => ({
   deleteButton: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 36px;
-    padding-block: 8px;
-    padding-inline: 10px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 14px;
-    line-height: 20px;
-    color: ${cssVar.colorError};
-
-    background: transparent;
-
     transition: background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      background: ${cssVar.colorErrorBg};
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-      background: transparent;
-    }
-  `,
-  deleteDivider: css`
-    height: 1px;
-    margin-block: 2px;
-    margin-inline: 4px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  deleteIcon: css`
-    color: ${cssVar.colorError};
-  `,
-  policyCheck: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-
-    color: ${cssVar.colorInfo};
   `,
   policyItem: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 36px;
-    padding-block: 8px;
-    padding-inline: 10px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 14px;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
     transition: background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-      background: transparent;
-    }
-  `,
-  policyItemIcon: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-  `,
-  policyPanel: css`
-    min-width: 132px;
-    padding: 4px;
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow:
-      0 0 15px 0 #00000008,
-      0 2px 30px 0 #00000014;
-  `,
-  policyText: css`
-    flex: 1;
-    text-align: start;
-  `,
-  toolLabel: css`
-    display: flex;
-    flex: 1;
-    gap: ${SKILL_ICON_GAP}px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  toolLabelBody: css`
-    overflow: hidden;
-    display: flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  toolLabelText: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-
-    line-height: 1.4;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  toolRow: css`
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    justify-content: space-between;
-
-    width: 100%;
-    min-width: 0;
-
-    &:hover [data-tool-trailing],
-    &:focus-within [data-tool-trailing] {
-      pointer-events: auto;
-      opacity: 1;
-    }
   `,
   toolTrailing: css`
-    pointer-events: none;
-
-    display: inline-flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-
-    opacity: 0;
-
     transition: opacity 150ms ${cssVar.motionEaseOut};
-
-    @media (hover: none) {
-      pointer-events: auto;
-      opacity: 1;
-    }
-  `,
-  toolTrailingVisible: css`
-    pointer-events: auto;
-    opacity: 1;
-  `,
-  typeTag: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-
-    padding-block: 1px;
-    padding-inline: 4px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillQuaternary};
   `,
   addSkillRow: css`
-    display: flex;
-    gap: ${SKILL_ICON_GAP}px;
-    align-items: center;
-
-    width: calc(100% + 24px);
-    min-height: 32px;
-    margin-inline: -12px;
-    padding-inline: 12px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 14px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
     transition: background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    /* The footer adds 8px block padding; cancel it on the last action row so the
-       bottom row sits flush against the popup edge instead of leaving a gap. */
-    &:last-child {
-      margin-block-end: -8px;
-    }
-  `,
-  addSkillLabel: css`
-    flex: 1;
-    text-align: start;
   `,
 }));
+
+const styles = {
+  activationGroupHeader:
+    'flex w-full min-w-0 min-h-9 cursor-pointer items-center justify-between gap-3 py-1',
+  activationGroupChevron:
+    'flex flex-none items-center justify-center size-5 text-foreground-tertiary',
+  activationGroupTitle: 'flex min-w-0 min-h-5.5 items-center gap-1.75',
+  activationGroupTitleBlock: 'flex min-w-0 items-center gap-3.5',
+  activationGroupIcon: 'flex flex-none items-center justify-center w-4.5',
+  activationGroupTitleBody: 'flex flex-[0_1_auto] min-w-0 items-center gap-1.5',
+  activationGroupTitleText:
+    'min-w-0 truncate text-sm leading-5.5 font-medium text-foreground normal-case',
+  count: 'flex-none text-xs leading-5 text-foreground-tertiary',
+  activationGroupActions: 'flex flex-none items-center gap-2',
+  switchWrap: 'inline-flex flex-none items-center',
+  iconAuto: 'text-info-text',
+  iconDefault: 'text-foreground-tertiary',
+  iconDisabled: 'text-destructive-text',
+  iconPinned: 'text-info-text',
+  policyButton:
+    'inline-flex cursor-pointer items-center justify-center p-0 border-0 rounded-(--radius-button) text-foreground-tertiary align-top bg-transparent aria-expanded:bg-transparent aria-expanded:text-foreground-tertiary active:not-aria-[haspopup]:translate-y-0 transition-[color,background] duration-200 ease-[ease] [&:hover]:text-muted-foreground [&[aria-expanded=true]:hover]:text-muted-foreground [&:hover]:bg-accent disabled:cursor-not-allowed disabled:opacity-[0.45] disabled:pointer-events-auto disabled:bg-transparent [&:disabled:hover]:bg-transparent',
+  deleteButton: cx(
+    'flex w-full min-h-9 cursor-pointer items-center gap-2.5 py-1.75 px-2.5 border-0 rounded-(--radius-button) text-sm leading-5.5 text-destructive-text bg-transparent transition-[background] [&:hover]:bg-destructive-wash disabled:cursor-not-allowed disabled:opacity-[0.45] disabled:pointer-events-auto disabled:bg-transparent [&:disabled:hover]:bg-transparent',
+    themeStyles.deleteButton,
+  ),
+  deleteDivider: 'h-px my-0.5 mx-1 bg-divider',
+  deleteIcon: 'text-destructive-text',
+  policyCheck: 'flex flex-none size-4 items-center justify-center text-info-text',
+  policyItem: cx(
+    'flex w-full min-h-9 cursor-pointer items-center gap-2.5 py-1.75 px-2.5 border-0 rounded-(--radius-button) text-sm leading-5.5 text-foreground bg-transparent transition-[background] [&:hover]:bg-accent disabled:cursor-not-allowed disabled:opacity-[0.45] disabled:pointer-events-auto disabled:bg-transparent [&:disabled:hover]:bg-transparent',
+    themeStyles.policyItem,
+  ),
+  policyItemIcon: 'flex flex-none size-4 items-center justify-center',
+  policyPanel: 'min-w-33 p-1 rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)',
+  policyText: 'flex-1 text-start',
+  toolLabel: 'flex flex-1 min-w-0 items-center gap-3.5',
+  toolLabelBody: 'flex flex-[0_1_auto] min-w-0 items-center gap-1.5 overflow-hidden',
+  toolLabelText: 'flex-[0_1_auto] min-w-0 truncate text-sm leading-5.5',
+  toolRow:
+    'flex w-full min-w-0 items-center justify-between gap-4 [&:hover_[data-tool-trailing]]:pointer-events-auto [&:hover_[data-tool-trailing]]:opacity-100 [&:focus-within_[data-tool-trailing]]:pointer-events-auto [&:focus-within_[data-tool-trailing]]:opacity-100',
+  toolTrailing: cx(
+    'pointer-events-none inline-flex flex-none items-center gap-2 opacity-0 transition-opacity [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100',
+    themeStyles.toolTrailing,
+  ),
+  toolTrailingVisible: 'pointer-events-auto opacity-100',
+  typeTag:
+    'inline-flex flex-none items-center py-0.25 px-1 border border-divider rounded-(--radius-chip) text-xs leading-5 text-foreground-tertiary bg-fill-quaternary',
+  addSkillRow: cx(
+    'flex w-[calc(100%+24px)] min-h-9 items-center gap-3.5 -mx-3 px-3 border-0 rounded-(--radius-button) text-sm leading-5.5 text-foreground bg-transparent transition-[background] [&:hover]:bg-accent last:-mbe-2',
+    themeStyles.addSkillRow,
+  ),
+  addSkillLabel: 'flex-1 text-start',
+};
 
 export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = {}) => {
   const { t } = useTranslation('setting');
@@ -691,11 +413,13 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         >
           <PopoverTrigger
             render={
-              <button
+              <Button
                 aria-label={t('tools.skillActivateMode.title')}
                 className={cx(styles.policyButton)}
                 disabled={!canEdit}
+                size="icon"
                 type="button"
+                variant="ghost"
                 onPointerEnter={closeToolDetailPopovers}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -712,9 +436,15 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                 }}
               >
                 <span className="anticon" role="img">
-                  <MoreHorizontal fill={'transparent'} height={15} size={15} width={15} />
+                  <MoreHorizontal
+                    className="size-3.75"
+                    fill={'transparent'}
+                    height={15}
+                    size={15}
+                    width={15}
+                  />
                 </span>
-              </button>
+              </Button>
             }
           />
           <PopoverContent align={'start'} className={'w-auto p-0'} side={'right'} sideOffset={8}>
@@ -1179,9 +909,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               item.meta?.avatar ? (
                 <Avatar
                   avatar={item.meta.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1245,9 +975,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               item.meta?.avatar ? (
                 <Avatar
                   avatar={item.meta.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1308,9 +1038,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               skill.avatar ? (
                 <Avatar
                   avatar={skill.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1471,12 +1201,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         title={title}
         icon={
           hasRealAvatar ? (
-            <Avatar
-              avatar={item.avatar}
-              shape={'square'}
-              size={36}
-              style={{ flex: 'none', marginInlineEnd: 0 }}
-            />
+            <Avatar avatar={item.avatar} className="flex-none me-0" shape={'square'} size={36} />
           ) : (
             <span className="anticon" role="img">
               <McpIcon fill={'transparent'} height={36} size={36} width={36} />
@@ -1647,11 +1372,10 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   );
 
   const marketHeader = (
-    <div style={{ width: '100%' }} onClick={(event) => event.stopPropagation()}>
+    <div className="w-full" onClick={(event) => event.stopPropagation()}>
       <SearchBar
-        className="orvilo-skill-submenu-search"
+        className="orvilo-skill-submenu-search w-full"
         placeholder={t('tools.search')}
-        style={{ width: '100%' }}
         value={searchKeyword}
         onChange={(event) => setSearchKeyword(event.target.value)}
         onKeyDown={(event) => {
@@ -1811,9 +1535,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               item.meta?.avatar ? (
                 <Avatar
                   avatar={item.meta.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1881,9 +1605,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               skill.avatar ? (
                 <Avatar
                   avatar={skill.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1962,9 +1686,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                 hasRealAvatar ? (
                   <Avatar
                     avatar={item.avatar}
+                    className="flex-none me-0"
                     shape={'square'}
                     size={36}
-                    style={{ flex: 'none', marginInlineEnd: 0 }}
                   />
                 ) : (
                   <span className="anticon" role="img">
@@ -2018,9 +1742,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                 hasRealAvatar ? (
                   <Avatar
                     avatar={item.avatar}
+                    className="flex-none me-0"
                     shape={'square'}
                     size={36}
-                    style={{ flex: 'none', marginInlineEnd: 0 }}
                   />
                 ) : (
                   <span className="anticon" role="img">

@@ -1,30 +1,20 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import type { CSSProperties, ReactNode } from 'react';
 import { createContext, memo, Suspense, use, useCallback, useMemo, useState } from 'react';
 
 import DebugNode from '@/components/DebugNode';
-import UpdateLoading from '@/components/Loading/UpdateLoading';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Spinner } from '@/components/ui/spinner';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 import { popoverPlacement } from '../../popoverPlacement';
 
-const prefixCls = 'ant';
-
-const styles = createStaticStyles(({ css }) => ({
-  popoverContent: css`
-    .${prefixCls}-form {
-      .${prefixCls}-form-item:first-child {
-        padding-block: 0 4px;
-      }
-      .${prefixCls}-form-item:last-child {
-        padding-block: 4px 0;
-      }
-    }
-  `,
-}));
+const styles = {
+  popoverContent:
+    '[&_.ant-form_.ant-form-item:first-child]:pbs-0 [&_.ant-form_.ant-form-item:first-child]:pbe-1 [&_.ant-form_.ant-form-item:last-child]:pbs-1 [&_.ant-form_.ant-form-item:last-child]:pbe-0',
+};
 
 const PopoverCloseContext = createContext<() => void>(() => {});
 
@@ -135,10 +125,10 @@ const ActionPopover = memo<ActionPopoverProps>(
       <Suspense fallback={<DebugNode trace="ActionPopover > content" />}>
         <>
           {title && (
-            <div className="flex flex-row gap-2 justify-between" style={{ marginBottom: 16 }}>
+            <div className="flex flex-row gap-2 justify-between mb-4">
               {title}
               {extra}
-              {loading && <UpdateLoading style={{ color: cssVar.colorTextSecondary }} />}
+              {loading && <Spinner className="size-4 text-muted-foreground" />}
             </div>
           )}
           {content}

@@ -118,8 +118,7 @@ app/
 ├── spa-auth/[locale]/[[...path]]/route.ts    # 渲染认证页的 HTML 外壳
 ├── [variants]/metadata.ts     # 变体路由共享的 SEO metadata
 ├── manifest.ts                 # PWA 清单
-├── robots.tsx                  # Robots.txt 生成
-└── sitemap.tsx                 # 站点地图生成
+└── robots.tsx                  # Robots.txt 生成
 ```
 
 ```bash
@@ -225,21 +224,13 @@ React Router DOM 在浏览器中加载 bundle 后承载主应用 SPA。
 /                          # 首页
 /agent/:aid                # Agent 会话
 /agent/:aid/profile        # Agent 详情
-/agent/:aid/cron/:cronId   # 定时任务详情
 /group/:gid                # 群组会话
 /group/:gid/profile        # 群组详情
-/community                 # 社区发现（agent、model、provider、mcp）
-/community/agent/:slug     # Agent 详情页
-/community/model/:slug     # 模型详情页
-/community/provider/:slug  # 提供商详情页
-/community/mcp/:slug       # MCP 详情页
 /resource                  # 资源管理
 /resource/library/:id      # 知识库详情
 /settings/:tab             # 设置（profile、provider 等）
 /settings/provider/:id     # 模型提供商配置
 /memory                    # 记忆管理
-/image                     # 图像生成
-/page/:id                  # 页面详情
 /share/t/:id               # 分享话题
 /onboarding                # 新用户引导
 ```
@@ -249,7 +240,6 @@ React Router DOM 在浏览器中加载 bundle 后承载主应用 SPA。
 ```bash
 /                          # 首页
 /agent/:aid                # Agent 会话
-/community                 # 社区发现
 /settings                  # 设置首页
 /settings/:tab             # 设置详情
 /settings/provider/:id     # 模型提供商配置

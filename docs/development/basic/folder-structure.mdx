@@ -120,8 +120,7 @@ app/
 ├── spa-auth/[locale]/[[...path]]/route.ts    # Serves the auth pages HTML shell
 ├── [variants]/metadata.ts     # Shared SEO metadata for variant routes
 ├── manifest.ts                 # PWA manifest
-├── robots.tsx                  # Robots.txt generation
-└── sitemap.tsx                 # Sitemap generation
+└── robots.tsx                  # Robots.txt generation
 ```
 
 ```bash
@@ -228,21 +227,13 @@ or `entry.desktop.tsx`) to mount the React Router app.
 /                          # Home
 /agent/:aid                # Agent conversation
 /agent/:aid/profile        # Agent profile
-/agent/:aid/cron/:cronId   # Cron task detail
 /group/:gid                # Group conversation
 /group/:gid/profile        # Group profile
-/community                 # Community discovery (agent, model, provider, mcp)
-/community/agent/:slug     # Agent detail page
-/community/model/:slug     # Model detail page
-/community/provider/:slug  # Provider detail page
-/community/mcp/:slug       # MCP detail page
 /resource                  # Resource management
 /resource/library/:id      # Knowledge base detail
 /settings/:tab             # Settings (profile, provider, etc.)
 /settings/provider/:id     # Model provider configuration
 /memory                    # Memory management
-/image                     # Image generation
-/page/:id                  # Page detail
 /share/t/:id               # Share topic
 /onboarding                # Onboarding flow
 ```
@@ -252,7 +243,6 @@ or `entry.desktop.tsx`) to mount the React Router app.
 ```bash
 /                          # Home
 /agent/:aid                # Agent conversation
-/community                 # Community discovery
 /settings                  # Settings home
 /settings/:tab             # Settings detail
 /settings/provider/:id     # Model provider configuration

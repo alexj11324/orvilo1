@@ -80,9 +80,11 @@ export const AgentRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children
   });
   const forwardTo = access.kind === 'forward' ? access.agentId : undefined;
 
+  // Keyed on the route too: the inbox slug is swapped for the agent's id by
+  // AgentIdSync, which lands on another built-in route with the same target.
   useEffect(() => {
     if (forwardTo) navigate(`/agent/${forwardTo}`, { replace: true });
-  }, [forwardTo, navigate]);
+  }, [aid, forwardTo, navigate]);
 
   if (access.kind === 'pending' || access.kind === 'forward') return null;
   if (access.kind === 'withheld')

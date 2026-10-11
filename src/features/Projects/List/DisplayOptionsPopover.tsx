@@ -108,17 +108,17 @@ const DisplayOptionsPopover = memo<DisplayOptionsPopoverProps>(({ onChange, onRe
               <TabsList className="w-full group-data-horizontal/tabs:h-9 rounded-(--radius-button)">
                 {[
                   {
-                    icon: <LayoutListIcon className="size-3.5" size={14} />,
+                    icon: <LayoutListIcon size={16} />,
                     label: t('list.display.layout.list'),
                     value: 'list',
                   },
                   {
-                    icon: <SquareKanbanIcon className="size-3.5" size={14} />,
+                    icon: <SquareKanbanIcon size={16} />,
                     label: t('list.display.layout.board'),
                     value: 'board',
                   },
                   {
-                    icon: <ChartGanttIcon className="size-3.5" size={14} />,
+                    icon: <ChartGanttIcon size={16} />,
                     label: t('list.display.layout.timeline'),
                     value: 'timeline',
                   },

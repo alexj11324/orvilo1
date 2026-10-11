@@ -113,8 +113,8 @@ const styles = createStaticStyles(({ css, cssVar }) => {
 
 const DataLoading = () => {
   return (
-    <div className="flex flex-col items-center justify-center" style={{ height: 80 }}>
-      <div className={styles.loader} />
+    <div className="flex flex-col items-center justify-center h-20">
+      <div className={styles.loader} data-slot="data-import-loader" />
     </div>
   );
 };

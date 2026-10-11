@@ -80,14 +80,6 @@ cd apps/cli && ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts login --server http:
 
 ## Web — seeded session
 
-> **Currently broken (2026-10-11).** `web-seed` inserts a raw token with no Clerk
-> identity. The server now stores a digest of a 64-character token, requires the
-> user's Clerk account binding, and rechecks the session against the Clerk
-> Backend API on every authorization, so the seeded row is rejected with 401.
-> Use manual cookie injection below until `web-seed` is rebuilt. The end-to-end
-> suite's `createTestSession` (`e2e/src/support/seedTestUser.ts`) shows the row a
-> working seed needs; it relies on `CLERK_API_URL` pointing at the e2e mock.
-
 The Web test surface is `agent-browser --session orvilo-dev`. The user's
 ordinary Chrome is only a cookie source; Chrome screenshots, Chrome Network
 records, and Chrome logged-in state do not prove the agent-browser test session
@@ -201,8 +193,7 @@ Login state must be **injected directly**, never acquired through a login page:
    from it. A signed-out boot usually means the snapshot is stale because a
    previous instance was killed instead of stopped (see the traps below) — a
    `save-login <id>` from any still-live signed-in instance repairs it.
-2. **Mint the state via CLI/API** (not available while `web-seed` is broken — see
-   the note under "Web — seeded session") — the same philosophy as `web-seed`: create
+2. **Mint the state via CLI/API** — the same philosophy as `web-seed`: create
    the session server-side (seeded `auth_sessions` row / dev token issuance)
    and inject it into the app's storage, with zero UI login. Prefer building on
    `setup-auth.sh` seeding over anything that renders a sign-in page.

@@ -109,20 +109,20 @@ parent instance's static public key. Reload should retain the session, and `/api
 should report the signed-in user. Normal Electron sign-in uses this same local
 server and the existing browser/PKCE callback flow.
 
-The seed-user sign-in helpers no longer work. `bun run dev:desktop:skip-login`
-and `bun run dev:desktop:login-local` sign in through the removed Better Auth
-`/api/auth/sign-in/email` endpoint, which now redirects to `/signin`, so both
-stop with "Local sign-in did not return a session token". A session row inserted
-by hand is rejected as well: every authorization rechecks the session against
-the Clerk Backend API and requires the user's Clerk account binding.
+The seed user and Better Auth helper commands below are legacy test workflows;
+they do not validate the normal Clerk/Google sign-in path.
 
-Until those helpers are rebuilt on the Clerk flow, sign in to a local Electron
-instance through the accounts portal once, then keep that login with
-`.agents/acceptance/scripts/electron-dev.sh save-login <id>`. The end-to-end
-suite has its own path: it points `CLERK_API_URL` at its mock service and seeds
-a matching session (`e2e/src/support/seedTestUser.ts`).
+For Electron development, run `bun run dev:desktop:skip-login` after the local
+database already has the seed user. The command starts Next.js and Electron,
+signs in through Better Auth, and prints the user ID only after both the
+renderer and backend accept the session. It does not create a user or seed a
+database. `SEED_EMAIL` and `SEED_PASSWORD` can select another existing local
+test account. `Ctrl-C` stops both processes and removes the temporary desktop
+profile. For an Electron instance already running with CDP on port 9263, use
+`bun run dev:desktop:login-local`; set `ORVILO_DESKTOP_CDP_PORT` if it uses a
+different port. Both commands require an HTTP server on literal `localhost`.
 
-A renderer session does **not** authorize the Electron main process or
+These renderer-session helpers do **not** authorize the Electron main process or
 connect an execution device. For real local-agent requests, follow
 [Electron real-model integration](./electron-real-model.md).
 

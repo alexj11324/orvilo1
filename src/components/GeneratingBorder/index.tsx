@@ -1,7 +1,6 @@
 'use client';
 
-import { createGlobalStyle, createStaticStyles, cssVar } from 'antd-style';
-import { clsx as cx } from 'cn';
+import { createGlobalStyle, createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, type ReactNode } from 'react';
 
 /**

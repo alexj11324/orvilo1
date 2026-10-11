@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CheckCircle2, TriangleAlert, XCircle } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
@@ -20,28 +19,12 @@ import { useTeammateActions } from '../api/hooks';
 import { teammatesKeys } from '../api/keys';
 import { grantableWorkspaceRoles, PROJECT_ROLE_ORDER } from '../api/roleCapabilities';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    padding-block: 0 16px;
-    padding-inline: 20px;
-  `,
-  emailResult: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    font-size: 12px;
-  `,
-  field: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  `,
-  resultList: css`
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  `,
-}));
+const styles = {
+  body: 'pbs-0 pbe-4 px-5',
+  emailResult: 'flex gap-1.5 items-start text-sm leading-5.5',
+  field: 'flex flex-col gap-1.5',
+  resultList: 'flex flex-col gap-1',
+};
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/;
 
@@ -170,54 +153,62 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
   const canSubmit = emails.length > 0 && !submitting && capabilities.canInvite;
 
   return (
-    <div className={cx(styles.body, 'flex flex-col gap-4')}>
-      <Alert variant="info">
-        <AlertTitle>{t('workspaceSetting.members.scopeExplainer')}</AlertTitle>
+    <div className={cn(styles.body, 'flex flex-col gap-4')}>
+      <Alert className="rounded-(--radius-card) text-sm leading-5.5" variant="info">
+        <AlertTitle className="line-clamp-none text-sm leading-5.5 tracking-normal">
+          {t('workspaceSetting.members.scopeExplainer')}
+        </AlertTitle>
       </Alert>
 
-      <div className={cx(styles.field, 'flex flex-col')}>
-        <div className="text-(length:--text-dense) font-medium">
+      <div className={cn(styles.field, 'flex flex-col')}>
+        <div className="text-sm leading-5.5 font-medium">
           {t('workspaceSetting.members.emailsLabel')}
         </div>
         <Textarea
           autoFocus
+          aria-label={t('workspaceSetting.members.emailsLabel')}
+          className="rounded-(--radius-input) text-sm leading-5.5 md:text-sm"
           placeholder={t('workspaceSetting.members.emailsPlaceholder')}
           rows={3}
           value={rawEmails}
           onChange={(event) => setRawEmails(event.target.value)}
         />
         {invalid.length > 0 && (
-          <div className="text-xs text-destructive">
+          <div className="text-xs leading-5 text-destructive-text">
             {t('workspaceSetting.members.invalidEmails', { emails: invalid.join(', ') })}
           </div>
         )}
         {emails.length > 0 && (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs leading-5 text-muted-foreground">
             {t('workspaceSetting.members.emailCount', { count: emails.length })}
           </div>
         )}
       </div>
 
-      <div className={cx(styles.field, 'flex flex-col')}>
-        <div className="text-(length:--text-dense) font-medium">
+      <div className={cn(styles.field, 'flex flex-col')}>
+        <div className="text-sm leading-5.5 font-medium">
           {t('workspaceSetting.members.workspaceRoleLabel')}
         </div>
         <Select
+          aria-label={t('workspaceSetting.members.workspaceRoleLabel')}
           options={workspaceRoleOptions}
+          size="normal"
           value={role}
           onChange={(value) => setRole(value as WorkspaceRole)}
         />
       </div>
 
-      <div className={cx(styles.field, 'flex flex-col')}>
-        <div className="text-(length:--text-dense) font-medium">
+      <div className={cn(styles.field, 'flex flex-col')}>
+        <div className="text-sm leading-5.5 font-medium">
           {t('workspaceSetting.members.projectsLabel')}
         </div>
         <Select
           allowClear
+          aria-label={t('workspaceSetting.members.projectsLabel')}
           mode="multiple"
           options={projectOptions}
           placeholder={t('workspaceSetting.members.projectsPlaceholder')}
+          size="normal"
           value={projectIds}
           onChange={(value) => setProjectIds(value as string[])}
         />
@@ -225,11 +216,11 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
           const project = projects.find((item) => item.id === projectId);
           return (
             <div className="flex items-center gap-2 justify-between" key={projectId}>
-              <div className="text-(length:--text-dense)">{project?.name ?? projectId}</div>
+              <div className="text-sm leading-5.5">{project?.name ?? projectId}</div>
               <Select
+                className="w-40"
                 options={projectRoleOptions}
-                size="small"
-                style={{ width: 160 }}
+                size="normal"
                 value={projectRoles[projectId] ?? 'contributor'}
                 onChange={(value) => setProjectRole(projectId, value as ProjectRole)}
               />
@@ -239,28 +230,44 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
       </div>
 
       {submitError && (
-        <Alert variant="destructive">
-          <AlertTitle>{submitError}</AlertTitle>
+        <Alert className="rounded-(--radius-card) text-sm leading-5.5" variant="destructive">
+          <AlertTitle className="line-clamp-none text-sm leading-5.5 tracking-normal">
+            {submitError}
+          </AlertTitle>
         </Alert>
       )}
 
       {result && (
-        <div className={cx(styles.resultList, 'flex flex-col')}>
+        <div className={cn(styles.resultList, 'flex flex-col')}>
           {result.results.map((entry) => {
             // `ok` + `emailed === false` = the row exists but nothing was sent —
             // distinct from both success and failure, so it needs its own look.
             const emailFailed = entry.ok && entry.emailed === false;
             return (
               <div className={styles.emailResult} key={entry.email}>
-                {createElement(emailFailed ? TriangleAlert : entry.ok ? CheckCircle2 : XCircle, {
-                  color: emailFailed
-                    ? cssVar.colorWarning
-                    : entry.ok
-                      ? cssVar.colorSuccess
-                      : cssVar.colorError,
-                  size: 14,
-                })}
-                <div className={cn('text-xs', entry.ok ? undefined : 'text-destructive')}>
+                <span className="inline-flex h-5.5 shrink-0 items-center">
+                  {createElement(emailFailed ? TriangleAlert : entry.ok ? CheckCircle2 : XCircle, {
+                    className: cn(
+                      'shrink-0',
+                      emailFailed
+                        ? 'text-warning-text'
+                        : entry.ok
+                          ? 'text-success-text'
+                          : 'text-destructive-text',
+                    ),
+                    size: 16,
+                  })}
+                </span>
+                <div
+                  className={cn(
+                    'text-sm leading-5.5',
+                    emailFailed
+                      ? 'text-warning-text'
+                      : entry.ok
+                        ? 'text-success-text'
+                        : 'text-destructive-text',
+                  )}
+                >
                   {emailFailed
                     ? t('workspaceSetting.members.inviteEmailFailed', { email: entry.email })
                     : entry.ok
@@ -276,9 +283,17 @@ const InviteTeammateContent = memo<InviteTeammateContentProps>(({ defaultProject
         </div>
       )}
 
-      <ModalFooter>
-        <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-        <Button disabled={!canSubmit} loading={submitting} variant="default" onClick={handleSubmit}>
+      <ModalFooter className="p-0">
+        <Button size="lg" onClick={close}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
+        <Button
+          disabled={!canSubmit}
+          loading={submitting}
+          size="lg"
+          variant="default"
+          onClick={handleSubmit}
+        >
           {t('workspaceSetting.members.inviteAction', { count: emails.length })}
         </Button>
       </ModalFooter>

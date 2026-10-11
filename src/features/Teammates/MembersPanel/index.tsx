@@ -1,8 +1,8 @@
 'use client';
 
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { Crown, PauseCircle, PlayCircle, Repeat, UserMinus } from 'lucide-react';
+import { cn } from 'cn';
+import { Crown, MoreHorizontal, PauseCircle, PlayCircle, Repeat, UserMinus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { lazy, memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,92 +37,23 @@ import {
 
 const RemoveMemberContent = lazy(() => import('./RemoveMemberContent'));
 
-const styles = createStaticStyles(({ css }) => ({
-  email: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  headerCell: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  `,
-  list: css`
-    display: flex;
-    flex-direction: column;
-  `,
-  memberCell: css`
-    display: flex;
-    flex: 1;
-    gap: 10px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  numeric: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  row: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 140px 76px 76px 86px 110px 110px 40px;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 4px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  table: css`
-    /* Fixed columns + gaps floor at ~840px; below that the wrapper scrolls
-       horizontally instead of crushing cells or overflowing the page. */
-    min-width: 840px;
-  `,
-  transferBanner: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorWarningBorder};
-    border-radius: 8px;
-
-    background: ${cssVar.colorWarningBg};
-  `,
-  transferBannerText: css`
-    font-size: 13px;
-    color: ${cssVar.colorText};
-  `,
-  tableScroll: css`
-    overflow-x: auto;
-  `,
-}));
+const styles = {
+  email: 'overflow-hidden text-xs leading-5 text-muted-foreground text-ellipsis whitespace-nowrap',
+  headerCell: 'text-xs leading-5 font-medium text-foreground-tertiary uppercase tracking-normal',
+  list: 'flex flex-col',
+  memberCell: 'flex flex-1 gap-2.5 items-center min-w-0',
+  name: 'overflow-hidden text-sm leading-5.5 font-medium text-ellipsis whitespace-nowrap',
+  numeric: 'text-xs leading-5 tabular-nums text-muted-foreground',
+  row: 'grid grid-cols-[minmax(0,1fr)_140px_76px_76px_86px_110px_110px_40px] gap-3 items-center py-2.5 px-1 border-be border-divider',
+  table: 'min-w-210',
+  transferBanner:
+    'flex gap-3 items-center justify-between py-2.5 px-3 border border-warning-border rounded-(--radius-card) bg-warning-wash',
+  transferBannerText: 'text-sm leading-5.5 text-foreground',
+  tableScroll: 'overflow-x-auto',
+};
 
 const displayName = (member: WorkspaceMemberSummary): string =>
   member.user?.fullName || member.user?.username || member.user?.email || member.userId;
-
-const ROLE_TAG_COLOR: Record<string, string> = {
-  admin: 'purple',
-  member: 'blue',
-  owner: 'gold',
-  viewer: 'default',
-};
 
 const STATUS_LABEL = {
   active: 'workspaceSetting.members.status.active',
@@ -205,11 +136,11 @@ const MemberRow = memo<MemberRowProps>(
             size={32}
             title={member.user?.email ?? displayName(member)}
           />
-          <div className="flex flex-col flex-1 gap-0" style={{ minWidth: 0 }}>
+          <div className="flex min-w-0 flex-1 flex-col gap-0">
             <span className={styles.name}>
               {displayName(member)}
               {member.role === 'owner' && (
-                <Crown size={12} style={{ color: cssVar.colorWarning, marginInlineStart: 6 }} />
+                <Crown className="ms-1.5 text-muted-foreground" size={16} />
               )}
             </span>
             {member.user?.email && <span className={styles.email}>{member.user.email}</span>}
@@ -219,9 +150,9 @@ const MemberRow = memo<MemberRowProps>(
         <div>
           {manageable && roleChoices.length > 0 ? (
             <Select
+              className="w-32"
               disabled={mutating}
               size="small"
-              style={{ width: 128 }}
               value={member.role}
               // Current role first so the select renders its label, not the raw value.
               options={[member.role, ...roleChoices].map((role) => ({
@@ -233,7 +164,7 @@ const MemberRow = memo<MemberRowProps>(
               }
             />
           ) : (
-            <Tag style={{ color: ROLE_TAG_COLOR[member.role] ?? 'default' }}>
+            <Tag className="py-0 text-xs leading-5" size="xl" variant="secondary">
               {t(`workspaceSetting.members.role.${member.role}`, {
                 defaultValue: member.role,
               })}
@@ -247,9 +178,16 @@ const MemberRow = memo<MemberRowProps>(
 
         <div>
           <Tag
-            style={{
-              color: status === 'active' ? 'green' : status === 'suspended' ? 'orange' : 'default',
-            }}
+            size="xl"
+            variant="secondary"
+            className={cn(
+              'py-0 text-xs leading-5',
+              status === 'active'
+                ? 'border-success-border bg-success-wash text-success-text'
+                : status === 'suspended'
+                  ? 'border-warning-border bg-warning-wash text-warning-text'
+                  : 'border-divider bg-fill-quaternary text-muted-foreground',
+            )}
           >
             {t(STATUS_LABEL[status])}
           </Tag>
@@ -260,8 +198,14 @@ const MemberRow = memo<MemberRowProps>(
         <div>
           {menuItems.length > 0 && (
             <SidebarDropdownMenu items={menuItems}>
-              <Button disabled={mutating} size="sm" variant="ghost">
-                ⋯
+              <Button
+                aria-label={t('more', { ns: 'common' })}
+                className="relative [@media(width<=600px)_and_(pointer:coarse)]:after:absolute [@media(width<=600px)_and_(pointer:coarse)]:after:-inset-1.5 [@media(width<=600px)_and_(pointer:coarse)]:after:content-['']"
+                disabled={mutating}
+                size="icon"
+                variant="ghost"
+              >
+                <MoreHorizontal aria-hidden size={16} />
               </Button>
             </SidebarDropdownMenu>
           )}
@@ -304,9 +248,9 @@ export const MembersPanel = memo(() => {
           </Suspense>
         ),
         footer: null,
-        styles: { content: { padding: 0 } },
+        classNames: { content: 'p-0' },
         title: t('workspaceSetting.members.removeTitle', { name: displayName(member) }),
-        width: 460,
+        width: 640,
       });
     },
     [members, t],
@@ -352,12 +296,12 @@ export const MembersPanel = memo(() => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4" style={{ paddingBlock: 8 }}>
+      <div className="flex flex-col gap-4 py-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <div className="flex items-center gap-2.5" key={i}>
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '40%' }} />
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '25%' }} />
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '20%' }} />
+            <Skeleton className="mb-0 h-3 w-2/5" />
+            <Skeleton className="mb-0 h-3 w-1/4" />
+            <Skeleton className="mb-0 h-3 w-1/5" />
           </div>
         ))}
       </div>
@@ -365,11 +309,13 @@ export const MembersPanel = memo(() => {
   }
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>{t('workspaceSetting.members.loadFailed')}</AlertTitle>
+      <Alert className="rounded-(--radius-card) text-sm leading-5.5" variant="destructive">
+        <AlertTitle className="line-clamp-none text-sm leading-5.5 tracking-normal">
+          {t('workspaceSetting.members.loadFailed')}
+        </AlertTitle>
         <AlertAction>
           {
-            <Button size="sm" onClick={() => void mutate()}>
+            <Button size="lg" onClick={() => void mutate()}>
               {t('retry', { ns: 'common' })}
             </Button>
           }
@@ -401,11 +347,13 @@ export const MembersPanel = memo(() => {
         // A failed pending-transfer lookup is NOT "no transfer" — hiding it
         // would let the owner open a second request and leave the recipient
         // unable to see or answer the pending one.
-        <Alert variant="warning">
-          <AlertTitle>{t('workspaceSetting.members.transferLoadFailed')}</AlertTitle>
+        <Alert className="rounded-(--radius-card) text-sm leading-5.5" variant="warning">
+          <AlertTitle className="line-clamp-none text-sm leading-5.5 tracking-normal">
+            {t('workspaceSetting.members.transferLoadFailed')}
+          </AlertTitle>
           <AlertAction>
             {
-              <Button size="sm" onClick={() => void refreshTransfer()}>
+              <Button size="lg" onClick={() => void refreshTransfer()}>
                 {t('retry', { ns: 'common' })}
               </Button>
             }
@@ -427,7 +375,7 @@ export const MembersPanel = memo(() => {
               <>
                 <Button
                   disabled={mutating}
-                  size="sm"
+                  size="lg"
                   variant="default"
                   onClick={() => void handleTransferRespond(true)}
                 >
@@ -435,7 +383,7 @@ export const MembersPanel = memo(() => {
                 </Button>
                 <Button
                   disabled={mutating}
-                  size="sm"
+                  size="lg"
                   onClick={() => void handleTransferRespond(false)}
                 >
                   {t('workspaceSetting.members.transferDecline')}
@@ -443,7 +391,7 @@ export const MembersPanel = memo(() => {
               </>
             )}
             {isTransferInitiator && (
-              <Button disabled={mutating} size="sm" onClick={() => void handleTransferCancel()}>
+              <Button disabled={mutating} size="lg" onClick={() => void handleTransferCancel()}>
                 {t('workspaceSetting.members.transferCancel')}
               </Button>
             )}
@@ -490,9 +438,11 @@ export const MembersPanel = memo(() => {
         </div>
       </div>
       {rows.length === 0 && (
-        <Empty style={{ paddingBlock: 32 }}>
+        <Empty className="py-8">
           <EmptyHeader>
-            <EmptyDescription>{t('workspaceSetting.members.empty')}</EmptyDescription>
+            <EmptyDescription className="text-sm leading-5.5">
+              {t('workspaceSetting.members.empty')}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}

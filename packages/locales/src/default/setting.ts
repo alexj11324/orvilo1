@@ -963,10 +963,10 @@ export default {
   'notification.channel.types.title': 'Notification types',
   'notification.matrix.all': 'All notifications',
   'notification.matrix.desc':
-    'Choose which events alert you on desktop and mobile. Inbox always keeps a record of work assigned to you, whatever you choose here.',
+    'Choose which events alert you on desktop. Mobile alerts are coming soon. Inbox always keeps a record of work assigned to you, whatever you choose here.',
   'notification.matrix.cell': '{{channel}}: {{event}}',
   'notification.matrix.event': 'Event',
-  'notification.matrix.push': 'Desktop & mobile',
+  'notification.matrix.push': 'Desktop',
   'notification.matrix.title': 'Event notifications',
   'notification.test.action': 'Send test notification',
   'notification.test.failed': 'Test notification failed: {{reason}}',

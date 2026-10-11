@@ -1,5 +1,4 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -34,53 +33,14 @@ import { useIssueStatusMove } from './useIssueStatusMove';
 import { useMenuDigitShortcuts } from './useMenuDigitShortcuts';
 import { useTeamWorkflowStates } from './useTeamWorkflowStates';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  searchInput: css`
-    width: 100%;
-    height: auto;
-    padding-block: 4px;
-    padding-inline: 10px;
-    border: none;
-    border-radius: 0;
-
-    font-family: inherit;
-    font-size: 13px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-    outline: none;
-    box-shadow: none;
-
-    &::placeholder {
-      color: ${cssVar.colorTextPlaceholder};
-    }
-  `,
-  showingCaption: css`
-    padding-block: 2px;
-    padding-inline: 10px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  trigger: css`
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    transition: filter ${cssVar.motionDurationMid};
-
-    &:hover {
-      filter: brightness(0.85);
-    }
-  `,
-  triggerDisabled: css`
-    cursor: not-allowed;
-    display: inline-flex;
-    opacity: 0.5;
-
-    &:hover {
-      filter: none;
-    }
-  `,
-}));
+const styles = {
+  searchInput:
+    'w-full rounded-(--radius-input) border-0 bg-transparent dark:bg-transparent px-2.5 py-1 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--ant-color-text-placeholder)',
+  showingCaption: 'px-2.5 py-0.5 text-xs leading-5 text-foreground-tertiary',
+  trigger:
+    'inline-flex cursor-pointer items-center transition-[filter] duration-(--orvilo-motion-mid) ease-[ease] motion-reduce:transition-none hover:brightness-85',
+  triggerDisabled: 'inline-flex cursor-not-allowed opacity-50 hover:filter-none',
+};
 
 interface IssueStatusPickerProps {
   children?: ReactNode;
@@ -289,6 +249,7 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
             autoFocus
             className={styles.searchInput}
             value={query}
+            visualSize="normal"
             aria-label={t('taskDetail.changeStatusPlaceholder', {
               defaultValue: 'Change status…',
             })}

@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { CheckCircle2, CircleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,30 +37,12 @@ const getIntentLabelKey = (data?: Partial<DeclareSelfFeedbackIntentParams>) => {
   return 'builtins.orvilo-self-feedback-intent.apiName.declareSelfFeedbackIntent';
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  iconAccepted: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorSuccess};
-  `,
-  iconRejected: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorWarning};
-  `,
-  meta: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  summary: css`
-    overflow: hidden;
-
-    min-width: 0;
-    max-width: 320px;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  iconAccepted: 'shrink-0 text-success-text',
+  iconRejected: 'shrink-0 text-warning-text',
+  meta: 'shrink-0 text-xs leading-5 text-foreground-tertiary',
+  summary: 'overflow-hidden min-w-0 max-w-80 text-ellipsis whitespace-nowrap',
+};
 
 export const DeclareSelfFeedbackIntentInspector = memo<
   BuiltinInspectorProps<DeclareSelfFeedbackIntentParams, DeclareSelfFeedbackIntentState>
@@ -74,7 +56,7 @@ export const DeclareSelfFeedbackIntentInspector = memo<
 
   if (isArgumentsStreaming && !hasContext) {
     return (
-      <div className={inspectorTextStyles.root}>
+      <div className={cx(inspectorTextStyles.root, 'text-sm leading-5.5')}>
         <span className={shinyTextStyles.shinyText}>{title}</span>
       </div>
     );
@@ -83,7 +65,10 @@ export const DeclareSelfFeedbackIntentInspector = memo<
   const isSettled = !isArgumentsStreaming && !isLoading && !!pluginState;
 
   return (
-    <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
+    <div
+      className={cx(inspectorTextStyles.root, 'text-sm leading-5.5')}
+      style={{ flexWrap: 'wrap', gap: 4 }}
+    >
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {title}
       </span>
@@ -93,10 +78,10 @@ export const DeclareSelfFeedbackIntentInspector = memo<
       {isSettled &&
         pluginState &&
         (pluginState.accepted ? (
-          <CheckCircle2 className={styles.iconAccepted} size={14} />
+          <CheckCircle2 className={styles.iconAccepted} size={16} />
         ) : (
           <>
-            <CircleAlert className={styles.iconRejected} size={14} />
+            <CircleAlert className={styles.iconRejected} size={16} />
             <span className={styles.meta}>
               {t('builtins.orvilo-self-feedback-intent.inspector.rejected')}
             </span>

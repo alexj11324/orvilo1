@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -8,22 +7,9 @@ import {
   TASK_VISIBILITY_ICONS,
 } from './taskVisibilityLabel';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-
-    padding-block: 4px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  chip: 'flex cursor-pointer items-center rounded-(--radius-chip) px-2 py-1 hover:bg-accent',
+};
 
 interface TaskVisibilityChipLabelProps extends Omit<ComponentProps<'div'>, 'children' | 'variant'> {
   /** Render mode: 'chip' shows the [icon + text] pill used in create forms;
@@ -51,16 +37,17 @@ const TaskVisibilityChipLabel = memo<TaskVisibilityChipLabelProps>(
       defaultValue: getTaskVisibilityDefaultLabel(visibility),
     });
 
-    const iconColor = variant === 'tag' ? cssVar.colorTextSecondary : cssVar.colorTextDescription;
-    const iconSize = variant === 'tag' ? 16 : 14;
+    const iconColor =
+      variant === 'tag' ? 'var(--muted-foreground)' : 'var(--foreground-description)';
+    const iconSize = 16;
 
     return (
       <div className={styles.chip} style={{ gap: variant === 'tag' ? 10 : 6 }} {...rest}>
         <IconComp color={iconColor} size={iconSize} />
         {variant === 'tag' ? (
-          <div className="font-medium">{label}</div>
+          <div className="text-sm leading-5.5 font-medium">{label}</div>
         ) : (
-          <div className="text-xs">{label}</div>
+          <div className="text-xs leading-5">{label}</div>
         )}
       </div>
     );

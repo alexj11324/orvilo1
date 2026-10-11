@@ -5,24 +5,8 @@ import { createStaticStyles, cssVar } from 'antd-style';
  * emits (`.cm-editor.cm-editor`) so these rules win regardless of which style
  * sheet the browser inserted last.
  */
-export const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    width: 100%;
-    height: 100%;
-
-    background: ${cssVar.colorBgContainer};
-
-    .cm-textarea {
-      height: 0;
-      opacity: 0;
-    }
-  `,
-
-  editorArea: css`
+const editorAreaStyle = createStaticStyles(
+  ({ css }) => css`
     overflow: hidden;
     flex: 1;
     min-height: 0;
@@ -36,15 +20,16 @@ export const styles = createStaticStyles(({ css }) => ({
        gutter and the fold markers stay pinned while the text scrolls. */
     .cm-scroller {
       overflow: auto;
+      font-size: 0.875rem;
       font-variant-ligatures: none;
-      line-height: 20px;
+      line-height: calc(22 / 14);
     }
 
     .cm-editor.cm-editor span,
     .cm-editor.cm-editor .cm-line {
       font-family: ${cssVar.fontFamilyCode};
-      font-size: 12px;
-      line-height: 20px;
+      font-size: 0.875rem;
+      line-height: calc(22 / 14);
     }
 
     /* Clicking below the last line should still land in the document, the way
@@ -73,9 +58,9 @@ export const styles = createStaticStyles(({ css }) => ({
       padding-inline: 16px 2px;
 
       font-family: ${cssVar.fontFamilyCode};
-      font-size: 11px;
+      font-size: 0.75rem;
       font-variant-numeric: tabular-nums;
-      line-height: 20px;
+      line-height: calc(20 / 12);
       color: ${cssVar.colorTextQuaternary};
     }
 
@@ -100,13 +85,13 @@ export const styles = createStaticStyles(({ css }) => ({
 
     .cm-matchingBracket,
     .cm-editor.cm-focused .cm-matchingBracket {
-      border-radius: 2px;
+      border-radius: var(--radius-chip);
       background: ${cssVar.colorFillSecondary};
       outline: 1px solid ${cssVar.colorBorder};
     }
 
     .cm-nonmatchingBracket {
-      border-radius: 2px;
+      border-radius: var(--radius-chip);
       background: ${cssVar.colorErrorBg};
     }
 
@@ -119,12 +104,12 @@ export const styles = createStaticStyles(({ css }) => ({
       align-items: center;
       justify-content: center;
 
-      width: 13px;
-      height: 20px;
+      width: 16px;
+      height: 1.375rem;
 
       color: ${cssVar.colorTextTertiary};
 
-      transition: opacity 0.15s;
+      transition: opacity var(--orvilo-motion-mid);
 
       &::before {
         content: '';
@@ -165,12 +150,26 @@ export const styles = createStaticStyles(({ css }) => ({
       height: auto;
       padding-inline: 6px;
       border: 1px solid ${cssVar.colorBorderSecondary};
-      border-radius: 4px;
+      border-radius: var(--radius-chip);
 
-      font-size: 11px;
+      font-size: 0.75rem;
+      line-height: calc(20 / 12);
       color: ${cssVar.colorTextTertiary};
 
       background: ${cssVar.colorFillTertiary};
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      .gutter-fold-open,
+      .gutter-fold-close {
+        transition: none;
+      }
+    }
   `,
-}));
+);
+
+export const styles = {
+  container:
+    'flex h-full w-full flex-col overflow-hidden bg-card [&_.cm-textarea]:h-0 [&_.cm-textarea]:opacity-0',
+  editorArea: editorAreaStyle,
+};

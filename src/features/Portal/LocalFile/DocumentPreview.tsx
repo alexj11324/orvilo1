@@ -3,7 +3,8 @@
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { clsx } from 'cn';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -46,39 +47,23 @@ const styles = createStaticStyles(({ css }) => ({
 
     .docx-wrapper > section.docx {
       margin-block-end: 0;
-      border-radius: 4px;
-      box-shadow: ${cssVar.boxShadowTertiary};
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-raised);
     }
-  `,
-  fallbackIcon: css`
-    width: 64px;
-    height: 64px;
-    border-radius: 14px;
-    background: ${cssVar.colorFillTertiary};
-  `,
-  officeContainer: css`
-    overflow: auto;
-    height: 100%;
-    background: ${cssVar.colorBgLayout};
   `,
   page: css`
     overflow: hidden;
     margin-block-end: 12px;
-    border-radius: 4px;
-    box-shadow: ${cssVar.boxShadowTertiary};
-  `,
-  pdfContainer: css`
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-
-    height: 100%;
-    padding-block: 10px;
-
-    background: ${cssVar.colorBgLayout};
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-raised);
   `,
 }));
+
+const flatStyles = {
+  fallbackIcon: 'size-16 rounded-(--radius-card) bg-muted',
+  officeContainer: 'overflow-auto h-full bg-background',
+  pdfContainer: 'overflow-auto flex flex-col items-center h-full py-4 bg-background',
+};
 
 const PdfPane = memo<{ blob: Blob }>(({ blob }) => {
   const [numPages, setNumPages] = useState(0);
@@ -98,7 +83,7 @@ const PdfPane = memo<{ blob: Blob }>(({ blob }) => {
   const width = containerWidth ? Math.min(containerWidth - 32, maxPageWidth) : undefined;
 
   return (
-    <div className={styles.pdfContainer} ref={setContainer}>
+    <div className={flatStyles.pdfContainer} ref={setContainer}>
       <Document
         file={blob}
         loading={<Loading />}
@@ -163,7 +148,7 @@ const PptxPane = memo<OfficePaneProps>(({ blob, onError }) => {
   }, [blob, container, scrollEl, onError]);
 
   return (
-    <div className={styles.officeContainer} ref={setScrollEl}>
+    <div className={flatStyles.officeContainer} ref={setScrollEl}>
       {loading && <Loading />}
       {/* The viewer owns this node's children — React must never render into it,
           or its bookkeeping breaks when the library replaces the content. */}
@@ -273,24 +258,25 @@ const DocumentPreview = memo<DocumentPreviewProps>(
 
     return (
       <div className="flex flex-col items-center justify-center gap-4 h-full w-full">
-        <div className={cx('flex flex-col items-center justify-center', styles.fallbackIcon)}>
+        <div className={clsx('flex flex-col items-center justify-center', flatStyles.fallbackIcon)}>
           <FileIcon fileName={filename} size={40} />
         </div>
         <div className="flex flex-col items-center gap-1">
-          <div style={{ fontWeight: 500 }}>{filename}</div>
-          <div className="text-muted-foreground">
+          <div className="text-sm leading-5.5 font-medium">{filename}</div>
+          <div className="text-xs leading-5 text-muted-foreground">
             {t('workingPanel.localFile.document.unsupported')}
           </div>
         </div>
         {isLocalFile ? (
           <Button
+            size="lg"
             variant="outline"
             onClick={() => localFileService.openLocalFile({ path: filePath })}
           >
             {t('workingPanel.localFile.document.openWithDefaultApp')}
           </Button>
         ) : (
-          <Button variant="outline" onClick={handleDownload}>
+          <Button size="lg" variant="outline" onClick={handleDownload}>
             {t('workingPanel.localFile.document.download')}
           </Button>
         )}

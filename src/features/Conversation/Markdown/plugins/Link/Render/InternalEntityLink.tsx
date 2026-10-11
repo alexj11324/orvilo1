@@ -28,12 +28,7 @@ import {
   internalEntityPreviewKey,
 } from './InternalEntityPreview';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  icon: css`
-    margin-inline-end: 4px;
-    color: ${cssVar.colorTextSecondary};
-    vertical-align: -0.15em;
-  `,
+const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
   link: css`
     /* Keep the label on the surrounding text baseline instead of the icon's flex baseline. */
     display: inline;
@@ -49,8 +44,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     text-underline-offset: 3px;
 
     transition:
-      color 0.15s,
-      text-decoration-color 0.15s;
+      color var(--orvilo-motion-mid),
+      text-decoration-color var(--orvilo-motion-mid);
 
     &:hover {
       color: ${cssVar.colorText} !important;
@@ -58,12 +53,16 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     }
 
     &:focus-visible {
-      border-radius: 2px;
+      border-radius: var(--radius-chip);
       outline: 2px solid ${cssVar.colorPrimaryBorder};
       outline-offset: 2px;
     }
   `,
 }));
+
+const styles = {
+  icon: 'me-1 size-4 text-muted-foreground align-[-0.15em]',
+};
 
 const ENTITY_ICONS = {
   acceptance: BadgeCheckIcon,
@@ -215,13 +214,14 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
   const link = (
     <a
       {...{ [RENDERER_HANDLED_LINK_ATTR]: 'true' }}
-      className={styles.link}
+      className={registeredStyles.link}
+      data-slot="markdown-entity-link"
       href={href}
       rel="noopener noreferrer"
       target="_blank"
       onClick={handleClick}
     >
-      {icon && createElement(icon, { className: styles.icon, size: 14 })}
+      {icon && createElement(icon, { className: styles.icon, size: 16 })}
       {displayLabel}
     </a>
   );

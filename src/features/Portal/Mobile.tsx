@@ -1,48 +1,23 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useChatStore } from '@/store/chat';
 import { portalThreadSelectors } from '@/store/chat/selectors';
 
 import { PortalContent } from './router';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    background: linear-gradient(${cssVar.colorBgElevated}, ${cssVar.colorBgContainer}) !important;
-  `,
-  fullscreenToggle: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 10;
-    inset-block-start: 8px;
-    inset-inline-end: 8px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: none;
-    border-radius: 12px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
+const styles = {
+  // This bottom Sheet is application overlay chrome, not authored content art.
+  container: 'bg-popover',
+  fullscreenToggle:
+    'absolute inset-bs-2 end-2 z-10 border-0 bg-transparent p-0 text-foreground-tertiary hover:bg-accent hover:text-foreground',
+} as const;
 
 const MobilePortalContent = ({
   isPortalThread,
@@ -68,21 +43,27 @@ const MobilePortalContent = ({
       showCloseButton={false}
       side={'bottom'}
       style={{ height: fullscreen ? '100%' : '95%' }}
-      className={cx(
+      className={cn(
         'gap-0 rounded-t-(--radius-overlay) p-0',
         isPortalThread && styles.container,
         fullscreen && 'data-[side=bottom]:rounded-none',
       )}
     >
       <SheetTitle className={'sr-only'}>{t('title')}</SheetTitle>
-      <button
+      <Button
         aria-label={t(fullscreen ? 'exitFullscreen' : 'fullscreen')}
         className={styles.fullscreenToggle}
+        size="icon"
         type="button"
+        variant="ghost"
         onClick={() => setFullscreen((prev) => !prev)}
       >
-        {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-      </button>
+        {fullscreen ? (
+          <Minimize2 className="size-4" size={16} />
+        ) : (
+          <Maximize2 className="size-4" size={16} />
+        )}
+      </Button>
       <PortalContent renderBody={renderBody} />
     </SheetContent>
   );
@@ -96,14 +77,8 @@ const MobilePortal = () => {
   ]);
 
   const renderBody = (body: ReactNode) => (
-    <div
-      className="flex flex-col gap-2 h-[calc(100%_-_52px)]"
-      style={{ overflow: 'hidden', padding: '0 8px' }}
-    >
-      <div
-        className="flex flex-col h-full w-[calc(100%_+_16px)]"
-        style={{ marginInline: -8, overflow: 'hidden', position: 'relative' }}
-      >
+    <div className="flex flex-col gap-2 h-[calc(100%_-_52px)] overflow-hidden px-2">
+      <div className="relative flex flex-col h-full w-[calc(100%_+_16px)] -mx-2 overflow-hidden">
         {body}
       </div>
     </div>

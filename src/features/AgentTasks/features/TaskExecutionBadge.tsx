@@ -5,7 +5,6 @@ import type {
   TaskStatus,
 } from '@orvilo/types';
 import { deriveTaskExecutionState } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { CircleHelp } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,17 +13,10 @@ import { EXECUTION_STATUS_VISUALS, type StatusVisual } from '@/components/Execut
 
 import { SimpleTooltip } from './SimpleTooltip';
 
-const styles = createStaticStyles(({ css }) => ({
-  badge: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  badge:
+    'inline-flex items-center gap-1 text-xs leading-5 text-foreground-tertiary whitespace-nowrap',
+};
 
 /**
  * Glyph + color per canonical execution state (`task_dispatch.phase` /
@@ -36,9 +28,9 @@ const styles = createStaticStyles(({ css }) => ({
 const EXECUTION_STATE_VISUALS: Record<TaskExecutionState, StatusVisual> = {
   canceled: EXECUTION_STATUS_VISUALS.canceled,
   failed: EXECUTION_STATUS_VISUALS.failed,
-  outcome_unknown: { color: cssVar.colorWarning, icon: CircleHelp },
+  outcome_unknown: { color: 'var(--warning-text)', icon: CircleHelp },
   provisioning: EXECUTION_STATUS_VISUALS.scheduled,
-  queued: { ...EXECUTION_STATUS_VISUALS.scheduled, color: cssVar.colorTextTertiary },
+  queued: { ...EXECUTION_STATUS_VISUALS.scheduled, color: 'var(--foreground-tertiary)' },
   running: EXECUTION_STATUS_VISUALS.running,
   succeeded: EXECUTION_STATUS_VISUALS.completed,
   waiting: EXECUTION_STATUS_VISUALS.waitingForHuman,
@@ -65,7 +57,7 @@ interface TaskExecutionBadgeProps {
  * scheduled properties show that execution has not started.
  */
 const TaskExecutionBadge = memo<TaskExecutionBadgeProps>(
-  ({ dispatchPhase, runState, showLabel, size = 14, status }) => {
+  ({ dispatchPhase, runState, showLabel, size = 16, status }) => {
     const { t } = useTranslation('chat');
     const execution = deriveTaskExecutionState({ dispatchPhase, legacyStatus: status, runState });
     if (!execution)

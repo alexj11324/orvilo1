@@ -1,9 +1,4 @@
-import { createStaticStyles } from 'antd-style';
-
-export const styles = createStaticStyles(({ css }) => ({
+export const styles = {
   // Search bar container
-  searchBarContainer: css`
-    padding-block: 8px;
-    padding-inline: 16px;
-  `,
-}));
+  searchBarContainer: 'pbs-2 pbe-2 px-4',
+};

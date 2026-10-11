@@ -1,8 +1,9 @@
 // @vitest-environment node
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { users, workspaceMembers, workspaces } from '../../schemas';
+import { taskSubscriptions, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskSubscriptionModel } from '../taskSubscription';
@@ -42,6 +43,47 @@ describe('TaskSubscriptionModel', () => {
 
     await model.subscribe(task.id);
     expect(await model.listActiveTaskIds()).toEqual([task.id]);
+  });
+
+  it('subscribes involved people once and keeps the first reason', async () => {
+    await serverDB.insert(users).values({ id: 'sub-other' });
+    const task = await new TaskModel(serverDB, userId, workspaceId).create({
+      instruction: 'Involve people',
+      name: 'Involved',
+    });
+    const actor = new TaskSubscriptionModel(serverDB, userId, workspaceId);
+
+    await actor.ensureSubscribed(task.id, ['sub-other', 'sub-other', null], 'mentioned');
+    await actor.ensureSubscribed(task.id, ['sub-other'], 'assigned');
+
+    const rows = await serverDB
+      .select()
+      .from(taskSubscriptions)
+      .where(eq(taskSubscriptions.taskId, task.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ reason: 'mentioned', userId: 'sub-other', workspaceId });
+    expect(
+      await new TaskSubscriptionModel(serverDB, 'sub-other', workspaceId).isSubscribed(task.id),
+    ).toBe(true);
+    // The actor was not in the list, so the rule did not subscribe them.
+    expect(await actor.isSubscribed(task.id)).toBe(false);
+  });
+
+  it('never re-subscribes someone who explicitly unsubscribed', async () => {
+    const task = await new TaskModel(serverDB, userId, workspaceId).create({
+      instruction: 'Leave me out',
+      name: 'Muted',
+    });
+    const model = new TaskSubscriptionModel(serverDB, userId, workspaceId);
+    await model.subscribe(task.id);
+    expect(await model.unsubscribe(task.id)).toBe(true);
+
+    await model.ensureSubscribed(task.id, [userId], 'commented');
+
+    expect(await model.isSubscribed(task.id)).toBe(false);
+    // Only the person themselves can come back, through the manual path.
+    await model.subscribe(task.id);
+    expect(await model.isSubscribed(task.id)).toBe(true);
   });
 
   it('does not clear assignee or reviewer when the follow is removed', async () => {

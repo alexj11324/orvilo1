@@ -32,6 +32,7 @@ import {
 } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
+import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
@@ -1626,6 +1627,7 @@ export class TaskService {
       taskLabels,
       admitted,
       activeDispatch,
+      isSubscribed,
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
       this.taskModel.getIssueRelations(task.id),
@@ -1638,6 +1640,10 @@ export class TaskService {
       this.taskLabelModel.listForTask(task.id).catch(() => []),
       isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }),
       new TaskDispatchModel(this.db, this.workspaceId).findActiveByTaskId(task.id),
+      // Rides on the detail read so the header toggle needs no request of its own.
+      new TaskSubscriptionModel(this.db, this.userId, this.workspaceId)
+        .isSubscribed(task.id)
+        .catch(() => false),
     ]);
 
     // What the reader is shown, not what was written: a burst of edits to one
@@ -2157,6 +2163,7 @@ export class TaskService {
       id: task.id,
       identifier: task.identifier,
       instruction: task.instruction,
+      isSubscribed,
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,

@@ -4,6 +4,9 @@ import type { TaskSubscriptionItem } from '../schemas/workAttention';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 
+/** Why an automatic rule subscribed someone; a manual follow stores `manual`. */
+export type TaskSubscriptionAutoReason = 'assigned' | 'commented' | 'mentioned' | 'reviewer';
+
 export class TaskSubscriptionModel {
   constructor(
     private readonly db: OrviloDatabase,
@@ -27,6 +30,36 @@ export class TaskSubscriptionModel {
       .returning();
     return row;
   };
+
+  /**
+   * Subscribe people who became involved in an Issue (commented, mentioned,
+   * assigned, reviewer). Unlike {@link subscribe} this never touches an
+   * existing row: an explicit unsubscribe (`unsubscribedAt`) is the person's
+   * own decision and an automatic rule must not undo it. `workspaceId` is the
+   * Issue's own, because recipients are matched on it at notification time.
+   */
+  ensureSubscribed = async (
+    taskId: string,
+    userIds: readonly (string | null | undefined)[],
+    reason: TaskSubscriptionAutoReason,
+  ): Promise<void> => {
+    const unique = [...new Set(userIds.filter((id): id is string => !!id))];
+    if (unique.length === 0) return;
+    await this.db
+      .insert(taskSubscriptions)
+      .values(
+        unique.map((userId) => ({
+          reason,
+          taskId,
+          userId,
+          workspaceId: this.workspaceId ?? null,
+        })),
+      )
+      .onConflictDoNothing({ target: [taskSubscriptions.taskId, taskSubscriptions.userId] });
+  };
+
+  isSubscribed = async (taskId: string): Promise<boolean> =>
+    (await this.listActiveForTaskIds([taskId])).length > 0;
 
   unsubscribe = async (taskId: string): Promise<boolean> => {
     const updated = await this.db

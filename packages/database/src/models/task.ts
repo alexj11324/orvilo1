@@ -94,6 +94,7 @@ import {
   TASK_OPEN_WORKFLOW,
   taskAttentionReasonExpr,
 } from './taskExecutionSql';
+import { TaskSubscriptionModel } from './taskSubscription';
 import {
   type TaskWorkflowPosition,
   workflowCategoryForLegacyStatus,
@@ -814,6 +815,12 @@ export class TaskModel {
           workspaceId: this.workspaceId ?? null,
         } as NewTask)
         .returning(taskRowColumns);
+
+      // People named on a new Issue are involved from the start (agents are
+      // never subscribers; these are member ids only).
+      const subscriptions = new TaskSubscriptionModel(runner, this.userId, this.workspaceId);
+      await subscriptions.ensureSubscribed(task.id, [task.assigneeUserId], 'assigned');
+      await subscriptions.ensureSubscribed(task.id, [task.reviewerUserId], 'reviewer');
 
       if (this.workspaceId && !options.mutation?.suppressDomainEvent) {
         await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
@@ -4274,6 +4281,15 @@ export class TaskModel {
         .insert(taskComments)
         .values({ ...data, visibility, workspaceId: this.workspaceId ?? null })
         .returning();
+      // A member who joins the discussion keeps hearing about the Issue.
+      // Agent-authored comments subscribe nobody.
+      if (!comment.authorAgentId) {
+        await new TaskSubscriptionModel(runner, this.userId, this.workspaceId).ensureSubscribed(
+          comment.taskId,
+          [comment.authorUserId],
+          'commented',
+        );
+      }
       await this.recordCommentMutation(runner, {
         action: 'created',
         comment,
@@ -4832,6 +4848,11 @@ export class TaskModel {
       if (!updated) return null;
 
       const events: { payload: TaskActivityLogPayload; type: TaskActivityLogType }[] = [];
+      const subscriptions = new TaskSubscriptionModel(
+        runner,
+        this.userId,
+        updated.workspaceId ?? undefined,
+      );
 
       // The two assignee slots are independent — one edit can move both, and
       // each gets its own row so the feed reads one change per line.
@@ -4846,6 +4867,9 @@ export class TaskModel {
           payload: { fromId: before.assigneeUserId, toId: updated.assigneeUserId },
           type: 'assignee_user',
         });
+        // Being assigned is being involved: the new assignee keeps hearing
+        // about the Issue after it is handed on, unless they unsubscribed.
+        await subscriptions.ensureSubscribed(id, [updated.assigneeUserId], 'assigned');
       }
       // Only an explicit reviewer write earns a feed row — the COALESCE
       // backfill stamped on a paused transition is the system's fallback
@@ -4856,6 +4880,7 @@ export class TaskModel {
           payload: { fromId: before.reviewerUserId, toId: updated.reviewerUserId },
           type: 'reviewer',
         });
+        await subscriptions.ensureSubscribed(id, [updated.reviewerUserId], 'reviewer');
       }
       // Where the Issue sits in its workflow, in the words the board uses.
       const workflowPayload = workflowStatePayload(

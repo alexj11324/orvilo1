@@ -2296,6 +2296,8 @@
   "taskDetail.subIssue.removeFromParent": "从父 Issue {{identifier}} 中移出",
   "taskDetail.subIssue.rowActions": "{{identifier}} 的操作",
   "taskDetail.subIssueOf": "隶属于",
+  "taskDetail.subscription.off": "未订阅。点击后会收到这个 Issue 的通知。",
+  "taskDetail.subscription.on": "已订阅。你会收到这个 Issue 的通知。点击退订。",
   "taskDetail.subtaskInstructionPlaceholder": "描述这个子 Issue…",
   "taskDetail.subtasks": "子 Issue",
   "taskDetail.titlePlaceholder": "输入 Issue 标题…",

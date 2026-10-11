@@ -1843,6 +1843,9 @@ export default {
     "This issue may have been deleted, or you don't have permission to view it.",
   'taskDetail.notFound.title': 'Issue not found',
   'taskDetail.subIssueOf': 'Sub-issue of',
+  'taskDetail.subscription.off': 'Not subscribed. Click to get notifications about this Issue.',
+  'taskDetail.subscription.on':
+    'Subscribed. You get notifications about this Issue. Click to unsubscribe.',
   'taskDetail.changePriorityPlaceholder': 'Change priority…',
   'taskDetail.changeStatusPlaceholder': 'Change status…',
   'taskDetail.showingAllItems': 'Showing all items',

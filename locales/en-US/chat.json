@@ -2297,6 +2297,8 @@
   "taskDetail.subIssue.removeFromParent": "Remove from parent {{identifier}}",
   "taskDetail.subIssue.rowActions": "Actions for {{identifier}}",
   "taskDetail.subIssueOf": "Sub-issue of",
+  "taskDetail.subscription.off": "Not subscribed. Click to get notifications about this Issue.",
+  "taskDetail.subscription.on": "Subscribed. You get notifications about this Issue. Click to unsubscribe.",
   "taskDetail.subtaskInstructionPlaceholder": "Describe the sub-issue...",
   "taskDetail.subtasks": "Sub-issues",
   "taskDetail.titlePlaceholder": "Issue title",

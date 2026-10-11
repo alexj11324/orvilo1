@@ -62,6 +62,17 @@ describe('TopicModel - Create', () => {
     });
   });
 
+  it.each([null, {}])('accepts agent titles when prior metadata is %j', async (metadata) => {
+    await serverDB
+      .insert(topics)
+      .values({ id: 'unset-title-source', title: 'Initial', metadata, userId });
+    await topicModel.updateAgentTitle('unset-title-source', 'Agent title');
+    expect(await topicModel.findById('unset-title-source')).toMatchObject({
+      title: 'Agent title',
+      metadata: { titleSource: 'agent' },
+    });
+  });
+
   describe('create', () => {
     it('should create a new topic and associate messages', async () => {
       const topicData = {

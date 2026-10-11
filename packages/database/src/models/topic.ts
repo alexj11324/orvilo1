@@ -2105,7 +2105,8 @@ export class TopicModel {
         and(
           eq(topics.id, id),
           this.ownership(),
-          sql`${topics.metadata}->>'titleSource' IS DISTINCT FROM 'user'`,
+          // pg_search cannot plan null/distinct tests on extracted jsonb values.
+          sql`COALESCE(${topics.metadata}->>'titleSource', '') <> 'user'`,
         ),
       )
       .returning();

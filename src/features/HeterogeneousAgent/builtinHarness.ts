@@ -22,3 +22,17 @@ export const isAgentRuntimeOffered = (
   type: string | null | undefined,
   builtinOffered: boolean,
 ): boolean => builtinOffered || (!!type && !isBuiltinEngineType(type));
+
+/**
+ * Whether an Agent named by id is withheld: a built-in Agent, or a listed one
+ * on a runtime that is not offered. An Agent the reader's list does not carry
+ * is left alone, since nothing is known about its runtime.
+ */
+export const isAgentWithheld = (params: {
+  builtinOffered: boolean;
+  isBuiltinAgent: boolean;
+  listed?: { heterogeneousType?: string | null };
+}): boolean =>
+  !params.builtinOffered &&
+  (params.isBuiltinAgent ||
+    (!!params.listed && !isAgentRuntimeOffered(params.listed.heterogeneousType, false)));

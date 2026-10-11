@@ -18,6 +18,10 @@ const api = vi.hoisted(() => ({
   runMutation: vi.fn(),
 }));
 
+vi.mock('@/features/HeterogeneousAgent/builtinHarness', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
   useFallbackAgentId: () => undefined,
 }));

@@ -1,8 +1,15 @@
 import { useCallback } from 'react';
 
 import { useFallbackAgentId } from '@/features/DefaultAgent/useFallbackAgentId';
+import {
+  isAgentWithheld,
+  useBuiltinHarnessOffered,
+} from '@/features/HeterogeneousAgent/builtinHarness';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { usePermission } from '@/hooks/usePermission';
+import { useAgentStore } from '@/store/agent';
+import { useHomeStore } from '@/store/home';
+import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
@@ -49,7 +56,14 @@ export const useRunWithContractCheck = () => {
     'agent',
     executingAgentId || undefined,
   );
-  const canExecuteTask = canEditTask && !!executingAgentId && canUseResource;
+  const builtinOffered = useBuiltinHarnessOffered();
+  const isBuiltinAgent = useAgentStore(
+    (s) => !!executingAgentId && Object.values(s.builtinAgentIdMap).includes(executingAgentId),
+  );
+  const listed = useHomeStore(homeAgentListSelectors.getAgentById(executingAgentId ?? ''));
+  // Starting is refused on a withheld runtime; stopping a run already on it is not.
+  const runtimeWithheld = !canPause && isAgentWithheld({ builtinOffered, isBuiltinAgent, listed });
+  const canExecuteTask = canEditTask && !!executingAgentId && canUseResource && !runtimeWithheld;
   const runTask = useTaskStore((s) => s.runTask);
   const updateTask = useTaskStore((s) => s.updateTask);
 
@@ -63,5 +77,12 @@ export const useRunWithContractCheck = () => {
     [assigneeAgentId, assigneeUserId, fallbackAgentId, runTask, updateTask],
   );
 
-  return { accessResolved, canEditTask, canExecuteTask, permissionReason, runWithContractCheck };
+  return {
+    accessResolved,
+    canEditTask,
+    canExecuteTask,
+    permissionReason,
+    runtimeWithheld,
+    runWithContractCheck,
+  };
 };

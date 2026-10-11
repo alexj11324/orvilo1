@@ -1845,6 +1845,8 @@ export default {
   'taskDetail.execution.hint.timedOut':
     'The agent stopped reporting progress, so the run was ended.',
   'taskDetail.execution.noAgentAccess': 'You do not have permission to run this agent.',
+  'taskDetail.execution.runtimeWithheld':
+    "This Issue's agent runs on a runtime that is not available right now. Assign another agent to run it.",
   'taskDetail.execution.startFailed':
     'The run could not be started. Check the Execution state and try again.',
   'taskDetail.execution.view.awaitingAcceptance': 'Finished, awaiting acceptance',

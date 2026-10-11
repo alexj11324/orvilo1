@@ -32,6 +32,8 @@ Expertise ingestion instead returns `{ ingested: 0, reason: 'EXPERTISE_UNAVAILAB
 
 Orvilo automatic memory extraction is limited to builtin-runtime topics, including direct/forced extraction. ACP/native session memory belongs to the selected CLI. Historical memory is retained; no CLI instruction/configuration files are rewritten. Skipped extraction retains `{ extracted: false, layers: {}, memoryIds: [] }` and the existing trace ID. Builtin memory UI is withheld independently of provider-settings flags: desktop/mobile settings, command-menu memory results, `/memory` pages, and `/settings/memory` are unavailable. Existing storage, APIs, and CLI-native memory remain intact; this is a presentation boundary, not deletion or an authorization boundary.
 
+**Client status.** The inline Issue composer sends its assignee as `agentId` to intent analysis and instruction synthesis, and the goal modal forwards its agent to `verify.generateGoalPlan`. Expertise drafting shows a neutral notice for `EXPERTISE_UNAVAILABLE` and keeps the description.
+
 ## Orchestration and delivery
 
 | Response                              | Field                          | Meaning                                                              |
@@ -44,6 +46,8 @@ Orvilo automatic memory extraction is limited to builtin-runtime topics, includi
 Admission describes permission for new dispatches, not interruption of existing runs or proof that every graph node is blocked. A persisted waiting reason can remain after admission opens. Shared additions are optional for older payloads. The `caid_dispatch` default is unchanged and must not be flipped until orchestration acceptance is complete.
 
 Repository-bound ACP/device and sandbox completion enter existing `verification_pending` delivery review. The server owns PR establishment, CI/review checks, accepted-head validation, merge-intent compare-and-set, and reconciliation. Agents no longer receive instructions to merge/push the base. A changed accepted head waits with `task.error`; exhausted verification retains `blocked` and `integration.lastErrorCode=remote_verification_unavailable`. Local-only conflict correction stays in its isolated integration worktree. Unknown merge outcomes must be reconciled before retrying a mutation.
+
+**Client status.** A goal shows one line under its current tasks while admission is `disabled`. An Issue shows a notice under its execution state only while its dispatch is requested or waiting; a persisted waiting reason is shown only while waiting, and a leftover `caid_dispatch_disabled` is hidden once admission is `enabled`. Reasons other than `no_eligible_agent`, `execution_agent_missing` and `goal_paused` are shown as their raw code.
 
 ## Inbox and external alerts
 

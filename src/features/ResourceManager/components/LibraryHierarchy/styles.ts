@@ -1,32 +1,7 @@
-import { createStaticStyles } from 'antd-style';
-
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  dragging: css`
-    will-change: transform;
-    opacity: 0.5;
-  `,
-  fileItemDragOver: css`
-    outline: 1px dashed ${cssVar.colorPrimaryBorder};
-    outline-offset: -2px;
-
-    &,
-    &:hover {
-      background: ${cssVar.colorPrimaryBg};
-    }
-  `,
-  treeItem: css`
-    cursor: pointer;
-
-    .hierarchy-node-actions {
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
-
-    /* Hover, keyboard focus on the action itself, or an open menu keep it visible. */
-    &:hover .hierarchy-node-actions,
-    .hierarchy-node-actions:focus-within,
-    .hierarchy-node-actions[data-open='true'] {
-      opacity: 1;
-    }
-  `,
-}));
+export const styles = {
+  dragging: 'will-change-transform opacity-50',
+  fileItemDragOver:
+    'outline outline-1 outline-dashed outline-primary-border -outline-offset-2 bg-primary-wash hover:bg-primary-wash',
+  treeItem:
+    'cursor-pointer [&_.hierarchy-node-actions]:opacity-0 [&_.hierarchy-node-actions]:transition-opacity [&_.hierarchy-node-actions]:duration-150 [&_.hierarchy-node-actions]:ease-[ease] hover:[&_.hierarchy-node-actions]:opacity-100 [&_.hierarchy-node-actions:focus-within]:opacity-100 [&_.hierarchy-node-actions[data-open=true]]:opacity-100',
+};

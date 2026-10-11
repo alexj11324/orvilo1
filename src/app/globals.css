@@ -398,3 +398,15 @@
         opacity: 1;
     }
 }
+
+/* Resource masonry loading: preserve its .6 midpoint; Tailwind pulse uses .5. */
+@keyframes resource-masonry-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}

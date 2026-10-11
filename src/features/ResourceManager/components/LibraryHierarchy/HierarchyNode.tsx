@@ -1,7 +1,6 @@
 'use client';
 
 import { DERIVED_DOCUMENT_SOURCE_TYPE } from '@orvilo/const';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, FileText, FolderIcon, FolderOpenIcon, LockIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
@@ -15,6 +14,7 @@ import React, {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import ActionIcon from '@/components/ActionIcon';
@@ -35,6 +35,8 @@ import { showContextMenu } from '@/libs/contextMenu';
 import { type NativeContextMenuItem } from '@/libs/contextMenu/types';
 import type { TreeItem } from '@/store/tree';
 import { useTreeStore } from '@/store/tree';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useFileItemClick } from '../Explorer/hooks/useFileItemClick';
@@ -63,6 +65,9 @@ interface HierarchyNodeProps {
 export const HierarchyNode = memo<HierarchyNodeProps>(
   ({ item, level = 0, flat, isExpanded, isLoading, onToggle, selectedKey, parentKey }) => {
     const navigate = useWorkspaceAwareNavigate();
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const motionDisabled = animationMode === 'disabled' || prefersReducedMotion;
 
     const [setMode, libraryId] = useResourceManagerStore((s) => [s.setMode, s.libraryId]);
     const [pendingTreeRenameItemId, setPendingTreeRenameItemId] = useResourceManagerStore((s) => [
@@ -306,9 +311,9 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
             data-is-folder={String(item.isFolder)}
             draggable={!flat}
             className={cn(
-              cx(
-                'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-(--radius-button) px-1',
-                isActive && 'bg-secondary',
+              cn(
+                'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-(--radius-button) px-1 text-sm leading-5.5',
+                isActive && 'bg-selected',
                 styles.treeItem,
                 isOver && styles.fileItemDragOver,
                 isDragging && styles.dragging,
@@ -330,20 +335,25 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
             }}
           >
             {flat ? (
-              <div style={{ width: 20 }} />
+              <div className="w-6 flex-none" />
             ) : isLoading ? (
               <Spinner className="size-5" />
             ) : (
               <m.div
-                animate={{ rotate: isExpanded ? 0 : -90 }}
                 initial={false}
-                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                transition={{ duration: motionDisabled ? 0 : 0.2, ease: 'easeInOut' }}
+                animate={{
+                  rotate: motionDisabled
+                    ? [isExpanded ? 0 : -90, isExpanded ? 0 : -90]
+                    : isExpanded
+                      ? 0
+                      : -90,
+                }}
               >
                 <ActionIcon
                   aria-label={t('toggle', { ns: 'common' })}
                   icon={ChevronDown}
-                  size={'small'}
-                  style={{ width: 20 }}
+                  size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleToggle();
@@ -351,24 +361,21 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
                 />
               </m.div>
             )}
-            <div
-              className="flex flex-row items-center flex-1 gap-2"
-              style={{ minHeight: 28, minWidth: 0, overflow: 'hidden' }}
-            >
+            <div className="flex flex-row items-center flex-1 gap-2 min-h-7 min-w-0 overflow-hidden">
               <span className="anticon" role="img">
                 {createElement(isExpanded ? FolderOpenIcon : FolderIcon, {
-                  size: 18,
-                  width: 18,
-                  height: 18,
+                  size: 16,
+                  width: 16,
+                  height: 16,
                   fill: 'transparent',
                 })}
               </span>
               {isRenaming ? (
                 <Input
-                  className="h-7"
+                  className="flex-1"
                   ref={inputRef}
-                  style={{ flex: 1 }}
                   value={renamingValue}
+                  visualSize="compact"
                   onBlur={handleRenameConfirm}
                   onChange={(e) => setRenamingValue(e.target.value)}
                   onClick={(event) => event.stopPropagation()}
@@ -384,16 +391,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
                   }}
                 />
               ) : (
-                <span
-                  style={{
-                    flex: 1,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {item.name}
-                </span>
+                <span className="flex-1 truncate">{item.name}</span>
               )}
             </div>
             <div className="flex flex-row items-center">
@@ -414,9 +412,9 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
           data-is-folder={false}
           draggable={!flat}
           className={cn(
-            cx(
-              'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-(--radius-button) px-1',
-              isActive && 'bg-secondary',
+            cn(
+              'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-(--radius-button) px-1 text-sm leading-5.5',
+              isActive && 'bg-selected',
               styles.treeItem,
               isDragging && styles.dragging,
             ),
@@ -433,38 +431,26 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
             showContextMenu(menuItems() as NativeContextMenuItem[]);
           }}
         >
-          <div style={{ width: 20 }} />
-          <div
-            className="flex flex-row items-center flex-1 gap-2"
-            style={{ minHeight: 28, minWidth: 0, overflow: 'hidden' }}
-          >
+          <div className="w-6 flex-none" />
+          <div className="flex flex-row items-center flex-1 gap-2 min-h-7 min-w-0 overflow-hidden">
             {isPrivate ? (
               <SimpleTooltip title={t('resources.visibility.privateTooltip', { ns: 'chat' })}>
                 <span className="anticon" role="img">
-                  <LockIcon fill={'transparent'} height={18} size={18} width={18} />
+                  <LockIcon fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               </SimpleTooltip>
             ) : isPage ? (
               emoji ? (
-                <span style={{ fontSize: 18 }}>{emoji}</span>
+                <span className="text-base">{emoji}</span>
               ) : (
                 <span className="anticon" role="img">
-                  <FileText fill={'transparent'} height={18} size={18} width={18} />
+                  <FileText fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               )
             ) : (
-              <FileIcon fileName={item.name} fileType={item.fileType} size={18} />
+              <FileIcon fileName={item.name} fileType={item.fileType} size={16} />
             )}
-            <span
-              style={{
-                flex: 1,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {item.name}
-            </span>
+            <span className="flex-1 truncate">{item.name}</span>
           </div>
           <HierarchyNodeMenuButton menuItems={menuItems} />
         </div>

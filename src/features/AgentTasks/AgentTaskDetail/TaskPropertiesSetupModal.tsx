@@ -1,5 +1,7 @@
 'use client';
 
+import { formatAbsoluteDate } from '@orvilo/utils/time';
+import { parseISO } from 'date-fns';
 import { t as translate } from 'i18next';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,17 +25,29 @@ import { trpcErrorMessage } from '@/utils/trpcError';
 
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import TaskLabelSelector from '../features/TaskLabelSelector';
+import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
 import { useTaskProjectChange } from '../shared/useTaskProjectChange';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
+import { ISSUE_RELATION_KINDS } from './relationGroups';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { TaskDetailScope, useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskPrerequisites from './TaskPrerequisites';
 import TaskScheduleConfig from './TaskScheduleConfig';
+
+// The dialog lists every relation kind, set or not.
+const ALL_RELATION_KINDS: ReadonlySet<string> = new Set(ISSUE_RELATION_KINDS);
 
 /**
  * Every issue property in one dialog, reusing the rail's own pickers and write
  * paths. A failed write stays on screen with its error instead of closing.
+ *
+ * It is a superset of the rail's "+ Add property" menu: that menu lists only
+ * the optional properties that have no row yet (due date, labels, reviewer,
+ * schedule, relations), and each of them is here too. Project, milestone and
+ * the agent assignee always have a place in the rail, so they are never
+ * "added" and appear only here.
  */
 const TaskPropertiesSetup = () => {
   const { t } = useTranslation(['chat', 'common']);
@@ -94,6 +108,22 @@ const TaskPropertiesSetup = () => {
             </div>
           </TaskLabelSelector>
         </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium">{t('taskDetail.dueDate')}</span>
+        <Button
+          aria-label={t('taskDetail.dueDate')}
+          className="justify-start font-normal"
+          disabled={disabled}
+          variant="outline"
+          onClick={() =>
+            openTaskScheduleDialog({ dueDate: task.dueDate ?? null, identifier: taskId })
+          }
+        >
+          {task.dueDate
+            ? formatAbsoluteDate(parseISO(task.dueDate))
+            : t('taskDetail.property.addDueDate')}
+        </Button>
       </div>
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium">{t('taskDetail.project')}</span>
@@ -227,6 +257,10 @@ const TaskPropertiesSetup = () => {
             </div>
           </TaskScheduleConfig>
         </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium">{t('taskDetail.relations.title')}</span>
+        <TaskPrerequisites revealedKinds={ALL_RELATION_KINDS} />
       </div>
       {error ? (
         <p className="text-sm text-destructive" role="alert">

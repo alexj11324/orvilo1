@@ -122,12 +122,20 @@ export const TaskBlockedNotice = () => {
 };
 
 interface RelationFieldsProps {
+  /**
+   * A kind that was just added from "+ Add property": its search opens right
+   * away instead of leaving an empty field to click.
+   */
+  openKind?: string | null;
   /** Empty relation kinds stay hidden unless listed here. */
   revealedKinds?: ReadonlySet<string>;
   taskId: string;
 }
 
-const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
+const isRelationKind = (kind?: string | null): kind is IssueRelationKind =>
+  ISSUE_RELATION_KINDS.includes(kind as IssueRelationKind);
+
+const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsProps) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const appOrigin = useAppOrigin();
@@ -143,6 +151,18 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [selected, setSelected] = useState<SearchHit[]>([]);
+  // Follow `openKind` once per value (adjusted during render, no effect): the
+  // user can still close the search afterwards without it reopening.
+  const [followedKind, setFollowedKind] = useState<string | null>(null);
+  if ((openKind ?? null) !== followedKind) {
+    setFollowedKind(openKind ?? null);
+    if (isRelationKind(openKind) && allowed) {
+      setPicker(openKind);
+      setQuery('');
+      setHits([]);
+      setSelected([]);
+    }
+  }
   const [searching, setSearching] = useState(false);
   const { edges, grouped } = useRelationEdges();
   const linkedKey = edges.map((edge) => edge.dependsOn).join('\n');
@@ -336,6 +356,7 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
                 <div className="flex items-center gap-2 border-b px-2">
                   <Search aria-hidden className="text-muted-foreground" size={14} />
                   <Input
+                    autoFocus
                     aria-label={t('taskDetail.relations.search')}
                     className="border-0 shadow-none focus-visible:ring-0"
                     placeholder={t('taskDetail.relations.search')}
@@ -510,10 +531,18 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
   );
 };
 
-const TaskPrerequisites = ({ revealedKinds }: Pick<RelationFieldsProps, 'revealedKinds'>) => {
+const TaskPrerequisites = ({
+  openKind,
+  revealedKinds,
+}: Pick<RelationFieldsProps, 'openKind' | 'revealedKinds'>) => {
   const taskId = useTaskDetailTaskId();
   return taskId ? (
-    <TaskRelationFields key={taskId} revealedKinds={revealedKinds} taskId={taskId} />
+    <TaskRelationFields
+      key={taskId}
+      openKind={openKind}
+      revealedKinds={revealedKinds}
+      taskId={taskId}
+    />
   ) : null;
 };
 

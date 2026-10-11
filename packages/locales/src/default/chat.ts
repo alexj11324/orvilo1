@@ -1632,6 +1632,7 @@ export default {
   'taskDetail.relations.noMatches': 'No matching issues',
   'taskDetail.relations.remove': 'Remove relation',
   'taskDetail.relations.actions': 'Relation actions',
+  'taskDetail.relations.title': 'Relations',
   'taskDetail.autoRunFailed': 'Could not start the run for this status.',
   'taskDetail.activities.filter.all': 'All',
   'taskDetail.activities.filter.comments': 'Comments',

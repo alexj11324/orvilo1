@@ -2204,6 +2204,7 @@
   "taskDetail.relations.remove": "Remove relation",
   "taskDetail.relations.search": "Search issues",
   "taskDetail.relations.searching": "Searching…",
+  "taskDetail.relations.title": "Relations",
   "taskDetail.replyInThread": "Reply in this thread",
   "taskDetail.replyPlaceholder": "Reply in this thread...",
   "taskDetail.reportedBy": "Reported by {{name}}",

@@ -1,8 +1,6 @@
 'use client';
 import type { NotificationFeedCard } from '@orvilo/types';
 import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   ArchiveRestoreIcon,
@@ -16,6 +14,7 @@ import { createElement, memo, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,95 +36,13 @@ import { inboxCardIcon } from './notificationIcons';
  * with read/archive/snooze icon buttons appearing on hover at the right of
  * the first line.
  */
-const styles = createStaticStyles(({ css }) => ({
-  row: css`
-    cursor: pointer;
-
-    position: relative;
-
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-
-    width: 100%;
-    padding-block: 16px;
-    padding-inline: 20px 12px;
-    border: 0;
-    border-block-end: 1px solid ${cssVar.colorFillQuaternary};
-
-    font: inherit;
-    color: inherit;
-    text-align: start;
-
-    appearance: none;
-    background: transparent;
-
-    &[data-unread='true'] {
-      background: ${cssVar.colorPrimaryBg}55;
-    }
-
-    &[data-active='true'] {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      box-shadow: inset 0 0 0 2px ${cssVar.colorPrimary};
-    }
-
-    /* The Issue list row's hover wash; the selected row keeps its own fill. */
-    &:hover:not([data-active='true']) {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  unreadDot: css`
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-start: 8px;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorPrimary};
-  `,
-  avatarDisc: css`
-    position: relative;
-
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  optionButton: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: 0;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    appearance: none;
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
+const styles = {
+  row: 'group relative flex w-full cursor-pointer items-start gap-2 border-0 border-be border-divider bg-transparent py-4 ps-5 pe-3 [font:inherit] text-inherit text-start [&[data-unread=true]:not([data-active=true]):not(:hover)]:bg-primary-wash data-[active=true]:bg-selected [&:hover:not([data-active=true])]:bg-accent focus-visible:inset-ring-2 focus-visible:inset-ring-ring/50',
+  unreadDot: 'absolute inset-bs-1/2 inset-s-2 size-1.5 rounded-full bg-primary',
+  avatarDisc:
+    'relative flex size-12 flex-none items-center justify-center rounded-full bg-muted text-muted-foreground',
+  optionButton: 'bg-muted p-0 text-muted-foreground hover:bg-selected hover:text-foreground',
+};
 
 export interface InboxListRowProps {
   /** Shown while the snoozed view is open — swaps archive for restore. */
@@ -172,7 +89,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
   return (
     <div
       aria-current={selected ? 'true' : undefined}
-      className={cn(styles.row, 'group')}
+      className={styles.row}
       data-active={selected}
       data-inbox-id={card.notificationId}
       data-unread={!card.read}
@@ -203,7 +120,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-3">
-          <p className="min-w-0 flex-1 truncate text-sm">
+          <p className="min-w-0 flex-1 truncate text-sm leading-5.5">
             {senderName ? <span className="font-medium">{senderName}</span> : null}
             {senderName ? ' ' : ''}
             <span className="text-muted-foreground">{card.content}</span>
@@ -218,10 +135,12 @@ const InboxListRow = memo((props: InboxListRowProps) => {
             <Tooltip>
               <TooltipTrigger
                 render={
-                  <button
+                  <Button
                     aria-label={card.read ? t('inbox.markUnread') : t('inbox.markRead')}
                     className={styles.optionButton}
+                    size="icon"
                     type="button"
+                    variant="ghost"
                     onClick={(event) => {
                       stopRowClick(event);
                       onToggleRead(card);
@@ -230,9 +149,9 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                 }
               >
                 {card.read ? (
-                  <MailIcon aria-hidden className="size-3" />
+                  <MailIcon aria-hidden className="size-4" />
                 ) : (
-                  <MailOpenIcon aria-hidden className="size-3" />
+                  <MailOpenIcon aria-hidden className="size-4" />
                 )}
               </TooltipTrigger>
               <TooltipContent>
@@ -244,10 +163,12 @@ const InboxListRow = memo((props: InboxListRowProps) => {
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <button
+                    <Button
                       aria-label={archivedView ? t('inbox.unarchive') : t('inbox.dismiss')}
                       className={styles.optionButton}
+                      size="icon"
                       type="button"
+                      variant="ghost"
                       onClick={(event) => {
                         stopRowClick(event);
                         onToggleArchive(card);
@@ -256,9 +177,9 @@ const InboxListRow = memo((props: InboxListRowProps) => {
                   }
                 >
                   {archivedView ? (
-                    <ArchiveRestoreIcon aria-hidden className="size-3" />
+                    <ArchiveRestoreIcon aria-hidden className="size-4" />
                   ) : (
-                    <BellOffIcon aria-hidden className="size-3" />
+                    <BellOffIcon aria-hidden className="size-4" />
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
@@ -270,15 +191,17 @@ const InboxListRow = memo((props: InboxListRowProps) => {
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <button
+                    <Button
                       aria-label={t('inbox.snooze')}
                       className={styles.optionButton}
+                      size="icon"
                       type="button"
+                      variant="ghost"
                       onClick={stopRowClick}
                     />
                   }
                 >
-                  <ClockIcon aria-hidden className="size-3" />
+                  <ClockIcon aria-hidden className="size-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={stopRowClick}>
                   {snoozedView || card.snoozedUntil ? (
@@ -322,14 +245,14 @@ const InboxListRow = memo((props: InboxListRowProps) => {
             ) : null}
           </div>
         </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs leading-5 text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">
             {card.resourceIdentifier ? (
               <span className="font-mono">{`${card.resourceIdentifier} `}</span>
             ) : null}
             {card.title}
           </span>
-          <span className="flex shrink-0 items-center gap-1 font-mono text-tertiary">
+          <span className="flex shrink-0 items-center gap-1 font-mono text-foreground-tertiary">
             {card.snoozedUntil ? (
               <>
                 <ClockIcon aria-hidden className="size-3" />

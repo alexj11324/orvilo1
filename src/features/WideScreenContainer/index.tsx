@@ -11,9 +11,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 
 const styles = createStaticStyles(({ css }) => ({
   container: css`
-    flex-grow: 1;
-    align-self: center;
-    transition: width 0.25s ${cssVar.motionEaseInOut};
+    transition: width ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
   `,
 }));
 
@@ -50,7 +48,8 @@ const WideScreenContainer = memo<WideScreenContainerProps>(
     return (
       <div className="flex flex-col w-full" style={{ ...wrapperStyle }} onClick={onClick}>
         <div
-          className={cx(cx(styles.container, className), 'flex flex-col')}
+          className={cx(cx('grow self-center', styles.container, className), 'flex flex-col')}
+          data-slot={'wide-screen-container'}
           style={{
             paddingInline: fullWidth ? 0 : 16,
             width:

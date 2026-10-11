@@ -1,13 +1,14 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import type { CompressionGroupMetadata, UIChatMessage } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronUp, History, Sparkles, Undo2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
@@ -16,6 +17,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { shinyTextStyles } from '@/styles/loading';
 
 import { dataSelectors, useConversationStore } from '../../store';
@@ -42,28 +45,11 @@ const setStoredTab = (id: string, tab: string) => {
   localStorage.setItem(`${STORAGE_KEY_PREFIX}${id}`, tab);
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    margin-block-end: 8px;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  contentScroll: css`
-    max-height: min(40vh, 400px);
-  `,
-  header: css`
-    .ant-tabs-nav {
-      margin-block-end: 0;
-    }
-  `,
-  messagesContainer: css`
-    padding-block: 8px;
-  `,
-}));
+const styles = {
+  container: 'mbe-2 py-2 px-3 border border-divider rounded-(--radius-card) bg-card',
+  contentScroll: '[max-height:min(40vh,400px)]',
+  messagesContainer: 'py-2',
+};
 
 export interface CompressedGroupMessageProps {
   id: string;
@@ -72,6 +58,9 @@ export interface CompressedGroupMessageProps {
 
 const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
   const { t } = useTranslation('chat');
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const showShimmer = animationMode !== 'disabled' && !prefersReducedMotion;
   const [activeTab, setActiveTab] = useState<string>(() => getStoredTab(id));
 
   const handleTabChange = useCallback(
@@ -127,12 +116,12 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
   const tabItems: TabItem[] = useMemo(
     () => [
       {
-        icon: <Sparkles size={14} />,
+        icon: <Sparkles size={16} />,
         key: 'summary',
         label: t('compression.summary'),
       },
       {
-        icon: <History size={14} />,
+        icon: <History size={16} />,
         key: 'history',
         label: t('compression.history'),
       },
@@ -146,7 +135,12 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
         <>
           <div className="flex">
             {/*<FolderArchive size={14} />*/}
-            <span className={cx(isGeneratingSummary ? shinyTextStyles.shinyText : '')}>
+            <span
+              className={cx(
+                'text-sm leading-5.5',
+                showShimmer ? shinyTextStyles.shinyText : 'text-muted-foreground',
+              )}
+            >
               {t('compressedHistory')}
             </span>
           </div>
@@ -154,14 +148,15 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
         </>
       ) : (
         <div className="flex items-center justify-between" style={{ width: '100%' }}>
-          <Tabs
-            className={styles.header}
-            value={isGeneratingSummary ? 'summary' : activeTab}
-            onValueChange={handleTabChange}
-          >
-            <TabsList>
+          <Tabs value={isGeneratingSummary ? 'summary' : activeTab} onValueChange={handleTabChange}>
+            <TabsList className="rounded-(--radius-button)">
               {tabItems.map((item) => (
-                <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
+                <TabsTrigger
+                  className="rounded-(--radius-input) leading-5.5"
+                  disabled={item.disabled}
+                  key={item.key}
+                  value={item.key}
+                >
                   {item.icon}
                   {item.label}
                 </TabsTrigger>
@@ -177,18 +172,24 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
             )}
           </Tabs>
           <div className="flex gap-1">
-            <ActionIcon
-              icon={Undo2}
-              size={'small'}
-              title={t('compression.cancel')}
-              onClick={handleCancelCompression}
-            />
-            <ActionIcon
-              aria-label={t('toggle', { ns: 'common' })}
-              icon={expanded ? ChevronUp : ChevronDown}
-              size={'small'}
-              onClick={() => toggleCompressedGroupExpanded(id)}
-            />
+            <span className="inline-flex flex-none coarse:p-1.5">
+              <ActionIcon
+                className="relative coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
+                icon={Undo2}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                title={t('compression.cancel')}
+                onClick={handleCancelCompression}
+              />
+            </span>
+            <span className="inline-flex flex-none coarse:p-1.5">
+              <ActionIcon
+                aria-label={t('toggle', { ns: 'common' })}
+                className="relative coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
+                icon={expanded ? ChevronUp : ChevronDown}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                onClick={() => toggleCompressedGroupExpanded(id)}
+              />
+            </span>
           </div>
         </div>
       )}

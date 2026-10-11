@@ -1,50 +1,20 @@
 'use client';
 
 import type { EmojiReaction } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+import { CLICKABLE_FOCUS_RING } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  active: css`
-    background: ${cssVar.colorFillTertiary};
-  `,
-  container: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  `,
-  count: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  reactionTag: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    height: 28px;
-    padding-block: 0;
-    padding-inline: 10px;
-    border-radius: 14px;
-
-    font-size: 14px;
-    line-height: 1;
-
-    background: ${cssVar.colorFillSecondary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  active: 'bg-selected hover:bg-selected',
+  container: 'flex flex-wrap gap-1',
+  count: 'text-xs leading-5 text-muted-foreground',
+  reactionTag:
+    'relative cursor-pointer inline-flex gap-1 items-center py-0 px-2.5 rounded-(--radius-button) text-sm leading-5.5 bg-fill-quaternary transition-[background-color] duration-(--orvilo-motion-fast) hover:bg-accent motion-reduce:transition-none',
+};
 
 interface ReactionDisplayProps {
   /**
@@ -66,22 +36,33 @@ const ReactionDisplay = memo<ReactionDisplayProps>(({ reactions, onReactionClick
 
   if (reactions.length === 0) return null;
 
+  const ReactionTag = canEdit ? Button : 'div';
+
   return (
     <div className={cn('flex items-center', styles.container)}>
       {reactions.map((reaction) => (
-        <div
-          {...clickableProps(canEdit)}
+        <span
+          className={cn('inline-flex flex-none', canEdit && 'coarse:p-1.5')}
           key={reaction.emoji}
-          style={{ cursor: canEdit ? undefined : 'default' }}
-          className={cn(
-            cx(styles.reactionTag, isActive?.(reaction.emoji) && styles.active),
-            CLICKABLE_FOCUS_RING,
-          )}
-          onClick={canEdit ? () => onReactionClick?.(reaction.emoji) : undefined}
         >
-          <span>{reaction.emoji}</span>
-          {reaction.count > 1 && <span className={styles.count}>{reaction.count}</span>}
-        </div>
+          <ReactionTag
+            {...(canEdit
+              ? { size: 'compact' as const, type: 'button' as const, variant: 'ghost' as const }
+              : {})}
+            style={{ cursor: canEdit ? undefined : 'default' }}
+            className={cn(
+              cn(styles.reactionTag, isActive?.(reaction.emoji) && styles.active),
+              CLICKABLE_FOCUS_RING,
+              canEdit
+                ? "coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
+                : 'h-8',
+            )}
+            onClick={canEdit ? () => onReactionClick?.(reaction.emoji) : undefined}
+          >
+            <span className="text-base leading-6">{reaction.emoji}</span>
+            {reaction.count > 1 && <span className={styles.count}>{reaction.count}</span>}
+          </ReactionTag>
+        </span>
       ))}
     </div>
   );

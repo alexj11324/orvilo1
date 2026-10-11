@@ -65,9 +65,7 @@ const RenameSkillContent = memo<RenameSkillContentProps>(({ currentName, onSubmi
             if (e.key === 'Enter') handleSubmit();
           }}
         />
-        {error ? (
-          <div style={{ color: 'var(--ant-color-error)', fontSize: 12 }}>{error}</div>
-        ) : null}
+        {error ? <div className="text-xs leading-5 text-destructive-text">{error}</div> : null}
       </div>
       <div className="flex gap-2 justify-end">
         <Button disabled={loading} size="lg" onClick={close}>

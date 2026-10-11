@@ -1,15 +1,16 @@
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import { AlertTriangle, CheckCircle, ExternalLink, Terminal } from 'lucide-react';
-import { useReducedMotion } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CodeBlock } from '@/components/ui/code-block';
 import { useToolStore } from '@/store/tool';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { type SystemDependencyCheckResult } from '@/types/plugins';
 
 interface MCPDependenciesGuideProps {
@@ -17,67 +18,12 @@ interface MCPDependenciesGuideProps {
   systemDependencies: SystemDependencyCheckResult[];
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  commandBlock: css`
-    position: relative;
-
-    padding-block: ${cssVar.paddingXS};
-    padding-inline: ${cssVar.paddingSM};
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM};
-
-    background-color: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background-color: ${cssVar.colorFillSecondary};
-    }
-  `,
-  container: css`
-    margin-block-start: ${cssVar.marginXS};
-    padding: ${cssVar.padding};
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadius};
-
-    background-color: ${cssVar.colorBgContainer};
-  `,
-  copyButton: css`
-    position: absolute;
-    inset-block-start: ${cssVar.paddingXXS};
-    inset-inline-end: ${cssVar.paddingXXS};
-
-    height: auto;
-    min-height: auto;
-    padding-block: 2px;
-    padding-inline: 6px;
-
-    font-size: 12px;
-  `,
-  dependencyCard: css`
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: var(--radius-card);
-  `,
-  footer: css`
-    display: flex;
-    gap: ${cssVar.marginXS};
-    justify-content: flex-end;
-    margin-block-start: ${cssVar.marginXS};
-  `,
-  statusIcon: css`
-    display: flex;
-    gap: ${cssVar.marginXXS};
-    align-items: center;
-  `,
-}));
-
 const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
   ({ identifier, systemDependencies }) => {
     const { t } = useTranslation(['plugin', 'common']);
-    const theme = useTheme();
-    const reducedMotion = useReducedMotion();
-    const motionEnabled = theme.motion !== false && !reducedMotion;
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const motionEnabled = animationMode !== 'disabled' && !prefersReducedMotion;
     const [installMCPPlugin, cancelInstallMCPPlugin] = useToolStore((s) => [
       s.installMCPPlugin,
       s.cancelInstallMCPPlugin,
@@ -99,63 +45,71 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
 
     return (
       <m.div
-        animate={{ y: 0 }}
-        className={styles.container}
+        animate={motionEnabled ? { y: 0 } : { y: [0, 0] }}
+        className="mbs-2 w-full max-w-160 rounded-(--radius-card) border border-border bg-card p-4 text-sm leading-5.5"
         initial={motionEnabled ? { y: 8 } : false}
         transition={
           motionEnabled ? { delay: 0.1, duration: 0.2, ease: [0.4, 0, 0.2, 1] } : { duration: 0 }
         }
       >
         <m.div
-          animate={{ opacity: 1, y: 0 }}
+          animate={motionEnabled ? { opacity: 1, y: 0 } : { opacity: [1, 1], y: [0, 0] }}
+          className="mbe-2"
           initial={motionEnabled ? { opacity: 0, y: 4 } : false}
-          style={{ marginBottom: 8 }}
           transition={motionEnabled ? { delay: 0.15, duration: 0.2 } : { duration: 0 }}
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <AlertTriangle color={cssVar.colorWarning} size={16} />
-              <h5 className="m-0">{t('mcpInstall.dependenciesRequired')}</h5>
+              <AlertTriangle className="shrink-0 text-warning-text" size={16} />
+              <h5 className="m-0 text-base leading-6 font-semibold">
+                {t('mcpInstall.dependenciesRequired')}
+              </h5>
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-sm leading-5.5 text-muted-foreground">
               {t('mcpInstall.dependenciesDescription')}
             </div>
           </div>
         </m.div>
 
         <m.div
-          animate={{ opacity: 1, y: 0 }}
+          animate={motionEnabled ? { opacity: 1, y: 0 } : { opacity: [1, 1], y: [0, 0] }}
           initial={motionEnabled ? { opacity: 0, y: 4 } : false}
           transition={motionEnabled ? { delay: 0.2, duration: 0.2 } : { duration: 0 }}
         >
           <div className="flex flex-col gap-2">
             {systemDependencies.map((dep) => (
-              <Card className={styles.dependencyCard} key={dep.name} size="sm">
+              <Card
+                className="rounded-(--radius-card) border border-divider"
+                key={dep.name}
+                size="sm"
+              >
                 <CardContent>
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{dep.name}</span>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <span className="min-w-0 wrap-anywhere text-sm leading-5.5 font-semibold">
+                          {dep.name}
+                        </span>
                         {dep.requiredVersion && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs leading-5 text-muted-foreground">
                             {t('mcpInstall.dependencyStatus.requiredVersion', {
                               version: dep.requiredVersion,
                             })}
                           </span>
                         )}
                       </div>
-                      <div className={styles.statusIcon}>
+                      <div className="flex items-center gap-1">
                         {dep.meetRequirement ? (
                           <>
-                            <CheckCircle color={cssVar.colorSuccess} size={14} />
-                            <span className="text-xs text-success-text">
+                            <CheckCircle className="shrink-0 text-success-text" size={14} />
+                            <span className="text-xs leading-5 text-success-text">
                               {t('mcpInstall.dependencyStatus.installed')}
                             </span>
                           </>
                         ) : (
                           <>
-                            <AlertTriangle color={cssVar.colorWarning} size={14} />
-                            <span className="text-xs text-warning-text">
+                            <AlertTriangle className="shrink-0 text-warning-text" size={14} />
+                            <span className="text-xs leading-5 text-warning-text">
                               {t('mcpInstall.dependencyStatus.notInstalled')}
                             </span>
                           </>
@@ -167,8 +121,8 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
                       <div className="flex flex-col gap-3">
                         {dep.installInstructions.current && (
                           <div className="flex flex-col gap-1">
-                            <span className="text-xs font-semibold">
-                              <Terminal size={12} style={{ marginRight: 4 }} />
+                            <span className="text-sm leading-5.5 font-semibold">
+                              <Terminal className="me-1 inline-block" size={14} />
                               {t('mcpInstall.installMethods.recommended')}
                             </span>
                             <CodeBlock code={dep.installInstructions.current} language={'bash'} />
@@ -177,11 +131,11 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
 
                         {dep.installInstructions.manual && (
                           <div className="flex flex-col gap-1">
-                            <span className="text-xs font-semibold">
-                              <ExternalLink size={12} style={{ marginRight: 4 }} />
+                            <span className="text-sm leading-5.5 font-semibold">
+                              <ExternalLink className="me-1 inline-block" size={14} />
                               {t('mcpInstall.installMethods.manual')}
                             </span>
-                            <Markdown style={{ fontSize: 12 }}>
+                            <Markdown fontSize={14} lineHeight={22 / 14}>
                               {dep.installInstructions.manual}
                             </Markdown>
                           </div>
@@ -196,20 +150,20 @@ const MCPDependenciesGuide = memo<MCPDependenciesGuideProps>(
         </m.div>
 
         <m.div
-          animate={{ opacity: 1, y: 0 }}
-          className={styles.footer}
+          animate={motionEnabled ? { opacity: 1, y: 0 } : { opacity: [1, 1], y: [0, 0] }}
+          className="mbs-2 flex justify-end gap-2"
           initial={motionEnabled ? { opacity: 0, y: 4 } : false}
           transition={motionEnabled ? { delay: 0.3, duration: 0.2 } : { duration: 0 }}
         >
-          <div className="flex justify-between">
-            <Button size="sm" onClick={handleCancel}>
+          <div className="flex flex-wrap justify-between gap-2">
+            <Button size="lg" onClick={handleCancel}>
               {t('common:cancel')}
             </Button>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={handleSkipCheck}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="lg" variant="outline" onClick={handleSkipCheck}>
                 {t('mcpInstall.skipDependencies')}
               </Button>
-              <Button size="sm" variant="default" onClick={handleRetryCheck}>
+              <Button size="lg" variant="default" onClick={handleRetryCheck}>
                 {t('mcpInstall.recheckDependencies')}
               </Button>
             </div>

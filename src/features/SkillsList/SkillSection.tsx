@@ -1,5 +1,3 @@
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { memo, type ReactNode, useState } from 'react';
 
 import AsyncError from '@/components/AsyncError';
@@ -40,25 +38,6 @@ export interface SkillSectionProps {
   sectionHeader?: SkillSectionHeader;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  count: css`
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  empty: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  flatHeader: css`
-    padding-inline: 4px;
-  `,
-  label: css`
-    font-size: 12px;
-    font-weight: 500;
-  `,
-}));
-
 const ITEM_KEY = 'skill-section';
 
 interface HeaderRowProps {
@@ -68,8 +47,10 @@ interface HeaderRowProps {
 
 const HeaderRow = memo<HeaderRowProps>(({ count, title }) => (
   <div className="flex items-center gap-1.5">
-    <div className={cn('text-muted-foreground', styles.label)}>{title}</div>
-    {typeof count === 'number' && count > 0 && <span className={styles.count}>{count}</span>}
+    <div className="text-sm leading-5.5 font-medium text-muted-foreground">{title}</div>
+    {typeof count === 'number' && count > 0 && (
+      <span className="text-xs leading-5 tabular-nums text-foreground-tertiary">{count}</span>
+    )}
   </div>
 ));
 
@@ -103,7 +84,7 @@ const Body = memo<BodyProps>(({ children, emptyText, error, isEmpty, isLoading, 
   if (isEmpty) {
     return (
       <div className="flex flex-col items-center justify-center py-2">
-        <div className={cn(styles.empty)}>{emptyText}</div>
+        <div className="text-sm leading-5.5 text-foreground-tertiary">{emptyText}</div>
       </div>
     );
   }
@@ -136,7 +117,7 @@ const SkillSection = memo<SkillSectionProps>(
     if (!collapsible) {
       return (
         <div className="flex flex-col gap-1">
-          <div className={styles.flatHeader}>
+          <div className="px-1">
             <HeaderRow count={count} title={title} />
           </div>
           {body}
@@ -150,7 +131,7 @@ const SkillSection = memo<SkillSectionProps>(
         onValueChange={(keys) => setExpanded(keys.length > 0)}
       >
         <AccordionItem value={ITEM_KEY}>
-          <AccordionTrigger style={{ paddingBlock: 2, paddingInline: 4 }}>
+          <AccordionTrigger className="min-h-8 rounded-(--radius-button) px-1 py-1">
             <HeaderRow count={count} title={title} />
           </AccordionTrigger>
           <AccordionContent>{body}</AccordionContent>

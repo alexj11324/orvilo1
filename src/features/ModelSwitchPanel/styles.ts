@@ -1,16 +1,11 @@
 import { createStaticStyles } from 'antd-style';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
+const retainedStyles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
     pointer-events: auto;
     user-select: none;
     overflow: hidden;
     padding: 0 !important;
-  `,
-  detailPopup: css`
-    user-select: none;
-    overscroll-behavior: contain;
-    width: 400px;
   `,
   dropdownMenu: css`
     user-select: none;
@@ -23,28 +18,9 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
       border-radius: ${cssVar.borderRadiusSM};
     }
   `,
-  empty: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    min-height: 96px;
-    padding-block: 24px;
-    padding-inline: 16px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
   groupHeader: css`
     width: 100%;
     color: ${cssVar.colorTextSecondary};
-  `,
-  list: css`
-    position: relative;
-    overflow: hidden auto;
-    overscroll-behavior: contain;
-    width: 100%;
   `,
   menuItem: css`
     cursor: pointer;
@@ -61,7 +37,7 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     border-radius: ${cssVar.borderRadiusSM};
   `,
   menuItemActive: css`
-    background: ${cssVar.colorFillTertiary};
+    background: ${cssVar.colorFillSecondary};
   `,
   footer: css`
     border-block-start: 1px solid ${cssVar.colorBorderSecondary};
@@ -69,14 +45,13 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
   toolbar: css`
     border-block-end: 1px solid ${cssVar.colorBorderSecondary};
   `,
-  trigger: css`
-    display: inline-flex;
-    outline: none;
-
-    /* SVG icons (from @lobehub/icons IconAvatar) can receive focus when dropdown closes,
-       causing an unwanted blue outline ring */
-    svg:focus {
-      outline: none;
-    }
-  `,
 }));
+
+export const styles = {
+  ...retainedStyles,
+  detailPopup: 'w-100 select-none overscroll-contain',
+  empty:
+    'flex min-h-24 items-center justify-center px-4 py-6 text-sm leading-5.5 text-muted-foreground text-center',
+  list: 'relative w-full overflow-x-hidden overflow-y-auto overscroll-contain',
+  trigger: 'inline-flex outline-none [&_svg:focus]:outline-none',
+};

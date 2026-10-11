@@ -1,5 +1,4 @@
 import { RadarChart } from '@lobehub/charts';
-import { createStaticStyles, cssVar } from 'antd-style';
 import type { ModelRating, ModelRatingSource } from 'model-bank';
 import type { FC } from 'react';
 import { memo } from 'react';
@@ -36,7 +35,7 @@ export interface RadarDimensionDatum {
   tooltip?: string;
 }
 
-export const radarStyles = createStaticStyles(({ css, cssVar }) => ({
+export const radarStyles = {
   /**
    * Grid strokes are re-colored with the alpha-based fill token: the library
    * draws them with colorBorderSecondary, which equals colorBgElevated in the
@@ -45,14 +44,8 @@ export const radarStyles = createStaticStyles(({ css, cssVar }) => ({
    * recharts-polar-grid-concentric-polygon) and `circle` in circle grid mode —
    * there is no `polygon` element inside the grid group.
    */
-  radar: css`
-    .recharts-polar-grid line,
-    .recharts-polar-grid path,
-    .recharts-polar-grid circle {
-      stroke: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
+  radar: '[&_.recharts-polar-grid_:is(line,path,circle)]:stroke-selected',
+};
 
 interface ModelRatingRadarProps {
   dimensions: RadarDimensionDatum[];
@@ -68,7 +61,7 @@ const ModelRatingRadar: FC<ModelRatingRadarProps> = memo(({ dimensions }) => {
     <RadarChart
       categories={['score']}
       className={radarStyles.radar}
-      colors={[cssVar.colorPrimary]}
+      colors={['var(--primary)']}
       data={data}
       height={220}
       index={'label'}
@@ -79,7 +72,7 @@ const ModelRatingRadar: FC<ModelRatingRadarProps> = memo(({ dimensions }) => {
       angleAxisLabelFormatter={(label, row) => (
         <>
           {label}{' '}
-          <tspan fill={cssVar.colorText} fontWeight={600}>
+          <tspan fill={'var(--foreground)'} fontWeight={600}>
             {row?.score}
           </tspan>
         </>

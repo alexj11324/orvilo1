@@ -1,6 +1,5 @@
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { createModal, DropdownMenu } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { DropdownMenu } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { ChevronDownIcon, ChevronUpIcon, InfoIcon, PlusIcon, XIcon } from 'lucide-react';
 import type { ModelRating } from 'model-bank';
@@ -9,6 +8,8 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBusinessModelRating } from '@/business/client/hooks/useBusinessModelRating';
+import { createModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 
 import type { RatingDimensionKey } from '../ModelRatingRadar';
@@ -18,159 +19,32 @@ import CompareRadar, { COMPARE_SERIES_COLORS, MAX_COMPARE_MODELS } from './Compa
 
 const RULE_KEYS = ['relative', 'sources', 'speed', 'price', 'missing'] as const;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  addButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border: 1px dashed ${cssVar.colorBorder};
-    border-radius: 16px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimary};
-      color: ${cssVar.colorPrimary};
-    }
-  `,
-  addButtonDisabled: css`
-    cursor: not-allowed;
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  bestPill: css`
-    display: inline-block;
-
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 10px;
-
-    font-weight: 600;
-  `,
-  cell: css`
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-align: center;
-  `,
-  cellMissing: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  chip: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    max-width: 200px;
-    padding-block: 2px;
-    padding-inline: 8px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-  `,
-  chipName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  chipRemove: css`
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    color: ${cssVar.colorTextTertiary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  colorDot: css`
-    flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  `,
-  headerCell: css`
-    overflow: hidden;
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  headerName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  ruleItem: css`
-    font-size: 12px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  rulesList: css`
-    margin: 0;
-    padding-inline-start: 16px;
-  `,
-  rulesToggle: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-    align-self: flex-start;
-
-    padding: 0;
-    border: none;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: none;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  sourceLink: css`
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorPrimary};
-    }
-  `,
-  table: css`
-    display: grid;
-    row-gap: 4px;
-  `,
-  tableDivider: css`
-    grid-column: 1 / -1;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  tableHeader: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-  `,
-  tableRowLabel: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-  `,
-}));
+const styles = {
+  addButton:
+    'cursor-pointer gap-1 border-dashed border-border bg-transparent px-2 text-sm leading-5.5 font-normal text-muted-foreground hover:border-primary-text hover:bg-transparent hover:text-primary-text active:not-aria-[haspopup]:translate-y-0',
+  addButtonDisabled:
+    'disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground',
+  bestPill: 'inline-block rounded-(--radius-chip) px-2 py-px font-semibold',
+  cell: 'text-xs leading-5 text-foreground text-center',
+  cellMissing: 'text-muted-foreground',
+  chip: 'inline-flex max-w-50 items-center gap-1.5 rounded-(--radius-chip) border border-divider px-2 py-0.5 text-sm leading-5.5 text-foreground',
+  chipName: 'min-w-0 truncate',
+  chipRemove:
+    'cursor-pointer text-muted-foreground hover:text-foreground active:not-aria-[haspopup]:translate-y-0',
+  colorDot: 'size-2 shrink-0 rounded-full',
+  headerCell:
+    'inline-flex items-center justify-center gap-1.5 overflow-hidden text-sm leading-5.5 font-medium text-muted-foreground',
+  headerName: 'min-w-0 truncate',
+  ruleItem: 'text-sm leading-5.5 text-muted-foreground',
+  rulesList: 'm-0 ps-4',
+  rulesToggle:
+    'cursor-pointer self-start gap-1 border-0 bg-transparent px-2 text-sm leading-5.5 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:translate-y-0',
+  sourceLink: 'text-muted-foreground hover:text-primary-text',
+  table: 'grid gap-y-1',
+  tableDivider: 'col-span-full border-t border-divider',
+  tableHeader: 'text-sm leading-5.5 font-medium text-muted-foreground text-center',
+  tableRowLabel: 'text-sm leading-5.5 text-muted-foreground text-start',
+};
 
 interface RatedModel {
   displayName: string;
@@ -274,14 +148,16 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
   const canAdd = candidates.length > 0 && !atLimit;
 
   const addButton = (
-    <button
+    <Button
       className={canAdd ? styles.addButton : `${styles.addButton} ${styles.addButtonDisabled}`}
       disabled={!canAdd}
+      size="normal"
       type={'button'}
+      variant="ghost"
     >
-      <Icon icon={PlusIcon} size={12} />
+      <Icon className="size-4" icon={PlusIcon} size={16} />
       {t('ModelSwitchPanel.detail.rating.modal.compare.add')}
-    </button>
+    </Button>
   );
 
   return (
@@ -293,13 +169,16 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
             <span className={styles.colorDot} style={{ background: model.color }} />
             <span className={styles.chipName}>{model.displayName}</span>
             {selected.length > 1 && (
-              <span
+              <Button
+                aria-label={t('remove', { ns: 'common' })}
                 className={styles.chipRemove}
-                role={'button'}
+                size="icon"
+                type="button"
+                variant="ghost"
                 onClick={() => setSelectedIds((prev) => prev.filter((id) => id !== model.id))}
               >
-                <Icon icon={XIcon} size={12} />
-              </span>
+                <Icon className="size-4" icon={XIcon} size={16} />
+              </Button>
             )}
           </span>
         ))}
@@ -364,7 +243,7 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
         </div>
       ) : (
         selected[0] && (
-          <div className={styles.table} style={{ gridTemplateColumns: '88px 1fr 1fr 1.4fr 1fr' }}>
+          <div className={`${styles.table} grid-cols-[88px_1fr_1fr_1.4fr_1fr]`}>
             {(['dimension', 'score', 'raw', 'source', 'updatedAt'] as const).map((column) => (
               <span
                 key={column}
@@ -400,7 +279,7 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
                 <span className={styles.tableRowLabel} key={`${key}-label`}>
                   {dimensions[dimensionIndex].label}
                 </span>,
-                <span className={styles.cell} key={`${key}-score`} style={{ fontWeight: 600 }}>
+                <span className={`${styles.cell} font-semibold`} key={`${key}-score`}>
                   {score.score}
                 </span>,
                 <span className={styles.cell} key={`${key}-raw`}>
@@ -427,15 +306,17 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
 
       {/* scoring rules & caveats — collapsed footer entry */}
       <Flexbox gap={8}>
-        <button
+        <Button
           className={styles.rulesToggle}
+          size="normal"
           type={'button'}
+          variant="ghost"
           onClick={() => setRulesOpen((prev) => !prev)}
         >
-          <Icon icon={InfoIcon} size={12} />
+          <Icon className="size-4" icon={InfoIcon} size={16} />
           {t('ModelSwitchPanel.detail.rating.modal.rules.title')}
-          <Icon icon={rulesOpen ? ChevronUpIcon : ChevronDownIcon} size={12} />
-        </button>
+          <Icon className="size-4" icon={rulesOpen ? ChevronUpIcon : ChevronDownIcon} size={16} />
+        </Button>
         {rulesOpen && (
           <ul className={styles.rulesList}>
             {RULE_KEYS.map((key) => (

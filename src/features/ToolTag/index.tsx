@@ -2,7 +2,6 @@
 
 import { type ComposioAppType } from '@orvilo/const';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { createElement, memo, useMemo } from 'react';
 
@@ -23,24 +22,16 @@ import {
  */
 const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, label }) => {
   if (typeof icon === 'string') {
-    return <img alt={label} height={16} src={icon} style={{ flexShrink: 0 }} width={16} />;
+    return <img alt={label} className="shrink-0" height={16} src={icon} width={16} />;
   }
 
-  return createElement(icon, { fill: cssVar.colorText, size: 16 });
+  return createElement(icon, { fill: 'var(--foreground)', size: 16 });
 });
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  compact: css`
-    height: auto !important;
-    padding: 0 !important;
-    border: none !important;
-    background: transparent !important;
-  `,
-  tag: css`
-    height: 24px !important;
-    border-radius: ${cssVar.borderRadiusSM} !important;
-  `,
-}));
+const styles = {
+  compact: 'h-auto rounded-(--radius-chip) border-0 bg-transparent p-0 text-xs leading-5',
+  tag: 'h-auto min-h-6 rounded-(--radius-chip) text-xs leading-5',
+};
 
 export interface ToolTagProps {
   /**
@@ -140,7 +131,7 @@ const ToolTag = memo<ToolTagProps>(({ identifier, variant = 'default' }) => {
 
     // Builtin type has avatar
     if (meta.type === 'builtin' && 'avatar' in meta && meta.avatar) {
-      return <Avatar avatar={meta.avatar} shape={'square'} size={16} style={{ flexShrink: 0 }} />;
+      return <Avatar avatar={meta.avatar} className="shrink-0" shape={'square'} size={16} />;
     }
 
     // Plugin type

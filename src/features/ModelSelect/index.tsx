@@ -1,5 +1,5 @@
 import { Flexbox, Tooltip, TooltipGroup } from '@lobehub/ui';
-import { Button, Select, type SelectProps, Switch, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { Button, Select, type SelectProps, Switch, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -7,17 +7,16 @@ import { useTranslation } from 'react-i18next';
 
 import { ModelItemRender, ProviderItemRender, TAG_CLASSNAME } from '@/components/ModelSelect';
 import { ModelIcon } from '@/components/OrviloIcons';
+import { Badge } from '@/components/reui/badge';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
 
 import { resolveEnableTargetProviderId, resolveStaleModelState } from './resolveStaleModelState';
 
-const prefixCls = 'ant';
-
 /**
- * Marks the stale-status Tag so the popup can hide it — inside the open list the
+ * Marks the stale-status badge so the popup can hide it — inside the open list the
  * status is conveyed by the enable toggle (notEnabled) or the remedy row
- * (redirected), while the closed trigger keeps showing the Tag.
+ * (redirected), while the closed trigger keeps showing the badge.
  */
 const STALE_TAG_CLASSNAME = 'orvilo-model-select-stale-tag';
 
@@ -39,18 +38,14 @@ const ITEM_INDICATOR_CLASSNAME = 'orvilo-model-select-item-indicator';
  */
 const STALE_ACTION_VALUE = '__orvilo_model_select_stale_action__';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
+const styles = createStaticStyles(({ css }) => ({
   popup: css`
     width: max(360px, var(--anchor-width));
 
-    &.${prefixCls}-select-dropdown .${prefixCls}-select-item-option-grouped {
-      padding-inline-start: 12px;
-    }
-
-    /* !important: the Tag's own class rule wins the cascade over this
-     * descendant selector, so a plain display: none never applies. */
+    /* Stale status is a local Badge now; its utility styles do not require
+       priority over a retained unlayered Tag rule. */
     .${STALE_TAG_CLASSNAME} {
-      display: none !important;
+      display: none;
     }
 
     .${STALE_OPTION_CLASSNAME} .${ITEM_INDICATOR_CLASSNAME} {
@@ -64,12 +59,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     .${TAG_CLASSNAME} {
       display: none;
     }
-  `,
-  staleHint: css`
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextTertiary};
-    white-space: normal;
   `,
 }));
 
@@ -270,18 +259,16 @@ const ModelSelect = memo<ModelSelectProps>(
         <Flexbox gap={4} style={{ width: '100%' }}>
           <Flexbox horizontal align={'center'} gap={8}>
             <ModelIcon model={value.model} size={20} />
-            <Text ellipsis style={{ fontSize: 14 }}>
+            <Text ellipsis fontSize={14} lineHeight={'22px'}>
               {meta?.displayName || value.model}
             </Text>
             <Tooltip title={t(`ModelSelect.staleModel.${status}.tooltip`, { successorName })}>
-              <Tag
-                className={STALE_TAG_CLASSNAME}
-                color={status === 'removed' ? 'warning' : undefined}
-                size={'small'}
-                style={{ cursor: 'default', flex: 'none' }}
+              <Badge
+                className={`${STALE_TAG_CLASSNAME} h-auto min-h-5 flex-none cursor-default text-xs leading-5`}
+                variant={status === 'removed' ? 'warning-light' : 'secondary'}
               >
                 {t(`ModelSelect.staleModel.${status}.tag`)}
-              </Tag>
+              </Badge>
             </Tooltip>
             {withPopupExtras && status === 'notEnabled' && (
               <>
@@ -314,7 +301,7 @@ const ModelSelect = memo<ModelSelectProps>(
             )}
           </Flexbox>
           {withPopupExtras && (
-            <span className={styles.staleHint}>
+            <span className="text-sm leading-5.5 whitespace-normal text-muted-foreground">
               {t(`ModelSelect.staleModel.${status}.hint`, { successorName })}
             </span>
           )}

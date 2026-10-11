@@ -5,9 +5,9 @@ import { memo } from 'react';
 import { radarStyles } from '../ModelRatingRadar';
 
 /**
- * Slot colors for compared models, assigned by selection order. Hardcoded hex
- * (matching the section-bar colors in ModelDetailPanel) so the polygons stay
- * distinguishable regardless of the user's primary theme color.
+ * Categorical slot colors for compared models, assigned by selection order.
+ * The series, legend dots and best-score tint share each slot's value. A
+ * theme-aware categorical token audit is still required before replacing them.
  */
 export const COMPARE_SERIES_COLORS = ['#1677ff', '#fa8c16', '#13c2c2', '#eb2f96'] as const;
 
@@ -65,7 +65,7 @@ const CompareRadar: FC<CompareRadarProps> = memo(({ dimensions, series }) => {
           ? (label, row) => (
               <>
                 {label}{' '}
-                <tspan fill={'var(--ant-color-text)'} fontWeight={600}>
+                <tspan fill={'var(--foreground)'} fontWeight={600}>
                   {row?.[series[0].id]}
                 </tspan>
               </>

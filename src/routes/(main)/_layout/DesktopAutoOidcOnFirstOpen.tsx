@@ -46,7 +46,12 @@ const DesktopAutoOidcOnFirstOpen = memo(() => {
     if (!setDesktopAutoOidcFirstOpenHandled()) return;
 
     // This will trigger IPC -> main process -> `shell.openExternal(/oidc/auth...)`.
-    connectRemoteServer({ remoteServerUrl: dataSyncConfig.remoteServerUrl, storageMode: 'cloud' });
+    void connectRemoteServer({
+      remoteServerUrl: dataSyncConfig.remoteServerUrl,
+      storageMode: 'cloud',
+    }).catch(() => {
+      // The store retains the typed error for the manual sign-in flow.
+    });
   }, [
     connectRemoteServer,
     dataSyncConfig.active,

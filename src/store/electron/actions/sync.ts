@@ -1,5 +1,5 @@
 import { isDesktop } from '@orvilo/const';
-import { type DataSyncConfig } from '@orvilo/electron-client-ipc';
+import { type AuthorizationErrorCode, type DataSyncConfig } from '@orvilo/electron-client-ipc';
 import isEqual from 'fast-deep-equal';
 import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
@@ -35,7 +35,9 @@ export class ElectronRemoteServerActionImpl {
   };
 
   connectRemoteServer = async (values: DataSyncConfig): Promise<void> => {
-    if (values.storageMode === 'selfHost' && !values.remoteServerUrl) return;
+    if (values.storageMode === 'selfHost' && !values.remoteServerUrl) {
+      throw Object.assign(new Error('Server URL is required'), { code: 'invalid_url' });
+    }
 
     this.#set({ isConnectingServer: true });
     this.#get().clearRemoteServerSyncError();
@@ -54,17 +56,17 @@ export class ElectronRemoteServerActionImpl {
       if (!result.success) {
         console.error('Authorization request failed:', result.error);
 
-        this.#set({
-          remoteServerSyncError: { message: result.error, type: 'AUTH_ERROR' },
-        });
+        throw Object.assign(new Error(result.error), { code: result.code ?? 'server_error' });
       }
       // Refresh state
       await this.#get().refreshServerConfig();
     } catch (error) {
       console.error('Remote server configuration error:', error);
+      const code = (error as { code?: AuthorizationErrorCode }).code ?? 'server_error';
       this.#set({
-        remoteServerSyncError: { message: (error as Error).message, type: 'CONFIG_ERROR' },
+        remoteServerSyncError: { code, message: (error as Error).message, type: 'AUTH_ERROR' },
       });
+      throw Object.assign(error instanceof Error ? error : new Error(String(error)), { code });
     } finally {
       this.#set({ isConnectingServer: false });
     }

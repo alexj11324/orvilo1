@@ -3,6 +3,7 @@ import querystring from 'node:querystring';
 import { URL } from 'node:url';
 
 import type {
+  AuthorizationErrorCode,
   AuthorizationProgress,
   DataSyncConfig,
   MarketAuthorizationParams,
@@ -22,6 +23,23 @@ const logger = createLogger('controllers:AuthCtr');
 
 const MAX_POLL_TIME = 2 * 60 * 1000; // 2 minutes (reduced from 5 minutes for better UX)
 const POLL_INTERVAL = 3000; // 3 seconds
+
+const authorizationCode = (
+  error: unknown,
+  fallback: AuthorizationErrorCode = 'server_error',
+): AuthorizationErrorCode => {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code === 'ERR_INVALID_URL') return 'invalid_url';
+  if (
+    code === 'timeout' ||
+    code === 'network' ||
+    code === 'invalid_url' ||
+    code === 'denied' ||
+    code === 'server_error'
+  )
+    return code;
+  return fallback;
+};
 
 // Refresh the access token only once it is within this window of its expiry. Kept
 // small (minutes) on purpose: a buffer that is large relative to the server's
@@ -54,6 +72,7 @@ export default class AuthCtr extends ControllerModule {
 
   private pollingInterval: NodeJS.Timeout | null = null;
   private cachedRemoteUrl: string | null = null;
+  private pollingFailureCode: AuthorizationErrorCode | null = null;
 
   /**
    * Auto-refresh timer
@@ -79,15 +98,18 @@ export default class AuthCtr extends ControllerModule {
     // Clear any old authorization state
     this.clearAuthorizationState();
 
-    const remoteUrl = await this.remoteServerConfigCtr.getRemoteServerUrl(config);
-
-    // Cache remote server URL for subsequent polling
-    this.cachedRemoteUrl = remoteUrl;
-
-    logger.info(
-      `Requesting OAuth authorization, storageMode:${config.storageMode} server URL: ${remoteUrl}`,
-    );
     try {
+      const remoteUrl = await this.remoteServerConfigCtr.getRemoteServerUrl(config);
+      const parsedRemoteUrl = new URL(remoteUrl);
+      if (!['http:', 'https:'].includes(parsedRemoteUrl.protocol)) {
+        throw Object.assign(new Error('Server URL must use HTTP or HTTPS'), {
+          code: 'invalid_url',
+        });
+      }
+      this.cachedRemoteUrl = remoteUrl;
+      logger.info(
+        `Requesting OAuth authorization, storageMode:${config.storageMode} server URL: ${remoteUrl}`,
+      );
       // Generate PKCE parameters
       logger.debug('Generating PKCE parameters');
       const codeVerifier = this.generateCodeVerifier();
@@ -134,7 +156,11 @@ export default class AuthCtr extends ControllerModule {
       return { success: true };
     } catch (error) {
       logger.error('Authorization request failed:', error);
-      return { error: error.message, success: false };
+      return {
+        code: authorizationCode(error),
+        error: error.message,
+        success: false,
+      };
     }
   }
 
@@ -215,8 +241,12 @@ export default class AuthCtr extends ControllerModule {
         // Check if polling has timed out
         if (elapsed > MAX_POLL_TIME) {
           logger.warn('Credential polling timed out');
+          this.stopPolling();
+          this.broadcastAuthorizationFailed(
+            'Authorization timed out',
+            this.pollingFailureCode ?? 'timeout',
+          );
           this.clearAuthorizationState();
-          this.broadcastAuthorizationFailed('Authorization timed out');
           return;
         }
 
@@ -237,7 +267,8 @@ export default class AuthCtr extends ControllerModule {
           // Validate state parameter
           if (result.state !== this.authRequestState) {
             logger.error('Authorization state validation failed');
-            this.broadcastAuthorizationFailed('Invalid state parameter');
+            this.clearAuthorizationState();
+            this.broadcastAuthorizationFailed('Invalid state parameter', 'denied');
             return;
           }
 
@@ -249,13 +280,19 @@ export default class AuthCtr extends ControllerModule {
             this.broadcastAuthorizationSuccessful();
           } else {
             logger.warn(`Authorization failed: ${exchangeResult.error || 'Unknown error'}`);
-            this.broadcastAuthorizationFailed(exchangeResult.error || 'Unknown error');
+            this.broadcastAuthorizationFailed(
+              exchangeResult.error || 'Unknown error',
+              exchangeResult.code ?? 'server_error',
+            );
           }
         }
       } catch (error) {
         logger.error('Error during credential polling:', error);
         this.clearAuthorizationState();
-        this.broadcastAuthorizationFailed('Polling error: ' + error.message);
+        this.broadcastAuthorizationFailed(
+          'Polling error: ' + error.message,
+          authorizationCode(error),
+        );
       }
     }, POLL_INTERVAL);
   }
@@ -280,6 +317,7 @@ export default class AuthCtr extends ControllerModule {
     this.codeVerifier = null;
     this.authRequestState = null;
     this.cachedRemoteUrl = null;
+    this.pollingFailureCode = null;
   }
 
   /**
@@ -372,12 +410,16 @@ export default class AuthCtr extends ControllerModule {
 
       // Check response status
       if (response.status === 404) {
-        // Credentials not ready yet, this is normal
+        // A reachable server with a pending handoff is a genuine timeout.
+        this.pollingFailureCode = null;
         return null;
       }
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const code: AuthorizationErrorCode = [401, 403].includes(response.status)
+          ? 'denied'
+          : 'server_error';
+        throw Object.assign(new Error(`HTTP ${response.status}: ${response.statusText}`), { code });
       }
 
       // Parse response data
@@ -399,7 +441,9 @@ export default class AuthCtr extends ControllerModule {
 
       return null;
     } catch (error) {
-      logger.debug('Polling attempt failed (this is normal):', error.message);
+      if (error.code === 'denied') throw error;
+      this.pollingFailureCode = error.code === 'server_error' ? 'server_error' : 'network';
+      logger.debug('Polling attempt failed:', error.message);
       return null;
     }
   }
@@ -498,7 +542,13 @@ export default class AuthCtr extends ControllerModule {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = `Failed to get token: ${response.status} ${response.statusText} ${typeof errorData.error === 'string' ? errorData.error : 'oidc_error'}`;
         logger.error(errorMessage);
-        throw new Error(errorMessage);
+        throw Object.assign(new Error(errorMessage), {
+          code:
+            [401, 403].includes(response.status) ||
+            ['access_denied', 'invalid_grant'].includes(errorData.error)
+              ? 'denied'
+              : 'server_error',
+        });
       }
 
       let data;
@@ -542,7 +592,11 @@ export default class AuthCtr extends ControllerModule {
       return { success: true };
     } catch (error) {
       logger.error('Exchanging authorization code failed');
-      return { error: error.message, success: false };
+      return {
+        code: authorizationCode(error, error instanceof TypeError ? 'network' : 'server_error'),
+        error: error.message,
+        success: false,
+      };
     }
   }
 
@@ -577,6 +631,7 @@ export default class AuthCtr extends ControllerModule {
    * Broadcast authorization successful event
    */
   private broadcastAuthorizationSuccessful() {
+    this.app.browserManager.showMainWindow();
     logger.debug('Broadcasting authorizationSuccessful event to all windows');
     const allWindows = BrowserWindow.getAllWindows();
 
@@ -605,13 +660,13 @@ export default class AuthCtr extends ControllerModule {
   /**
    * Broadcast authorization failed event
    */
-  private broadcastAuthorizationFailed(error: string) {
+  private broadcastAuthorizationFailed(error: string, code: AuthorizationErrorCode) {
     logger.debug(`Broadcasting authorizationFailed event to all windows, error: ${error}`);
     const allWindows = BrowserWindow.getAllWindows();
 
     for (const win of allWindows) {
       if (!win.isDestroyed()) {
-        win.webContents.send('authorizationFailed', { error });
+        win.webContents.send('authorizationFailed', { code, error });
       }
     }
   }

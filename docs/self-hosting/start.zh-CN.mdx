@@ -138,13 +138,13 @@ Orvilo 由以下几个关键组件组成：
 1. **使用 HTTPS** — 始终通过 SSL/TLS 证书部署
 2. **保护数据库** — 使用强密码并限制网络访问
 3. **环境变量** — 安全存储密钥（绝不写入代码）
-4. **认证** — 多用户部署时启用 Better Auth
+4. **认证** — 把部署接入 Clerk 账户门户
 5. **定期更新** — 保持 Orvilo 及依赖项的版本最新
 
 认证选项：
 
 - **开放访问** — 不需要认证（仅适合单用户部署）
-- **Better Auth** — 内置认证，支持邮箱密码、OAuth、Magic Links
+- **Clerk 账户门户** — 邮箱密码、OAuth、Magic Links 和 MFA，在 Clerk 中配置
 - **反向代理** — 使用 Authelia、Authentik 等
 
 ## 下一步
@@ -154,4 +154,4 @@ Orvilo 由以下几个关键组件组成：
 3. **配置基础设施** — 按需准备数据库、Redis 和存储
 4. **配置环境变量** — 参见 [环境变量参考](/docs/self-hosting/environment-variables)
 5. **部署** — 按照上方对应平台的指南操作
-6. **配置认证** — 多用户场景下配置 [Better Auth](/docs/self-hosting/auth)
+6. **配置认证** — 多用户场景下配置[身份验证服务](/zh/docs/self-hosting/auth)

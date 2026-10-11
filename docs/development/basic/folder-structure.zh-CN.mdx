@@ -62,7 +62,7 @@ src/
 ├── helpers/           # 工具辅助函数
 ├── hooks/             # 全应用复用的自定义 Hooks
 ├── layout/            # 全局布局组件（AuthProvider、GlobalProvider）
-├── libs/              # 第三方集成（better-auth、OIDC、tRPC、MCP 等）
+├── libs/              # 第三方集成（认证会话、OIDC、tRPC、MCP 等）
 ├── routes/            # SPA 页面片段（layout + page 文件），按平台分组
 │   ├── (main)/        # 桌面端路由
 │   ├── (mobile)/      # 移动端路由
@@ -82,7 +82,6 @@ src/
 ├── styles/            # 全局样式和 CSS-in-JS 配置
 ├── types/             # TypeScript 类型定义
 ├── utils/             # 通用工具函数
-├── auth.ts            # 认证配置（Better Auth）
 ├── instrumentation.ts # 应用监控和遥测设置
 └── proxy.ts           # Next.js 中间件代理配置
 ```

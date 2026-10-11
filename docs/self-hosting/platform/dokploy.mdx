@@ -42,7 +42,7 @@ S3_BUCKET=
 S3_ENABLE_PATH_STYLE=
 ```
 
-### Configure KEY\_VAULTS\_SECRET Environment Variable
+### Configure KEY_VAULTS_SECRET Environment Variable
 
 `KEY_VAULTS_SECRET` is used to encrypt sensitive information such as API keys stored by users. Click the button below to generate:
 
@@ -50,13 +50,9 @@ S3_ENABLE_PATH_STYLE=
 
 ### Configure authentication environment variables
 
-Prepare the following authentication environment variables (powered by [Better Auth](https://www.better-auth.com)):
+Prepare the following authentication environment variables (sign-in is delegated to the Clerk accounts portal — see [Authentication Service](/docs/self-hosting/auth)):
 
-Click the button below to generate `AUTH_SECRET` (session encryption key):
-
-<GenerateSecret envName="AUTH_SECRET" />
-
-You also need to configure the `JWKS_KEY` environment variable for signing and verifying JWTs. Click the button below to generate:
+Configure the `JWKS_KEY` environment variable for signing and verifying JWTs. Click the button below to generate:
 
 <GenerateJWKSKey />
 
@@ -109,7 +105,8 @@ DATABASE_URL=
 
 # Use the values generated above
 KEY_VAULTS_SECRET=
-AUTH_SECRET=
+AUTH_ACCOUNTS_URL=https://accounts.example.com
+CLERK_SECRET_KEY=your-clerk-secret-key
 JWKS_KEY=
 
 # S3 related configuration

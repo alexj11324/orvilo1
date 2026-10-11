@@ -203,7 +203,7 @@ const RepoListSection = memo<RepoListSectionProps>(({ repos, onReposChange }) =>
                 className={`${twStyles.repoDeleteBtn} repo-delete-btn`}
                 disabled={!canEdit}
                 icon={X}
-                size={{ blockSize: 28, borderRadius: 6, size: 14 }}
+                size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
                 onClick={(e) => removeRepo(repo, e)}
               />
             </div>

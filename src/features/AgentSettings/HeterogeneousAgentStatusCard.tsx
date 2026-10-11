@@ -516,7 +516,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                           className={`command-edit-button ${styles.commandEditButton}`}
                           disabled={!canEdit}
                           icon={PencilLine}
-                          size={{ blockSize: 28, borderRadius: 6, size: 14 }}
+                          size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
                           onClick={startEditingCommand}
                         />
                       </span>

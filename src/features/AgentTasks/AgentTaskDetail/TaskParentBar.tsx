@@ -1,18 +1,29 @@
 import type { TaskDetailData, TaskDetailSubtask, TaskWorkflowCategory } from '@orvilo/types';
+import { MoreHorizontal } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { usePermission } from '@/hooks/usePermission';
 import { taskService } from '@/services/task';
+import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
-import { useTaskDetailSelector } from './TaskDetailScope';
+import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import { openTaskIssueRelationModal } from './TaskIssueRelationModal';
 
 const TASK_STATUS_SET = new Set([
   'backlog',
@@ -32,7 +43,13 @@ const TaskParentBar = memo(() => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const parent = useTaskDetailSelector(taskDetailSelectors.taskParent);
-  const currentIdentifier = useTaskDetailSelector(taskDetailSelectors.taskDetail)?.identifier;
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const currentIdentifier = detail?.identifier;
+  const taskId = useTaskDetailTaskId();
+  const { allowed: canEditTask } = usePermission('create_content');
+  const updateTask = useTaskStore((s) => s.updateTask);
+  const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
+  const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
 
   const [fetchedParentAgent, setFetchedParentAgent] = useState<
     { agentId?: string | null; identifier: string } | undefined
@@ -78,6 +95,27 @@ const TaskParentBar = memo(() => {
   }, [parent?.identifier]);
 
   if (!parent) return null;
+
+  // The parent picker addresses this Issue by database id and observed revision.
+  const canChangeParent = canEditTask && !!taskId && !!detail?.id && !!detail.domainRevision;
+  const changeParent = () => {
+    if (!canChangeParent || !taskId || !detail?.id || !detail.domainRevision) return;
+    openTaskIssueRelationModal({
+      expectedDomainRevision: detail.domainRevision,
+      identifier: detail.identifier,
+      kind: 'subIssueOf',
+      onChanged: async () => {
+        await Promise.all([refreshTaskDetail(taskId), refreshTaskList()]);
+      },
+      taskId: detail.id,
+      title: t('taskDetail.parentBar.changeTitle'),
+    });
+  };
+  // `updateTask` reports its own failure and refetches both Issues.
+  const removeParent = () => {
+    if (!canEditTask || !taskId) return;
+    void updateTask(taskId, { parentTaskId: null }).catch(() => {});
+  };
 
   const parentAgentId =
     parent.agentId === undefined
@@ -138,6 +176,32 @@ const TaskParentBar = memo(() => {
             }
           />
         </span>
+      )}
+      {canEditTask && taskId && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                aria-label={t('taskDetail.parentBar.actions')}
+                className="flex-none"
+                size="icon-sm"
+                variant="ghost"
+              >
+                <MoreHorizontal />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="start">
+            <DropdownMenuGroup>
+              <DropdownMenuItem disabled={!canChangeParent} onClick={changeParent}>
+                {t('taskDetail.parentBar.change')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={removeParent}>
+                {t('taskDetail.parentBar.remove')}
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   );

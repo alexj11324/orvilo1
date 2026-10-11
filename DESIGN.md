@@ -195,6 +195,8 @@ Pills, avatars, and circular actions may be fully round. Role-specific shapes ma
 
 Depth comes from surfaces and borders first. Shared elevation roles are raised cards (`boxShadowTertiary`, often none), popovers/menus (`boxShadowSecondary`), and dialogs (`boxShadow`). The light reference values above describe the existing engine; values may change between light and dark while those roles remain shared. Avoid imposing one library's shadow formula on another. In the dark theme dialogs take no shadow: the scrim and the 1px ring already define the edge.
 
+The local raised-surface role is `--shadow-raised`, used as `shadow-(--shadow-raised)`. It resolves to the existing `boxShadowTertiary` for document pages and other surfaces that already have that raised treatment; it does not add shadows to ordinary cards. The PDF viewer's clipped document page uses the 8px card radius and retains react-pdf's original paper/canvas paint. Its document canvas frame uses 16px block gutters while keeping the caller's 24px inline gutter; PDF page sizing and annotation coordinates remain owned by the renderer. ThemeRoles supplies the resolved light/dark engine value to the document host; globals uses the same engine variable with `none` until that value is available.
+
 Preserve the native desktop glass/translucency boundary in [global styles](src/styles/global.ts) and the desktop shell. Theme-aware translucent surfaces must remain legible over the actual native backdrop; an opaque web reference is not authority to flatten native glass.
 
 ## Motion

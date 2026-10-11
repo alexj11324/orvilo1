@@ -12,6 +12,8 @@ import { DEFAULT_AVATAR } from '@/const/meta';
 import { useTaskStore } from '@/store/task';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
+import { isRunEndedBadly } from './runEnding';
+import RunFailureReason from './RunFailureReason';
 import RunReplyEditor from './RunReplyEditor';
 import { useTaskDetailTaskId } from './TaskDetailScope';
 
@@ -55,9 +57,12 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
     });
   }, [activity.agentId, activity.author, activity.id, activity.title, openTopicDrawer]);
 
-  // Nothing was reported yet — the panel's own empty handling covers that case.
+  // A run that failed, timed out or was stopped often reports nothing at all;
+  // the report then is why it ended. Otherwise nothing was reported yet and the
+  // panel's own empty handling covers that case.
   const body = activity.content || activity.summary;
-  if (!body) return null;
+  const endedBadly = isRunEndedBadly(activity.status);
+  if (!body && !endedBadly) return null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -73,9 +78,12 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
           {activity.author?.name ?? t('taskDetail.reportedByAgent')}
         </div>
       </div>
-      <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
-        {body}
-      </Markdown>
+      {endedBadly && <RunFailureReason reason={activity.error} status={activity.status} />}
+      {body && (
+        <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
+          {body}
+        </Markdown>
+      )}
 
       {commenting ? (
         <RunReplyEditor

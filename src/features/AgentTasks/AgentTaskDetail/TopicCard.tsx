@@ -40,6 +40,8 @@ import { isForbiddenError } from '@/utils/forbiddenError';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { styles } from '../shared/style';
+import { isRunEndedBadly, runEndingLabel } from './runEnding';
+import RunFailureReason from './RunFailureReason';
 import RunIntegrationTag from './RunIntegrationTag';
 import RunReplyEditor from './RunReplyEditor';
 import RunVerifyDetail from './RunVerifyDetail';
@@ -118,9 +120,18 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
   const runTaskId = activity.sourceTaskId ?? activeTaskId;
   const canFollowUp = canEditTask && !!runTaskId;
   const showRunFollowUp = shouldShowRunFollowUp(canFollowUp, isRunning);
+  // A failed, timed-out or stopped run always has something to read: the
+  // recorded reason, or a sentence saying how it ended.
+  const endedBadly = isRunEndedBadly(activity.status);
   const hasBody = Boolean(
-    activity.summary || activity.content || showRunFollowUp || activity.verify?.total,
+    activity.summary || activity.content || showRunFollowUp || activity.verify?.total || endedBadly,
   );
+  const endingLabel = endedBadly
+    ? runEndingLabel(
+        String(t(`taskDetail.runEnded.label.${activity.status}` as never)),
+        activity.error,
+      )
+    : undefined;
   // A verdict with no results behind it has nothing to move down to, so it
   // stays in the header no matter what the body is doing.
   const verifyDetailOpen = bodyExpanded && Boolean(activity.verify?.total);
@@ -330,7 +341,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           ) : (
             avatarNode
           )}
-          <TopicStatusIcon size={16} status={activity.status} />
+          <TopicStatusIcon label={endingLabel} size={16} status={activity.status} />
           {activity.sourceTaskIdentifier && (
             <Tag
               size="sm"
@@ -435,6 +446,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
 
       {hasBody && bodyExpanded && (
         <div className={primary ? 'flex flex-col gap-3' : 'flex flex-col gap-2 px-1'}>
+          {endedBadly && <RunFailureReason reason={activity.error} status={activity.status} />}
           {activity.summary && !(primary && activity.content) && (
             <div
               className="text-sm"

@@ -1822,9 +1822,49 @@ export default {
   'taskDetail.execution.running': 'Running',
   'taskDetail.execution.succeeded': 'Succeeded',
   'taskDetail.execution.waiting': 'Waiting',
+  'taskDetail.execution.action.resume': 'Resume',
+  'taskDetail.execution.action.retry': 'Retry',
+  'taskDetail.execution.action.start': 'Start',
+  'taskDetail.execution.hint.assignAgentToRun': 'Assign an agent to run this Issue again.',
+  'taskDetail.execution.hint.awaitingAcceptance':
+    'The agent finished its run. Review the result to accept it or send it back.',
+  'taskDetail.execution.hint.inProgressNoRun':
+    'This Issue is In Progress, but no run has started. Start it here.',
+  'taskDetail.execution.hint.moveToStart':
+    'The agent starts when you move this Issue to In Progress.',
+  'taskDetail.execution.hint.needsAgent':
+    'This Issue is In Progress but no agent is assigned. Assign an agent to run it.',
+  'taskDetail.execution.hint.outcomeUnknown':
+    'The run ended without a confirmed result. Check the latest run before you retry.',
+  'taskDetail.execution.hint.scheduled': 'The schedule starts the next run.',
+  'taskDetail.execution.hint.stopped':
+    'The run was stopped before it finished. Resume to start a new run.',
+  'taskDetail.execution.hint.timedOut':
+    'The agent stopped reporting progress, so the run was ended.',
+  'taskDetail.execution.noAgentAccess': 'You do not have permission to run this agent.',
+  'taskDetail.execution.startFailed':
+    'The run could not be started. Check the Execution state and try again.',
+  'taskDetail.execution.view.awaitingAcceptance': 'Finished, awaiting acceptance',
+  'taskDetail.execution.view.needsAgent': 'Needs an agent',
+  'taskDetail.execution.view.notStarted': 'Not started',
+  'taskDetail.execution.view.scheduled': 'Scheduled',
+  'taskDetail.execution.view.stopped': 'Stopped',
+  'taskDetail.execution.view.stopping': 'Stopping',
+  'taskDetail.execution.view.timedOut': 'Timed out',
   'taskDetail.executionStatus': 'Execution',
+  'taskDetail.runEnded.canceled': 'This run was stopped before it finished.',
+  'taskDetail.runEnded.failedNoReason':
+    'This run failed. No reason was recorded; open the run to see its last messages.',
+  'taskDetail.runEnded.label.canceled': 'Stopped',
+  'taskDetail.runEnded.label.failed': 'Failed',
+  'taskDetail.runEnded.label.timeout': 'Timed out',
+  'taskDetail.runEnded.showFull': 'Show full reason',
+  'taskDetail.runEnded.showLess': 'Show less',
+  'taskDetail.runEnded.timeout': 'This run timed out: the agent stopped reporting progress.',
   'taskDetail.dispatchNotice.admissionDisabled':
-    'This workspace is not starting queued runs automatically right now. Runs already in progress are not affected, and you can still start a run yourself.',
+    'This workspace is not starting queued runs automatically right now. Runs already in progress are not affected.',
+  'taskDetail.dispatchNotice.heldByAdmission':
+    'Waiting to start. This run was held while the workspace was not starting queued runs automatically.',
   'taskDetail.dispatchNotice.reason.goalPaused':
     'Waiting because the goal this Issue belongs to is paused. Resume the goal to continue.',
   'taskDetail.dispatchNotice.reason.noAgent':
@@ -1839,6 +1879,7 @@ export default {
   'taskDetail.menu.makeCopy': 'Make a copy…',
   'taskDetail.menu.cancel': 'Cancel issue',
   'taskDetail.menu.reopen': 'Reopen issue',
+  'taskDetail.menu.rerun': 'Run again',
   'taskDetail.menu.remove': 'Remove',
   'taskDetail.menu.removeParent': 'Parent issue',
   'taskDetail.menu.removeSubIssue': 'Sub-issue',

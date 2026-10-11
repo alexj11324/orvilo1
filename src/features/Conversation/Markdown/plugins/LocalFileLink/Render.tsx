@@ -20,18 +20,7 @@ interface LocalFileLinkProperties {
   linkLabel?: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  reference: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-    vertical-align: -0.16em;
-  `,
-  icon: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-  `,
+const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
   link: css`
     cursor: pointer;
 
@@ -41,7 +30,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     margin-inline: -2px;
     padding-inline: 2px;
-    border-radius: ${cssVar.borderRadiusSM};
+    border-radius: var(--radius-chip);
 
     text-decoration: none;
     vertical-align: -0.16em;
@@ -71,6 +60,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     }
   `,
 }));
+
+const styles = {
+  reference: 'inline-flex gap-1 items-center align-[-0.16em]',
+  icon: 'inline-flex shrink-0 items-center',
+};
 
 const getFileName = (filePath: string) => filePath.split(/[\\/]/).at(-1) || filePath;
 
@@ -113,7 +107,7 @@ const Render = memo<MarkdownElementProps<LocalFileLinkProperties>>(({ node }) =>
         <Tooltip>
           <TooltipTrigger
             render={
-              <span style={{ display: 'inline-flex' }}>
+              <span className="inline-flex">
                 <span className={styles.reference} data-file-path={parsed?.filePath}>
                   <span aria-hidden className={styles.icon}>
                     <FileIcon fileName={iconFileName} size={16} variant={'raw'} />
@@ -136,10 +130,10 @@ const Render = memo<MarkdownElementProps<LocalFileLinkProperties>>(({ node }) =>
       <Tooltip>
         <TooltipTrigger
           render={
-            <span style={{ display: 'inline-flex' }}>
+            <span className="inline-flex">
               <a
                 {...(parsed ? { [RENDERER_HANDLED_LINK_ATTR]: 'true' } : {})}
-                className={styles.link}
+                className={registeredStyles.link}
                 href={linkHref}
                 onClick={handleClick}
               >

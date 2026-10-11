@@ -28,12 +28,7 @@ import {
   internalEntityPreviewKey,
 } from './InternalEntityPreview';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  icon: css`
-    margin-inline-end: 4px;
-    color: ${cssVar.colorTextSecondary};
-    vertical-align: -0.15em;
-  `,
+const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
   link: css`
     /* Keep the label on the surrounding text baseline instead of the icon's flex baseline. */
     display: inline;
@@ -58,12 +53,16 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     }
 
     &:focus-visible {
-      border-radius: 2px;
+      border-radius: var(--radius-chip);
       outline: 2px solid ${cssVar.colorPrimaryBorder};
       outline-offset: 2px;
     }
   `,
 }));
+
+const styles = {
+  icon: 'me-1 size-3.5 text-muted-foreground align-[-0.15em]',
+};
 
 const ENTITY_ICONS = {
   acceptance: BadgeCheckIcon,
@@ -215,7 +214,7 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
   const link = (
     <a
       {...{ [RENDERER_HANDLED_LINK_ATTR]: 'true' }}
-      className={styles.link}
+      className={registeredStyles.link}
       href={href}
       rel="noopener noreferrer"
       target="_blank"

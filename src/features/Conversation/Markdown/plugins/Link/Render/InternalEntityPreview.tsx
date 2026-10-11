@@ -2,7 +2,6 @@
 import { Freeze } from '@lobehub/ui';
 import type { VerifyCodingScope } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import type { TFunction } from 'i18next';
 import {
@@ -26,46 +25,13 @@ import { verifyService } from '@/services/verify';
 
 import type { InternalLinkReference } from '../internalLink';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  content: css`
-    width: 320px;
-    padding: 16px;
-  `,
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    line-height: 1.55;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  icon: css`
-    display: grid;
-    flex: none;
-    place-items: center;
-
-    width: 36px;
-    height: 36px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-weight: 600;
-    line-height: 1.4;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  type: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  content: 'w-80 p-4',
+  description: 'line-clamp-3 text-sm leading-5.5 text-muted-foreground',
+  icon: 'grid size-9 flex-none place-items-center rounded-(--radius-card) text-muted-foreground bg-muted',
+  title: 'truncate text-sm leading-5.5 font-semibold',
+  type: 'text-xs leading-5 text-foreground-tertiary',
+};
 
 interface PreviewData {
   avatar?: string | null;
@@ -251,7 +217,7 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
           ) : (
             <span className={styles.icon}>{createElement(icon, { size: 19 })}</span>
           )}
-          <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className={styles.type}>{typeLabel}</span>
             <span className={styles.title}>{data?.title || fallbackTitle}</span>
           </div>
@@ -259,9 +225,9 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
         {data?.description && (
           <div className={cn('text-sm', styles.description)}>{data.description}</div>
         )}
-        {data?.meta && <div className="text-xs text-muted-foreground">{data.meta}</div>}
+        {data?.meta && <div className="text-xs leading-5 text-muted-foreground">{data.meta}</div>}
         {data?.secondaryMeta && (
-          <div className="text-xs text-muted-foreground">{data.secondaryMeta}</div>
+          <div className="text-xs leading-5 text-muted-foreground">{data.secondaryMeta}</div>
         )}
       </div>
     );
@@ -269,7 +235,7 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger openOnHover delay={350} render={<span>{children}</span>} />
-        <PopoverContent side="top" style={{ borderRadius: 12, overflow: 'hidden', padding: 0 }}>
+        <PopoverContent className="overflow-hidden p-0" side="top">
           {/* Disabling the SWR key clears data before the exit animation finishes. */}
           <Freeze frozen={!open}>{content}</Freeze>
         </PopoverContent>

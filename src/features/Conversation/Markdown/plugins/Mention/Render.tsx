@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,32 +12,10 @@ import { sessionSelectors } from '@/store/session/selectors';
 
 import { type MarkdownElementProps } from '../type';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  mention: css`
-    cursor: pointer;
-
-    position: relative;
-
-    display: inline;
-
-    margin-inline: 0.25em;
-    padding-block: 0.2em;
-    padding-inline: 0.4em;
-    border-radius: 0.25em;
-
-    font-size: 0.875em;
-    line-height: 1;
-    color: ${cssVar.colorInfo};
-    word-break: break-word;
-    white-space: break-spaces;
-
-    background: ${cssVar.colorInfoBg};
-
-    &:hover {
-      background: color-mix(in srgb, ${cssVar.colorInfo} 15%, ${cssVar.colorBgContainer});
-    }
-  `,
-}));
+const styles = {
+  mention:
+    'relative inline cursor-pointer mx-1 py-0.5 px-1.5 rounded-(--radius-chip) text-sm leading-5.5 text-info-text [word-break:break-word] whitespace-break-spaces bg-info-wash hover:bg-[color-mix(in_srgb,var(--info)_15%,var(--card))]',
+};
 
 interface MentionProps {
   id: string;
@@ -77,16 +54,18 @@ const Render = memo<MarkdownElementProps<MentionProps>>(({ children, node }) => 
     <Popover>
       <PopoverContent>
         {
-          <div className="flex flex-col gap-3" style={{ width: 320, overflow: 'hidden' }}>
+          <div className="flex w-80 flex-col gap-3 overflow-hidden">
             <div className="flex items-center gap-2">
               <Avatar
                 avatar={member.avatar || DEFAULT_AVATAR}
                 background={member.backgroundColor ?? undefined}
+                className="flex-none"
                 shape={'square'}
-                style={{ flex: 'none' }}
               />
-              <div className="flex flex-col" style={{ overflow: 'hidden' }}>
-                <div className="truncate text-muted-foreground">{member.description}</div>
+              <div className="flex flex-col overflow-hidden">
+                <div className="truncate text-sm leading-5.5 text-muted-foreground">
+                  {member.description}
+                </div>
               </div>
             </div>
           </div>

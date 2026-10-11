@@ -14,6 +14,14 @@ export const isTrpcErrorCode = (error: unknown, code: TRPC_ERROR_CODE_KEY): bool
   return (error as { data?: { code?: unknown } }).data?.code === code;
 };
 
+/**
+ * Detect a `PRECONDITION_FAILED` rejection carrying one stable reason. The
+ * server puts the reason in `message` (e.g. `EXPERTISE_UNAVAILABLE`), so this
+ * never depends on localized text.
+ */
+export const isTrpcPreconditionReason = (error: unknown, reason: string): boolean =>
+  isTrpcErrorCode(error, 'PRECONDITION_FAILED') && trpcErrorMessage(error) === reason;
+
 export const trpcErrorMessage = (error: unknown): string | undefined => {
   if (typeof error !== 'object' || error === null) return undefined;
   const record = error as { message?: unknown; shape?: { message?: unknown } };

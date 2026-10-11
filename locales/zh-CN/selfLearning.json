@@ -54,6 +54,7 @@
   "create.next": "下一步",
   "create.regenerate": "重新生成",
   "create.reviewHelp": "这是它从你的描述里读出来的锚。看看有没有偏 —— 过滤器决定它从哪些对话里学；分层和经典依据决定经验挂在哪、「覆盖」意味着什么。",
+  "create.unavailable": "此部署暂不支持用 AI 起草方向，你填写的描述已保留。",
   "domain.delete": "删除",
   "domain.deleteConfirm.content": "它在这个方向学到的 {{habits}} 条经验、{{runs}} 次实践记录会一起删掉，不可恢复。",
   "domain.deleteConfirm.ok": "删除",

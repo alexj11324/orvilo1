@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { openAddGoalTaskModal } from '@/features/AgentGoals/AddTaskModal';
 import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
+import type { DispatchNoticeCopy } from '@/features/AgentTasks/shared/dispatchNotice';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useChatStore } from '@/store/chat';
@@ -60,6 +61,8 @@ interface FrontierProps {
   actions: FrontierActions;
   canEdit: boolean;
   graph: GoalGraphView;
+  /** Why ready tasks are not being started on their own, when the server says so. */
+  notice?: DispatchNoticeCopy;
   onSelect: (nodeId: string) => void;
   /** The coordinator is still decomposing — the empty list is a promise, not a lull. */
   planning?: boolean;
@@ -434,7 +437,7 @@ const AddTaskButton = memo<{ onAdd: FrontierActions['addTask'] }>(({ onAdd }) =>
 
 AddTaskButton.displayName = 'GoalAddTaskButton';
 
-const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, planning }) => {
+const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelect, planning }) => {
   const { t } = useTranslation('chat');
   const [showBlocked, setShowBlocked] = useState(false);
 
@@ -459,6 +462,11 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
         </div>
         {canEdit && <AddTaskButton onAdd={actions.addTask} />}
       </div>
+      {notice && (
+        <p className="text-xs text-muted-foreground" data-testid="goal-dispatch-notice">
+          {t(notice.key as never)}
+        </p>
+      )}
 
       <div className={styles.list}>
         <div className="flex flex-col gap-0 p-0.5">

@@ -40,6 +40,7 @@ import { ISSUE_RELATION_KINDS } from './relationGroups';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskDispatchNotice from './TaskDispatchNotice';
 import TaskPrerequisites from './TaskPrerequisites';
 import {
   createPropertyRevealState,
@@ -197,9 +198,17 @@ const TaskProperties = memo(() => {
         </PropertyRow>
 
         {optionalFields.execution && (
-          <PropertyRow label={t('taskDetail.executionStatus')}>
-            <TaskExecutionBadge showLabel dispatchPhase={dispatchPhase} size={16} status={status} />
-          </PropertyRow>
+          <>
+            <PropertyRow label={t('taskDetail.executionStatus')}>
+              <TaskExecutionBadge
+                showLabel
+                dispatchPhase={dispatchPhase}
+                size={16}
+                status={status}
+              />
+            </PropertyRow>
+            <TaskDispatchNotice />
+          </>
         )}
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (

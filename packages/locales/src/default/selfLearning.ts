@@ -46,6 +46,8 @@ export default {
   'create.cancel': 'Cancel',
   'create.confirm': 'Create',
   'create.failed': 'Could not create the direction. Try again.',
+  'create.unavailable':
+    'Drafting with AI is not available on this deployment. Your description is kept.',
   'create.field.brief': 'Direction brief',
   'create.field.domainFilter': 'What counts as practice',
   'create.field.outOfScope': 'What does not count',

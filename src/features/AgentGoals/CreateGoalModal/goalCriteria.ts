@@ -4,6 +4,8 @@ import type { VerifyCriterionDraft } from '@/services/verify';
 import { verifyService } from '@/services/verify';
 
 interface GenerateGoalCriteriaParams {
+  /** The agent the goal is being created for, when the opener supplied one. */
+  agentId?: string;
   context?: string;
   goal: string;
 }
@@ -29,10 +31,12 @@ export const createFallbackGoalCriterion = (goal: string): GoalCriterionDraft =>
 });
 
 export const generateGoalCriteria = async ({
+  agentId,
   context,
   goal,
 }: GenerateGoalCriteriaParams): Promise<GeneratedGoalPlan> => {
   const generated = await verifyService.generateGoalPlan({
+    agentId,
     context,
     goal,
     maxCriteria: 8,

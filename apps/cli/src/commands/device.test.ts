@@ -113,6 +113,31 @@ describe('device command', () => {
     });
   });
 
+  describe('status', () => {
+    const printedLines = () => consoleSpy.mock.calls.map((call: unknown[]) => String(call[0]));
+
+    it('should say the gateway is not configured instead of only reporting offline', async () => {
+      mockTrpcClient.device.status.query.mockResolvedValue({
+        deviceCount: 0,
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
+        online: false,
+      });
+
+      await createProgram().parseAsync(['node', 'test', 'device', 'status']);
+
+      expect(printedLines().some((line) => line.includes('not configured'))).toBe(true);
+    });
+
+    it('should not mention the gateway when it is configured but no device is online', async () => {
+      mockTrpcClient.device.status.query.mockResolvedValue({ deviceCount: 0, online: false });
+
+      await createProgram().parseAsync(['node', 'test', 'device', 'status']);
+
+      expect(printedLines().some((line) => line.includes('Gateway'))).toBe(false);
+      expect(printedLines().some((line) => line.includes('Online'))).toBe(true);
+    });
+  });
+
   describe('delete', () => {
     it('should remove a device with --yes (no prompt)', async () => {
       mockTrpcClient.device.removeDevice.mutate.mockResolvedValue({ success: true });

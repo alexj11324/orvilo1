@@ -1823,6 +1823,13 @@ export default {
   'taskDetail.execution.succeeded': 'Succeeded',
   'taskDetail.execution.waiting': 'Waiting',
   'taskDetail.executionStatus': 'Execution',
+  'taskDetail.dispatchNotice.admissionDisabled':
+    'This workspace is not starting queued runs automatically right now. Runs already in progress are not affected, and you can still start a run yourself.',
+  'taskDetail.dispatchNotice.reason.goalPaused':
+    'Waiting because the goal this Issue belongs to is paused. Resume the goal to continue.',
+  'taskDetail.dispatchNotice.reason.noAgent':
+    'Waiting for an agent. Assign an agent to this Issue to start it.',
+  'taskDetail.dispatchNotice.reason.other': 'Waiting to start: {{reason}}',
   'taskDetail.project': 'Project',
   'taskDetail.noProject': 'No project',
   'taskDetail.openProject': 'Open project',
@@ -2331,6 +2338,8 @@ export default {
   'goalProcess.frontier.emptyTitle': 'Nothing to advance right now',
   'goalProcess.frontier.emptyDescription':
     'Every task is either waiting on a dependency or already finished.',
+  'goalProcess.frontier.dispatchHeld':
+    'This workspace is not starting new tasks automatically right now, so ready tasks will wait. Tasks already running are not affected.',
   'goalProcess.frontier.achievedTitle': 'Nothing left to advance — this goal is achieved',
   'goalProcess.frontier.achievedDescription': 'The findings are in the map below.',
   'goalProcess.addTask.failed': 'Failed to add the task — please try again',

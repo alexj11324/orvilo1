@@ -2,7 +2,7 @@
 
 import { Image, PreviewGroup } from '@lobehub/ui';
 import type { BuiltinRender, BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
 
@@ -15,14 +15,9 @@ import {
   parseBrowserMcpApi,
 } from '../Inspector/browserMcpLabels';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  row: css`
-    padding-block: 6px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-  `,
-}));
+const styles = {
+  row: 'rounded-(--radius-card) border border-divider px-2.5 py-1.5 text-sm leading-5.5',
+};
 
 /**
  * A screenshot echoed back by the in-app browser. The MCP handler returns the
@@ -56,7 +51,7 @@ const PageRow = memo<{ content?: string }>(({ content }) => {
   if (!content) return null;
 
   return (
-    <div className={cx('flex flex-row items-center gap-1.5', styles.row)}>
+    <div className={cn('flex flex-row items-center gap-1.5', styles.row)}>
       <Globe size={14} />
       <div className="truncate block">{content}</div>
     </div>
@@ -92,9 +87,8 @@ const Screenshot = memo<BrowserMcpRenderProps>(({ content, pluginState }) => {
             // any padding reads as a mat around the screenshot rather than a frame.
             // `display: flex` also kills the inline-image baseline gap, which would
             // otherwise leave a sliver of background under the picture.
-            className="rounded-(--radius-card) border"
+            className="flex self-start overflow-hidden rounded-(--radius-card) border p-0"
             key={image.fileId || image.url || index}
-            style={{ alignSelf: 'flex-start', display: 'flex', overflow: 'hidden', padding: 0 }}
           >
             {/* A full-page capture of the sidebar browser is tall (e.g. 720×1620), so
                 bound the height and let the user click through to the preview for the

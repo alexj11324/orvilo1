@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckCircle, DiffIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,12 +10,9 @@ import { oneLineEllipsis, shinyTextStyles } from '@/styles';
 
 import type { UpdatePlanParams, UpdatePlanState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  title: css`
-    margin-inline-end: 8px;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  title: 'me-2 text-foreground',
+};
 
 export const UpdatePlanInspector = memo<BuiltinInspectorProps<UpdatePlanParams, UpdatePlanState>>(
   ({ args, partialArgs, isArgumentsStreaming }) => {
@@ -27,7 +24,7 @@ export const UpdatePlanInspector = memo<BuiltinInspectorProps<UpdatePlanParams, 
 
     if (isArgumentsStreaming && !planId) {
       return (
-        <div className={oneLineEllipsis}>
+        <div className={cn(oneLineEllipsis, 'text-sm leading-5.5')}>
           <span className={shinyTextStyles.shinyText}>
             {t('builtins.orvilo-agent.apiName.updatePlan')}
           </span>
@@ -36,24 +33,18 @@ export const UpdatePlanInspector = memo<BuiltinInspectorProps<UpdatePlanParams, 
     }
 
     return (
-      <div className={oneLineEllipsis}>
-        <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
+      <div className={cn(oneLineEllipsis, 'text-sm leading-5.5')}>
+        <span className={cn(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-agent.apiName.updatePlan')}
         </span>
         {completed && (
-          <span
-            className="font-mono rounded bg-muted px-1 text-xs"
-            style={{ color: cssVar.colorSuccess }}
-          >
+          <span className="rounded-(--radius-chip) bg-muted px-1 text-xs leading-5 text-success-text">
             <CheckCircle size={12} />
             {t('builtins.orvilo-agent.apiName.updatePlan.completed')}
           </span>
         )}
         {hasUpdates && !completed && (
-          <span
-            className="font-mono rounded bg-muted px-1 text-xs"
-            style={{ color: cssVar.colorWarning }}
-          >
+          <span className="rounded-(--radius-chip) bg-muted px-1 text-xs leading-5 text-warning-text">
             <DiffIcon size={12} />
             {t('builtins.orvilo-agent.apiName.updatePlan.modified')}
           </span>

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs, { type Dayjs } from 'dayjs';
 import { CalendarIcon, EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
@@ -32,7 +31,6 @@ import {
 } from '@/features/Projects/milestoneRow';
 import { projectIssueProgress } from '@/features/Projects/projectIssueProgress';
 import { formatProjectDate, PROJECT_DAY_FORMAT } from '@/features/Projects/projectPlanningDate';
-import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 
@@ -57,193 +55,31 @@ interface MilestoneDraft {
 const HOVER_CONTROLS_CLASS = 'project-milestone-hover-controls';
 const DRAG_HANDLE_CLASS = 'project-milestone-drag-handle';
 
-const styles = createStaticStyles(({ css }) => ({
-  addButton: css`
-    align-self: flex-start;
-    border-radius: 9999px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  assignButton: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    height: 24px;
-    padding-block: 0;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 9999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  card: css`
-    position: relative;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgContainer};
-
-    &:hover
-      .${HOVER_CONTROLS_CLASS},
-      &:focus-within
-      .${HOVER_CONTROLS_CLASS},
-      &:hover
-      .${DRAG_HANDLE_CLASS},
-      &:focus-within
-      .${DRAG_HANDLE_CLASS} {
-      opacity: 1;
-    }
-  `,
-  cardMenuOpen: css`
-    .${HOVER_CONTROLS_CLASS} {
-      opacity: 1;
-    }
-  `,
-  collapseButton: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-    padding: 0;
-    border: 0;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  composer: css`
-    padding-block: 12px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-  `,
-  description: css`
-    white-space: pre-wrap;
-  `,
-  descriptionGhost: css`
-    cursor: pointer;
-
-    padding-block: 0;
-    padding-inline: 0;
-    border: 0;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextDescription};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  dragHandle: css`
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-
-    width: 14px;
-    height: 100%;
-    border-radius: 8px 0 0 8px;
-
-    opacity: 0;
-  `,
-  headerRow: css`
-    min-height: 31px;
-  `,
-  hiddenControl: css`
-    opacity: 0;
-    transition: opacity 120ms;
-  `,
-  hoverControls: css`
-    display: flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    opacity: 0;
-
-    transition: opacity 120ms;
-  `,
-  milestoneIconLink: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-
-    width: 22px;
-    height: 16px;
-
-    color: inherit;
-  `,
-  milestoneProgress: css`
-    /* Reference: <a href="…/issues?projectMilestoneId=<id>">N issues · 100%</a>,
-       13px/450, a 28px-tall hit area at the end of the milestone row. */
-    display: flex;
-    flex: none;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 8px;
-    border-radius: 9999px;
-
-    font-size: 13px;
-    font-weight: 450;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  noMilestoneRow: css`
-    min-height: 42px;
-    padding-block: 6px;
-    padding-inline: 4px;
-    border-radius: 8px;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  section: css`
-    padding-block: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  unassignedBody: css`
-    padding-block: 2px 6px;
-    padding-inline: 30px;
-  `,
-  unassignedRow: css`
-    min-height: 28px;
-    border-radius: 6px;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
+const styles = {
+  addButton: 'self-start rounded-(--radius-button) text-muted-foreground',
+  assignButton:
+    'flex h-7 flex-none cursor-pointer items-center gap-1 rounded-(--radius-input) border-0 bg-transparent px-2 py-0 text-xs leading-5 text-muted-foreground hover:bg-fill-quaternary hover:text-foreground',
+  card: 'relative rounded-(--radius-card) border border-divider bg-card p-4 [&:hover_.project-milestone-hover-controls]:opacity-100 [&:focus-within_.project-milestone-hover-controls]:opacity-100 [&:hover_.project-milestone-drag-handle]:opacity-100 [&:focus-within_.project-milestone-drag-handle]:opacity-100',
+  cardMenuOpen: '[&_.project-milestone-hover-controls]:opacity-100',
+  collapseButton:
+    'flex size-8 min-h-8 min-w-8 flex-none cursor-pointer items-center justify-center rounded-(--radius-button) border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground',
+  composer: 'rounded-(--radius-card) border border-divider p-4',
+  description: 'whitespace-pre-wrap',
+  descriptionGhost:
+    'cursor-pointer border-0 bg-transparent px-0 py-0 text-sm leading-5.5 text-foreground-description hover:text-muted-foreground',
+  dragHandle: 'absolute inset-y-0 start-0 h-full w-3.5 rounded-s-(--radius-card) opacity-0',
+  headerRow: 'min-h-8',
+  hiddenControl: 'opacity-0 transition-opacity duration-(--orvilo-motion-fast)',
+  hoverControls:
+    'flex flex-none items-center gap-1 opacity-0 transition-opacity duration-(--orvilo-motion-fast)',
+  milestoneIconLink: 'flex size-8 flex-none items-center justify-center text-inherit',
+  milestoneProgress:
+    'flex h-7 flex-none items-center rounded-(--radius-input) px-2 text-xs leading-5 font-normal text-muted-foreground hover:bg-fill-quaternary hover:text-foreground group-focus-visible/project-progress:bg-fill-quaternary group-focus-visible/project-progress:text-foreground',
+  noMilestoneRow: 'min-h-11 rounded-(--radius-card) px-1 py-1.5 hover:bg-fill-quaternary',
+  section: 'border-bs border-divider py-4',
+  unassignedBody: 'pbs-0.5 pbe-1.5 px-7.5',
+  unassignedRow: 'min-h-11 rounded-(--radius-card) hover:bg-fill-quaternary',
+};
 
 interface MilestoneComposerProps {
   initial?: Milestone;
@@ -267,7 +103,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
     };
 
     return (
-      <div className={cn('flex flex-col', styles.composer)} style={{ gap: 8 }}>
+      <div className={cn(cn('flex flex-col', styles.composer), 'gap-2')}>
         <Input
           autoFocus
           aria-label={t('create.milestone.name')}
@@ -301,7 +137,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
-        <div className="flex flex-row" style={{ justifyContent: 'end', gap: 8 }}>
+        <div className="flex flex-row [justify-content:end] gap-2">
           <Button size="lg" variant="outline" onClick={onCancel}>
             {t('common:cancel')}
           </Button>
@@ -482,9 +318,11 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
     const collapsed = collapsedIds.has(milestone.id);
     return (
       <div
-        className={cx(styles.card, menuOpenId === milestone.id && styles.cardMenuOpen)}
         id={getMilestoneAnchorId(milestone.id)}
-        style={{ flex: 1, minWidth: 0 }}
+        className={cn(
+          cn(styles.card, menuOpenId === milestone.id && styles.cardMenuOpen),
+          'flex-1 min-w-0',
+        )}
       >
         {editingId === milestone.id ? (
           <MilestoneComposer
@@ -504,10 +342,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
           />
         ) : (
           <>
-            <div
-              className={cn('flex flex-row', styles.headerRow)}
-              style={{ alignItems: 'center', gap: 6 }}
-            >
+            <div className={cn(cn('flex flex-row', styles.headerRow), 'items-center gap-1.5')}>
               <a
                 aria-label={milestone.name}
                 className={styles.milestoneIconLink}
@@ -516,10 +351,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               >
                 <MilestoneIcon size={MILESTONE_ICON_SIZE} />
               </a>
-              <span
-                className="text-sm"
-                style={{ fontSize: 15, fontWeight: 450, flex: '0 1 auto', minWidth: 0 }}
-              >
+              <span className="text-sm leading-5.5 font-normal flex-[0_1_auto] min-w-0">
                 {milestone.name}
               </span>
               <button
@@ -532,18 +364,20 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               >
                 <AccordionArrowIcon isOpen={!collapsed} size={16} />
               </button>
-              <div className="flex flex-col" style={{ flex: 1 }} />
+              <div className="flex flex-col flex-1" />
               {/* A `null` readout could not be computed honestly; the link and
                   its number land together or not at all. */}
               {milestone.progress && (
                 <WorkspaceLink
-                  className={styles.milestoneProgress}
+                  className="group/project-progress inline-flex rounded-(--radius-input) focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
                   to={getProjectMilestoneIssuesPath(projectRef, milestone.id)}
                 >
-                  {t('overview.milestoneIssues', {
-                    count: milestone.progress.issues,
-                    percent: milestone.progress.percent,
-                  })}
+                  <span className={styles.milestoneProgress}>
+                    {t('overview.milestoneIssues', {
+                      count: milestone.progress.issues,
+                      percent: milestone.progress.percent,
+                    })}
+                  </span>
                 </WorkspaceLink>
               )}
               {canEdit ? (
@@ -555,7 +389,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                     disabled={saving}
                     value={milestone.date}
                     className={
-                      !milestone.date ? cx(HOVER_CONTROLS_CLASS, styles.hiddenControl) : undefined
+                      !milestone.date ? cn(HOVER_CONTROLS_CLASS, styles.hiddenControl) : undefined
                     }
                     onChange={(date) => {
                       if (date === (milestone.date ?? null)) return;
@@ -565,16 +399,12 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                       );
                     }}
                   />
-                  <div className={cx(HOVER_CONTROLS_CLASS, styles.hoverControls)}>
+                  <div className={cn(HOVER_CONTROLS_CLASS, styles.hoverControls)}>
                     <DropdownMenu
                       items={milestoneMenu(milestone)}
                       onOpenChange={(open) => setMenuOpenId(open ? milestone.id : null)}
                     >
-                      <Button
-                        aria-label={t('overview.milestoneMenu')}
-                        size="icon-sm"
-                        variant="ghost"
-                      >
+                      <Button aria-label={t('overview.milestoneMenu')} size="icon" variant="ghost">
                         {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
                       </Button>
                     </DropdownMenu>
@@ -582,10 +412,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                 </>
               ) : (
                 milestone.date && (
-                  <span
-                    className="text-sm text-muted-foreground"
-                    style={{ fontSize: 12, flex: 'none' }}
-                  >
+                  <span className="text-muted-foreground text-xs leading-5 flex-none">
                     {formatProjectDate(milestone.date)}
                   </span>
                 )
@@ -593,17 +420,19 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
             </div>
             {!collapsed &&
               (milestone.description ? (
-                <div className="flex flex-col" style={{ paddingInlineStart: 28 }}>
+                <div className="flex flex-col ps-7">
                   <span
-                    className={cn('text-sm text-muted-foreground', styles.description)}
-                    style={{ fontSize: 13 }}
+                    className={cn(
+                      cn('text-sm text-muted-foreground', styles.description),
+                      'text-sm leading-5.5',
+                    )}
                   >
                     {milestone.description}
                   </span>
                 </div>
               ) : (
                 canEdit && (
-                  <div className="flex flex-col" style={{ paddingInlineStart: 28 }}>
+                  <div className="flex flex-col ps-7">
                     <button
                       className={styles.descriptionGhost}
                       type="button"
@@ -619,7 +448,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
         {canEdit && (
           <SortableItemHandle
             aria-label={t('overview.milestoneDrag')}
-            className={cx(DRAG_HANDLE_CLASS, styles.dragHandle)}
+            className={cn(DRAG_HANDLE_CLASS, styles.dragHandle)}
           />
         )}
       </div>
@@ -627,33 +456,22 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
   };
 
   return (
-    <section
-      className={cn('flex flex-col', styles.section)}
-      id={'milestone-list'}
-      style={{ gap: 8 }}
-    >
-      <div className="flex flex-row" style={{ alignItems: 'center', gap: 7 }}>
-        <span
-          className="text-sm"
-          style={{
-            color: SECTION_LABEL_PROPS.color,
-            fontSize: SECTION_LABEL_PROPS.fontSize,
-            fontWeight: SECTION_LABEL_PROPS.weight,
-          }}
-        >
+    <section className={cn(cn('flex flex-col', styles.section), 'gap-2')} id={'milestone-list'}>
+      <div className="flex flex-row items-center gap-1.75">
+        <span className="text-muted-foreground text-xs leading-5 font-medium">
           {t('overview.milestones')}
         </span>
       </div>
       {milestones.length === 0 ? (
-        <span className="text-sm text-muted-foreground" style={{ fontSize: 13, paddingBlock: 4 }}>
+        <span className="text-muted-foreground text-sm leading-5.5 py-1">
           {t('overview.milestonesEmpty')}
         </span>
       ) : (
         <>
           <Sortable
-            className="flex flex-col"
+            className="flex flex-col gap-1"
             getItemValue={(milestone) => milestone.id}
-            style={{ gap: 4 }}
+
             value={milestones}
             onValueChange={() => {}}
             onValueCommit={(items) => {
@@ -675,14 +493,9 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                 const milestone = milestones.find((item) => item.id === value);
                 if (!milestone) return null;
                 return (
-                  <div
-                    className={cn('flex flex-row', styles.card)}
-                    style={{ alignItems: 'center', gap: 8 }}
-                  >
+                  <div className={cn(cn('flex flex-row', styles.card), 'items-center gap-2')}>
                     <MilestoneIcon size={MILESTONE_ICON_SIZE} />
-                    <span className="text-sm" style={{ fontSize: 15, fontWeight: 450 }}>
-                      {milestone.name}
-                    </span>
+                    <span className="text-sm leading-5.5 font-normal">{milestone.name}</span>
                   </div>
                 );
               }}
@@ -693,62 +506,58 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               destination); expanding it lists the issues so one can be filed
               under a milestone — the only UI path onto `setTaskMilestone`. */}
           <div className={styles.noMilestoneRow}>
-            <div className="flex flex-row" style={{ alignItems: 'center', gap: 10 }}>
+            <div className="flex flex-row items-center gap-2.5">
               <MilestoneIcon muted size={MILESTONE_ICON_SIZE} />
               {unassignedTasks.length > 0 ? (
                 <button
                   aria-expanded={unassignedOpen}
                   aria-label={t('overview.noMilestone')}
-                  className={styles.collapseButton}
-                  style={{ height: 'auto', width: 'auto' }}
+                  className={cn(styles.collapseButton, 'h-auto w-auto')}
+
                   type="button"
                   onClick={() => setUnassignedOpen((open) => !open)}
                 >
-                  <span
-                    className="text-sm text-muted-foreground"
-                    style={{ fontSize: 13, fontWeight: 450 }}
-                  >
+                  <span className="text-muted-foreground text-sm leading-5.5 font-normal">
                     {t('overview.noMilestone')}
                   </span>
                   <AccordionArrowIcon isOpen={unassignedOpen} size={14} />
                 </button>
               ) : (
-                <span
-                  className="text-sm text-muted-foreground"
-                  style={{ fontSize: 13, fontWeight: 450 }}
-                >
+                <span className="text-muted-foreground text-sm leading-5.5 font-normal">
                   {t('overview.noMilestone')}
                 </span>
               )}
-              <div className="flex flex-col" style={{ flex: 1 }} />
+              <div className="flex flex-col flex-1" />
               {unassignedProgress && (
                 <WorkspaceLink
-                  className={styles.milestoneProgress}
+                  className="group/project-progress inline-flex rounded-(--radius-input) focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
                   to={getProjectTasksPath(projectRef)}
                 >
-                  {t('overview.milestoneIssues', {
-                    count: unassignedProgress.scope,
-                    percent:
-                      unassignedProgress.scope === 0
-                        ? 0
-                        : Math.round(
-                            (unassignedProgress.completed / unassignedProgress.scope) * 100,
-                          ),
-                  })}
+                  <span className={styles.milestoneProgress}>
+                    {t('overview.milestoneIssues', {
+                      count: unassignedProgress.scope,
+                      percent:
+                        unassignedProgress.scope === 0
+                          ? 0
+                          : Math.round(
+                              (unassignedProgress.completed / unassignedProgress.scope) * 100,
+                            ),
+                    })}
+                  </span>
                 </WorkspaceLink>
               )}
             </div>
             {unassignedOpen &&
               unassignedTasks.map((task: ProjectTask) => (
                 <div
-                  className={cn('flex flex-row', cx(styles.unassignedBody, styles.unassignedRow))}
                   key={task.id}
-                  style={{ alignItems: 'center', gap: 8 }}
+                  className={cn(
+                    cn('flex flex-row', cn(styles.unassignedBody, styles.unassignedRow)),
+                    'items-center gap-2',
+                  )}
                 >
-                  <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
-                    {task.identifier}
-                  </span>
-                  <span className="text-sm truncate" style={{ fontSize: 13, flex: 1, minWidth: 0 }}>
+                  <span className="text-muted-foreground text-xs leading-5">{task.identifier}</span>
+                  <span className="truncate text-sm leading-5.5 flex-1 min-w-0">
                     {task.name ?? task.identifier}
                   </span>
                   {canEdit && (

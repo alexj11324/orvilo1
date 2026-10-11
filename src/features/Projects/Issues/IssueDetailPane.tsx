@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowUpRightIcon, XIcon } from 'lucide-react';
 import { createElement, lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,27 +14,10 @@ const LazyIssuePeekActions = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssuePeekActions })),
 );
 
-const styles = createStaticStyles(({ css }) => ({
-  /**
-   * Sticky inside the pane's own scroll host — the header stays put while
-   * `IssueContent` scrolls beneath it, matching Linear's peek chrome.
-   */
-  paneHeader: css`
-    position: sticky;
-    z-index: 2;
-    inset-block-start: 0;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 16px 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgLayout};
-  `,
-}));
+const styles = {
+  paneHeader:
+    'sticky top-0 z-2 flex items-center gap-1 border-be border-divider bg-background py-2 ps-4 pe-2',
+};
 
 interface IssueDetailPaneProps {
   /**
@@ -62,13 +44,10 @@ const IssueDetailPane = memo<IssueDetailPaneProps>(({ identifier, onClose, onOpe
   return (
     <>
       <div className={styles.paneHeader}>
-        <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
+        <span className="text-sm leading-5.5 font-medium">
           {identifier ?? t('taskList.details.open')}
         </span>
-        <div
-          className="flex flex-row"
-          style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
-        >
+        <div className="flex flex-row items-center justify-end gap-1 flex-1">
           {identifier && (
             <Suspense fallback={null}>
               <LazyIssuePeekActions taskId={identifier} onDeleted={onClose} />
@@ -77,7 +56,7 @@ const IssueDetailPane = memo<IssueDetailPaneProps>(({ identifier, onClose, onOpe
           {identifier && (
             <Button
               aria-label={t('taskList.detail.openFullPage')}
-              size="icon-sm"
+              size="icon"
               title={t('taskList.detail.openFullPage')}
               variant="ghost"
               onClick={onOpen}
@@ -87,7 +66,7 @@ const IssueDetailPane = memo<IssueDetailPaneProps>(({ identifier, onClose, onOpe
           )}
           <Button
             aria-label={t('taskList.detail.close')}
-            size="icon-sm"
+            size="icon"
             title={t('taskList.detail.close')}
             variant="ghost"
             onClick={onClose}
@@ -99,12 +78,7 @@ const IssueDetailPane = memo<IssueDetailPaneProps>(({ identifier, onClose, onOpe
       {identifier ? (
         <Suspense
           fallback={
-            <div
-              aria-busy="true"
-              className="flex flex-col gap-2"
-              role="status"
-              style={{ padding: 8 }}
-            >
+            <div aria-busy="true" className="flex flex-col gap-2 p-2" role="status">
               {Array.from({ length: 4 }, (_, index) => (
                 <Skeleton className="h-8 w-full" key={index} />
               ))}
@@ -114,11 +88,8 @@ const IssueDetailPane = memo<IssueDetailPaneProps>(({ identifier, onClose, onOpe
           <LazyIssueContent taskId={identifier} />
         </Suspense>
       ) : (
-        <div
-          className="flex flex-col"
-          style={{ alignItems: 'center', paddingBlock: 48, paddingInline: 16 }}
-        >
-          <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+        <div className="flex flex-col items-center py-12 px-4">
+          <span className="text-muted-foreground text-xs leading-5">
             {t('taskList.details.selectIssue')}
           </span>
         </div>

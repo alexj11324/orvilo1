@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles, cssVar } from 'antd-style';
 import type { ParseKeys } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -11,49 +10,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { ProjectIssueFilter } from './issueFilters';
 import { projectIssueFilterKey } from './issueFilters';
 
-const styles = createStaticStyles(({ css }) => ({
-  chip: css`
-    display: inline-flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 3px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  chipRemove: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 14px;
-    height: 14px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: transparent;
-
-    &:hover,
-    &:focus-visible {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
+const styles = {
+  chip: 'inline-flex flex-none items-center gap-1 rounded-(--radius-chip) border border-border bg-accent px-2.5 py-0.75 text-xs leading-5 text-muted-foreground whitespace-nowrap',
+  chipRemove:
+    'inline-flex size-7 flex-none cursor-pointer items-center justify-center rounded-(--radius-input) border-0 bg-transparent p-0 text-foreground-tertiary hover:bg-selected hover:text-foreground focus-visible:bg-selected focus-visible:text-foreground',
+};
 
 const PRIORITY_LABEL_KEY: Record<number, ParseKeys<'chat'>> = {
   0: 'taskDetail.priority.none',
@@ -164,24 +125,14 @@ const IssueFilterChips = memo<IssueFilterChipsProps>(
     };
 
     return (
-      <div
-        className="flex flex-row"
-        style={{
-          alignItems: 'center',
-          gap: 6,
-          flex: 'none',
-          flexWrap: 'wrap',
-          minWidth: 0,
-          rowGap: 6,
-        }}
-      >
+      <div className="flex flex-row items-center gap-1.5 flex-none flex-wrap min-w-0 gap-y-1.5">
         {filters.map((filter) => {
           const key = projectIssueFilterKey(filter);
           const { label, value } = chipLabel(filter);
           return (
             <span className={styles.chip} key={key}>
               <span>
-                <span style={{ color: cssVar.colorTextTertiary }}>{label}:</span> {value}
+                <span className="text-foreground-tertiary">{label}:</span> {value}
               </span>
               <Tooltip>
                 <TooltipTrigger
@@ -202,7 +153,7 @@ const IssueFilterChips = memo<IssueFilterChipsProps>(
           );
         })}
         {filters.length > 1 ? (
-          <Button size="sm" variant="ghost" onClick={onClearAll}>
+          <Button size="compact" variant="ghost" onClick={onClearAll}>
             {t('taskList.filter.clearAll')}
           </Button>
         ) : null}

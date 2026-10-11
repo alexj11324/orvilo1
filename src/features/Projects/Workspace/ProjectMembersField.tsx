@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { UsersIcon } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,31 +32,10 @@ import { openInviteTeammateModal } from '@/features/Teammates/InviteTeammateModa
 
 import { PROPERTY_CONTROL_CLASS } from './propertyControl';
 
-const styles = createStaticStyles(({ css }) => ({
-  label: css`
-    position: absolute;
-
-    overflow: hidden;
-
-    width: 1px;
-    height: 1px;
-
-    white-space: nowrap;
-
-    clip-path: inset(50%);
-  `,
-  field: css`
-    width: auto;
-    min-width: 0;
-    max-width: 100%;
-    min-height: 28px;
-    border-color: transparent;
-
-    font-size: 13px;
-
-    background: transparent;
-  `,
-}));
+const styles = {
+  label: 'sr-only',
+  field: 'w-auto min-w-0 max-w-full min-h-7 border-transparent bg-transparent text-sm leading-5.5',
+};
 
 // Combobox values are strings; this sentinel marks the "invite teammate"
 // pseudo-option in the members picker.
@@ -119,7 +97,7 @@ export function ProjectMembersField({
       return {
         disabled: member.disabled,
         label: (
-          <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
+          <div className="flex flex-row items-center gap-1.5">
             <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
             {name}
           </div>
@@ -198,7 +176,7 @@ export function ProjectMembersField({
             aria-label={t('properties.members')}
             className={PROPERTY_CONTROL_CLASS}
             id={id}
-            render={<Button variant="ghost" />}
+            render={<Button size="sm" variant="ghost" />}
           >
             {members.length ? (
               <AvatarGroup

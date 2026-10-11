@@ -1,5 +1,4 @@
 import type { ProjectDatePrecision } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs, { type Dayjs } from 'dayjs';
 import { ArrowRightIcon, CalendarIcon, TagIcon, UserRoundIcon, XIcon } from 'lucide-react';
@@ -42,20 +41,9 @@ import {
 } from '../projectPlanningDate';
 import { PROPERTY_CONTROL_CLASS } from './propertyControl';
 
-const styles = createStaticStyles(({ css }) => ({
-  accessibleLabel: css`
-    position: absolute;
-
-    overflow: hidden;
-
-    width: 1px;
-    height: 1px;
-
-    white-space: nowrap;
-
-    clip-path: inset(50%);
-  `,
-}));
+const styles = {
+  accessibleLabel: 'sr-only',
+};
 
 function usePlanningMutation(projectId: string) {
   const { t } = useTranslation('project');
@@ -118,7 +106,7 @@ export function ProjectLabelsField({ detail }: { detail: ProjectDetail }) {
             aria-label={t('properties.labels')}
             className={PROPERTY_CONTROL_CLASS}
             id={id}
-            render={<Button variant="ghost" />}
+            render={<Button size="sm" variant="ghost" />}
           >
             <TagIcon aria-hidden size={16} />
             <span className="truncate">
@@ -182,7 +170,7 @@ export function ProjectLeadField({
       return {
         disabled: !!member.deletedAt || !!member.suspendedAt,
         label: (
-          <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
+          <div className="flex flex-row items-center gap-1.5">
             <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
             {name}
           </div>
@@ -227,7 +215,7 @@ export function ProjectLeadField({
             aria-label={t('properties.lead')}
             className={PROPERTY_CONTROL_CLASS}
             id={id}
-            render={<Button variant="ghost" />}
+            render={<Button size="sm" variant="ghost" />}
           >
             {selectedMember ? (
               <Avatar
@@ -298,6 +286,7 @@ export function ProjectPriorityField({
         className={PROPERTY_CONTROL_CLASS}
         disabled={saving}
         id={id}
+        size="sm"
         variant="ghost"
       >
         <PriorityIcon priority={priority} size={16} />
@@ -333,8 +322,8 @@ export function ProjectDateInput({
     : text;
   return (
     <div className="flex flex-col gap-2 px-3 pt-3 pb-2">
-      <span className="text-xs text-muted-foreground">{title}</span>
-      <InputGroup>
+      <span className="text-xs leading-5 text-muted-foreground">{title}</span>
+      <InputGroup className="rounded-(--radius-input)">
         <InputGroupInput
           autoFocus
           aria-invalid={invalid || undefined}
@@ -372,7 +361,11 @@ export function ProjectDateInput({
           </InputGroupAddon>
         )}
       </InputGroup>
-      {invalid && <span className="text-xs text-destructive">{t('create.dateInputInvalid')}</span>}
+      {invalid && (
+        <span className="text-xs leading-5 text-destructive-text">
+          {t('create.dateInputInvalid')}
+        </span>
+      )}
     </div>
   );
 }

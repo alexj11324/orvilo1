@@ -13,6 +13,8 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
+import { useChatStore } from '@/store/chat';
+import { topicSelectors } from '@/store/chat/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
@@ -111,3 +113,42 @@ export const AgentRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children
 });
 
 AgentRuntimeWithheldGuard.displayName = 'AgentRuntimeWithheldGuard';
+
+/**
+ * The same card for the conversation route, which names a topic and not an
+ * Agent: a topic owned by an Agent on a withheld runtime keeps its history but
+ * offers no composer to send on that runtime.
+ */
+export const TopicRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children }) => {
+  const { t } = useTranslation('chat');
+  const { topicId } = useParams<{ topicId?: string }>();
+  const builtinOffered = useBuiltinHarnessOffered();
+  const ownerId = useChatStore((s) =>
+    topicId ? (topicSelectors.getTopicById(topicId)(s)?.agentId ?? '') : '',
+  );
+  const isBuiltinAgent = useAgentStore((s) => Object.values(s.builtinAgentIdMap).includes(ownerId));
+  const listed = useHomeStore(homeAgentListSelectors.getAgentById(ownerId));
+  const { error: listError } = useFetchAgentList();
+  const listReady = useHomeStore(homeAgentListSelectors.isAgentListInit);
+  // No default Agent is named: a topic stays with its owner, so a built-in
+  // owner is withheld instead of forwarded.
+  const access = resolveRuntimeAccess({
+    builtinOffered,
+    isBuiltinAgent,
+    listed,
+    ready: listReady || !!listError,
+  });
+
+  if (!ownerId || access.kind === 'open') return children;
+  if (access.kind === 'pending') return null;
+
+  return (
+    <NotFound
+      hideWatermark
+      desc={t('agentRuntimeWithheld.desc')}
+      title={t('agentNotFound.title')}
+    />
+  );
+});
+
+TopicRuntimeWithheldGuard.displayName = 'TopicRuntimeWithheldGuard';

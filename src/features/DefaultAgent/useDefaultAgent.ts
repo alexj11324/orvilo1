@@ -6,6 +6,7 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
 import { type ResolvedDefaultAgent, resolveDefaultAgent } from './resolveDefaultAgent';
+import { resolveOfferedAgentId } from './resolveOfferedAgentId';
 import { useDefaultAgentPreference } from './useDefaultAgentPreference';
 
 /** The Agent entry points open when the user named none; see `resolveDefaultAgent`. */
@@ -33,4 +34,20 @@ export const useDefaultAgentState = (): { agent?: ResolvedDefaultAgent; ready: b
   );
 
   return { agent, ready: ready && !loading };
+};
+
+/**
+ * A remembered Agent id, kept only while it may still be addressed; see
+ * `resolveOfferedAgentId`. Until the Agent list has loaded this names no
+ * Agent, so a withheld one is never bound for a moment first.
+ */
+export const useOfferedAgentId = (agentId?: string | null): string | undefined => {
+  const builtinOffered = useBuiltinHarnessOffered();
+  const agents = useHomeStore(homeAgentListSelectors.allAgents, isEqual);
+  const defaultAgentId = useDefaultAgent()?.agentId;
+
+  return useMemo(
+    () => resolveOfferedAgentId({ agentId, agents, builtinOffered, defaultAgentId }),
+    [agentId, agents, builtinOffered, defaultAgentId],
+  );
 };

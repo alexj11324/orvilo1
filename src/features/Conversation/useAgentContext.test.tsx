@@ -13,6 +13,10 @@ import { useAgentContext } from './useAgentContext';
 
 const activeWorkspaceSlugMock = vi.hoisted(() => ({ value: null as string | null }));
 
+// The hand-over to the default Agent has its own tests; here every Agent is offered.
+vi.mock('@/features/DefaultAgent/useDefaultAgent', () => ({
+  useOfferedAgentId: (agentId?: string | null) => agentId ?? undefined,
+}));
 vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
   useActiveWorkspaceSlug: () => activeWorkspaceSlugMock.value,
 }));

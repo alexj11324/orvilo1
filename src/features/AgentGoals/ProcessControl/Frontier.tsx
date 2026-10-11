@@ -464,7 +464,7 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelec
       </div>
       {notice && (
         <p className="text-xs text-muted-foreground" data-testid="goal-dispatch-notice">
-          {t(notice.key as never)}
+          {String(t(notice.key as never))}
         </p>
       )}
 

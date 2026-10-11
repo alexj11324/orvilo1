@@ -134,7 +134,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             format="YYYY/MM/DD"
             placeholder={t('create.milestone.date')}
             prefix={<CalendarIcon size={13} />}
-            size="small"
+            size="normal"
             suffixIcon={null}
             value={draft.date ? dayjs(draft.date) : null}
             onChange={(date) =>

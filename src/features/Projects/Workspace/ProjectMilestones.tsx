@@ -286,7 +286,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           format="YYYY/MM/DD"
           placeholder={t('create.milestone.date')}
           prefix={<CalendarIcon size={13} />}
-          size="small"
+          size="normal"
           suffixIcon={null}
           value={date ? dayjs(date) : null}
           onChange={(value) => {
@@ -361,6 +361,7 @@ function MilestoneDateControl({
       open={open}
       placeholder={t('overview.milestoneSetDate')}
       prefix={<CalendarIcon aria-hidden size={16} />}
+      size="small"
       suffixIcon={null}
       value={value ? dayjs(value) : null}
       variant="ghost"

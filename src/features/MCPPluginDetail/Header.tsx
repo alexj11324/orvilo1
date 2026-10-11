@@ -84,7 +84,7 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
         {cate?.icon ? <cate.icon size={16} /> : null}
         <span className="truncate">{cate?.label}</span>
       </TooltipTrigger>
-      <TooltipContent>
+      <TooltipContent className="rounded-(--radius-overlay)">
         <span className="min-w-0 break-words">{cate?.label}</span>
       </TooltipContent>
     </Tooltip>

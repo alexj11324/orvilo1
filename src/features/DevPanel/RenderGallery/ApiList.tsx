@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useEffect, useRef } from 'react';
 
@@ -9,94 +8,19 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type { ApiEntry } from './useDevtoolsEntries';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  column: css`
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-
-    width: 240px;
-    height: 100%;
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  dot: css`
-    flex-shrink: 0;
-
-    width: 5px;
-    height: 5px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorTextQuaternary};
-  `,
-  dotActive: css`
-    background: ${cssVar.colorPrimary};
-  `,
-  item: css`
-    cursor: pointer;
-
-    overflow: hidden;
-    flex-shrink: 0;
-    gap: 8px;
-    align-items: center;
-
-    height: 30px;
-    padding-inline: 12px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition:
-      background 0.15s,
-      color 0.15s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  itemActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  /** Namespace prefix of an mcp__ name — muted, and the part that elides. */
-  labelHead: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    color: ${cssVar.colorTextQuaternary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  labelRow: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    align-items: baseline;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 13px;
-  `,
-  /** Trailing action segment — always kept visible. */
-  labelTail: css`
-    flex-shrink: 0;
-    white-space: nowrap;
-  `,
-  list: css`
-    overflow: auto;
-    flex: 1;
-    gap: 2px;
-
-    min-height: 0;
-    padding-block: 4px;
-  `,
-}));
+const styles = {
+  column: 'flex flex-col shrink-0 w-60 h-full border-e border-divider bg-card',
+  dot: 'shrink-0 size-1.5 rounded-full bg-foreground-quaternary',
+  dotActive: 'bg-primary',
+  item: 'cursor-pointer overflow-hidden shrink-0 gap-2 items-center h-8 px-3 text-muted-foreground transition-[color,background-color] duration-(--orvilo-motion-mid) motion-reduce:transition-none hover:text-foreground hover:bg-fill-quaternary',
+  itemActive: 'text-foreground bg-selected hover:bg-selected',
+  // Elide the namespace prefix while keeping the distinguishing action visible.
+  labelHead:
+    'overflow-hidden flex-[0_1_auto] text-foreground-quaternary text-ellipsis whitespace-nowrap',
+  labelRow: 'overflow-hidden flex flex-1 items-baseline min-w-0 font-mono text-sm leading-5.5',
+  labelTail: 'shrink-0 whitespace-nowrap',
+  list: 'overflow-auto flex-1 gap-0.5 min-h-0 py-1',
+};
 
 /**
  * Split a name at its last `__` so the long `mcp__<server>__` namespace can
@@ -137,9 +61,11 @@ const ApiList = memo<ApiListProps>(({ apis, activeApiName, onSelect }) => {
   return (
     <aside className={styles.column}>
       <div className={devDockPanelStyles.paneHeader}>
-        <div className="text-xs text-muted-foreground font-semibold">APIs · {apis.length}</div>
+        <div className="text-xs leading-5 text-muted-foreground font-semibold">
+          APIs · {apis.length}
+        </div>
       </div>
-      <div className={cx(styles.list, 'flex flex-col')} ref={listRef}>
+      <div className={cn(styles.list, 'flex flex-col')} ref={listRef}>
         {apis.map((api) => {
           const active = api.apiName === activeApiName;
           const { head, tail } = splitName(api.apiName);
@@ -150,12 +76,12 @@ const ApiList = memo<ApiListProps>(({ apis, activeApiName, onSelect }) => {
               key={api.apiName}
               title={api.apiName}
               className={cn(
-                cx(cx(styles.item, active && styles.itemActive), 'flex'),
+                cn(cn(styles.item, active && styles.itemActive), 'flex'),
                 CLICKABLE_FOCUS_RING,
               )}
               onClick={() => onSelect(api.apiName)}
             >
-              <span className={cx(styles.dot, api.render && styles.dotActive)} />
+              <span className={cn(styles.dot, api.render && styles.dotActive)} />
               <span className={styles.labelRow}>
                 {head && <span className={styles.labelHead}>{head}</span>}
                 <span className={styles.labelTail}>{tail}</span>

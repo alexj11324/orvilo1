@@ -1,5 +1,5 @@
 import { isDesktop } from '@orvilo/const';
-import { cssVar, useResponsive } from 'antd-style';
+import { useResponsive } from 'antd-style';
 import {
   Clock3Icon,
   CopyPlus,
@@ -300,7 +300,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
           disabled: true,
           key: 'page-info',
           label: (
-            <span style={{ color: cssVar.colorTextTertiary, fontSize: 12, lineHeight: 1.6 }}>
+            <span className="text-xs leading-5 text-foreground-tertiary">
               {authorName && lastUpdatedTime
                 ? t('pageEditor.editedAtBy', {
                     name: authorName,

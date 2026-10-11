@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useState } from 'react';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -12,24 +12,12 @@ import MemoryPopover from './MemoryPopover';
 import { isMemorySamplingSupported, useMemorySamples } from './memorySamples';
 import { isMemoryHigh } from './metricUtils';
 
-const styles = createStaticStyles(({ css }) => ({
-  active: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  high: css`
-    color: ${cssVar.colorError};
-  `,
-  mid: css`
-    color: ${cssVar.colorWarning};
-  `,
-  text: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    font-feature-settings: 'tnum';
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  active: 'text-foreground bg-selected',
+  high: 'text-destructive-text',
+  mid: 'text-warning-text',
+  text: 'font-mono text-xs leading-5 tabular-nums text-foreground-tertiary',
+};
 
 const MemoryWidget = memo(() => {
   const samples = useMemorySamples();
@@ -47,7 +35,7 @@ const MemoryWidget = memo(() => {
         render={
           <button
             type={'button'}
-            className={cx(
+            className={cn(
               barButtonStyles.button,
               styles.text,
               high ? styles.high : percent >= 70 ? styles.mid : undefined,

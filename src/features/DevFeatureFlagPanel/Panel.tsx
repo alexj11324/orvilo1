@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { snakeCase } from 'es-toolkit/compat';
 import { ListRestartIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -17,47 +16,13 @@ import {
 
 import FlagRow from './FlagRow';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  empty: css`
-    padding-block: 32px;
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-    text-align: center;
-  `,
-  footer: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  toolbar: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-
-    height: 44px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  toolbarFilter: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    height: 100%;
-    padding-inline: 12px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  body: 'overflow-auto flex-1 min-h-0',
+  empty: 'py-8 text-sm leading-5.5 text-foreground-description text-center',
+  footer: 'flex gap-2 items-center justify-between py-2 px-3 border-bs border-divider',
+  toolbar: 'flex shrink-0 items-center h-11 border-be border-divider',
+  toolbarFilter: 'flex shrink-0 gap-1.5 items-center h-full px-3 border-s border-divider',
+};
 
 const Panel = memo(() => {
   const originalFlags = useServerConfigStore((s) => s._originalFeatureFlags);
@@ -102,7 +67,7 @@ const Panel = memo(() => {
         />
         <div className={`${styles.toolbarFilter} flex`}>
           <Switch checked={overriddenOnly} size="sm" onCheckedChange={setOverriddenOnly} />
-          <div className="text-muted-foreground" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+          <div className="text-muted-foreground text-xs leading-5 whitespace-nowrap">
             overridden only
           </div>
         </div>
@@ -117,11 +82,11 @@ const Panel = memo(() => {
       </div>
 
       <div className={styles.footer}>
-        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+        <div className="text-muted-foreground text-xs leading-5">
           {overrideCount} active override{overrideCount === 1 ? '' : 's'} · client-side ·
           localStorage persisted
         </div>
-        <Button disabled={overrideCount === 0} size="sm" onClick={resetFlagOverrides}>
+        <Button disabled={overrideCount === 0} size="normal" onClick={resetFlagOverrides}>
           <ListRestartIcon data-icon="inline-start" />
           Reset all
         </Button>

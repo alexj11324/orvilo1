@@ -1,9 +1,9 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon, type LucideIcon } from 'lucide-react';
 import { type ComponentProps, type ReactNode } from 'react';
 import { createElement, memo, Suspense, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { BriefCardSkeleton } from '@/features/DailyBrief/BriefCardSkeleton';
 
 import CountBadge from '../CountBadge';
@@ -23,24 +23,13 @@ interface GroupBlockProps extends Omit<ComponentProps<'div'>, 'title'> {
   title?: ReactNode;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  action: css`
-    opacity: 0;
-    transition: opacity ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
-
-    button {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  actionVisible: css`
-    opacity: 1;
-  `,
-  // The whole heading is the hit target, not just the chevron — a 14px glyph is
-  // a poor thing to ask someone to aim at, and the label is already there.
-  heading: css`
-    cursor: pointer;
-  `,
-}));
+const styles = {
+  action:
+    'opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) focus-within:opacity-100 [&_button]:text-muted-foreground',
+  actionVisible: 'opacity-100',
+  heading:
+    'min-w-0 p-0 border-0 text-start bg-transparent aria-expanded:bg-transparent hover:bg-transparent active:not-aria-[haspopup]:translate-y-0',
+};
 
 const GroupBlock = memo<GroupBlockProps>(
   ({
@@ -55,6 +44,18 @@ const GroupBlock = memo<GroupBlockProps>(
     ...rest
   }) => {
     const [isHovered, setIsHovered] = useState(false);
+    const heading = (
+      <>
+        {icon && createElement(icon, { className: 'text-foreground-description', size: 16 })}
+        <div className={cn('truncate', homeType.sectionLabel)}>{title}</div>
+        {count !== undefined && <CountBadge count={count} />}
+        {onCollapsedChange &&
+          createElement(collapsed ? ChevronRightIcon : ChevronDownIcon, {
+            className: 'size-4 text-foreground-quaternary',
+            size: 16,
+          })}
+      </>
+    );
 
     return (
       <div
@@ -64,29 +65,32 @@ const GroupBlock = memo<GroupBlockProps>(
         {...rest}
       >
         <div className="flex items-center justify-between">
+          {onCollapsedChange ? (
+            <Button
+              aria-expanded={onCollapsedChange ? !collapsed : undefined}
+              nativeButton={false}
+              render={<div />}
+              role={onCollapsedChange ? 'button' : undefined}
+              size="lg"
+              tabIndex={onCollapsedChange ? 0 : undefined}
+              type="button"
+              variant="ghost"
+              className={cn(
+                styles.heading,
+                'flex items-center flex-1 gap-1.5 justify-start overflow-hidden',
+              )}
+              onClick={onCollapsedChange ? () => onCollapsedChange(!collapsed) : undefined}
+            >
+              {heading}
+            </Button>
+          ) : (
+            <div className="flex items-center flex-1 gap-1.5 justify-start overflow-hidden">
+              {heading}
+            </div>
+          )}
           <div
-            aria-expanded={onCollapsedChange ? !collapsed : undefined}
-            role={onCollapsedChange ? 'button' : undefined}
-            style={{ overflow: 'hidden' }}
-            tabIndex={onCollapsedChange ? 0 : undefined}
-            className={cx(
-              cx(onCollapsedChange && styles.heading),
-              'flex items-center flex-1 gap-1.5 justify-start',
-            )}
-            onClick={onCollapsedChange ? () => onCollapsedChange(!collapsed) : undefined}
-          >
-            {icon && createElement(icon, { color: cssVar.colorTextDescription, size: 16 })}
-            <div className={cn('truncate', homeType.sectionLabel)}>{title}</div>
-            {count !== undefined && <CountBadge count={count} />}
-            {onCollapsedChange &&
-              createElement(collapsed ? ChevronRightIcon : ChevronDownIcon, {
-                color: cssVar.colorTextQuaternary,
-                size: 14,
-              })}
-          </div>
-          <div
-            className={cx(
-              cx(styles.action, (isHovered || actionAlwaysVisible) && styles.actionVisible),
+            className={cn(
+              cn(styles.action, (isHovered || actionAlwaysVisible) && styles.actionVisible),
               'flex items-center flex-none gap-0.5 justify-end',
             )}
           >

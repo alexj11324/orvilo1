@@ -3,7 +3,7 @@
 import type { IEditor } from '@lobehub/editor';
 import { ReactMentionPlugin, ReactTablePlugin, ReactToolbarPlugin } from '@lobehub/editor';
 import { Editor } from '@lobehub/editor/react';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { CodeXmlIcon, LetterTextIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -29,30 +29,19 @@ import { selectors as profileSelectors } from '../store/selectors';
 import TypoBar from './TypoBar';
 import { useSlashItems } from './useSlashItems';
 
-const styles = createStaticStyles(({ css }) => ({
-  editorShell: css`
-    min-height: 300px;
-    padding-block: 18px;
-    padding-inline: 18px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  root: css`
-    padding-block-end: 16px;
-  `,
+const registeredStyles = createStaticStyles(({ css }) => ({
   sourceEditor: css`
     min-height: 262px;
     background: transparent;
   `,
-  title: css`
-    cursor: default;
-    font-size: 16px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
 }));
+
+const styles = {
+  editorShell: 'min-h-75 rounded-(--radius-card) border border-divider bg-card p-4',
+  root: 'pbe-4',
+  sourceEditor: registeredStyles.sourceEditor,
+  title: 'cursor-default text-base font-semibold text-foreground',
+} as const;
 
 interface AgentEditorCanvasProps {
   agentId: string;
@@ -446,31 +435,37 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
               />
             )}
             <div
-              className="flex gap-0.5"
+              className="flex items-center gap-0.5"
               // The profile content wrapper focuses the prompt editor on any
               // bubbled click, and Lexical's focus() moves the caret to the
               // document end when there is no selection — scrolling the page to
               // the bottom. Toggling the view mode must not move the caret.
               onClick={(e) => e.stopPropagation()}
             >
-              <ActionIcon
-                active={activeEditorMode === 'visual'}
-                aria-label={t('settingAgent.prompt.mode.visual')}
-                aria-pressed={activeEditorMode === 'visual'}
-                icon={LetterTextIcon}
-                size={14}
-                title={t('settingAgent.prompt.mode.visual')}
-                onClick={() => setEditorMode('visual')}
-              />
-              <ActionIcon
-                active={activeEditorMode === 'source'}
-                aria-label={t('settingAgent.prompt.mode.source')}
-                aria-pressed={activeEditorMode === 'source'}
-                icon={CodeXmlIcon}
-                size={14}
-                title={t('settingAgent.prompt.mode.source')}
-                onClick={() => setEditorMode('source')}
-              />
+              <span className="inline-flex flex-none pointer-coarse:p-1.5">
+                <ActionIcon
+                  active={activeEditorMode === 'visual'}
+                  aria-label={t('settingAgent.prompt.mode.visual')}
+                  aria-pressed={activeEditorMode === 'visual'}
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                  icon={LetterTextIcon}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  title={t('settingAgent.prompt.mode.visual')}
+                  onClick={() => setEditorMode('visual')}
+                />
+              </span>
+              <span className="inline-flex flex-none pointer-coarse:p-1.5">
+                <ActionIcon
+                  active={activeEditorMode === 'source'}
+                  aria-label={t('settingAgent.prompt.mode.source')}
+                  aria-pressed={activeEditorMode === 'source'}
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                  icon={CodeXmlIcon}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  title={t('settingAgent.prompt.mode.source')}
+                  onClick={() => setEditorMode('source')}
+                />
+              </span>
             </div>
           </div>
         </div>

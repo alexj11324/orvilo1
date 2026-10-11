@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { SearchIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,52 +11,12 @@ import { filterSwitcherItems, pickRecentItems, type SwitcherItem } from './switc
 import SwitcherRow from './SwitcherRow';
 import { useSwitcherRecents } from './useSwitcherRecents';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  list: css`
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    flex: 1 1 auto;
-
-    min-height: 0;
-    max-height: min(360px, 50vh);
-    margin-block-end: calc(var(--switcher-inset) * -1);
-    margin-inline: calc(var(--switcher-inset) * -1);
-    padding-block: 4px var(--switcher-inset);
-    padding-inline: var(--switcher-inset);
-  `,
-  root: css`
-    --switcher-inset: 6px;
-
-    overflow: hidden;
-    max-height: min(420px, 70vh);
-    padding: var(--switcher-inset);
-  `,
-  search: css`
-    flex: none;
-
-    margin-inline: calc(var(--switcher-inset) * -1);
-    padding-block: 2px 8px;
-    padding-inline: 14px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    .ant-input-affix-wrapper,
-    .ant-input {
-      padding-inline: 0;
-      border: none !important;
-      background: transparent !important;
-      box-shadow: none !important;
-    }
-  `,
-  section: css`
-    padding-block: 6px 2px;
-    padding-inline: 8px;
-
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  list: 'min-h-0 max-h-[min(360px,50vh)] flex-auto overflow-y-auto overscroll-contain -mbe-(--switcher-inset) -mx-(--switcher-inset) pbs-1 pbe-(--switcher-inset) px-(--switcher-inset)',
+  root: '[--switcher-inset:calc(var(--spacing)*1.5)] max-h-[min(420px,70vh)] overflow-hidden p-(--switcher-inset)',
+  search: 'flex-none -mx-(--switcher-inset) border-be border-divider px-3.5 pbs-0.5 pbe-2',
+  section: 'px-2 pbs-1.5 pbe-0.5 text-xs font-medium text-foreground-tertiary',
+};
 
 interface SwitcherMenuProps {
   activeId?: string;
@@ -106,19 +66,19 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
     const showRecent = recentItems.length > 0;
 
     return (
-      <div className={cx(styles.root, 'flex flex-col')}>
+      <div className={cn(styles.root, 'flex flex-col')}>
         <div className={styles.search}>
           <div className="relative">
             <SearchIcon
-              className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2"
-              size={14}
-              style={{ color: cssVar.colorTextTertiary }}
+              className="pointer-events-none absolute start-0 [inset-block-start:50%] -translate-y-1/2 text-foreground-tertiary"
+              size={16}
             />
             <Input
               autoFocus
-              className="h-6 border-none bg-transparent pl-5 shadow-none"
+              className="border-none bg-transparent ps-6 shadow-none dark:bg-transparent"
               placeholder={searchPlaceholder}
               value={query}
+              visualSize="normal"
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
@@ -138,9 +98,7 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
           loading={<SkeletonList rows={4} />}
           empty={
             <div className="flex flex-col items-center p-4">
-              <div className="text-(length:--text-dense) text-muted-foreground">
-                {t('navPanel.searchResultEmpty')}
-              </div>
+              <div className="text-sm text-muted-foreground">{t('navPanel.searchResultEmpty')}</div>
             </div>
           }
           onRetry={onRetry}

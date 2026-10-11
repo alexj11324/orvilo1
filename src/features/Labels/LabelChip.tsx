@@ -1,19 +1,14 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
 import IssueRowChip from '@/components/IssueRowChip';
 
 import { resolveLabelColor } from './labelColor';
 
-const styles = createStaticStyles(({ css }) => ({
-  dot: css`
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  `,
-}));
+const styles = {
+  dot: 'size-2 rounded-full',
+};
 
 export interface LabelChipProps {
   className?: string;

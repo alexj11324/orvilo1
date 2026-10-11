@@ -1,58 +1,19 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    agent: css`
-      padding: 4px;
-      border-radius: 2px;
-    `,
-    agentActive: css`
-      background: ${cssVar.colorFillSecondary};
-    `,
-    bubble: css`
-      padding: 6px;
-      border: 1px solid color-mix(in srgb, ${cssVar.colorBorderSecondary} 66%, transparent);
-      border-radius: 3px;
-      background-color: ${cssVar.colorBgContainer};
-    `,
-    container: css`
-      overflow: hidden;
-      justify-self: flex-end;
-
-      width: 332px;
-      height: 200px;
-      border: 1px solid ${cssVar.colorBorder};
-      border-radius: ${cssVar.borderRadiusLG};
-
-      background: ${cssVar.colorBgLayout};
-    `,
-    conversation: css`
-      background: ${cssVar.colorBgContainer};
-    `,
-    header: css`
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    `,
-    icon: css`
-      flex: none;
-      border-radius: 2px;
-      background: ${cssVar.colorFillSecondary};
-    `,
-    input: css`
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    `,
-    nav: css`
-      padding: 4px;
-      border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-      background: ${cssVar.colorBgLayout};
-    `,
-    sidebar: css`
-      padding: 4px;
-      border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-      background: ${cssVar.colorBgLayout};
-    `,
-  };
-});
+const styles = {
+  agent: 'p-1 rounded-(--radius-chip)',
+  agentActive: 'bg-selected',
+  bubble: 'p-1.5 border border-divider/66 rounded-(--radius-card) bg-card',
+  container:
+    'overflow-hidden justify-self-end w-83 h-50 border border-border rounded-(--radius-card) bg-background',
+  conversation: 'bg-card',
+  header: 'border-be border-divider',
+  icon: 'flex-none rounded-(--radius-chip) bg-selected',
+  input: 'border-bs border-divider',
+  nav: 'p-1 border-e border-divider bg-background',
+  sidebar: 'p-1 border-e border-divider bg-background',
+};
 
 const AgentItem = memo<{
   active?: boolean;
@@ -60,39 +21,30 @@ const AgentItem = memo<{
 }>(({ active, color }) => {
   return (
     <div
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '100%' }}
-      className={['flex min-w-0', cx(styles.agent, active && styles.agentActive)]
-        .filter(Boolean)
-        .join(' ')}
+      className={cn(
+        'flex min-w-0 flex-row items-center gap-1 w-full',
+        styles.agent,
+        active && styles.agentActive,
+      )}
     >
       <div
-        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-        style={{
-          flexDirection: 'column',
-          width: 12,
-          height: 12,
-          background: color,
-          borderRadius: '50%',
-        }}
+        className={cn('flex min-w-0', styles.icon, 'flex-col w-3 h-3 rounded-full')}
+        style={{ background: color }}
       />
-      <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 4, flex: 1 }}>
+      <div className={cn('flex min-w-0', 'flex-col gap-1 flex-1')}>
         <div
-          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-          style={{
-            flexDirection: 'column',
-            width: '66%',
-            height: 2,
-            background: cssVar.colorTextTertiary,
-          }}
+          className={cn(
+            'flex min-w-0',
+            styles.icon,
+            'flex-col w-[66%] h-0.5 bg-foreground-tertiary',
+          )}
         />
         <div
-          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-          style={{
-            flexDirection: 'column',
-            width: '100%',
-            height: 2,
-            background: cssVar.colorTextQuaternary,
-          }}
+          className={cn(
+            'flex min-w-0',
+            styles.icon,
+            'flex-col w-full h-0.5 bg-foreground-quaternary',
+          )}
         />
       </div>
     </div>
@@ -101,57 +53,25 @@ const AgentItem = memo<{
 
 const Preview = memo(() => {
   const nav = (
-    <div
-      className={['flex min-w-0', styles.nav].filter(Boolean).join(' ')}
-      style={{ flexDirection: 'column', alignItems: 'center', gap: 8, width: 24 }}
-    >
+    <div className={cn('flex min-w-0', styles.nav, 'flex-col items-center gap-2 w-6')}>
       <div
-        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-        style={{
-          flexDirection: 'column',
-          width: 14,
-          height: 14,
-          border: `2px solid ${cssVar.colorPrimary}`,
-          borderRadius: '50%',
-        }}
+        className={cn(
+          'flex min-w-0',
+          styles.icon,
+          'flex-col w-3.5 h-3.5 border-2 border-primary rounded-full',
+        )}
       />
-      <div
-        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-        style={{ flexDirection: 'column', width: 12, height: 12 }}
-      />
-      <div
-        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-        style={{ flexDirection: 'column', width: 12, height: 12 }}
-      />
-      <div
-        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-        style={{ flexDirection: 'column', width: 12, height: 12 }}
-      />
+      <div className={cn('flex min-w-0', styles.icon, 'flex-col w-3 h-3')} />
+      <div className={cn('flex min-w-0', styles.icon, 'flex-col w-3 h-3')} />
+      <div className={cn('flex min-w-0', styles.icon, 'flex-col w-3 h-3')} />
     </div>
   );
 
   const sidebar = (
-    <div
-      className={['flex min-w-0', styles.sidebar].filter(Boolean).join(' ')}
-      style={{ flexDirection: 'column', gap: 4, width: 72 }}
-    >
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'column', gap: 4, paddingInline: 2, paddingTop: 4 }}
-      >
-        <div
-          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-          style={{ flexDirection: 'column', width: '50%', height: 8 }}
-        />
-        <div
-          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-          style={{
-            flexDirection: 'column',
-            width: '100%',
-            height: 8,
-            background: cssVar.colorFillTertiary,
-          }}
-        />
+    <div className={cn('flex min-w-0', styles.sidebar, 'flex-col gap-1 w-18')}>
+      <div className={cn('flex min-w-0', 'flex-col gap-1 px-0.5 pbs-1')}>
+        <div className={cn('flex min-w-0', styles.icon, 'flex-col w-1/2 h-2')} />
+        <div className={cn('flex min-w-0', styles.icon, 'flex-col w-full h-2 bg-accent')} />
       </div>
       <AgentItem />
       <AgentItem active />
@@ -161,56 +81,21 @@ const Preview = memo(() => {
   );
 
   const header = (
-    <div
-      className={['flex min-w-0', styles.header].filter(Boolean).join(' ')}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 4,
-      }}
-    >
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-      >
-        <div
-          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-          style={{ flexDirection: 'column', width: 12, height: 12, borderRadius: '50%' }}
-        />
-        <div
-          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-          style={{ flexDirection: 'column', width: 32, height: 8 }}
-        />
+    <div className={cn('flex min-w-0', styles.header, 'flex-row items-center justify-between p-1')}>
+      <div className={cn('flex min-w-0', 'flex-row items-center gap-1')}>
+        <div className={cn('flex min-w-0', styles.icon, 'flex-col w-3 h-3 rounded-full')} />
+        <div className={cn('flex min-w-0', styles.icon, 'flex-col w-8 h-2')} />
       </div>
-      <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 2 }}>
-        <div
-          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-          style={{ flexDirection: 'column', width: 10, height: 10 }}
-        />
-        <div
-          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-          style={{ flexDirection: 'column', width: 10, height: 10 }}
-        />
+      <div className={cn('flex min-w-0', 'flex-row gap-0.5')}>
+        <div className={cn('flex min-w-0', styles.icon, 'flex-col w-2.5 h-2.5')} />
+        <div className={cn('flex min-w-0', styles.icon, 'flex-col w-2.5 h-2.5')} />
       </div>
     </div>
   );
 
   const input = (
-    <div
-      className={['flex min-w-0', styles.input].filter(Boolean).join(' ')}
-      style={{
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        justifyContent: 'flex-end',
-        height: 48,
-        padding: 8,
-      }}
-    >
-      <div
-        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-        style={{ flexDirection: 'column', width: 32, height: 12, background: cssVar.colorPrimary }}
-      />
+    <div className={cn('flex min-w-0', styles.input, 'flex-col items-end justify-end h-12 p-2')}>
+      <div className={cn('flex min-w-0', styles.icon, 'flex-col w-8 h-3 bg-primary')} />
     </div>
   );
 
@@ -218,146 +103,86 @@ const Preview = memo(() => {
     <div className={`flex rounded-(--radius-card) border border-border ${styles.container}`}>
       {nav}
       {sidebar}
-      <div
-        className={['flex min-w-0', styles.conversation].filter(Boolean).join(' ')}
-        style={{ flexDirection: 'column', flex: 1 }}
-      >
+      <div className={cn('flex min-w-0', styles.conversation, 'flex-col flex-1')}>
         {header}
-        <div
-          className={'flex min-w-0'}
-          style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, flex: 1, padding: 6 }}
-        >
-          <div
-            className={'flex min-w-0'}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: 4,
-              width: '100%',
-            }}
-          >
-            <div
-              className={['flex min-w-0', styles.bubble].filter(Boolean).join(' ')}
-              style={{ flexDirection: 'column', gap: 4, width: 64 }}
-            >
+        <div className={cn('flex min-w-0', 'flex-col items-start gap-2 flex-1 p-1.5')}>
+          <div className={cn('flex min-w-0', 'flex-row items-center justify-end gap-1 w-full')}>
+            <div className={cn('flex min-w-0', styles.bubble, 'flex-col gap-1 w-16')}>
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '100%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-full h-0.5 bg-foreground-quaternary',
+                )}
               />
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '66%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-[66%] h-0.5 bg-foreground-quaternary',
+                )}
               />
             </div>
-            <div
-              className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-              style={{ flexDirection: 'column', width: 14, height: 14, borderRadius: '50%' }}
-            />
+            <div className={cn('flex min-w-0', styles.icon, 'flex-col w-3.5 h-3.5 rounded-full')} />
           </div>
-          <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 4 }}>
-            <div
-              className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-              style={{ flexDirection: 'column', width: 14, height: 14, borderRadius: '50%' }}
-            />
-            <div
-              className={['flex min-w-0', styles.bubble].filter(Boolean).join(' ')}
-              style={{ flexDirection: 'column', gap: 4, width: 160 }}
-            >
+          <div className={cn('flex min-w-0', 'flex-row gap-1')}>
+            <div className={cn('flex min-w-0', styles.icon, 'flex-col w-3.5 h-3.5 rounded-full')} />
+            <div className={cn('flex min-w-0', styles.bubble, 'flex-col gap-1 w-40')}>
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '100%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-full h-0.5 bg-foreground-quaternary',
+                )}
               />
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '66%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-[66%] h-0.5 bg-foreground-quaternary',
+                )}
               />
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '100%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-full h-0.5 bg-foreground-quaternary',
+                )}
               />
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '100%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-full h-0.5 bg-foreground-quaternary',
+                )}
               />
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '33%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-[33%] h-0.5 bg-foreground-quaternary',
+                )}
               />
             </div>
           </div>
-          <div
-            className={'flex min-w-0'}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: 4,
-              width: '100%',
-            }}
-          >
-            <div
-              className={['flex min-w-0', styles.bubble].filter(Boolean).join(' ')}
-              style={{ flexDirection: 'column', gap: 4, width: 100 }}
-            >
+          <div className={cn('flex min-w-0', 'flex-row items-center justify-end gap-1 w-full')}>
+            <div className={cn('flex min-w-0', styles.bubble, 'flex-col gap-1 w-25')}>
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '100%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-full h-0.5 bg-foreground-quaternary',
+                )}
               />
               <div
-                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-                style={{
-                  flexDirection: 'column',
-                  width: '66%',
-                  height: 2,
-                  background: cssVar.colorTextQuaternary,
-                }}
+                className={cn(
+                  'flex min-w-0',
+                  styles.icon,
+                  'flex-col w-[66%] h-0.5 bg-foreground-quaternary',
+                )}
               />
             </div>
-            <div
-              className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
-              style={{ flexDirection: 'column', width: 14, height: 14, borderRadius: '50%' }}
-            />
+            <div className={cn('flex min-w-0', styles.icon, 'flex-col w-3.5 h-3.5 rounded-full')} />
           </div>
         </div>
         {input}

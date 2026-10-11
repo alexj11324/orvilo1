@@ -1,7 +1,7 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { type MouseEvent, type ReactNode } from 'react';
@@ -32,20 +32,10 @@ import ToolMessage from './Tool';
 import UserMessage from './User';
 import VerifyMessage from './Verify';
 
-const prefixCls = 'ant';
-
-const styles = createStaticStyles(({ css }) => ({
-  loading: css`
-    opacity: 0.6;
-  `,
-  message: css`
-    position: relative;
-    // prevent the textarea too long
-    .${prefixCls}-input {
-      max-height: 900px;
-    }
-  `,
-}));
+const styles = {
+  loading: 'opacity-60',
+  message: 'relative [&_.ant-input]:max-h-225',
+};
 
 export interface MessageItemProps {
   className?: string;

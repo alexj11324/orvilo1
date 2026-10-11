@@ -1,7 +1,6 @@
 'use client';
 
 import { SOCIAL_URL } from '@orvilo/business-const';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { BookOpenIcon, CodeIcon, DownloadIcon, PackageCheckIcon, SettingsIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -16,30 +15,12 @@ import { McpNavKey } from '@/types/discover';
 
 import { useDetailContext } from './DetailProvider';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    link: css`
-      color: ${cssVar.colorTextDescription};
+const styles = { link: 'text-foreground-description hover:text-primary-text' };
 
-      &:hover {
-        color: ${cssVar.colorInfo};
-      }
-    `,
-    nav: css`
-      border-block-end: 1px solid ${cssVar.colorBorder};
-    `,
-    tabs: css`
-      scrollbar-width: none;
-      overflow-x: auto;
-      flex: 1;
-      min-width: 0;
-
-      &::-webkit-scrollbar {
-        display: none;
-      }
-    `,
-  };
-});
+const twStyles = {
+  nav: 'border-be border-divider',
+  tabs: 'min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+};
 
 interface NavProps {
   activeTab?: McpNavKey;
@@ -62,7 +43,7 @@ const Nav = memo<NavProps>(
 
     const nav = (
       <Tabs
-        className={styles.tabs}
+        className={twStyles.tabs}
         value={activeTab}
         onValueChange={(key) => setActiveTab?.(key as McpNavKey)}
       >
@@ -85,12 +66,7 @@ const Nav = memo<NavProps>(
               key: McpNavKey.Deployment,
               label:
                 deploymentCount > 1 ? (
-                  <div
-                    className="flex items-center gap-1.5"
-                    style={{
-                      display: 'inline-flex',
-                    }}
-                  >
+                  <div className="inline-flex items-center gap-1.5">
                     {t('mcp.details.deployment.title')}
                     <Badge variant="secondary">{deploymentCount}</Badge>
                   </div>
@@ -103,12 +79,7 @@ const Nav = memo<NavProps>(
               key: McpNavKey.Schema,
               label:
                 schemaCount > 1 ? (
-                  <div
-                    className="flex items-center gap-1.5"
-                    style={{
-                      display: 'inline-flex',
-                    }}
-                  >
+                  <div className="inline-flex items-center gap-1.5">
                     {t('mcp.details.schema.title')}
                     <Badge variant="secondary">{schemaCount}</Badge>
                   </div>
@@ -136,13 +107,10 @@ const Nav = memo<NavProps>(
     return mobile ? (
       nav
     ) : (
-      <div className={cn('flex items-center justify-between', styles.nav)}>
+      <div className={cn('flex items-center justify-between', twStyles.nav)}>
         {nav}
         {!inModal && (
-          <div
-            className="flex gap-3"
-            style={{ flex: 'none', marginInlineStart: 12, whiteSpace: 'nowrap' }}
-          >
+          <div className="flex flex-none gap-3 ms-3 whitespace-nowrap">
             {/* A white-label deployment may have no community server to point
                 at; drop the entry rather than render a link that goes nowhere. */}
             {SOCIAL_URL.discord && (

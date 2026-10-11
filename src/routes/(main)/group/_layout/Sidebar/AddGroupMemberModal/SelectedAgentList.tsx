@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,18 +10,10 @@ import { type AgentItemData } from './AgentItem';
 import AgentItem from './AgentItem';
 import { useAgentSelectionStore } from './store';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow-y: auto;
-    flex: 1;
-    padding: ${cssVar.paddingSM}px;
-  `,
-  title: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  container: 'overflow-y-auto flex-1 p-3',
+  title: 'text-xs leading-5 font-medium text-muted-foreground',
+};
 
 interface SelectedAgentListProps {
   agents: AgentItemData[];

@@ -76,10 +76,6 @@ const isCustomPage = (fileType?: string, name?: string) => {
 };
 
 const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    opacity: 0;
-    transition: opacity ${cssVar.motionDurationMid};
-  `,
   card: css`
     cursor: pointer;
 
@@ -88,11 +84,14 @@ const styles = createStaticStyles(({ css }) => ({
     overflow: hidden;
 
     border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
+    border-radius: var(--radius-card);
 
     background: ${cssVar.colorBgContainer};
 
-    transition: all ${cssVar.motionDurationMid};
+    transition:
+      border-color ${cssVar.motionDurationFast},
+      box-shadow ${cssVar.motionDurationFast},
+      background-color ${cssVar.motionDurationFast};
 
     &:hover {
       border-color: ${cssVar.colorPrimary};
@@ -115,24 +114,6 @@ const styles = createStaticStyles(({ css }) => ({
       }
     }
   `,
-  checkbox: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 8px;
-    inset-inline-start: 8px;
-
-    opacity: 0;
-
-    transition: opacity ${cssVar.motionDurationMid};
-  `,
-  content: css`
-    position: relative;
-  `,
-  /**
-   * Always visible, unlike the hover-only checkbox and dropdown above it: the
-   * point of the badge is that a private card is recognisable at a glance while
-   * scanning a library that mixes both scopes.
-   */
   privateBadge: css`
     position: absolute;
     z-index: 2;
@@ -144,14 +125,11 @@ const styles = createStaticStyles(({ css }) => ({
     justify-content: center;
 
     padding: 4px;
-    border-radius: ${cssVar.borderRadius};
+    border-radius: var(--radius-chip);
 
-    color: ${cssVar.colorTextSecondary};
+    color: var(--overlay-mask-foreground);
 
-    background: ${cssVar.colorBgMask};
-  `,
-  contentWithPadding: css`
-    padding: 12px;
+    background: var(--overlay-mask);
   `,
   dragOver: css`
     border-color: ${cssVar.colorText} !important;
@@ -162,29 +140,26 @@ const styles = createStaticStyles(({ css }) => ({
       color: ${cssVar.colorBgElevated} !important;
     }
   `,
-  dragging: css`
-    will-change: transform;
-    opacity: 0.5;
-  `,
-  dropdown: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 8px;
-    inset-inline-end: 8px;
-
-    opacity: 0;
-
-    transition: opacity ${cssVar.motionDurationMid};
-  `,
   selected: css`
     border-color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorPrimaryBg};
+    background: var(--selected);
 
     .checkbox {
       opacity: 1;
     }
   `,
 }));
+
+const twStyles = {
+  actions: 'opacity-0 transition-opacity duration-(--orvilo-motion-mid)',
+  checkbox:
+    'absolute z-2 inset-bs-2 start-2 opacity-0 transition-opacity duration-(--orvilo-motion-mid)',
+  content: 'relative',
+  contentWithPadding: 'p-4',
+  dragging: 'will-change-transform opacity-50',
+  dropdown:
+    'absolute z-2 inset-bs-2 end-2 opacity-0 transition-opacity duration-(--orvilo-motion-mid)',
+};
 
 interface MasonryFileItemProps extends FileListItem {
   knowledgeBaseId?: string;
@@ -362,12 +337,13 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
       <div
         data-drop-target-id={id}
         data-is-folder={isFolder}
+        data-slot="resource-masonry-card"
         draggable={!!knowledgeBaseId}
         ref={cardRef}
         className={cx(
           styles.card,
           selected && styles.selected,
-          isDragging && styles.dragging,
+          isDragging && twStyles.dragging,
           isOver && styles.dragOver,
         )}
         onDragEnd={handleDragEnd}
@@ -380,7 +356,7 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
         }}
       >
         <div
-          className={cx('checkbox', styles.checkbox)}
+          className={cx('checkbox', twStyles.checkbox)}
           style={{ cursor: selectable ? 'pointer' : 'not-allowed' }}
           title={selectable ? undefined : t('FileManager.selection.onlyOwn')}
           onPointerDown={(event) => event.stopPropagation()}
@@ -394,7 +370,7 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
         </div>
 
         <div
-          className={cx('dropdown', styles.dropdown)}
+          className={cx('dropdown', twStyles.dropdown)}
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
         >
@@ -405,7 +381,7 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
           <SimpleTooltip title={t('resources.visibility.privateTooltip', { ns: 'chat' })}>
             <div className={styles.privateBadge}>
               <span className="anticon" role="img">
-                <LockIcon fill={'transparent'} height={14} size={14} width={14} />
+                <LockIcon fill={'transparent'} height={16} size={16} width={16} />
               </span>
             </div>
           </SimpleTooltip>
@@ -414,16 +390,14 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
         <div
           {...clickableProps()}
           className={cn(
-            cx(
-              styles.content,
-              !isImage &&
-                !isMarkdown &&
-                !isPage &&
-                !isVideo &&
-                !isAudio &&
-                !isWebpage &&
-                styles.contentWithPadding,
-            ),
+            twStyles.content,
+            !isImage &&
+              !isMarkdown &&
+              !isPage &&
+              !isVideo &&
+              !isAudio &&
+              !isWebpage &&
+              twStyles.contentWithPadding,
             CLICKABLE_FOCUS_RING,
           )}
           onClick={handleItemClick}

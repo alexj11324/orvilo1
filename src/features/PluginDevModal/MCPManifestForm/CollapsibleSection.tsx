@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { type ReactNode } from 'react';
@@ -6,34 +5,12 @@ import { useState } from 'react';
 
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    margin-block-end: ${cssVar.marginLG};
-  `,
-
-  header: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all ${cssVar.motionDurationMid} ease;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-
-  title: css`
-    margin-inline-start: 4px;
-    font-weight: ${cssVar.fontWeightStrong};
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  container: 'mbe-6',
+  header:
+    'flex min-h-9 cursor-pointer items-center rounded-(--radius-button) text-foreground-tertiary transition-colors duration-(--orvilo-motion-mid) ease-[ease] hover:text-foreground',
+  title: 'ms-1 text-sm font-semibold text-foreground',
+};
 
 interface CollapsibleSectionProps {
   /** Child component content */
@@ -55,7 +32,7 @@ const CollapsibleSection = ({
     <div className={styles.container}>
       <div
         {...clickableProps()}
-        className={cn(cx(styles.header), CLICKABLE_FOCUS_RING)}
+        className={cn(styles.header, CLICKABLE_FOCUS_RING)}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}

@@ -1,57 +1,16 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDown } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ChatHistoryMenu from './index';
 
-const styles = createStaticStyles(({ css }) => ({
-  label: css`
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  // Reference geometry: 28px-high pill trigger, 12px/500 type, 9999px radius,
-  // 8px horizontal padding — Linear's `Switch agent chat` title button.
-  trigger: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    max-width: 100%;
-    height: 28px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: 9999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -1px;
-    }
-
-    &[data-popup-open] {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  label: 'min-w-0 truncate',
+  trigger:
+    'inline-flex h-8 pointer-coarse:h-11 max-w-full cursor-pointer items-center gap-1 rounded-full border-0 bg-transparent px-2 text-sm leading-5.5 font-medium text-foreground transition-[background-color] duration-150 ease-[ease] hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 focus-visible:outline-offset-[-1px] data-[popup-open]:bg-accent motion-reduce:transition-none',
+} as const;
 
 interface ChatHistoryTitleMenuProps {
   title: string;

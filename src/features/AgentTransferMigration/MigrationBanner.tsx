@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -72,22 +71,16 @@ export const TopicMigrationPlaceholder = memo<MigrationBannerProps>(
     );
 
     return (
-      <div
-        className="flex flex-col items-center flex-1 gap-3 justify-center"
-        style={{ padding: 24 }}
-      >
-        <Spinner className="size-5 text-muted-foreground" />
-        <div className="text-muted-foreground font-medium">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
+        <Spinner className="size-4 text-muted-foreground" />
+        <div className="text-sm leading-5.5 text-muted-foreground font-medium">
           {t(
             data?.type === 'copy'
               ? 'transferMigration.topicPendingCopy.title'
               : 'transferMigration.topicPending.title',
           )}
         </div>
-        <div
-          className="text-xs text-muted-foreground"
-          style={{ maxWidth: 420, textAlign: 'center' }}
-        >
+        <div className="max-w-105 text-center text-xs leading-5 text-muted-foreground">
           {t('transferMigration.topicPending.desc')}
         </div>
       </div>
@@ -97,27 +90,9 @@ export const TopicMigrationPlaceholder = memo<MigrationBannerProps>(
 
 TopicMigrationPlaceholder.displayName = 'TopicMigrationPlaceholder';
 
-const chipStyles = createStaticStyles(({ css }) => ({
-  chip: css`
-    pointer-events: auto;
-    cursor: default;
-
-    padding-block: 3px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 20px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    white-space: nowrap;
-
-    /* Solid surface under the translucent fill: the chip also renders as a
-       floating overlay on top of chat content, where a bare alpha fill would
-       let the text underneath bleed through. */
-    background-color: ${cssVar.colorBgElevated};
-    background-image: linear-gradient(${cssVar.colorFillTertiary}, ${cssVar.colorFillTertiary});
-  `,
-}));
+const chipStyles = {
+  chip: 'pointer-events-auto cursor-default border border-divider rounded-full py-[calc(var(--spacing)*0.75)] px-2.5 text-xs leading-5 text-foreground whitespace-nowrap bg-popover [background-image:linear-gradient(var(--accent),var(--accent))]',
+};
 
 /**
  * Compact migration chip for the chat header's center slot: spinner +
@@ -137,7 +112,7 @@ export const AgentMigrationBadge = memo<MigrationTarget>(({ agentId, groupId }) 
         render={
           <span>
             <div className={`flex items-center gap-1.5 ${chipStyles.chip}`}>
-              <Spinner className="size-3 text-warning" />
+              <Spinner className="size-4 text-warning-text" />
               <span>
                 {t(
                   data.type === 'copy'

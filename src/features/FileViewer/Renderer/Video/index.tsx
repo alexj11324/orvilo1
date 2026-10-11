@@ -3,12 +3,7 @@
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding: ${cssVar.paddingSM};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
+const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
   video: css`
     max-width: 100%;
     max-height: 100%;
@@ -27,6 +22,11 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     }
   `,
 }));
+
+const styles = {
+  container: 'p-4 rounded-(--radius-card) bg-card',
+  video: registeredStyles.video,
+};
 
 interface VideoViewerProps {
   fileId: string;

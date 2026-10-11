@@ -2,7 +2,7 @@
 
 import { Image } from '@lobehub/ui';
 import type { AcceptanceAttachment } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import { ImagePlus, X } from 'lucide-react';
 import { type ClipboardEvent, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,98 +16,14 @@ import { useFileStore } from '@/store/file';
 /** 10MB — a screenshot, not a video; keeps the reject payload light. */
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 
-const styles = createStaticStyles(({ css }) => ({
-  flushUpload: css`
-    display: contents;
-
-    .ant-upload,
-    .ant-upload-select {
-      display: contents;
-    }
-  `,
-  remove: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 0;
-    inset-inline-end: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-
-    color: #fff;
-
-    opacity: 1;
-    background: ${cssVar.colorError};
-
-    transition: opacity 0.15s;
-
-    @media (pointer: coarse), (width <= 767px) {
-      width: 44px;
-      height: 44px;
-    }
-  `,
-  thumb: css`
-    position: relative;
-
-    overflow: hidden;
-
-    width: 56px;
-    height: 56px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover .acceptance-attach-remove {
-      opacity: 1;
-    }
-
-    img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  `,
-  /**
-   * A screenshot posted INTO a remark is the remark's evidence, not a chip on a
-   * draft: at 56px "here is what I see instead" is unreadable, so in a comment
-   * the picture is shown at a size a reader can judge without opening it.
-   */
-  thumbLarge: css`
-    width: auto;
-    max-width: min(100%, 360px);
-    height: auto;
-    max-height: 220px;
-
-    img {
-      cursor: zoom-in;
-
-      width: auto;
-      max-width: min(100%, 360px);
-      height: auto;
-      max-height: 220px;
-
-      object-fit: contain;
-    }
-  `,
-  thumbLoading: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  flushUpload: 'contents',
+  remove:
+    'absolute inset-bs-0 end-0 z-2 rounded-full border-0 bg-destructive p-0 text-destructive-on-fill opacity-100 hover:bg-destructive hover:text-destructive-on-fill',
+  thumb: 'relative h-14 w-14 overflow-hidden rounded-(--radius-card) border border-divider',
+  thumbLarge: 'h-auto w-auto max-h-55 max-w-[min(100%,360px)]',
+  thumbLoading: 'flex items-center justify-center bg-fill-quaternary text-foreground-tertiary',
+} as const;
 
 /** An attachment the user just uploaded this session — id + a live preview URL. */
 export interface PendingAttachment {
@@ -215,21 +131,33 @@ export const AttachmentStrip = memo<AttachmentStripProps>(
       <div className="flex gap-2 flex-wrap">
         {attachments.map((attachment) => (
           <div className={styles.thumb} key={attachment.id}>
-            <Image alt={attachment.name ?? ''} preview={false} src={attachment.url} />
+            <Image
+              alt={attachment.name ?? ''}
+              height="100%"
+              objectFit="cover"
+              preview={false}
+              src={attachment.url}
+              style={{ borderRadius: 0, height: '100%', width: '100%' }}
+              styles={{ image: { display: 'block' }, wrapper: { height: '100%', width: '100%' } }}
+              variant="borderless"
+              width="100%"
+            />
             {!disabled && (
-              <button
+              <Button
                 aria-label={t('acceptance.review.removeAttachment')}
-                className={cx('acceptance-attach-remove', styles.remove)}
+                className={cn('acceptance-attach-remove', styles.remove)}
+                size="icon"
                 type={'button'}
+                variant="ghost"
                 onClick={() => onRemove(attachment.id)}
               >
-                <X size={12} />
-              </button>
+                <X className="size-4" size={16} />
+              </Button>
             )}
           </div>
         ))}
         {uploading && (
-          <div className={cx(styles.thumb, styles.thumbLoading)}>
+          <div className={cn(styles.thumb, styles.thumbLoading)}>
             <Spinner />
           </div>
         )}
@@ -248,15 +176,13 @@ interface AttachmentUploadButtonProps {
 /** The "attach screenshot" trigger — a picker button that hands files back for upload. */
 export const AttachmentUploadButton = memo<AttachmentUploadButtonProps>(({ disabled, onFiles }) => {
   const { t } = useTranslation('verify');
-  // A 44px target is for thumbs; on a pointer device it towers over the field above it.
-  const { md = true } = useResponsive();
   return (
     <Upload
       multiple
       accept={'image/*'}
       className={styles.flushUpload}
       disabled={disabled}
-
+      style={{ display: 'contents' }}
       beforeUpload={(file, fileList) => {
         // beforeUpload fires per file — fire the batch once, on the first item.
         if (file === fileList[0]) onFiles(fileList as unknown as File[]);
@@ -264,9 +190,9 @@ export const AttachmentUploadButton = memo<AttachmentUploadButtonProps>(({ disab
       }}
     >
       <Button
+        className="self-start text-sm leading-5.5"
         disabled={disabled}
-        size="compact"
-        style={{ alignSelf: 'flex-start', minHeight: md ? undefined : 44 }}
+        size="lg"
         variant="ghost"
       >
         <ImagePlus />
@@ -300,10 +226,31 @@ export const AttachmentThumbs = memo<AttachmentThumbsProps>(({ attachments, size
     >
       {usable.map((attachment) => (
         <div
-          className={cx(styles.thumb, size === 'comment' && styles.thumbLarge)}
+          className={cn(styles.thumb, size === 'comment' && styles.thumbLarge)}
           key={attachment.id}
         >
-          <Image alt={attachment.name ?? ''} src={attachment.url!} />
+          <Image
+            alt={attachment.name ?? ''}
+            height={size === 'comment' ? 'auto' : '100%'}
+            maxHeight={size === 'comment' ? 220 : '100%'}
+            maxWidth={size === 'comment' ? 'min(100%, 360px)' : '100%'}
+            objectFit={size === 'comment' ? 'contain' : 'cover'}
+            src={attachment.url!}
+            variant="borderless"
+            width={size === 'comment' ? 'auto' : '100%'}
+            style={{
+              borderRadius: 0,
+              height: size === 'comment' ? 'auto' : '100%',
+              width: size === 'comment' ? 'auto' : '100%',
+            }}
+            styles={{
+              image: { display: 'block' },
+              wrapper: {
+                height: size === 'comment' ? 'auto' : '100%',
+                width: size === 'comment' ? 'auto' : '100%',
+              },
+            }}
+          />
         </div>
       ))}
     </div>

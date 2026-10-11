@@ -1,6 +1,7 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 
@@ -53,63 +54,7 @@ export const readEvidenceComparison = (metadata: unknown): EvidenceComparisonMet
   };
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  /* One fused card: the pair is a single object, so no outer gap between the
-     halves — the 1px background seam is the divider in either direction, which
-     keeps the split correct when the grid collapses to one column. */
-  card: css`
-    overflow: hidden;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1px;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorBorderSecondary};
-
-    @media (width <= 640px) {
-      grid-template-columns: 1fr;
-    }
-  `,
-  cardVertical: css`
-    grid-template-columns: 1fr;
-  `,
-  side: css`
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    background: ${cssVar.colorBgContainer};
-  `,
-  /* The role rides on a tinted band fused to its own capture, so which state
-     you're looking at survives being read at a glance. */
-  label: css`
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-
-    padding-block: 7px;
-    padding-inline: 10px;
-
-    font-size: 12px;
-  `,
-  labelBefore: css`
-    border-block-end: 1px solid ${cssVar.colorErrorBorder};
-    color: ${cssVar.colorErrorText};
-    background: ${cssVar.colorErrorBg};
-  `,
-  labelAfter: css`
-    border-block-end: 1px solid ${cssVar.colorSuccessBorder};
-    color: ${cssVar.colorSuccessText};
-    background: ${cssVar.colorSuccessBg};
-  `,
-  /* The two captions are themselves a before/after contrast, so they must stay
-     readable side by side — wrap rather than ellipsize. */
-  caption: css`
-    min-width: 0;
-    opacity: 0.85;
-  `,
+const registeredStyles = createStaticStyles(({ css }) => ({
   /* The card frames the capture; an inner border/radius would double the frame,
      so whatever media the caller renders inside is flattened to the card edge. */
   content: css`
@@ -125,6 +70,17 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
 }));
+
+const styles = {
+  card: 'grid w-full grid-cols-2 gap-px overflow-hidden rounded-(--radius-card) border border-divider bg-divider [@media(width<=640px)]:grid-cols-1',
+  cardVertical: 'grid-cols-1',
+  side: 'flex min-w-0 flex-col bg-card',
+  label: 'flex items-baseline gap-2 px-4 py-2 text-xs leading-5',
+  labelBefore: 'border-be border-destructive-border bg-destructive-wash text-destructive-text',
+  labelAfter: 'border-be border-success-border bg-success-wash text-success-text',
+  caption: 'min-w-0 opacity-85',
+  content: registeredStyles.content,
+} as const;
 
 export interface EvidenceComparisonSide {
   /** Caption in the tinted band — the comparison label, or the evidence description. */
@@ -145,7 +101,7 @@ interface EvidenceComparisonCardProps {
 export const EvidenceComparisonCard = memo<EvidenceComparisonCardProps>(
   ({ after, before, layout = 'horizontal' }) => {
     return (
-      <div className={cx(styles.card, layout === 'vertical' && styles.cardVertical)}>
+      <div className={cn(styles.card, layout === 'vertical' && styles.cardVertical)}>
         {(
           [
             ['before', before],

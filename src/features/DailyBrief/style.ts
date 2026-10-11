@@ -1,6 +1,6 @@
 import { createStaticStyles } from 'antd-style';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
+const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
   actionBtn: css`
     &:hover {
       border-color: ${cssVar.colorBorder} !important;
@@ -15,10 +15,6 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     border: 1px solid ${cssVar.colorFillTertiary} !important;
     font-size: 12px;
     color: ${cssVar.colorTextDescription};
-  `,
-  resolvedTag: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextQuaternary};
   `,
   card: css`
     .brief-comment-btn,
@@ -35,7 +31,10 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
       }
     }
   `,
-  clickableHeader: css`
-    cursor: pointer;
-  `,
 }));
+
+export const styles = {
+  ...registeredStyles,
+  resolvedTag: 'text-xs leading-5 text-foreground-quaternary',
+  clickableHeader: 'cursor-pointer',
+};

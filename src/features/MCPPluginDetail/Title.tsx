@@ -1,29 +1,17 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
 import { type ComponentProps, memo, type ReactNode } from 'react';
 
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  more: css`
-    display: flex;
-    align-items: center;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    margin-block: 0.2em;
-    font-weight: bold;
-    line-height: 1.5;
-  `,
-  title2: css`
-    font-size: 18px;
-  `,
-  title3: css`
-    font-size: 16px;
-  `,
-}));
+const styles = {
+  more: 'flex items-center text-sm leading-5.5 text-muted-foreground',
+  title: 'my-[0.2em] font-semibold',
+  title2: 'text-xl',
+  title3: 'text-base',
+};
 
 export interface TitleProps extends ComponentProps<'div'> {
   icon?: ReactNode;
@@ -37,7 +25,7 @@ export interface TitleProps extends ComponentProps<'div'> {
 const Title = memo<TitleProps>(
   ({ id, tag, children, moreLink, more, level = 2, icon, ...rest }) => {
     const title = (
-      <h2 className={cx(styles.title, styles[`title${level}` as 'title2' | 'title3'])} id={id}>
+      <h2 className={cn(styles.title, styles[`title${level}` as 'title2' | 'title3'])} id={id}>
         {children}
       </h2>
     );
@@ -45,19 +33,19 @@ const Title = memo<TitleProps>(
     const moreLinkElement = moreLink ? (
       moreLink.startsWith('http') ? (
         <a className={styles.more} href={moreLink} rel="noreferrer" target="_blank">
-          <span style={{ marginRight: 4 }}>{more}</span>
-          <ChevronRight />
+          <span className="me-1">{more}</span>
+          <ChevronRight size={16} />
         </a>
       ) : (
         <WorkspaceLink className={styles.more} to={moreLink}>
-          <span style={{ marginRight: 4 }}>{more}</span>
-          <ChevronRight />
+          <span className="me-1">{more}</span>
+          <ChevronRight size={16} />
         </WorkspaceLink>
       )
     ) : null;
 
     return (
-      <div className="flex items-center gap-4 justify-between" style={{ width: '100%' }} {...rest}>
+      <div className="flex w-full items-center gap-4 justify-between" {...rest}>
         {tag || icon ? (
           <div className="flex items-center gap-2">
             {icon}

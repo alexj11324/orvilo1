@@ -1,7 +1,6 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { type ChangeEvent } from 'react';
@@ -20,24 +19,10 @@ import AgentItem from './AgentItem';
 
 type Row = { agent: AgentItemData; type: 'agent' } | { label: string; type: 'header' };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    user-select: none;
-
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    padding-block: ${cssVar.paddingSM}px 0;
-    padding-inline: ${cssVar.paddingSM}px;
-  `,
-  sectionHeader: css`
-    padding-block: 6px 4px;
-    padding-inline: 8px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  container: 'select-none overflow-hidden flex flex-1 flex-col pbs-3 px-3 pbe-0',
+  sectionHeader: 'pbs-1.5 pbe-1 px-2 text-xs leading-5 text-muted-foreground',
+};
 
 interface AvailableAgentListProps {
   agents: AgentItemData[];
@@ -110,12 +95,12 @@ const AvailableAgentList = memo<AvailableAgentListProps>(({ agents, isLoading })
         onChange={handleSearchChange}
       />
 
-      <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
+      <div className="flex min-h-0 flex-col flex-1">
         {isLoading ? (
           <div className="flex flex-col gap-2 p-2">
-            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
-            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
-            <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+            <Skeleton className="my-0.5 h-5.5 w-full" />
+            <Skeleton className="my-0.5 h-5.5 w-full" />
+            <Skeleton className="my-0.5 h-5.5 w-full" />
           </div>
         ) : filteredAgents.length === 0 ? (
           <AgentSelectionEmpty
@@ -124,7 +109,7 @@ const AvailableAgentList = memo<AvailableAgentListProps>(({ agents, isLoading })
           />
         ) : (
           <Virtuoso
-            style={{ flex: 1 }}
+            className="flex-1"
             totalCount={rows.length}
             itemContent={(index) => {
               const row = rows[index];

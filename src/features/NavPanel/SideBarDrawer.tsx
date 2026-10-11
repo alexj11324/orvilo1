@@ -7,7 +7,6 @@ import type { ReactNode } from 'react';
 import { memo, Suspense, useEffect, useState } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 
 import SkeletonList from './components/SkeletonList';
 import { NAV_PANEL_RIGHT_DRAWER_ID } from './constants';
@@ -21,12 +20,6 @@ const DRAWER_WIDTH = 280;
 const DRAWER_Z_INDEX = 1000;
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  body: css`
-    overflow: hidden auto;
-    flex: 1;
-    min-height: 0;
-    background: ${cssVar.colorBgLayout};
-  `,
   popup: css`
     position: absolute;
     inset-block: 0;
@@ -90,12 +83,7 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
                 showBack={false}
                 left={
                   typeof title === 'string' ? (
-                    <div
-                      className="truncate text-sm font-[400]"
-                      style={{ fontWeight: 600, paddingLeft: 8 }}
-                    >
-                      {title}
-                    </div>
+                    <div className="truncate ps-2 text-sm font-semibold">{title}</div>
                   ) : (
                     title
                   )
@@ -104,16 +92,16 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
                   <>
                     {action}
                     <ActionIcon
+                      className="-me-0.5"
                       icon={XIcon}
-                      size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-                      style={{ marginInlineEnd: -2 }}
+                      size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
                       onClick={onClose}
                     />
                   </>
                 }
               />
               {subHeader}
-              <div className={styles.body}>
+              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-background">
                 <Suspense
                   fallback={
                     <div className="flex flex-col gap-px py-px px-1">

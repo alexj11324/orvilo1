@@ -21,40 +21,6 @@ import { useNavPanelSizeChangeHandler } from '../hooks/useNavPanel';
 import { BACK_BUTTON_ID } from './BackButton';
 
 const draggableStyles = createStaticStyles(({ css, cssVar }) => ({
-  content: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    height: 100%;
-    min-height: 100%;
-    max-height: 100%;
-  `,
-  inner: css`
-    position: relative;
-
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 240px;
-    max-width: 100%;
-    min-height: 0;
-  `,
-  layer: css`
-    position: absolute;
-    inset: 0;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    min-width: 240px;
-    max-width: 100%;
-    min-height: 100%;
-    max-height: 100%;
-  `,
   panel: css`
     user-select: none;
     height: 100%;
@@ -85,6 +51,12 @@ const draggableStyles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+const twDraggableStyles = {
+  content: 'relative flex h-full min-h-full max-h-full flex-col overflow-hidden',
+  inner: 'relative min-h-0 min-w-60 max-w-full flex-1 overflow-hidden',
+  layer: 'absolute inset-0 min-h-full max-h-full min-w-60 max-w-full flex-col overflow-hidden',
+};
+
 interface NavPanelDraggableProps {
   activeContent: {
     key: string;
@@ -94,10 +66,8 @@ interface NavPanelDraggableProps {
 }
 
 const classNames = {
-  content: draggableStyles.content,
+  content: twDraggableStyles.content,
 };
-
-const hiddenLayerStyle = { display: 'none' };
 
 export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, homeContent }) => {
   const isStatusInit = useGlobalStore(systemStatusSelectors.isStatusInit);
@@ -120,7 +90,7 @@ export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, 
 
   if (defaultWidthRef.current === 0) {
     const pendingWidth = systemStatusSelectors.leftPanelWidth(useGlobalStore.getState());
-    return <div aria-hidden style={{ flexShrink: 0, height: '100%', width: pendingWidth }} />;
+    return <div aria-hidden className="h-full shrink-0" style={{ width: pendingWidth }} />;
   }
 
   const defaultSize = { height: '100%', width: defaultWidthRef.current };
@@ -140,22 +110,19 @@ export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, 
       style={styles}
       onSizeDragging={handleSizeChange}
     >
-      <div className={draggableStyles.inner}>
+      <div className={twDraggableStyles.inner}>
         {/* Home stays mounted while a route-owned panel is active so its list
             state survives the round trip. Activity keeps the fibers but not the
             visibility, so the layer is force-hidden like HomeLayout does. */}
         {homeContent && (
           <Activity mode={isHomeActive ? 'visible' : 'hidden'} name="NavPanelHome">
-            <div
-              className={draggableStyles.layer}
-              style={isHomeActive ? undefined : hiddenLayerStyle}
-            >
+            <div className={`${twDraggableStyles.layer} ${isHomeActive ? 'flex' : 'hidden'}`}>
               {homeContent}
             </div>
           </Activity>
         )}
         {!isHomeActive && (
-          <div className={draggableStyles.layer} key={activeContent.key}>
+          <div className={`${twDraggableStyles.layer} flex`} key={activeContent.key}>
             {activeContent.node}
           </div>
         )}

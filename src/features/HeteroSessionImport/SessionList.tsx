@@ -1,7 +1,7 @@
 import { ClaudeCode, Codex } from '@lobehub/icons';
 import type { HeteroSessionDigest } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check, RotateCcw, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,20 +14,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 import { baseName, fmtTokens, type ImportRowState, selectable, type SessionStatus } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  row: css`
-    padding-block: 10px;
-    padding-inline: 16px;
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  rowDim: css`
-    opacity: 0.45;
-  `,
-}));
+const styles = {
+  row: 'py-2.5 px-4 rounded-(--radius-card) hover:bg-accent',
+  rowDim: 'opacity-45',
+};
 
 const BRAND = { 'claude-code': ClaudeCode, 'codex': Codex } as const;
 
@@ -92,23 +82,25 @@ const ImportState = memo<{ onRetry: () => void; showRetry: boolean; state?: Impo
     if (state.ok)
       return (
         <div className="flex items-center gap-1">
-          <Check size={14} style={{ color: 'var(--lobe-color-success, #52c41a)' }} />
-          <div className="text-xs text-success">
+          <Check className="text-success-text" size={14} />
+          <div className="text-xs leading-5 text-success-text">
             {t('heteroImport.state.inserted', { count: state.inserted })}
           </div>
         </div>
       );
     if (showRetry)
       return (
-        <Button size="sm" onClick={onRetry}>
-          <RotateCcw size={13} />
+        <Button size="normal" onClick={onRetry}>
+          <RotateCcw size={16} />
           {t('heteroImport.retry')}
         </Button>
       );
     return (
       <div className="flex items-center gap-1">
-        <X size={14} style={{ color: 'var(--lobe-color-error, #ff4d4f)' }} />
-        <div className="text-xs text-destructive">{t('heteroImport.state.failed')}</div>
+        <X className="text-destructive-text" size={14} />
+        <div className="text-xs leading-5 text-destructive-text">
+          {t('heteroImport.state.failed')}
+        </div>
       </div>
     );
   },
@@ -140,9 +132,13 @@ export const SessionRow = memo<SessionRowProps>(
 
     return (
       <div
-        className={cx(cx(styles.row, dim && styles.rowDim), 'flex items-center gap-3')}
         data-session-row={digest.sessionId}
-        style={{ cursor: canPick ? 'pointer' : 'default' }}
+        className={cn(
+          styles.row,
+          dim && styles.rowDim,
+          'flex items-center gap-3',
+          canPick ? 'cursor-pointer' : 'cursor-default',
+        )}
         onClick={() => canPick && onToggle(digest.sessionId)}
       >
         {!importing && (
@@ -153,9 +149,9 @@ export const SessionRow = memo<SessionRowProps>(
             onClick={(e) => e.stopPropagation()}
           />
         )}
-        <div className="flex flex-col gap-0.5" style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex flex-col flex-1 min-w-0 gap-0.5">
           <div className="flex items-center gap-2">
-            {showDir && <Brand size={13} style={{ flex: 'none', opacity: 0.75 }} />}
+            {showDir && <Brand className="flex-none opacity-75" size={13} />}
             <div className="truncate block">
               {digest.title || digest.firstPrompt || digest.sessionId}
             </div>

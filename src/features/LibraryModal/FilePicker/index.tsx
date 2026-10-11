@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { t } from 'i18next';
 import { FileSearch, ServerCrash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo } from 'react';
@@ -26,16 +25,9 @@ import ViewSwitcher from '../AssignKnowledgeBase/ViewSwitcher';
 
 const PAGE_SIZE = 50;
 
-const styles = createStaticStyles(({ css }) => ({
-  grid: css`
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-
-    padding-block: 4px;
-  `,
-}));
+const styles = {
+  grid: 'overflow-y-auto grid grid-cols-2 gap-2 py-1',
+};
 
 interface ResourcePage {
   hasMore: boolean;
@@ -139,7 +131,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
 
   return (
     <div className="flex flex-col h-125 w-full">
-      <div className="flex flex-row items-center justify-end" style={{ paddingBlockEnd: 12 }}>
+      <div className="flex flex-row items-center justify-end pbe-3">
         <ViewSwitcher
           view={viewMode}
           onViewChange={(mode) => updateSystemStatus({ knowledgeBaseModalViewMode: mode })}
@@ -160,9 +152,10 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
       ) : files.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 p-10">
           <SimpleEmpty
-            description={t('empty', { ns: 'file' })}
-            descriptionProps={{ fontSize: 14 }}
             icon={FileSearch}
+            description={
+              <span className="block text-sm leading-5.5">{t('empty', { ns: 'file' })}</span>
+            }
           />
         </div>
       ) : viewMode === 'list' ? (
@@ -208,5 +201,5 @@ export const openLibraryFilePicker = (
     footer: false,
     styles: { content: { overflow: 'hidden' } },
     title: t('knowledgeBase.library.title', { ns: 'chat' }),
-    width: 600,
+    width: 'min(1024px, calc(100vw - 32px))',
   });

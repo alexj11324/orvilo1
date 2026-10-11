@@ -34,7 +34,7 @@ import { FlowOutline } from './FlowOutline';
 import { FlowPanelHostContext } from './FlowPanelHost';
 import { FlowResults } from './FlowResults';
 
-const styles = createStaticStyles(({ css }) => ({
+const registeredStyles = createStaticStyles(({ css }) => ({
   // Fullscreen is a two-column shell, the same shape the page uses: the details
   // rail owns the full height of the right edge and the toolbar belongs to the
   // canvas beside it, not to a band stretched across both.
@@ -43,32 +43,6 @@ const styles = createStaticStyles(({ css }) => ({
     z-index: ${cssVar.zIndexPopupBase};
     inset: 0;
     background: ${cssVar.colorBgContainer};
-
-    @media (width <= 640px) {
-      flex-direction: column;
-    }
-  `,
-  stage: css`
-    min-width: 0;
-    min-height: 0;
-    padding: 16px;
-  `,
-  details: css`
-    overflow: hidden;
-    flex: none;
-
-    width: min(440px, 42%);
-    height: 100%;
-    min-height: 0;
-
-    @media (width <= 640px) {
-      width: 100%;
-      height: 40%;
-    }
-  `,
-  workspace: css`
-    min-width: 0;
-    min-height: 0;
 
     @media (width <= 640px) {
       flex-direction: column;
@@ -90,6 +64,16 @@ const styles = createStaticStyles(({ css }) => ({
     margin-inline: auto;
   `,
 }));
+
+const styles = {
+  fullscreen: registeredStyles.fullscreen,
+  stage: 'min-h-0 min-w-0 p-4',
+  details:
+    'h-full min-h-0 w-[min(440px,42%)] flex-none overflow-hidden [@media(width<=640px)]:h-[40%] [@media(width<=640px)]:w-full',
+  workspace: 'min-h-0 min-w-0 [@media(width<=640px)]:flex-col',
+  toolbar: registeredStyles.toolbar,
+  outline: registeredStyles.outline,
+} as const;
 const nodeTypes = { state: FlowNode, flowGroup: FlowGroup };
 
 export function AcceptanceFlow() {
@@ -217,13 +201,18 @@ export function AcceptanceFlow() {
         style={{ flexWrap: 'wrap' }}
       >
         <div className="flex items-center gap-1">
-          <Button size="sm" variant="ghost" onClick={() => setFocus(undefined)}>
+          <Button size="compact" type="button" variant="ghost" onClick={() => setFocus(undefined)}>
             {t('flow.allGroups')}
           </Button>
           {crumbs.map((crumb) => (
             <div className="flex items-center gap-1" key={crumb.id}>
               <div className="text-muted-foreground">/</div>
-              <Button size="sm" variant="ghost" onClick={() => setFocus(crumb.id)}>
+              <Button
+                size="compact"
+                type="button"
+                variant="ghost"
+                onClick={() => setFocus(crumb.id)}
+              >
                 {crumb.title}
               </Button>
             </div>
@@ -232,7 +221,8 @@ export function AcceptanceFlow() {
         <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
           <AcceptancePlanReview runId={candidates[0]?.run?.verifyRunId} />
           <Button
-            size="sm"
+            size="compact"
+            type="button"
             variant="ghost"
             onClick={() => setDisplay(showOutline ? 'graph' : 'outline')}
           >
@@ -254,7 +244,7 @@ export function AcceptanceFlow() {
               setSelected(undefined);
             }}
           >
-            <SelectTrigger size="sm" style={{ width: 120, flexShrink: 0 }}>
+            <SelectTrigger size="compact" style={{ width: 120, flexShrink: 0 }}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -271,6 +261,7 @@ export function AcceptanceFlow() {
             aria-label={t(fullscreen ? 'flow.exitFullscreen' : 'flow.fullscreen')}
             icon={fullscreen ? Minimize2 : Maximize2}
             ref={fullscreenButton}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t(fullscreen ? 'flow.exitFullscreen' : 'flow.fullscreen')}
             onClick={() => setFullscreen((value) => !value)}
           />

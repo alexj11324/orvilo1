@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx, useTheme } from 'antd-style';
+import { cx, useTheme } from 'antd-style';
 import { memo, type ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 
@@ -19,34 +19,12 @@ import { useTopLevelFileUpload } from './hooks/useTopLevelFileUpload';
 
 const ChunkDrawer = dynamic(() => import('./components/ChunkDrawer'), { ssr: false });
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    container: css`
-      position: relative;
-      overflow: hidden;
-    `,
-    editorOverlay: css`
-      position: absolute;
-      z-index: 1;
-      inset: 0;
-
-      width: 100%;
-      height: 100%;
-
-      background-color: var(--editor-overlay-bg, ${cssVar.colorBgContainer});
-    `,
-    pageEditorOverlay: css`
-      position: absolute;
-      z-index: 1;
-      inset: 0;
-
-      width: 100%;
-      height: 100%;
-
-      background-color: ${cssVar.colorBgLayout};
-    `,
-  };
-});
+const styles = {
+  container: 'relative overflow-hidden',
+  editorOverlay:
+    'absolute z-1 inset-0 size-full [background-color:var(--editor-overlay-bg,var(--card))]',
+  pageEditorOverlay: 'absolute z-1 inset-0 size-full bg-background',
+};
 
 export type ResourceManagerMode = 'editor' | 'explorer' | 'page';
 

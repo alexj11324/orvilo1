@@ -11,26 +11,13 @@ export const TEXT_REJECT_MODAL_WIDTH = 'min(560px, calc(100vw - 32px))';
  * answer for both breakpoints in one node, unlike the body, which mounts one
  * presentation or the other.
  */
-const styles = createStaticStyles(({ css }) => ({
+const registeredStyles = createStaticStyles(({ css }) => ({
   mobileClose: css`
     @media (width <= 767px) {
       inset-block-start: max(4px, env(safe-area-inset-top));
       inset-inline-end: 4px;
       width: 44px;
       height: 44px;
-    }
-  `,
-  mobileContent: css`
-    @media (width <= 767px) {
-      padding-block: 0 max(12px, env(safe-area-inset-bottom));
-      padding-inline: 12px;
-    }
-  `,
-  mobileHeader: css`
-    @media (width <= 767px) {
-      min-height: 56px;
-      padding-block: max(12px, env(safe-area-inset-top)) 12px;
-      padding-inline: 12px 52px;
     }
   `,
   mobilePopup: css`
@@ -45,12 +32,6 @@ const styles = createStaticStyles(({ css }) => ({
         padding: 0;
         border-radius: 0;
       }
-    }
-  `,
-  modalPopup: css`
-    > div {
-      display: flex;
-      flex-direction: column;
     }
   `,
   modalPopupMedia: css`
@@ -70,6 +51,17 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
 }));
+
+const styles = {
+  mobileClose: registeredStyles.mobileClose,
+  mobileContent:
+    '[@media(width<=767px)]:px-3 [@media(width<=767px)]:pbs-0 [@media(width<=767px)]:[padding-block-end:max(12px,env(safe-area-inset-bottom))]',
+  mobileHeader:
+    '[@media(width<=767px)]:min-h-14 [@media(width<=767px)]:ps-3 [@media(width<=767px)]:pe-13 [@media(width<=767px)]:[padding-block-start:max(12px,env(safe-area-inset-top))] [@media(width<=767px)]:pbe-3',
+  mobilePopup: registeredStyles.mobilePopup,
+  modalPopup: '[&>div]:flex [&>div]:flex-col',
+  modalPopupMedia: registeredStyles.modalPopupMedia,
+} as const;
 
 /** Evidence earns a near-fullscreen stage; a text-only reject stays a dialog. */
 export const checkRejectModalSize = (evidenceCount: number) =>

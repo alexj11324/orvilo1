@@ -1,7 +1,6 @@
 'use client';
 
 import { safeParseJSON } from '@orvilo/utils';
-import { createStaticStyles } from 'antd-style';
 import { AlertTriangle } from 'lucide-react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Component, memo, useMemo } from 'react';
@@ -14,38 +13,13 @@ import { toolInterventionSelectors } from '@/store/user/selectors';
 
 import ApprovalActions from '../Messages/AssistantGroup/Tool/Detail/Intervention/ApprovalActions';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  description: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  icon: css`
-    flex: none;
-    color: ${cssVar.colorWarning};
-  `,
-  notice: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 2px;
-
-    font-size: 12px;
-    line-height: 1.5;
-  `,
-  title: css`
-    flex: none;
-    font-weight: 500;
-    color: ${cssVar.colorWarning};
-  `,
-}));
+const styles = {
+  description:
+    'overflow-hidden flex-1 min-w-0 text-muted-foreground text-ellipsis whitespace-nowrap',
+  icon: 'flex-none text-warning-text',
+  notice: 'flex gap-1.5 items-center min-w-0 py-0.5 text-sm',
+  title: 'flex-none font-medium text-warning-text',
+};
 
 interface UserInterventionFallbackProps {
   actionsPortalTarget?: HTMLDivElement | null;
@@ -102,7 +76,7 @@ const UserInterventionFallback = memo<UserInterventionFallbackProps>(
     return (
       <div className="flex flex-col gap-2">
         <div className={styles.notice}>
-          <AlertTriangle className={styles.icon} size={14} />
+          <AlertTriangle className={styles.icon} size={16} />
           <span className={styles.title}>{t('tool.intervention.renderFallback.title')}</span>
           <span className={styles.description}>
             {t('tool.intervention.renderFallback.description')}

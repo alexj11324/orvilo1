@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Crown, Sparkles, Users, UsersRound } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -20,33 +19,11 @@ import AgentBuilderToggle from './AgentBuilderToggle';
 import { type ChromeTabItem } from './ChromeTabs';
 import ChromeTabs from './ChromeTabs';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  header: css`
-    overflow: hidden;
-    flex: none;
-
-    width: 100%;
-    height: 44px;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  tabsWrapper: css`
-    scrollbar-width: none;
-
-    overflow-x: auto;
-
-    /* A swipe past the tabs' edge must not fire the browser back gesture. */
-    overscroll-behavior-x: none;
-    flex: 1;
-
-    min-width: 0;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  `,
-}));
+const styles = {
+  header: 'overflow-hidden flex-none w-full h-11 py-1 px-3 border-be border-divider',
+  tabsWrapper:
+    '[scrollbar-width:none] overflow-x-auto overscroll-x-none flex-1 min-w-0 [&::-webkit-scrollbar]:hidden',
+};
 
 const Header = memo(() => {
   const { t } = useTranslation('chat');
@@ -144,7 +121,7 @@ const Header = memo(() => {
             onChange={setSelectedTabId}
           />
         </div>
-        <div className="flex items-center gap-2" style={{ flex: 'none', marginInlineStart: 12 }}>
+        <div className="ms-3 flex flex-none items-center gap-2">
           <AgentBuilderToggle />
         </div>
       </div>

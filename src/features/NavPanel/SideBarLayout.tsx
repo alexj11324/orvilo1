@@ -1,6 +1,5 @@
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
-import { createGlobalStyle, createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
+import { createGlobalStyle, createStaticStyles, cx } from 'antd-style';
 import { type ReactNode, type UIEvent } from 'react';
 import { memo, Suspense, useCallback, useLayoutEffect, useRef } from 'react';
 
@@ -112,16 +111,15 @@ const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => 
   }, [navKey]);
 
   return (
-    <div className="flex flex-col gap-px" style={{ height: '100%', overflow: 'hidden' }}>
+    <div className="flex h-full flex-col gap-px overflow-hidden">
       <ScrollFadeProperties />
       <Suspense fallback={<SideBarHeaderSkeleton />}>{header}</Suspense>
       <ScrollAreaPrimitive.Root
         // Preserve the height chain for sidebar bodies containing virtual lists.
-        className="relative"
-        style={{ flex: 1, minHeight: 0 }}
+        className="relative min-h-0 flex-1"
       >
         <ScrollAreaPrimitive.Viewport
-          className={cn('size-full', styles.scrollFade)}
+          className={cx('size-full', styles.scrollFade)}
           ref={scrollerRef}
           onScroll={handleScroll}
         >

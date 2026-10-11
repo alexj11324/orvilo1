@@ -1,6 +1,6 @@
 import { createStaticStyles, keyframes } from 'antd-style';
 
-export const styles = createStaticStyles(({ css, cssVar }) => {
+const retainedStyles = createStaticStyles(({ css, cssVar }) => {
   const locateHighlight = keyframes`
     0%, 100% {
       background: transparent;
@@ -16,7 +16,7 @@ export const styles = createStaticStyles(({ css, cssVar }) => {
       position: relative;
 
       &[data-message-locate-highlight] {
-        border-radius: ${cssVar.borderRadiusLG};
+        border-radius: var(--radius-card);
         animation: ${locateHighlight} 1400ms ${cssVar.motionEaseOut};
       }
 
@@ -29,7 +29,7 @@ export const styles = createStaticStyles(({ css, cssVar }) => {
 
         opacity: 0;
 
-        transition: opacity 200ms ${cssVar.motionEaseOut};
+        transition: opacity var(--orvilo-motion-mid) ${cssVar.motionEaseOut};
       }
 
       &:hover,
@@ -47,19 +47,11 @@ export const styles = createStaticStyles(({ css, cssVar }) => {
         }
       }
     `,
-    loading: css`
-      position: absolute;
-      inset-block-end: 0;
-      inset-inline-start: -4px;
-      inset-inline-end: unset;
-
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-
-      color: ${cssVar.colorBgLayout};
-
-      background: ${cssVar.colorPrimary};
-    `,
   };
 });
+
+export const styles = {
+  container: retainedStyles.container,
+  loading:
+    'absolute inset-be-0 -start-1 [inset-inline-end:unset] size-4 rounded-full text-background bg-primary',
+};

@@ -9,7 +9,7 @@ import {
 } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -28,81 +28,36 @@ import {
 
 import type { CreateGoalParams, GoalCriterionDraft } from '../../types';
 
-const styles = createStaticStyles(({ css }) => ({
-  header: css`
-    position: sticky;
-    z-index: 2;
-
-    /* Chrome measures sticky against the scroller's CONTENT box, so top: 0
-      would pin 8px below where the header actually rests (the root cancels
-      that padding) and shove it down. -8px makes the pinned and resting
-      positions identical — the title simply never moves. */
-    inset-block-start: -8px;
-
-    padding-block: 8px 4px;
-
-    background: ${cssVar.colorBgElevated};
-  `,
+const retainedStyles = createStaticStyles(({ css }) => ({
   instructionEditor: css`
     padding-block: 8px;
     padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
+    border-radius: var(--radius-input);
     background: ${cssVar.colorFillQuaternary};
 
-    /* The editor defaults to a document-reading 16px; inside a confirmation
-      card the instruction is one field among several, so it matches the
-      criteria rows rather than dwarfing them. */
+    /* This editable instruction is an ordinary confirmation-form field.
+       Keep the public rich editor's descendant contract while applying the
+       DESIGN body role; its public Editor currently does not forward theme. */
     &,
     & * {
-      font-size: 13px;
-      line-height: 1.65;
+      font-size: var(--text-sm);
+      line-height: calc(1.375 / 0.875);
     }
-  `,
-  list: css`
-    background: transparent;
-
-    /* The secondary border is too faint to read on the dark elevated surface
-      the intervention card sits on. */
-    html[data-theme='dark'] & > * + * {
-      border-block-start-color: ${cssVar.colorBorder};
-    }
-  `,
-  /**
-   * Cancels the intervention scroller's own top padding. It has to sit on the
-   * card root, not on the sticky header: a sticky box is clamped to its
-   * containing block, so pulling the header alone just gets clamped back and
-   * leaves that strip for content to scroll through.
-   */
-  root: css`
-    margin-block-start: -8px;
-  `,
-  section: css`
-    padding-block: 8px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  sectionHeader: css`
-    cursor: pointer;
-    user-select: none;
-  `,
-  sectionLabel: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  seq: css`
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  titleInput: css`
-    padding-block: 2px;
-    padding-inline: 0;
-    font-size: 15px;
-    font-weight: 600;
   `,
 }));
+
+const styles = {
+  header: 'sticky z-2 -inset-bs-2 pbs-2 pbe-1 bg-popover',
+  instructionEditor: retainedStyles.instructionEditor,
+  list: '[background:transparent] dark:[&>*+*]:border-bs-border',
+  root: '-mbs-2',
+  section: 'py-2 [&+&]:border-bs [&+&]:border-divider',
+  sectionHeader:
+    'cursor-pointer select-none min-h-8 rounded-(--radius-button) pointer-coarse:min-bs-11',
+  sectionLabel: 'text-sm font-medium text-muted-foreground',
+  seq: 'text-xs text-foreground-tertiary',
+  titleInput: 'py-0.5 px-0 text-base md:text-base leading-6 font-semibold',
+};
 
 interface SectionProps {
   children: React.ReactNode;
@@ -121,12 +76,9 @@ const Section = memo<SectionProps>(({ children, extra, label, onToggle, open }) 
   <div className={cn('flex', 'flex-col', 'gap-1.75', styles.section)}>
     <div className={cn('flex', 'items-center', 'gap-1.5', styles.sectionHeader)} onClick={onToggle}>
       <ChevronRight
-        size={13}
-        style={{
-          color: cssVar.colorTextQuaternary,
-          transform: open ? 'rotate(90deg)' : 'none',
-          transition: 'transform 0.2s',
-        }}
+        className="size-3.5 text-foreground-quaternary transition-transform duration-(--orvilo-motion-mid) motion-reduce:transition-none"
+        size={14}
+        style={{ transform: open ? 'rotate(90deg)' : 'none' }}
       />
       <div className={styles.sectionLabel}>{label}</div>
       {extra}
@@ -194,6 +146,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
           <Input
             className={styles.titleInput}
             value={args.name}
+            visualSize="normal"
             onChange={(event) => patch({ name: event.target.value })}
           />
         </div>
@@ -203,7 +156,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
           open={openSections.instruction}
           onToggle={() => toggleSection('instruction')}
         >
-          <div className={cn('flex', 'flex-col', styles.instructionEditor)}>
+          <div className={cx('flex', 'flex-col', styles.instructionEditor)}>
             <Editor
               content={initialInstruction}
               editor={editor}
@@ -240,25 +193,31 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
                   title={criterion.title}
                   actions={
                     <>
-                      <ActionIcon
-                        icon={Pencil}
-                        size={'small'}
-                        title={t('builtins.orvilo-task.goal.editCriterion')}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditModal(index);
-                        }}
-                      />
-                      <ActionIcon
-                        icon={Trash2}
-                        size={'small'}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          patch({
-                            criteria: args.criteria.filter((_, itemIndex) => itemIndex !== index),
-                          });
-                        }}
-                      />
+                      <span className="inline-flex flex-none pointer-coarse:p-1.5">
+                        <ActionIcon
+                          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                          icon={Pencil}
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                          title={t('builtins.orvilo-task.goal.editCriterion')}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditModal(index);
+                          }}
+                        />
+                      </span>
+                      <span className="inline-flex flex-none pointer-coarse:p-1.5">
+                        <ActionIcon
+                          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                          icon={Trash2}
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            patch({
+                              criteria: args.criteria.filter((_, itemIndex) => itemIndex !== index),
+                            });
+                          }}
+                        />
+                      </span>
                     </>
                   }
                   onOpen={() => openEditModal(index)}
@@ -274,7 +233,7 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
             </CriterionList>
             <div className="flex">
               <Button
-                size="sm"
+                size="compact"
                 variant="ghost"
                 onClick={() =>
                   openCriterionEditModal({
@@ -300,13 +259,14 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
           open={openSections.budget}
           onToggle={() => toggleSection('budget')}
         >
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-6">
             <div className="flex flex-col gap-1">
               <div className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</div>
               <div className="flex items-center gap-2">
                 <InputNumber
+                  className="w-30"
                   min={2}
-                  style={{ width: 120 }}
+                  size="normal"
                   value={args.maxIterations ?? undefined}
                   onChange={(value) => patch({ maxIterations: value })}
                 />
@@ -318,10 +278,11 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
             <div className="flex flex-col gap-1">
               <div className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</div>
               <InputNumber
+                className="w-30"
                 min={0}
                 placeholder={t('builtins.orvilo-task.goal.uncapped')}
                 prefix={'$'}
-                style={{ width: 120 }}
+                size="normal"
                 value={args.maxTotalCost ?? undefined}
                 onChange={(value) => patch({ maxTotalCost: value })}
               />
@@ -329,10 +290,11 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
             <div className="flex flex-col gap-1">
               <div className={styles.seq}>{t('builtins.orvilo-task.goal.parallelism')}</div>
               <InputNumber
+                className="w-30"
                 max={10}
                 min={1}
                 placeholder={t('builtins.orvilo-task.goal.parallelismAuto')}
-                style={{ width: 120 }}
+                size="normal"
                 value={args.maxConcurrentTasks ?? undefined}
                 onChange={(value) => patch({ maxConcurrentTasks: value })}
               />

@@ -1,7 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import {
   type ComponentType,
@@ -161,7 +160,7 @@ const NavItem = memo<NavItemProps>(
     active,
     href,
     icon,
-    iconSize = 18,
+    iconSize = 16,
     title,
     titleColor,
     description,
@@ -231,19 +230,15 @@ const NavItem = memo<NavItemProps>(
         aria-current={active && href ? 'page' : undefined}
         aria-disabled={disabled || undefined}
         data-active={active || undefined}
-        className={cn(
+        style={mergedStyle}
+        className={cx(
           styles.container,
           className,
-          'flex items-center gap-2 px-1',
-          RootElement === 'button' && 'w-full text-left',
+          'flex items-center gap-2 rounded-(--radius-button) px-1',
+          description ? 'py-2' : 'h-8',
+          RootElement === 'button' && 'w-full text-start',
           !disabled && styles.interactive,
         )}
-        style={{
-          borderRadius: cssVar.borderRadius,
-          height: description ? undefined : 28,
-          paddingBlock: description ? 8 : undefined,
-          ...mergedStyle,
-        }}
         onClick={(e: MouseEvent<HTMLElement>) => {
           // Always prevent default <a> navigation for normal clicks to avoid full page reload.
           // This must run before any early return to ensure SPA navigation is never bypassed.
@@ -261,15 +256,12 @@ const NavItem = memo<NavItemProps>(
       >
         {icon && (
           <div
-            className="flex flex-none items-center justify-center"
-            // With a description the row is two lines tall; align the leading icon
-            // to the title's first line (match its line-height) instead of letting
-            // it center across both lines, which drops it into the gap.
-            style={{
-              alignSelf: description ? 'flex-start' : undefined,
-              height: description ? 22 : 28,
-              width: 28,
-            }}
+            // The 28px column carries identity tiles and public caller icons;
+            // description aligns it to the unchanged 22px body title line.
+            className={cx(
+              'flex w-7 flex-none items-center justify-center',
+              description ? 'h-5.5 self-start' : 'h-8',
+            )}
           >
             {loading ? (
               <NeuralNetworkLoading size={iconSize} />
@@ -285,15 +277,12 @@ const NavItem = memo<NavItemProps>(
         )}
 
         {iconPostfix}
-        <div
-          className={cn(CONTENT_CLASS_NAME, 'flex flex-1 items-center gap-2')}
-          style={{ overflow: 'hidden' }}
-        >
+        <div className={cx(CONTENT_CLASS_NAME, 'flex flex-1 items-center gap-2 overflow-hidden')}>
           {titlePrefix}
           {description ? (
-            <div className="flex flex-col flex-1 gap-0.75" style={{ overflow: 'hidden' }}>
+            <div className="flex flex-col flex-1 gap-0.5 overflow-hidden">
               <div
-                className="truncate font-medium text-(length:--text-dense)"
+                className="truncate font-medium text-sm"
                 style={{ color: textColor }}
                 title={typeof title === 'string' ? title : undefined}
               >
@@ -303,7 +292,7 @@ const NavItem = memo<NavItemProps>(
             </div>
           ) : (
             <div
-              className="flex-1 truncate font-medium text-(length:--text-dense)"
+              className="flex-1 truncate font-medium text-sm"
               style={{ color: textColor }}
               title={typeof title === 'string' ? title : undefined}
             >
@@ -324,7 +313,7 @@ const NavItem = memo<NavItemProps>(
         </div>
         {actions && (
           <div
-            className={cn(ACTION_CLASS_NAME, 'flex items-center justify-end gap-0.5')}
+            className={cx(ACTION_CLASS_NAME, 'flex items-center justify-end gap-0.5')}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();

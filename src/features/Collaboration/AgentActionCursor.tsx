@@ -10,56 +10,8 @@ import type { ActivityPhase, ServerActivityEvent } from '@/store/collaboration';
 import { collabIdForTarget } from './anchors';
 import { useCollaborationContext } from './context';
 
-const styles = createStaticStyles(({ css }) => ({
-  bubble: css`
-    pointer-events: none;
-    will-change: transform;
-    user-select: none;
-
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 3px;
-    padding-inline: 6px;
-    border-radius: 999px;
-
-    font-size: 11px;
-    font-weight: 500;
-    line-height: 1;
-    white-space: nowrap;
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: -3px;
-      border-radius: 999px;
-    }
-  `,
-  committed: css`
-    border: 1px solid ${cssVar.colorSuccessBorder};
-    color: ${cssVar.colorSuccessText};
-    background: ${cssVar.colorSuccessBg};
-  `,
-  failed: css`
-    border: 1px solid ${cssVar.colorErrorBorder};
-    color: ${cssVar.colorErrorText};
-    background: ${cssVar.colorErrorBg};
-  `,
-  proposed: css`
-    border: 1px dashed ${cssVar.colorBorder};
-    color: ${cssVar.colorTextSecondary};
-    background: ${cssVar.colorBgElevated};
-  `,
+const registeredStyles = createStaticStyles(({ css }) => ({
   started: css`
-    border: 1px solid ${cssVar.colorPrimaryBorder};
-    color: ${cssVar.colorPrimaryText};
-    background: ${cssVar.colorPrimaryBg};
-
     @media (prefers-reduced-motion: no-preference) {
       &::before {
         border: 1px solid ${cssVar.colorPrimaryBorder};
@@ -68,6 +20,18 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
 }));
+
+const styles = {
+  bubble:
+    "pointer-events-none will-change-transform select-none absolute inset-bs-0 inset-s-0 flex gap-1 items-center py-0.5 px-1.5 rounded-full text-xs leading-5 font-medium whitespace-nowrap before:content-[''] before:absolute before:-inset-0.75 before:rounded-full",
+  committed: 'border border-success-border text-success-text bg-success-wash',
+  failed: 'border border-destructive-border text-destructive-text bg-destructive-wash',
+  proposed: 'border border-dashed border-border text-muted-foreground bg-popover',
+  started: cx(
+    'border border-primary-border text-primary-text bg-primary-wash',
+    registeredStyles.started,
+  ),
+};
 
 export const AGENT_PHASE_ICON: Record<ActivityPhase, typeof FileEdit> = {
   committed: CheckCircle2,
@@ -110,11 +74,12 @@ export const AgentActionCursor = memo<{ event: ServerActivityEvent }>(({ event }
   return (
     <div
       className={cx(styles.bubble, phaseClass(event.phase))}
+      data-slot="collaboration-agent-action"
       style={{
         transform: `translate(${rect.left + rect.width}px, ${rect.top}px) translate(-50%, -50%)`,
       }}
     >
-      <PhaseIcon size={11} />
+      <PhaseIcon size={16} />
       <span>{t('teammates.activity.bubble', { action: event.action, name })}</span>
     </div>
   );

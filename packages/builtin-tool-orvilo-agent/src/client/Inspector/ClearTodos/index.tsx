@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -9,13 +9,9 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { ClearTodosParams, ClearTodosState } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  mode: css`
-    padding-block-end: 1px;
-    color: ${cssVar.colorText};
-    background: linear-gradient(to top, ${cssVar.colorWarningBg} 40%, transparent 40%);
-  `,
-}));
+const styles = {
+  mode: 'pbe-px text-foreground [background:linear-gradient(to_top,var(--warning-wash)_40%,transparent_40%)]',
+};
 
 export const ClearTodosInspector = memo<BuiltinInspectorProps<ClearTodosParams, ClearTodosState>>(
   ({ args, partialArgs, isArgumentsStreaming }) => {

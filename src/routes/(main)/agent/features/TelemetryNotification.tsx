@@ -1,7 +1,6 @@
 'use client';
 
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { LucideArrowUpRightFromSquare, TelescopeIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -14,15 +13,10 @@ import { PRIVACY_URL } from '@/const/url';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  desc: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    font-size: 18px;
-    font-weight: bold;
-  `,
-}));
+const styles = {
+  desc: 'text-sm leading-5.5 text-muted-foreground',
+  title: 'text-xl font-semibold',
+} as const;
 
 const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
   const { t } = useTranslation('common');
@@ -44,9 +38,9 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
     <Notification mobile={mobile} show={showModal} showCloseIcon={false}>
       <div className="flex flex-col">
         <Avatar
-          avatar={<TelescopeIcon />}
-          background={cssVar.geekblue1}
-          style={{ color: cssVar.geekblue7 }}
+          avatar={<TelescopeIcon className="text-info-text" />}
+          background="var(--info-wash)"
+          className="text-info-text"
         />
       </div>
       <div className="flex flex-col gap-4">
@@ -59,7 +53,10 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
             <span>
               <a href={PRIVACY_URL} rel="noreferrer" target="_blank">
                 {t('telemetry.learnMore')}
-                <LucideArrowUpRightFromSquare style={{ marginInlineStart: 4 }} />
+                <LucideArrowUpRightFromSquare
+                  className="ms-1 inline-block size-4 align-middle"
+                  size={16}
+                />
               </a>
             </span>
           </div>

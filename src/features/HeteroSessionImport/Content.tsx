@@ -6,7 +6,7 @@ import type {
   HeteroSessionDirPref,
   HeteroSessionImportStatus,
 } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check, FolderSearch, TriangleAlert, X } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,15 +26,10 @@ import { SessionRow } from './SessionList';
 import SidebarTree, { type TreeScope } from './SidebarTree';
 import { deriveSessionStatus, dirKeyOf, fmtTokens, type ImportRowState, selectable } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  footer: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
-
-const CONTENT_HEIGHT = 'min(680px, calc(100vh - 240px))';
+const styles = {
+  footer: 'py-3 px-4 border-bs border-divider',
+  contentHeight: '[height:min(680px,calc(100vh_-_240px))]',
+};
 
 type Phase = 'done' | 'empty' | 'error' | 'importing' | 'scanning' | 'select';
 
@@ -244,10 +239,7 @@ const Content = memo<ContentProps>(({ agentId }) => {
 
   if (phase === 'scanning')
     return (
-      <div
-        className="flex flex-col items-center gap-4 justify-center"
-        style={{ height: CONTENT_HEIGHT }}
-      >
+      <div className={cn('flex flex-col items-center gap-4 justify-center', styles.contentHeight)}>
         <NeuralNetworkLoading size={48} />
         <div className="text-muted-foreground">{t('heteroImport.scanning')}</div>
       </div>
@@ -255,19 +247,13 @@ const Content = memo<ContentProps>(({ agentId }) => {
 
   if (phase === 'empty')
     return (
-      <div
-        className="flex flex-col items-center gap-3 justify-center"
-        style={{ height: CONTENT_HEIGHT }}
-      >
-        <FolderSearch size={40} style={{ opacity: 0.4 }} />
+      <div className={cn('flex flex-col items-center gap-3 justify-center', styles.contentHeight)}>
+        <FolderSearch className="opacity-40" size={40} />
         <div className="font-medium">{t('heteroImport.empty.title')}</div>
-        <div
-          className="text-(length:--text-dense) text-muted-foreground"
-          style={{ maxWidth: 380, textAlign: 'center' }}
-        >
+        <div className="text-sm leading-5.5 text-muted-foreground max-w-95 text-center">
           {t('heteroImport.empty.desc')}
         </div>
-        <Button size="sm" onClick={scan}>
+        <Button size="normal" onClick={scan}>
           {t('heteroImport.footer.rescan')}
         </Button>
       </div>
@@ -275,19 +261,13 @@ const Content = memo<ContentProps>(({ agentId }) => {
 
   if (phase === 'error')
     return (
-      <div
-        className="flex flex-col items-center gap-3 justify-center"
-        style={{ height: CONTENT_HEIGHT }}
-      >
-        <TriangleAlert size={40} style={{ opacity: 0.5 }} />
+      <div className={cn('flex flex-col items-center gap-3 justify-center', styles.contentHeight)}>
+        <TriangleAlert className="opacity-50" size={40} />
         <div className="font-medium">{t('heteroImport.error.title')}</div>
-        <div
-          className="text-(length:--text-dense) text-muted-foreground"
-          style={{ maxWidth: 380, textAlign: 'center' }}
-        >
+        <div className="text-sm leading-5.5 text-muted-foreground max-w-95 text-center">
           {t('heteroImport.error.desc')}
         </div>
-        <Button size="sm" onClick={scan}>
+        <Button size="normal" onClick={scan}>
           {t('heteroImport.footer.rescan')}
         </Button>
       </div>
@@ -295,22 +275,23 @@ const Content = memo<ContentProps>(({ agentId }) => {
 
   return (
     <div className="flex flex-col">
-      <div className="flex" style={{ height: CONTENT_HEIGHT }}>
+      <div className={cn('flex', styles.contentHeight)}>
         {!importing && (
           <SidebarTree groups={groups} scope={scope} onScopeChange={setScope} onSetPref={setPref} />
         )}
-        <div className="flex flex-col" style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex flex-col flex-1 min-w-0">
           {!importing && (
-            <div className="flex flex-col gap-2" style={{ padding: '0 16px 10px' }}>
+            <div className="flex flex-col gap-2 pbs-0 px-4 pbe-2.5">
               <div className="relative">
                 <FolderSearch
-                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  size={14}
+                  className="pointer-events-none absolute inset-s-2.5 inset-bs-1/2 -translate-y-1/2 text-muted-foreground"
+                  size={16}
                 />
                 <Input
-                  className="h-7 pl-8"
+                  className="ps-8"
                   placeholder={t('heteroImport.searchPlaceholder')}
                   value={keyword}
+                  visualSize="normal"
                   onChange={(e) => setKeyword(e.target.value)}
                 />
               </div>
@@ -321,20 +302,20 @@ const Content = memo<ContentProps>(({ agentId }) => {
                     indeterminate={!allChecked && someChecked}
                     onCheckedChange={toggleAll}
                   />
-                  <div className="text-(length:--text-dense) text-muted-foreground">
+                  <div className="text-sm leading-5.5 text-muted-foreground">
                     {t('heteroImport.selectAll')}
                   </div>
                 </label>
                 <label className="flex items-center gap-2">
                   <Checkbox checked={hideImported} onCheckedChange={setHideImported} />
-                  <div className="text-(length:--text-dense) text-muted-foreground">
+                  <div className="text-sm leading-5.5 text-muted-foreground">
                     {t('heteroImport.hideImported')}
                   </div>
                 </label>
               </div>
             </div>
           )}
-          <ScrollArea style={{ flex: 1, padding: '0 8px 8px' }}>
+          <ScrollArea className="flex-1 pbs-0 px-2 pbe-2">
             {rows.map(({ digest }) => (
               <SessionRow
                 checked={selected.has(digest.sessionId)}
@@ -358,8 +339,8 @@ const Content = memo<ContentProps>(({ agentId }) => {
       </div>
 
       {phase === 'select' && (
-        <div className={cx(styles.footer, 'flex items-center justify-between')}>
-          <div className="text-(length:--text-dense) text-muted-foreground">
+        <div className={cn(styles.footer, 'flex items-center justify-between')}>
+          <div className="text-sm leading-5.5 text-muted-foreground">
             {selected.size > 0
               ? t('heteroImport.footer.selected', {
                   messages: estMessages.toLocaleString(),
@@ -380,29 +361,25 @@ const Content = memo<ContentProps>(({ agentId }) => {
       )}
 
       {phase === 'importing' && (
-        <div className={cx(styles.footer, 'flex flex-col gap-1')} style={{ width: '100%' }}>
+        <div className={cn(styles.footer, 'flex flex-col gap-1 w-full')}>
           <div className="flex items-center justify-between">
-            <div className="text-(length:--text-dense) text-muted-foreground">
+            <div className="text-sm leading-5.5 text-muted-foreground">
               {t('heteroImport.progress', { done: doneStates.length, total: selectedItems.length })}
             </div>
-            <div className="text-(length:--text-dense) text-muted-foreground">{pct}%</div>
+            <div className="text-sm leading-5.5 text-muted-foreground">{pct}%</div>
           </div>
           <Progress value={pct} />
         </div>
       )}
 
       {phase === 'done' && (
-        <div className={cx(styles.footer, 'flex items-center justify-between')}>
+        <div className={cn(styles.footer, 'flex items-center justify-between')}>
           <div className="flex items-center gap-2">
             {createElement(doneStats.failed ? X : Check, {
               size: 16,
-              style: {
-                color: doneStats.failed
-                  ? 'var(--lobe-color-warning, #faad14)'
-                  : 'var(--lobe-color-success, #52c41a)',
-              },
+              className: doneStats.failed ? 'text-warning-text' : 'text-success-text',
             })}
-            <div className="text-(length:--text-dense)">
+            <div className="text-sm leading-5.5">
               {t('heteroImport.done.summary', {
                 messages: doneStats.inserted.toLocaleString(),
                 sessions: doneStats.ok,

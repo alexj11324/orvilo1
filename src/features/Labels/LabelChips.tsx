@@ -13,7 +13,7 @@ const styles = createStaticStyles(({ css }) => ({
   group: css`
     display: inline-flex;
     flex: none;
-    gap: 3px;
+    gap: 4px;
     align-items: center;
 
     min-width: 0;

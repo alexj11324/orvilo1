@@ -1,6 +1,6 @@
 'use client';
 
-import { createGlobalStyle, createStaticStyles } from 'antd-style';
+import { createGlobalStyle } from 'antd-style';
 import { type FocusEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -9,15 +9,10 @@ import { inputSelectors, useConversationStore } from '@/features/Conversation/st
 
 import HoverExpandBar from './HoverExpandBar';
 
-const styles = createStaticStyles(({ css }) => ({
-  row: css`
-    position: relative;
-    flex-shrink: 0;
-  `,
-  surface: css`
-    view-transition-name: floating-chat-panel-input;
-  `,
-}));
+const styles = {
+  row: 'relative shrink-0',
+  surface: '[view-transition-name:floating-chat-panel-input]',
+};
 
 const InputRowViewTransitionStyle = createGlobalStyle`
   ::view-transition-old(floating-chat-panel-input),

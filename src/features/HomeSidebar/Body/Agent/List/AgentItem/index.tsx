@@ -1,6 +1,5 @@
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2, PinIcon } from 'lucide-react';
 import { type CSSProperties, type DragEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -20,56 +19,13 @@ import { usePreservedAgentUrl } from '../usePreservedAgentUrl';
 import Avatar from './Avatar';
 import { useAgentDropdownMenu } from './useDropdownMenu';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  badge: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block-end: -3px;
-    inset-inline-end: -3px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    min-width: 14px;
-    height: 14px;
-    padding-inline: 3px;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 999px;
-
-    font-size: 9px;
-    font-weight: 600;
-    line-height: 1;
-    color: #fff;
-
-    background: ${cssVar.colorError};
-  `,
-  runningBadge: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block-end: -3px;
-    inset-inline-end: -3px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 14px;
-    height: 14px;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 999px;
-
-    color: ${cssVar.colorWarning};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  wrapper: css`
-    position: relative;
-    display: inline-flex;
-  `,
-}));
+const styles = {
+  badge:
+    'pointer-events-none absolute -inset-be-1 -end-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-[length:calc(var(--spacing)*0.375)] border-card px-1 text-xs font-semibold text-destructive-on-fill bg-destructive',
+  runningBadge:
+    'pointer-events-none absolute -inset-be-1 -end-1 inline-flex size-5 items-center justify-center rounded-full border-[length:calc(var(--spacing)*0.375)] border-card bg-card text-warning-text',
+  wrapper: 'relative inline-flex',
+};
 
 interface AgentItemProps {
   className?: string;
@@ -135,15 +91,14 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
 
   // Memoize pin icon
   const pinIcon = useMemo(
-    () =>
-      pinned ? <PinIcon size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} /> : undefined,
+    () => (pinned ? <PinIcon className="pointer-events-none opacity-50" size={14} /> : undefined),
     [pinned],
   );
 
   // Memoize avatar icon (show loader when updating, running spinner or unread badge at bottom-right)
   const avatarIcon = useMemo(() => {
     if (isUpdating) {
-      return <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={18} />;
+      return <Loader2 className="animate-spin text-foreground-description" size={16} />;
     }
 
     const avatarNode = <Avatar type={heterogeneousType} />;
@@ -153,7 +108,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
         <span className={styles.wrapper}>
           {avatarNode}
           <span className={styles.runningBadge}>
-            <Loader2 className="animate-spin" size={9} />
+            <Loader2 className="animate-spin" size={14} />
           </span>
         </span>
       );
@@ -207,7 +162,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
           roleTag ? (
             <>
               {displayTitle}
-              <span style={{ fontSize: 12, marginInlineStart: 6, opacity: 0.6 }}>{roleTag}</span>
+              <span className="ms-1.5 text-xs opacity-60">{roleTag}</span>
             </>
           ) : (
             displayTitle

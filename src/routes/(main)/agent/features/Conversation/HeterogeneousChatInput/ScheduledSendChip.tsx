@@ -1,7 +1,6 @@
 'use client';
 
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { CalendarClockIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -10,23 +9,10 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import { useConversationStore } from '@/features/Conversation';
 
-const styles = createStaticStyles(({ css }) => ({
-  chip: css`
-    flex: none;
-
-    height: 28px;
-    padding-inline: 8px 4px;
-    border-radius: 14px;
-
-    background: ${cssVar.colorInfoBg};
-  `,
-  label: css`
-    font-size: 12px;
-    line-height: 1;
-    color: ${cssVar.colorInfoText};
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  chip: 'h-8 pointer-coarse:h-11 flex-none rounded-full bg-info-wash ps-2 pe-1',
+  label: 'text-xs leading-5 text-info-text whitespace-nowrap',
+} as const;
 
 /**
  * The armed-schedule chip, sitting right next to the `+` menu that armed it.
@@ -46,14 +32,17 @@ const ScheduledSendChip = memo(() => {
 
   return (
     <div className={cn('flex items-center gap-1', styles.chip)}>
-      <CalendarClockIcon size={12} style={{ color: cssVar.colorInfoText }} />
+      <CalendarClockIcon className="size-4 text-info-text" size={16} />
       <div className={styles.label}>{formatAbsoluteDateTime(scheduledSendAt)}</div>
-      <ActionIcon
-        icon={XIcon}
-        size={'small'}
-        title={t('input.schedule.clear')}
-        onClick={() => setScheduledSendAt(undefined)}
-      />
+      <span className="inline-flex flex-none pointer-coarse:p-1.5">
+        <ActionIcon
+          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+          icon={XIcon}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+          title={t('input.schedule.clear')}
+          onClick={() => setScheduledSendAt(undefined)}
+        />
+      </span>
     </div>
   );
 });

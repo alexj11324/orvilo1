@@ -1,7 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,79 +9,12 @@ import { useChatStore } from '@/store/chat';
 import { threadSelectors } from '@/store/chat/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  item: css`
-    cursor: pointer;
-
-    overflow: hidden;
-
-    padding-block: 6px;
-    padding-inline: 10px;
-    border-radius: 6px;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  itemActive: css`
-    font-weight: 600;
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  trigger: css`
-    cursor: pointer;
-
-    overflow: hidden;
-    display: inline-block;
-
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 6px;
-    border: none;
-    border-radius: 6px;
-
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.5;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: transparent;
-    outline: none;
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus {
-      outline: none;
-      box-shadow: none;
-    }
-
-    /* Keep a visible landmark for keyboard focus (mirrors DeviceItem). */
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -1px;
-    }
-
-    &[data-popup-open] {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  item: 'h-8 pointer-coarse:h-11 cursor-pointer truncate rounded-(--radius-button) px-2.5 py-1.25 text-sm leading-5.5 text-foreground whitespace-nowrap transition-[background-color] duration-150 ease-[ease] hover:bg-accent motion-reduce:transition-none',
+  itemActive: 'bg-selected font-semibold hover:bg-selected',
+  trigger:
+    'inline-flex items-center h-8 pointer-coarse:h-11 min-w-0 cursor-pointer truncate rounded-(--radius-button) border-0 bg-transparent px-1.5 py-1.25 text-sm leading-5.5 font-semibold text-foreground outline-none transition-[background-color] duration-150 ease-[ease] hover:bg-accent focus:outline-none focus:shadow-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 focus-visible:outline-offset-[-1px] data-[popup-open]:bg-accent motion-reduce:transition-none',
+} as const;
 
 interface ThreadSwitcherProps {
   title: string;
@@ -100,21 +32,13 @@ const ThreadSwitcher = memo<ThreadSwitcherProps>(({ title }) => {
   };
 
   const content = (
-    <div
-      className="flex flex-col gap-0.5 p-1"
-      style={{
-        maxHeight: '50vh',
-        maxWidth: 360,
-        minWidth: 240,
-        overflowY: 'auto',
-      }}
-    >
+    <div className="flex flex-col gap-0.5 p-1 max-h-[50vh] max-w-90 min-w-60 overflow-y-auto">
       {threads.map((thread) => (
         <div
           {...clickableProps()}
           key={thread.id}
           className={cn(
-            cx(styles.item, thread.id === activeThreadId && styles.itemActive),
+            clsx(styles.item, thread.id === activeThreadId && styles.itemActive),
             CLICKABLE_FOCUS_RING,
           )}
           onClick={() => handleSwitch(thread.id)}
@@ -128,13 +52,10 @@ const ThreadSwitcher = memo<ThreadSwitcherProps>(({ title }) => {
   return (
     <Popover>
       <PopoverTrigger
-        render={
-          <span className={styles.trigger} style={{ display: 'inline-flex' }}>
-            {title}
-          </span>
-        }
+        nativeButton={false}
+        render={<span className={styles.trigger}>{title}</span>}
       />
-      <PopoverContent align="start" side="bottom" style={{ padding: 4 }}>
+      <PopoverContent align="start" className="p-1" side="bottom">
         {content}
       </PopoverContent>
     </Popover>

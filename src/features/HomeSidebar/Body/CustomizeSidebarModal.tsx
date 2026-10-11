@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { t } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -64,19 +64,10 @@ export const getVisibleSidebarSections = (isWorkspaceMode: boolean): SidebarSect
 // Styles
 // ---------------------------------------------------------------------------
 
-const styles = createStaticStyles(({ css }) => ({
-  item: css`
-    height: 40px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  footer: css`
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    padding-block-start: 16px;
-  `,
-}));
+const styles = {
+  item: 'min-h-9 px-2 rounded-(--radius-button) text-sm',
+  footer: 'grid grid-cols-2 gap-2 pbs-4',
+};
 
 // ---------------------------------------------------------------------------
 // SectionRow
@@ -92,11 +83,11 @@ const SectionRow = memo<{
 
   return (
     <div
-      className={cx(styles.item, 'flex items-center gap-2 justify-between')}
+      className={cn(styles.item, 'flex items-center gap-2 justify-between')}
       style={{ opacity: isHidden ? 0.5 : undefined }}
     >
       <div className="flex items-center gap-2">
-        <config.icon size={18} />
+        <config.icon size={16} />
         <div>{t(config.labelKey as never)}</div>
       </div>
       {config.alwaysVisible ? (
@@ -106,9 +97,9 @@ const SectionRow = memo<{
               render={
                 <span className="inline-flex">
                   <ActionIcon
+                    className="cursor-default opacity-45"
                     icon={PinIcon}
-                    size={'small'}
-                    style={{ cursor: 'default', opacity: 0.45 }}
+                    size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
                   />
                 </span>
               }
@@ -124,7 +115,7 @@ const SectionRow = memo<{
                 <span className="inline-flex">
                   <ActionIcon
                     icon={isHidden ? EyeOff : Eye}
-                    size={'small'}
+                    size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
                     onClick={() => onToggle(config.id)}
                   />
                 </span>
@@ -206,7 +197,7 @@ const CustomizeSidebarContent = memo(() => {
       </div>
       <div className={styles.footer}>
         <Button className="w-full" type="button" variant="outline" onClick={handleResetDefault}>
-          <RotateCcw data-icon="inline-start" size={14} />
+          <RotateCcw data-icon="inline-start" size={16} />
           {commonT('navPanel.resetDefault')}
         </Button>
         <Button className="w-full" type="button" variant="default" onClick={handleConfirm}>

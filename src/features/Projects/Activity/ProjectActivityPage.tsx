@@ -1,7 +1,6 @@
 'use client';
 import type { ProjectUpdate } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
-import { createStaticStyles } from 'antd-style';
 import type { TFunction } from 'i18next';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -48,48 +47,14 @@ import { ProjectCreationTimelineItem } from './ProjectCreationTimelineItem';
  * 14px/22px body copy and a 12px timestamp. Long-form comments render as
  * bordered cards inside the same item.
  */
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  body: css`
-    overflow-y: auto;
-    flex: 1;
-
-    min-height: 0;
-    padding-block: 24px 32px;
-    padding-inline: max(24px, calc((100% - 800px) / 2));
-  `,
-  card: css`
-    padding-block: 2px;
-    padding-inline: 12px;
-    border: 0.5px solid ${cssVar.colorBorder};
-    border-radius: 10px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  empty: css`
-    padding-block: 24px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  link: css`
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    overflow-wrap: anywhere;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  `,
-  taskRef: css`
-    color: ${cssVar.colorTextTertiary};
-    overflow-wrap: anywhere;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      text-decoration: underline;
-    }
-  `,
-}));
+const styles = {
+  body: 'overflow-y-auto flex-1 min-h-0 pbs-6 pbe-8 [padding-inline:max(24px,calc((100%_-_800px)/2))]',
+  card: 'py-0.5 px-3 border-[0.5px] border-border rounded-(--radius-card) bg-card',
+  empty: 'py-6 text-xs leading-5 text-foreground-tertiary text-center',
+  link: 'font-medium text-foreground [overflow-wrap:anywhere] hover:underline',
+  taskRef:
+    'text-foreground-tertiary [overflow-wrap:anywhere] hover:text-foreground hover:underline',
+};
 
 const STATUS_KEY = {
   backlog: 'taskDetail.status.backlog',
@@ -471,7 +436,7 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
 
   if (isLoading && !data)
     return (
-      <div aria-busy="true" className="flex flex-col gap-2" role="status" style={{ padding: 12 }}>
+      <div aria-busy="true" className="flex flex-col gap-2 p-3" role="status">
         {Array.from({ length: 8 }, (_, index) => (
           <Skeleton className="h-8 w-full" key={index} />
         ))}
@@ -479,7 +444,7 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
     );
   if (error && rows.length === 0)
     return (
-      <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
+      <div className="flex flex-col items-center justify-center flex-1 p-6">
         <AsyncError error={error} variant={'block'} onRetry={() => void mutate()} />
       </div>
     );
@@ -524,11 +489,11 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
         <AsyncError error={moreError} variant={'inline'} onRetry={() => void loadMore()} />
       ) : null}
       {nextCursor ? (
-        <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 16 }}>
+        <div className="flex flex-col items-center justify-center py-4">
           <Button
             aria-busy={loadingMore}
             disabled={loadingMore}
-            size="compact"
+            size="normal"
             variant="outline"
             onClick={() => void loadMore()}
           >

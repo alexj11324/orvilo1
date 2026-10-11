@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CheckIcon, SearchIcon } from 'lucide-react';
@@ -19,65 +18,11 @@ import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { type ChatTopic } from '@/types/topic';
 
-const styles = createStaticStyles(({ css }) => ({
-  empty: css`
-    padding-block: 24px;
-    padding-inline: 12px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-    text-align: center;
-  `,
-  item: css`
-    cursor: pointer;
-
-    overflow: hidden;
-    flex: none;
-    justify-content: space-between;
-
-    width: 100%;
-    min-height: 32px;
-    padding-block: 4px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: 6px;
-
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-    text-align: start;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: transparent;
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -1px;
-    }
-
-    &[aria-current='true'],
-    &[aria-current='true']:hover {
-      font-weight: 600;
-      background: var(--muted);
-    }
-  `,
-  // Mirrors Linear's 320px `Chat history` menu: a search field on top of the
-  // existing-chat rows for the agent currently in view.
-  root: css`
-    width: 100%;
-    min-height: 0;
-    max-height: min(400px, var(--available-height, 400px));
-  `,
-}));
+const styles = {
+  empty: 'px-3 py-6 text-center text-xs leading-5 text-foreground-description',
+  item: 'w-full flex-none cursor-pointer justify-between overflow-hidden border-0 bg-transparent px-2 py-1 text-start text-sm leading-5.5 font-normal text-foreground whitespace-nowrap hover:bg-accent aria-[current=true]:bg-selected aria-[current=true]:font-semibold aria-[current=true]:hover:bg-selected',
+  root: 'min-h-0 max-h-[min(400px,var(--available-height,400px))] w-full',
+} as const;
 
 interface ChatHistoryContentProps {
   /** Called after a row navigates — popovers pass their close handler. */
@@ -146,22 +91,22 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
 
   return (
     <div className={cn('flex flex-col gap-1', styles.root)}>
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2 border-be border-border px-3 py-2">
         <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
         <Input
           autoFocus
           aria-label={t('chatHistory.title', { ns: 'chat' })}
-          className="h-7 border-0 px-0 text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
+          className="border-0 px-0 text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
           placeholder={t('chatHistory.title', { ns: 'chat' })}
           value={keyword}
+          visualSize="compact"
           onChange={(e) => setKeyword(e.target.value)}
           onKeyDown={(event) => focusRow(event, true)}
         />
       </div>
       <div
-        className="flex flex-col gap-0.5 p-1"
+        className="flex flex-col gap-0.5 p-1 max-h-80 min-h-0 overflow-y-auto"
         ref={listRef}
-        style={{ maxHeight: 320, minHeight: 0, overflowY: 'auto' }}
         onKeyDown={focusRow}
       >
         {showLoading ? (

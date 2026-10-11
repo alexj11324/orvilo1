@@ -1,7 +1,6 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { UserMinus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,17 +21,10 @@ import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 import AddGroupMemberModal from '../AddGroupMemberModal';
 import GroupMemberItem from './GroupMemberItem';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  memberTrigger: css`
-    border-radius: ${cssVar.borderRadius};
-    transition: background 0.2s ${cssVar.motionEaseOut};
-
-    &[data-popup-open],
-    &[data-active='true'] {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  memberTrigger:
+    'rounded-(--radius-card) transition-[background-color] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-out) motion-reduce:transition-none data-[popup-open]:bg-accent data-[active=true]:bg-selected data-[active=true]:data-[popup-open]:bg-selected',
+};
 
 interface GroupMemberProps {
   addModalOpen: boolean;
@@ -128,7 +120,7 @@ const GroupMember = memo<GroupMemberProps>(({ addModalOpen, onAddModalOpenChange
                       disabled={!canEdit}
                       icon={UserMinus}
                       loading={removingMemberIds.includes(item.id)}
-                      size={'small'}
+                      size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
                       title={canEdit ? t('groupSidebar.members.removeMember') : reason}
                       onClick={(e) => {
                         e.stopPropagation();

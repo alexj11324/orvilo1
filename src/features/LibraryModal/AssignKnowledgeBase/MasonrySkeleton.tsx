@@ -1,21 +1,11 @@
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  grid: css`
-    display: grid;
-    gap: 16px;
-    padding-block: 12px;
-  `,
-}));
+const styles = {
+  card: 'p-4 border border-divider rounded-(--radius-card) bg-card',
+  grid: 'grid gap-4 py-3',
+};
 
 interface MasonrySkeletonProps {
   columnCount: number;

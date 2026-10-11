@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { IndentStyle } from './indent';
 
 const styles = {
-  bar: 'h-8 shrink-0 border-t border-divider bg-card px-2.5 text-xs leading-5 text-foreground-tertiary',
+  bar: 'h-8 shrink-0 border-bs border-divider bg-card px-2.5 text-xs leading-5 text-foreground-tertiary',
   button:
     'cursor-pointer px-1.5 font-normal leading-5 whitespace-nowrap text-inherit hover:bg-accent hover:text-foreground focus-visible:ring-inset',
   item: 'px-1.5 whitespace-nowrap',

@@ -1846,6 +1846,19 @@ export class TaskService {
           }
         : null;
 
+    // `directTopics` is newest-first. A run that failed before its reason was
+    // recorded on the run row (older rows, or a failure that never reached topic
+    // settlement) can still borrow the task's current error — but only the
+    // latest run of this task: `tasks.error` describes nothing older.
+    const latestDirectTopicId = directTopics[0]?.topicId ?? null;
+    const topicFailureReason = (t: TaskTopicActivityRow): string | null => {
+      if (t.status !== 'failed' && t.status !== 'timeout' && t.status !== 'canceled') return null;
+      const recorded = (t.handoff as TaskTopicHandoff | null)?.error?.message;
+      if (recorded) return recorded;
+      const isLatestOwnRun = !t.sourceTaskId && !!t.topicId && t.topicId === latestDirectTopicId;
+      return isLatestOwnRun && t.status !== 'canceled' ? (task.error ?? null) : null;
+    };
+
     const activities: TaskDetailActivity[] = [
       ...(createdActivity ? [createdActivity] : []),
       ...topics.map((t) => {
@@ -1859,6 +1872,7 @@ export class TaskService {
           // Raw last assistant message of the run, shown alongside
           // the synthesized summary on the run card.
           content: handoff?.content,
+          error: topicFailureReason(t),
           id: t.topicId ?? undefined,
           // The run's workspace-integration record (merge state, branch, PR) —
           // null for runs that never provisioned an isolated worktree.

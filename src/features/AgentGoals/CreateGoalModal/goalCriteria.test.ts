@@ -51,6 +51,24 @@ describe('generateGoalCriteria', () => {
     });
   });
 
+  it('passes the chosen agent so an ACP round can draft the plan', async () => {
+    const generatePlan = vi.spyOn(verifyService, 'generateGoalPlan').mockResolvedValue({
+      criteria: [{ title: 'Paper draft is complete' }],
+      instruction: 'Write the paper.',
+      title: 'Publish benchmark paper',
+    });
+
+    await generateGoalCriteria({ agentId: 'agent-acp', goal: 'Write the paper' });
+
+    expect(generatePlan).toHaveBeenCalledWith({
+      agentId: 'agent-acp',
+      context: undefined,
+      goal: 'Write the paper',
+      maxCriteria: 8,
+    });
+    expect(generatePlan.mock.calls[0][0].agentId).toBe('agent-acp');
+  });
+
   it('rejects an empty AI response instead of advancing with no criteria', async () => {
     vi.spyOn(verifyService, 'generateGoalPlan').mockResolvedValue({
       criteria: [],

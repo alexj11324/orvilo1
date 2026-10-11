@@ -103,6 +103,8 @@ class TaskService {
    * whether to act on the reading.
    */
   analyzeIntent = async (params: {
+    /** The assignee picked in the composer; ACP users get no reading without it. */
+    agentId?: string;
     context?: string;
     instruction: string;
   }): Promise<TaskIntentAnalysis> => lambdaClient.task.analyzeIntent.mutate(params);
@@ -113,6 +115,8 @@ class TaskService {
    * nothing.
    */
   synthesizeInstruction = async (params: {
+    /** The assignee picked in the composer; ACP users get no rewrite without it. */
+    agentId?: string;
     answers: { answer: string; question: string }[];
     context?: string;
     instruction: string;

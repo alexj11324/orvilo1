@@ -6,6 +6,7 @@ import { useCallback } from 'react';
 
 import { toast } from '@/components/toast';
 import { shouldAutoRunForWorkflowMove } from '@/features/AgentTasks/features/shouldAutoRunForWorkflowMove';
+import { runTaskWithContractCheck } from '@/features/AgentTasks/shared/runWithContractCheck';
 import {
   moveBoardMaybePickingState,
   workQueryBoardMoveToastKey,
@@ -61,8 +62,10 @@ export const useIssueStatusMove = () => {
             status: task.status,
           })
         ) {
-          const started = await runTask(input.taskIdentifier);
-          if (!started) toast.error(t('taskDetail.autoRunFailed', { ns: 'chat' }));
+          // Declining the pending-contract-edits confirmation leaves the move in
+          // place with no run; the Issue's Execution area then offers Start.
+          const result = await runTaskWithContractCheck(input.taskIdentifier, runTask);
+          if (result === 'failed') toast.error(t('taskDetail.autoRunFailed', { ns: 'chat' }));
         }
       };
       if (!task.teamId) {

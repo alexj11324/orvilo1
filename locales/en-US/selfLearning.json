@@ -54,6 +54,7 @@
   "create.next": "Next",
   "create.regenerate": "Regenerate",
   "create.reviewHelp": "Here is the anchor it read out of your brief. Fix anything that is off — the filter decides which conversations it learns from; the layers and canon decide where lessons attach and what “coverage” means.",
+  "create.unavailable": "Drafting with AI is not available on this deployment. Your description is kept.",
   "domain.delete": "Delete",
   "domain.deleteConfirm.content": "Its {{habits}} experiences and {{runs}} practice records in this direction go with it. This cannot be undone.",
   "domain.deleteConfirm.ok": "Delete",

@@ -222,6 +222,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       topicId: 'topic-1',
     });
     (service as any).taskTopicModel.updateHandoffContent = vi.fn().mockResolvedValue(undefined);
+    (service as any).taskTopicModel.updateHandoffError = vi.fn().mockResolvedValue(undefined);
     (service as any).taskTopicModel.markResultReady = vi.fn().mockResolvedValue(true);
     (service as any).briefModel.create = createBrief;
     (service as any).briefModel.hasUnresolvedUrgentByTask = vi.fn().mockResolvedValue(false);
@@ -1311,6 +1312,49 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         error: 'builder failed before push',
         parkedReason: 'execution_failed',
       });
+    });
+
+    it('records the failure reason on the run that failed', async () => {
+      findById.mockResolvedValue(baseTask({ automationMode: null }));
+
+      await service.onTopicComplete({
+        errorCode: 'AgentRuntimeError',
+        errorMessage: 'codex exited with code 1',
+        operationId: 'op-1',
+        reason: 'error',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect((service as any).taskTopicModel.updateHandoffError).toHaveBeenCalledWith(
+        'task-1',
+        'topic-1',
+        { code: 'AgentRuntimeError', message: 'codex exited with code 1' },
+      );
+    });
+
+    it('still settles the failure when the reason cannot be recorded on the run', async () => {
+      findById.mockResolvedValue(baseTask({ automationMode: null }));
+      (service as any).taskTopicModel.updateHandoffError = vi
+        .fn()
+        .mockRejectedValue(new Error('db unavailable'));
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await service.onTopicComplete({
+        errorMessage: 'boom',
+        operationId: 'op-1',
+        reason: 'error',
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+      });
+
+      expect(updateStatus).toHaveBeenCalledWith('task-1', 'paused', {
+        error: 'boom',
+        parkedReason: 'execution_failed',
+      });
+      warn.mockRestore();
     });
 
     it('non-automation task → status="paused" (unchanged behavior)', async () => {

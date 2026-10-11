@@ -25,7 +25,6 @@ import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import IssueStatusPicker from '../features/IssueStatusPicker';
 import { type PickerControl } from '../features/PickerTrigger';
-import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
@@ -37,9 +36,11 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { isDueDateOverdue } from './isDueDateOverdue';
 import { RAIL_CONTROL_CLASS, RAIL_PLACEHOLDER_CLASS } from './railControl';
 import { ISSUE_RELATION_KINDS } from './relationGroups';
+import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskExecutionSection from './TaskExecutionSection';
 import TaskPrerequisites from './TaskPrerequisites';
 import {
   createPropertyRevealState,
@@ -86,7 +87,6 @@ const TaskProperties = memo(() => {
   if (currentReveal !== revealState) setRevealState(currentReveal);
   const revealed = currentReveal.keys;
 
-  const dispatchPhase = useTaskDetailSelector(taskDetailSelectors.taskDispatchPhase);
   const status = useTaskDetailSelector(taskDetailSelectors.taskStatus) as TaskStatus | undefined;
   const workflowCategory = useTaskDetailSelector(taskDetailSelectors.taskWorkflowCategory);
   const workflowStateId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateId);
@@ -140,7 +140,6 @@ const TaskProperties = memo(() => {
   // appears once it has a value, or after it is added from the menu.
   const optionalFields = {
     dueDate: !!dueDate || revealed.has('dueDate'),
-    execution: (!!status && status !== 'backlog') || !!dispatchPhase,
     labels: labels.length > 0 || revealed.has('labels'),
     schedule: !!(schedulePattern || heartbeatInterval) || revealed.has('schedule'),
   };
@@ -196,11 +195,13 @@ const TaskProperties = memo(() => {
           <TaskDetailAssignee />
         </PropertyRow>
 
-        {optionalFields.execution && (
-          <PropertyRow label={t('taskDetail.executionStatus')}>
-            <TaskExecutionBadge showLabel dispatchPhase={dispatchPhase} size={16} status={status} />
-          </PropertyRow>
-        )}
+        {/* Execution sits under the agent it describes: state, reason and the
+            one action that moves it on, in a single place. */}
+        <TaskExecutionSection />
+
+        {/* The human half of "is it done": the acceptance state, one click from
+            its details. Automations have no acceptance to wait on. */}
+        {!automationMode && <TaskAcceptanceStateRow />}
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
           <PropertyRow label={t('taskDetail.assignee')}>

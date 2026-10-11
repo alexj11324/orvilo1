@@ -3,19 +3,14 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DropdownMenu } from '@/components/ItemsMenu';
-import { confirmModal } from '@/components/Modal';
 import StopLoadingIcon from '@/components/StopLoading';
 import { Button } from '@/components/ui/button';
-import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
-import { usePermission } from '@/hooks/usePermission';
-import { lambdaClient } from '@/libs/trpc/client';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { nextHeartbeatFiring, nextScheduleFiring } from './scheduler/helpers';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import { useRunWithContractCheck } from './useRunWithContractCheck';
 
 const padTime = (n: number) => String(n).padStart(2, '0');
 
@@ -40,15 +35,16 @@ export const formatCountdown = (msRemaining: number): CountdownDisplay => {
   return { countdown, type: 'time' };
 };
 
-export const shouldPersistFallbackAssignee = (
-  assigneeAgentId?: string | null,
-  assigneeUserId?: string | null,
-  inboxAgentId?: string | null,
-) => !assigneeAgentId && !assigneeUserId && !!inboxAgentId;
+export { shouldPersistFallbackAssignee } from './useRunWithContractCheck';
 
 const TaskDetailRunPauseAction = memo(() => {
   const { t } = useTranslation('chat');
-  const { allowed: canEditTask, reason } = usePermission('create_content');
+  const {
+    canEditTask,
+    canExecuteTask,
+    permissionReason: reason,
+    runWithContractCheck,
+  } = useRunWithContractCheck();
   const taskId = useTaskDetailTaskId();
   const canRun = useTaskDetailSelector(taskDetailSelectors.canRunTask);
   const isBlocked = useTaskDetailSelector(taskDetailSelectors.isTaskBlocked);
@@ -59,66 +55,13 @@ const TaskDetailRunPauseAction = memo(() => {
   const interval = useTaskDetailSelector(taskDetailSelectors.taskPeriodicInterval);
   const schedulePattern = useTaskDetailSelector(taskDetailSelectors.taskSchedulePattern);
   const scheduleTimezone = useTaskDetailSelector(taskDetailSelectors.taskScheduleTimezone);
-  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
-  const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
-  const runningActivity = detail?.activities?.find(
-    (activity) =>
-      activity.type === 'topic' &&
-      activity.status === 'running' &&
-      (!activity.sourceTaskId || activity.sourceTaskId === detail.id),
-  );
-  const executingAgentId = canPause
-    ? runningActivity?.agentId ||
-      (runningActivity?.author?.type === 'agent' ? runningActivity.author.id : undefined) ||
-      assigneeAgentId
-    : assigneeAgentId || inboxAgentId;
-  const { canUseResource } = useResourceAccess('agent', executingAgentId || undefined);
-  const canExecuteTask = canEditTask && !!executingAgentId && canUseResource;
   const isRerun = status === 'completed';
-  const runTask = useTaskStore((s) => s.runTask);
-  const updateTask = useTaskStore((s) => s.updateTask);
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus);
   const setAutomationMode = useTaskStore((s) => s.setAutomationMode);
 
   const [isStarting, setIsStarting] = useState(false);
   const [isCancellingSchedule, setIsCancellingSchedule] = useState(false);
   const [isRunningNow, setIsRunningNow] = useState(false);
-
-  /**
-   * Contract-aware run (SB08): when goal/acceptance drifted from the adopted
-   * contract's revisions, the run is explicitly a frozen-contract `repair`
-   * and the user is told the edits stay pending for an approved replan — a
-   * run never silently adopts or ignores constraint changes.
-   */
-  const runWithContractCheck = useCallback(
-    async (id: string) => {
-      if (shouldPersistFallbackAssignee(assigneeAgentId, assigneeUserId, inboxAgentId)) {
-        await updateTask(id, { assigneeAgentId: inboxAgentId });
-      }
-      const context = await lambdaClient.task.contractContext.query({ id }).catch(() => undefined);
-      if (context?.data?.pendingConstraintEdits) {
-        const revision = context.data.contract?.revision;
-        const confirmed = await new Promise<boolean>((resolve) => {
-          confirmModal({
-            cancelText: t('cancel', { ns: 'common' }),
-            content: t('taskDetail.pendingContractEdits.content', {
-              revision: revision ?? '?',
-            }),
-            okText: t('taskDetail.runNow'),
-            onCancel: () => resolve(false),
-            onOk: () => resolve(true),
-            title: t('taskDetail.pendingContractEdits.title'),
-          });
-        });
-        if (!confirmed) return;
-        await runTask(id, { intent: 'repair' });
-        return;
-      }
-      await runTask(id);
-    },
-    [assigneeAgentId, assigneeUserId, inboxAgentId, runTask, t, updateTask],
-  );
 
   const handleRunOrPause = useCallback(async () => {
     if (!canExecuteTask) return;

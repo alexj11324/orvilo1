@@ -57,6 +57,7 @@ import {
 import { type MarkIssueRelationKind, openTaskIssueRelationModal } from './TaskIssueRelationModal';
 import { openTaskPropertiesSetupModal } from './TaskPropertiesSetupModal';
 import { ISSUE_RESOURCE_KINDS } from './useIssueDetailActions';
+import { useIssueRerunMenuItem } from './useIssueRerunMenuItem';
 import { useTaskCopyActions } from './useTaskCopyActions';
 import { useTaskIssueDates } from './useTaskIssueDates';
 
@@ -200,6 +201,7 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
     open && taskUuid ? ['task:recurrence', taskUuid] : null,
     () => taskMenuService.recurrence(taskUuid!),
   );
+  const rerunItem = useIssueRerunMenuItem();
   const { dueDateItem, reminderItem, removeDates } = useTaskIssueDates({
     canEdit: canEditTask,
     closeMenu: () => setOpen(false),
@@ -531,6 +533,8 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
     reminderItem,
     { type: 'divider' },
     ...(resolvedTransferItems?.length ? [...resolvedTransferItems, { type: 'divider' }] : []),
+    // Present only once a run has succeeded; see `canRerunIssue`.
+    ...(rerunItem ? [rerunItem] : []),
     {
       disabled: !canEditTask,
       icon: <CloseTargetIcon color={WORKFLOW_CATEGORY_VISUALS[closeTarget].color} />,

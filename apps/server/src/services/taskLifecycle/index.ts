@@ -607,6 +607,26 @@ export class TaskLifecycleService {
       } else if (reason === 'error') {
         const errorText = params.errorMessage || errorMessage || 'Unknown error';
 
+        // Keep the reason on the run itself: `tasks.error` holds only the current
+        // failure and the next attempt clears it, so an older failed run would
+        // otherwise have nothing to show. Best-effort — losing the copy must not
+        // stop the failure from settling.
+        if (topicId) {
+          try {
+            await this.taskTopicModel.updateHandoffError(taskId, topicId, {
+              code: errorCode,
+              message: errorText,
+            });
+          } catch (e) {
+            // Name only: a query error carries its parameters, which here are the
+            // runtime's error text.
+            console.warn(
+              '[TaskLifecycle] persisting run failure reason failed:',
+              e instanceof Error ? e.name : 'unknown error',
+            );
+          }
+        }
+
         // A budget / plan failure won't clear on a blind Retry — lead the card with
         // the fix (Upgrade → plans page) instead. Other causes keep retry + feedback.
         const isBillingError = errorCode ? BILLING_ERROR_CODES.has(errorCode) : false;

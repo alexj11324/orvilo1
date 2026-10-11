@@ -1060,6 +1060,55 @@ describe('TaskTopicModel', () => {
     });
   });
 
+  describe('updateHandoffError', () => {
+    it('records the failure reason without disturbing the run output', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Test' });
+      await createTopic('tpc_err');
+
+      await topicModel.add(task.id, 'tpc_err', { seq: 1 });
+      await topicModel.updateHandoffContent(task.id, 'tpc_err', 'partial output');
+      await topicModel.updateHandoffError(task.id, 'tpc_err', {
+        code: 'AgentRuntimeError',
+        message: 'codex exited with code 1',
+      });
+
+      const [row] = await topicModel.findWithHandoff(task.id, 10);
+      expect(row.handoff).toEqual({
+        content: 'partial output',
+        error: { code: 'AgentRuntimeError', message: 'codex exited with code 1' },
+      });
+    });
+
+    it('keeps only a readable head of an oversized reason', async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const topicModel = new TaskTopicModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Test' });
+      await createTopic('tpc_long');
+
+      await topicModel.add(task.id, 'tpc_long', { seq: 1 });
+      await topicModel.updateHandoffError(task.id, 'tpc_long', { message: 'x'.repeat(10_000) });
+
+      const [row] = await topicModel.findWithHandoff(task.id, 10);
+      expect((row.handoff as any).error).toEqual({ message: 'x'.repeat(4000) });
+    });
+
+    it("does not write to another user's run", async () => {
+      const taskModel = new TaskModel(serverDB, userId);
+      const task = await taskModel.create({ instruction: 'Test' });
+      await createTopic('tpc_own');
+      await new TaskTopicModel(serverDB, userId).add(task.id, 'tpc_own', { seq: 1 });
+
+      await new TaskTopicModel(serverDB, 'someone-else').updateHandoffError(task.id, 'tpc_own', {
+        message: 'not yours',
+      });
+
+      const [row] = await new TaskTopicModel(serverDB, userId).findWithHandoff(task.id, 10);
+      expect(row.handoff).toBeNull();
+    });
+  });
+
   describe('updateBriefDecision', () => {
     it('patches briefDecision into a fresh handoff JSONB (no prior handoff)', async () => {
       const taskModel = new TaskModel(serverDB, userId);

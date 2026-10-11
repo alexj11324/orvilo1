@@ -799,6 +799,12 @@ export interface TaskTopicHandoff {
    * surfaces the actual run output, not only the summary.
    */
   content?: string;
+  /**
+   * Why the run failed, as the runtime reported it. Written when a run settles
+   * as failed so the reason stays with that run after `tasks.error` is cleared
+   * by the next attempt. Untrusted agent/CLI output: render as plain text.
+   */
+  error?: { code?: string; message: string };
   keyFindings?: string[];
   nextAction?: string;
   summary?: string;
@@ -1240,6 +1246,12 @@ export interface TaskDetailActivity {
   cronJobId?: string | null;
   /** Comment-only: rich Lexical JSON state. When present, supersedes `content` for rendering. */
   editorData?: unknown;
+  /**
+   * Topic-only: why a failed, timed-out or stopped run ended, when the server
+   * recorded a reason. Untrusted agent/CLI output: render as plain text, never
+   * as markup.
+   */
+  error?: string | null;
   /** Comment-only: files attached to this comment for rendering in the UI. */
   files?: ChatFileItem[];
   id?: string;

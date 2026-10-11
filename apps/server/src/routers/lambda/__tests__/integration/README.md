@@ -5,14 +5,13 @@
 ## 目录结构
 
 ```
-tests/integration/
+apps/server/src/routers/lambda/__tests__/integration/
 ├── README.md           # 本文件
 ├── setup.ts            # 集成测试的通用设置
-├── utils.ts            # 集成测试工具函数
-└── routers/            # tRPC Router 集成测试
-    ├── message.integration.test.ts
-    ├── session.integration.test.ts
-    └── topic.integration.test.ts
+├── helpers/            # 集成测试工具函数
+├── message.integration.test.ts
+├── topic.integration.test.ts
+└── ...                 # 其他 tRPC Router 集成测试
 ```
 
 ## 什么是集成测试？
@@ -34,14 +33,11 @@ tests/integration/
 ## 运行集成测试
 
 ```bash
-# 运行所有集成测试
-pnpm test:integration
-
-# 运行特定文件
-pnpm vitest tests/integration/routers/message.integration.test.ts
+# 运行特定文件（在仓库根目录执行）
+bunx vitest run --silent='passed-only' 'apps/server/src/routers/lambda/__tests__/integration/message.integration.test.ts'
 
 # 监听模式
-pnpm vitest tests/integration --watch
+bunx vitest 'apps/server/src/routers/lambda/__tests__/integration' --watch
 ```
 
 ## 编写集成测试的最佳实践
@@ -49,7 +45,7 @@ pnpm vitest tests/integration --watch
 ### 1. 使用真实数据库环境
 
 ```typescript
-import { getTestDB } from '@/database/models/__tests__/_util';
+import { getTestDB } from '@orvilo/database/test-utils';
 
 const serverDB = await getTestDB();
 ```

@@ -22,7 +22,7 @@ Our testing strategy includes:
 
 - **Unit Tests** — Vitest for functions, components, and stores
 - **E2E Tests** — Playwright + Cucumber for user flows
-- **Type Checking** — TypeScript compiler (`bun run type-check`)
+- **Type Checking** — TypeScript compiler (full-repo `bun run type-check` runs in CI only)
 - **Linting** — ESLint, Stylelint
 
 ## Quick Reference
@@ -34,10 +34,10 @@ Our testing strategy includes:
 bunx vitest run --silent='passed-only' 'path/to/test.test.ts'
 
 # Run tests in a package (e.g., database)
-cd packages/database && bunx vitest run --silent='passed-only' 'src/models/user.test.ts'
+cd packages/database && bunx vitest run --silent='passed-only' 'src/models/__tests__/user.test.ts'
 
-# Type checking
-bun run type-check
+# Type checking (scoped to one package; the full-repo check runs in CI only)
+cd apps/server && pnpm type-check
 
 # E2E tests
 pnpm e2e
@@ -248,11 +248,11 @@ For database and ORM tests in packages:
 ```bash
 # Client DB tests
 cd packages/database
-bunx vitest run --silent='passed-only' 'src/models/user.test.ts'
+bunx vitest run --silent='passed-only' 'src/models/__tests__/user.test.ts'
 
 # Server DB tests
 cd packages/database
-TEST_SERVER_DB=1 bunx vitest run --silent='passed-only' 'src/models/user.test.ts'
+TEST_SERVER_DB=1 bunx vitest run --silent='passed-only' 'src/models/__tests__/user.test.ts'
 ```
 
 ## E2E Testing with Playwright
@@ -276,19 +276,16 @@ E2E tests live in the `e2e/` directory:
 
 ```
 e2e/
-├── features/             # Cucumber feature files (.feature)
-│   ├── auth.feature
-│   └── chat.feature
-├── step-definitions/     # Step implementations
-│   ├── auth.steps.ts
-│   └── chat.steps.ts
-├── support/              # Shared helpers and hooks
-└── playwright.config.ts
+├── src/
+│   ├── features/         # Cucumber feature files (.feature)
+│   ├── steps/            # Step implementations
+│   └── support/          # Shared helpers
+└── cucumber.config.js
 ```
 
 ### Writing E2E Tests
 
-**Feature file** (`e2e/features/chat.feature`):
+**Feature file** (`e2e/src/features/chat.feature`):
 
 ```gherkin
 Feature: Chat Functionality
@@ -302,7 +299,7 @@ Feature: Chat Functionality
     And I should see a response from the AI
 ```
 
-**Step definitions** (`e2e/step-definitions/chat.steps.ts`):
+**Step definitions** (`e2e/src/steps/chat.steps.ts`):
 
 ```typescript
 import { Given, When, Then } from '@cucumber/cucumber';

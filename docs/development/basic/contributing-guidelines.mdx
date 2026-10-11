@@ -128,7 +128,7 @@ Follow the [code style guidelines](/docs/development/basic/contributing-guidelin
 ```bash
 pnpm lint:ts       # TypeScript/JavaScript
 pnpm lint:style    # CSS/styles
-bun run type-check # Type checking
+cd apps/server && pnpm type-check # Type checking, scoped to one package (the full-repo check runs in CI only)
 ```
 
 **4. Commit with gitmoji**

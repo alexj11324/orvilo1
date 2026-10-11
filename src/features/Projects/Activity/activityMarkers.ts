@@ -40,12 +40,28 @@ const STATUS_TO_CATEGORY: Partial<Record<string, TaskWorkflowCategory>> = {
 
 const PRIORITY_LEVELS = new Set([0, 1, 2, 3, 4]);
 
+const WORKFLOW_CATEGORIES = new Set<string>([
+  'backlog',
+  'canceled',
+  'done',
+  'in_progress',
+  'in_review',
+  'todo',
+  'triage',
+]);
+
 export const resolveRowMarker = (row: ActivityFeedRow): ActivityMarker => {
   switch (row.type) {
     case 'status': {
       const to = row.payload?.to;
       const category = typeof to === 'string' ? STATUS_TO_CATEGORY[to] : undefined;
       return category ? { category, kind: 'workflow' } : { glyph: 'statusProperty', kind: 'glyph' };
+    }
+    case 'workflow_state': {
+      const to = row.payload?.to;
+      return typeof to === 'string' && WORKFLOW_CATEGORIES.has(to)
+        ? { category: to as TaskWorkflowCategory, kind: 'workflow' }
+        : { glyph: 'statusProperty', kind: 'glyph' };
     }
     case 'priority': {
       const to = row.payload?.to;

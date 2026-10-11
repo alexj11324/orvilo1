@@ -28,7 +28,7 @@ vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOri
 vi.mock('@/features/DefaultAgent/useDefaultAgent', () => ({
   useDefaultAgentState: () => ({ agent: undefined, ready: true }),
 }));
-vi.mock('@/hooks/useFetchAgentList', () => ({ useFetchAgentList: vi.fn() }));
+vi.mock('@/hooks/useFetchAgentList', () => ({ useFetchAgentList: vi.fn(() => ({})) }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => vi.fn(),
 }));

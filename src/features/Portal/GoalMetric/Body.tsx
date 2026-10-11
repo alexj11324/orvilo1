@@ -30,7 +30,7 @@ import { goalSelectors, useGoalStore } from '@/store/goal';
 
 const styles = {
   label: 'text-xs leading-5 font-semibold text-muted-foreground',
-  mono: 'font-(family-name:--ant-font-family-code) tabular-nums',
+  mono: 'font-mono tabular-nums',
   row: 'cursor-pointer py-1.5 px-1.5 rounded-(--radius-input) hover:bg-fill-quaternary',
   staticRow: 'py-1',
 };

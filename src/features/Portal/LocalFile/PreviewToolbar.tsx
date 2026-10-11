@@ -17,7 +17,7 @@ const styles = {
   actions: '[@container(max-width:300px)]:[&_.toggle-group-item-label]:hidden',
   bar: '@container shrink-0 h-10 ps-3 pe-2 border-b border-divider bg-card',
   // Hide the path only when the actions slot has actual element children.
-  path: 'overflow-hidden min-w-0 text-xs leading-5 font-(family-name:--ant-font-family-code) [@container(max-width:440px)]:[&:has(~[data-toolbar-actions]>*)]:hidden',
+  path: 'overflow-hidden min-w-0 text-xs leading-5 font-mono [@container(max-width:440px)]:[&:has(~[data-toolbar-actions]>*)]:hidden',
 };
 
 interface ToolbarActionButtonProps {

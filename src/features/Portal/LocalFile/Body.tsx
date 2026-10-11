@@ -80,7 +80,7 @@ const MARKDOWN_EXTS = new Set(['md', 'mdx', 'markdown']);
 
 const frontmatterStyles = {
   card: '[margin-block:calc(var(--spacing)*2)_calc(var(--spacing)*3)] mx-3 rounded-(--radius-card) border border-divider bg-card',
-  key: 'shrink-0 w-24 font-(family-name:--ant-font-family-code) text-xs leading-5 text-muted-foreground',
+  key: 'shrink-0 w-24 font-mono text-xs leading-5 text-muted-foreground',
   row: 'py-2 px-3 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-divider',
   value: 'min-w-0 text-xs leading-5 whitespace-pre-wrap',
 };

@@ -607,7 +607,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 <NumberField
                   disabled={!canCreate}
                   min={2}
-                  size={'sm'}
+                  size={'lg'}
                   style={{ width: '100%' }}
                   value={plan.maxIterations ?? undefined}
                   onValueChange={(value) =>
@@ -635,7 +635,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 <NumberField
                   disabled={!canCreate}
                   min={0}
-                  size={'sm'}
+                  size={'lg'}
                   style={{ width: '100%' }}
                   value={plan.maxTotalCost}
                   onValueChange={(value) =>
@@ -660,7 +660,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                   disabled={!canCreate}
                   max={10}
                   min={1}
-                  size={'sm'}
+                  size={'lg'}
                   style={{ width: '100%' }}
                   value={plan.maxConcurrentTasks ?? undefined}
                   onValueChange={(value) =>

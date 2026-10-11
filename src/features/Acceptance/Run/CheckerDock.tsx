@@ -181,6 +181,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
           <Input
             placeholder={t('editor.placeholder')}
             value={item.title}
+            visualSize="small"
             onChange={(e) => {
               const next = [...draftItems];
               next[index] = { ...item, title: e.target.value };

@@ -35,6 +35,7 @@ const HistoryCountSlider = ({
     <InputNumber
       disabled={disabled}
       min={0}
+      size="sm"
       step={1}
       style={{ maxWidth: 64 }}
       value={value ?? null}

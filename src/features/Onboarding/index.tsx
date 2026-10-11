@@ -28,6 +28,7 @@ import {
   resolvePostOnboardingTargetUrl,
   stashOnboardingCallbackUrl,
 } from '@/utils/onboardingRedirect';
+import { isWorkspaceSlugTakenError } from '@/utils/workspaceSlugError';
 
 import AccountMenu from './AccountMenu';
 import DesktopAuthGate from './DesktopAuthGate';
@@ -51,6 +52,7 @@ function OnboardingSetup() {
     workspaceName,
     workspaceSlug,
     workspaceSlugError,
+    markWorkspaceSlugTaken,
     onWorkspaceNameChange,
     onWorkspaceSlugChange,
   } = useWorkspaceSlug(setup?.workspaceName, setup?.workspaceSlug);
@@ -132,7 +134,10 @@ function OnboardingSetup() {
         useUserStore.getState().onboarding?.setup?.workspaceId,
         createdWorkspaceRef,
         saveWorkspace,
-      );
+      ).catch((error) => {
+        if (isWorkspaceSlugTakenError(error)) markWorkspaceSlugTaken();
+        throw error;
+      });
       createdWorkspaceRef.current = resolved;
       await saveWorkspace(resolved);
       setSavedWorkspace({ ...resolved, name: workspaceName.trim() });

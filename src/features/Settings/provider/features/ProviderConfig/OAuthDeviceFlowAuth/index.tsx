@@ -3,6 +3,7 @@
 import { CheckCircleFilled } from '@ant-design/icons';
 import { CopyButton, Icon } from '@lobehub/ui';
 import { Avatar, Button, confirmModal, Modal, Text } from '@lobehub/ui/base-ui';
+import { createStaticStyles } from 'antd-style';
 import { LogOutIcon, UnplugIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
@@ -13,6 +14,21 @@ import { usePermission } from '@/hooks/usePermission';
 import { lambdaQuery } from '@/libs/trpc/client';
 
 import { useOAuthDeviceFlow } from './useOAuthDeviceFlow';
+
+const buttonStyles = createStaticStyles(({ css }) => ({
+  compactAction: css`
+    height: 32px;
+    border-radius: var(--radius-button);
+    font-size: var(--text-sm);
+    line-height: ${22 / 14};
+  `,
+  normalAction: css`
+    height: 36px;
+    border-radius: var(--radius-button);
+    font-size: var(--text-sm);
+    line-height: ${22 / 14};
+  `,
+}));
 
 const styles = {
   card: 'w-full max-w-256 overflow-hidden rounded-(--radius-card) border border-divider',
@@ -127,16 +143,11 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
               </div>
             )}
             <Button
+              className={buttonStyles.compactAction}
               disabled={!canManageProvider}
               icon={<Icon icon={LogOutIcon} size={16} />}
               loading={revokeAuth.isPending}
               size={'middle'}
-              style={{
-                borderRadius: 'var(--radius-button)',
-                fontSize: 'var(--text-sm)',
-                height: 32,
-                lineHeight: 22 / 14,
-              }}
               onClick={handleDisconnect}
             >
               {t('providerModels.config.oauth.disconnect')}
@@ -146,16 +157,11 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
 
       return (
         <Button
+          className={buttonStyles.compactAction}
           disabled={!canManageProvider}
           loading={isAuthenticating}
           size={'middle'}
           type={'primary'}
-          style={{
-            borderRadius: 'var(--radius-button)',
-            fontSize: 'var(--text-sm)',
-            height: 32,
-            lineHeight: 22 / 14,
-          }}
           onClick={handleStartAuth}
         >
           {t('providerModels.config.oauth.connect')}
@@ -189,27 +195,17 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
             <div className="flex w-full flex-col gap-3">
               <Button
                 block
+                className={buttonStyles.normalAction}
                 disabled={!canManageProvider}
                 type="primary"
-                style={{
-                  borderRadius: 'var(--radius-button)',
-                  fontSize: 'var(--text-sm)',
-                  height: 36,
-                  lineHeight: 22 / 14,
-                }}
                 onClick={handleStartAuth}
               >
                 {t('providerModels.config.oauth.retry')}
               </Button>
               <Button
                 block
+                className={buttonStyles.normalAction}
                 type="text"
-                style={{
-                  borderRadius: 'var(--radius-button)',
-                  fontSize: 'var(--text-sm)',
-                  height: 36,
-                  lineHeight: 22 / 14,
-                }}
                 onClick={handleCancelAuth}
               >
                 {t('providerModels.config.oauth.cancel')}

@@ -14,6 +14,7 @@ import {
   useModalContext,
 } from '@lobehub/ui/base-ui';
 import { Form } from 'antd';
+import { createStaticStyles } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import { BrainIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
@@ -40,6 +41,15 @@ const SectionTitle = memo<{ children: ReactNode }>(({ children }) => (
 ));
 
 SectionTitle.displayName = 'SectionTitle';
+
+const buttonStyles = createStaticStyles(({ css }) => ({
+  normalAction: css`
+    height: 36px;
+    border-radius: var(--radius-button);
+    font-size: var(--text-sm);
+    line-height: ${22 / 14};
+  `,
+}));
 
 const itemStyle = { marginBottom: 0 };
 
@@ -176,27 +186,17 @@ const SettingContent = memo<SettingContentProps>(({ initialValues, id }) => {
       <ModalFooter className="mbs-4 border-bs border-divider p-0">
         <Button
           danger
+          className={buttonStyles.normalAction}
           disabled={loading}
           type={'primary'}
-          style={{
-            borderRadius: 'var(--radius-button)',
-            fontSize: 'var(--text-sm)',
-            height: 36,
-            lineHeight: 22 / 14,
-          }}
           onClick={handleDelete}
         >
           {t('delete', { ns: 'common' })}
         </Button>
         <Button
+          className={buttonStyles.normalAction}
           loading={loading}
           type={'primary'}
-          style={{
-            borderRadius: 'var(--radius-button)',
-            fontSize: 'var(--text-sm)',
-            height: 36,
-            lineHeight: 22 / 14,
-          }}
           onClick={() => form.submit()}
         >
           {t('update', { ns: 'common' })}

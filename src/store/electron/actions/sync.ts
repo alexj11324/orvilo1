@@ -35,13 +35,12 @@ export class ElectronRemoteServerActionImpl {
   };
 
   connectRemoteServer = async (values: DataSyncConfig): Promise<void> => {
-    if (values.storageMode === 'selfHost' && !values.remoteServerUrl) {
-      throw Object.assign(new Error('Server URL is required'), { code: 'invalid_url' });
-    }
-
     this.#set({ isConnectingServer: true });
     this.#get().clearRemoteServerSyncError();
     try {
+      if (values.storageMode === 'selfHost' && !values.remoteServerUrl) {
+        throw Object.assign(new Error('Server URL is required'), { code: 'invalid_url' });
+      }
       // Get current configuration
       const config = await remoteServerService.getRemoteServerConfig();
 
@@ -62,7 +61,12 @@ export class ElectronRemoteServerActionImpl {
       await this.#get().refreshServerConfig();
     } catch (error) {
       console.error('Remote server configuration error:', error);
-      const code = (error as { code?: AuthorizationErrorCode }).code ?? 'server_error';
+      const candidate = (error as { code?: AuthorizationErrorCode } | null)?.code;
+      const code: AuthorizationErrorCode =
+        candidate &&
+        ['timeout', 'network', 'invalid_url', 'denied', 'server_error'].includes(candidate)
+          ? candidate
+          : 'server_error';
       this.#set({
         remoteServerSyncError: { code, message: (error as Error).message, type: 'AUTH_ERROR' },
       });

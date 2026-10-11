@@ -12,7 +12,10 @@ vi.mock('@/store/user', () => ({ useUserStore: {} }));
 
 describe('desktop authorization code propagation', () => {
   it('rejects an empty self-hosted server URL with invalid_url', async () => {
-    const action = new ElectronRemoteServerActionImpl(vi.fn() as any, (() => ({})) as any);
+    const action = new ElectronRemoteServerActionImpl(
+      vi.fn() as any,
+      (() => ({ clearRemoteServerSyncError: vi.fn() })) as any,
+    );
     await expect(
       action.connectRemoteServer({ storageMode: 'selfHost', remoteServerUrl: '' }),
     ).rejects.toMatchObject({ code: 'invalid_url' });

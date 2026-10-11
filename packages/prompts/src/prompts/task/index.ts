@@ -107,8 +107,18 @@ const WORKFLOW_CATEGORIES = new Set([
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Five or six cron fields made only of the characters cron syntax uses. */
 const CRON_PATTERN = /^[\d*,/?LW#-]+(?: [\d*,/?LW#-]+){4,5}$/;
-/** An IANA zone name such as `Asia/Shanghai` or `UTC`. */
-const TIMEZONE = /^[A-Z][\w+-]*(?:\/[A-Z][\w+-]*){0,2}$/i;
+/** The shape of an IANA zone name such as `Asia/Shanghai` or `UTC`. */
+const TIMEZONE_SHAPE = /^[A-Z][\w+-]*(?:\/[A-Z][\w+-]*){0,2}$/i;
+/** A real zone the runtime knows — the shape alone would admit words joined by slashes. */
+const isTimezone = (value: string): boolean => {
+  if (!TIMEZONE_SHAPE.test(value)) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const PRIORITY_LABELS: Record<number, string> = {
   0: 'none',
@@ -183,7 +193,7 @@ const readAutomation: ValueReader = (value) => {
   }
   const parts = [pattern];
   if (!isAbsent(timezone)) {
-    if (typeof timezone !== 'string' || timezone.length > 64 || !TIMEZONE.test(timezone)) {
+    if (typeof timezone !== 'string' || timezone.length > 64 || !isTimezone(timezone)) {
       return undefined;
     }
     parts.push(timezone);

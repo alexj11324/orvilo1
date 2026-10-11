@@ -53,6 +53,8 @@ Legacy `user_settings.notification.inbox` and `workspace_user_settings.preferenc
 
 Personal `notification.push.enabled` and `notification.push.items.work[event]` control existing external push/desktop callers; missing values default enabled. Event names remain `task_assigned`, `task_review`, `task_status_changed`, `agent_run_completed`, `agent_run_failed`, and `acp_permission`. Expo delivery requires a registered token; desktop run/approval callers exist. This does not promise external delivery for every Inbox event. Email settings are persisted, but the OSS Issue pipeline has no email delivery adapter; do not expose email controls as functioning delivery.
 
+**Client status.** Settings → Notifications shows only the personal push/desktop switches. The Inbox column, the workspace notification page and the settings-search entries for Inbox, email and push anchors are removed; the stored legacy fields are untouched.
+
 ## Optional services and topic titles
 
 - Unconfigured Market: tRPC `data.code=SERVICE_UNAVAILABLE`, `data.errorData.code=MARKET_UNAVAILABLE`; skill execution returns `success: false`, `error.code=MARKET_UNAVAILABLE`. Missing/blank `MARKET_BASE_URL` does not contact a hosted fallback.

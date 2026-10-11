@@ -25,7 +25,7 @@ The overall architecture of Orvilo consists of the following core layers:
 | Frontend            | Next.js RSC + React Router DOM hybrid SPA        |
 | Backend API         | RESTful WebAPI + tRPC Routers                    |
 | Runtime             | Model Runtime + Agent Runtime                    |
-| Auth                | Better Auth (email/password + SSO)               |
+| Auth                | Clerk accounts portal + app session cookie       |
 | Data Storage        | PostgreSQL + Redis + S3                          |
 | Marketplace         | Agent Market + MCP Tool Market                   |
 +---------------------+--------------------------------------------------+
@@ -95,12 +95,12 @@ In short: Model Runtime handles "how to communicate with an LLM provider"; Agent
 
 ## Authentication
 
-Orvilo uses [Better Auth](https://www.better-auth.com/) as the authentication framework, supporting:
+Orvilo delegates sign-in to an accounts portal powered by [Clerk](https://clerk.com). The app exchanges the Clerk session token for its own `orvilo_auth` session cookie, backed by the `auth_sessions` table, and rechecks the Clerk session on every authorization.
 
-- Email + password registration and login
-- SSO single sign-on (GitHub, Google, and various OAuth providers)
+- Sign-in methods (email + password, magic link, OAuth, MFA) are configured in the Clerk dashboard, not in Orvilo
+- Desktop and CLI authorization go through Orvilo's built-in OIDC provider (`/oidc/*`)
 
-Auth configuration is in `src/auth.ts`, with related routes under `src/app/(backend)/api/`.
+Session handling is in `apps/server/src/services/auth`, with the routes under `src/app/(backend)/api/auth/`. See [Authentication Service](/docs/self-hosting/auth) for configuration.
 
 ## Data Storage
 

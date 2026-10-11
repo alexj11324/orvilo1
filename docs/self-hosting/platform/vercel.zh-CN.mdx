@@ -4,7 +4,7 @@ description: 本文详细介绍如何在 Vercel 中部署 Orvilo，包括数据�
 tags:
   - 服务端数据库
   - Postgres
-  - Better Auth
+  - Clerk
   - S3存储服务
   - Vercel部署
   - 数据库配置
@@ -99,17 +99,13 @@ tags:
 <Steps>
   ### 添加身份验证环境变量
 
-  在 Vercel 的部署环境变量中，添加以下环境变量以启用身份验证（基于 [Better Auth](https://www.better-auth.com)）：
+  在 Vercel 的部署环境变量中，添加以下环境变量以启用身份验证（登录由 Clerk 账户门户负责，参见[身份验证服务](/zh/docs/self-hosting/auth)）：
 
-  点击下方按钮一键生成 `AUTH_SECRET`（会话加密密钥）：
-
-  <GenerateSecret envName="AUTH_SECRET" />
-
-  同时需要配置 `JWKS_KEY` 环境变量，用于签名和验证 JWT。点击下方按钮一键生成：
+  配置 `JWKS_KEY` 环境变量，用于签名和验证 JWT。点击下方按钮一键生成：
 
   <GenerateJWKSKey />
 
-  配置这些变量后，用户即可使用邮箱和密码注册登录。
+  同时把 `AUTH_ACCOUNTS_URL` 设为账户门户的地址，把 `CLERK_SECRET_KEY` 设为该门户背后 Clerk 实例的密钥。登录方式在 Clerk 控制台中配置。
 
   <Callout type={'info'}>
     如需 SSO 登录、魔法链接登录、邮箱验证等高级功能，请参阅 [身份验证服务](/zh/docs/self-hosting/auth)。
@@ -316,7 +312,8 @@ DATABASE_URL=
 KEY_VAULTS_SECRET=jgwsK28dspyVQoIf8/M3IIHl1h6LYYceSYNXeLpy6uk=
 
 # 身份验证
-AUTH_SECRET=jgwsK28dspyVQoIf8/M3IIHl1h6LYYceSYNXeLpy6uk=
+AUTH_ACCOUNTS_URL=https://accounts.example.com
+CLERK_SECRET_KEY=your-clerk-secret-key
 JWKS_KEY='{"keys":[...]}'
 
 # S3 相关配置

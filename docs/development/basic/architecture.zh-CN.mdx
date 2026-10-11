@@ -23,7 +23,7 @@ Orvilo 的整体架构由以下核心层组成：
 | Frontend            | Next.js RSC + React Router DOM 混合路由 SPA      |
 | Backend API         | RESTful WebAPI + tRPC Routers                    |
 | Runtime             | Model Runtime + Agent Runtime                    |
-| Auth                | Better Auth（邮箱密码 + SSO）                     |
+| Auth                | Clerk 账户门户 + 应用会话 Cookie                  |
 | Data Storage        | PostgreSQL + Redis + S3                          |
 | Marketplace         | Agent 市场 + MCP 工具市场                         |
 +---------------------+--------------------------------------------------+
@@ -93,12 +93,12 @@ Orvilo 的整体架构由以下核心层组成：
 
 ## 认证鉴权
 
-Orvilo 使用 [Better Auth](https://www.better-auth.com/) 作为认证框架，支持：
+Orvilo 把登录交给由 [Clerk](https://clerk.com) 驱动的账户门户。应用用 Clerk 会话令牌换取自己的 `orvilo_auth` 会话 Cookie（存于 `auth_sessions` 表），并在每次鉴权时向 Clerk 复核该会话。
 
-- 邮箱 + 密码注册登录
-- SSO 单点登录（GitHub、Google 等多种 OAuth Provider）
+- 登录方式（邮箱密码、Magic Link、OAuth、MFA）在 Clerk 控制台配置，不在 Orvilo 里配置
+- 桌面端与 CLI 的授权走 Orvilo 内置的 OIDC 提供方（`/oidc/*`）
 
-认证配置位于 `src/auth.ts`，相关路由在 `src/app/(backend)/api/` 下。
+会话处理位于 `apps/server/src/services/auth`，相关路由在 `src/app/(backend)/api/auth/` 下。配置方式参见[身份验证服务](/zh/docs/self-hosting/auth)。
 
 ## 数据存储
 

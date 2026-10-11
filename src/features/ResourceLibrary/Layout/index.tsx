@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useParams } from 'react-router';

@@ -2,7 +2,7 @@
 
 import { type OwnCredSummary } from '@orvilo/types';
 import { useQuery } from '@tanstack/react-query';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { CircleAlert, Eye, EyeOff, Info, TriangleAlert } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';

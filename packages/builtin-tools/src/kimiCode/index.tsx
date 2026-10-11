@@ -16,7 +16,7 @@ import {
   shinyTextStyles,
 } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspector, BuiltinInspectorProps, BuiltinRenderProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { createTwoFilesPatch } from 'diff';
 import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';

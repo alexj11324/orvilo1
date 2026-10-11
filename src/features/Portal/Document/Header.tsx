@@ -1,7 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useClientDataSWR } from '@/libs/swr';

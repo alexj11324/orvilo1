@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { FileText, FolderIcon, LockIcon } from 'lucide-react';
 
 import FileIcon from '@/components/FileIcon';

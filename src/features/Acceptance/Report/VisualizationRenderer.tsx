@@ -51,7 +51,8 @@ const registeredStyles = createStaticStyles(({ css }) => ({
 const styles = {
   axisLabel: 'text-xs leading-5 text-foreground-tertiary',
   badge:
-    'inline-flex items-center gap-1 rounded-full bg-success-wash px-1.5 py-0.5 text-xs leading-5 font-semibold text-success-text tabular-nums',
+    'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs leading-5 font-semibold tabular-nums',
+  badgeBetter: 'bg-success-wash text-success-text',
   badgeWorse: 'bg-destructive-wash text-destructive-text',
   bar: 'h-1.5 overflow-hidden rounded-full bg-selected',
   barChartLabel: 'text-xs leading-5 text-muted-foreground',
@@ -61,7 +62,8 @@ const styles = {
   chart: 'block min-h-45 w-full',
   context:
     '[border-block-start:1px_solid_var(--divider)] px-4 pt-2 pb-2.5 text-xs leading-5 text-muted-foreground',
-  delta: 'inline-flex items-center gap-1 font-semibold text-success-text tabular-nums',
+  delta: 'inline-flex items-center gap-1 font-semibold tabular-nums',
+  deltaBetter: 'text-success-text',
   deltaWorse: 'text-destructive-text',
   header: '[border-block-end:1px_solid_var(--divider)] px-4 py-3',
   heatmap: 'grid items-center gap-1',
@@ -207,7 +209,9 @@ const MetricComparisonRenderer = memo<{
             </div>
             <div className="flex flex-col items-end gap-0.5">
               {improvement !== null && (
-                <span className={clsx(styles.delta, !improved && styles.deltaWorse)}>
+                <span
+                  className={clsx(styles.delta, improved ? styles.deltaBetter : styles.deltaWorse)}
+                >
                   <DeltaIcon size={16} />
                   {Math.abs(improvement).toFixed(1)}%
                 </span>
@@ -582,7 +586,7 @@ export const VisualizationDeltaBadge = memo<{
   const improved = delta.improvement >= 0;
   const DeltaIcon = delta.after <= delta.before ? ArrowDownRight : ArrowUpRight;
   return (
-    <span className={clsx(styles.badge, !improved && styles.badgeWorse)}>
+    <span className={clsx(styles.badge, improved ? styles.badgeBetter : styles.badgeWorse)}>
       <DeltaIcon size={16} />
       {Math.abs(delta.improvement).toFixed(1)}%
     </span>

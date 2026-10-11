@@ -1775,7 +1775,11 @@ export default {
   'taskDetail.comment.deleteConfirm.ok': 'Delete',
   'taskDetail.comment.deleteConfirm.title': 'Delete this comment?',
   'taskDetail.comment.edit': 'Edit',
+  'taskDetail.comment.edited': 'edited',
+  'taskDetail.comment.editedAt': 'Edited {{time}}',
   'taskDetail.comment.save': 'Save',
+  'taskDetail.comment.replyToRun': 'Reply to run #{{seq}}',
+  'taskDetail.comment.replyToRunUnnumbered': 'Reply to an earlier run',
   'taskDetail.commentDraftSaveFailed': 'Could not save comment draft',
   'taskDetail.commentSendFailed': 'Could not post the comment. Your draft is kept.',
   'taskDetail.commentPlaceholder':

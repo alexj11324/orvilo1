@@ -431,6 +431,58 @@ describe('TaskService', () => {
       expect(mockTaskModel.findById).toHaveBeenCalledWith('private-target-id');
     });
 
+    it('names the run a comment was left on, and leaves ordinary comments unmarked', async () => {
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'task_001',
+        identifier: 'TASK-1',
+        instruction: 'Runs',
+        status: 'backlog',
+        totalTopics: 2,
+      });
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getDependencies.mockResolvedValue([]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue([
+        {
+          createdAt: new Date('2024-01-03T00:00:00Z'),
+          seq: 3,
+          status: 'completed',
+          topicId: 'tpc_3',
+        },
+      ]);
+      mockBriefModel.findByTaskId.mockResolvedValue([]);
+      const comment = (id: string, topicId: string | null) => ({
+        authorUserId: userId,
+        capabilities: { canDelete: true, canEdit: true },
+        content: id,
+        createdAt: new Date('2024-01-04T00:00:00Z'),
+        id,
+        topicId,
+        updatedAt: new Date('2024-01-04T00:00:00Z'),
+      });
+      mockTaskModel.getComments.mockResolvedValue([
+        comment('on-run-3', 'tpc_3'),
+        comment('on-old-run', 'tpc_gone'),
+        comment('plain', null),
+      ]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-1');
+      const byId = Object.fromEntries(
+        (result?.activities ?? [])
+          .filter((activity) => activity.type === 'comment')
+          .map((activity) => [activity.id, activity.replyToRun]),
+      );
+
+      expect(byId).toEqual({
+        'on-old-run': { seq: null, topicId: 'tpc_gone' },
+        'on-run-3': { seq: 3, topicId: 'tpc_3' },
+        'plain': undefined,
+      });
+    });
+
     it('should return null when task is not found', async () => {
       mockTaskModel.resolve.mockResolvedValue(null);
 

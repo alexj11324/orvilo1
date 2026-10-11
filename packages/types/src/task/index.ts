@@ -1416,6 +1416,12 @@ export interface TaskDetailActivity {
    */
   propertyChange?: TaskDetailPropertyChange;
   readAt?: string | null;
+  /**
+   * Comment-only: the run this comment was left on. `seq` is that run's
+   * number in the Issue (`#3`), or null when the run is outside the loaded
+   * window of runs and cannot be numbered or linked.
+   */
+  replyToRun?: { seq: number | null; topicId: string } | null;
   resolvedAction?: string | null;
   resolvedAt?: string | null;
   resolvedComment?: string | null;

@@ -1937,6 +1937,9 @@ export class TaskService {
       shownLogs,
     );
 
+    const topicSeqById = new Map<string, number>();
+    for (const t of topics) if (t.topicId && t.seq != null) topicSeqById.set(t.topicId, t.seq);
+
     const creatorId = task.createdByAgentId ?? task.createdByUserId;
     const createdActivity: TaskDetailActivity | null =
       task.createdAt && creatorId
@@ -2021,6 +2024,12 @@ export class TaskService {
           editorData: c.editorData ?? undefined,
           files: files.length > 0 ? files : undefined,
           id: c.id,
+          // A follow-up left on one run says which run, so it does not read as
+          // an unanswered comment on the Issue. `seq` is null when that run is
+          // older than the loaded window of runs.
+          replyToRun: c.topicId
+            ? { seq: topicSeqById.get(c.topicId) ?? null, topicId: c.topicId }
+            : undefined,
           time: toISO(c.createdAt),
           updatedAt: c.updatedAt ? toISO(c.updatedAt) : undefined,
           type: 'comment' as const,

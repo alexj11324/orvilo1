@@ -1643,9 +1643,11 @@ export class TaskModel {
           .set({ visibility })
           .where(and(inArray(taskTopics.taskId, taskIds), this.topicsOwnership()));
 
+        // A visibility flip is not an edit: keep `updatedAt`, which the
+        // comment card reads as "edited".
         await tx
           .update(taskComments)
-          .set({ visibility })
+          .set({ updatedAt: taskComments.updatedAt, visibility })
           .where(and(inArray(taskComments.taskId, taskIds), this.commentsOwnership()));
 
         await tx
@@ -5224,7 +5226,8 @@ export class TaskModel {
         .where(inArray(taskDocuments.taskId, ids));
       await (trx as OrviloDatabase)
         .update(taskComments)
-        .set({ ...ownershipUpdate, ...visibilityUpdate })
+        // Moving an Issue is not an edit of its comments (see the "edited" marker).
+        .set({ ...ownershipUpdate, ...visibilityUpdate, updatedAt: taskComments.updatedAt })
         .where(inArray(taskComments.taskId, ids));
       await (trx as OrviloDatabase)
         .update(taskActivities)

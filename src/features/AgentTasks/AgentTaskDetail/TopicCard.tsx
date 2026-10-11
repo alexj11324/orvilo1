@@ -40,6 +40,7 @@ import { isForbiddenError } from '@/utils/forbiddenError';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { styles } from '../shared/style';
+import { runAnchorId } from './commentActions';
 import { isRunEndedBadly, runEndingLabel } from './runEnding';
 import RunFailureReason from './RunFailureReason';
 import RunIntegrationTag from './RunIntegrationTag';
@@ -49,6 +50,7 @@ import RunVerifyTag from './RunVerifyTag';
 import { shouldShowRunFollowUp } from './shouldShowRunFollowUp';
 import { useTaskDetailTaskId } from './TaskDetailScope';
 import TopicStatusIcon from './TopicStatusIcon';
+import { useAnchorHighlight } from './useAnchorHighlight';
 
 const formatDuration = (ms: number): string => {
   const seconds = Math.floor(ms / 1000);
@@ -152,6 +154,10 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
     }, 1000);
     return () => clearInterval(interval);
   }, [isRunning, activity.time]);
+
+  // `#run-<topicId>` deep link, e.g. from a comment left on this run.
+  const runAnchor = activity.id ? runAnchorId(activity.id) : undefined;
+  const runHighlighted = useAnchorHighlight(runAnchor);
 
   const handleOpen = useCallback(() => {
     if (!activity.id) return;
@@ -313,10 +319,11 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
     // summary line all belong to the list presentation; a report drops them and
     // lets the delivery own the surface.
     <div
+      id={runAnchor}
       className={
         primary
           ? 'flex flex-col gap-3'
-          : 'relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-2'
+          : `relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-2 transition-shadow ${runHighlighted ? 'ring-2 ring-ring' : ''}`
       }
       style={
         primary

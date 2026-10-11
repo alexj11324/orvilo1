@@ -299,6 +299,39 @@ const workAttentionProcedure = wsCompatProcedure.use(serverDatabase).use(async (
   });
 });
 
+/** Ancestor walks stop here even on a corrupt (cyclic) legacy tree. */
+const RELATION_ANCESTOR_WALK_MAX = 100;
+
+/**
+ * The project an Issue's relations must stay inside, plus the Issues that can
+ * never take the requested link: itself always; for a new sub-issue its own
+ * ancestors (a cycle) and its existing descendants; for a new parent its
+ * descendants (a cycle) and the parent it already has.
+ */
+const resolveRelationSearchScope = async (
+  taskModel: TaskModel,
+  eligibleFor: { relation: 'child' | 'dependency' | 'parent'; taskId: string },
+): Promise<{ excludeIds: string[]; projectId: string | null }> => {
+  const anchor = await taskModel.resolve(eligibleFor.taskId);
+  if (!anchor) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+  const excludeIds = new Set<string>([anchor.id]);
+  if (eligibleFor.relation !== 'dependency') {
+    for (const task of await taskModel.findAllDescendants(anchor.id)) excludeIds.add(task.id);
+  }
+  if (eligibleFor.relation === 'parent' && anchor.parentTaskId) {
+    excludeIds.add(anchor.parentTaskId);
+  }
+  if (eligibleFor.relation === 'child') {
+    let parentId = anchor.parentTaskId;
+    for (let step = 0; parentId && step < RELATION_ANCESTOR_WALK_MAX; step += 1) {
+      if (excludeIds.has(parentId)) break;
+      excludeIds.add(parentId);
+      parentId = (await taskModel.findById(parentId))?.parentTaskId ?? null;
+    }
+  }
+  return { excludeIds: [...excludeIds], projectId: anchor.projectId ?? null };
+};
+
 const organizeProcedure = workAttentionProcedure.use(withScopedPermission('notification:organize'));
 const taskWriteProcedure = workAttentionProcedure.use(withScopedPermission('agent:update'));
 
@@ -745,6 +778,17 @@ export const workAttentionRouter = router({
     .input(
       z.object({
         limitPerType: z.number().min(1).max(WORK_SEARCH_MAX_PER_TYPE).default(5),
+        /**
+         * Narrow task hits to Issues that can be linked to `taskId`: `child`
+         * = can become its sub-issue, `parent` = can become its parent,
+         * `dependency` = can be blocked-by / blocking / related.
+         */
+        eligibleFor: z
+          .object({
+            relation: z.enum(['child', 'dependency', 'parent']),
+            taskId: z.string(),
+          })
+          .optional(),
         query: z.string().trim().min(1).max(200),
         type: z.enum(['project', 'savedView', 'task', 'team']).optional(),
       }),
@@ -752,16 +796,29 @@ export const workAttentionRouter = router({
     .query(async ({ ctx, input }) => {
       const limit = input.limitPerType;
       const needle = input.query;
+      const taskScope = input.eligibleFor
+        ? await resolveRelationSearchScope(ctx.taskModel, input.eligibleFor)
+        : undefined;
       const wants = (type: 'project' | 'savedView' | 'task' | 'team') =>
         !input.type || input.type === type;
       const matches = (value: string) => value.toLowerCase().includes(needle.toLowerCase());
 
       const [taskRows, projectRows, views, teams] = await Promise.all([
-        wants('task') ? ctx.workQueryModel.searchTasks(needle, limit) : [],
+        wants('task') ? ctx.workQueryModel.searchTasks(needle, limit, taskScope) : [],
         wants('project') ? ctx.workQueryModel.searchProjects(needle, limit) : [],
         wants('savedView') ? ctx.savedViewModel.list() : [],
         wants('team') && ctx.teamModel ? ctx.teamModel.listReadable() : [],
       ]);
+
+      // A sub-issue candidate that already sits under another Issue is still
+      // offered — the picker names the parent it would be moved from.
+      const parentIds =
+        input.eligibleFor?.relation === 'child'
+          ? [...new Set(taskRows.flatMap((row) => (row.parentTaskId ? [row.parentTaskId] : [])))]
+          : [];
+      const parentIdentifierById = new Map(
+        (await ctx.taskModel.findByIds(parentIds)).map((task) => [task.id, task.identifier]),
+      );
 
       const items = [
         ...taskRows.map((row) => {
@@ -770,6 +827,9 @@ export const workAttentionRouter = router({
             createdAt: row.createdAt,
             description: row.identifier,
             id: row.id,
+            parentIdentifier: row.parentTaskId
+              ? (parentIdentifierById.get(row.parentTaskId) ?? null)
+              : null,
             relevance: searchRelevance(needle, title),
             title,
             type: 'task' as const,

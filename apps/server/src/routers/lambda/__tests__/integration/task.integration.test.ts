@@ -18,6 +18,7 @@ import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 import { createTaskRuntime } from '@/server/services/toolExecution/serverRuntimes/task';
 
 import { taskRouter } from '../../task';
+import { workAttentionRouter } from '../../workAttention';
 import {
   cleanupTestUser,
   createTestAgent,
@@ -895,6 +896,189 @@ describe('Task Router Integration', () => {
           parentTaskId: child.data.identifier,
         }),
       ).rejects.toThrow('Task cannot be parented to its own descendant');
+    });
+
+    const seedProject = async (suffix: string) => {
+      const projectId = `project-${suffix}-${userId}`;
+      await serverDB
+        .insert(projects)
+        .values({ id: projectId, identifier: suffix.toUpperCase(), name: suffix, userId });
+      return projectId;
+    };
+
+    /** The stable reason the error formatter forwards to clients as `errorData.code`. */
+    const rejectionCode = async (write: Promise<unknown>) => {
+      const error = await write.then(
+        () => undefined,
+        (failure: { cause?: { data?: { code?: string } } }) => failure,
+      );
+      return error?.cause?.data?.code;
+    };
+
+    it('puts several existing issues under one parent in a single write', async () => {
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const oldParent = await caller.create({ instruction: 'Old parent', name: 'Old Parent' });
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({
+        instruction: 'Second',
+        name: 'Second',
+        parentTaskId: oldParent.data.id,
+      });
+
+      const result = await caller.setParentBatch({
+        parentTaskId: parent.data.identifier,
+        taskIds: [first.data.identifier, second.data.id, first.data.id],
+      });
+
+      expect(result.data.map((task) => task.id)).toEqual([first.data.id, second.data.id]);
+      const detail = await caller.detail({ id: parent.data.identifier });
+      expect(detail.data.subtasks?.map((task) => task.name).sort()).toEqual(['First', 'Second']);
+      // An issue that already had a parent is moved, not refused.
+      expect((await caller.detail({ id: oldParent.data.identifier })).data.subtasks ?? []).toEqual(
+        [],
+      );
+    });
+
+    it('rolls the whole batch back when one issue cannot become a child', async () => {
+      const grandparent = await caller.create({ instruction: 'Grandparent', name: 'Grandparent' });
+      const parent = await caller.create({
+        instruction: 'Parent',
+        name: 'Parent',
+        parentTaskId: grandparent.data.id,
+      });
+      const loose = await caller.create({ instruction: 'Loose', name: 'Loose' });
+
+      // The grandparent is an ancestor of the target parent — a cycle.
+      const write = caller.setParentBatch({
+        parentTaskId: parent.data.id,
+        taskIds: [loose.data.id, grandparent.data.id],
+      });
+      await expect(write).rejects.toThrow('Task cannot be parented to its own descendant');
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({
+            parentTaskId: parent.data.id,
+            taskIds: [loose.data.id, grandparent.data.id],
+          }),
+        ),
+      ).toBe('CYCLE');
+
+      expect((await caller.find({ id: loose.data.id })).data.parentTaskId).toBeNull();
+    });
+
+    it('rejects a batch that crosses a project boundary with a stable reason', async () => {
+      const projectId = await seedProject('pa');
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent', projectId });
+      const outsider = await caller.create({ instruction: 'Outsider', name: 'Outsider' });
+
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [outsider.data.id] }),
+        ),
+      ).toBe('CROSS_PROJECT');
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [parent.data.id] }),
+        ),
+      ).toBe('SELF');
+    });
+
+    it('refuses a batch parent write for an issue the caller cannot read', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const otherCaller = taskRouter.createCaller(createTestContext(otherUserId));
+      const foreign = await otherCaller.create({ instruction: 'Foreign', name: 'Foreign' });
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+
+      await expect(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [foreign.data.id] }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(
+        caller.setParentBatch({ parentTaskId: foreign.data.id, taskIds: [parent.data.id] }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+
+    it('searches only the issues that can legally take the requested link', async () => {
+      const projectId = await seedProject('pc');
+      const search = workAttentionRouter.createCaller(createTestContext(userId)).search;
+      const make = (name: string, extra: { parentTaskId?: string; projectId?: string } = {}) =>
+        caller.create({ instruction: name, name: `Pick ${name}`, projectId, ...extra });
+      const grandparent = await make('grandparent');
+      const anchor = await make('anchor', { parentTaskId: grandparent.data.id });
+      await make('child', { parentTaskId: anchor.data.id });
+      const otherParent = await make('other parent');
+      await make('adopted', { parentTaskId: otherParent.data.id });
+      await make('free');
+      await caller.create({ instruction: 'Elsewhere', name: 'Pick elsewhere' });
+
+      const names = async (relation: 'child' | 'dependency' | 'parent') =>
+        (
+          await search({
+            eligibleFor: { relation, taskId: anchor.data.identifier },
+            limitPerType: 50,
+            query: 'Pick',
+            type: 'task',
+          })
+        ).data
+          .map((hit) => hit.title)
+          .sort();
+
+      // Not itself, its ancestor, its existing child, or another project's issue.
+      expect(await names('child')).toEqual(['Pick adopted', 'Pick free', 'Pick other parent']);
+      // Not itself, its descendant, or the parent it already has.
+      expect(await names('parent')).toEqual(['Pick adopted', 'Pick free', 'Pick other parent']);
+      expect(await names('dependency')).toEqual([
+        'Pick adopted',
+        'Pick child',
+        'Pick free',
+        'Pick grandparent',
+        'Pick other parent',
+      ]);
+
+      const hits = (
+        await search({
+          eligibleFor: { relation: 'child', taskId: anchor.data.id },
+          limitPerType: 50,
+          query: 'Pick adopted',
+          type: 'task',
+        })
+      ).data;
+      // A candidate under another parent says where it would be moved from.
+      expect(hits).toEqual([
+        expect.objectContaining({ parentIdentifier: otherParent.data.identifier }),
+      ]);
+      // An unscoped search is unchanged: every project, the anchor included.
+      const unscoped = (await search({ limitPerType: 50, query: 'Pick', type: 'task' })).data;
+      expect(unscoped).toHaveLength(7);
+    });
+
+    it('names why a dependency was refused with a stable reason code', async () => {
+      const projectId = await seedProject('pb');
+      const inProject = await caller.create({ instruction: 'In', name: 'In', projectId });
+      const outside = await caller.create({ instruction: 'Out', name: 'Out' });
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({ instruction: 'Second', name: 'Second' });
+      await caller.addDependency({ dependsOnId: first.data.id, taskId: second.data.id });
+
+      expect(
+        await rejectionCode(
+          caller.addDependency({ dependsOnId: outside.data.id, taskId: inProject.data.id }),
+        ),
+      ).toBe('CROSS_PROJECT');
+      // Related links stay inside one project too.
+      expect(
+        await rejectionCode(
+          caller.addDependency({
+            dependsOnId: outside.data.id,
+            taskId: inProject.data.id,
+            type: 'relates',
+          }),
+        ),
+      ).toBe('CROSS_PROJECT');
+      expect(
+        await rejectionCode(
+          caller.addDependency({ dependsOnId: second.data.id, taskId: first.data.id }),
+        ),
+      ).toBe('CYCLE');
     });
   });
 

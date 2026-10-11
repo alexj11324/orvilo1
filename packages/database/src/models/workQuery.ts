@@ -2027,7 +2027,16 @@ export class WorkQueryModel {
    * Thin name/identifier match for CommandMenu. Not a new FTS entity.
    * Task ACL matches list/Inbox: ownership plus private-team readability.
    */
-  searchTasks = async (needle: string, limit = 8) => {
+  searchTasks = async (
+    needle: string,
+    limit = 8,
+    /**
+     * Relation pickers narrow the match to one project (`null` = Issues with
+     * no project) and drop Issues that can never be linked, so the page of
+     * results is not spent on rows the write would refuse.
+     */
+    scope?: { excludeIds?: string[]; projectId: string | null },
+  ) => {
     const q = needle.trim();
     if (!q) return [];
     const pattern = `%${escapeLike(q)}%`;
@@ -2037,12 +2046,19 @@ export class WorkQueryModel {
         id: tasks.id,
         identifier: tasks.identifier,
         name: tasks.name,
+        parentTaskId: tasks.parentTaskId,
         updatedAt: tasks.updatedAt,
       })
       .from(tasks)
       .where(
         and(
           this.ownership(),
+          scope
+            ? scope.projectId === null
+              ? isNull(tasks.projectId)
+              : eq(tasks.projectId, scope.projectId)
+            : undefined,
+          scope?.excludeIds?.length ? notInArray(tasks.id, scope.excludeIds) : undefined,
           or(
             sql`${tasks.name} ILIKE ${pattern} ESCAPE '\\'`,
             sql`${tasks.identifier} ILIKE ${pattern} ESCAPE '\\'`,

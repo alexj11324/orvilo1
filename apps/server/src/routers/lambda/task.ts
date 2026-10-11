@@ -26,7 +26,10 @@ import {
   TaskModel,
   TaskRevisionConflictError,
 } from '@/database/models/task';
-import { TaskDependencyError } from '@/database/models/taskDependency';
+import {
+  TaskDependencyError,
+  type TaskRelationRejectionReason,
+} from '@/database/models/taskDependency';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskReminderModel } from '@/database/models/taskReminder';
@@ -671,6 +674,9 @@ async function resolveActivityActor(
   return { agentId: claimedAgentId ?? null, userId: ctx.userId };
 }
 
+/** Upper bound for one "add existing sub-issues" submit. */
+const SET_PARENT_BATCH_MAX = 50;
+
 async function resolveSafeParentTaskId(
   model: TaskModel,
   taskId: string,
@@ -681,6 +687,7 @@ async function resolveSafeParentTaskId(
   const parent = await resolveOrThrow(model, parentTaskId);
   if (parent.id === taskId) {
     throw new TRPCError({
+      cause: { data: { code: 'SELF' satisfies TaskRelationRejectionReason } },
       code: 'BAD_REQUEST',
       message: 'Task cannot be parented to itself',
     });
@@ -689,6 +696,7 @@ async function resolveSafeParentTaskId(
   const descendants = await model.findAllDescendants(taskId);
   if (descendants.some((task) => task.id === parent.id)) {
     throw new TRPCError({
+      cause: { data: { code: 'CYCLE' satisfies TaskRelationRejectionReason } },
       code: 'BAD_REQUEST',
       message: 'Task cannot be parented to its own descendant',
     });
@@ -697,6 +705,7 @@ async function resolveSafeParentTaskId(
   const task = await resolveOrThrow(model, taskId);
   if (task.projectId !== parent.projectId) {
     throw new TRPCError({
+      cause: { data: { code: 'CROSS_PROJECT' satisfies TaskRelationRejectionReason } },
       code: 'BAD_REQUEST',
       message: 'Parent task must belong to the same project',
     });
@@ -2434,6 +2443,79 @@ export const taskRouter = router({
           cause: error,
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update task',
+        });
+      }
+    }),
+
+  /**
+   * Put several existing Issues under one parent. Each child passes the same
+   * checks as a single `update({ parentTaskId })`; one refusal rolls the whole
+   * batch back, so the picker never leaves a half-applied selection behind.
+   */
+  setParentBatch: taskProcedureWrite
+    .input(
+      z.object({
+        parentTaskId: z.string(),
+        taskIds: z.array(z.string()).min(1).max(SET_PARENT_BATCH_MAX),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const actor = await resolveActivityActor(ctx);
+        const parent = await resolveOrThrow(ctx.taskModel, input.parentTaskId);
+        const children: TaskItem[] = [];
+        for (const taskId of input.taskIds) {
+          const child = await resolveOrThrow(ctx.taskModel, taskId);
+          if (children.some((task) => task.id === child.id)) continue;
+          children.push(child);
+        }
+        // Same collaborative edit lock `update` honours, per child.
+        if (ctx.workspaceId) {
+          for (const child of children) {
+            if (await ctx.editLockService.getBlockingHolder('task', child.id)) {
+              throw new TRPCError({
+                cause: { data: { code: 'DocumentLocked' } },
+                code: 'CONFLICT',
+                message: `${child.identifier} is being edited by another user`,
+              });
+            }
+          }
+        }
+
+        const updated = await ctx.serverDB.transaction(async (tx) => {
+          const model = new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined);
+          const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
+          const rows: TaskItem[] = [];
+          for (const child of children) {
+            const parentTaskId = await resolveSafeParentTaskId(model, child.id, parent.id);
+            const row = await taskService.updateTaskWithAssigneeLock(
+              child.id,
+              { parentTaskId },
+              actor,
+            );
+            if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+            rows.push(row);
+          }
+          return rows;
+        });
+        return {
+          data: await withDerivedStatus(ctx.taskModel, updated),
+          message: 'Parent updated',
+          success: true,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskDependencyError) {
+          throw new TRPCError({ cause: error, code: error.code, message: error.message });
+        }
+        if (error instanceof TaskRevisionConflictError) {
+          throw new TRPCError({ code: 'CONFLICT', message: error.message });
+        }
+        console.error('[task:setParentBatch]', error);
+        throw new TRPCError({
+          cause: error,
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update parent',
         });
       }
     }),

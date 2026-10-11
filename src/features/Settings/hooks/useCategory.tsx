@@ -231,7 +231,7 @@ export const useCategory = () => {
             key: SettingsTabs.ServiceModel,
             label: t('tab.serviceModel'),
           },
-          {
+          offered(SettingsTabs.Memory) && {
             icon: BrainCircuit,
             key: SettingsTabs.Memory,
             label: t('tab.memory'),

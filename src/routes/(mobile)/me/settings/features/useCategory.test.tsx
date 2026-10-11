@@ -204,3 +204,10 @@ describe('mobile settings useCategory', () => {
     expect(navigate).toHaveBeenCalledWith('/acme/settings/general');
   });
 });
+
+it('does not offer builtin memory while the harness is hidden', () => {
+  const { result } = renderHook(() => useCategory(), { wrapper: createWrapper(true) });
+  expect(result.current.flatMap((group) => group.items.map((item) => item.key))).not.toContain(
+    SettingsTabs.Memory,
+  );
+});

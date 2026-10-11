@@ -277,3 +277,7 @@ describe('settings useCategory', () => {
     expect(result.current.flatMap((group) => group.items).every((item) => !item.href)).toBe(true);
   });
 });
+
+it('does not offer builtin memory settings while the harness is hidden', () => {
+  expect(getItemKeys()).not.toContain(SettingsTabs.Memory);
+});

@@ -18,6 +18,7 @@ import {
 import { memo, type ReactNode, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { BUILTIN_MEMORY_UI_ENABLED } from '@/config/routes/settings';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -286,7 +287,9 @@ const SearchResults = memo<SearchResultsProps>(
       onSetTypeFilter(type);
     };
 
-    const groups = groupSearchResults(results);
+    const groups = groupSearchResults(
+      BUILTIN_MEMORY_UI_ENABLED ? results : results.filter((result) => result.type !== 'memory'),
+    );
     const hasResults = groups.length > 0;
     const visibleResultPositions = createVisibleResultPositionMap<CommandMenuSearchResult>(
       groups.map((group) => group.items),

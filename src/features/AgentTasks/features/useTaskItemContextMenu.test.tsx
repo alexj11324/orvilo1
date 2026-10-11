@@ -55,6 +55,7 @@ const mocks = vi.hoisted(() => ({
   messageSuccess: vi.fn(),
   modalConfirm: vi.fn(),
   getReminder: vi.fn(),
+  getSubtasks: vi.fn(),
   moveWorkflow: vi.fn(),
   refreshTaskList: vi.fn(),
   setReminder: vi.fn(),
@@ -75,6 +76,7 @@ vi.mock('@/libs/contextMenu', () => ({
 vi.mock('@/services/task', () => ({
   taskService: {
     getReminder: mocks.getReminder,
+    getSubtasks: mocks.getSubtasks,
     setReminder: mocks.setReminder,
   },
 }));
@@ -201,6 +203,117 @@ describe('useTaskItemContextMenu', () => {
     expect(
       itemTypes.some((type, index) => type === 'divider' && itemTypes[index + 1] === 'divider'),
     ).toBe(false);
+  });
+
+  describe('remove from parent', () => {
+    const keysOf = (items: ReturnType<typeof useTaskItemContextMenu>['items']) =>
+      items.map((item) =>
+        item && typeof item === 'object' && 'key' in item ? String(item.key) : 'divider',
+      );
+
+    it('is offered only on a row shown as a child in a sub-issue list', () => {
+      const flat = renderHook(() =>
+        useTaskItemContextMenu({ identifier: 'T-2', priority: 0, status: 'backlog' }),
+      );
+      expect(keysOf(flat.result.current.items)).not.toContain('removeFromParent');
+
+      const child = renderHook(() =>
+        useTaskItemContextMenu({
+          identifier: 'T-2',
+          parentIdentifier: 'T-1',
+          priority: 0,
+          status: 'backlog',
+        }),
+      );
+      expect(keysOf(child.result.current.items)).toContain('removeFromParent');
+    });
+
+    it('sits in its own group, away from delete', () => {
+      const { result } = renderHook(() =>
+        useTaskItemContextMenu({
+          identifier: 'T-2',
+          parentIdentifier: 'T-1',
+          priority: 0,
+          status: 'backlog',
+        }),
+      );
+      const keys = keysOf(result.current.items);
+      const detach = keys.indexOf('removeFromParent');
+      const remove = keys.indexOf('delete');
+
+      expect(keys[detach - 1]).toBe('divider');
+      expect(keys[detach + 1]).toBe('divider');
+      // At least one whole group (the clipboard block) and two dividers between them.
+      expect(keys.slice(detach, remove).filter((key) => key === 'divider').length).toBeGreaterThan(
+        1,
+      );
+      expect(keys.indexOf('copy')).toBeGreaterThan(detach);
+      expect(remove).toBeGreaterThan(keys.indexOf('copy'));
+    });
+
+    it('detaches the sub-issue and keeps it', () => {
+      mocks.updateTask.mockResolvedValue(undefined);
+      const { result } = renderHook(() =>
+        useTaskItemContextMenu({
+          identifier: 'T-2',
+          parentIdentifier: 'T-1',
+          priority: 0,
+          status: 'backlog',
+        }),
+      );
+      const item = result.current.items.find(
+        (entry) =>
+          entry && typeof entry === 'object' && 'key' in entry && entry.key === 'removeFromParent',
+      ) as { onClick: (info: { domEvent: { stopPropagation: () => void } }) => void };
+
+      item.onClick({ domEvent: { stopPropagation: vi.fn() } });
+
+      expect(mocks.updateTask).toHaveBeenCalledWith('T-2', { parentTaskId: null });
+      expect(mocks.deleteTask).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('delete confirmation', () => {
+    const openDelete = async () => {
+      const { result } = renderHook(() =>
+        useTaskItemContextMenu({ identifier: 'T-1', priority: 0, status: 'backlog' }),
+      );
+      const item = result.current.items.find(
+        (entry) => entry && typeof entry === 'object' && 'key' in entry && entry.key === 'delete',
+      ) as { onClick: (info: { domEvent: { stopPropagation: () => void } }) => void };
+      render(<ModalHost />);
+      await act(async () => {
+        item.onClick({ domEvent: { stopPropagation: vi.fn() } });
+      });
+    };
+
+    it('says what happens to the sub-issues of the issue being deleted', async () => {
+      mocks.getSubtasks.mockResolvedValue({ data: [{ id: 'a' }, { id: 'b' }] });
+      await openDelete();
+
+      await waitFor(() =>
+        expect(screen.getByText('taskDetail.deleteConfirm.contentWithSubIssues')).toBeTruthy(),
+      );
+      expect(mocks.getSubtasks).toHaveBeenCalledWith('T-1');
+    });
+
+    it('keeps the plain warning for an issue without sub-issues', async () => {
+      mocks.getSubtasks.mockResolvedValue({ data: [] });
+      await openDelete();
+
+      await waitFor(() =>
+        expect(screen.getByText('taskDetail.deleteConfirm.content')).toBeTruthy(),
+      );
+    });
+
+    it('does not claim there are none when the sub-issues could not be read', async () => {
+      mocks.getSubtasks.mockRejectedValue(new Error('offline'));
+      await openDelete();
+
+      await waitFor(() =>
+        expect(screen.getByText('taskDetail.deleteConfirm.contentUnknownSubIssues')).toBeTruthy(),
+      );
+    });
   });
 
   it('copies the global task detail link in global route scope', async () => {

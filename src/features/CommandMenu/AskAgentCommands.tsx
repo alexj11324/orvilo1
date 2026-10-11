@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors/builtinAgentSelectors';
 import { useHomeStore } from '@/store/home';
@@ -20,6 +22,8 @@ const AskAgentCommands = memo(() => {
 
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
+  const keep = useKeepSidebarListed();
+  const builtinOffered = useBuiltinHarnessOffered();
 
   // Check if search starts with "@"
   const isAtMention = search.trimStart().startsWith('@');
@@ -32,7 +36,7 @@ const AskAgentCommands = memo(() => {
 
   // Filter agents based on the query after "@"
   const filteredAgents = useMemo(() => {
-    const agents = allAgents.filter((item) => item.type === 'agent');
+    const agents = keep(allAgents).filter((item) => item.type === 'agent');
     if (!mentionQuery) {
       return agents.slice(0, 10);
     }
@@ -42,7 +46,7 @@ const AskAgentCommands = memo(() => {
         return title.includes(mentionQuery);
       })
       .slice(0, 10);
-  }, [allAgents, mentionQuery]);
+  }, [allAgents, keep, mentionQuery]);
 
   const handleAgentSelect = (agentId: string, agentTitle: string, agentAvatar: string) => {
     setSelectedAgent({
@@ -57,7 +61,7 @@ const AskAgentCommands = memo(() => {
   if (!isAtMention) return null;
 
   // Check if Orvilo AI matches the query
-  const showOrviloAI = !mentionQuery || 'orvilo ai'.includes(mentionQuery);
+  const showOrviloAI = builtinOffered && (!mentionQuery || 'orvilo ai'.includes(mentionQuery));
 
   return (
     <Command.Group heading={t('cmdk.mentionAgent')}>

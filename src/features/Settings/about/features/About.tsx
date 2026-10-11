@@ -10,6 +10,7 @@ import Form from '@/components/GroupForm';
 import { Separator } from '@/components/ui/separator';
 import { DOWNLOAD_URL, mailTo, OFFICIAL_SITE } from '@/const/url';
 import { getHostContext } from '@/platform';
+import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 import AboutList from './AboutList';
 import ItemCard from './ItemCard';
@@ -28,6 +29,8 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
   const { t } = useTranslation('common');
   // The download entry only makes sense on web; the desktop app is already installed.
   const inDesktopApp = getHostContext().kind === 'desktop';
+  // The hosted site is a promotion target, so it follows the promotion flag.
+  const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);
 
   return (
     <Form.Group
@@ -96,7 +99,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
           ItemRender={ItemLink}
           items={[
             {
-              href: OFFICIAL_SITE,
+              href: showCloudPromotion ? OFFICIAL_SITE : undefined,
               label: t('officialSite'),
               value: 'officialSite',
             },

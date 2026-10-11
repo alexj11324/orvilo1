@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -22,7 +24,11 @@ const AskAIMenu = memo(() => {
 
   // Get agent list (limit to first 20 items for simplicity)
   const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
-  const agents = allAgents.filter((item) => item.type === 'agent').slice(0, 20);
+  const keep = useKeepSidebarListed();
+  const builtinOffered = useBuiltinHarnessOffered();
+  const agents = keep(allAgents)
+    .filter((item) => item.type === 'agent')
+    .slice(0, 20);
 
   const heading = search.trim()
     ? t('cmdk.askAIHeading', { query: `"${search.trim()}"` })
@@ -40,12 +46,14 @@ const AskAIMenu = memo(() => {
 
   return (
     <Command.Group heading={heading}>
-      <Command.Item value="orvilo-ai" onSelect={handleAskOrviloAI}>
-        <AgentRuntimeIcon size={18} type="orvilo" />
-        <div className={styles.itemContent}>
-          <div className={styles.itemLabel}>Orvilo AI</div>
-        </div>
-      </Command.Item>
+      {builtinOffered && (
+        <Command.Item value="orvilo-ai" onSelect={handleAskOrviloAI}>
+          <AgentRuntimeIcon size={18} type="orvilo" />
+          <div className={styles.itemContent}>
+            <div className={styles.itemLabel}>Orvilo AI</div>
+          </div>
+        </Command.Item>
+      )}
       {agents.map((agent) => (
         <CommandItem
           icon={<AssigneeAvatar agentId={agent.id} size={18} />}

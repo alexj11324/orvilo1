@@ -38,7 +38,6 @@ import { usePermission } from '@/hooks/usePermission';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { SettingsTabs } from '@/store/global/initialState';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
@@ -92,7 +91,6 @@ export const useCategory = () => {
   const { t } = useTranslation('setting');
   const { t: tAuth } = useTranslation('auth');
   const { t: tSubscription } = useTranslation('subscription');
-  const { showProvider } = useServerConfigStore(featureFlagsSelectors);
   const [avatar, username] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
     userProfileSelectors.nickName(s),
@@ -221,12 +219,12 @@ export const useCategory = () => {
           },
           // Provider settings should not depend on Advanced tools: new users may need
           // non-LobeHub providers, and desktop users often bring their own API keys.
-          showProvider && {
+          offered(SettingsTabs.Provider) && {
             icon: Brain,
             key: SettingsTabs.Provider,
             label: t('tab.provider'),
           },
-          {
+          offered(SettingsTabs.ServiceModel) && {
             icon: Sparkles,
             key: SettingsTabs.ServiceModel,
             label: t('tab.serviceModel'),
@@ -401,7 +399,6 @@ export const useCategory = () => {
     capabilityContext,
     avatarUrl,
     username,
-    showProvider,
     slug,
     canManageWorkspace,
     canViewBilling,

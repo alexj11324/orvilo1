@@ -16,6 +16,15 @@ export default {
   'settingAgent.modelSettings.unavailable.unverified':
     'Connection is not verified. Check the key, endpoint and model access, then retry.',
   'settingAgent.modelSettings.verifyBinding': 'Verify connection',
+  'defaultAgentPicker.title': 'Default Agent',
+  'defaultAgentPicker.description':
+    'Opens when you start a chat or ask from the command menu without naming an Agent.',
+  'defaultAgentPicker.choose': 'Choose an Agent',
+  'defaultAgentPicker.saved': 'Default Agent saved',
+  'defaultAgentPicker.fallback.orchestrator': 'No default is set, so your Orchestrator is used.',
+  'defaultAgentPicker.fallback.first':
+    'No default is set, so the first Agent in your list is used.',
+  'orchestrator.alsoDefault': 'Also set as my default Agent',
   'tab.orchestrator': 'Orchestrator',
   'orchestrator.description':
     'Choose a configured Agent to coordinate new projects. Existing projects keep their current coordinator.',
@@ -23,7 +32,7 @@ export default {
   'orchestrator.personalScope': 'Applies to your new personal projects.',
   'orchestrator.select': 'Choose Orchestrator Agent',
   'orchestrator.unsupported': 'This engine cannot coordinate projects. Choose a supported Agent.',
-  'orchestrator.empty': 'Create and configure an Agent to choose an Orchestrator.',
+  'orchestrator.empty': 'Connect an Agent in Settings → Agents to choose an Orchestrator.',
   'orchestrator.selectionUnavailable':
     'The selected Agent is unavailable. Configure it or choose another Agent.',
   'orchestrator.create': 'Create Agent',

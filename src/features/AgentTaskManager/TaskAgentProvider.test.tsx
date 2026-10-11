@@ -42,6 +42,9 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
+  useFallbackAgentId: () => 'agt_inbox',
+}));
 vi.mock('@/components/Skeleton/Conversation/Segment', () => ({
   default: () => <div data-testid="loading" />,
 }));

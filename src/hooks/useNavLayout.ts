@@ -3,6 +3,8 @@ import { BotIcon, InboxIcon, ListTodoIcon, MessagesSquareIcon, SquareUserIcon } 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useDefaultAgentState } from '@/features/DefaultAgent/useDefaultAgent';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { SidebarTabKey } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
@@ -21,6 +23,7 @@ export interface NavLayout {
   footer: {
     hideGitHub: boolean;
     layout: 'expanded' | 'compact';
+    showChangelog: boolean;
     showEvalEntry: boolean;
     showSettingsEntry: boolean;
   };
@@ -33,7 +36,19 @@ export interface NavLayout {
 
 export const useNavLayout = (): NavLayout => {
   const { t } = useTranslation('common');
-  const { hideGitHub } = useServerConfigStore(featureFlagsSelectors);
+  const { hideGitHub, showChangelog } = useServerConfigStore(featureFlagsSelectors);
+  const builtinOffered = useBuiltinHarnessOffered();
+  const defaultAgentState = useDefaultAgentState();
+  // The Agent row opens the inbox Agent while the built-in harness is offered.
+  // Otherwise it opens the user's default Agent, or Agent settings when there
+  // is none. Until that is known it keeps the inbox route, which the agent
+  // route guard forwards to the default Agent once it resolves.
+  const agentUrl =
+    builtinOffered || !defaultAgentState.ready
+      ? `/agent/${INBOX_SESSION_ID}`
+      : defaultAgentState.agent
+        ? `/agent/${defaultAgentState.agent.agentId}`
+        : '/settings/agents';
 
   // Fixed primary IA (see features/Navigation/sidebarContract): the header
   // carries the workspace switcher and search; the body renders
@@ -67,7 +82,7 @@ export const useNavLayout = (): NavLayout => {
           icon: BotIcon,
           key: SidebarTabKey.Agent,
           title: t('navPanel.agent'),
-          url: `/agent/${INBOX_SESSION_ID}`,
+          url: agentUrl,
         },
         {
           icon: MessagesSquareIcon,
@@ -76,7 +91,7 @@ export const useNavLayout = (): NavLayout => {
           url: '/group',
         },
       ] as NavItem[],
-    [t],
+    [agentUrl, t],
   );
 
   // Every destination that used to live here has been retired by the task-first
@@ -97,10 +112,11 @@ export const useNavLayout = (): NavLayout => {
     () => ({
       hideGitHub: !!hideGitHub,
       layout: 'compact' as const,
+      showChangelog: !!showChangelog,
       showEvalEntry: false,
       showSettingsEntry: true,
     }),
-    [hideGitHub],
+    [hideGitHub, showChangelog],
   );
 
   const userPanel = useMemo(

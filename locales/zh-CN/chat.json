@@ -49,6 +49,7 @@
   "agentProfile.knowledgeBases_other": "{{count}} 个知识库",
   "agentProfile.skills_one": "{{count}} 项技能",
   "agentProfile.skills_other": "{{count}} 项技能",
+  "agentRuntimeWithheld.desc": "该 Agent 使用的运行时暂未开放。它的对话记录都还在。",
   "agentSignal.receipts.agentSignalLabel": "智能体信号",
   "agentSignal.receipts.memory.detail": "已保存以供未来回复使用",
   "agentSignal.receipts.memory.title": "记忆已保存",

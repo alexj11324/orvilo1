@@ -2,6 +2,8 @@ import { INBOX_SESSION_ID } from '@orvilo/const';
 import { HotkeyEnum } from '@orvilo/const/hotkeys';
 import { useLocation } from 'react-router';
 
+import { useFallbackAgentId } from '@/features/DefaultAgent/useFallbackAgentId';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useNavigateToAgent } from '@/hooks/useNavigateToAgent';
 import { usePinnedAgentState } from '@/hooks/usePinnedAgentState';
@@ -28,9 +30,12 @@ export const isAgentProfilePanelRoute = (pathname: string) =>
 export const useNavigateToChatHotkey = () => {
   const navigateToAgent = useNavigateToAgent();
   const [, { unpinAgent }] = usePinnedAgentState();
+  const builtinOffered = useBuiltinHarnessOffered();
+  const fallbackAgentId = useFallbackAgentId();
 
   return useHotkeyById(HotkeyEnum.NavigateToChat, () => {
-    navigateToAgent(INBOX_SESSION_ID);
+    if (!fallbackAgentId) return;
+    navigateToAgent(builtinOffered ? INBOX_SESSION_ID : fallbackAgentId);
     unpinAgent();
   });
 };

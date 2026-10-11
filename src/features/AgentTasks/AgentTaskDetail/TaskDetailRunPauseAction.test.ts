@@ -18,6 +18,9 @@ const api = vi.hoisted(() => ({
   runMutation: vi.fn(),
 }));
 
+vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
+  useFallbackAgentId: () => undefined,
+}));
 vi.mock('@/libs/trpc/client', () => ({
   lambdaClient: {
     task: {

@@ -23,7 +23,7 @@ import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selec
  */
 export const useSettingsCapabilityContext = (): SettingsCapabilityContext => {
   const mobile = useServerConfigStore(serverConfigSelectors.isMobile);
-  const { hideDocs, showApiKeyManage } = useServerConfigStore(featureFlagsSelectors);
+  const { hideDocs, showApiKeyManage, showProvider } = useServerConfigStore(featureFlagsSelectors);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
 
@@ -35,7 +35,8 @@ export const useSettingsCapabilityContext = (): SettingsCapabilityContext => {
       isDevMode: !!isDevMode,
       mobile,
       showApiKeyManage: !!showApiKeyManage,
+      showProvider: !!showProvider,
     }),
-    [enableBusinessFeatures, hideDocs, isDevMode, mobile, showApiKeyManage],
+    [enableBusinessFeatures, hideDocs, isDevMode, mobile, showApiKeyManage, showProvider],
   );
 };

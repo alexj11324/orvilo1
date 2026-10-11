@@ -1,5 +1,6 @@
 'use client';
 
+import { BRANDING_URL } from '@orvilo/business-const';
 import {
   BookOpenIcon,
   CheckIcon,
@@ -22,7 +23,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { DOCUMENTS_REFER_URL } from '@/const/url';
 import { renderSidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useMenu } from '@/features/User/UserPanel/useMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -132,19 +132,21 @@ export function WorkspaceMenuContent() {
       <DropdownMenuSeparator />
 
       <DropdownMenuGroup>
-        <DropdownMenuItem
-          render={
-            <a
-              className="text-inherit"
-              href={DOCUMENTS_REFER_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            />
-          }
-        >
-          <BookOpenIcon aria-hidden />
-          {t('userPanel.docs')}
-        </DropdownMenuItem>
+        {BRANDING_URL.help && (
+          <DropdownMenuItem
+            render={
+              <a
+                className="text-inherit"
+                href={BRANDING_URL.help}
+                rel="noopener noreferrer"
+                target="_blank"
+              />
+            }
+          >
+            <BookOpenIcon aria-hidden />
+            {t('userPanel.docs')}
+          </DropdownMenuItem>
+        )}
         {renderSidebarMenuItems(groups.help)}
       </DropdownMenuGroup>
 

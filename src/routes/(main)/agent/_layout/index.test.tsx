@@ -20,6 +20,17 @@ vi.mock(import('@/const/version'), async (importOriginal) => ({
   ...(await importOriginal()),
   isDesktop: false,
 }));
+vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBuiltinHarnessOffered: () => true,
+}));
+vi.mock('@/features/DefaultAgent/useDefaultAgent', () => ({
+  useDefaultAgentState: () => ({ agent: undefined, ready: true }),
+}));
+vi.mock('@/hooks/useFetchAgentList', () => ({ useFetchAgentList: vi.fn() }));
+vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
+  useWorkspaceAwareNavigate: () => vi.fn(),
+}));
 vi.mock('@/hooks/useInitAgentConfig', () => ({ useInitAgentConfig: vi.fn() }));
 vi.mock('@/features/ProtocolUrlHandler', () => ({ default: () => null }));
 vi.mock('./RegisterHotkeys', () => ({ default: () => null }));

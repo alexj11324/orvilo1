@@ -25,6 +25,9 @@ const mock = vi.hoisted(() => ({
   resumed: vi.fn(),
   setup: { firstAgentId: 'first-agent', workspaceId: 'created-workspace' },
 }));
+vi.mock('@/features/HeterogeneousAgent/builtinHarness', () => ({
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('@/store/user', () => ({
   useUserStore: (selector: (s: unknown) => unknown) =>
     selector({ isSignedIn: true, onboarding: { setup: mock.setup } }),

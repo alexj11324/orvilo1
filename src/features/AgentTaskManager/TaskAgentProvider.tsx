@@ -7,6 +7,7 @@ import { useMatch, useSearchParams } from 'react-router';
 
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import { ConversationProvider } from '@/features/Conversation';
+import { useFallbackAgentId } from '@/features/DefaultAgent/useFallbackAgentId';
 import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
 import { useOperationState } from '@/hooks/useOperationState';
 import { useAgentStore } from '@/store/agent';
@@ -37,7 +38,7 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
   useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.inbox);
   useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.taskAgent);
 
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
+  const fallbackAgentId = useFallbackAgentId();
   const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
   const setActiveAgentId = useAgentStore((s) => s.setActiveAgentId);
   const activeTopicId = useChatStore((s) => s.activeTopicId);
@@ -115,14 +116,14 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
   const context = useMemo<ConversationContext>(
     () => ({
       agentId: selectedAgentId || '',
-      defaultTaskAssigneeAgentId: inboxAgentId,
+      defaultTaskAssigneeAgentId: fallbackAgentId,
       scope: 'task',
       topicId: activeTopicId,
       viewedTask: resolvedViewedTaskId
         ? { taskId: resolvedViewedTaskId, type: 'detail' }
         : { type: 'list' },
     }),
-    [activeTopicId, inboxAgentId, resolvedViewedTaskId, selectedAgentId],
+    [activeTopicId, fallbackAgentId, resolvedViewedTaskId, selectedAgentId],
   );
 
   const chatKey = useMemo(() => messageMapKey(context), [context]);

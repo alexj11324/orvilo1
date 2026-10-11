@@ -48,7 +48,10 @@ const workspaceUserSettingsProcedure = wsCompatProcedure.use(serverDatabase).use
 // `WorkspaceUserPreference` doesn't need a coupled zod-schema bump — the
 // type layer already constrains the write paths.
 const preferencePatchSchema = z
-  .object({ orchestratorAgentId: z.string().min(1).max(128).nullish() })
+  .object({
+    defaultAgentId: z.string().min(1).max(128).nullish(),
+    orchestratorAgentId: z.string().min(1).max(128).nullish(),
+  })
   .passthrough()
   .partial();
 
@@ -80,7 +83,11 @@ export const workspaceUserSettingsRouter = router({
   updatePreference: workspaceUserSettingsProcedure
     .input(preferencePatchSchema)
     .mutation(async ({ ctx, input }) => {
-      if (input.orchestratorAgentId) {
+      // An Orchestrator's runtime is copied into new projects, so the member must
+      // be able to read its full configuration. A default Agent is only opened,
+      // so being able to use it is enough.
+      for (const agentId of new Set([input.defaultAgentId, input.orchestratorAgentId])) {
+        if (!agentId) continue;
         const access = await getResourceConfigAccess(
           {
             db: ctx.serverDB,
@@ -90,13 +97,17 @@ export const workspaceUserSettingsRouter = router({
               .workspacePermissionCodes,
           },
           'agent',
-          input.orchestratorAgentId,
+          agentId,
         );
-        if (access !== 'full')
+        const denied =
+          agentId === input.orchestratorAgentId ? access !== 'full' : access === 'none';
+        if (denied)
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Agent runtime configuration is unavailable',
           });
+      }
+      if (input.orchestratorAgentId) {
         await ctx.preferenceAgentModel.inheritRuntimeForCreation(input.orchestratorAgentId, {
           purpose: 'orchestrator',
           visibility: 'private',

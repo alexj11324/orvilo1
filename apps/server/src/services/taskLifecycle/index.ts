@@ -618,7 +618,12 @@ export class TaskLifecycleService {
               message: errorText,
             });
           } catch (e) {
-            console.warn('[TaskLifecycle] persisting run failure reason failed:', e);
+            // Name only: a query error carries its parameters, which here are the
+            // runtime's error text.
+            console.warn(
+              '[TaskLifecycle] persisting run failure reason failed:',
+              e instanceof Error ? e.name : 'unknown error',
+            );
           }
         }
 

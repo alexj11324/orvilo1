@@ -142,10 +142,13 @@ Exact engine aliases also live on the document theme host, so body portals inher
 | `--foreground-description`                            | `colorTextDescription`                                          | Preserve existing description text; this is not necessarily secondary text |
 | `--fill-quaternary`                                   | `colorFillQuaternary`                                           | Faintest neutral wash                                                      |
 | `--divider`                                           | `colorBorderSecondary`                                          | Everyday divider outside the sidebar                                       |
+| `--overlay-mask` / `--overlay-mask-foreground`        | `colorBgMask` / `colorTextLightSolid`                           | Scrims and icon overlays on photographs; preserve the engine mask pair     |
 | `--{primary,success,warning,info,destructive}-wash`   | Corresponding `color{Primary,Success,Warning,Info,Error}Bg`     | Exact existing status background                                           |
 | `--{primary,success,warning,info,destructive}-border` | Corresponding `color{Primary,Success,Warning,Info,Error}Border` | Exact existing status edge                                                 |
 
 The `*-wash` aliases preserve engine backgrounds; existing `*-subtle` roles remain their computed 10% mixes. Do not substitute one for the other by appearance. Description text likewise keeps its exact alias: the current dark engine description is `#6f6f6f`, while secondary text is `#aaaaaa`. These aliases require the existing top-level theme host; they do not introduce a separate fallback palette.
+
+The mask pair is for a translucent scrim or an icon laid over image content. Its foreground preserves `colorTextLightSolid` on that mask and does not select the foreground for ordinary filled actions. Filled actions still use the foreground paired with their actual fill. Before the theme host mounts, the mask aliases reference the same existing engine CSS variables; they add no fallback palette.
 
 These fills are translucent washes, not surfaces: they stay visible on the page canvas, panels, and popovers alike. `colorBgContainerSecondary` remains an engine surface role and is no longer what `bg-muted` or `bg-secondary` paint. A sticky cell that must hide scrolling content keeps an opaque base and layers the wash as an image with the `wash-*` utility (`bg-background wash-muted`); never use a wash as the only paint there. Status colors used as text or icons take the `*-text` roles (`text-destructive-text`), not the fill roles. The mapping, consumer audit, and follow-ups are recorded in [semantic token roles](docs/development/semantic-token-roles.md).
 

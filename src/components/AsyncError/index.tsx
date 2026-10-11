@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { RotateCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { createElement, memo, type ReactNode } from 'react';
@@ -47,32 +46,12 @@ export interface AsyncErrorProps {
   variant?: AsyncErrorVariant;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  block: css`
-    width: 100%;
-    min-height: 180px;
-    padding: 32px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  icon: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  inline: css`
-    padding-block: 8px;
-  `,
-  metric: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  page: css`
-    flex: 1;
-    width: 100%;
-    min-height: 320px;
-    padding: 48px;
-  `,
-}));
+const styles = {
+  block: 'min-h-45 w-full rounded-(--radius-card) border border-divider bg-card p-8',
+  inline: 'py-2',
+  metric: 'text-muted-foreground',
+  page: 'min-h-80 w-full flex-1 p-12',
+};
 
 const AsyncError = memo<AsyncErrorProps>(
   ({ variant = 'block', error, onRetry, retrying = false, title, description, action }) => {
@@ -100,7 +79,7 @@ const AsyncError = memo<AsyncErrorProps>(
     const recoveryAction =
       action ??
       (status === 401 ? (
-        <Button size="sm" onClick={recoverAuthentication}>
+        <Button size="lg" onClick={recoverAuthentication}>
           {t('asyncState.signIn')}
         </Button>
       ) : status === 403 ? (
@@ -109,7 +88,7 @@ const AsyncError = memo<AsyncErrorProps>(
         <Button
           disabled={retrying}
           loading={retrying}
-          size="sm"
+          size="lg"
           variant={variant === 'inline' || variant === 'metric' ? 'ghost' : 'default'}
           onClick={onRetry}
         >
@@ -121,9 +100,9 @@ const AsyncError = memo<AsyncErrorProps>(
     // ─── metric: a failed marker where a number would render (never a fake $0) ───
     if (variant === 'metric') {
       return (
-        <div className={cn('flex items-center', styles.metric)} style={{ gap: 6 }}>
+        <div className={cn('flex items-center gap-1.5', styles.metric)}>
           {createElement(TriangleAlertIcon, { size: 14 })}
-          <div className="text-(length:--text-dense)" style={{ color: cssVar.colorTextQuaternary }}>
+          <div className="text-sm leading-5.5 text-muted-foreground">
             {t('asyncState.metricLabel')}
           </div>
           {recoveryAction}
@@ -136,9 +115,7 @@ const AsyncError = memo<AsyncErrorProps>(
       return (
         <div className={cn('inline-flex gap-2 items-center justify-center', styles.inline)}>
           {createElement(TriangleAlertIcon, { size: 14 })}
-          <div className="text-(length:--text-dense)" style={{ color: cssVar.colorTextSecondary }}>
-            {heading}
-          </div>
+          <div className="text-sm leading-5.5 text-muted-foreground">{heading}</div>
           {recoveryAction}
         </div>
       );
@@ -154,13 +131,8 @@ const AsyncError = memo<AsyncErrorProps>(
       >
         {createElement(TriangleAlertIcon, { size: 16 })}
         <div className={'flex flex-col gap-1 items-center'}>
-          <div className="font-semibold" style={{ fontSize: variant === 'page' ? 16 : 15 }}>
-            {heading}
-          </div>
-          <div
-            className="text-center text-(length:--text-dense)"
-            style={{ color: cssVar.colorTextTertiary, maxWidth: 360 }}
-          >
+          <div className="text-base font-semibold leading-6">{heading}</div>
+          <div className="max-w-90 text-center text-sm leading-5.5 text-muted-foreground">
             {reason}
           </div>
         </div>

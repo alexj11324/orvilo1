@@ -68,6 +68,8 @@
     --color-primary-hover-foreground: var(--primary-hover-foreground);
     --color-popover-foreground: var(--popover-foreground);
     --color-popover: var(--popover);
+    --color-overlay-mask: var(--overlay-mask);
+    --color-overlay-mask-foreground: var(--overlay-mask-foreground);
     --color-card-foreground: var(--card-foreground);
     --color-card: var(--card);
     --color-foreground: var(--foreground);
@@ -111,6 +113,8 @@
     --card-foreground: var(--foreground);
     --popover: var(--ant-color-bg-elevated, #ffffff);
     --popover-foreground: var(--foreground);
+    --overlay-mask: var(--ant-color-bg-mask);
+    --overlay-mask-foreground: var(--ant-color-text-light-solid);
     --primary-foreground: var(--primary-on-fill);
     --secondary: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --secondary-foreground: var(--foreground);

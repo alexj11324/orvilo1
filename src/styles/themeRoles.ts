@@ -72,6 +72,8 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --card-foreground: ${theme.colorText};
       --popover: ${theme.colorBgElevated};
       --popover-foreground: ${theme.colorText};
+      --overlay-mask: ${theme.colorBgMask};
+      --overlay-mask-foreground: ${theme.colorTextLightSolid};
       --primary: ${theme.colorPrimary};
       --primary-foreground: ${readableColor(theme.colorPrimary)};
       --primary-hover: ${theme.colorPrimaryHover};

@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { FileImage, FileText, FileUpIcon, FolderIcon } from 'lucide-react';
 import { createElement, type CSSProperties, type ReactNode } from 'react';
@@ -10,94 +10,23 @@ import { useTranslation } from 'react-i18next';
 import { useDragUploadContext } from './DragUploadProvider';
 import { type DroppedLocalPath, useLocalDragUpload } from './useLocalDragUpload';
 
-const BLOCK_SIZE = 48;
-const OVERLAY_INSET = 28;
-const OVERLAY_BORDER_INSET = 10;
-
-const DEFAULT_TONE = {
-  iconColor: `color-mix(in srgb, ${cssVar.geekblue} 95%, black)`,
-  iconStrongBg: `color-mix(in srgb, ${cssVar.geekblue} 38%, white)`,
-  iconSoftBg: `color-mix(in srgb, ${cssVar.geekblue} 68%, white)`,
+const styles = {
+  container: 'relative',
+  content: 'relative z-1 box-border h-full w-full px-7 py-6',
+  desc: 'text-xs leading-5',
+  icon: 'h-[calc(var(--spacing)*14.4)] w-12 rounded-(--radius-card)',
+  iconGroup: 'mbs-0',
+  iconSoft: 'bg-primary-subtle text-primary-text',
+  iconSoftLocalPath: 'bg-info-subtle text-info-text',
+  iconStrong: 'border border-primary-border bg-card text-card-foreground',
+  iconStrongLocalPath: 'border-info-border',
+  overlay:
+    'pointer-events-none absolute inset-0 z-100 flex items-center justify-center bg-overlay-mask transition-opacity duration-(--orvilo-motion-mid) ease-in-out motion-reduce:transition-none',
+  overlayContent:
+    "relative box-border w-[min(460px,72vw)] rounded-(--radius-overlay) bg-primary p-7 text-primary-foreground shadow-(--shadow-dialog) before:pointer-events-none before:absolute before:inset-2.5 before:rounded-(--radius-overlay) before:border-[1.5px] before:border-dashed before:border-current before:content-['']",
+  overlayContentLocalPath: 'bg-info text-info-on-fill',
+  title: 'text-base font-semibold leading-6',
 };
-
-const LOCAL_PATH_TONE = {
-  iconColor: `color-mix(in srgb, ${cssVar.purple} 82%, black)`,
-  iconStrongBg: `color-mix(in srgb, ${cssVar.purple} 36%, white)`,
-  iconSoftBg: `color-mix(in srgb, ${cssVar.purple} 64%, white)`,
-};
-
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    position: relative;
-  `,
-  content: css`
-    position: relative;
-    z-index: 1;
-
-    box-sizing: border-box;
-    width: 100%;
-    height: 100%;
-    padding-block: 24px;
-    padding-inline: 28px;
-  `,
-  desc: css`
-    font-size: 12px;
-    line-height: 18px;
-    color: #fff;
-  `,
-  icon: css`
-    border-radius: ${cssVar.borderRadiusSM};
-  `,
-  iconGroup: css`
-    margin-block-start: 0;
-  `,
-  overlay: css`
-    pointer-events: none;
-
-    position: absolute;
-    z-index: 100;
-    inset: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background: ${cssVar.colorBgMask};
-
-    transition: all 0.2s ease-in-out;
-  `,
-  overlayContent: css`
-    position: relative;
-
-    box-sizing: border-box;
-    width: min(460px, 72vw);
-    padding: ${OVERLAY_INSET}px;
-    border-radius: 16px;
-
-    background: ${cssVar.geekblue};
-    box-shadow: 0 16px 48px color-mix(in srgb, ${cssVar.geekblue} 32%, transparent);
-
-    &::before {
-      pointer-events: none;
-      content: '';
-
-      position: absolute;
-      inset: ${OVERLAY_BORDER_INSET}px;
-
-      border: 1.5px dashed #fff;
-      border-radius: ${cssVar.borderRadiusLG};
-    }
-  `,
-  overlayContentLocalPath: css`
-    background: color-mix(in srgb, ${cssVar.purple} 82%, ${cssVar.geekblue});
-    box-shadow: 0 16px 48px color-mix(in srgb, ${cssVar.purple} 32%, transparent);
-  `,
-  title: css`
-    font-size: 16px;
-    font-weight: bold;
-    color: #fff;
-  `,
-}));
 
 export interface DragUploadZoneProps {
   /**
@@ -209,7 +138,6 @@ const DragUploadZone = memo<DragUploadZoneProps>(
       if (overlayCopy.showFolderIcon) return [FolderIcon, FolderIcon, FolderIcon];
       return [FileImage, FileUpIcon, FileText];
     }, [dragContentKind, isLocalPathReferenceOverlay, overlayCopy.showFolderIcon]);
-    const tone = isLocalPathReferenceOverlay ? LOCAL_PATH_TONE : DEFAULT_TONE;
 
     return (
       <div className={cx(styles.container, className)} style={style} {...getContainerProps()}>
@@ -218,7 +146,7 @@ const DragUploadZone = memo<DragUploadZoneProps>(
           <div className={styles.overlay}>
             <div
               style={{ minHeight: overlayMinHeight }}
-              className={cx(
+              className={cn(
                 styles.overlayContent,
                 isLocalPathReferenceOverlay && styles.overlayContentLocalPath,
               )}
@@ -228,44 +156,37 @@ const DragUploadZone = memo<DragUploadZoneProps>(
               >
                 <div className={cn('flex', styles.iconGroup)}>
                   <div
-                    className={cn('flex flex-col items-center justify-center', styles.icon)}
-                    style={{
-                      background: tone.iconSoftBg,
-                      color: tone.iconColor,
-                      transform: 'rotateZ(-20deg) translateX(8px)',
-                      height: BLOCK_SIZE * 1.2,
-                      width: BLOCK_SIZE,
-                    }}
+                    className={cn(
+                      'flex flex-col items-center justify-center [transform:rotateZ(-20deg)_translateX(calc(var(--spacing)*2))]',
+                      styles.icon,
+                      styles.iconSoft,
+                      isLocalPathReferenceOverlay && styles.iconSoftLocalPath,
+                    )}
                   >
-                    {createElement(overlayIcons[0], { size: 28, strokeWidth: 1.5 })}
+                    {createElement(overlayIcons[0], { size: 16, strokeWidth: 1.5 })}
                   </div>
                   <div
-                    className={cn('flex flex-col items-center justify-center', styles.icon)}
-                    style={{
-                      background: tone.iconStrongBg,
-                      color: tone.iconColor,
-                      transform: 'translateY(-10px)',
-                      zIndex: 1,
-                      height: BLOCK_SIZE * 1.2,
-                      width: BLOCK_SIZE,
-                    }}
+                    className={cn(
+                      'z-1 flex flex-col items-center justify-center [transform:translateY(calc(var(--spacing)*-2.5))]',
+                      styles.icon,
+                      styles.iconStrong,
+                      isLocalPathReferenceOverlay && styles.iconStrongLocalPath,
+                    )}
                   >
-                    {createElement(overlayIcons[1], { size: 28, strokeWidth: 1.5 })}
+                    {createElement(overlayIcons[1], { size: 16, strokeWidth: 1.5 })}
                   </div>
                   <div
-                    className={cn('flex flex-col items-center justify-center', styles.icon)}
-                    style={{
-                      background: tone.iconSoftBg,
-                      color: tone.iconColor,
-                      transform: 'rotateZ(20deg) translateX(-8px)',
-                      height: BLOCK_SIZE * 1.2,
-                      width: BLOCK_SIZE,
-                    }}
+                    className={cn(
+                      'flex flex-col items-center justify-center [transform:rotateZ(20deg)_translateX(calc(var(--spacing)*-2))]',
+                      styles.icon,
+                      styles.iconSoft,
+                      isLocalPathReferenceOverlay && styles.iconSoftLocalPath,
+                    )}
                   >
-                    {createElement(overlayIcons[2], { size: 28, strokeWidth: 1.5 })}
+                    {createElement(overlayIcons[2], { size: 16, strokeWidth: 1.5 })}
                   </div>
                 </div>
-                <div className={'flex flex-col gap-1 items-center'} style={{ textAlign: 'center' }}>
+                <div className="flex flex-col items-center gap-1 text-center">
                   <div className={cn('flex flex-col', styles.title)}>{overlayCopy.title}</div>
                   <div className={cn('flex flex-col', styles.desc)}>{overlayCopy.desc}</div>
                 </div>

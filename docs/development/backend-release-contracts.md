@@ -49,8 +49,6 @@ Repository-bound ACP/device and sandbox completion enter existing `verification_
 
 **Client status.** A goal shows one line under its current tasks while admission is `disabled`. An Issue shows a notice under its execution state only while its dispatch is requested or waiting; a persisted waiting reason is shown only while waiting, and a leftover `caid_dispatch_disabled` is hidden once admission is `enabled`. Reasons other than `no_eligible_agent`, `execution_agent_missing` and `goal_paused` are shown as their raw code.
 
-The Issue header withholds the manual run control once admission is `enabled`, because the Orchestrator starts work there; the control that stops a run in progress stays. While admission is `disabled` the manual control remains the only way to start a run.
-
 ## Inbox and external alerts
 
 Relevant Inbox work/action records are durable. Recipient selection, subscriptions, actor exclusion, authorization, and deduplication still apply. This follows the separation documented by [Linear](https://linear.app/docs/notifications) and [Plane](https://docs.plane.so/communication-and-collaboration/notifications).

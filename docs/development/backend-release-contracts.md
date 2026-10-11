@@ -28,7 +28,7 @@ Pass optional `agentId: string` to `verify.generateGoalCriteria`, `verify.genera
 
 Expertise ingestion instead returns `{ ingested: 0, reason: 'EXPERTISE_UNAVAILABLE' }` without calling a model. Preserve the user's input when optional work is unavailable. Builtin owners retain their model bindings; ACP optional work only uses an explicitly available builtin fallback.
 
-Orvilo automatic memory extraction is limited to builtin-runtime topics, including direct/forced extraction. ACP/native session memory belongs to the selected CLI. Historical memory is retained; no CLI instruction/configuration files are rewritten. Skipped extraction retains `{ extracted: false, layers: {}, memoryIds: [] }` and the existing trace ID. Hide builtin-only memory controls with the Harness UI.
+Orvilo automatic memory extraction is limited to builtin-runtime topics, including direct/forced extraction. ACP/native session memory belongs to the selected CLI. Historical memory is retained; no CLI instruction/configuration files are rewritten. Skipped extraction retains `{ extracted: false, layers: {}, memoryIds: [] }` and the existing trace ID. Builtin memory UI is withheld independently of provider-settings flags: desktop/mobile settings, command-menu memory results, `/memory` pages, and `/settings/memory` are unavailable. Existing storage, APIs, and CLI-native memory remain intact; this is a presentation boundary, not deletion or an authorization boundary.
 
 ## Orchestration and delivery
 

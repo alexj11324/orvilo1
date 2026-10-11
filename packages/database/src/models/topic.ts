@@ -56,6 +56,7 @@ import { markCopiedMessageMetadata } from '../utils/copyMessagesInDatabase';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { idGenerator } from '../utils/idGenerator';
 import { inJsonStringArray } from '../utils/inJsonStringArray';
+import { builtinMemoryTopic } from '../utils/memoryRuntime';
 import { searchableMessage } from '../utils/searchableMessage';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
@@ -2788,6 +2789,7 @@ export class TopicModel {
         // Share-visitor conversations are not the creator's own speech — never
         // feed them into the creator's memory extraction.
         this.notShareVisitor(),
+        builtinMemoryTopic(),
         options.startDate ? gte(topics.createdAt, options.startDate) : undefined,
         options.endDate ? lte(topics.createdAt, options.endDate) : undefined,
         options.ignoreExtracted
@@ -2815,6 +2817,7 @@ export class TopicModel {
         and(
           this.ownership(),
           this.notShareVisitor(),
+          builtinMemoryTopic(),
           options.startDate ? gte(topics.createdAt, options.startDate) : undefined,
           options.endDate ? lte(topics.createdAt, options.endDate) : undefined,
           options.ignoreExtracted

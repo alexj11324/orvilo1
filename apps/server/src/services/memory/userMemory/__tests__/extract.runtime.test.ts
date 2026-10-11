@@ -2,6 +2,8 @@ import { type AiProviderRuntimeState, MemorySourceType } from '@orvilo/types';
 import { type EnabledAiModel } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getTestDB } from '@/database/core/getTestDB';
+import { agents, topics, users } from '@/database/schemas';
 import type * as DatabaseServerModule from '@/database/server';
 import { type MemoryExtractionPrivateConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 
@@ -527,5 +529,44 @@ describe('makeTaskErrorItem', () => {
       sourceType: 'chat_topic',
       stage: 'retrieval',
     });
+  });
+});
+
+describe('MemoryExtractionExecutor runtime ownership', () => {
+  it('does not read or extract an ACP transcript on direct or forced requests', async () => {
+    const db = await getTestDB();
+    const userId = 'memory-runtime-owner';
+    await db.insert(users).values({ id: userId });
+    try {
+      await db.insert(agents).values({ id: 'memory-acp-agent', userId, model: 'codex' });
+      await db
+        .insert(topics)
+        .values({ id: 'memory-acp-topic', userId, agentId: 'memory-acp-agent' });
+      mocks.getServerDB.mockResolvedValue(db);
+      mocks.isUserMemoryExtractionEnabled.mockResolvedValue(true);
+      const executor = createExecutor();
+      const providerLookup = vi
+        .spyOn(executor as any, 'getAiProviderRuntimeState')
+        .mockRejectedValue(new Error('ACP must not reach builtin memory models'));
+      for (const force of [false, true]) {
+        const result = await executor.extractTopic({
+          forceAll: force,
+          forceTopics: force,
+          layers: [],
+          source: MemorySourceType.ChatTopic,
+          topicId: 'memory-acp-topic',
+          userId,
+        });
+        expect(result).toMatchObject({ extracted: false, layers: {}, memoryIds: [] });
+      }
+      expect(providerLookup).not.toHaveBeenCalled();
+      const topic = await db.query.topics.findFirst({
+        where: (row, { eq }) => eq(row.id, 'memory-acp-topic'),
+      });
+      expect(topic?.metadata?.userMemoryExtractStatus).toBeUndefined();
+    } finally {
+      const { eq } = await import('drizzle-orm');
+      await db.delete(users).where(eq(users.id, userId));
+    }
   });
 });

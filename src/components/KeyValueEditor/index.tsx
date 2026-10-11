@@ -164,7 +164,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
                 <ActionIcon
                   disabled={disabled}
                   icon={LucideTrash}
-                  size={{ blockSize: 36, borderRadius: 8, size: 14 }}
+                  size={{ blockSize: 36, borderRadius: 'var(--radius-button)', size: 14 }}
                   title={deleteTooltip || t('KeyValueEditor.deleteTooltip')}
                   onClick={() => handleRemove(item.id)}
                 />

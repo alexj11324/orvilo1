@@ -1209,6 +1209,85 @@ describe('TaskService', () => {
       );
     });
 
+    it('carries why each run failed, and lends the task error only to the latest run', async () => {
+      const task = {
+        assigneeAgentId: null,
+        assigneeUserId: null,
+        createdAt: null,
+        description: null,
+        error: 'Heartbeat watchdog gave up',
+        heartbeatInterval: null,
+        heartbeatTimeout: null,
+        id: 'task_001',
+        identifier: 'TASK-1',
+        instruction: null,
+        lastHeartbeatAt: null,
+        name: 'Task 1',
+        parentTaskId: null,
+        priority: 'normal',
+        status: 'failed',
+        totalTopics: 0,
+      };
+
+      // Newest first, as the model returns them.
+      const topics = [
+        {
+          createdAt: new Date('2024-01-05T00:00:00Z'),
+          handoff: null,
+          seq: 4,
+          status: 'timeout',
+          topicId: 'topic-4',
+        },
+        {
+          createdAt: new Date('2024-01-04T00:00:00Z'),
+          handoff: { error: { message: 'codex exited with code 1' } },
+          seq: 3,
+          status: 'failed',
+          topicId: 'topic-3',
+        },
+        {
+          createdAt: new Date('2024-01-03T00:00:00Z'),
+          handoff: null,
+          seq: 2,
+          status: 'failed',
+          topicId: 'topic-2',
+        },
+        {
+          createdAt: new Date('2024-01-02T00:00:00Z'),
+          handoff: { content: 'done', error: { message: 'stale reason from an earlier attempt' } },
+          seq: 1,
+          status: 'completed',
+          topicId: 'topic-1',
+        },
+      ];
+
+      mockTaskModel.resolve.mockResolvedValue(task);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getDependencies.mockResolvedValue([]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue(topics);
+      mockBriefModel.findByTaskId.mockResolvedValue([]);
+      mockTaskModel.getComments.mockResolvedValue([]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-1');
+
+      const reasonByRun = Object.fromEntries(
+        (result?.activities ?? []).filter((a) => a.type === 'topic').map((a) => [a.id, a.error]),
+      );
+      expect(reasonByRun).toEqual({
+        // A succeeded run never reports a failure reason.
+        'topic-1': null,
+        // An older failed run with nothing recorded does not borrow the task error.
+        'topic-2': null,
+        'topic-3': 'codex exited with code 1',
+        // The latest run has no reason of its own, so the task's current error stands in.
+        'topic-4': 'Heartbeat watchdog gave up',
+      });
+    });
+
     it('should resolve author info for activities', async () => {
       const task = {
         assigneeAgentId: 'agt_assignee',

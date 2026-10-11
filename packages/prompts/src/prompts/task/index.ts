@@ -1,4 +1,9 @@
-import type { TaskDetailData, TaskDetailWorkspaceNode, TaskStatus } from '@orvilo/types';
+import type {
+  TaskDetailActivity,
+  TaskDetailData,
+  TaskDetailWorkspaceNode,
+  TaskStatus,
+} from '@orvilo/types';
 
 // ── Formatting helpers for Task tool responses ──
 

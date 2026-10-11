@@ -70,8 +70,11 @@ export const AgentRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children
   );
   const listed = useHomeStore(homeAgentListSelectors.getAgentById(aid));
   // The verdict below waits on the Agent list, so this guard makes sure it loads.
-  useFetchAgentList();
-  const { agent: defaultAgent, ready } = useDefaultAgentState();
+  // A failed list fetch must not blank the page: the verdict then falls back to
+  // what is already known, and the list's own retry settles it later.
+  const { error: listError } = useFetchAgentList();
+  const { agent: defaultAgent, ready: listReady } = useDefaultAgentState();
+  const ready = listReady || !!listError;
   const access = resolveRuntimeAccess({
     builtinOffered,
     defaultAgentId: defaultAgent?.agentId,

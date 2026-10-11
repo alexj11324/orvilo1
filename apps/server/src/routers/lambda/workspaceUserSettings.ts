@@ -10,7 +10,11 @@ import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSetti
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { EditLockService } from '@/server/services/editLock';
-import { assertCanEditResource } from '@/server/services/resourcePermission';
+import {
+  assertCanEditResource,
+  canPerformResourceAction,
+  getResourceMeta,
+} from '@/server/services/resourcePermission';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
 
 import { getResourceConfigAccess } from './_helpers/resourceConfigGuard';
@@ -85,7 +89,7 @@ export const workspaceUserSettingsRouter = router({
     .mutation(async ({ ctx, input }) => {
       // An Orchestrator's runtime is copied into new projects, so the member must
       // be able to read its full configuration. A default Agent is only opened,
-      // so being able to use it is enough.
+      // so being allowed to use it is enough.
       for (const agentId of new Set([input.defaultAgentId, input.orchestratorAgentId])) {
         if (!agentId) continue;
         const access = await getResourceConfigAccess(
@@ -99,13 +103,31 @@ export const workspaceUserSettingsRouter = router({
           'agent',
           agentId,
         );
-        const denied =
-          agentId === input.orchestratorAgentId ? access !== 'full' : access === 'none';
-        if (denied)
+        if (agentId === input.orchestratorAgentId ? access !== 'full' : access === 'none')
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Agent runtime configuration is unavailable',
           });
+        // Seeing a workspace Agent is not being allowed to run it, and a default
+        // Agent the member cannot use would open onto a conversation they cannot send in.
+        if (agentId === input.defaultAgentId && ctx.workspaceId && access !== 'full') {
+          const meta = await getResourceMeta(ctx.serverDB, 'agent', agentId);
+          const usable =
+            !!meta &&
+            (await canPerformResourceAction({
+              action: 'use',
+              db: ctx.serverDB,
+              grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
+                .workspacePermissionCodes,
+              meta,
+              resourceId: agentId,
+              resourceType: 'agent',
+              userId: ctx.userId,
+              workspaceId: ctx.workspaceId,
+            }));
+          if (!usable)
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Agent is not available to use' });
+        }
       }
       if (input.orchestratorAgentId) {
         await ctx.preferenceAgentModel.inheritRuntimeForCreation(input.orchestratorAgentId, {

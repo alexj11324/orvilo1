@@ -8,6 +8,7 @@ import { useMatch, useSearchParams } from 'react-router';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import { ConversationProvider } from '@/features/Conversation';
 import { useFallbackAgentId } from '@/features/DefaultAgent/useFallbackAgentId';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
 import { useOperationState } from '@/hooks/useOperationState';
 import { useAgentStore } from '@/store/agent';
@@ -39,6 +40,7 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
   useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.taskAgent);
 
   const fallbackAgentId = useFallbackAgentId();
+  const builtinOffered = useBuiltinHarnessOffered();
   const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
   const setActiveAgentId = useAgentStore((s) => s.setActiveAgentId);
   const activeTopicId = useChatStore((s) => s.activeTopicId);
@@ -60,7 +62,9 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
     scopedSelection.scopeAgentId === preferredAgentId
       ? scopedSelection.agentId
       : preferredAgentId || routedAgentId;
-  const selectedAgentId = scopedSelectedAgentId || preferredAgentId || taskAgentId;
+  // The built-in task agent is the panel's default only where its harness is offered.
+  const defaultPanelAgentId = builtinOffered ? taskAgentId : fallbackAgentId;
+  const selectedAgentId = scopedSelectedAgentId || preferredAgentId || defaultPanelAgentId;
 
   const selectTaskAgent = useCallback(
     (agentId: string) => {
@@ -75,7 +79,7 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
 
     // Completing a handoff (routed or clicked task agent) is an explicit
     // last-used write; the taskAgent default fallback never counts.
-    if (selectedAgentId !== taskAgentId) {
+    if (selectedAgentId !== defaultPanelAgentId) {
       useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: selectedAgentId });
     }
 
@@ -111,7 +115,7 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
       scope: 'task',
       skipRefreshMessage: !targetTopicId,
     });
-  }, [routedAgentId, routedTopicId, selectedAgentId, setActiveAgentId, taskAgentId]);
+  }, [defaultPanelAgentId, routedAgentId, routedTopicId, selectedAgentId, setActiveAgentId]);
 
   const context = useMemo<ConversationContext>(
     () => ({

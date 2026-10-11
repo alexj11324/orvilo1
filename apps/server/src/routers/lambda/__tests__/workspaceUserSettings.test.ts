@@ -58,8 +58,12 @@ vi.mock('@/database/models/chatGroup', () => ({
 }));
 
 const mockAssertCanEdit = vi.fn();
+const mockCanPerform = vi.fn();
+const mockGetResourceMeta = vi.fn();
 vi.mock('@/server/services/resourcePermission', () => ({
   assertCanEditResource: (...args: any[]) => mockAssertCanEdit(...args),
+  canPerformResourceAction: (...args: any[]) => mockCanPerform(...args),
+  getResourceMeta: (...args: any[]) => mockGetResourceMeta(...args),
 }));
 
 const mockGetBlockingHolder = vi.fn();
@@ -86,6 +90,8 @@ describe('workspaceUserSettingsRouter.updatePreference', () => {
     mockChatGroupUpdate.mockResolvedValue({ id: 'cg_1' });
     mockConfigAccess.mockResolvedValue('full');
     mockInheritRuntime.mockResolvedValue({});
+    mockGetResourceMeta.mockResolvedValue({ workspaceId: 'ws-1' });
+    mockCanPerform.mockResolvedValue(true);
   });
 
   it('validates an explicit Orchestrator before saving the member preference', async () => {
@@ -119,6 +125,29 @@ describe('workspaceUserSettingsRouter.updatePreference', () => {
     expect(mockUpdatePreference).not.toHaveBeenCalled();
     await caller.updatePreference({ orchestratorAgentId: null });
     expect(mockUpdatePreference).toHaveBeenCalledWith({ orchestratorAgentId: null });
+  });
+
+  // Seeing a workspace Agent's profile is not permission to run it; a default
+  // Agent the member cannot use would open onto a conversation they cannot send in.
+  it('does not save a default Agent the member can see but not use', async () => {
+    mockConfigAccess.mockResolvedValue('profile');
+    mockCanPerform.mockResolvedValue(false);
+    await expect(
+      workspaceUserSettingsRouter.createCaller(ctx).updatePreference({ defaultAgentId: 'agt_1' }),
+    ).rejects.toThrow('Agent is not available to use');
+    expect(mockCanPerform).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'use', resourceId: 'agt_1', userId: 'user-member' }),
+    );
+    expect(mockUpdatePreference).not.toHaveBeenCalled();
+  });
+
+  it('saves a default Agent the member may use without reading its configuration', async () => {
+    mockConfigAccess.mockResolvedValue('profile');
+    await workspaceUserSettingsRouter
+      .createCaller(ctx)
+      .updatePreference({ defaultAgentId: 'agt_1' });
+    expect(mockInheritRuntime).not.toHaveBeenCalled();
+    expect(mockUpdatePreference).toHaveBeenCalledWith({ defaultAgentId: 'agt_1' });
   });
 
   describe('legacy sidebarGroupAssignments compat for "Move to Category"', () => {

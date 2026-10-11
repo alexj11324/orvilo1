@@ -43,6 +43,10 @@ const mocks = vi.hoisted(() => ({
 
 // The real Popover only mounts its content after an open interaction; the
 // assertions read the selector list synchronously.
+vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('@/components/ui/popover', () => ({
   Popover: ({ children }: { children: ReactNode }) => <>{children}</>,
   PopoverContent: ({ children }: { children: ReactNode }) => (

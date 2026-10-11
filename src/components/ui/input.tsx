@@ -9,7 +9,7 @@ const inputVisualSizeClasses: Record<InputVisualSize, string> = {
   compact: 'h-8',
   small: 'h-7',
   normal: 'h-9',
-  large: 'h-10',
+  large: 'h-10 text-base',
 };
 
 interface InputProps extends React.ComponentProps<'input'> {

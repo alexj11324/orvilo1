@@ -15,7 +15,7 @@ const styles = {
   list: 'min-h-0 max-h-[min(360px,50vh)] flex-auto overflow-y-auto overscroll-contain -mbe-(--switcher-inset) -mx-(--switcher-inset) pbs-1 pbe-(--switcher-inset) px-(--switcher-inset)',
   root: '[--switcher-inset:calc(var(--spacing)*1.5)] max-h-[min(420px,70vh)] overflow-hidden p-(--switcher-inset)',
   search: 'flex-none -mx-(--switcher-inset) border-be border-divider px-3.5 pbs-0.5 pbe-2',
-  section: 'px-2 pbs-1.5 pbe-0.5 text-xs font-medium text-foreground-tertiary',
+  section: 'px-2 pbs-1.5 pbe-0.5 text-xs leading-5 font-medium text-foreground-tertiary',
 };
 
 interface SwitcherMenuProps {

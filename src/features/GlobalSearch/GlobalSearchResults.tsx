@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import type { ParseKeys } from 'i18next';
 import {
   Brain,
@@ -17,6 +16,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { savedViewTitle } from '@/features/SavedViews/savedViewTitle';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -25,83 +25,18 @@ import type { GlobalSearchResult } from '@/services/globalSearch';
 import { globalSearchResultHref, globalSearchResultSubtitle } from './groupSearchResults';
 import type { GlobalSearchDisplayType, GlobalSearchGroup } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  error: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-    font-size: 13px;
-    color: ${cssVar.colorError};
-  `,
-  groupHeading: css`
-    padding-block: 10px 4px;
-    padding-inline: 16px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextDescription};
-  `,
-  notice: css`
-    padding-block: 8px;
-    padding-inline: 16px;
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  row: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 8px;
-    padding-inline: 16px;
-    border: none;
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 14px;
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  rowIcon: css`
-    display: grid;
-    flex-shrink: 0;
-    place-items: center;
-    color: ${cssVar.colorTextDescription};
-  `,
-  rowSubtitle: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  rowTitle: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  skeleton: css`
-    height: 14px;
-    border-radius: ${cssVar.borderRadiusSM};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  skeletonRow: css`
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 16px;
-  `,
-}));
+const styles = {
+  error: 'py-3 px-4 text-sm text-destructive-text',
+  groupHeading: 'pbs-2.5 pbe-1 px-4 text-xs font-medium text-foreground-description',
+  notice: 'py-2 px-4 text-xs text-foreground-description',
+  row: 'flex min-h-9 w-full cursor-pointer items-center gap-2.5 rounded-(--radius-button) border-0 bg-transparent py-2 px-4 text-start text-sm text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 pointer-coarse:min-h-11',
+  rowIcon: 'grid shrink-0 place-items-center text-foreground-description',
+  rowSubtitle:
+    'overflow-hidden text-xs text-foreground-description text-ellipsis whitespace-nowrap',
+  rowTitle: 'overflow-hidden text-ellipsis whitespace-nowrap',
+  skeleton: 'animate-none',
+  skeletonRow: 'flex min-h-9 items-center gap-2.5 py-2 px-4',
+};
 
 /** Group headings reuse the palette's shipped plural labels. */
 const GROUP_LABEL_KEYS: Record<GlobalSearchDisplayType, ParseKeys<'common'>> = {
@@ -191,10 +126,13 @@ const GlobalSearchResults = ({
       <div aria-busy="true" aria-label={t('globalSearch.loading')}>
         {[1, 2, 3].map((i) => (
           <div className={styles.skeletonRow} key={`skeleton-${i}`}>
-            <div className={styles.skeleton} style={{ height: 20, width: 20 }} />
-            <div className="flex flex-col flex-1 gap-1.5">
-              <div className={styles.skeleton} style={{ width: `${55 + i * 10}%` }} />
-              <div className={styles.skeleton} style={{ height: 10, width: `${35 + i * 5}%` }} />
+            <Skeleton className={`${styles.skeleton} size-4`} />
+            <div className="flex flex-col flex-1 gap-0.5">
+              <Skeleton
+                className={`${styles.skeleton} h-5.5`}
+                style={{ width: `${55 + i * 10}%` }}
+              />
+              <Skeleton className={`${styles.skeleton} h-5`} style={{ width: `${35 + i * 5}%` }} />
             </div>
           </div>
         ))}
@@ -204,12 +142,14 @@ const GlobalSearchResults = ({
 
   if (groups.length === 0) {
     return (
-      <Empty>
+      <Empty className="rounded-(--radius-card)">
         <EmptyHeader>
-          <EmptyMedia variant="icon">
+          <EmptyMedia className="rounded-(--radius-card)" variant="icon">
             <SearchIcon />
           </EmptyMedia>
-          <EmptyDescription>{t('globalSearch.empty', { query })}</EmptyDescription>
+          <EmptyDescription className="text-sm leading-5.5">
+            {t('globalSearch.empty', { query })}
+          </EmptyDescription>
         </EmptyHeader>
       </Empty>
     );
@@ -231,7 +171,7 @@ const GlobalSearchResults = ({
                 onClick={() => handleSelect(result)}
               >
                 <span className={styles.rowIcon}>{TYPE_ICONS[group.type]}</span>
-                <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+                <div className="flex flex-col flex-1 min-w-0 gap-0.5">
                   <span className={styles.rowTitle}>{resultTitle(result)}</span>
                   {subtitle && <span className={styles.rowSubtitle}>{subtitle}</span>}
                 </div>
@@ -242,8 +182,8 @@ const GlobalSearchResults = ({
       ))}
       {isLoading && (
         <div className={styles.skeletonRow}>
-          <div className={styles.skeleton} style={{ height: 20, width: 20 }} />
-          <div className={styles.skeleton} style={{ width: '60%' }} />
+          <Skeleton className={`${styles.skeleton} size-4`} />
+          <Skeleton className={`${styles.skeleton} h-5.5 w-3/5`} />
         </div>
       )}
     </div>

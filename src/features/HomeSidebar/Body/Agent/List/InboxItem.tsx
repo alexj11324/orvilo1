@@ -56,7 +56,7 @@ const InboxItem = memo<InboxItemProps>(({ className, style }) => {
             <span className={styles.wrapper}>
               {avatarNode}
               <span className={styles.runningBadge}>
-                <Loader2 className="animate-spin" size={14} />
+                <Loader2 className="animate-spin" size={16} />
               </span>
             </span>
           ) : (

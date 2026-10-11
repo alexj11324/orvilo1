@@ -39,10 +39,12 @@ const SwitcherRow = memo<SwitcherRowProps>(({ active, item, onSelect, privateLab
       )}
     >
       {item.title}
-      {item.subtitle && <span className="ms-1.5 text-xs opacity-60">{item.subtitle}</span>}
+      {item.subtitle && (
+        <span className="ms-1.5 text-xs leading-5 opacity-60">{item.subtitle}</span>
+      )}
     </span>
     {item.private && privateLabel && (
-      <span className="text-xs text-foreground-tertiary">{privateLabel}</span>
+      <span className="text-xs leading-5 text-foreground-tertiary">{privateLabel}</span>
     )}
     {active && <CheckIcon className="text-foreground" size={16} />}
   </Button>

@@ -49,7 +49,7 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
       <div className="flex flex-1 flex-row items-center gap-0.5 overflow-hidden">
         {showBack && (
           <BackButton
-            size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
+            size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
             to={backTo}
           />
         )}
@@ -91,7 +91,7 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
                 {index < all.length - 1 && (
                   <BreadcrumbSeparator>
                     <span className="anticon" role="img">
-                      <ChevronRightIcon fill="transparent" size={14} />
+                      <ChevronRightIcon fill="transparent" size={16} />
                     </span>
                   </BreadcrumbSeparator>
                 )}

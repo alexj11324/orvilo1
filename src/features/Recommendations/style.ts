@@ -2,7 +2,7 @@ import { createStaticStyles } from 'antd-style';
 
 import { SPIN_TURN_MS } from './spinHold';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
+const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
   card: css`
     &:hover {
       border-color: ${cssVar.colorBorder} !important;
@@ -13,6 +13,7 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
 
     width: calc(100% + 16px);
     height: auto;
+    min-height: calc(var(--spacing) * 9);
     margin-inline: -8px;
     padding-block: 6px;
     padding-inline: 8px;
@@ -21,16 +22,12 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
 
     text-align: start;
 
-    transition: background ${cssVar.motionDurationFast};
+    transition: background-color ${cssVar.motionDurationMid};
 
-    /* the selector mirrors base-ui's variantText hover rule so the row tint
-       can outrank its brighter fill */
+    /* Keep the disabled guard and match the local Button semantic hover wash. */
     &:hover:not(:disabled, [aria-disabled='true']) {
-      background: ${cssVar.colorFillQuaternary};
+      background: ${cssVar.colorFillTertiary};
     }
-  `,
-  compactTitle: css`
-    min-width: 0;
   `,
   refreshSpin: css`
     animation: recommendations-refresh-spin ${SPIN_TURN_MS}ms linear infinite;
@@ -47,7 +44,12 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
       animation: none;
     }
   `,
-  subtitle: css`
-    color: ${cssVar.colorTextDescription};
-  `,
 }));
+
+export const styles = {
+  card: registeredStyles.card,
+  compactRow: `${registeredStyles.compactRow} motion-reduce:transition-none`,
+  compactTitle: 'min-w-0',
+  refreshSpin: `${registeredStyles.refreshSpin} motion-reduce:animate-none`,
+  subtitle: 'text-foreground-description',
+};

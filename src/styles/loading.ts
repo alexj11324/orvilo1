@@ -1,5 +1,5 @@
 import { shinyTextStyles as sharedShinyTextStyles } from '@orvilo/shared-tool-ui/styles';
-import { createStaticStyles, css } from 'antd-style';
+import { css } from 'antd-style';
 
 export const dotLoading = css`
   &::after {
@@ -28,17 +28,13 @@ export const dotLoading = css`
   }
 `;
 
-export const elapsedTimeStyles = createStaticStyles(({ css, cssVar }) => ({
-  elapsedTime: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+export const elapsedTimeStyles = {
+  elapsedTime: 'text-foreground-tertiary',
+};
 
-export const errorTextStyles = createStaticStyles(({ css, cssVar }) => ({
-  errorText: css`
-    color: ${cssVar.colorError};
-  `,
-}));
+export const errorTextStyles = {
+  errorText: 'text-destructive-text',
+};
 
 export const shinyTextStyles = {
   errorText: errorTextStyles.errorText,

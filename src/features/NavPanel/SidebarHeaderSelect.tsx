@@ -66,7 +66,7 @@ export const SidebarHeaderSelectTrigger = memo<SidebarHeaderSelectTriggerProps>(
       <div className="truncate font-medium">{title}</div>
       <ActionIcon
         icon={ChevronsUpDownIcon}
-        size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
+        size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
       />
     </div>
   ),

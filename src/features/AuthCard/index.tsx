@@ -1,24 +1,9 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { type ComponentProps, type ReactNode } from 'react';
 import { memo } from 'react';
-
-const styles = createStaticStyles(({ css }) => ({
-  auth16Root: css`
-    width: min(100%, 24rem);
-  `,
-
-  auth16Subtitle: css`
-    line-height: 1.5;
-  `,
-
-  auth16Title: css`
-    line-height: 1.25;
-    letter-spacing: -0.02em;
-  `,
-}));
 
 export type AuthCardVariant = 'auth16' | 'default';
 
@@ -38,21 +23,24 @@ export const AuthCard = memo<AuthCardProps>(
 
     return (
       <div
-        className={cx(cx(isAuth16 && styles.auth16Root, className), 'flex flex-col')}
-        style={{
-          gap: isAuth16 ? 24 : undefined,
-          width: isAuth16 ? 'min(100%,384px)' : 'min(100%,440px)',
-        }}
+        className={cx(
+          cx(
+            // A supplied style replaces the original default style object as a whole.
+            'style' in flexboxProps
+              ? isAuth16 && 'w-[min(100%,24rem)]'
+              : isAuth16
+                ? 'w-[min(100%,384px)] gap-6'
+                : 'w-[min(100%,440px)]',
+            className,
+          ),
+          'flex flex-col',
+        )}
         {...flexboxProps}
       >
-        <div className="flex flex-col" style={{ gap: isAuth16 ? 8 : 16 }}>
+        <div className={cn('flex flex-col', isAuth16 ? 'gap-2' : 'gap-4')}>
           {title && (
             <TitleTag
-              className={cn('font-bold', isAuth16 && 'text-center', isAuth16 && styles.auth16Title)}
-              style={{
-                fontSize: isAuth16 ? 27 : 28,
-                ...(isAuth16 ? { margin: 0 } : { lineHeight: 1.4 }),
-              }}
+              className={cn('text-3xl leading-9 font-semibold', isAuth16 && 'm-0 text-center')}
             >
               {title}
             </TitleTag>
@@ -60,25 +48,15 @@ export const AuthCard = memo<AuthCardProps>(
           {subtitle && (
             <SubtitleTag
               className={cn(
-                'text-muted-foreground',
-                isAuth16 && 'text-center font-normal',
-                !isAuth16 && 'font-medium',
-                isAuth16 && styles.auth16Subtitle,
+                'text-sm leading-5.5 text-muted-foreground',
+                isAuth16 ? 'm-0 text-center font-normal' : 'font-medium',
               )}
-              style={{
-                color: isAuth16 ? 'var(--muted-foreground)' : undefined,
-                fontSize: isAuth16 ? 14 : 18,
-                ...(isAuth16 ? { margin: 0 } : { lineHeight: 1.4 }),
-              }}
             >
               {subtitle}
             </SubtitleTag>
           )}
         </div>
-        <div
-          className="flex flex-col"
-          style={{ gap: isAuth16 ? 12 : 4, paddingBlock: isAuth16 ? 0 : 32 }}
-        >
+        <div className={cn('flex flex-col', isAuth16 ? 'gap-3 py-0' : 'gap-1 py-8')}>
           {children}
         </div>
         {footer}

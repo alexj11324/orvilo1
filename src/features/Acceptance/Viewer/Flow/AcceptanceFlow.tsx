@@ -167,9 +167,14 @@ export function AcceptanceFlow() {
     crumbs.unshift({ id, title: graph.groups.get(id)!.title });
   const graphEdges = graph.edges.map((edge) => ({
     ...edge,
-    markerEnd: { type: MarkerType.Arrow, color: cssVar.colorTextQuaternary, width: 16, height: 16 },
+    markerEnd: {
+      type: MarkerType.Arrow,
+      color: 'var(--foreground-quaternary)',
+      width: 16,
+      height: 16,
+    },
     style: {
-      stroke: edge.id === selected ? cssVar.colorPrimary : cssVar.colorTextQuaternary,
+      stroke: edge.id === selected ? 'var(--primary)' : 'var(--foreground-quaternary)',
       strokeWidth: edge.id === selected ? 2 : 1.5,
     },
   }));

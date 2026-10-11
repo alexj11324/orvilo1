@@ -8,11 +8,9 @@ const Container: FC<PropsWithChildren> = ({ children }) => {
 
   return (
     <div
-      className="flex flex-col flex-1"
+      className="relative flex flex-1 flex-col overflow-y-auto"
       style={{
         background: theme.colorBgContainerSecondary,
-        overflowY: 'auto',
-        position: 'relative',
       }}
     >
       {children}

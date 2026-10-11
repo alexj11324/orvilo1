@@ -1,6 +1,6 @@
 'use client';
 
-import { cssVar, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -49,14 +49,14 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
         {!lite && (
           <div className="flex items-center gap-1 overflow-hidden">
             {!isSignedIn && !activeIdentity ? (
-              <ProductLogo color={cssVar.colorText} size={28} type={'text'} />
+              <ProductLogo color="var(--foreground)" size={28} type={'text'} />
             ) : (
               <div className="flex-1 truncate font-medium">{displayName}</div>
             )}
             <ChevronDownIcon
               className="text-foreground-description"
               id={USER_DROPDOWN_ICON_ID}
-              size={14}
+              size={16}
             />
           </div>
         )}

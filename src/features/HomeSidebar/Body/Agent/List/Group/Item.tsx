@@ -50,7 +50,7 @@ const GroupItem = memo<SidebarGroup>(({ items, id, name, visibility }) => {
         <div ref={setAnchor}>
           <div className="flex items-center">
             <div className="min-w-0 flex-1">
-              <AccordionTrigger className="h-8 rounded-(--radius-button) py-0">
+              <AccordionTrigger className="h-8 rounded-(--radius-button) py-0 text-start transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)">
                 <div className="flex items-center gap-1.5 overflow-hidden">
                   {groupIcon}
                   <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">

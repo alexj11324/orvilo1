@@ -30,7 +30,7 @@ import GroupItem, { GroupItemDragContext } from './GroupItem';
 
 const styles = {
   container:
-    'min-h-9 px-2 rounded-(--radius-button) transition-colors duration-(--orvilo-motion-mid) ease-in-out hover:bg-accent',
+    'min-h-9 px-2 rounded-(--radius-button) transition-colors duration-(--orvilo-motion-mid) [transition-timing-function:ease-in-out] hover:bg-accent',
 };
 
 interface ConfigGroupModalProps {

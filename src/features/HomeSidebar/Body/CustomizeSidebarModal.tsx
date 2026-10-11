@@ -95,12 +95,13 @@ const SectionRow = memo<{
           <Tooltip>
             <TooltipTrigger
               render={
-                <span className="inline-flex">
-                  <ActionIcon
-                    className="cursor-default opacity-45"
-                    icon={PinIcon}
-                    size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
-                  />
+                <span
+                  aria-label={t('navPanel.pinned' as never)}
+                  className="inline-flex size-8 items-center justify-center rounded-(--radius-button) opacity-45 focus-visible:outline-none focus-visible:inset-ring-3 focus-visible:inset-ring-ring/50"
+                  role="img"
+                  tabIndex={0}
+                >
+                  <PinIcon aria-hidden="true" className="size-4" size={16} />
                 </span>
               }
             />
@@ -112,13 +113,14 @@ const SectionRow = memo<{
           <Tooltip>
             <TooltipTrigger
               render={
-                <span className="inline-flex">
-                  <ActionIcon
-                    icon={isHidden ? EyeOff : Eye}
-                    size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
-                    onClick={() => onToggle(config.id)}
-                  />
-                </span>
+                <ActionIcon
+                  aria-label={t(config.labelKey as never)}
+                  aria-pressed={!isHidden}
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                  icon={isHidden ? EyeOff : Eye}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  onClick={() => onToggle(config.id)}
+                />
               }
             />
             <TooltipContent>

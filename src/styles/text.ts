@@ -27,23 +27,10 @@ export const oneLineEllipsis = lineEllipsis(1);
  * Inspector text style for builtin tool inspectors
  * Combines oneLineEllipsis with secondary text color
  */
-export const inspectorTextStyles = createStaticStyles(({ css, cssVar }) => ({
-  root: css`
-    /* Coordinate space for the shiny sweep: every shimmering span in the row
-     * resolves its overlay against this box, so they read as one wave. */
-    ${shinyGroup}
-
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-
-    min-width: 0;
-
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+export const inspectorTextStyles = {
+  // Keep every child sweep anchored to the inspector row on mask-capable engines.
+  root: 'overflow-hidden flex items-center min-w-0 text-muted-foreground text-ellipsis whitespace-nowrap supports-[-webkit-mask-clip:text]:relative supports-[-webkit-mask-clip:text]:[--shiny-origin:static]',
+};
 
 /**
  * Highlight underline effect using gradient background
@@ -52,7 +39,7 @@ export const inspectorTextStyles = createStaticStyles(({ css, cssVar }) => ({
  * - warning: warning yellow highlight
  * - gold: gold highlight (for page-agent etc.)
  */
-export const highlightTextStyles = createStaticStyles(({ css, cssVar }) => {
+const registeredHighlightTextStyles = createStaticStyles(({ css, cssVar }) => {
   const highlightBase = (highlightColor: string) => css`
     overflow: hidden;
 
@@ -68,11 +55,19 @@ export const highlightTextStyles = createStaticStyles(({ css, cssVar }) => {
 
   return {
     gold: highlightBase(cssVar.gold4),
-    info: highlightBase(cssVar.colorInfoBg),
     primary: highlightBase(cssVar.colorPrimaryBgHover),
-    warning: highlightBase(cssVar.colorWarningBg),
   };
 });
+
+// Info and warning use document theme roles; primary and gold retain registered producers.
+const highlightBase = 'overflow-hidden min-w-0 ms-1 pbe-0.25 text-foreground text-ellipsis';
+
+export const highlightTextStyles = {
+  gold: registeredHighlightTextStyles.gold,
+  info: `${highlightBase} [background:linear-gradient(to_top,var(--info-wash)_40%,transparent_40%)]`,
+  primary: registeredHighlightTextStyles.primary,
+  warning: `${highlightBase} [background:linear-gradient(to_top,var(--warning-wash)_40%,transparent_40%)]`,
+};
 
 export const shinyGroupStyles = {
   shinyGroup,

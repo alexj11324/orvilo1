@@ -27,14 +27,16 @@ const GroupItem = memo<GroupItemProps>(({ id, name, disabled }) => {
   return (
     <>
       {!disabled && (
-        <button
+        <Button
           aria-label={t('sessionGroup.drag', 'Drag')}
-          className="inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded-(--radius-button) text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="shrink-0 cursor-grab text-muted-foreground"
+          size="icon"
           type="button"
+          variant="ghost"
           {...dragListeners}
         >
           <GripVertical size={16} />
-        </button>
+        </Button>
       )}
       {!editing ? (
         <>

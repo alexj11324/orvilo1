@@ -21,7 +21,7 @@ import { useAgentDropdownMenu } from './useDropdownMenu';
 
 const styles = {
   badge:
-    'pointer-events-none absolute -inset-be-1 -end-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-[length:calc(var(--spacing)*0.375)] border-card px-1 text-xs font-semibold text-destructive-on-fill bg-destructive',
+    'pointer-events-none absolute -inset-be-1 -end-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-[length:calc(var(--spacing)*0.375)] border-card px-1 text-xs leading-5 font-semibold text-destructive-on-fill bg-destructive',
   runningBadge:
     'pointer-events-none absolute -inset-be-1 -end-1 inline-flex size-5 items-center justify-center rounded-full border-[length:calc(var(--spacing)*0.375)] border-card bg-card text-warning-text',
   wrapper: 'relative inline-flex',
@@ -91,7 +91,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
 
   // Memoize pin icon
   const pinIcon = useMemo(
-    () => (pinned ? <PinIcon className="pointer-events-none opacity-50" size={14} /> : undefined),
+    () => (pinned ? <PinIcon className="pointer-events-none opacity-50" size={16} /> : undefined),
     [pinned],
   );
 
@@ -108,7 +108,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
         <span className={styles.wrapper}>
           {avatarNode}
           <span className={styles.runningBadge}>
-            <Loader2 className="animate-spin" size={14} />
+            <Loader2 className="animate-spin" size={16} />
           </span>
         </span>
       );
@@ -162,7 +162,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
           roleTag ? (
             <>
               {displayTitle}
-              <span className="ms-1.5 text-xs opacity-60">{roleTag}</span>
+              <span className="ms-1.5 text-xs leading-5 opacity-60">{roleTag}</span>
             </>
           ) : (
             displayTitle

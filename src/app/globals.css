@@ -535,3 +535,28 @@
         box-shadow: 0 0 calc(var(--spacing) * 1.25) var(--info), 0 0 calc(var(--spacing) * 2) color-mix(in srgb, var(--info) 60%, transparent);
     }
 }
+
+
+/* Sidebar scroll-mask interpolation; the viewport retains a static mask when
+   ThemeRoles disables nonessential animation or reduced motion is requested. */
+@property --sidebar-fade-top {
+    inherits: true;
+    initial-value: 0;
+    syntax: '<length>';
+}
+
+@property --sidebar-fade-bottom {
+    inherits: true;
+    initial-value: 0;
+    syntax: '<length>';
+}
+
+@keyframes orvilo-sidebar-scroll-fade-top-in {
+    from { --sidebar-fade-top: 0; }
+    to { --sidebar-fade-top: var(--sidebar-fade-size); }
+}
+
+@keyframes orvilo-sidebar-scroll-fade-bottom-out {
+    from { --sidebar-fade-bottom: var(--sidebar-fade-size); }
+    to { --sidebar-fade-bottom: 0; }
+}

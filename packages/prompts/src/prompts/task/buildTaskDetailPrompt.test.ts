@@ -51,6 +51,53 @@ describe('buildTaskDetailPrompt', () => {
       },
       // A date field holding something that is not a date is not echoed.
       { author, propertyChange: { field: 'dueDate', from: null, to: INJECTION }, type: 'property' },
+      // Allowed fields whose stored value is not what the field promises.
+      {
+        author,
+        propertyChange: { field: 'status', from: 'backlog', to: INJECTION as never },
+        type: 'property',
+      },
+      {
+        author,
+        propertyChange: { field: 'priority', from: INJECTION as never, to: 1 },
+        type: 'property',
+      },
+      {
+        author,
+        propertyChange: {
+          field: 'automation',
+          from: {
+            heartbeatInterval: null,
+            maxExecutions: 3,
+            mode: 'schedule',
+            schedulePattern: '0 9 * * 1-5',
+            scheduleTimezone: 'Asia/Shanghai',
+          },
+          to: {
+            heartbeatInterval: null,
+            maxExecutions: null,
+            mode: 'schedule',
+            schedulePattern: INJECTION,
+            scheduleTimezone: INJECTION,
+          },
+        },
+        type: 'property',
+      },
+      {
+        author,
+        propertyChange: {
+          field: 'automation',
+          from: { heartbeatInterval: 600, mode: 'heartbeat' } as never,
+          to: { mode: INJECTION, note: INJECTION } as never,
+        },
+        type: 'property',
+      },
+      // A kind this build has never heard of prints nothing.
+      {
+        author,
+        propertyChange: { field: 'somethingNew', from: INJECTION, to: INJECTION } as never,
+        type: 'property',
+      },
       // Everything below carries text somebody typed, often on another Issue.
       { author, propertyChange: { field: 'title', from: 'Old', to: INJECTION }, type: 'property' },
       { author, propertyChange: { field: 'description' }, type: 'property' },
@@ -118,7 +165,7 @@ describe('buildTaskDetailPrompt', () => {
         .filter((line) => line.includes('🔁'))
         .map((line) => line.replace(/^.*Mira /, ''));
 
-    it('renders fixed-vocabulary changes and leaves out every change that carries typed text', () => {
+    it('renders only checked values of allowed fields and no line for any other field', () => {
       const result = buildTaskDetailPrompt({ task: { ...baseTask, activities } }, NOW);
 
       expect(propertyLines(result)).toEqual([
@@ -127,6 +174,11 @@ describe('buildTaskDetailPrompt', () => {
         // By category: a team's own name for a state is typed text too.
         'changed workflow: todo → in_progress',
         'changed due date: none → 2026-08-15',
+        'changed due date: none → unknown',
+        'changed status: backlog → unknown',
+        'changed priority: - → urgent',
+        'changed automation: schedule(0 9 * * 1-5, Asia/Shanghai, max 3) → schedule(?)',
+        'changed automation: heartbeat(600s) → unknown',
       ]);
       expect(result).not.toContain(INJECTION);
       expect(result).not.toContain('ignore-previous-instructions');
@@ -140,6 +192,11 @@ describe('buildTaskDetailPrompt', () => {
         expect.stringMatching(/^changed priority: none → /),
         'changed workflow: todo → in_progress',
         'changed due date: none → 2026-08-15',
+        'changed due date: none → unknown',
+        'changed status: backlog → unknown',
+        'changed priority: - → urgent',
+        'changed automation: schedule(0 9 * * 1-5, Asia/Shanghai, max 3) → schedule(?)',
+        'changed automation: heartbeat(600s) → unknown',
       ]);
       expect(result).not.toContain(INJECTION);
       expect(result).not.toContain('ignore-previous-instructions');

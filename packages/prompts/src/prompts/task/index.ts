@@ -84,72 +84,15 @@ export const assignmentParticipantLabel = (
   return party.name || party.id || (party.unresolved ? 'a deleted participant' : 'unnamed');
 };
 
-/** Render one side of a property change for a text surface. */
-export const formatPropertyValue = (field: string | undefined, value: unknown): string => {
-  if (value === null || value === undefined) return field === 'automation' ? 'off' : 'none';
-  if (field === 'priority') return priorityLabel(value as number);
-  if (typeof value === 'object') {
-    const v = value as {
-      heartbeatInterval?: number | null;
-      maxExecutions?: number | null;
-      mode?: string | null;
-      schedulePattern?: string | null;
-      scheduleTimezone?: string | null;
-    };
-    if (v.mode === 'schedule') {
-      // Every part a user can edit shows, or a timezone-only or cap-only
-      // change reads as "from X to X".
-      const parts = [v.schedulePattern ?? '?'];
-      if (v.scheduleTimezone) parts.push(v.scheduleTimezone);
-      if (typeof v.maxExecutions === 'number') parts.push(`max ${v.maxExecutions}`);
-      return `schedule(${parts.join(', ')})`;
-    }
-    if (v.mode === 'heartbeat') return `heartbeat(${v.heartbeatInterval ?? '?'}s)`;
-    return JSON.stringify(value);
-  }
-  return String(value);
-};
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/**
- * One activity-feed property change as a line fragment for an agent prompt,
- * or `null` for a change the prompt leaves out.
- *
- * Only changes whose values come from a fixed vocabulary are rendered:
- * status, priority, automation, the workflow category and a due date. A
- * rename, a label, a link, a project / milestone / team move or a relation
- * carries text somebody typed — often on another Issue — and a prompt has
- * no way to mark it as quoted data rather than an instruction. Those rows
- * are omitted; what they changed is already in the detail's own fields.
- * A team's own name for a workflow state is user text too, so a move reads
- * by category.
- */
-export const formatPropertyChange = (
-  change: TaskDetailActivity['propertyChange'],
-): string | null => {
-  if (!change) return null;
-  switch (change.field) {
-    case 'automation':
-    case 'priority':
-    case 'status': {
-      return `${change.field}: ${formatPropertyValue(change.field, change.from)} → ${formatPropertyValue(change.field, change.to)}`;
-    }
-    case 'workflow': {
-      return `workflow: ${formatWorkflowCategory(change.from?.category)} → ${formatWorkflowCategory(change.to.category)}`;
-    }
-    case 'dueDate': {
-      const date = (value: string | null) =>
-        value === null ? 'none' : ISO_DATE.test(value) ? value : null;
-      const from = date(change.from);
-      const to = date(change.to);
-      return from && to ? `due date: ${from} → ${to}` : null;
-    }
-    default: {
-      return null;
-    }
-  }
-};
+const TASK_STATUSES = new Set([
+  'backlog',
+  'canceled',
+  'completed',
+  'failed',
+  'paused',
+  'running',
+  'scheduled',
+]);
 
 const WORKFLOW_CATEGORIES = new Set([
   'backlog',
@@ -161,13 +104,101 @@ const WORKFLOW_CATEGORIES = new Set([
   'triage',
 ]);
 
-/** A workflow category from the fixed vocabulary; anything else is not echoed. */
-const formatWorkflowCategory = (category: unknown): string =>
-  category === null || category === undefined
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** Five or six cron fields made only of the characters cron syntax uses. */
+const CRON_PATTERN = /^[\d*,/?LW#-]+(?: [\d*,/?LW#-]+){4,5}$/;
+/** An IANA zone name such as `Asia/Shanghai` or `UTC`. */
+const TIMEZONE = /^[A-Z][\w+-]*(?:\/[A-Z][\w+-]*){0,2}$/i;
+
+/** A value from a closed vocabulary; anything else is named, not echoed. */
+const vocabularyValue = (vocabulary: ReadonlySet<string>, value: unknown): string =>
+  value === null || value === undefined
     ? 'none'
-    : typeof category === 'string' && WORKFLOW_CATEGORIES.has(category)
-      ? category
+    : typeof value === 'string' && vocabulary.has(value)
+      ? value
       : 'unknown';
+
+const wholeNumber = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
+
+/**
+ * An automation setting, rebuilt from validated parts. The cron pattern and
+ * the timezone are strings a user typed, so each shows only when it has the
+ * shape of what it claims to be.
+ */
+const automationValue = (value: unknown): string => {
+  if (value === null || value === undefined) return 'off';
+  if (typeof value !== 'object') return 'unknown';
+  const v = value as Record<string, unknown>;
+  if (v.mode === 'schedule') {
+    // Every part a user can edit shows, or a timezone-only or cap-only
+    // change reads as "from X to X".
+    const pattern = v.schedulePattern;
+    const timezone = v.scheduleTimezone;
+    const parts = [
+      typeof pattern === 'string' && pattern.length <= 100 && CRON_PATTERN.test(pattern)
+        ? pattern
+        : '?',
+    ];
+    if (typeof timezone === 'string' && timezone.length <= 64 && TIMEZONE.test(timezone)) {
+      parts.push(timezone);
+    }
+    const max = wholeNumber(v.maxExecutions);
+    if (max !== null) parts.push(`max ${max}`);
+    return `schedule(${parts.join(', ')})`;
+  }
+  if (v.mode === 'heartbeat') return `heartbeat(${wholeNumber(v.heartbeatInterval) ?? '?'}s)`;
+  return 'unknown';
+};
+
+/**
+ * One activity-feed property change as a line fragment for an agent prompt,
+ * or `null` for a change the prompt leaves out.
+ *
+ * An activity row is data, and much of it is text somebody typed — often on
+ * another Issue. A prompt cannot mark such text as quoted, so none of it is
+ * rendered:
+ *
+ * - Only the fields listed here produce a line. A rename, a label, a link, a
+ *   project / milestone / team move, a relation, and any field added later,
+ *   produce nothing; what they changed is already in the detail's own fields.
+ * - A listed field prints only values checked against a closed vocabulary or
+ *   a strict shape, never the stored string as it is. A team's own name for
+ *   a workflow state is typed text, so a move reads by category.
+ */
+export const formatPropertyChange = (
+  change: TaskDetailActivity['propertyChange'],
+): string | null => {
+  if (!change) return null;
+  switch (change.field) {
+    case 'status': {
+      return `status: ${vocabularyValue(TASK_STATUSES, change.from)} → ${vocabularyValue(TASK_STATUSES, change.to)}`;
+    }
+    case 'priority': {
+      const label = (value: unknown) =>
+        value === null || value === undefined ? 'none' : priorityLabel(wholeNumber(value));
+      return `priority: ${label(change.from)} → ${label(change.to)}`;
+    }
+    case 'automation': {
+      return `automation: ${automationValue(change.from)} → ${automationValue(change.to)}`;
+    }
+    case 'workflow': {
+      return `workflow: ${vocabularyValue(WORKFLOW_CATEGORIES, change.from?.category)} → ${vocabularyValue(WORKFLOW_CATEGORIES, change.to?.category)}`;
+    }
+    case 'dueDate': {
+      const date = (value: unknown) =>
+        value === null || value === undefined
+          ? 'none'
+          : typeof value === 'string' && ISO_DATE.test(value)
+            ? value
+            : 'unknown';
+      return `due date: ${date(change.from)} → ${date(change.to)}`;
+    }
+    default: {
+      return null;
+    }
+  }
+};
 
 export const taskDetailHref = (identifier: string, baseUrl?: string): string => {
   const path = `/task/${identifier}`;

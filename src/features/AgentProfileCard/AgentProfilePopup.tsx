@@ -3,7 +3,6 @@
 import { PreviewCard } from '@base-ui/react/preview-card';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { agentDisplayName, type AgentItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { BookOpen, FileText, Settings } from 'lucide-react';
 import { memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,23 +21,11 @@ import { agentService } from '@/services/agent';
 
 import AgentProfileCard from '.';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  footer: css`
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  statItem: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  trigger: css`
-    border-radius: ${cssVar.borderRadius};
-
-    &[data-popup-open] {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  footer: 'py-3 px-4 [border-block-start:1px_solid_var(--divider)]',
+  statItem: 'text-xs leading-5 text-muted-foreground',
+  trigger: 'rounded-(--radius-button) data-popup-open:bg-selected',
+};
 
 type AgentPreview = Pick<
   AgentItem,
@@ -124,7 +111,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         {pluginCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <SkillsIcon size={13} />
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs leading-5 text-muted-foreground">
               {t('agentProfile.skills', { count: pluginCount })}
             </div>
           </div>
@@ -132,7 +119,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         {knowledgeCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <BookOpen size={13} />
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs leading-5 text-muted-foreground">
               {t('agentProfile.knowledgeBases', { count: knowledgeCount })}
             </div>
           </div>
@@ -140,7 +127,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         {fileCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <FileText size={13} />
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs leading-5 text-muted-foreground">
               {t('agentProfile.files', { count: fileCount })}
             </div>
           </div>
@@ -149,7 +136,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
     ) : null;
 
     const content = showSkeleton ? (
-      <div style={{ padding: 16, width: 280 }}>
+      <div className="p-4 w-70">
         <ArticleSkeleton avatar rows={2} />
       </div>
     ) : (
@@ -160,10 +147,10 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         title={agentDisplayName(merged, t('defaultSession', { ns: 'common' }))}
         headerAction={
           groupId && canConfigure ? (
-            <div className="flex items-center justify-end" style={{ paddingBlockStart: 0 }}>
+            <div className="flex items-center justify-end [padding-block-start:0]">
               <ActionIcon
                 icon={Settings}
-                size="small"
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
                 title={t('groupSidebar.agentProfile.settings')}
                 onClick={handleSettings}
               />
@@ -184,7 +171,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
             <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
               <PreviewCard.Popup
                 className={
-                  'w-auto overflow-hidden rounded-(--radius-overlay) bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
+                  'w-auto overflow-hidden rounded-(--radius-overlay) bg-popover text-sm leading-5.5 text-popover-foreground shadow-(--shadow-popover) ring-1 ring-foreground/10'
                 }
               >
                 {content}
@@ -198,7 +185,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger render={<span className={styles.trigger}>{children}</span>} />
         <PopoverContent
-          className={'w-auto overflow-hidden rounded-(--radius-overlay) p-0'}
+          className={'w-auto overflow-hidden rounded-(--radius-overlay) p-0 leading-5.5'}
           side={'right'}
         >
           {content}

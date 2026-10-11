@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
@@ -9,64 +8,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  banner: css`
-    position: relative;
-    overflow: hidden;
-    height: 60px;
-  `,
-  bannerInner: css`
-    filter: blur(44px);
-  `,
-  clickableAvatar: css`
-    cursor: pointer;
-  `,
-  clickableTitle: css`
-    cursor: pointer;
-
-    &:hover {
-      color: ${cssVar.colorPrimary};
-    }
-  `,
-  container: css`
-    overflow: hidden;
-    width: 280px;
-    background: ${cssVar.colorBgElevated};
-  `,
-  description: css`
-    overflow: hidden;
-
-    max-height: 80px;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-  `,
-  descriptionSkeleton: css`
-    .ant-skeleton-paragraph {
-      margin-block-start: 4px !important;
-    }
-
-    .ant-skeleton-paragraph > li {
-      height: 12px !important;
-    }
-
-    .ant-skeleton-paragraph > li + li {
-      margin-block-start: 6px !important;
-    }
-  `,
-  header: css`
-    position: relative;
-    margin-block-start: -24px;
-    padding-inline: 16px;
-  `,
-  name: css`
-    font-size: 16px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  banner: 'relative overflow-hidden h-15 bg-muted',
+  bannerInner: '[filter:blur(44px)]',
+  clickableAvatar: 'cursor-pointer',
+  clickableTitle: 'cursor-pointer hover:text-primary-text',
+  container: 'overflow-hidden w-70 bg-popover',
+  description: 'overflow-hidden max-h-20 text-sm leading-5.5 text-muted-foreground text-ellipsis',
+  descriptionSkeleton: '',
+  header: 'relative [margin-block-start:-24px] px-4',
+  name: 'text-base leading-6 font-semibold text-foreground',
+};
 
 export interface AgentProfileCardProps {
   agentId: string;
@@ -84,10 +36,7 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
   ({ agentId, description, headerAction, loading, onHeaderClick, title, children }) => {
     return (
       <div className={`flex flex-col ${styles.container}`}>
-        <div
-          className={`flex flex-col items-center justify-center ${styles.banner}`}
-          style={{ background: cssVar.colorFillTertiary }}
-        >
+        <div className={`flex flex-col items-center justify-center ${styles.banner}`}>
           <span className={styles.bannerInner}>
             <AssigneeAvatar agentId={agentId} size={400} />
           </span>
@@ -95,8 +44,7 @@ const AgentProfileCard = memo<AgentProfileCardProps>(
 
         <div className={`flex flex-col gap-2 ${styles.header}`}>
           <span
-            className={onHeaderClick ? styles.clickableAvatar : undefined}
-            style={{ border: `2px solid ${cssVar.colorBgElevated}` }}
+            className={cn('border-2 border-popover', onHeaderClick && styles.clickableAvatar)}
             onClick={onHeaderClick}
           >
             <AssigneeAvatar agentId={agentId} size={48} />

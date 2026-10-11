@@ -1,9 +1,10 @@
-import { GitPullRequestIcon, LinkIcon, PlusIcon, TrashIcon } from 'lucide-react';
+import { GitPullRequestIcon, LinkIcon, PencilIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { confirmModal } from '@/components/Modal';
 import { Spinner } from '@/components/ui/spinner';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
@@ -15,6 +16,7 @@ import { trpcErrorMessage } from '@/utils/trpcError';
 import { issueResourceRef } from './issueResourceRef';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailSectionHeader from './TaskDetailSectionHeader';
+import { openTaskIssueResourceTitleModal } from './TaskIssueResourceTitleModal';
 import { ISSUE_RESOURCE_KINDS, useIssueDetailActions } from './useIssueDetailActions';
 
 /**
@@ -48,6 +50,18 @@ const TaskIssueResources = () => {
     } finally {
       setRemoving(undefined);
     }
+  };
+
+  // Removing is not undoable from here, so it asks first and names the link.
+  const confirmRemove = (resource: { id: string; title: string }) => {
+    if (!editable || !taskId || removing) return;
+    confirmModal({
+      content: t('taskDetail.resources.removeConfirm.content', { title: resource.title }),
+      okButtonProps: { danger: true },
+      okText: t('taskDetail.resources.removeConfirm.ok'),
+      onOk: () => remove(resource.id),
+      title: t('taskDetail.resources.removeConfirm.title'),
+    });
   };
 
   if (!taskId) return null;
@@ -119,14 +133,29 @@ const TaskIssueResources = () => {
                 <span className="min-w-0 flex-1 truncate text-sm">{resource.title}</span>
               )}
               {editable ? (
-                <ActionIcon
-                  disabled={!!removing}
-                  icon={TrashIcon}
-                  loading={removing === resource.id}
-                  size="small"
-                  title={t('taskDetail.resources.remove')}
-                  onClick={() => void remove(resource.id)}
-                />
+                <>
+                  <ActionIcon
+                    disabled={!!removing}
+                    icon={PencilIcon}
+                    size="small"
+                    title={t('taskDetail.resources.edit')}
+                    onClick={() =>
+                      openTaskIssueResourceTitleModal({
+                        onChanged: () => mutate(),
+                        resource,
+                        taskId,
+                      })
+                    }
+                  />
+                  <ActionIcon
+                    disabled={!!removing}
+                    icon={TrashIcon}
+                    loading={removing === resource.id}
+                    size="small"
+                    title={t('taskDetail.resources.remove')}
+                    onClick={() => confirmRemove(resource)}
+                  />
+                </>
               ) : null}
             </div>
           );

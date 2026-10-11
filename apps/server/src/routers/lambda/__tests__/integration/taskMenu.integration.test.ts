@@ -138,6 +138,21 @@ describe('Task Menu Router', () => {
     await expect(
       viewer.addLink({ id: task.id, kind: 'link', url: 'https://example.com/viewer' }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const [link] = (await viewer.links({ id: task.id })).data;
+    await expect(
+      viewer.updateLink({ id: task.id, linkId: link.id, title: 'Viewer title' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(
+      (await callerFor(memberId).updateLink({ id: task.id, linkId: link.id, title: ' Spec v2 ' }))
+        .data,
+    ).toMatchObject({ title: 'Spec v2', url: 'https://example.com/spec' });
+    await expect(
+      callerFor(memberId).updateLink({
+        id: task.id,
+        linkId: '00000000-0000-4000-8000-000000000000',
+        title: 'Missing',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     await expect(
       viewer.copyIssue({ expectedDomainRevision: task.domainRevision, id: task.id }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
@@ -148,7 +163,7 @@ describe('Task Menu Router', () => {
         targetId: task.id,
       }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    expect((await viewer.links({ id: task.id })).data).toHaveLength(1);
+    expect((await viewer.links({ id: task.id })).data).toMatchObject([{ title: 'Spec v2' }]);
   });
 
   it('never resolves an issue from a workspace the caller did not address', async () => {

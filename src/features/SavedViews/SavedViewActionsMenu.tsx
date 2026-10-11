@@ -152,6 +152,7 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
     return list;
   }, [
     canEdit,
+    dirty,
     exporting,
     onCopyLink,
     onDelete,

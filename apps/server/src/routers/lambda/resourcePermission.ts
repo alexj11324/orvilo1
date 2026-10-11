@@ -10,6 +10,7 @@ import {
   getLegacyViewerAccessLevel,
   PERMISSION_RESOURCE_TYPES,
   RESOURCE_ACCESS_LEVELS,
+  type ResourceAccessLevel,
   users,
   workspaceMembers,
 } from '@/database/schemas';
@@ -310,16 +311,26 @@ export const resourcePermissionRouter = router({
    * profile, for the Permission page. Manager-only, like the page itself.
    */
   listCollaborators: permissionProcedure.input(resourceInput).query(async ({ ctx, input }) => {
-    await loadManageableResource(ctx, input);
+    const meta = await loadManageableResource(ctx, input);
+    const creatorId = input.resourceType === 'agent' ? (meta.userId ?? null) : null;
 
     // The model only returns per-member rows, so `userId` is always set — the
     // filter narrows the nullable column type, not the data.
-    let grants = (
+    let grants: { accessLevel: ResourceAccessLevel; createdAt: Date | null; userId: string }[] = (
       await ctx.permissionModel.listCollaborators(input.resourceType, input.resourceId)
     ).filter((row): row is typeof row & { userId: string } => row.userId !== null);
     // Agent Use lists selected active members, not legacy view-only rows.
     if (input.resourceType === 'agent') {
       grants = grants.filter((row) => row.accessLevel === 'use');
+      // The creator can use their Agent without a row, so the roster names
+      // them first whether or not one exists.
+      if (creatorId) {
+        const own = grants.find((row) => row.userId === creatorId);
+        grants = [
+          own ?? { accessLevel: 'use', createdAt: null, userId: creatorId },
+          ...grants.filter((row) => row.userId !== creatorId),
+        ];
+      }
       if (grants.length === 0) return [];
       const activeMembers = await ctx.serverDB
         .select({ userId: workspaceMembers.userId })
@@ -360,6 +371,7 @@ export const resourcePermissionRouter = router({
     return grants.map((row) => ({
       accessLevel: row.accessLevel,
       createdAt: row.createdAt,
+      isCreator: row.userId === creatorId,
       user: profileMap.get(row.userId) ?? null,
       userId: row.userId,
     }));
@@ -369,7 +381,15 @@ export const resourcePermissionRouter = router({
   removeCollaborator: permissionProcedure
     .input(resourceInput.extend({ userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      await loadManageableResource(ctx, input);
+      const meta = await loadManageableResource(ctx, input);
+      // Removing the row would change nothing: the creator can use the Agent
+      // without one. Refuse rather than report a removal that did not happen.
+      if (input.resourceType === 'agent' && meta.userId === input.userId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'The creator of an Agent can always use it',
+        });
+      }
 
       await ctx.permissionModel.removeCollaborators(input.resourceType, input.resourceId, [
         input.userId,

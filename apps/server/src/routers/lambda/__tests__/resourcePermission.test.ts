@@ -502,6 +502,51 @@ describe('resourcePermissionRouter collaborators', () => {
     ]);
   });
 
+  it('names the Agent creator on the roster even without a Use row', async () => {
+    getResourceMetaMock.mockResolvedValue({
+      userId: 'creator',
+      visibility: 'public',
+      workspaceId: 'ws_1',
+    } as any);
+    collaboratorModelMock.listCollaborators.mockResolvedValue([
+      { accessLevel: 'use', userId: 'active' },
+    ]);
+    const db = dbWithResults(
+      [{ userId: 'active' }, { userId: 'creator' }],
+      [
+        { id: 'active', fullName: 'Active member' },
+        { id: 'creator', fullName: 'The creator' },
+      ],
+    );
+
+    const result = await caller(db).listCollaborators({
+      resourceId: 'agent-1',
+      resourceType: 'agent',
+    });
+
+    expect(result.map((row) => [row.userId, row.isCreator])).toEqual([
+      ['creator', true],
+      ['active', false],
+    ]);
+  });
+
+  it('refuses to remove the Agent creator from the roster', async () => {
+    getResourceMetaMock.mockResolvedValue({
+      userId: 'creator',
+      visibility: 'public',
+      workspaceId: 'ws_1',
+    } as any);
+
+    await expect(
+      caller().removeCollaborator({
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+        userId: 'creator',
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(collaboratorModelMock.removeCollaborators).not.toHaveBeenCalled();
+  });
+
   it('removes one member grant', async () => {
     const result = await caller().removeCollaborator({
       resourceId: 'kb-1',

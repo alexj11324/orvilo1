@@ -250,6 +250,9 @@ export const canPerformResourceAction = async (params: {
         workspaceId,
       });
       if (!capability.hasAllScope && !capability.hasOwnerScope) return false;
+      // Whoever created the Agent can run it while they are an active, writable
+      // member. Everyone else needs an explicit per-member row.
+      if (meta.userId === userId) return true;
       const grant = await new ResourcePermissionModel(db, workspaceId).getCollaboratorLevel(
         resourceType,
         resourceId,

@@ -10,30 +10,6 @@ import ActionIcon from '@/components/ActionIcon';
 import { useIsDark } from '@/hooks/useIsDark';
 
 const styles = createStaticStyles(({ css }) => ({
-  cancelIcon: css`
-    position: absolute;
-    z-index: 100;
-    inset-block-start: 8px;
-    inset-inline-end: 8px;
-  `,
-  container: css`
-    position: absolute;
-    z-index: 1100;
-    inset-block-end: 16px;
-    inset-inline-end: 20px;
-
-    overflow: hidden;
-
-    border: 1px solid ${cssVar.colorSplit};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  mobileContainer: css`
-    inset-block-end: 8px;
-    inset-inline-start: 8px;
-  `,
   wrapper: css`
     background:
       linear-gradient(
@@ -81,24 +57,25 @@ const Notification = memo<NotificationProps>(
       show && (
         <div
           style={{ height, width: mobile ? 'calc(100% - 16px)' : width }}
-          className={cn(
-            'flex flex-col',
-            cx(styles.container, mobile && styles.mobileContainer, className),
+          className={cx(
+            'absolute z-[1100] end-5 inset-be-4 flex flex-col overflow-hidden rounded-(--radius-overlay) border border-divider bg-card text-sm leading-5.5 text-foreground shadow-(--shadow-popover)',
+            mobile && 'start-2 inset-be-2',
+            className,
           )}
           {...rest}
         >
           {showCloseIcon && (
             <ActionIcon
               aria-label={tCommon('close')}
-              className={styles.cancelIcon}
+              className="absolute z-100 inset-bs-2 end-2"
               icon={XIcon}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               onClick={() => onCancel?.()}
             />
           )}
           <div
-            style={{ padding: '20px 20px 16px' }}
             className={cn(
-              'flex gap-4 p-4',
+              'flex gap-4 px-5 pbs-5 pbe-4',
               cx(
                 styles.wrapper,
                 isDarkMode ? styles.wrapperDark : styles.wrapperLight,

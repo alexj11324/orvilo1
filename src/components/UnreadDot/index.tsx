@@ -1,54 +1,18 @@
-import { createStaticStyles, keyframes } from 'antd-style';
+'use client';
+
+import { cn } from 'cn';
 import { memo } from 'react';
+import { useMediaQuery } from 'react-responsive';
 
-const rippleAnim = keyframes`
-  0% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(3);
-    opacity: 0;
-  }
-`;
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  dot: css`
-    position: relative;
-    z-index: 1;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorInfo};
-  `,
-  ripple: css`
-    position: absolute;
-    inset: 0;
-
-    width: 6px;
-    height: 6px;
-    margin: auto;
-    border: 1px solid ${cssVar.colorInfo};
-    border-radius: 50%;
-
-    background: transparent;
-
-    animation: ${rippleAnim} 1.8s ease-out infinite;
-  `,
-  wrapper: css`
-    position: relative;
-
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 14px;
-    height: 14px;
-  `,
-}));
+const styles = {
+  dot: 'relative z-1 size-1.5 rounded-full bg-info',
+  ripple:
+    'absolute inset-0 m-auto size-1.5 rounded-full border border-info bg-transparent motion-reduce:animate-none',
+  wrapper: 'relative flex size-3.5 flex-none items-center justify-center',
+};
 
 interface UnreadDotProps {
   /** Announces the mark to screen readers — pass it wherever the dot is the only carrier of "unread". */
@@ -61,16 +25,22 @@ interface UnreadDotProps {
  * glance in a long list. `ExecutionStatus`'s `unread` icon is only the fallback
  * for surfaces that can't render this.
  */
-const UnreadDot = memo<UnreadDotProps>(({ label }) => (
-  <span
-    aria-label={label}
-    className={styles.wrapper}
-    data-testid="topic-unread-dot"
-    role={label ? 'status' : undefined}
-  >
-    <span className={styles.ripple} />
-    <span className={styles.dot} />
-  </span>
-));
+const UnreadDot = memo<UnreadDotProps>(({ label }) => {
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const shouldAnimate = animationMode !== 'disabled' && !prefersReducedMotion;
+
+  return (
+    <span
+      aria-label={label}
+      className={styles.wrapper}
+      data-testid="topic-unread-dot"
+      role={label ? 'status' : undefined}
+    >
+      <span className={cn(styles.ripple, shouldAnimate && 'animate-unread-ripple')} />
+      <span className={styles.dot} />
+    </span>
+  );
+});
 
 export default UnreadDot;

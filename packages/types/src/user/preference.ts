@@ -155,71 +155,11 @@ export const UserGuideSchema = z.object({
 
 export type UserGuide = z.infer<typeof UserGuideSchema>;
 
-export const UserLabSchema = z.object({
-  /**
-   * enable graph runtime configuration for agents
-   */
-  enableAgentGraphConfig: z.boolean().optional(),
-  /**
-   * enable artifact deployment features (publish artifacts to a hosted URL)
-   */
-  enableArtifactDeployment: z.boolean().optional(),
-  /**
-   * enable displaying two desktop tabs side by side
-   */
-  enableDesktopSplitView: z.boolean().optional(),
-  /**
-   * one-click import of local Claude Code / Codex CLI sessions as topics (desktop only)
-   */
-  enableHeteroSessionImport: z.boolean().optional(),
-  /**
-   * enable multi-agent group chat mode
-   */
-  enableGroupChat: z.boolean().optional(),
-  /**
-   * enable the iMessage channel (BlueBubbles Desktop bridge)
-   */
-  /**
-   * enable markdown rendering in chat input editor
-   */
-  enableInputMarkdown: z.boolean().optional(),
-  /**
-   * enable selecting message text and adding it to the next conversation context
-   */
-  enableMessageTextSelectionActions: z.boolean().optional(),
-  /**
-   * show OAuth app management in personal and workspace settings
-   */
-  enableOAuthApps: z.boolean().optional(),
-  /**
-   * enable the project workspace experiment
-   */
-  enableProjects: z.boolean().optional(),
-  /**
-   * show the per-agent self-learning (expertise) page and its sidebar entry
-   */
-  enableSelfLearning: z.boolean().optional(),
-  /**
-   * enable the task delivery-acceptance (verify) config UI on the task detail
-   */
-  enableTaskVerify: z.boolean().optional(),
-  /** Capture a conversation turn as an eval test case (developer-facing). */
-  enableEvalCapture: z.boolean().optional(),
-  /**
-   * enable the per-topic acceptance tray above the composer (author a topic's
-   * delivery checklist inline)
-   */
-  enableTopicAcceptance: z.boolean().optional(),
-});
-
-export type UserLab = z.infer<typeof UserLabSchema>;
-
 export interface UserPreference {
   /** Last-used app for "Open working directory in…" split button. Empty/unknown values fall back to platform default. */
   defaultOpenInApp?: string;
   /**
    * disable markdown rendering in chat input editor
-   * @deprecated Use lab.enableInputMarkdown instead
    */
   disableInputMarkdownRender?: boolean;
   /**
@@ -229,10 +169,6 @@ export interface UserPreference {
   fontFamily?: string;
   guide?: UserGuide;
   hideSyncAlert?: boolean;
-  /**
-   * lab experimental features
-   */
-  lab?: UserLab;
   /**
    * Last active workspace id. Used on cloud to land the user back in the
    * workspace they last used when they open `/` — `null` means personal
@@ -329,7 +265,6 @@ export const UserPreferenceSchema = z
     fontFamily: z.string().optional(),
     guide: UserGuideSchema.optional(),
     hideSyncAlert: z.boolean().optional(),
-    lab: UserLabSchema.optional(),
     lastWorkspaceId: z.string().nullish(),
     sidebarHiddenAgentIds: z.array(z.string()).optional(),
     sidebarHiddenGroupIds: z.array(z.string()).optional(),

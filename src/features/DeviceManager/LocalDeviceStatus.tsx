@@ -102,7 +102,7 @@ const LocalDeviceStatus = memo(() => {
           </span>
         )}
         {signInFailure && localState.phase === 'signInRequired' && (
-          <span className={'text-destructive break-words text-xs'} role="alert">
+          <span className={'text-destructive-text break-words text-xs'} role="alert">
             {tAuthorization(AUTHORIZATION_ERROR_I18N_KEY[signInFailure])}
           </span>
         )}

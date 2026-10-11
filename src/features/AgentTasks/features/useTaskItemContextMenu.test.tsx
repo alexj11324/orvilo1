@@ -264,7 +264,9 @@ describe('useTaskItemContextMenu', () => {
       const item = result.current.items.find(
         (entry) =>
           entry && typeof entry === 'object' && 'key' in entry && entry.key === 'removeFromParent',
-      ) as { onClick: (info: { domEvent: { stopPropagation: () => void } }) => void };
+      ) as unknown as {
+        onClick: (info: { domEvent: { stopPropagation: () => void } }) => void;
+      };
 
       item.onClick({ domEvent: { stopPropagation: vi.fn() } });
 
@@ -280,7 +282,9 @@ describe('useTaskItemContextMenu', () => {
       );
       const item = result.current.items.find(
         (entry) => entry && typeof entry === 'object' && 'key' in entry && entry.key === 'delete',
-      ) as { onClick: (info: { domEvent: { stopPropagation: () => void } }) => void };
+      ) as unknown as {
+        onClick: (info: { domEvent: { stopPropagation: () => void } }) => void;
+      };
       render(<ModalHost />);
       await act(async () => {
         item.onClick({ domEvent: { stopPropagation: vi.fn() } });

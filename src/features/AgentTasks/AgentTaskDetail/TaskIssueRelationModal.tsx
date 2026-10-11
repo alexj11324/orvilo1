@@ -208,7 +208,9 @@ const TaskIssueRelationPicker = ({
                   {picked ? <CheckIcon className="size-3" /> : null}
                 </span>
               ) : null}
-              <span className="shrink-0 text-xs text-muted-foreground">{hit.identifier}</span>
+              <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                {hit.identifier}
+              </span>
               <span className="min-w-0 flex-1 truncate">{hit.title}</span>
               {kind === 'parentOf' && hit.parentIdentifier ? (
                 <span className="shrink-0 text-xs text-muted-foreground">

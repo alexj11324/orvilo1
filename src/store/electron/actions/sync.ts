@@ -1,5 +1,5 @@
 import { isDesktop } from '@orvilo/const';
-import { type AuthorizationErrorCode, type DataSyncConfig } from '@orvilo/electron-client-ipc';
+import { type DataSyncConfig } from '@orvilo/electron-client-ipc';
 import isEqual from 'fast-deep-equal';
 import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
@@ -9,6 +9,7 @@ import { electronKeys } from '@/libs/swr/keys';
 import { remoteServerService } from '@/services/electron/remoteServer';
 import { type StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
+import { readAuthorizationErrorCode } from '@/utils/electron/authorizationError';
 
 import { type ElectronStore } from '../store';
 
@@ -61,12 +62,7 @@ export class ElectronRemoteServerActionImpl {
       await this.#get().refreshServerConfig();
     } catch (error) {
       console.error('Remote server configuration error:', error);
-      const candidate = (error as { code?: AuthorizationErrorCode } | null)?.code;
-      const code: AuthorizationErrorCode =
-        candidate &&
-        ['timeout', 'network', 'invalid_url', 'denied', 'server_error'].includes(candidate)
-          ? candidate
-          : 'server_error';
+      const code = readAuthorizationErrorCode(error) ?? 'server_error';
       this.#set({
         remoteServerSyncError: { code, message: (error as Error).message, type: 'AUTH_ERROR' },
       });

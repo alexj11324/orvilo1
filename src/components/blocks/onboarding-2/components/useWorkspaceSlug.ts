@@ -16,6 +16,9 @@ export const useWorkspaceSlug = (initialName = '', initialSlug = '') => {
     initialSlug || slugifyWorkspaceName(initialName),
   );
   const slugEditedRef = useRef(initialSlug.trim() !== '');
+  // The URL the server last rejected as owned by another workspace. Only that
+  // exact value is flagged, so editing the field clears the error.
+  const [takenSlug, setTakenSlug] = useState<string>();
 
   const onWorkspaceNameChange = (value: string) => {
     setWorkspaceName(value);
@@ -32,15 +35,21 @@ export const useWorkspaceSlug = (initialName = '', initialSlug = '') => {
   // Match workspace.create before the wizard advances or checkpoints a URL
   // the backend will reject. Empty Skip keeps its existing fallback behavior.
   const slug = workspaceSlug.trim();
-  const workspaceSlugError: 'invalidLength' | 'invalidPattern' | undefined = !slug
+  const workspaceSlugError: 'invalidLength' | 'invalidPattern' | 'taken' | undefined = !slug
     ? undefined
     : slug.length < WORKSPACE_SLUG_MIN || slug.length > WORKSPACE_SLUG_MAX
       ? 'invalidLength'
       : !isWorkspaceSlugFormatValid(slug)
         ? 'invalidPattern'
-        : undefined;
+        : slug === takenSlug
+          ? 'taken'
+          : undefined;
+
+  /** Call when create fails with `isWorkspaceSlugTakenError` to flag the submitted URL. */
+  const markWorkspaceSlugTaken = () => setTakenSlug(slug);
 
   return {
+    markWorkspaceSlugTaken,
     onWorkspaceNameChange,
     onWorkspaceSlugChange,
     workspaceName,

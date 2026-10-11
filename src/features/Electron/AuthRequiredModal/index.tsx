@@ -1,6 +1,6 @@
 'use client';
 
-import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
+import { type AuthorizationErrorCode, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import debug from 'debug';
 import { AlertCircle, LogIn } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -8,9 +8,14 @@ import { useTranslation } from 'react-i18next';
 
 import type { ImperativeModalProps, ModalInstance } from '@/components/Modal';
 import { createModal, ModalFooter } from '@/components/Modal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { sessionAuthEvents } from '@/layout/AuthProvider/SessionAuth/events';
 import { useElectronStore } from '@/store/electron';
+import {
+  AUTHORIZATION_ERROR_I18N_KEY,
+  readAuthorizationErrorCode,
+} from '@/utils/electron/authorizationError';
 import { buildOnboardingRedirectUrl } from '@/utils/onboardingRedirect';
 
 const log = debug('orvilo-client:auth-required-modal');
@@ -23,7 +28,9 @@ interface AuthRequiredModalContentProps {
 const AuthRequiredModalContent = memo<AuthRequiredModalContentProps>(
   ({ onActionReady, onSigningInChange }) => {
     const { t } = useTranslation('auth');
+    const { t: tAuthorization } = useTranslation('desktop-onboarding');
     const [isSigningIn, setIsSigningIn] = useState(false);
+    const [failureCode, setFailureCode] = useState<AuthorizationErrorCode>();
 
     const [dataSyncConfig, connectRemoteServer, clearRemoteServerSyncError] = useElectronStore(
       (s) => [s.dataSyncConfig, s.connectRemoteServer, s.clearRemoteServerSyncError],
@@ -33,12 +40,14 @@ const AuthRequiredModalContent = memo<AuthRequiredModalContentProps>(
       onSigningInChange?.(isSigningIn);
     }, [isSigningIn, onSigningInChange]);
 
-    useWatchBroadcast('authorizationFailed', () => {
+    useWatchBroadcast('authorizationFailed', (failure) => {
+      setFailureCode(readAuthorizationErrorCode(failure) ?? 'server_error');
       setIsSigningIn(false);
     });
 
     const signIn = useCallback(async () => {
       setIsSigningIn(true);
+      setFailureCode(undefined);
       clearRemoteServerSyncError();
 
       try {
@@ -46,8 +55,9 @@ const AuthRequiredModalContent = memo<AuthRequiredModalContentProps>(
           remoteServerUrl: dataSyncConfig?.remoteServerUrl,
           storageMode: dataSyncConfig?.storageMode || 'cloud',
         });
-      } catch {
-        // The store retains the typed failure; allow another attempt.
+      } catch (error) {
+        // Say why it failed and restore the button for another attempt.
+        setFailureCode(readAuthorizationErrorCode(error) ?? 'server_error');
         setIsSigningIn(false);
       }
     }, [clearRemoteServerSyncError, connectRemoteServer, dataSyncConfig]);
@@ -56,7 +66,18 @@ const AuthRequiredModalContent = memo<AuthRequiredModalContentProps>(
       onActionReady({ signIn });
     }, [onActionReady, signIn]);
 
-    return <p className="m-0">{t('authModal.description')}</p>;
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="m-0">{t('authModal.description')}</p>
+        {failureCode && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              {tAuthorization(AUTHORIZATION_ERROR_I18N_KEY[failureCode])}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+    );
   },
 );
 

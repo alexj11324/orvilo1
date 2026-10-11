@@ -46,6 +46,9 @@ vi.mock('react-i18next', () => ({
         'screen5.actions.signInCloud': 'Sign in Cloud',
         'screen5.actions.signOut': 'Sign out',
         'screen5.actions.tryAgain': 'Try again',
+        'screen5.errors.denied': 'Sign-in was not authorized',
+        'screen5.errors.network': 'Check your network connection',
+        'screen5.errors.timedOut': 'Authorization timed out',
         'screen5.description':
           'Sign in to sync Agents, Groups, settings, and Context across all devices.',
         'screen5.methods.selfhost.description': 'Use self-hosted server',
@@ -264,13 +267,30 @@ describe('Desktop onboarding LoginStep', () => {
 
   it('surfaces a rejected authorization request and allows a retry', async () => {
     mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
-    mockElectronState.connectRemoteServer.mockRejectedValueOnce(new Error('Browser unavailable'));
+    mockElectronState.connectRemoteServer.mockRejectedValueOnce(
+      Object.assign(new Error('Browser unavailable'), { code: 'network' }),
+    );
     await renderLoginStep();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sign in Cloud' }));
     });
-    expect(screen.getByText('Browser unavailable')).toBeInTheDocument();
+    // Copy is chosen by the code; the rejected error's own text is not shown.
+    expect(screen.getByText('Check your network connection')).toBeInTheDocument();
+    expect(screen.queryByText('Browser unavailable')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
+  });
+
+  it('does not classify a failure by the wording of its message', async () => {
+    mockElectronState.dataSyncConfig = { active: false, storageMode: 'cloud' };
+    mockElectronState.connectRemoteServer.mockRejectedValueOnce(
+      Object.assign(new Error('Request timed out'), { code: 'denied' }),
+    );
+    await renderLoginStep();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in Cloud' }));
+    });
+    expect(screen.getByText('Sign-in was not authorized')).toBeInTheDocument();
+    expect(screen.queryByText('Authorization timed out')).not.toBeInTheDocument();
   });
 
   it('retries a failed authorization from the visible error state', async () => {
@@ -280,14 +300,16 @@ describe('Desktop onboarding LoginStep', () => {
     const failedListener = vi
       .mocked(useWatchBroadcast)
       .mock.calls.findLast(([event]) => event === 'authorizationFailed')?.[1] as (result: {
+      code: string;
       error: string;
     }) => void;
     act(() => {
-      failedListener({ error: 'Connection refused' });
+      failedListener({ code: 'timeout', error: 'Connection refused' });
     });
-    expect(screen.getByText('Connection refused')).toBeInTheDocument();
+    expect(screen.getByText('Authorization timed out')).toBeInTheDocument();
+    expect(screen.queryByText('Connection refused')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(mockElectronState.connectRemoteServer).toHaveBeenCalledTimes(2);
-    expect(screen.queryByText('Connection refused')).not.toBeInTheDocument();
+    expect(screen.queryByText('Authorization timed out')).not.toBeInTheDocument();
   });
 });

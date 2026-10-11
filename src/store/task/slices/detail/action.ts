@@ -31,6 +31,7 @@ import {
   buildOptimisticAssignmentActivities,
   buildOptimisticCommentActivity,
   buildOptimisticPropertyActivity,
+  buildOptimisticPropertyChanges,
 } from './optimisticActivity';
 import type { TaskDetailDispatch } from './reducer';
 import { findSubtaskParentId, taskDetailReducer } from './reducer';
@@ -543,32 +544,48 @@ export class TaskDetailSliceActionImpl {
           target: options?.optimisticAssignee,
         })
       : [];
-    // Priority rides the same dispatch as the assignee rows.
-    const priorityRow =
-      current && rest.priority !== undefined && rest.priority !== (current.priority ?? null)
-        ? buildOptimisticPropertyActivity({
-            actor: actorId
-              ? {
-                  avatar: userProfileSelectors.userAvatar(userState) || null,
-                  id: actorId,
-                  name: userProfileSelectors.displayUserName(userState) || null,
-                  type: 'user',
-                }
-              : undefined,
-            change: { field: 'priority', from: current.priority ?? null, to: rest.priority },
-            now: new Date().toISOString(),
-          })
-        : undefined;
-    const activities = appendOptimisticPropertyActivity(
-      [...(current?.activities ?? []), ...optimisticActivities],
-      priorityRow,
+    // Property rows ride the same dispatch as the assignee rows. These are
+    // the edits that do not refetch the detail afterwards (a refetch would
+    // fight the title and description editors mid-typing), so without a
+    // synthesized row the feed would stay silent until the next poll.
+    const propertyChanges = current
+      ? buildOptimisticPropertyChanges(
+          {
+            dueDate: current.dueDate,
+            editorData: current.editorData,
+            instruction: current.instruction,
+            name: current.name,
+            priority: current.priority,
+          },
+          rest,
+        )
+      : [];
+    const propertyNow = new Date().toISOString();
+    const propertyRows = propertyChanges.map((change) =>
+      buildOptimisticPropertyActivity({
+        actor: actorId
+          ? {
+              avatar: userProfileSelectors.userAvatar(userState) || null,
+              id: actorId,
+              name: userProfileSelectors.displayUserName(userState) || null,
+              type: 'user',
+            }
+          : undefined,
+        change,
+        now: propertyNow,
+      }),
     );
+    const activities = propertyRows.reduce(
+      (feed, row) => appendOptimisticPropertyActivity(feed, row),
+      [...(current?.activities ?? []), ...optimisticActivities],
+    );
+    const hasPropertyRow = propertyRows.some(Boolean);
     const optimistic: Partial<TaskDetailData> = {
       ...optimisticRest,
       ...(assigneeAgentId !== undefined ? { agentId: assigneeAgentId } : {}),
       ...(assigneeUserId !== undefined ? { userId: assigneeUserId } : {}),
       ...(reviewerUserId !== undefined ? { reviewerUserId } : {}),
-      ...(optimisticActivities.length > 0 || priorityRow ? { activities } : {}),
+      ...(optimisticActivities.length > 0 || hasPropertyRow ? { activities } : {}),
     };
     const payload = options?.actorAgentId
       ? { ...data, actorAgentId: options.actorAgentId }
@@ -681,6 +698,9 @@ export class TaskDetailSliceActionImpl {
       // Status writes stamp `completedAt` and append a status activity row
       // server-side — the cached detail has to reconcile, not just the list.
       data.status !== undefined ||
+      // A workflow move appends the feed row that says where the Issue went
+      // (and stamps or clears `completedAt`) — only the server knows both.
+      data.workflowCategory !== undefined ||
       reviewerUserId !== undefined
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
@@ -761,11 +781,43 @@ export class TaskDetailSliceActionImpl {
         : [...currentLabels, label]
       : currentLabels.filter((item) => item.id !== labelId);
 
+    // The feed row rides the same dispatch as the chip. This path never
+    // refetches the detail, so without it the feed would stay silent until
+    // the next poll. Only a label that really changes gets a row — the same
+    // rule the server applies.
+    const hadLabel = currentLabels.find((item) => item.id === labelId);
+    const userState = useUserStore.getState();
+    const actorId = userProfileSelectors.userId(userState);
+    const labelRow =
+      current && assigned !== Boolean(hadLabel)
+        ? buildOptimisticPropertyActivity({
+            actor: actorId
+              ? {
+                  avatar: userProfileSelectors.userAvatar(userState) || null,
+                  id: actorId,
+                  name: userProfileSelectors.displayUserName(userState) || null,
+                  type: 'user',
+                }
+              : undefined,
+            change: {
+              action: assigned ? 'added' : 'removed',
+              field: 'label',
+              name: (assigned ? label?.name : hadLabel?.name) ?? null,
+            },
+            now: new Date().toISOString(),
+          })
+        : undefined;
+
     if (current) {
       this.internal_dispatchTaskDetail({
         id: taskId,
         type: 'updateTaskDetail',
-        value: { labels: optimistic },
+        value: {
+          labels: optimistic,
+          ...(labelRow
+            ? { activities: appendOptimisticPropertyActivity(current.activities ?? [], labelRow) }
+            : {}),
+        },
       });
     }
 
@@ -784,10 +836,19 @@ export class TaskDetailSliceActionImpl {
       await Promise.all([mutate(isWorkQueryTaskRowsKey), mutate(isTaskListKey)]).catch(() => {});
     } catch (error) {
       if (current) {
+        const latest = this.#get().taskDetailMap[taskId];
         this.internal_dispatchTaskDetail({
           id: taskId,
           type: 'updateTaskDetail',
-          value: { labels: currentLabels },
+          value: {
+            labels: currentLabels,
+            // The change did not happen, so its row must go too.
+            ...(labelRow
+              ? {
+                  activities: (latest?.activities ?? []).filter((a) => a.id !== labelRow.id),
+                }
+              : {}),
+          },
         });
       }
       throw error;

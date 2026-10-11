@@ -2,7 +2,6 @@
 
 import { isDesktop } from '@orvilo/const';
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import {
   ChevronRightIcon,
   FolderCogIcon,
@@ -24,139 +23,26 @@ import DeviceDetailPanel from './DeviceDetailPanel';
 import DeviceItem from './DeviceItem';
 import { useDeviceList } from './useDeviceList';
 
-const styles = createStaticStyles(({ css }) => ({
-  // ─── Onboarding empty state ───
-  badge: css`
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 500;
-    color: ${cssVar.colorPrimary};
-
-    background: ${cssVar.colorPrimaryBg};
-  `,
-  capabilityCard: css`
-    padding: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  capabilityIcon: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 36px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  emptyCard: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  // The personal page renders inside a settings form card, so the list and the
-  // onboarding state drop their own card chrome — one frame, not two nested.
-  plainCol: css`
-    overflow: hidden;
-    min-width: 0;
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  emptyHero: css`
-    padding-block: 40px;
-    padding-inline: 32px;
-    text-align: center;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  heroIcon: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 56px;
-    height: 56px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  option: css`
-    cursor: pointer;
-    padding: 20px;
-    background: ${cssVar.colorBgContainer};
-    transition: background 0.15s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  optionGrid: css`
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  optionIcon: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 40px;
-    height: 40px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  // ─── Master-detail surfaces ───
-  detailCol: css`
-    align-self: stretch;
-
-    min-width: 0;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  listCol: css`
-    overflow: hidden;
-
-    min-width: 0;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  listScroll: css`
-    overflow-y: auto;
-
-    /* Cap the list so long fleets (servers / CLI agents) stay scrollable instead
-       of pushing the page — pairs with the detail panel sitting beside it. */
-    max-height: 480px;
-  `,
-}));
+const styles = {
+  badge:
+    'py-0.25 px-2 rounded-full text-xs leading-5 font-medium text-primary-text bg-primary-wash',
+  capabilityCard: 'p-4 border border-divider rounded-(--radius-card) bg-card',
+  capabilityIcon:
+    'flex items-center justify-center size-9 rounded-(--radius-card) text-muted-foreground bg-muted',
+  emptyCard: 'overflow-hidden border border-divider rounded-(--radius-card) bg-card',
+  plainCol: 'overflow-hidden min-w-0 rounded-(--radius-card)',
+  emptyHero: 'py-10 px-8 text-center bg-fill-quaternary',
+  heroIcon:
+    'flex items-center justify-center size-14 rounded-(--radius-card) text-foreground bg-selected',
+  option:
+    'cursor-pointer p-5 bg-card transition-[background-color] duration-(--orvilo-motion-fast) ease-in-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2 motion-reduce:transition-none',
+  optionGrid: 'grid grid-cols-2 gap-px border-bs border-divider bg-divider',
+  optionIcon:
+    'flex shrink-0 items-center justify-center size-10 rounded-(--radius-card) text-muted-foreground bg-muted',
+  detailCol: 'self-stretch min-w-0 border border-divider rounded-(--radius-card) bg-card',
+  listCol: 'overflow-hidden min-w-0 border border-divider rounded-(--radius-card) bg-card',
+  listScroll: 'overflow-y-auto max-h-120',
+};
 
 interface ConnectOptionProps {
   badge?: string;
@@ -180,18 +66,16 @@ const ConnectOption = memo<ConnectOptionProps>(({ icon: Icon, title, desc, badge
     }}
   >
     <span className={styles.optionIcon}>
-      <Icon size={20} />
+      <Icon size={16} />
     </span>
-    <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
+    <div className="flex flex-col flex-1 min-w-0 gap-1">
       <div className="flex items-center gap-2">
-        <div className="font-medium">{title}</div>
+        <div className="text-sm leading-5.5 font-medium">{title}</div>
         {badge && <span className={styles.badge}>{badge}</span>}
       </div>
-      <div className="text-xs" style={{ color: cssVar.colorTextTertiary }}>
-        {desc}
-      </div>
+      <div className="text-xs leading-5 text-foreground-tertiary">{desc}</div>
     </div>
-    <ChevronRightIcon size={16} style={{ color: cssVar.colorTextQuaternary }} />
+    <ChevronRightIcon className="size-4 text-foreground-quaternary" size={16} />
   </div>
 ));
 
@@ -223,13 +107,11 @@ const Capabilities = memo(() => {
         {items.map((cap) => (
           <div className={`flex flex-col flex-1 gap-3 ${styles.capabilityCard}`} key={cap.title}>
             <span className={styles.capabilityIcon}>
-              <cap.icon size={18} />
+              <cap.icon size={16} />
             </span>
             <div className="flex flex-col gap-1">
-              <div className="font-medium">{cap.title}</div>
-              <div className="text-xs" style={{ color: cssVar.colorTextTertiary }}>
-                {cap.desc}
-              </div>
+              <div className="text-sm leading-5.5 font-medium">{cap.title}</div>
+              <div className="text-xs leading-5 text-foreground-tertiary">{cap.desc}</div>
             </div>
           </div>
         ))}
@@ -242,7 +124,7 @@ const Capabilities = memo(() => {
 // row text — loading → loaded is a content swap, not a relayout (ux §4.1).
 const ListSkeleton = memo<{ bordered?: boolean }>(({ bordered }) => (
   <div className={`flex flex-col flex-1 ${bordered ? styles.listCol : styles.plainCol}`}>
-    <div className="flex flex-col" style={{ padding: bordered ? 4 : 0 }}>
+    <div className={`flex flex-col ${bordered ? 'p-1' : 'p-0'}`}>
       <SharedListSkeleton />
     </div>
   </div>
@@ -315,10 +197,10 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
               <MonitorDownIcon size={28} />
             )}
           </span>
-          <div className="text-lg font-semibold">
+          <div className="text-xl leading-7 font-semibold">
             {t(isWorkspace ? 'workspaceSetting.devices.heroTitle' : 'devices.empty.title')}
           </div>
-          <div className="text-muted-foreground" style={{ maxWidth: 440 }}>
+          <div className="max-w-110 text-sm leading-5.5 text-muted-foreground">
             {t(isWorkspace ? 'workspaceSetting.devices.heroDesc' : 'devices.empty.desc')}
           </div>
         </div>
@@ -361,8 +243,7 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
       <div className="flex items-start gap-4">
         <div className={`flex flex-col flex-1 ${isWorkspace ? styles.listCol : styles.plainCol}`}>
           <div
-            className={`flex flex-col gap-0.5 ${styles.listScroll}`}
-            style={{ padding: isWorkspace ? 4 : 0 }}
+            className={`flex flex-col gap-0.5 ${styles.listScroll} ${isWorkspace ? 'p-1' : 'p-0'}`}
           >
             {devices.map((device) => (
               <DeviceItem

@@ -1,7 +1,6 @@
 import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,40 +14,18 @@ import CollectionFooter from './CollectionFooter';
 import CommentComposer from './CommentComposer';
 import type { ReviewThread, ReviewThreadComment, WriteOutcome } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  cardHeader: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  commentBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-  `,
-  threadHeader: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  cardHeader:
+    'flex items-center gap-2 [border-block-end:1px_solid_var(--divider)] bg-fill-quaternary px-4 py-2',
+  commentBox: '[border-block-start:1px_dashed_var(--divider)] px-4 py-2',
+  threadHeader: 'font-mono text-xs leading-5 text-muted-foreground',
+} as const;
 
 const ThreadComment = memo<{ comment: ReviewThreadComment }>(({ comment }) => {
   const { t } = useTranslation('common');
   return (
-    <div className="flex flex-col gap-1 p-3">
+    <div className="flex flex-col gap-2 p-4">
       <div className="flex flex-row items-center gap-2">
         <Avatar avatar={comment.authorAvatar ?? undefined} name={comment.author ?? '?'} size={20} />
         <div className="text-xs font-medium">{comment.author}</div>
@@ -67,7 +44,7 @@ const ThreadComment = memo<{ comment: ReviewThreadComment }>(({ comment }) => {
           </div>
         ) : null}
       </div>
-      <Markdown fontSize={13} variant={'chat'}>
+      <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
         {comment.body}
       </Markdown>
     </div>
@@ -91,17 +68,18 @@ const ReviewThreadCard = memo<{
   // snapshot) clears the marker — a failure leaves the cursor untouched, so
   // it stays until retried.
   const commentsMore = usePagedLoadMore();
+  const { resetLoadMoreError } = commentsMore;
   const commentsEndCursor = thread.comments.endCursor;
   useEffect(() => {
-    commentsMore.resetLoadMoreError();
-  }, [commentsEndCursor, commentsMore.resetLoadMoreError]);
+    resetLoadMoreError();
+  }, [commentsEndCursor, resetLoadMoreError]);
   const anchor = thread.path ? `${thread.path}${thread.line ? `:${thread.line}` : ''}` : null;
   const comments = thread.comments;
 
   return (
-    <div className={cx('flex flex-col', styles.card)}>
+    <div className={clsx('flex flex-col', styles.card)}>
       {anchor ? (
-        <div className={cx('flex flex-row items-center gap-2', styles.cardHeader)}>
+        <div className={clsx('flex flex-row items-center gap-2', styles.cardHeader)}>
           <div className={cn(styles.threadHeader)}>{anchor}</div>
           {thread.isOutdated ? <Tag>{t('reviews.threadOutdated')}</Tag> : null}
           {thread.isResolved ? (
@@ -133,7 +111,7 @@ const ReviewThreadCard = memo<{
             : undefined
         }
       />
-      <div className={cx('flex flex-col', styles.commentBox)}>
+      <div className={clsx('flex flex-col', styles.commentBox)}>
         {replyOpen ? (
           <CommentComposer
             disabled={writeDisabled}
@@ -151,7 +129,7 @@ const ReviewThreadCard = memo<{
         ) : (
           <Button
             disabled={writeDisabled || stale}
-            size="sm"
+            size="lg"
             variant="ghost"
             onClick={() => setReplyOpen(true)}
           >

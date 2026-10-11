@@ -1,13 +1,18 @@
 /**
  * @vitest-environment happy-dom
  */
-import { fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render as rtlRender, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { useUserStore as UserStoreHook } from '@/store/user';
 
 import { PendingAcceptanceCheckList } from './PendingAcceptanceCheckList';
 import TaskAcceptance from './TaskAcceptance';
+import type { TaskDetailScope } from './TaskDetailScope';
+import type TaskVerifyConfig from './TaskVerifyConfig';
 
 // The section links out to the acceptance report, so it needs router context.
 const render = (ui: ReactNode) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
@@ -456,5 +461,270 @@ describe('TaskAcceptance', () => {
     expect(screen.getByText('Result')).toBeInTheDocument();
     expect(screen.getByText('taskDetail.acceptance.collapseAll')).toBeInTheDocument();
     expect(screen.getByText('Check 11')).toBeInTheDocument();
+  });
+});
+
+// Existing TaskAcceptance tests above keep their original fixtures and cases.
+// The following describe mounts real loading owners in an isolated module graph.
+let MotionTaskAcceptance: typeof TaskAcceptance;
+let MotionTaskVerifyConfig: typeof TaskVerifyConfig;
+let MotionTaskDetailScope: typeof TaskDetailScope;
+let useMotionUserStore: typeof UserStoreHook;
+
+const fixture = vi.hoisted(() => {
+  const originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+  const mediaLists = new Map<string, MediaQueryList>();
+  let reduced = false;
+  const matchMedia = (query: string): MediaQueryList => {
+    if (!mediaLists.has(query)) {
+      const listeners = new Set<(event: MediaQueryListEvent) => void>();
+      const target = new EventTarget();
+      const list = Object.assign(target, {
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: (listener: (event: MediaQueryListEvent) => void) => listeners.add(listener),
+        removeListener: (listener: (event: MediaQueryListEvent) => void) =>
+          listeners.delete(listener),
+        notify: () => {
+          const event = Object.assign(new Event('change'), {
+            matches: list.matches,
+            media: query,
+          }) as MediaQueryListEvent;
+          listeners.forEach((listener) => listener(event));
+          target.dispatchEvent(event);
+        },
+      });
+      Object.defineProperty(list, 'matches', {
+        get: () => query === '(prefers-reduced-motion: reduce)' && reduced,
+      });
+      mediaLists.set(query, list as unknown as MediaQueryList);
+    }
+    return mediaLists.get(query)!;
+  };
+  // matchmediaquery captures window.matchMedia when its external module loads.
+  // Install the public native boundary before any component import evaluates.
+  Object.defineProperty(window, 'matchMedia', { configurable: true, value: matchMedia });
+  return {
+    originalMatchMedia,
+    matchMedia,
+    busyPath: 'subject' as 'subject' | 'bundle',
+    generateCriteria: vi.fn(),
+    mutateBundle: vi.fn(),
+    mutateSubject: vi.fn(),
+    setReduced: (next: boolean) => {
+      reduced = next;
+      mediaLists.forEach((list) => (list as MediaQueryList & { notify: () => void }).notify());
+    },
+  };
+});
+
+const modes = [
+  { animationMode: 'agile', reduced: false, animated: true },
+  { animationMode: 'agile', reduced: true, animated: false },
+  { animationMode: 'disabled', reduced: false, animated: false },
+  { animationMode: 'disabled', reduced: true, animated: false },
+] as const;
+const paths = ['subject', 'bundle', 'generation'] as const;
+type BusyPath = (typeof paths)[number];
+
+const setMode = (animationMode: 'agile' | 'disabled') =>
+  useMotionUserStore.setState((state) => ({
+    settings: { ...state.settings, general: { ...state.settings.general, animationMode } },
+  }));
+
+const mountBusy = async (path: BusyPath) => {
+  fixture.busyPath = path === 'bundle' ? 'bundle' : 'subject';
+  const result = rtlRender(
+    <MotionTaskDetailScope taskId="T-motion">
+      {path === 'generation' ? <MotionTaskVerifyConfig /> : <MotionTaskAcceptance />}
+    </MotionTaskDetailScope>,
+  );
+  if (path === 'generation') {
+    await userEvent.setup().click(screen.getByText('verifyConfig.empty.title'));
+    expect(fixture.generateCriteria).toHaveBeenCalledTimes(1);
+    expect(fixture.generateCriteria).toHaveBeenCalledWith(
+      expect.objectContaining({ goal: 'A motion regression goal' }),
+    );
+    expect(screen.getByText('verifyConfig.generating')).toBeVisible();
+  }
+  return result;
+};
+
+const expectLoading = (container: HTMLElement, animated: boolean, path: BusyPath) => {
+  // This is the actual Neural child SVG, with connections and processing unit.
+  // No stylesheet source/class matching or fake loading-node replacement.
+  const neural = container.querySelector('svg[viewBox="0 0 100 100"]');
+  if (animated) {
+    expect(neural).not.toBeNull();
+    expect(neural!.querySelectorAll('line')).toHaveLength(18);
+    expect(neural!.querySelector('rect')).not.toBeNull();
+    expect(screen.queryByRole('status', { name: 'loading' })).not.toBeInTheDocument();
+  } else {
+    expect(neural).toBeNull();
+    expect(screen.getByRole('status', { name: 'loading' })).toBeVisible();
+  }
+  if (path === 'generation') expect(screen.getByText('verifyConfig.generating')).toBeVisible();
+  expect(fixture.mutateSubject).not.toHaveBeenCalled();
+  expect(fixture.mutateBundle).not.toHaveBeenCalled();
+};
+
+describe('Task loading motion respects both live preferences', () => {
+  beforeAll(async () => {
+    // The existing suite already completed using its original module graph.
+    // Rebuild only this describe's real owners after installing the public
+    // browser media function and bounded data fixtures; no control is mocked.
+    vi.resetModules();
+    vi.doUnmock('@/components/NeuralNetworkLoading');
+    vi.doUnmock('@/components/ActionIcon');
+    vi.doUnmock('./TaskVerifyConfig');
+    // Fixtures stop network/device side effects at data boundaries, preserving
+    // public selectors and actual Zustand subscriptions for preference changes.
+    vi.doMock('@/store/user', async () => {
+      const { create } = await import('zustand');
+      return {
+        useUserStore: create(() => ({
+          defaultSettings: { general: { animationMode: 'agile' } },
+          settings: { general: { animationMode: 'agile' } },
+        })),
+      };
+    });
+    vi.doMock('@/store/task', async () => {
+      const { create } = await import('zustand');
+      return {
+        useTaskStore: create(() => ({
+          activeTaskId: 'T-motion',
+          taskDetailMap: {
+            'T-motion': { id: 'motion-db', name: 'A motion regression goal', verify: undefined },
+          },
+          updateVerifyConfig: vi.fn(),
+        })),
+      };
+    });
+    vi.doMock('@/store/chat', () => {
+      const readChatState = (selector: (state: object) => unknown) =>
+        selector({ openAcceptance: vi.fn(), openAcceptanceCheck: vi.fn() });
+      return { useChatStore: readChatState };
+    });
+    vi.doMock('@/store/global', () => {
+      const readGlobalState = (selector: (state: object) => unknown) =>
+        selector({ toggleTaskAgentPanel: vi.fn() });
+      return { useGlobalStore: readGlobalState };
+    });
+    vi.doMock('@/hooks/usePermission', () => {
+      const readPermission = () => ({ allowed: true });
+      return { usePermission: readPermission };
+    });
+    vi.doMock('@/features/Acceptance', async () => {
+      const readAcceptanceBySubject = () => ({
+        data: fixture.busyPath === 'bundle' ? { id: 'motion-acceptance' } : undefined,
+        error: undefined,
+        isLoading: fixture.busyPath === 'subject',
+        mutate: fixture.mutateSubject,
+      });
+      const readAcceptanceBundle = () => ({
+        data: undefined,
+        error: undefined,
+        isLoading: fixture.busyPath === 'bundle',
+        mutate: fixture.mutateBundle,
+      });
+      return {
+        ...(await vi.importActual('@/features/Acceptance/CriterionList')),
+        checkDisplayTitle: (title: string) => title,
+        checkHeadMeta: () => ({ color: 'green', icon: () => null }),
+        groupChecks: () => [],
+        shouldGroupChecks: () => false,
+        useAcceptanceBySubject: readAcceptanceBySubject,
+        useAcceptanceBundle: readAcceptanceBundle,
+      };
+    });
+    vi.doMock('@/features/Acceptance/hooks', () => {
+      const readRubrics = () => ({ data: [] });
+      return { useRubrics: readRubrics };
+    });
+    vi.doMock('./useTaskVerifyModel', () => {
+      const readTaskVerifyModel = () => ({
+        isLoading: false,
+        isReady: true,
+        model: 'test-model',
+        provider: 'test-provider',
+      });
+      return { useTaskVerifyModel: readTaskVerifyModel };
+    });
+    vi.doMock('@/services/verify', () => ({
+      verifyService: {
+        generateCriteria: (...args: unknown[]) => fixture.generateCriteria(...args),
+      },
+    }));
+
+    // Resolve the queued data fixtures before mounting the actual owners.
+    // importActual bypasses this file's hoisted Verifier mock explicitly;
+    // importing the real scope normally preserves the owners' context identity.
+    const userStore = await import('@/store/user');
+    const scope = await import('./TaskDetailScope');
+    const acceptance = await vi.importActual<{ default: typeof TaskAcceptance }>(
+      './TaskAcceptance',
+    );
+    const verification = await vi.importActual<{ default: typeof TaskVerifyConfig }>(
+      './TaskVerifyConfig',
+    );
+    MotionTaskAcceptance = acceptance.default;
+    MotionTaskVerifyConfig = verification.default;
+    MotionTaskDetailScope = scope.TaskDetailScope;
+    useMotionUserStore = userStore.useUserStore;
+  });
+
+  afterAll(() => {
+    cleanup();
+    if (fixture.originalMatchMedia) {
+      Object.defineProperty(window, 'matchMedia', fixture.originalMatchMedia);
+    } else {
+      Reflect.deleteProperty(window, 'matchMedia');
+    }
+    for (const moduleName of [
+      '@/store/user',
+      '@/store/task',
+      '@/store/chat',
+      '@/store/global',
+      '@/hooks/usePermission',
+      '@/features/Acceptance',
+      '@/features/Acceptance/hooks',
+      './useTaskVerifyModel',
+      '@/services/verify',
+    ]) {
+      vi.doUnmock(moduleName);
+    }
+    vi.resetModules();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fixture.generateCriteria.mockImplementation(() => new Promise(() => {}));
+    fixture.setReduced(false);
+    setMode('agile');
+  });
+  afterEach(() => cleanup());
+
+  describe.each(paths)('%s busy path', (path) => {
+    it.each(modes)('$animationMode / reduced=$reduced retains the loading state', async (mode) => {
+      fixture.setReduced(mode.reduced);
+      setMode(mode.animationMode);
+      const { container } = await mountBusy(path);
+      expectLoading(container, mode.animated, path);
+    });
+
+    it('responds to live user and system changes without restarting busy work', async () => {
+      const { container } = await mountBusy(path);
+      expectLoading(container, true, path);
+      act(() => setMode('disabled'));
+      expectLoading(container, false, path);
+      act(() => setMode('agile'));
+      expectLoading(container, true, path);
+      act(() => fixture.setReduced(true));
+      expectLoading(container, false, path);
+      act(() => fixture.setReduced(false));
+      expectLoading(container, true, path);
+      expect(fixture.generateCriteria).toHaveBeenCalledTimes(path === 'generation' ? 1 : 0);
+    });
   });
 });

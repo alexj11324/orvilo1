@@ -1,7 +1,6 @@
 'use client';
 
 import type { DeviceListItem, DeviceVisibility } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { CircleCheck, Lock, Users } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -19,32 +18,12 @@ import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
 
 import { refreshDeviceList } from './const';
 
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    padding-block: 16px;
-    padding-inline: 24px;
-  `,
-  optionHint: css`
-    margin-inline-start: auto;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  optionRow: css`
-    width: 100%;
-    min-width: 0;
-    padding-block: 2px;
-  `,
-  /* The trigger wraps the selected label in an inline valueText span, so the
-     row can't stretch and right-aligned hints collapse next to the label —
-     flex the wrapper so the trigger lays out like the dropdown options. */
-  selectValue: css`
-    > span {
-      display: flex;
-      flex: 1;
-      min-width: 0;
-    }
-  `,
-}));
+const styles = {
+  footer: 'py-4 px-6',
+  optionHint: 'ms-auto text-xs leading-5 text-foreground-tertiary',
+  optionRow: 'w-full min-w-0 py-0.5 text-sm leading-5.5',
+  selectValue: 'w-full [&>[data-slot=select-value]]:min-w-0',
+};
 
 interface ShareDeviceContentProps {
   device: DeviceListItem;
@@ -94,7 +73,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
             <div className={`flex items-center gap-2 ${styles.optionRow}`} title={workspace.name}>
               {renderWorkspaceLabel(workspace)}
               {shared && (
-                <Tag size="sm" style={{ flex: 'none', margin: 0 }}>
+                <Tag className="flex-none m-0" size="sm">
                   {tSetting('devices.share.alreadyShared')}
                 </Tag>
               )}
@@ -132,8 +111,8 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
       ).map((item) => ({
         label: (
           <div className={`flex items-center gap-2 ${styles.optionRow}`} title={item.label}>
-            <item.icon size={14} />
-            <div style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</div>
+            <item.icon className="size-4" size={16} />
+            <div className="text-sm leading-5.5 font-medium">{item.label}</div>
             <span className={styles.optionHint}>{item.desc}</span>
           </div>
         ),
@@ -203,16 +182,18 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
 
   if (step === 'done' && completion) {
     return (
-      <div className="flex flex-col items-center gap-5 justify-center" style={{ padding: 48 }}>
+      <div className="flex flex-col items-center gap-5 justify-center p-12 text-sm leading-5.5">
         <div className="flex flex-col items-center gap-3">
-          <CircleCheck color={cssVar.colorSuccess} size={32} />
+          <CircleCheck className="size-8 text-success-text" size={32} />
           <div className="font-medium">
             {tSetting('devices.share.success', { name: completion.name })}
           </div>
         </div>
         <div className="flex gap-2">
-          <Button onClick={close}>{tSetting('devices.share.done')}</Button>
-          <Button variant="default" onClick={goToTarget}>
+          <Button size="normal" type="button" onClick={close}>
+            {tSetting('devices.share.done')}
+          </Button>
+          <Button size="normal" type="button" variant="default" onClick={goToTarget}>
             {tSetting('devices.share.goToTarget', { name: completion.name })}
           </Button>
         </div>
@@ -222,19 +203,19 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-col gap-4" style={{ padding: 24 }}>
-        <div className="text-muted-foreground" style={{ fontSize: 13 }}>
+      <div className="flex flex-col gap-4 p-6 text-sm leading-5.5">
+        <div className="text-sm leading-5.5 text-muted-foreground">
           {tSetting('devices.share.modalDesc')}
         </div>
 
         {workspaces.length === 0 ? (
-          <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 24 }}>
+          <div className="flex flex-col items-center justify-center py-6">
             <div className="text-xs text-muted-foreground">{tSetting('devices.share.empty')}</div>
           </div>
         ) : (
           <>
             <div className="flex flex-col gap-1.5">
-              <div style={{ fontSize: 13, fontWeight: 500 }}>
+              <div className="text-sm leading-5.5 font-medium">
                 {tSetting('devices.share.targetLabel')}
               </div>
               <Select
@@ -242,20 +223,20 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
                 className={styles.selectValue}
                 options={targetOptions}
                 placeholder={tSetting('devices.share.selectPlaceholder')}
-                style={{ width: '100%' }}
+                size="normal"
                 value={effectiveTargetId}
                 onChange={(value) => typeof value === 'string' && setTargetId(value)}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <div style={{ fontSize: 13, fontWeight: 500 }}>
+              <div className="text-sm leading-5.5 font-medium">
                 {tSetting('workspace.general.transferScope.title')}
               </div>
               <Select
                 className={styles.selectValue}
                 options={visibilityOptions}
-                style={{ width: '100%' }}
+                size="normal"
                 value={visibility}
                 onChange={(value) =>
                   (value === 'private' || value === 'public') && setVisibility(value)
@@ -267,12 +248,14 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
       </div>
 
       <div className={`flex gap-2 justify-between ${styles.footer}`}>
-        <Button disabled={sharing} onClick={close}>
+        <Button disabled={sharing} size="normal" type="button" onClick={close}>
           {tSetting('cancel', { ns: 'common' })}
         </Button>
         <Button
           disabled={!effectiveTargetId}
           loading={sharing}
+          size="normal"
+          type="button"
           variant="default"
           onClick={() => handleShare()}
         >
@@ -290,8 +273,8 @@ export const openShareDeviceModal = (device: DeviceListItem) =>
     content: <ShareDeviceContent device={device} />,
     footer: null,
     maskClosable: false,
-    styles: {
-      content: { padding: 0 },
+    classNames: {
+      content: 'p-0',
     },
     title: t('devices.share.modalTitle', { ns: 'setting' }),
     width: 'min(92vw, 520px)',

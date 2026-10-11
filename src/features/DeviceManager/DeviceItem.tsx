@@ -1,7 +1,6 @@
 'use client';
 
 import type { DeviceListItem } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
@@ -37,90 +36,17 @@ import { getDeviceIcon } from './getDeviceIcon';
 import { openShareDeviceModal } from './ShareDeviceModal';
 import { useCanEditDevice } from './useCanEditDevice';
 
-const styles = createStaticStyles(({ css }) => ({
-  // Liveness line. `flex: none` + no ellipsis: it is the shortest thing on the
-  // row and the reason the row is readable at a glance — a long cwd next to it
-  // must truncate itself rather than squeeze this out.
-  activity: css`
-    flex: none;
-    font-size: ${cssVar.fontSizeSM};
-    white-space: nowrap;
-  `,
-  // Code-font cwd line; truncates rather than wrapping so a deep path keeps the
-  // row at one line.
-  cwd: css`
-    overflow: hidden;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  // Same tile treatment as the credential list rows (creds/features/style.ts).
-  iconTile: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  metaDivider: css`
-    flex: none;
-    width: 1px;
-    height: 10px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  row: css`
-    cursor: pointer;
-
-    padding-block: 12px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: background 0.15s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -1px;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  rowActive: css`
-    background: ${cssVar.colorFillSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  statusOffline: css`
-    width: 8px;
-    height: 8px;
-    border: 1.5px solid ${cssVar.colorTextQuaternary};
-    border-radius: 50%;
-  `,
-  statusOnline: css`
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorSuccess};
-    box-shadow: 0 0 0 3px ${cssVar.colorSuccessBg};
-  `,
-}));
+const styles = {
+  activity: 'flex-none text-xs leading-5 whitespace-nowrap',
+  cwd: 'truncate font-mono text-xs leading-5',
+  iconTile:
+    'flex shrink-0 items-center justify-center size-12 rounded-(--radius-card) text-muted-foreground bg-muted',
+  metaDivider: 'flex-none w-px h-2.5 bg-divider',
+  row: 'cursor-pointer p-3 rounded-(--radius-card) transition-[background-color] duration-(--orvilo-motion-fast) ease-in-out focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-1 motion-reduce:transition-none',
+  rowActive: 'bg-selected hover:bg-selected',
+  statusOffline: 'size-2 border-1.5 border-foreground-quaternary rounded-full',
+  statusOnline: 'size-2 rounded-full bg-success ring-3 ring-success-wash',
+};
 
 interface DeviceItemProps {
   device: DeviceListItem;
@@ -287,7 +213,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
   return (
     <div
       aria-pressed={selected}
-      className={`flex items-center gap-4 ${cx(styles.row, selected && styles.rowActive)}`}
+      className={`flex items-center gap-4 ${cn(styles.row, selected ? styles.rowActive : 'hover:bg-accent')}`}
       role={'button'}
       tabIndex={0}
       onClick={onSelect}
@@ -299,9 +225,9 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
         }
       }}
     >
-      <div className={styles.iconTile}>{getDeviceIcon(device.platform, 20)}</div>
+      <div className={styles.iconTile}>{getDeviceIcon(device.platform, 16)}</div>
 
-      <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
         <div className="flex items-center gap-2">
           <div className="truncate block text-sm font-medium">{displayName}</div>
           <span className={online ? styles.statusOnline : styles.statusOffline} />
@@ -335,26 +261,26 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
             </Tooltip>
           )}
         </div>
-        <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+        <div className="flex items-center min-w-0 gap-2">
           <div className={cn('text-muted-foreground', styles.activity)}>{activityText}</div>
           {device.defaultCwd && (
             <>
               <span className={styles.metaDivider} />
-              <FolderIcon size={12} style={{ color: cssVar.colorTextQuaternary }} />
+              <FolderIcon className="size-4 text-foreground-quaternary" size={16} />
               <div className={cn('text-muted-foreground', styles.cwd)}>{device.defaultCwd}</div>
             </>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2" style={{ flex: 'none' }}>
+      <div className="flex flex-none items-center gap-2">
         {device.scope === 'workspace' && device.enroller && (
           // Enroller avatar — the at-a-glance "who put this here" answer for
           // shared workspace pools. Hidden in personal scope (always the
           // caller) and for ghost rows (no row yet).
           <Tooltip>
             <TooltipTrigger render={<span onClick={(e) => e.stopPropagation()} />}>
-              <Avatar avatar={device.enroller.avatar ?? undefined} size={20} />
+              <Avatar avatar={device.enroller.avatar ?? undefined} size={24} />
             </TooltipTrigger>
             <TooltipContent>
               {t('workspaceSetting.devices.enrolledBy', {
@@ -370,7 +296,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
           <span onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger render={<span />}>
-                <Button aria-label={tCommon('more')} size="compact">
+                <Button aria-label={tCommon('more')} size="compact" type="button">
                   <MoreHorizontalIcon data-icon="inline-start" />
                 </Button>
               </DropdownMenuTrigger>

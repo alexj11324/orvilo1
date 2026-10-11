@@ -10,7 +10,8 @@ import type {
   VerifyVisualizationDataset,
   VerifyVisualizationManifest,
 } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { clsx } from 'cn';
 import { ArrowDownRight, ArrowUpRight, ChartNoAxesCombined } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Fragment, memo } from 'react';
@@ -26,200 +27,61 @@ import {
   tableHighlightRows,
 } from './visualization';
 
-const styles = createStaticStyles(({ css }) => ({
-  axisLabel: css`
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  badge: css`
-    display: inline-flex;
-    gap: 3px;
-    align-items: center;
-
-    padding-block: 1px;
-    padding-inline: 5px;
-    border-radius: 999px;
-
-    font-size: 11px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorSuccess};
-
-    background: ${cssVar.colorSuccessBg};
-  `,
-  badgeWorse: css`
-    color: ${cssVar.colorError};
-    background: ${cssVar.colorErrorBg};
-  `,
-  bar: css`
-    overflow: hidden;
-    height: 6px;
-    border-radius: 999px;
-    background: ${cssVar.colorFillSecondary};
-  `,
-  barChartLabel: css`
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  barAfter: css`
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorInfo};
-  `,
+const registeredStyles = createStaticStyles(({ css }) => ({
   barBefore: css`
     height: 100%;
     border-radius: inherit;
     background: ${cssVar.colorTextQuaternary};
   `,
-  body: css`
-    min-width: 0;
-    padding: 14px;
-  `,
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  chart: css`
-    display: block;
-    width: 100%;
-    min-height: 180px;
-  `,
-  context: css`
-    padding-block: 8px 10px;
-    padding-inline: 14px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  delta: css`
-    display: inline-flex;
-    gap: 3px;
-    align-items: center;
-
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorSuccess};
-  `,
-  deltaWorse: css`
-    color: ${cssVar.colorError};
-  `,
-  header: css`
-    padding-block: 10px;
-    padding-inline: 14px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  heatmap: css`
-    display: grid;
-    gap: 3px;
-    align-items: center;
-  `,
-  heatmapCell: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    min-height: 34px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-size: 11px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  `,
-  metric: css`
-    display: grid;
-    grid-template-columns: minmax(120px, 1fr) minmax(240px, 2.4fr) auto;
-    gap: 16px;
-    align-items: center;
-
-    padding-block: 12px;
-    padding-inline: 14px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-
-    @media (width <= 640px) {
-      grid-template-columns: 1fr auto;
-    }
-  `,
-  metricName: css`
-    min-width: 0;
-    font-weight: 500;
-  `,
-  sample: css`
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  table: css`
-    border-collapse: collapse;
-    width: 100%;
-
-    th,
-    td {
-      padding-block: 8px;
-      padding-inline: 10px;
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-      text-align: start;
-      white-space: nowrap;
-    }
-
-    th {
-      font-size: 11px;
-      font-weight: 500;
-      color: ${cssVar.colorTextSecondary};
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    td {
-      font-size: 12px;
-      font-variant-numeric: tabular-nums;
-    }
-  `,
-  tableBest: css`
-    font-weight: 700;
-    color: ${cssVar.colorInfo};
-    background: ${cssVar.colorInfoBg};
-  `,
   tableBestBadge: css`
-    margin-inline-start: 5px;
-    padding-block: 1px;
+    margin-inline-start: 4px;
+    padding-block: 2px;
     padding-inline: 4px;
-    border-radius: 4px;
+    border-radius: var(--radius-chip);
 
-    font-size: 9px;
-    font-weight: 700;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    line-height: calc(1.25 / 0.75);
     color: ${cssVar.colorInfo};
 
     background: ${cssVar.colorInfoBgHover};
   `,
-  tableScroll: css`
-    overflow-x: auto;
-  `,
-  target: css`
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  values: css`
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-
-    @media (width <= 640px) {
-      grid-column: 1 / -1;
-      grid-row: 2;
-    }
-  `,
-  valueText: css`
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  `,
 }));
+
+const styles = {
+  axisLabel: 'text-xs leading-5 text-foreground-tertiary',
+  badge:
+    'inline-flex items-center gap-1 rounded-full bg-success-wash px-1.5 py-0.5 text-xs leading-5 font-semibold text-success-text tabular-nums',
+  badgeWorse: 'bg-destructive-wash text-destructive-text',
+  bar: 'h-1.5 overflow-hidden rounded-full bg-selected',
+  barChartLabel: 'text-xs leading-5 text-muted-foreground',
+  barAfter: 'h-full rounded-[inherit] bg-info',
+  body: 'min-w-0 p-4',
+  card: 'overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  chart: 'block min-h-45 w-full',
+  context:
+    '[border-block-start:1px_solid_var(--divider)] px-4 pt-2 pb-2.5 text-xs leading-5 text-muted-foreground',
+  delta: 'inline-flex items-center gap-1 font-semibold text-success-text tabular-nums',
+  deltaWorse: 'text-destructive-text',
+  header: '[border-block-end:1px_solid_var(--divider)] px-4 py-3',
+  heatmap: 'grid items-center gap-1',
+  heatmapCell:
+    'flex min-h-8.5 items-center justify-center rounded-(--radius-card) text-xs leading-5 font-semibold tabular-nums',
+  metric:
+    'grid grid-cols-[minmax(120px,1fr)_minmax(240px,2.4fr)_auto] items-center gap-4 px-4 py-3 [&+&]:[border-block-start:1px_solid_var(--divider)] [@media(width<=640px)]:grid-cols-[1fr_auto]',
+  metricName: 'min-w-0 text-sm leading-5.5 font-medium',
+  sample: 'text-xs leading-5 text-foreground-tertiary',
+  table:
+    'w-full border-collapse [&_th]:[border-block-end:1px_solid_var(--divider)] [&_th]:px-2.5 [&_th]:py-2 [&_th]:text-start [&_th]:whitespace-nowrap [&_th]:bg-fill-quaternary [&_th]:text-xs [&_th]:leading-5 [&_th]:font-medium [&_th]:text-muted-foreground [&_td]:[border-block-end:1px_solid_var(--divider)] [&_td]:px-2.5 [&_td]:py-2 [&_td]:text-start [&_td]:whitespace-nowrap [&_td]:text-xs [&_td]:leading-5 [&_td]:tabular-nums',
+  tableBest: 'bg-info-wash font-semibold text-info-text',
+  tableScroll: 'overflow-x-auto',
+  target: 'text-xs leading-5 text-muted-foreground',
+  values:
+    'flex flex-col gap-2 [@media(width<=640px)]:col-span-full [@media(width<=640px)]:row-start-2',
+  valueText: 'flex justify-between text-xs leading-5 tabular-nums',
+  barBefore: registeredStyles.barBefore,
+  tableBestBadge: registeredStyles.tableBestBadge,
+} as const;
 
 const SERIES_COLORS = [
   cssVar.colorInfo,
@@ -259,8 +121,10 @@ const ViewCard = memo<{
   return (
     <div className={styles.card}>
       <div className={`flex items-center gap-2 ${styles.header}`}>
-        <ChartNoAxesCombined size={15} />
-        <div className="font-semibold">{title ?? t('report.visualization.title')}</div>
+        <ChartNoAxesCombined size={16} />
+        <div className="text-sm leading-5.5 font-semibold">
+          {title ?? t('report.visualization.title')}
+        </div>
       </div>
       {children}
       {context && <div className={styles.context}>{context}</div>}
@@ -327,7 +191,7 @@ const MetricComparisonRenderer = memo<{
                   ['after', after, styles.barAfter],
                 ] as const
               ).map(([role, value, barClass]) => (
-                <div className="flex flex-col gap-1.25" key={role}>
+                <div className="flex flex-col gap-1" key={role}>
                   <span className={styles.valueText}>
                     <span>{t(`report.visualization.${role}`)}</span>
                     <strong>{formatValue(value, unit)}</strong>
@@ -343,8 +207,8 @@ const MetricComparisonRenderer = memo<{
             </div>
             <div className="flex flex-col items-end gap-0.5">
               {improvement !== null && (
-                <span className={cx(styles.delta, !improved && styles.deltaWorse)}>
-                  <DeltaIcon size={13} />
+                <span className={clsx(styles.delta, !improved && styles.deltaWorse)}>
+                  <DeltaIcon size={16} />
                   {Math.abs(improvement).toFixed(1)}%
                 </span>
               )}
@@ -425,16 +289,16 @@ const LineChartRenderer = memo<{
                   strokeLinejoin={'round'}
                   strokeWidth={semanticStyle === 'muted' ? 1.5 : 2.5}
                 />
-                <text fill={color} fontSize={11} x={54 + seriesIndex * 130} y={18}>
+                <text fill={color} fontSize={12} x={54 + seriesIndex * 130} y={18}>
                   {series.label ?? fieldLabel(dataset, series.field)}
                 </text>
               </g>
             );
           })}
-          <text fill={cssVar.colorTextTertiary} fontSize={10} textAnchor={'middle'} x={334} y={222}>
+          <text fill={cssVar.colorTextTertiary} fontSize={12} textAnchor={'middle'} x={334} y={222}>
             {view.encoding.xLabel ?? fieldLabel(dataset, view.encoding.x)}
           </text>
-          <text fill={cssVar.colorTextTertiary} fontSize={10} x={4} y={108}>
+          <text fill={cssVar.colorTextTertiary} fontSize={12} x={4} y={108}>
             {view.encoding.yLabel ?? ''}
           </text>
         </svg>
@@ -491,10 +355,10 @@ const ScatterPlotRenderer = memo<{
               </circle>
             );
           })}
-          <text fill={cssVar.colorTextTertiary} fontSize={10} textAnchor={'middle'} x={334} y={222}>
+          <text fill={cssVar.colorTextTertiary} fontSize={12} textAnchor={'middle'} x={334} y={222}>
             {view.encoding.xLabel ?? fieldLabel(dataset, view.encoding.x)}
           </text>
-          <text fill={cssVar.colorTextTertiary} fontSize={10} x={4} y={108}>
+          <text fill={cssVar.colorTextTertiary} fontSize={12} x={4} y={108}>
             {view.encoding.yLabel ?? fieldLabel(dataset, view.encoding.y)}
           </text>
         </svg>
@@ -538,7 +402,7 @@ const HeatmapRenderer = memo<{
         >
           <span />
           {xValues.map((value) => (
-            <span className={styles.axisLabel} key={value} style={{ textAlign: 'center' }}>
+            <span className={clsx(styles.axisLabel, 'text-center')} key={value}>
               {value}
             </span>
           ))}
@@ -637,7 +501,7 @@ const BarChartRenderer = memo<{
           {view.encoding.series.map((series, index) => (
             <text
               fill={SERIES_COLORS[index % SERIES_COLORS.length]}
-              fontSize={11}
+              fontSize={12}
               key={series.field}
               x={58 + index * 140}
               y={16}
@@ -646,7 +510,7 @@ const BarChartRenderer = memo<{
             </text>
           ))}
           {view.encoding.valueLabel && (
-            <text fill={cssVar.colorTextTertiary} fontSize={10} x={4} y={112}>
+            <text fill={cssVar.colorTextTertiary} fontSize={12} x={4} y={112}>
               {view.encoding.valueLabel}
             </text>
           )}
@@ -718,8 +582,8 @@ export const VisualizationDeltaBadge = memo<{
   const improved = delta.improvement >= 0;
   const DeltaIcon = delta.after <= delta.before ? ArrowDownRight : ArrowUpRight;
   return (
-    <span className={cx(styles.badge, !improved && styles.badgeWorse)}>
-      <DeltaIcon size={11} />
+    <span className={clsx(styles.badge, !improved && styles.badgeWorse)}>
+      <DeltaIcon size={16} />
       {Math.abs(delta.improvement).toFixed(1)}%
     </span>
   );

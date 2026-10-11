@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs, { type Dayjs } from 'dayjs';
 import { Globe, Hash, SlidersHorizontal } from 'lucide-react';
@@ -13,6 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -26,59 +26,13 @@ import {
   WEEKDAYS,
 } from './CronConfig';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  fieldLabel: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  timezoneOffset: css`
-    flex-shrink: 0;
-    margin-inline-start: 12px;
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  timezoneOption: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    min-width: 0;
-  `,
-  weekdayButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 32px;
-    border-radius: 6px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    transition: all 0.15s ease;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  weekdayButtonActive: css`
-    color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorPrimaryBg};
-
-    &:hover {
-      color: ${cssVar.colorPrimary};
-      background: ${cssVar.colorPrimaryBgHover};
-    }
-  `,
-}));
+const styles = {
+  fieldLabel: 'text-xs leading-5 text-muted-foreground',
+  timezoneOffset: 'shrink-0 ms-3 text-xs leading-5 text-foreground-description',
+  timezoneOption: 'flex gap-3 items-center justify-between min-w-0 text-sm leading-5.5',
+  weekdayButton: 'w-9 px-0',
+  weekdayButtonActive: 'text-primary-text bg-selected hover:text-primary-text hover:bg-selected',
+};
 
 const DEFAULT_PATTERN = '0 9 * * *';
 const DEFAULT_TIMEZONE = 'UTC';
@@ -245,6 +199,7 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
         <div className="flex flex-1 flex-col gap-1.5">
           <div className={cn(styles.fieldLabel)}>{t('taskSchedule.frequency')}</div>
           <Select
+            size="normal"
             value={scheduleType}
             options={SCHEDULE_TYPE_OPTIONS.map((opt) => ({
               label: t(opt.label as any),
@@ -258,6 +213,7 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
             <div className={cn(styles.fieldLabel)}>{t('taskSchedule.time')}</div>
             <Select
               options={TIME_OPTIONS}
+              size="normal"
               value={triggerTime.hour() * 60 + triggerTime.minute()}
               onChange={(value) => handleTimeChange(value as number)}
             />
@@ -268,15 +224,17 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
             <div className={cn(styles.fieldLabel)}>{t('taskSchedule.every')}</div>
             <div className="flex items-center gap-1.5">
               <InputNumber
+                className="flex-1"
                 max={24}
                 min={1}
-                style={{ flex: 1 }}
+                size="normal"
                 value={hourlyInterval}
                 onChange={handleHourlyIntervalChange}
               />
               <div className="text-muted-foreground">{t('taskSchedule.hours')}</div>
               <Select
-                style={{ width: 80 }}
+                className="w-20"
+                size="normal"
                 value={triggerTime.minute()}
                 options={[
                   { label: ':00', value: 0 },
@@ -296,16 +254,19 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
           <div className={cn(styles.fieldLabel)}>{t('taskSchedule.weekday')}</div>
           <div className="flex gap-1.5">
             {WEEKDAYS.map(({ key, label }) => (
-              <div
+              <Button
                 key={key}
-                className={cx(
+                size="normal"
+                type="button"
+                variant="ghost"
+                className={cn(
                   styles.weekdayButton,
                   weekdays.includes(key) && styles.weekdayButtonActive,
                 )}
                 onClick={() => toggleWeekday(key)}
               >
                 {t(label as any)}
-              </div>
+              </Button>
             ))}
           </div>
         </div>
@@ -313,32 +274,29 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
 
       <Accordion defaultValue={[]}>
         <AccordionItem className="border-b-0" value="advanced">
-          <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 0 }}>
+          <AccordionTrigger className="py-1.5 px-0">
             <div className="flex items-center gap-2">
-              <SlidersHorizontal color={cssVar.colorTextDescription} size={14} />
-              <div style={{ color: cssVar.colorTextSecondary }}>
-                {t('taskSchedule.advancedSettings')}
-              </div>
+              <SlidersHorizontal className="size-3.5 text-foreground-description" size={14} />
+              <div className="text-muted-foreground">{t('taskSchedule.advancedSettings')}</div>
             </div>
           </AccordionTrigger>
           <AccordionContent>
-            <div className="flex flex-col gap-3.5" style={{ paddingBlock: '8px 4px' }}>
+            <div className="flex flex-col gap-3.5 pbs-2 pbe-1">
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <Globe color={cssVar.colorTextDescription} size={14} />
+                  <Globe className="size-3.5 text-foreground-description" size={14} />
                   <div className={cn(styles.fieldLabel)}>{t('taskSchedule.timezone')}</div>
                 </div>
                 <Select
                   showSearch
                   options={TIMEZONE_OPTIONS}
+                  size="normal"
                   value={tz}
                   optionRender={(option) => {
                     const data = option as TimezoneOption;
                     return (
                       <div className={styles.timezoneOption}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {data.label}
-                        </span>
+                        <span className="overflow-hidden text-ellipsis">{data.label}</span>
                         <span className={styles.timezoneOffset}>{data.offset}</span>
                       </div>
                     );
@@ -349,15 +307,16 @@ const SchedulerForm = memo<SchedulerFormProps>(({ maxExecutions, onChange, patte
 
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <Hash color={cssVar.colorTextDescription} size={14} />
+                  <Hash className="size-3.5 text-foreground-description" size={14} />
                   <div className={cn(styles.fieldLabel)}>{t('taskSchedule.maxExecutions')}</div>
                 </div>
                 <div className="flex items-center gap-3">
                   <InputNumber
+                    className="flex-1"
                     disabled={continuous}
                     min={1}
                     placeholder={t('taskSchedule.maxExecutionsPlaceholder')}
-                    style={{ flex: 1 }}
+                    size="normal"
                     value={maxExec ?? undefined}
                     onChange={handleMaxExecChange}
                   />

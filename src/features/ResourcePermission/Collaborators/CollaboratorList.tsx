@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,16 +25,10 @@ import type { PermissionResourceType, ResourceCollaborator } from '@/services/re
 import { useAccessLevelOptions } from '../useAccessLevelOptions';
 import { useResourceCollaborators } from '../useResourceCollaborators';
 
-const styles = createStaticStyles(({ css }) => ({
-  empty: css`
-    padding-block: 12px;
-    font-size: 14px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  row: css`
-    padding-block: 8px;
-  `,
-}));
+const styles = {
+  empty: 'py-3 text-sm leading-5.5 text-foreground-description',
+  row: 'py-2',
+};
 
 const displayName = (collaborator: ResourceCollaborator) =>
   collaborator.user?.fullName ||
@@ -65,9 +59,9 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
     return (
       <div className="flex flex-col gap-1">
         {[0, 1].map((key) => (
-          <div className={cx('flex flex-row items-center gap-3', styles.row)} key={key}>
-            <Skeleton className="rounded-full" style={{ height: 32, width: 32 }} />
-            <Skeleton style={{ marginBottom: 0, width: 160 }} />
+          <div className={cn('flex flex-row items-center gap-3', styles.row)} key={key}>
+            <Skeleton className="size-8 rounded-full" />
+            <Skeleton className="mbe-0 h-5.5 w-40 rounded-(--radius-chip)" />
           </div>
         ))}
       </div>
@@ -95,12 +89,12 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
 
         return (
           <div
-            className={cx('flex flex-row items-center gap-3', styles.row)}
+            className={cn('flex flex-row items-center gap-3', styles.row)}
             key={collaborator.userId}
           >
             <Avatar avatar={collaborator.user?.avatar || undefined} size={32} title={name} />
-            <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-              <div className="truncate min-w-0 font-medium">{name}</div>
+            <div className="flex flex-col flex-1 min-w-0">
+              <div className="truncate min-w-0 text-sm leading-5.5 font-medium">{name}</div>
               {email && email !== name ? (
                 <div className="truncate min-w-0 text-xs text-muted-foreground">{email}</div>
               ) : null}
@@ -114,20 +108,23 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
                   <ActionIcon
                     disabled={mutating}
                     icon={XIcon}
-                    size="small"
+                    size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
                     title={t('permission.collaborators.remove')}
                   />
                 }
               />
-              <AlertDialogContent>
+              <AlertDialogContent className="rounded-(--radius-overlay)">
                 <AlertDialogHeader>
                   <AlertDialogTitle>
                     {t('permission.collaborators.removeConfirmTitle', { name })}
                   </AlertDialogTitle>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
+                <AlertDialogFooter className="rounded-b-(--radius-overlay)">
+                  <AlertDialogCancel size="normal">
+                    {t('cancel', { ns: 'common' })}
+                  </AlertDialogCancel>
                   <AlertDialogConfirm
+                    size="normal"
                     variant="destructive"
                     onClick={() => void removeCollaborator(collaborator.userId)}
                   >

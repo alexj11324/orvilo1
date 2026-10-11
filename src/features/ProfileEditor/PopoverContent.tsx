@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { ExternalLink, Settings } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 
 import Empty from './Empty';
 
-const SKILL_ICON_SIZE = 20;
+const SKILL_ICON_SIZE = 16;
 
 const filterItems = (items: ItemType[], keyword: string): ItemType[] => {
   const lower = keyword.toLowerCase();
@@ -38,24 +38,15 @@ const filterItems = (items: ItemType[], keyword: string): ItemType[] => {
     .filter(Boolean) as ItemType[];
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    padding: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  header: css`
-    padding-block: 8px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorFill};
-    background: transparent;
-  `,
-  scroller: css`
-    overflow: hidden auto;
-  `,
-  trailingIcon: css`
-    opacity: 0.5;
-  `,
-}));
+const styles = {
+  header: 'border-be border-divider bg-transparent p-2',
+};
+
+const twStyles = {
+  footer: 'border-bs border-divider p-1',
+  scroller: 'overflow-x-hidden overflow-y-auto',
+  trailingIcon: 'opacity-50',
+};
 
 interface PopoverContentProps {
   items: ItemType[];
@@ -85,10 +76,10 @@ const PopoverContent = memo<PopoverContentProps>(({ items, onClose }) => {
           onKeyDown={(event) => event.stopPropagation()}
         />
       </div>
-      <ScrollSignalProvider className={styles.scroller} style={{ flex: 1 }}>
+      <ScrollSignalProvider className={twStyles.scroller} style={{ flex: 1 }}>
         {isEmpty ? <Empty /> : <ToolsList items={filteredItems} />}
       </ScrollSignalProvider>
-      <div className={styles.footer}>
+      <div className={twStyles.footer}>
         <div
           className={toolsListStyles.item}
           role="button"
@@ -109,7 +100,7 @@ const PopoverContent = memo<PopoverContentProps>(({ items, onClose }) => {
             </span>
           </div>
           <div className={toolsListStyles.itemContent}>{t('tools.plugins.management')}</div>
-          <span className={cx('anticon', styles.trailingIcon)} role="img">
+          <span className={cx('anticon', twStyles.trailingIcon)} role="img">
             <ExternalLink fill={'transparent'} height={16} size={16} width={16} />
           </span>
         </div>

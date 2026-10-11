@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx } from 'cn';
 import {
   CheckCircle2Icon,
   CircleDashedIcon,
@@ -9,52 +9,32 @@ import {
 import { createElement, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 
 import CollectionFooter from './CollectionFooter';
 import type { CheckSummary, NormalizedCheckItem, PullRequestCollection } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  cardHeader: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  checkRow: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 5px;
-    padding-inline: 12px;
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  cardHeader:
+    'flex items-center gap-2 [border-block-end:1px_solid_var(--divider)] bg-fill-quaternary px-4 py-2',
+  checkRow: 'flex items-center gap-2 px-4 py-1.5',
+} as const;
 
 export const checkStatusVisual = (status: NormalizedCheckItem['status']) => {
   switch (status) {
     case 'passed': {
-      return { color: cssVar.colorSuccess, icon: CheckCircle2Icon };
+      return { color: 'var(--success-text)', icon: CheckCircle2Icon };
     }
     case 'failing': {
-      return { color: cssVar.colorError, icon: XCircleIcon };
+      return { color: 'var(--destructive-text)', icon: XCircleIcon };
     }
     case 'pending': {
-      return { color: cssVar.colorWarning, icon: CircleDashedIcon };
+      return { color: 'var(--warning-text)', icon: CircleDashedIcon };
     }
     default: {
-      return { color: cssVar.colorTextTertiary, icon: CircleHelpIcon };
+      return { color: 'var(--foreground-tertiary)', icon: CircleHelpIcon };
     }
   }
 };
@@ -64,19 +44,19 @@ export const checkSummaryVisual = (
 ): { color: string; labelKey: string } => {
   switch (state) {
     case 'passed': {
-      return { color: cssVar.colorSuccess, labelKey: 'reviews.checksPassing' };
+      return { color: 'var(--success-text)', labelKey: 'reviews.checksPassing' };
     }
     case 'failing': {
-      return { color: cssVar.colorError, labelKey: 'reviews.checksFailing_other' };
+      return { color: 'var(--destructive-text)', labelKey: 'reviews.checksFailing_other' };
     }
     case 'pending': {
-      return { color: cssVar.colorWarning, labelKey: 'reviews.checksPending' };
+      return { color: 'var(--warning-text)', labelKey: 'reviews.checksPending' };
     }
     case 'partial': {
-      return { color: cssVar.colorWarning, labelKey: 'reviews.checksPartial' };
+      return { color: 'var(--warning-text)', labelKey: 'reviews.checksPartial' };
     }
     default: {
-      return { color: cssVar.colorTextTertiary, labelKey: 'reviews.checksUnknown' };
+      return { color: 'var(--foreground-tertiary)', labelKey: 'reviews.checksUnknown' };
     }
   }
 };
@@ -91,16 +71,17 @@ const ReviewChecksPanel = memo<{
 }>(({ checks, onLoadMore }) => {
   const { t } = useTranslation('common');
   const checksMore = usePagedLoadMore();
+  const { resetLoadMoreError } = checksMore;
   const checksEndCursor = checks.endCursor;
   useEffect(() => {
-    checksMore.resetLoadMoreError();
-  }, [checksEndCursor, checksMore.resetLoadMoreError]);
+    resetLoadMoreError();
+  }, [checksEndCursor, resetLoadMoreError]);
   const summary = checks.summary;
   const visual = checkSummaryVisual(summary.state);
   return (
-    <div className={cx('flex flex-col', styles.card)}>
-      <div className={cx('flex items-center gap-2', styles.cardHeader)}>
-        <div className="font-medium">{t('reviews.checks')}</div>
+    <div className={clsx('flex flex-col', styles.card)}>
+      <div className={clsx('flex items-center gap-2', styles.cardHeader)}>
+        <div className="text-sm leading-5.5 font-semibold">{t('reviews.checks')}</div>
         <div className="text-xs text-muted-foreground">
           {t(visual.labelKey as never, { count: summary.failing })}
         </div>
@@ -114,19 +95,22 @@ const ReviewChecksPanel = memo<{
         const icon = checkStatusVisual(check.status);
         return (
           <div className={styles.checkRow} key={`${check.name}-${index}`}>
-            {createElement(icon.icon, { color: icon.color, size: 14 })}
-            <div className="text-(length:--text-dense)">{check.name}</div>
+            {createElement(icon.icon, { color: icon.color, size: 16 })}
+            <div className="text-sm leading-5.5">{check.name}</div>
             <div className="text-xs text-muted-foreground">
               {check.rawConclusion ?? check.rawStatus ?? ''}
             </div>
             {check.detailsUrl ? (
-              <div
-                className="text-xs text-muted-foreground"
-                style={{ cursor: 'pointer' }}
+              <Button
+                aria-label={check.name}
+                className="text-muted-foreground"
+                size="icon"
+                type="button"
+                variant="ghost"
                 onClick={() => window.open(check.detailsUrl!, '_blank', 'noopener,noreferrer')}
               >
-                <ExternalLinkIcon size={12} />
-              </div>
+                <ExternalLinkIcon size={16} />
+              </Button>
             ) : null}
           </div>
         );

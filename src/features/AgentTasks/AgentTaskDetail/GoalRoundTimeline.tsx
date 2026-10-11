@@ -20,27 +20,7 @@ interface GoalRound {
   usage?: { cost: number; tokens: number } | null;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  dot: css`
-    position: absolute;
-    inset-block-end: -2px;
-    inset-inline-end: -2px;
-
-    width: 7px;
-    height: 7px;
-    border: 2px solid ${cssVar.colorBgContainer};
-    border-radius: 50%;
-
-    background: ${cssVar.colorError};
-  `,
-  rail: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    align-items: center;
-
-    min-width: 0;
-  `,
+const stylesRetained = createStaticStyles(({ css }) => ({
   round: css`
     cursor: pointer;
 
@@ -66,12 +46,14 @@ const styles = createStaticStyles(({ css }) => ({
       filter: brightness(1.25);
     }
   `,
-  total: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
 }));
+
+const styles = {
+  dot: 'absolute -bottom-0.5 -end-0.5 size-1.75 border-2 border-card rounded-full bg-destructive',
+  rail: 'flex flex-wrap gap-1.25 items-center min-w-0',
+  round: stylesRetained.round,
+  total: 'flex-none text-xs leading-5 text-foreground-tertiary',
+};
 
 export const formatGoalDuration = (milliseconds: number) => {
   const minutes = milliseconds / 60_000;
@@ -159,6 +141,7 @@ const GoalRoundTimeline = memo<{ rounds?: GoalRound[] }>(({ rounds = [] }) => {
               className={styles.round}
               data-active={run.status === 'running' || index === rounds.length - 1}
               data-goal-round={run.roundIndex ?? index + 1}
+              data-slot="goal-round"
               style={{ width: goalRoundWidth(durations[index], base) }}
             >
               {/* An agent-verified round may carry no report at all, so the

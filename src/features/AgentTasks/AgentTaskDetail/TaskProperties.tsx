@@ -160,8 +160,9 @@ const TaskProperties = memo(() => {
   const railControl: PickerControl = { className: RAIL_CONTROL_CLASS };
   const statusValue = (
     <Button
-      className={RAIL_CONTROL_CLASS}
+      className={cn(RAIL_CONTROL_CLASS, "[&_svg:not([class*='size-'])]:size-4")}
       data-task-workflow-state={workflowMark?.category}
+      size="sm"
       variant="ghost"
     >
       <WorkflowIcon color={workflowMark.color} size={16} />
@@ -231,7 +232,11 @@ const TaskProperties = memo(() => {
 
         <PropertyRow label={t('taskDetail.property.priority')}>
           <TaskPriorityTag nativeButton priority={priority} taskIdentifier={taskId}>
-            <Button className={RAIL_CONTROL_CLASS} variant="ghost">
+            <Button
+              className={cn(RAIL_CONTROL_CLASS, "[&_svg:not([class*='size-'])]:size-4")}
+              size="sm"
+              variant="ghost"
+            >
               <TaskPriorityTag
                 disableDropdown
                 priority={priority}
@@ -252,6 +257,7 @@ const TaskProperties = memo(() => {
             <Button
               className={cn(styles.propertyButton, 'min-w-0 justify-start font-normal')}
               disabled={readOnly}
+              size="sm"
               variant="ghost"
               onClick={() =>
                 openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })

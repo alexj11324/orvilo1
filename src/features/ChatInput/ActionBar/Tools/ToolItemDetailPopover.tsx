@@ -1,39 +1,14 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
 import { Badge } from '@/components/reui/badge';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    width: 320px;
-    padding: 12px;
-  `,
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 6;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  identifier: css`
-    overflow: hidden;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  title: css`
-    font-size: 14px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  container: 'w-80 p-3',
+  description: 'line-clamp-6 text-sm leading-5.5 text-muted-foreground',
+  identifier: 'truncate font-mono text-xs leading-5 text-foreground-tertiary',
+  title: 'text-sm leading-5.5 font-semibold text-foreground',
+};
 
 interface ToolItemDetailPopoverProps {
   description?: ReactNode;
@@ -53,14 +28,14 @@ interface ToolItemDetailPopoverProps {
 const ToolItemDetailPopover = memo<ToolItemDetailPopoverProps>(
   ({ icon, title, description, sourceLabel, identifier, meta }) => {
     return (
-      <div className={cx('flex flex-col gap-2.5', styles.container)}>
+      <div className={cn('flex flex-col gap-2.5', styles.container)}>
         <div className="flex flex-row items-center gap-2.5">
           {icon}
-          <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+          <div className="flex flex-col flex-1 min-w-0 gap-0.5">
             <div className="flex flex-row items-center gap-1.5">
               <div className={cn('truncate', styles.title)}>{title}</div>
               {sourceLabel && (
-                <Badge size="sm" style={{ flexShrink: 0 }} variant="secondary">
+                <Badge className="shrink-0" size="sm" variant="secondary">
                   {sourceLabel}
                 </Badge>
               )}

@@ -1,26 +1,12 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
 import { Badge } from '@/components/reui/badge';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    tag: css`
-      margin: 0;
-      padding-block: 4px;
-      padding-inline: 12px;
-      border-radius: 16px;
-
-      color: ${cssVar.colorTextSecondary};
-    `,
-  };
-});
-
 const VersionTag = memo<{ range: string[] }>(({ range }) => {
   return (
-    <Badge className={styles.tag} variant="secondary">
+    <Badge className="m-0 h-auto px-3 py-1 leading-5 text-muted-foreground" variant="secondary">
       {range.map((v) => 'v' + v).join(' ~ ')}
     </Badge>
   );

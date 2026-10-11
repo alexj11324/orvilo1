@@ -324,6 +324,10 @@ export const recentKeys = {
 export const isTaskListKey = (key: unknown): boolean =>
   Array.isArray(key) && key[0] === 'task:list';
 
+/** Every cached `task:detail` — a family-wide write changes several at once. */
+export const isTaskDetailKey = (key: unknown): boolean =>
+  Array.isArray(key) && key[0] === 'task:detail';
+
 export const isScheduledTaskListKey = (key: unknown): boolean =>
   Array.isArray(key) && key[0] === 'task:scheduledList';
 

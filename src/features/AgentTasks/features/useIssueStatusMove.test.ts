@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   moveBoardMaybePickingState: vi.fn(),
   mutate: vi.fn(),
   refreshDetail: vi.fn(),
+  resolveStatusCascade: vi.fn(),
   runTask: vi.fn(),
   taskDetailMap: {} as Record<
     string,
@@ -32,6 +33,7 @@ vi.mock('@/components/Modal', () => ({ confirmModal: mocks.confirmModal }));
 
 vi.mock('@/features/MyWork/workQueryBoardMove', () => ({
   moveBoardMaybePickingState: mocks.moveBoardMaybePickingState,
+  resolveStatusCascade: mocks.resolveStatusCascade,
   workQueryBoardMoveToastKey: mocks.toastKey,
 }));
 
@@ -81,6 +83,13 @@ describe('useIssueStatusMove', () => {
     mocks.moveBoardMaybePickingState.mockResolvedValue(true);
     mocks.mutate.mockResolvedValue(undefined);
     mocks.refreshDetail.mockResolvedValue(undefined);
+    // Default: the Issue has no open sub-issues, so nothing is asked.
+    mocks.resolveStatusCascade.mockImplementation(
+      async (input: { parentOnly: () => Promise<number> }) => ({
+        cascaded: false,
+        revision: await input.parentOnly(),
+      }),
+    );
     mocks.runTask.mockResolvedValue({ success: true });
     mocks.taskDetailMap = {};
     mocks.updateTask.mockResolvedValue('T-9');
@@ -126,6 +135,111 @@ describe('useIssueStatusMove', () => {
     expect(moved).toBe(false);
     expect(mocks.refreshDetail).not.toHaveBeenCalled();
     expect(mocks.mutate).not.toHaveBeenCalled();
+  });
+
+  describe('moving a parent to Done or Canceled', () => {
+    const refreshedEveryDetail = () =>
+      mocks.mutate.mock.calls.some((call) => call[0](['task:detail', 'T-other']) === true);
+
+    it('asks about open sub-issues for Done and Canceled, and for nothing else', async () => {
+      const { result } = renderHook(() => useIssueStatusMove());
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'in_progress' }) });
+      expect(mocks.resolveStatusCascade).not.toHaveBeenCalled();
+
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'done' }) });
+      expect(mocks.resolveStatusCascade).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          status: 'completed',
+          task: { id: 'tsk_9', identifier: 'T-9' },
+        }),
+      );
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'canceled' }) });
+      expect(mocks.resolveStatusCascade).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: 'canceled' }),
+      );
+    });
+
+    it('continues from the cascade revision and refreshes every cached detail on "update all"', async () => {
+      mocks.resolveStatusCascade.mockResolvedValue({ cascaded: true, revision: 12 });
+      const { result } = renderHook(() => useIssueStatusMove());
+      const moved = await result.current({
+        taskIdentifier: 'T-9',
+        target: target({ category: 'done' }),
+      });
+
+      expect(moved).toBe(true);
+      expect(mocks.moveBoardMaybePickingState).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedDomainRevision: 12, targetKey: 'done' }),
+      );
+      // Sub-issue rows live in other Issues' details — all of them are refetched.
+      expect(refreshedEveryDetail()).toBe(true);
+    });
+
+    it('moves only the parent, from its own revision, on "parent only"', async () => {
+      const { result } = renderHook(() => useIssueStatusMove());
+      const moved = await result.current({
+        taskIdentifier: 'T-9',
+        target: target({ category: 'done' }),
+      });
+
+      expect(moved).toBe(true);
+      expect(mocks.moveBoardMaybePickingState).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedDomainRevision: 7, targetKey: 'done' }),
+      );
+      expect(refreshedEveryDetail()).toBe(false);
+      expect(mocks.refreshDetail).toHaveBeenCalledWith('T-9');
+    });
+
+    it('writes nothing when the question is dismissed', async () => {
+      mocks.resolveStatusCascade.mockResolvedValue(undefined);
+      const { result } = renderHook(() => useIssueStatusMove());
+      const moved = await result.current({
+        taskIdentifier: 'T-9',
+        target: target({ category: 'canceled' }),
+      });
+
+      expect(moved).toBe(false);
+      expect(mocks.moveBoardMaybePickingState).not.toHaveBeenCalled();
+      expect(mocks.updateTask).not.toHaveBeenCalled();
+      expect(mocks.mutate).not.toHaveBeenCalled();
+    });
+
+    it('does not write the category a second time for a team-less Issue the cascade already moved', async () => {
+      mocks.find.mockResolvedValue(teamTask({ teamId: null }));
+      mocks.resolveStatusCascade.mockResolvedValue({ cascaded: true, revision: 12 });
+      const { result } = renderHook(() => useIssueStatusMove());
+      const moved = await result.current({
+        taskIdentifier: 'T-9',
+        target: target({ category: 'done' }),
+      });
+
+      expect(moved).toBe(true);
+      expect(mocks.updateTask).not.toHaveBeenCalled();
+      expect(refreshedEveryDetail()).toBe(true);
+    });
+
+    it('skips the question where the board skips it', async () => {
+      // Tied to a provider workflow state: the exact state is chosen instead.
+      mocks.find.mockResolvedValue(teamTask({ workflowStateId: 'linear-state-1' }));
+      const { result } = renderHook(() => useIssueStatusMove());
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'done' }) });
+      // Already Done: picking another Done state is not a move into Done.
+      mocks.find.mockResolvedValue(teamTask({ workflowCategory: 'done' }));
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'done' }) });
+
+      expect(mocks.resolveStatusCascade).not.toHaveBeenCalled();
+    });
+
+    it('reports a failed sub-issue check and moves nothing', async () => {
+      mocks.resolveStatusCascade.mockRejectedValue(new Error('offline'));
+      const { result } = renderHook(() => useIssueStatusMove());
+
+      await expect(
+        result.current({ taskIdentifier: 'T-9', target: target({ category: 'done' }) }),
+      ).rejects.toThrow('offline');
+      expect(mocks.toastError).toHaveBeenCalledTimes(1);
+      expect(mocks.moveBoardMaybePickingState).not.toHaveBeenCalled();
+    });
   });
 
   it('keeps the plain category write for tasks without a team', async () => {

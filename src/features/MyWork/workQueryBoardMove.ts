@@ -72,38 +72,59 @@ export const moveBoardMaybePickingState = async (input: {
   }
 };
 
-const applyWorkQueryBoardCascade = async (plan: {
+/**
+ * The "also complete/cancel its open sub-issues?" step every surface shares
+ * when an Issue moves to Done or Canceled. With no open sub-issues there is
+ * nothing to ask. Otherwise the dialog decides: "update all" commits the whole
+ * family through `updateStatusCascade`; "parent only" runs the caller's own
+ * write. Resolves with the revision to continue from, or `undefined` when the
+ * user dismissed the dialog and nothing was written.
+ */
+export const resolveStatusCascade = async (input: {
+  /** The caller's own way to move just this Issue; returns its resulting revision. */
+  parentOnly: () => Promise<number>;
   status: 'canceled' | 'completed';
-  task: WorkQueryBoardTask;
-}): Promise<number | undefined> => {
-  const tree = await taskService.getTaskTree(plan.task.identifier);
+  task: { id: string; identifier: string };
+}): Promise<{ cascaded: boolean; revision: number } | undefined> => {
+  const tree = await taskService.getTaskTree(input.task.identifier);
   const root = tree.data.find(
-    (item) => item.id === plan.task.id || item.identifier === plan.task.identifier,
+    (item) => item.id === input.task.id || item.identifier === input.task.identifier,
   );
   if (!root) throw new Error('Task tree did not include its requested root');
   const openSubtasks = getOpenSubtasks(
     tree.data.filter((item) => item.id !== root.id && item.identifier !== root.identifier),
   );
-  const applyStatus = async (includeSubtasks: boolean) => {
-    if (includeSubtasks && openSubtasks.length > 0) {
-      const result = await taskService.updateStatusCascade(plan.task.identifier, plan.status);
-      return result.data.task.domainRevision;
-    }
-    await taskService.update(plan.task.id, { status: plan.status });
-    const current = await taskService.find(plan.task.id);
-    return current.data.domainRevision;
-  };
-  if (openSubtasks.length === 0) return applyStatus(false);
-  let revision: number | undefined;
+  if (openSubtasks.length === 0) return { cascaded: false, revision: await input.parentOnly() };
+  let outcome: { cascaded: boolean; revision: number } | undefined;
   const confirmed = await createTaskStatusCascadeModal({
     subtasks: openSubtasks,
-    targetStatus: plan.status,
+    targetStatus: input.status,
     onApply: async (includeSubtasks) => {
-      revision = await applyStatus(includeSubtasks);
+      if (!includeSubtasks) {
+        outcome = { cascaded: false, revision: await input.parentOnly() };
+        return;
+      }
+      const result = await taskService.updateStatusCascade(input.task.identifier, input.status);
+      outcome = { cascaded: true, revision: result.data.task.domainRevision };
     },
   });
-  if (!confirmed || revision === undefined) return undefined;
-  return revision;
+  return confirmed ? outcome : undefined;
+};
+
+const applyWorkQueryBoardCascade = async (plan: {
+  status: 'canceled' | 'completed';
+  task: WorkQueryBoardTask;
+}): Promise<number | undefined> => {
+  const outcome = await resolveStatusCascade({
+    parentOnly: async () => {
+      await taskService.update(plan.task.id, { status: plan.status });
+      const current = await taskService.find(plan.task.id);
+      return current.data.domainRevision;
+    },
+    status: plan.status,
+    task: plan.task,
+  });
+  return outcome?.revision;
 };
 
 export const workQueryBoardMoveToastKey = (

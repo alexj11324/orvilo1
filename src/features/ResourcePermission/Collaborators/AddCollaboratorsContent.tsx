@@ -2,7 +2,7 @@
 
 import { MAX_RESOURCE_COLLABORATORS_PER_ADD } from '@orvilo/const';
 import { useHover } from 'ahooks';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckIcon, SearchXIcon, UsersIcon } from 'lucide-react';
 import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,55 +21,14 @@ import type { PermissionResourceType, ResourceAccessLevel } from '@/services/res
 import { useResourceCollaborators } from '../useResourceCollaborators';
 import { useResourcePermission } from '../useResourcePermission';
 
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    padding-block: 12px;
-    padding-inline: 20px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  header: css`
-    padding-block: 4px 12px;
-    padding-inline: 20px;
-  `,
-  list: css`
-    user-select: none;
-
-    overflow-y: auto;
-
-    /* Fill toward 360px, but yield on short viewports so the footer never
-       leaves the screen; 240px keeps ~4 rows visible as the floor. */
-    height: clamp(240px, calc(100dvh - 320px), 360px);
-    padding-block: 0 8px;
-    padding-inline: 12px;
-  `,
-  row: css`
-    cursor: pointer;
-
-    margin-block: 2px;
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: background 0.2s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  rowIndicator: css`
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    margin-inline-start: auto;
-    padding-inline-start: 8px;
-
-    color: ${cssVar.colorPrimary};
-  `,
-  rowSelected: css`
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  footer: 'py-3 px-5 border-bs border-divider',
+  header: 'pbs-1 pbe-3 px-5',
+  list: 'select-none overflow-y-auto h-[clamp(240px,calc(100dvh_-_320px),360px)] pbe-2 px-3',
+  row: 'cursor-pointer my-0.5 py-2.5 px-3 rounded-(--radius-card) transition-[background-color] duration-(--orvilo-motion-mid) ease-in-out motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-1',
+  rowIndicator: 'inline-flex items-center justify-center ms-auto ps-2 text-primary-text',
+  rowSelected: 'bg-selected hover:bg-selected',
+};
 
 /**
  * Structural shape shared by the OSS stub's membership rows and the cloud
@@ -114,9 +73,9 @@ const MemberRow = memo<{
       ref={ref}
       role={'option'}
       tabIndex={0}
-      className={cx(
+      className={cn(
         'flex flex-row items-center gap-3',
-        cx(styles.row, selected && styles.rowSelected),
+        cn(styles.row, selected ? styles.rowSelected : 'hover:bg-accent'),
       )}
       onClick={() => onToggle(member.userId)}
       onKeyDown={(e) => {
@@ -134,8 +93,8 @@ const MemberRow = memo<{
         size={40}
         title={name}
       />
-      <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-        <div className="truncate min-w-0 font-medium">{name}</div>
+      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
+        <div className="truncate min-w-0 text-sm leading-5.5 font-medium">{name}</div>
         {email && email !== name ? (
           <div className="truncate min-w-0 text-xs text-muted-foreground">{email}</div>
         ) : null}
@@ -235,7 +194,7 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
 
     return (
       <div className="flex flex-col">
-        <div className={cx('flex flex-col', styles.header)}>
+        <div className={cn('flex flex-col', styles.header)}>
           <SearchBar
             autoFocus
             placeholder={t('permission.collaborators.addModal.search')}
@@ -245,7 +204,7 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
         </div>
         <div
           aria-multiselectable
-          className={cx('flex flex-col', styles.list)}
+          className={cn('flex flex-col', styles.list)}
           role={'listbox'}
           aria-label={t(
             resourceType === 'agent'
@@ -255,9 +214,9 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
         >
           {isInitialLoading ? (
             [0, 1, 2].map((key) => (
-              <div className={cx('flex flex-row items-center gap-3', styles.row)} key={key}>
-                <Skeleton className="rounded-full" style={{ height: 40, width: 40 }} />
-                <Skeleton style={{ marginBottom: 0, width: 180 }} />
+              <div className={cn('flex flex-row items-center gap-3', styles.row)} key={key}>
+                <Skeleton className="size-10 rounded-full" />
+                <Skeleton className="mbe-0 w-45" />
               </div>
             ))
           ) : filtered.length === 0 ? (
@@ -282,20 +241,21 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
             ))
           )}
         </div>
-        <div className={cx('flex flex-row items-center gap-2', styles.footer)}>
+        <div className={cn('flex flex-row items-center gap-2', styles.footer)}>
           <div className="flex flex-col flex-1">
             {selected.length > 0 ? (
-              <div className="text-(length:--text-dense) text-muted-foreground">
+              <div className="text-xs leading-5 text-muted-foreground">
                 {t('permission.collaborators.addModal.selectedCount', { count: selected.length })}
               </div>
             ) : null}
           </div>
-          <Button variant="outline" onClick={() => close()}>
+          <Button size="normal" variant="outline" onClick={() => close()}>
             {t('cancel', { ns: 'common' })}
           </Button>
           <Button
             disabled={selected.length === 0}
             loading={mutating}
+            size="normal"
             variant="default"
             onClick={handleConfirm}
           >

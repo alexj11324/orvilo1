@@ -1083,6 +1083,106 @@ describe('Task Router Integration', () => {
       expect(await anchored(foreign.data.id)).toEqual(await anchored('task_does_not_exist'));
     });
 
+    it('walks descendants of a looping tree once and stops', async () => {
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({ instruction: 'Second', name: 'Second' });
+      const third = await caller.create({
+        instruction: 'Third',
+        name: 'Third',
+        parentTaskId: second.data.id,
+      });
+      // A corrupt legacy loop: first ⇄ second.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: second.data.id })
+        .where(eq(tasks.id, first.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: first.data.id })
+        .where(eq(tasks.id, second.data.id));
+
+      const descendants = await new TaskModel(serverDB, userId).findAllDescendants(first.data.id);
+
+      expect(descendants.map((task) => task.id).sort()).toEqual(
+        [second.data.id, third.data.id].sort(),
+      );
+    });
+
+    it('moves an issue out of a looping tree instead of hanging on it', async () => {
+      const stuck = await caller.create({ instruction: 'Stuck', name: 'Stuck' });
+      const partner = await caller.create({ instruction: 'Partner', name: 'Partner' });
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const batchParent = await caller.create({ instruction: 'Batch', name: 'Batch parent' });
+      // `stuck` is its own descendant: stuck ⇄ partner.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: partner.data.id })
+        .where(eq(tasks.id, stuck.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: stuck.data.id })
+        .where(eq(tasks.id, partner.data.id));
+
+      const moved = await caller.update({ id: stuck.data.id, parentTaskId: parent.data.id });
+      expect(moved.data.parentTaskId).toBe(parent.data.id);
+
+      // And through the batch write, from the same corrupt starting point.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: partner.data.id })
+        .where(eq(tasks.id, stuck.data.id));
+      const batch = await caller.setParentBatch({
+        parentTaskId: batchParent.data.id,
+        taskIds: [stuck.data.id],
+      });
+      expect(batch.data.map((task) => task.parentTaskId)).toEqual([batchParent.data.id]);
+    });
+
+    it('names a parent whose own chain is unusable differently from a cycle', async () => {
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({ instruction: 'Second', name: 'Second' });
+      const loose = await caller.create({ instruction: 'Loose', name: 'Loose' });
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: second.data.id })
+        .where(eq(tasks.id, first.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: first.data.id })
+        .where(eq(tasks.id, second.data.id));
+
+      // `loose` is not in the loop, so this is not a cycle it would create.
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({ parentTaskId: first.data.id, taskIds: [loose.data.id] }),
+        ),
+      ).toBe('BROKEN_PARENT_CHAIN');
+      expect(
+        await rejectionCode(caller.update({ id: loose.data.id, parentTaskId: first.data.id })),
+      ).toBe('BROKEN_PARENT_CHAIN');
+      // An issue that is in the chain is still a cycle.
+      expect(
+        await rejectionCode(caller.update({ id: second.data.id, parentTaskId: first.data.id })),
+      ).toBe('CYCLE');
+    });
+
+    it('sets a parent and an assignee in one update', async () => {
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const child = await caller.create({ instruction: 'Child', name: 'Child' });
+
+      const updated = await caller.update({
+        assigneeUserId: userId,
+        expectedDomainRevision: await revisionOf(child.data.id),
+        id: child.data.id,
+        parentTaskId: parent.data.id,
+      });
+
+      expect(updated.data).toMatchObject({
+        assigneeUserId: userId,
+        parentTaskId: parent.data.id,
+      });
+    });
+
     it('refuses to extend a parent chain that never reaches a root', async () => {
       const first = await caller.create({ instruction: 'First', name: 'First' });
       const second = await caller.create({ instruction: 'Second', name: 'Second' });

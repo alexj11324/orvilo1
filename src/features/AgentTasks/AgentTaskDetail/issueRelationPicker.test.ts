@@ -84,6 +84,12 @@ describe('relationRejectionKey', () => {
     );
   });
 
+  it('tells a parent with an unusable chain apart from a cycle', () => {
+    expect(relationRejectionKey(rejected('BROKEN_PARENT_CHAIN'), 'parent')).toBe(
+      'taskDetail.relationError.brokenParentChain',
+    );
+  });
+
   it('words a cycle for the link that was attempted', () => {
     expect(relationRejectionKey(rejected('CYCLE'), 'dependency')).toBe(
       'taskDetail.relationError.dependencyCycle',

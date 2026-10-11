@@ -2050,6 +2050,8 @@ export default {
   'taskDetail.picker.selected_other': '{{count}} selected',
   'taskDetail.relationError.alreadyBlocking':
     'These two issues already have a blocking relation. Remove it before marking them as related.',
+  'taskDetail.relationError.brokenParentChain':
+    'The parent issue sits in a chain of parents that is too deep or loops back on itself, so nothing can be put under it. Pick a different parent.',
   'taskDetail.relationError.crossProject':
     'That issue is in another project. Move it into this project first, then link it.',
   'taskDetail.relationError.dependencyCycle':

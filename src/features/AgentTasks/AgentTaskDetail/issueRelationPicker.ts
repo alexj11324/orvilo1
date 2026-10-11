@@ -56,6 +56,7 @@ export const relationPickerRows = (
 /** Stable reasons the server attaches to a refused relation or parent write. */
 const RELATION_REJECTION_CODES = [
   'ALREADY_BLOCKING',
+  'BROKEN_PARENT_CHAIN',
   'CROSS_PROJECT',
   'CYCLE',
   'SELF',
@@ -74,6 +75,7 @@ export const relationRejectionCode = (error: unknown): RelationRejectionCode | u
 
 export type RelationRejectionKey =
   | 'taskDetail.relationError.alreadyBlocking'
+  | 'taskDetail.relationError.brokenParentChain'
   | 'taskDetail.relationError.crossProject'
   | 'taskDetail.relationError.dependencyCycle'
   | 'taskDetail.relationError.parentCycle'
@@ -94,6 +96,9 @@ export const relationRejectionKey = (
   switch (relationRejectionCode(error)) {
     case 'ALREADY_BLOCKING': {
       return 'taskDetail.relationError.alreadyBlocking';
+    }
+    case 'BROKEN_PARENT_CHAIN': {
+      return 'taskDetail.relationError.brokenParentChain';
     }
     case 'CROSS_PROJECT': {
       return 'taskDetail.relationError.crossProject';

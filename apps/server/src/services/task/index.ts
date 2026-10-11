@@ -1213,6 +1213,17 @@ export class TaskService {
     }
   }
 
+  /**
+   * Take the assignee's membership row lock in the caller's transaction.
+   * Every assignment write locks that row before any task-graph lock, so a
+   * caller that needs both and opens its own transaction takes this first.
+   * No-op outside a workspace or without an assignee, like the write itself.
+   */
+  async lockAssigneeUser(db: OrviloDatabase, assigneeUserId?: string | null): Promise<void> {
+    if (!assigneeUserId || !this.workspaceId) return;
+    await this.assertAssigneeUserAssignableWithDatabase(db, assigneeUserId, true);
+  }
+
   private async withAssigneeUserLock<T>(
     assigneeUserId: string | null | undefined,
     write: (db: OrviloDatabase) => Promise<T>,

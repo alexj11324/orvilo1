@@ -2430,10 +2430,12 @@ export class TaskModel {
 
   /**
    * Fetch all descendants of a root task using Drizzle select() (returns camelCase fields).
-   * Uses breadth-first traversal with O(depth) queries.
+   * Uses breadth-first traversal with O(depth) queries. Each row is visited
+   * once, so a corrupt tree whose parent pointers loop still terminates.
    */
   async findAllDescendants(rootTaskId: string): Promise<TaskItem[]> {
     const all: TaskItem[] = [];
+    const seen = new Set<string>([rootTaskId]);
     let parentIds = [rootTaskId];
 
     while (parentIds.length > 0) {
@@ -2443,10 +2445,12 @@ export class TaskModel {
         .where(and(inArray(tasks.parentTaskId, parentIds), this.ownership()))
         .orderBy(tasks.sortOrder, tasks.seq);
 
-      if (children.length === 0) break;
+      const fresh = children.filter((child) => !seen.has(child.id));
+      if (fresh.length === 0) break;
 
-      all.push(...children);
-      parentIds = children.map((c) => c.id);
+      for (const child of fresh) seen.add(child.id);
+      all.push(...fresh);
+      parentIds = fresh.map((c) => c.id);
     }
 
     return all;

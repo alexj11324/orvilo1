@@ -44,7 +44,7 @@ import { automationResultDeliveries, taskTopics } from '@/database/schemas/task'
 import { topics } from '@/database/schemas/topic';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentVisibleTo } from '@/database/utils/agent-access';
-import { lockTaskDependencyGraph } from '@/database/utils/taskDependencyLock';
+import { lockTaskDependencyGraphForRows } from '@/database/utils/taskDependencyLock';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
@@ -715,13 +715,25 @@ async function assertParentChainExcludes(
   `);
   const rows = chain.rows as { depth: number; id: string; parent_task_id: string | null }[];
   const chainIds = new Set(rows.map((row) => row.id));
-  // The parent row must be there, and the chain must reach a root in bounds.
-  const reachedRoot = rows.some((row) => row.parent_task_id === null);
-  if (!chainIds.has(parentId) || !reachedRoot || childIds.some((id) => chainIds.has(id))) {
+  // The parent was resolved before the lock; it can have been deleted since.
+  if (!chainIds.has(parentId)) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+  }
+  if (childIds.some((id) => chainIds.has(id))) {
     throw new TRPCError({
       cause: { data: { code: 'CYCLE' satisfies TaskRelationRejectionReason } },
       code: 'BAD_REQUEST',
       message: 'Task cannot be parented to its own descendant',
+    });
+  }
+  // No child is in the chain, but the chain itself is unusable: deeper than
+  // the bound, or looping without ever reaching a root. Refused all the same,
+  // under its own reason — the selection did not cause it.
+  if (!rows.some((row) => row.parent_task_id === null)) {
+    throw new TRPCError({
+      cause: { data: { code: 'BROKEN_PARENT_CHAIN' satisfies TaskRelationRejectionReason } },
+      code: 'BAD_REQUEST',
+      message: 'Parent task has a parent chain that is too deep or loops',
     });
   }
 }
@@ -742,15 +754,10 @@ async function resolveSafeParentTaskId(
     });
   }
 
-  const descendants = await model.findAllDescendants(taskId);
-  if (descendants.some((task) => task.id === parent.id)) {
-    throw new TRPCError({
-      cause: { data: { code: 'CYCLE' satisfies TaskRelationRejectionReason } },
-      code: 'BAD_REQUEST',
-      message: 'Task cannot be parented to its own descendant',
-    });
-  }
-
+  // The cycle check is `assertParentChainExcludes`, run by every caller under
+  // the graph lock: proving the task is not among the parent's raw ancestors
+  // is the same fact as "the parent is not a descendant of the task", without
+  // loading the task's whole subtree.
   const task = await resolveOrThrow(model, taskId);
   if (task.projectId !== parent.projectId) {
     throw new TRPCError({
@@ -2469,9 +2476,20 @@ export const taskRouter = router({
         // Giving an Issue a parent re-validates under the scope's graph lock,
         // in the transaction that writes it. The checks above ran on a snapshot
         // a concurrent parent change could already have invalidated.
+        const parentRow = resolvedParentTaskId
+          ? await resolveOrThrow(model, resolvedParentTaskId)
+          : null;
         const task = resolvedParentTaskId
           ? await ctx.serverDB.transaction(async (tx) => {
-              await lockTaskDependencyGraph(tx, ctx.userId, ctx.workspaceId ?? undefined);
+              // Lock order on every assignment path is member row, then graph:
+              // take the member row here before the graph lock, not after it.
+              await ctx.taskService.lockAssigneeUser(tx, data.assigneeUserId);
+              // Keyed by the rows' own scopes as well as the request's — see
+              // `taskDependencyRowScope`.
+              await lockTaskDependencyGraphForRows(tx, ctx, [
+                resolved,
+                ...(parentRow ? [parentRow] : []),
+              ]);
               await resolveSafeParentTaskId(
                 new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined),
                 resolved.id,
@@ -2558,7 +2576,9 @@ export const taskRouter = router({
           // Serialize with every other tree and graph write in this scope
           // before reading: two requests that would each pass alone cannot
           // both validate against the same stale tree and then both write.
-          await lockTaskDependencyGraph(tx, ctx.userId, ctx.workspaceId ?? undefined);
+          // The rows' own scopes as well as the request's: the caller's unfiled
+          // Issues are writable from several contexts — see `taskDependencyRowScope`.
+          await lockTaskDependencyGraphForRows(tx, ctx, [parent, ...children]);
           const model = new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const rows: TaskItem[] = [];

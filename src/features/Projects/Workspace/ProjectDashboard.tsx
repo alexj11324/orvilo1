@@ -1,18 +1,9 @@
 'use client';
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { memo } from 'react';
 
 import type { ProjectDetail } from '@/store/project';
 
 import ProjectMilestones from './ProjectMilestones';
-
-const styles = createStaticStyles(({ css }) => ({
-  main: css`
-    min-width: 0;
-    margin-block-start: 24px;
-  `,
-}));
 
 interface ProjectDashboardProps {
   detail: ProjectDetail;
@@ -26,7 +17,7 @@ interface ProjectDashboardProps {
  */
 const ProjectDashboard = memo<ProjectDashboardProps>(({ detail }) => {
   return (
-    <div className={cn('flex flex-col', styles.main)} style={{ gap: 24 }}>
+    <div className={'flex flex-col min-w-0 mbs-6 gap-6'}>
       <ProjectMilestones detail={detail} />
     </div>
   );

@@ -313,7 +313,6 @@ tests/                                       # Integration tests
 
 ```bash
 pnpm test       # Run all tests
-pnpm test:watch # Watch mode
 pnpm type-check # Type validation
 ```
 

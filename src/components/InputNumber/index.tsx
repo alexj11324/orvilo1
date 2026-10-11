@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { type ComponentProps, type CSSProperties, memo, type ReactNode } from 'react';
+import { type ComponentProps, type CSSProperties, memo, type ReactNode, useRef } from 'react';
 
 import {
   NumberField,
@@ -31,6 +31,47 @@ export interface InputNumberProps {
   'step'?: number;
   'style'?: CSSProperties;
   'value'?: number | null;
+}
+
+function NumberFieldStepper({
+  direction,
+  onClick,
+  onPointerCancel,
+  onPointerDown,
+  ...props
+}: ComponentProps<typeof NumberFieldIncrement> & { direction: 'decrement' | 'increment' }) {
+  const rejectedTouch = useRef(false);
+  const Stepper = direction === 'increment' ? NumberFieldIncrement : NumberFieldDecrement;
+
+  return (
+    <Stepper
+      {...props}
+      onClick={(event) => {
+        const reject = rejectedTouch.current && event.detail !== 0;
+        rejectedTouch.current = false;
+        if (reject) event.preventBaseUIHandler();
+        onClick?.(event);
+      }}
+      onPointerCancel={(event) => {
+        rejectedTouch.current = false;
+        onPointerCancel?.(event);
+      }}
+      onPointerDown={(event) => {
+        rejectedTouch.current = false;
+        if (event.pointerType === 'touch') {
+          // Touch adjustment can target a button from the gap and move click coordinates.
+          // Hit testing the original point also accepts the shared 44px extension.
+          const hit = event.currentTarget.ownerDocument.elementFromPoint(
+            event.clientX,
+            event.clientY,
+          );
+          rejectedTouch.current = !hit || !event.currentTarget.contains(hit);
+          if (rejectedTouch.current) event.preventBaseUIHandler();
+        }
+        onPointerDown?.(event);
+      }}
+    />
+  );
 }
 
 const InputNumber = memo<InputNumberProps>(
@@ -66,24 +107,36 @@ const InputNumber = memo<InputNumberProps>(
         <NumberFieldInput className={controls ? 'px-0' : undefined} placeholder={placeholder} />
         {controls && (
           <div className="grid h-full w-5 shrink-0 grid-rows-2 border-s border-input pointer-coarse:hidden">
-            <NumberFieldIncrement className="rounded-none rounded-se-(--radius-input) px-0 text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent">
-              <ChevronUp className="size-3" />
-            </NumberFieldIncrement>
-            <NumberFieldDecrement className="rounded-none rounded-ee-(--radius-input) px-0 text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent">
-              <ChevronDown className="size-3" />
-            </NumberFieldDecrement>
+            <NumberFieldStepper
+              className="rounded-none rounded-se-(--radius-input) px-0 text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent"
+              direction="increment"
+            >
+              <ChevronUp />
+            </NumberFieldStepper>
+            <NumberFieldStepper
+              className="rounded-none rounded-ee-(--radius-input) px-0 text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent"
+              direction="decrement"
+            >
+              <ChevronDown />
+            </NumberFieldStepper>
           </div>
         )}
       </NumberFieldGroup>
       {controls && (
         // 40px controls with an 8px gap keep the shared 44px touch targets separate.
         <div className="hidden w-full items-center justify-center gap-2 pointer-coarse:flex">
-          <NumberFieldDecrement className="size-10 rounded-(--radius-input) border border-input text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent">
+          <NumberFieldStepper
+            className="size-10 rounded-(--radius-input) border border-input text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent"
+            direction="decrement"
+          >
             <ChevronDown className="size-4" />
-          </NumberFieldDecrement>
-          <NumberFieldIncrement className="size-10 rounded-(--radius-input) border border-input text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent">
+          </NumberFieldStepper>
+          <NumberFieldStepper
+            className="size-10 rounded-(--radius-input) border border-input text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-disabled:hover:bg-transparent"
+            direction="increment"
+          >
             <ChevronUp className="size-4" />
-          </NumberFieldIncrement>
+          </NumberFieldStepper>
         </div>
       )}
     </NumberField>

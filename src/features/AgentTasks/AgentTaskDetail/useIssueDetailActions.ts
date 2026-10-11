@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 
 import { usePermission } from '@/hooks/usePermission';
 import { mutate } from '@/libs/swr';
+import { isTaskDetailKey } from '@/libs/swr/keys';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
@@ -61,20 +62,14 @@ export const useIssueDetailActions = () => {
       identifier: detailIdentifier,
       kind: 'parentOf',
       onChanged: async () => {
-        await Promise.all([taskId ? refreshTaskDetail(taskId) : undefined, refreshTaskList()]);
+        // A picked Issue may have been moved out of another parent, whose cached
+        // detail still lists it — refetch every cached detail, not just this one.
+        await Promise.all([mutate(isTaskDetailKey), refreshTaskList()]);
       },
       taskId: detailId!,
       title: t('taskDetail.subIssue.addExistingTitle', { ns: 'chat' }),
     });
-  }, [
-    canAddExistingSubIssues,
-    detailId,
-    detailIdentifier,
-    domainRevision,
-    refreshTaskDetail,
-    refreshTaskList,
-    taskId,
-  ]);
+  }, [canAddExistingSubIssues, detailId, detailIdentifier, domainRevision, refreshTaskList]);
 
   const addResource = useCallback(
     (kind: IssueResourceKind) => {

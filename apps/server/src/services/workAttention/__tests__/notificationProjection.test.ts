@@ -162,7 +162,7 @@ describe('real Issue notification producers and projection', () => {
   const feed = (userId: string) =>
     new NotificationModel(db, userId, { workspaceId: wsId }).listFeed();
 
-  it('honors personal event switches inside a workspace and preserves other recipients', async () => {
+  it('retains status and review inbox records despite legacy personal and workspace switches', async () => {
     await db.insert(userSettings).values({
       id: subscriber,
       notification: { inbox: { items: { work: { task_status_changed: false } } } },
@@ -185,14 +185,34 @@ describe('real Issue notification producers and projection', () => {
       payload: { userId: owner },
     });
     await project();
-    expect(await feed(subscriber)).toHaveLength(0);
+    expect(await feed(subscriber)).toEqual([
+      expect.objectContaining({ type: 'task_status_changed' }),
+    ]);
     expect(await feed(owner)).toHaveLength(0);
     expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_review' })]);
     await project();
     expect(await feed(author)).toHaveLength(1);
   });
 
-  it('honors an inbox channel opt-out for assignment and keeps unauthorized users out', async () => {
+  it('retains assignments despite legacy workspace inbox opt-out', async () => {
+    await db.insert(workspaceUserSettings).values({
+      workspaceId: wsId,
+      userId: author,
+      preference: { notification: { inbox: { enabled: false } } },
+    });
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'workspace-disabled-assignment',
+      eventType: 'task.assigned',
+      workspaceId: wsId,
+      payload: { userId: owner },
+    });
+    await project();
+    expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_assigned' })]);
+  });
+
+  it('retains assignments despite legacy personal inbox opt-out and keeps unauthorized users out', async () => {
     await db.insert(userSettings).values({
       id: author,
       notification: { inbox: { enabled: false } },
@@ -206,7 +226,7 @@ describe('real Issue notification producers and projection', () => {
       payload: { userId: owner, assigneeUserId: outsider },
     });
     await project();
-    expect(await feed(author)).toHaveLength(0);
+    expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_assigned' })]);
     expect(await feed(outsider)).toHaveLength(0);
   });
 

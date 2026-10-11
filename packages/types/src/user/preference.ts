@@ -69,11 +69,10 @@ export interface WorkspaceUserPreference {
   /** Per-member Agent/Chat runtime mode for shared workspace agents. */
   agentModeOverrides?: Record<string /* agentId */, boolean>;
   /**
-   * This member's notification preferences for workspace-scoped scenarios
-   * (the `workspace` category of the scenario registry). Same shape as the
-   * personal `user_settings.notification` bag; missing = every workspace
-   * notification enabled. Workspace notifications consult only this bag —
-   * personal notification settings no longer apply to them.
+   * Legacy notification preferences, retained for storage/API compatibility.
+   * Inbox records are always kept for relevant events. External notification
+   * delivery uses personal user_settings.notification; this workspace bag
+   * does not override it.
    */
   notification?: NotificationSettings;
   /** This member's default Orchestrator in this workspace; null clears it. */

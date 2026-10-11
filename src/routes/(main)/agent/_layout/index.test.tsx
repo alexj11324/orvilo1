@@ -13,6 +13,7 @@ vi.mock('react-router', async () => {
   return {
     ...actual,
     Outlet: () => <div data-testid="agent-layout-outlet">outlet</div>,
+    useLocation: () => ({ pathname: '/agent/agt_1' }),
   };
 });
 

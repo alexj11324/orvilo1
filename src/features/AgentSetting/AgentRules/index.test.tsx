@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
+vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('@/features/SelfLearning/hooks', () => ({
   useExpertiseOverview: () => mocks.overview,
 }));

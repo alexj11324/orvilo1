@@ -11,6 +11,7 @@ import urlJoin from 'url-join';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import { FormGroup } from '@/components/GroupForm';
 import { buttonVariants } from '@/components/ui/button';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useExpertiseOverview } from '@/features/SelfLearning/hooks';
 import { useAgentStore } from '@/store/agent';
 
@@ -49,7 +50,12 @@ const AgentRules = memo(() => {
     [domains],
   );
 
-  const openPath = activeAgentId ? urlJoin('/agent', activeAgentId, 'self-evolving') : undefined;
+  // The rules page is withheld with the built-in harness; the rows then only list.
+  const selfEvolvingOffered = useBuiltinHarnessOffered();
+  const openPath =
+    activeAgentId && selfEvolvingOffered
+      ? urlJoin('/agent', activeAgentId, 'self-evolving')
+      : undefined;
 
   return (
     <FormGroup gap={16} title={t('agentTab.rules')} variant={'borderless'}>

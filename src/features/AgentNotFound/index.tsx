@@ -3,11 +3,12 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { type FC, memo, type PropsWithChildren, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router';
+import { useLocation, useParams } from 'react-router';
 
 import NotFound from '@/components/404';
 import { useDefaultAgentState } from '@/features/DefaultAgent/useDefaultAgent';
 import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
+import { isSelfEvolvingPath } from '@/features/SelfLearning/availability';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useAgentStore } from '@/store/agent';
@@ -79,6 +80,9 @@ export const AgentRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children
     ready,
   });
   const forwardTo = access.kind === 'forward' ? access.agentId : undefined;
+  const { pathname } = useLocation();
+  const leaveSelfEvolving =
+    !builtinOffered && access.kind === 'open' && isSelfEvolvingPath(pathname);
 
   // Keyed on the route too: the inbox slug is swapped for the agent's id by
   // AgentIdSync, which lands on another built-in route with the same target.
@@ -86,7 +90,11 @@ export const AgentRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children
     if (forwardTo) navigate(`/agent/${forwardTo}`, { replace: true });
   }, [aid, forwardTo, navigate]);
 
-  if (access.kind === 'pending' || access.kind === 'forward') return null;
+  useEffect(() => {
+    if (leaveSelfEvolving) navigate(`/agent/${aid}`, { replace: true });
+  }, [aid, leaveSelfEvolving, navigate]);
+
+  if (access.kind === 'pending' || access.kind === 'forward' || leaveSelfEvolving) return null;
   if (access.kind === 'withheld')
     return (
       <NotFound

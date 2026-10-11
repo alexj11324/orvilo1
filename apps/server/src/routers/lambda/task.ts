@@ -9,7 +9,7 @@ import type {
 } from '@orvilo/types';
 import { TASK_ATTENTION_REASONS } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
@@ -676,6 +676,54 @@ async function resolveActivityActor(
 
 /** Upper bound for one "add existing sub-issues" submit. */
 const SET_PARENT_BATCH_MAX = 50;
+/** Longest task id or identifier the batch accepts per entry. */
+const TASK_REF_MAX_LENGTH = 128;
+/** A sub-issue tree deeper than this is treated as corrupt and never extended. */
+const PARENT_CHAIN_MAX_DEPTH = 200;
+
+/**
+ * Set-level cycle guard for a batch parent write. `resolveSafeParentTaskId`
+ * walks down from each child through the Issues the caller can read, so an
+ * Issue hidden from the caller in the middle of the chain would hide a cycle.
+ * This walks up from the parent over the raw rows instead: if any Issue about
+ * to become a child is the parent or one of its ancestors, the batch is
+ * refused. The walk is bounded by tree depth, and a chain that does not end
+ * within the bound is refused rather than waved through.
+ */
+async function assertParentChainExcludes(
+  db: Pick<OrviloDatabase, 'execute'>,
+  parentId: string,
+  childIds: string[],
+) {
+  if (childIds.includes(parentId)) {
+    throw new TRPCError({
+      cause: { data: { code: 'SELF' satisfies TaskRelationRejectionReason } },
+      code: 'BAD_REQUEST',
+      message: 'Task cannot be parented to itself',
+    });
+  }
+  const chain = await db.execute(sql`
+    WITH RECURSIVE chain(id, parent_task_id, depth) AS (
+      SELECT t.id, t.parent_task_id, 0 FROM tasks t WHERE t.id = ${parentId}
+      UNION ALL
+      SELECT p.id, p.parent_task_id, c.depth + 1 FROM tasks p
+      JOIN chain c ON p.id = c.parent_task_id
+      WHERE c.depth < ${PARENT_CHAIN_MAX_DEPTH}
+    )
+    SELECT id, parent_task_id, depth FROM chain
+  `);
+  const rows = chain.rows as { depth: number; id: string; parent_task_id: string | null }[];
+  const chainIds = new Set(rows.map((row) => row.id));
+  // The parent row must be there, and the chain must reach a root in bounds.
+  const reachedRoot = rows.some((row) => row.parent_task_id === null);
+  if (!chainIds.has(parentId) || !reachedRoot || childIds.some((id) => chainIds.has(id))) {
+    throw new TRPCError({
+      cause: { data: { code: 'CYCLE' satisfies TaskRelationRejectionReason } },
+      code: 'BAD_REQUEST',
+      message: 'Task cannot be parented to its own descendant',
+    });
+  }
+}
 
 async function resolveSafeParentTaskId(
   model: TaskModel,
@@ -2359,6 +2407,11 @@ export const taskRouter = router({
           parentTaskId === undefined
             ? undefined
             : await resolveSafeParentTaskId(model, resolved.id, parentTaskId);
+        // The check above only sees Issues the caller can read; this one walks
+        // the raw parent chain, so a hidden Issue in between cannot hide a cycle.
+        if (resolvedParentTaskId) {
+          await assertParentChainExcludes(ctx.serverDB, resolvedParentTaskId, [resolved.id]);
+        }
 
         const updateData = {
           ...data,
@@ -2455,8 +2508,11 @@ export const taskRouter = router({
   setParentBatch: taskProcedureWrite
     .input(
       z.object({
-        parentTaskId: z.string(),
-        taskIds: z.array(z.string()).min(1).max(SET_PARENT_BATCH_MAX),
+        parentTaskId: z.string().min(1).max(TASK_REF_MAX_LENGTH),
+        taskIds: z
+          .array(z.string().min(1).max(TASK_REF_MAX_LENGTH))
+          .min(1)
+          .max(SET_PARENT_BATCH_MAX),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -2486,6 +2542,13 @@ export const taskRouter = router({
           const model = new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
           const rows: TaskItem[] = [];
+          // Validate the selection as a set against the rows this transaction
+          // sees, before any of them is written.
+          await assertParentChainExcludes(
+            tx,
+            parent.id,
+            children.map((child) => child.id),
+          );
           for (const child of children) {
             const parentTaskId = await resolveSafeParentTaskId(model, child.id, parent.id);
             const row = await taskService.updateTaskWithAssigneeLock(

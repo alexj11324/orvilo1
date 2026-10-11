@@ -966,6 +966,75 @@ describe('Task Router Integration', () => {
       expect((await caller.find({ id: loose.data.id })).data.parentTaskId).toBeNull();
     });
 
+    it('refuses a cycle that runs through an issue the caller cannot read', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const otherCaller = taskRouter.createCaller(createTestContext(otherUserId));
+      const top = await caller.create({ instruction: 'Top', name: 'Top' });
+      const hidden = await otherCaller.create({ instruction: 'Hidden', name: 'Hidden' });
+      const bottom = await caller.create({ instruction: 'Bottom', name: 'Bottom' });
+      const loose = await caller.create({ instruction: 'Loose', name: 'Loose' });
+      // top → hidden → bottom, where the caller cannot read the middle Issue,
+      // so a walk down from `top` through readable Issues never reaches `bottom`.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: top.data.id })
+        .where(eq(tasks.id, hidden.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: hidden.data.id })
+        .where(eq(tasks.id, bottom.data.id));
+
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({
+            parentTaskId: bottom.data.id,
+            taskIds: [loose.data.id, top.data.id],
+          }),
+        ),
+      ).toBe('CYCLE');
+      expect(
+        await rejectionCode(caller.update({ id: top.data.id, parentTaskId: bottom.data.id })),
+      ).toBe('CYCLE');
+      expect((await caller.find({ id: loose.data.id })).data.parentTaskId).toBeNull();
+      expect((await caller.find({ id: top.data.id })).data.parentTaskId).toBeNull();
+    });
+
+    it('refuses to extend a parent chain that never reaches a root', async () => {
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({ instruction: 'Second', name: 'Second' });
+      const loose = await caller.create({ instruction: 'Loose', name: 'Loose' });
+      // A corrupt legacy loop: first ⇄ second.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: second.data.id })
+        .where(eq(tasks.id, first.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: first.data.id })
+        .where(eq(tasks.id, second.data.id));
+
+      await expect(
+        caller.setParentBatch({ parentTaskId: first.data.id, taskIds: [loose.data.id] }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect((await caller.find({ id: loose.data.id })).data.parentTaskId).toBeNull();
+    });
+
+    it('bounds the batch and the ids it accepts', async () => {
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      await expect(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [] }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        caller.setParentBatch({
+          parentTaskId: parent.data.id,
+          taskIds: Array.from({ length: 51 }, (_, index) => `task-${index}`),
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: ['x'.repeat(129)] }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    });
+
     it('rejects a batch that crosses a project boundary with a stable reason', async () => {
       const projectId = await seedProject('pa');
       const parent = await caller.create({ instruction: 'Parent', name: 'Parent', projectId });
@@ -1004,7 +1073,9 @@ describe('Task Router Integration', () => {
         caller.create({ instruction: name, name: `Pick ${name}`, projectId, ...extra });
       const grandparent = await make('grandparent');
       const anchor = await make('anchor', { parentTaskId: grandparent.data.id });
-      await make('child', { parentTaskId: anchor.data.id });
+      const child = await make('child', { parentTaskId: anchor.data.id });
+      // Two levels down: the exclusion follows the whole subtree, not one level.
+      await make('grandchild', { parentTaskId: child.data.id });
       const otherParent = await make('other parent');
       await make('adopted', { parentTaskId: otherParent.data.id });
       await make('free');
@@ -1030,6 +1101,7 @@ describe('Task Router Integration', () => {
         'Pick adopted',
         'Pick child',
         'Pick free',
+        'Pick grandchild',
         'Pick grandparent',
         'Pick other parent',
       ]);
@@ -1046,9 +1118,17 @@ describe('Task Router Integration', () => {
       expect(hits).toEqual([
         expect.objectContaining({ parentIdentifier: otherParent.data.identifier }),
       ]);
+      // The lookup id is bounded like any other client-supplied reference.
+      await expect(
+        search({
+          eligibleFor: { relation: 'child', taskId: 'x'.repeat(129) },
+          query: 'Pick',
+          type: 'task',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
       // An unscoped search is unchanged: every project, the anchor included.
       const unscoped = (await search({ limitPerType: 50, query: 'Pick', type: 'task' })).data;
-      expect(unscoped).toHaveLength(7);
+      expect(unscoped).toHaveLength(8);
     });
 
     it('names why a dependency was refused with a stable reason code', async () => {

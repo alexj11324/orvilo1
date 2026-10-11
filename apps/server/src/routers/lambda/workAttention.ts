@@ -299,38 +299,35 @@ const workAttentionProcedure = wsCompatProcedure.use(serverDatabase).use(async (
   });
 });
 
-/** Ancestor walks stop here even on a corrupt (cyclic) legacy tree. */
-const RELATION_ANCESTOR_WALK_MAX = 100;
-
 /**
  * The project an Issue's relations must stay inside, plus the Issues that can
  * never take the requested link: itself always; for a new sub-issue its own
  * ancestors (a cycle) and its existing descendants; for a new parent its
- * descendants (a cycle) and the parent it already has.
+ * descendants (a cycle) and the parent it already has. The tree exclusions
+ * are expressed inside the search statement — nothing is walked here.
  */
 const resolveRelationSearchScope = async (
   taskModel: TaskModel,
   eligibleFor: { relation: 'child' | 'dependency' | 'parent'; taskId: string },
-): Promise<{ excludeIds: string[]; projectId: string | null }> => {
+) => {
   const anchor = await taskModel.resolve(eligibleFor.taskId);
   if (!anchor) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
-  const excludeIds = new Set<string>([anchor.id]);
-  if (eligibleFor.relation !== 'dependency') {
-    for (const task of await taskModel.findAllDescendants(anchor.id)) excludeIds.add(task.id);
-  }
-  if (eligibleFor.relation === 'parent' && anchor.parentTaskId) {
-    excludeIds.add(anchor.parentTaskId);
-  }
-  if (eligibleFor.relation === 'child') {
-    let parentId = anchor.parentTaskId;
-    for (let step = 0; parentId && step < RELATION_ANCESTOR_WALK_MAX; step += 1) {
-      if (excludeIds.has(parentId)) break;
-      excludeIds.add(parentId);
-      parentId = (await taskModel.findById(parentId))?.parentTaskId ?? null;
-    }
-  }
-  return { excludeIds: [...excludeIds], projectId: anchor.projectId ?? null };
+  const projectId = anchor.projectId ?? null;
+  if (eligibleFor.relation === 'dependency') return { excludeIds: [anchor.id], projectId };
+  return {
+    // `excludeAncestorsOf` covers the anchor itself for a new sub-issue.
+    excludeAncestorsOf: eligibleFor.relation === 'child' ? anchor.id : undefined,
+    excludeDescendantsOf: anchor.id,
+    excludeIds:
+      eligibleFor.relation === 'parent'
+        ? [anchor.id, ...(anchor.parentTaskId ? [anchor.parentTaskId] : [])]
+        : [],
+    projectId,
+  };
 };
+
+/** Longest task id or identifier a relation lookup accepts. */
+const TASK_REF_MAX_LENGTH = 128;
 
 const organizeProcedure = workAttentionProcedure.use(withScopedPermission('notification:organize'));
 const taskWriteProcedure = workAttentionProcedure.use(withScopedPermission('agent:update'));
@@ -786,7 +783,7 @@ export const workAttentionRouter = router({
         eligibleFor: z
           .object({
             relation: z.enum(['child', 'dependency', 'parent']),
-            taskId: z.string(),
+            taskId: z.string().min(1).max(TASK_REF_MAX_LENGTH),
           })
           .optional(),
         query: z.string().trim().min(1).max(200),

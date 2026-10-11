@@ -2035,7 +2035,15 @@ export class WorkQueryModel {
      * no project) and drop Issues that can never be linked, so the page of
      * results is not spent on rows the write would refuse.
      */
-    scope?: { excludeIds?: string[]; projectId: string | null },
+    scope?: {
+      /** Drop this Issue and every Issue above it in the sub-issue tree. */
+      excludeAncestorsOf?: string;
+      /** Drop every Issue below this one in the sub-issue tree. */
+      excludeDescendantsOf?: string;
+      /** A handful of known ids; tree-sized sets use the two walks above. */
+      excludeIds?: string[];
+      projectId: string | null;
+    },
   ) => {
     const q = needle.trim();
     if (!q) return [];
@@ -2059,6 +2067,33 @@ export class WorkQueryModel {
               : eq(tasks.projectId, scope.projectId)
             : undefined,
           scope?.excludeIds?.length ? notInArray(tasks.id, scope.excludeIds) : undefined,
+          // Both walks run inside this one statement, so a large subtree is
+          // never loaded into memory or sent back as a parameter list. UNION
+          // (not UNION ALL) ends the recursion even on a corrupt cyclic tree.
+          scope?.excludeAncestorsOf
+            ? sql`${tasks.id} NOT IN (
+                WITH RECURSIVE chain(id, parent_task_id) AS (
+                  SELECT a.id, a.parent_task_id FROM tasks a
+                  WHERE a.id = ${scope.excludeAncestorsOf}
+                  UNION
+                  SELECT p.id, p.parent_task_id FROM tasks p
+                  JOIN chain c ON p.id = c.parent_task_id
+                )
+                SELECT id FROM chain
+              )`
+            : undefined,
+          scope?.excludeDescendantsOf
+            ? sql`${tasks.id} NOT IN (
+                WITH RECURSIVE subtree(id) AS (
+                  SELECT d.id FROM tasks d
+                  WHERE d.parent_task_id = ${scope.excludeDescendantsOf}
+                  UNION
+                  SELECT n.id FROM tasks n
+                  JOIN subtree s ON n.parent_task_id = s.id
+                )
+                SELECT id FROM subtree
+              )`
+            : undefined,
           or(
             sql`${tasks.name} ILIKE ${pattern} ESCAPE '\\'`,
             sql`${tasks.identifier} ILIKE ${pattern} ESCAPE '\\'`,

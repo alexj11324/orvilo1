@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   GOAL_DISPATCH_HELD_KEY,
+  ISSUE_DISPATCH_HELD_EARLIER_KEY,
   ISSUE_DISPATCH_HELD_KEY,
   resolveGoalDispatchNotice,
   resolveIssueDispatchNotices,
@@ -51,10 +52,29 @@ describe('resolveIssueDispatchNotices', () => {
     ).toEqual([{ key: ISSUE_DISPATCH_HELD_KEY }]);
   });
 
-  it('does not present a leftover admission reason as current once admission is enabled', () => {
+  // The gate is computed for the viewer; intake is admitted under another
+  // identity, so the dispatch can really be waiting on admission while the
+  // payload reads `enabled`. It is explained, but not as the current gate.
+  it('explains a dispatch still waiting on admission without claiming the gate is closed', () => {
     expect(
       resolveIssueDispatchNotices({
         dispatchPhase: 'waiting',
+        dispatchWaitingReason: 'caid_dispatch_disabled',
+        orchestrationAdmission: 'enabled',
+      }),
+    ).toEqual([{ key: ISSUE_DISPATCH_HELD_EARLIER_KEY }]);
+    expect(
+      resolveIssueDispatchNotices({
+        dispatchPhase: 'waiting',
+        dispatchWaitingReason: 'caid_dispatch_disabled',
+      }),
+    ).toEqual([{ key: ISSUE_DISPATCH_HELD_EARLIER_KEY }]);
+  });
+
+  it('says nothing about admission for a queued dispatch once the gate is open', () => {
+    expect(
+      resolveIssueDispatchNotices({
+        dispatchPhase: 'requested',
         dispatchWaitingReason: 'caid_dispatch_disabled',
         orchestrationAdmission: 'enabled',
       }),
@@ -110,17 +130,20 @@ describe('resolveIssueDispatchNotices', () => {
     ]);
   });
 
-  it('shows both the admission hold and a different persisted reason', () => {
+  it("shows only the dispatch's own reason when it has one, even while admission is disabled", () => {
     expect(
       resolveIssueDispatchNotices({
         dispatchPhase: 'waiting',
         dispatchWaitingReason: 'no_eligible_agent',
         orchestrationAdmission: 'disabled',
       }),
-    ).toEqual([
-      { key: ISSUE_DISPATCH_HELD_KEY },
-      { key: 'taskDetail.dispatchNotice.reason.noAgent' },
-    ]);
+    ).toEqual([{ key: 'taskDetail.dispatchNotice.reason.noAgent' }]);
+  });
+
+  it('shows the admission hold for a waiting dispatch that carries no reason', () => {
+    expect(
+      resolveIssueDispatchNotices({ dispatchPhase: 'waiting', orchestrationAdmission: 'disabled' }),
+    ).toEqual([{ key: ISSUE_DISPATCH_HELD_KEY }]);
   });
 
   it('ignores a reason left on a dispatch that is no longer waiting', () => {

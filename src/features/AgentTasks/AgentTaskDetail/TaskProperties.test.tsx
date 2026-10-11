@@ -267,6 +267,88 @@ describe('TaskProperties', () => {
     }
   });
 
+  it('always shows Execution once an agent is assigned, as "not started" before any run', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.agentId = 'agent-1';
+    detail.workflowCategory = 'todo';
+    try {
+      render(<TaskProperties />);
+      const execution = screen.getByRole('group', { name: 'taskDetail.executionStatus' });
+      expect(execution.textContent).toContain('taskDetail.execution.view.notStarted');
+      expect(execution.textContent).toContain('taskDetail.execution.hint.moveToStart');
+      // Starting is the status move; there is no button for it here.
+      expect(execution.querySelector('button')).toBeNull();
+    } finally {
+      delete detail.agentId;
+      delete detail.workflowCategory;
+    }
+  });
+
+  it('says an In Progress Issue with no agent needs one', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.workflowCategory = 'in_progress';
+    try {
+      render(<TaskProperties />);
+      const execution = screen.getByRole('group', { name: 'taskDetail.executionStatus' });
+      expect(execution.textContent).toContain('taskDetail.execution.view.needsAgent');
+      expect(execution.textContent).toContain('taskDetail.execution.hint.needsAgent');
+    } finally {
+      delete detail.workflowCategory;
+    }
+  });
+
+  it('reads a succeeded run that is not accepted yet differently from Done', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.agentId = 'agent-1';
+    detail.dispatchPhase = 'succeeded';
+    detail.status = 'paused';
+    detail.workflowCategory = 'in_review';
+    try {
+      const { unmount } = render(<TaskProperties />);
+      expect(screen.getByText('taskDetail.execution.view.awaitingAcceptance')).toBeTruthy();
+      unmount();
+
+      detail.status = 'completed';
+      detail.workflowCategory = 'done';
+      render(<TaskProperties />);
+      expect(screen.queryByText('taskDetail.execution.view.awaitingAcceptance')).toBeNull();
+      expect(screen.getByText('succeeded')).toBeTruthy();
+    } finally {
+      delete detail.agentId;
+      delete detail.dispatchPhase;
+      detail.status = 'backlog';
+      delete detail.workflowCategory;
+    }
+  });
+
+  it('shows why the latest run failed as plain text under the failed state', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    const reason = '<img src=x onerror=alert(1)> **exit 1**';
+    detail.dispatchPhase = 'failed';
+    detail.status = 'failed';
+    detail.workflowCategory = 'in_progress';
+    detail.activities = [{ error: reason, id: 'run-1', seq: 1, status: 'failed', type: 'topic' }];
+    try {
+      const { container } = render(<TaskProperties />);
+      expect(screen.getByTestId('run-failure-reason').textContent).toBe(reason);
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.querySelector('strong')).toBeNull();
+    } finally {
+      delete detail.dispatchPhase;
+      detail.status = 'backlog';
+      delete detail.workflowCategory;
+      delete detail.activities;
+    }
+  });
+
   it('leaves the idle execution property out of the rail without changing compact badges', () => {
     const { unmount } = render(<TaskProperties />);
     expect(screen.queryByText('goalProcess.summary.notStarted')).toBeNull();

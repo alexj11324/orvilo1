@@ -47,6 +47,13 @@ const EXECUTION_STATE_VISUALS: Record<TaskExecutionState, StatusVisual> = {
 interface TaskExecutionBadgeProps {
   /** `task_dispatch.phase` — dispatch truth, wins rank ties in the projection. */
   dispatchPhase?: TaskDispatchPhase | null;
+  /**
+   * An already-projected state, for a caller that resolved it with more
+   * context than this badge has. Skips the projection below.
+   */
+  execution?: TaskExecutionState;
+  /** Replaces the state's default name where the caller can say more. */
+  label?: string;
   /** `task_topics.run_state` — run truth for the current topic. */
   runState?: TaskRunState | null;
   /** Tooltip-only icon (default) or icon + text row. */
@@ -65,16 +72,26 @@ interface TaskExecutionBadgeProps {
  * scheduled properties show that execution has not started.
  */
 const TaskExecutionBadge = memo<TaskExecutionBadgeProps>(
-  ({ dispatchPhase, runState, showLabel, size = 14, status }) => {
+  ({
+    dispatchPhase,
+    execution: projected,
+    label: labelOverride,
+    runState,
+    showLabel,
+    size = 14,
+    status,
+  }) => {
     const { t } = useTranslation('chat');
-    const execution = deriveTaskExecutionState({ dispatchPhase, legacyStatus: status, runState });
+    const execution =
+      projected ?? deriveTaskExecutionState({ dispatchPhase, legacyStatus: status, runState });
     if (!execution)
       return showLabel && (status === 'backlog' || status === 'scheduled') ? (
         <span className={styles.badge}>{t('goalProcess.summary.notStarted')}</span>
       ) : null;
     const visual = EXECUTION_STATE_VISUALS[execution];
     const VisualIcon = visual.icon;
-    const label = t(`taskDetail.execution.${execution}`, { defaultValue: execution });
+    const label =
+      labelOverride ?? t(`taskDetail.execution.${execution}`, { defaultValue: execution });
     const icon = <VisualIcon color={visual.color} size={size} />;
     if (!showLabel)
       return (

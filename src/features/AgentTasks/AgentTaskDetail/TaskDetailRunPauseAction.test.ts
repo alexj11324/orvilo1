@@ -1,13 +1,15 @@
 import type { TaskDetailData } from '@orvilo/types';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement, type ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useTaskStore } from '@/store/task';
 
 import TaskDetailPage from './TaskDetailPage';
 import { formatCountdown, shouldPersistFallbackAssignee } from './TaskDetailRunPauseAction';
+import { TaskDetailScope } from './TaskDetailScope';
+import TaskExecutionSection from './TaskExecutionSection';
 
 const api = vi.hoisted(() => ({
   contractContext: vi.fn(),
@@ -55,6 +57,8 @@ vi.mock('./useActiveTaskDetail', () => ({
   useActiveTaskDetail: () => ({ isNotFound: false, isInitialLoading: false, onRetry: () => {} }),
 }));
 
+afterEach(() => cleanup());
+
 describe('formatCountdown', () => {
   it('keeps the precise countdown for durations shorter than one day', () => {
     expect(formatCountdown((23 * 3600 + 59 * 60 + 59) * 1000)).toEqual({
@@ -85,41 +89,73 @@ describe('shouldPersistFallbackAssignee', () => {
   });
 });
 
-describe('task detail failure recovery', () => {
+const failedTask = {
+  identifier: 'T-5',
+  instruction: 'Verify the recovered task',
+  status: 'failed',
+  agentId: 'journey-agent',
+  dispatchPhase: 'failed',
+  workflowCategory: 'in_progress',
+  dependencies: [],
+} satisfies TaskDetailData;
+
+const seedTask = (patch: Partial<TaskDetailData> = {}) => {
+  useTaskStore.setState({
+    activeTaskId: 'T-6',
+    taskDetailMap: { 'T-5': { ...failedTask, ...patch } },
+    internal_refreshTaskDetail: vi.fn().mockResolvedValue(undefined),
+    refreshTaskList: vi.fn().mockResolvedValue(undefined),
+  });
+};
+
+const renderExecution = () =>
+  render(createElement(TaskDetailScope, { taskId: 'T-5' }, createElement(TaskExecutionSection)));
+
+// Starting, retrying and resuming moved out of the Issue header into the
+// Execution area. Every one of them still takes the contract-checked run.
+describe('Issue execution recovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.runMutation.mockResolvedValue({ success: true });
-    const failedTask = {
-      identifier: 'T-5',
-      instruction: 'Verify the recovered task',
-      status: 'failed',
-      agentId: 'journey-agent',
-      dispatchPhase: 'failed',
-      workflowCategory: 'in_progress',
-      dependencies: [],
-    } satisfies TaskDetailData;
-    useTaskStore.setState({
-      activeTaskId: 'T-6',
-      taskDetailMap: { 'T-5': failedTask },
-      internal_refreshTaskDetail: vi.fn().mockResolvedValue(undefined),
-      refreshTaskList: vi.fn().mockResolvedValue(undefined),
-    });
+    seedTask();
   });
 
   it.each([
-    { status: 'paused', pendingConstraintEdits: false },
-    { status: 'failed', pendingConstraintEdits: true },
-  ])(
-    'offers scoped recovery for a failed dispatch with $status status',
-    async ({ status, pendingConstraintEdits }) => {
-      useTaskStore.setState({
-        taskDetailMap: { 'T-5': { ...useTaskStore.getState().taskDetailMap['T-5'], status } },
-      });
+    {
+      action: 'retry',
+      name: 'a failed dispatch parked as paused',
+      patch: { status: 'paused' },
+      pendingConstraintEdits: false,
+    },
+    {
+      action: 'retry',
+      name: 'a failed run with pending contract edits',
+      patch: { status: 'failed' },
+      pendingConstraintEdits: true,
+    },
+    {
+      action: 'resume',
+      name: 'a stopped run',
+      patch: { dispatchPhase: 'canceled', status: 'paused' },
+      pendingConstraintEdits: true,
+    },
+    {
+      action: 'start',
+      name: 'an In Progress Issue that never ran',
+      patch: { dispatchPhase: null, status: 'backlog' },
+      pendingConstraintEdits: true,
+    },
+  ] as const)(
+    'offers $action for $name through the contract check',
+    async ({ action, patch, pendingConstraintEdits }) => {
+      seedTask(patch);
       api.contractContext.mockResolvedValue({
         data: { pendingConstraintEdits, contract: { revision: 2 } },
       });
-      render(createElement(TaskDetailPage, { taskId: 'T-5' }));
-      await userEvent.click(await screen.findByRole('button', { name: 'taskDetail.runTask' }));
+      renderExecution();
+      await userEvent.click(
+        await screen.findByRole('button', { name: `taskDetail.execution.action.${action}` }),
+      );
 
       expect(api.contractContext).toHaveBeenCalledWith({ id: 'T-5' });
       await waitFor(() => expect(api.runMutation).toHaveBeenCalledTimes(1));
@@ -132,4 +168,59 @@ describe('task detail failure recovery', () => {
       expect(api.confirmModal).toHaveBeenCalledTimes(pendingConstraintEdits ? 1 : 0);
     },
   );
+
+  it('does not run when the pending-contract-edits confirmation is declined', async () => {
+    api.contractContext.mockResolvedValue({
+      data: { pendingConstraintEdits: true, contract: { revision: 2 } },
+    });
+    api.confirmModal.mockImplementationOnce(((options: { onCancel: () => void }) =>
+      options.onCancel()) as never);
+    renderExecution();
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'taskDetail.execution.action.retry' }),
+    );
+
+    await waitFor(() => expect(api.confirmModal).toHaveBeenCalledTimes(1));
+    expect(api.runMutation).not.toHaveBeenCalled();
+  });
+
+  it('holds the action while prerequisites are unfinished', async () => {
+    seedTask({ dependencies: [{ dependsOn: 'T-1', status: 'backlog', type: 'blocks' }] });
+    renderExecution();
+
+    const retry = await screen.findByRole('button', { name: 'taskDetail.execution.action.retry' });
+    expect(retry).toBeDisabled();
+  });
+});
+
+describe('Issue header run control', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    seedTask();
+  });
+
+  it.each(['failed', 'paused', 'backlog', 'completed'])(
+    'offers no way to start a %s Issue from the header',
+    (status) => {
+      seedTask({ status });
+      render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+
+      expect(screen.queryByRole('button')).toBeNull();
+    },
+  );
+
+  it('keeps Stop in the header while a run is in progress', () => {
+    seedTask({ dispatchPhase: 'running', status: 'running' });
+    render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+
+    expect(screen.getByRole('button', { name: 'taskDetail.stopTask' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'taskDetail.runTask' })).toBeNull();
+  });
+
+  it('keeps the schedule control in the header for a scheduled Issue', () => {
+    seedTask({ automationMode: 'schedule', dispatchPhase: null, status: 'scheduled' });
+    render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+
+    expect(screen.getByRole('button', { name: 'taskDetail.cancelSchedule' })).toBeTruthy();
+  });
 });

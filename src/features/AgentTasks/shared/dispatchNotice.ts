@@ -5,14 +5,19 @@ import type { TaskDispatchPhase } from '@orvilo/types';
  *
  * Two independent signals, and neither is the other:
  * - `orchestrationAdmission` is the current gate for NEW automatic dispatches
- *   in this workspace. It says nothing about runs already in flight, and runs
- *   the user starts by hand are not gated at all.
+ *   in this workspace, computed for the person viewing. It says nothing about
+ *   runs already in flight. Automatic intake is admitted under a different
+ *   identity, so this value can read `enabled` while a dispatch still waits on
+ *   admission.
  * - `dispatchWaitingReason` is the reason persisted on the active dispatch. It
  *   can outlive its cause: a dispatch held while admission was closed keeps
  *   that reason until the next sweep re-drives it.
  *
- * So the admission line only shows while the gate is closed, and a leftover
- * admission reason is never presented as the current state once it is open.
+ * So one line is shown, the most specific one that is true: the dispatch's own
+ * reason when it has one; otherwise the admission line while the gate is
+ * closed. A dispatch still waiting on admission while the gate reads open is
+ * neither hidden nor described as the current workspace state — it says what
+ * held it.
  */
 
 type OrchestrationAdmission = 'enabled' | 'disabled';
@@ -26,6 +31,7 @@ export interface DispatchNoticeCopy {
 
 export const GOAL_DISPATCH_HELD_KEY = 'goalProcess.frontier.dispatchHeld';
 export const ISSUE_DISPATCH_HELD_KEY = 'taskDetail.dispatchNotice.admissionDisabled';
+export const ISSUE_DISPATCH_HELD_EARLIER_KEY = 'taskDetail.dispatchNotice.heldByAdmission';
 
 /** Older payloads carry no admission field; absent never reads as closed. */
 export const isOrchestrationHeld = (admission?: OrchestrationAdmission | null): boolean =>
@@ -62,20 +68,27 @@ export const resolveIssueDispatchNotices = (input: {
   dispatchWaitingReason?: string | null;
   orchestrationAdmission?: OrchestrationAdmission | null;
 }): DispatchNoticeCopy[] => {
-  const notices: DispatchNoticeCopy[] = [];
+  if (!isNotStarted(input.dispatchPhase)) return [];
 
-  if (isOrchestrationHeld(input.orchestrationAdmission) && isNotStarted(input.dispatchPhase))
-    notices.push({ key: ISSUE_DISPATCH_HELD_KEY });
+  // A persisted reason describes the dispatch only while it is still waiting.
+  const reason =
+    input.dispatchPhase === 'waiting'
+      ? input.dispatchWaitingReason?.trim() || undefined
+      : undefined;
 
-  const reason = input.dispatchWaitingReason?.trim();
-  // The admission line above already covers a current admission hold; with the
-  // gate open the same reason is a leftover, not the state of the Issue.
-  if (input.dispatchPhase !== 'waiting' || !reason || reason === ADMISSION_DISABLED_REASON)
-    return notices;
+  // The dispatch's own reason is the whole explanation: a run waiting for an
+  // agent is not waiting on workspace admission, whatever the gate reads.
+  if (reason && reason !== ADMISSION_DISABLED_REASON) {
+    const key = WAITING_REASON_KEYS[reason];
+    return [key ? { key } : { key: 'taskDetail.dispatchNotice.reason.other', params: { reason } }];
+  }
 
-  const key = WAITING_REASON_KEYS[reason];
-  notices.push(
-    key ? { key } : { key: 'taskDetail.dispatchNotice.reason.other', params: { reason } },
-  );
-  return notices;
+  if (isOrchestrationHeld(input.orchestrationAdmission)) return [{ key: ISSUE_DISPATCH_HELD_KEY }];
+
+  // Still waiting on admission although the gate reads open for this viewer:
+  // either the sweep has not re-driven it yet, or intake is admitted under a
+  // different identity. Say what held it without claiming the gate is closed.
+  if (reason === ADMISSION_DISABLED_REASON) return [{ key: ISSUE_DISPATCH_HELD_EARLIER_KEY }];
+
+  return [];
 };

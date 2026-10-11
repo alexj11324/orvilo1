@@ -426,6 +426,42 @@ describe('TaskDetailHeaderActions', () => {
     });
   });
 
+  // Re-running moved here from the header button; starting, retrying and
+  // resuming are not menu commands (they sit in the Execution area).
+  it('offers "Run again" only after a run succeeded', () => {
+    setDetail({
+      agentId: 'agent-1',
+      dispatchPhase: 'succeeded',
+      status: 'completed',
+      workflowCategory: 'done',
+    });
+    const { unmount } = render(<TaskDetailHeaderActions />);
+    expect(item('rerun')?.label).toBe('taskDetail.menu.rerun');
+    unmount();
+
+    for (const detail of [
+      {
+        agentId: 'agent-1',
+        dispatchPhase: 'failed',
+        status: 'failed',
+        workflowCategory: 'in_progress',
+      },
+      { agentId: 'agent-1', status: 'backlog', workflowCategory: 'in_progress' },
+      {
+        agentId: 'agent-1',
+        dispatchPhase: 'running',
+        status: 'running',
+        workflowCategory: 'in_progress',
+      },
+      { dispatchPhase: 'succeeded', status: 'completed', workflowCategory: 'done' },
+    ]) {
+      setDetail(detail);
+      const view = render(<TaskDetailHeaderActions />);
+      expect(item('rerun')).toBeUndefined();
+      view.unmount();
+    }
+  });
+
   it('opens the task route in a new tab through the host navigation adapter', () => {
     render(<TaskDetailHeaderActions />);
 

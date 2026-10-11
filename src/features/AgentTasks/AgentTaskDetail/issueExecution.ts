@@ -122,14 +122,17 @@ export const resolveIssueExecution = (input: IssueExecutionInput): IssueExecutio
     };
   };
 
-  // Automation owns the next run. The last occurrence's failure still shows.
+  // Automation owns the next run, so there is no retry here. A failed last
+  // occurrence still reads as failed — a failed glyph captioned "Scheduled"
+  // would say two things at once.
   if (status === 'scheduled') {
+    const lastFailed = execution === 'failed';
     return {
-      actionBlocked,
-      badge: execution === 'failed' ? execution : undefined,
+      actionBlocked: false,
+      badge: lastFailed ? execution : undefined,
       hints: [HINT('scheduled')],
-      kind: 'scheduled',
-      showFailureReason: execution === 'failed',
+      kind: lastFailed ? 'failed' : 'scheduled',
+      showFailureReason: lastFailed,
     };
   }
 

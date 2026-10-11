@@ -260,12 +260,18 @@ describe('resolveIssueExecution', () => {
       });
     });
 
-    it('keeps the last occurrence failure visible', () => {
+    it('reads a failed last occurrence as failed, with no retry: the schedule runs it again', () => {
       expect(
         resolveIssueExecution(
           withAgent({ automationMode: 'schedule', dispatchPhase: 'failed', status: 'scheduled' }),
         ),
-      ).toMatchObject({ badge: 'failed', kind: 'scheduled', showFailureReason: true });
+      ).toEqual({
+        actionBlocked: false,
+        badge: 'failed',
+        hints: [hint('scheduled')],
+        kind: 'failed',
+        showFailureReason: true,
+      });
     });
   });
 });

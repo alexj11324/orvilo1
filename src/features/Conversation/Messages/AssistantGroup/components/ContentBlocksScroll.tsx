@@ -2,7 +2,6 @@
 
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
 import type { UIChatMessage } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import type { RefObject } from 'react';
 import { memo, useMemo } from 'react';
 
@@ -11,19 +10,6 @@ import { ScrollBar } from '@/components/ui/scroll-area';
 import { resolveAssistantGroupFromMessages } from '../utils/resolveAssistantGroupFromMessages';
 import ContentBlock from './ContentBlock';
 import type { RenderableAssistantContentBlock } from './types';
-
-const styles = createStaticStyles(({ css }) => ({
-  scrollRoot: css`
-    border-radius: 0;
-    background: transparent;
-  `,
-  scrollTask: css`
-    max-height: min(50vh, 300px);
-  `,
-  scrollWorkflow: css`
-    max-height: min(40vh, 320px);
-  `,
-}));
 
 interface ContentBlocksScrollBaseProps {
   disableEditing?: boolean;
@@ -69,7 +55,7 @@ const ContentBlocksScroll = memo<ContentBlocksScrollProps>((props) => {
   }, [assistantIdFromProps, blocksFromProps, messagesList]);
 
   const list = (
-    <div className="flex flex-col" style={{ gap: variant === 'workflow' ? 8 : undefined }}>
+    <div className={variant === 'workflow' ? 'flex flex-col gap-2' : 'flex flex-col'}>
       {blocks.map((block) => (
         <ContentBlock
           key={block.renderKey ?? block.id}
@@ -82,31 +68,27 @@ const ContentBlocksScroll = memo<ContentBlocksScrollProps>((props) => {
   );
 
   const body =
-    variant === 'workflow' ? (
-      <div className="flex flex-col" style={{ paddingBlock: '4px 8px' }}>
-        {list}
-      </div>
-    ) : (
-      list
-    );
+    variant === 'workflow' ? <div className="flex flex-col pbs-1 pbe-2">{list}</div> : list;
 
   if (!scroll) {
     return body;
   }
 
-  const scrollClass = variant === 'task' ? styles.scrollTask : styles.scrollWorkflow;
+  const scrollClass =
+    variant === 'task'
+      ? 'max-h-[min(50vh,--spacing(75))] pe-3'
+      : 'max-h-[min(40vh,--spacing(80))] pe-3';
 
   return (
-    <ScrollAreaPrimitive.Root className={styles.scrollRoot}>
+    <ScrollAreaPrimitive.Root className="rounded-none bg-transparent">
       <ScrollAreaPrimitive.Viewport
         className={scrollClass}
         ref={scrollRef as RefObject<HTMLDivElement>}
-        style={{ paddingInlineEnd: 12 }}
         onScroll={onScroll}
       >
         {body}
       </ScrollAreaPrimitive.Viewport>
-      <ScrollBar style={{ marginInlineEnd: 2 }} />
+      <ScrollBar className="me-0.5" />
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   );

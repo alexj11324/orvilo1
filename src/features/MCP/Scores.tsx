@@ -137,8 +137,9 @@ const Scores = memo<ScoresProps>(
               <span className="inline-flex max-w-full">
                 <div
                   className={cn(
-                    'flex items-center gap-2 text-foreground-description [padding-left:4px]',
+                    'flex items-center gap-2 text-foreground-description',
                     styles.tag,
+                    'ps-1',
                   )}
                 >
                   <CircleDashedIcon className="text-foreground-quaternary" size={22} />

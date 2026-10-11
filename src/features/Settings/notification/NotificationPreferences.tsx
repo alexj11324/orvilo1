@@ -10,12 +10,9 @@ import { useTranslation } from 'react-i18next';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 
-/** Channels with a working delivery path. Email has no sender yet, so it is not offered. */
-const CHANNELS = ['inbox', 'push'] as const;
+import { NOTIFICATION_CHANNELS as CHANNELS, type NotificationChannel as Channel } from './channels';
 
-type Channel = (typeof CHANNELS)[number];
-
-const GRID = 'grid grid-cols-[minmax(0,1fr)_repeat(2,5.5rem)] items-center gap-x-2';
+const GRID = 'grid grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-x-2';
 
 interface NotificationPreferencesProps {
   /** Receives only the changed leaf; the owner merges it into the stored settings. */
@@ -24,8 +21,8 @@ interface NotificationPreferencesProps {
 }
 
 /**
- * Event × channel matrix shared by the personal and the workspace notification
- * pages. Presentational only: each page owns where the value is read and saved.
+ * Event × channel matrix for the personal notification page. Presentational
+ * only: the page owns where the value is read and saved.
  */
 const NotificationPreferences = ({ onChange, value }: NotificationPreferencesProps) => {
   const { t } = useTranslation('setting');

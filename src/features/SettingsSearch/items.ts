@@ -74,7 +74,7 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
     'discord',
     'wechat',
   ],
-  [SettingsTabs.Notification]: ['notification', 'email', 'push', 'alerts', 'inbox'],
+  [SettingsTabs.Notification]: ['notification', 'push', 'alerts', 'inbox'],
   [SettingsTabs.Plans]: ['subscription', 'plan', 'upgrade', 'pricing', 'membership'],
   [SettingsTabs.Profile]: [
     'profile',
@@ -599,21 +599,10 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     visible: (ctx) => ctx.isDesktop,
   },
   {
-    anchor: 'notification-inbox',
-    keywords: ['inbox', 'in-app notification'],
-    labelKey: 'notification.inbox.title',
-    tab: SettingsTabs.Notification,
-  },
-  {
-    anchor: 'notification-email',
-    keywords: ['email'],
-    labelKey: 'notification.email.title',
-    tab: SettingsTabs.Notification,
-  },
-  {
-    anchor: 'notification-push',
-    keywords: ['push'],
-    labelKey: 'notification.push.title',
+    anchor: 'notification-events',
+    descKey: 'notification.matrix.desc',
+    keywords: ['push', 'desktop', 'mobile', 'alerts', 'events'],
+    labelKey: 'notification.matrix.title',
     tab: SettingsTabs.Notification,
   },
 ];

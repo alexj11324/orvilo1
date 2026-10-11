@@ -1,4 +1,5 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cssVar } from 'antd-style';
+import { clsx } from 'cn';
 import {
   CheckCircle2Icon,
   CircleDashedIcon,
@@ -14,33 +15,11 @@ import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import CollectionFooter from './CollectionFooter';
 import type { CheckSummary, NormalizedCheckItem, PullRequestCollection } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  cardHeader: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  checkRow: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 5px;
-    padding-inline: 12px;
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  cardHeader: 'flex items-center gap-2 border-b border-divider bg-fill-quaternary px-3 py-1.5',
+  checkRow: 'flex items-center gap-2 px-3 py-1.25',
+} as const;
 
 export const checkStatusVisual = (status: NormalizedCheckItem['status']) => {
   switch (status) {
@@ -98,8 +77,8 @@ const ReviewChecksPanel = memo<{
   const summary = checks.summary;
   const visual = checkSummaryVisual(summary.state);
   return (
-    <div className={cx('flex flex-col', styles.card)}>
-      <div className={cx('flex items-center gap-2', styles.cardHeader)}>
+    <div className={clsx('flex flex-col', styles.card)}>
+      <div className={clsx('flex items-center gap-2', styles.cardHeader)}>
         <div className="font-medium">{t('reviews.checks')}</div>
         <div className="text-xs text-muted-foreground">
           {t(visual.labelKey as never, { count: summary.failing })}

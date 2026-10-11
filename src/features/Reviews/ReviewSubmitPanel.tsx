@@ -1,4 +1,5 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cssVar } from 'antd-style';
+import { clsx } from 'cn';
 import { GitPullRequestDraftIcon, PencilLineIcon, RefreshCwIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,26 +9,11 @@ import { Textarea } from '@/components/ui/textarea';
 
 import type { ReviewComposerController } from './useReviewComposer';
 
-const styles = createStaticStyles(({ css }) => ({
-  banner: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorWarningBorder};
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorWarningBg};
-  `,
-  card: css`
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  banner:
+    'flex items-center gap-2 rounded-(--radius-card) border border-warning-border bg-warning-wash px-2.5 py-1.5',
+  card: 'rounded-(--radius-card) border border-divider bg-card p-3',
+} as const;
 
 /**
  * The review-submit region. Its controller lives in the page so closing this
@@ -45,29 +31,29 @@ const ReviewSubmitPanel = memo<{
   const { body, busy, setBody, submitting, unknownIntent, verifying } = composer;
 
   return (
-    <div className={cx('flex flex-col gap-2', styles.card)}>
+    <div className={clsx('flex flex-col gap-2', styles.card)}>
       <div className="flex items-center gap-2">
         <PencilLineIcon color={cssVar.colorTextSecondary} size={14} />
         <div className="font-medium">{t('reviews.submitReviewTitle')}</div>
       </div>
       {pendingReviewId ? (
-        <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'status'}>
+        <div className={clsx('flex flex-col items-center gap-2', styles.banner)} role={'status'}>
           <GitPullRequestDraftIcon color={cssVar.colorWarning} size={14} />
           <div className="text-xs">{t('reviews.pendingDraftBanner')}</div>
         </div>
       ) : null}
       {unknownIntent ? (
-        <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
+        <div className={clsx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
           <RefreshCwIcon color={cssVar.colorWarning} size={14} />
           <div className="text-xs">{t('reviews.outcomeUnknown')}</div>
           <div className="flex-1" />
-          <Button loading={verifying} size="sm" onClick={() => void composer.verifyAndRetry()}>
+          <Button loading={verifying} size="lg" onClick={() => void composer.verifyAndRetry()}>
             {t('reviews.outcomeUnknownAction')}
           </Button>
         </div>
       ) : null}
       {stale ? (
-        <div className={cx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
+        <div className={clsx('flex flex-col items-center gap-2', styles.banner)} role={'alert'}>
           <div className="text-xs">{t('reviews.headDrifted')}</div>
         </div>
       ) : null}

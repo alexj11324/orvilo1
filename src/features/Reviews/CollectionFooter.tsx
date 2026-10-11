@@ -1,22 +1,14 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import { Button } from '@/components/ui/button';
 
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  footer:
+    'flex items-center justify-between gap-2 border-t border-dashed border-divider px-3 py-1.5',
+} as const;
 
 /**
  * Collection completeness footer — a partially-loaded collection is always
@@ -38,7 +30,7 @@ const CollectionFooter = memo<{
   const { t } = useTranslation('common');
   if (!error && !hasMore && !stale && (total === null || loaded === total)) return null;
   return (
-    <div className={cx('flex flex-col', styles.footer)}>
+    <div className={clsx('flex flex-col', styles.footer)}>
       {error ? (
         <AsyncError error={error} variant={'inline'} onRetry={onRetry} />
       ) : (
@@ -49,7 +41,7 @@ const CollectionFooter = memo<{
               : t('reviews.loadedCount', { loaded, total: total ?? '…' })}
           </div>
           {hasMore && !stale ? (
-            <Button loading={loading} size="sm" variant="ghost" onClick={onLoadMore}>
+            <Button loading={loading} size="lg" variant="ghost" onClick={onLoadMore}>
               {t('myWork.loadMore')}
             </Button>
           ) : null}

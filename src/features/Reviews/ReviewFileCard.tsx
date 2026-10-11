@@ -1,6 +1,6 @@
 import { PatchDiff } from '@lobehub/ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { cssVar } from 'antd-style';
+import { clsx, cn } from 'cn';
 import { ChevronDownIcon, FileDiffIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,37 +8,13 @@ import { useTranslation } from 'react-i18next';
 import CommentComposer from './CommentComposer';
 import type { ReviewFile, WriteOutcome } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  cardHeader: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  commentBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-  `,
-  threadHeader: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  cardHeader:
+    'cursor-pointer flex items-center gap-2 border-b border-divider bg-fill-quaternary px-3 py-1.5',
+  commentBox: 'border-t border-dashed border-divider px-3 py-2',
+  threadHeader: 'font-mono text-xs leading-5 text-muted-foreground',
+} as const;
 
 /**
  * One changed file: patch diff (unified or split) plus the line-comment
@@ -61,11 +37,11 @@ const ReviewFileCard = memo<{
 
   return (
     <div
-      className={cx('flex flex-col', styles.card)}
+      className={clsx('flex flex-col', styles.card)}
       id={`file-${encodeURIComponent(file.filename)}`}
     >
       <div
-        className={cx('flex flex-row items-center', styles.cardHeader)}
+        className={clsx('flex flex-row items-center', styles.cardHeader)}
         onClick={() => setCollapsed((current) => !current)}
       >
         <span
@@ -114,7 +90,7 @@ const ReviewFileCard = memo<{
             }}
           />
           {commentAt ? (
-            <div className={cx('flex flex-col gap-2', styles.commentBox)}>
+            <div className={clsx('flex flex-col gap-2', styles.commentBox)}>
               <div className={cn(styles.threadHeader)}>
                 {file.filename}:{commentAt.line} ·{' '}
                 {commentAt.side === 'LEFT'

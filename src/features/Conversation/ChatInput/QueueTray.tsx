@@ -54,33 +54,19 @@ const QueuedFilePreview = memo<QueuedFilePreviewProps>(({ file }) => {
     // Use @lobehub/ui Image so click-to-zoom preview works. Lock both wrapper
     // and inner <img> to PREVIEW_SIZE — `size` alone doesn't constrain the
     // intrinsic image dimensions inside a flex row.
+    // Public Image has unlayered root width/radius and wrapper height rules.
+    // Its lobe-base flex/height layer is unordered here; priority is limited to those conflicts.
     return (
       <Image
         alt={file.name}
+        className="size-7! shrink-0! my-0 rounded-(--radius-input)! shadow-none"
         objectFit={'cover'}
         size={PREVIEW_SIZE}
         src={file.url}
         title={file.name}
         variant={'borderless'}
-        style={{
-          borderRadius: 'var(--radius-input)',
-          boxShadow: 'none',
-          flexShrink: 0,
-          height: PREVIEW_SIZE,
-          marginBlock: 0,
-          width: PREVIEW_SIZE,
-        }}
-        styles={{
-          image: { height: PREVIEW_SIZE, width: PREVIEW_SIZE },
-          wrapper: {
-            border: '1px solid var(--divider)',
-            borderRadius: 'var(--radius-input)',
-            boxShadow: 'none',
-            flexShrink: 0,
-            height: PREVIEW_SIZE,
-            marginBlock: 0,
-            width: PREVIEW_SIZE,
-          },
+        classNames={{
+          wrapper: 'h-7! w-7 my-0 border border-divider rounded-(--radius-input) shadow-none',
         }}
       />
     );

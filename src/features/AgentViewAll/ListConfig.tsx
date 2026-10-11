@@ -154,7 +154,7 @@ const ListConfig = memo<ListConfigProps>(
             />
           }
         />
-        <PopoverContent align="end" className="p-4" side="bottom">
+        <PopoverContent align="end" className="w-auto p-4" side="bottom">
           {panelContent}
         </PopoverContent>
       </Popover>

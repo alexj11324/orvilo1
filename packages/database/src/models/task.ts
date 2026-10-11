@@ -21,7 +21,7 @@ import type {
   WorkspaceDocNode,
   WorkspaceTreeNode,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
+import { deriveLegacyTaskStatus, TASK_ACTIVITY_COLLAPSE_WINDOW_MS } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -4521,6 +4521,81 @@ export class TaskModel {
   }
 
   /**
+   * Append a `session` activity (description body, acceptance criteria): an
+   * edit with no before/after worth naming, saved many times in one sitting.
+   * When the Issue's newest row is the same kind by the same actor inside the
+   * collapse window, that row is moved to now instead of adding another, so a
+   * sitting is one row however many times it saved. Anything else in between
+   * — another actor, another kind of change — starts a new entry.
+   *
+   * The caller must hold the task row lock (`FOR UPDATE`): two concurrent
+   * saves would otherwise both read the same newest row and both insert.
+   */
+  private async appendSessionActivity(
+    taskId: string,
+    type: 'description' | 'verify_config',
+    actor: { agentId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    const { actorKind, ...actorColumns } = taskActivityActor(actor);
+    const [newest] = await this.db
+      .select({
+        actorAgentId: taskActivities.actorAgentId,
+        actorUserId: taskActivities.actorUserId,
+        createdAt: taskActivities.createdAt,
+        id: taskActivities.id,
+        payload: taskActivities.payload,
+        type: taskActivities.type,
+      })
+      .from(taskActivities)
+      .where(eq(taskActivities.taskId, taskId))
+      .orderBy(desc(taskActivities.createdAt), desc(taskActivities.id))
+      .limit(1);
+    const sameSitting =
+      !!newest &&
+      newest.type === type &&
+      newest.actorAgentId === actorColumns.actorAgentId &&
+      newest.actorUserId === actorColumns.actorUserId &&
+      // A deleted actor leaves both id columns null; the kind keeps "someone
+      // who is gone" apart from the system.
+      (newest.payload?.actorKind ?? 'system') === actorKind &&
+      Date.now() - new Date(newest.createdAt).getTime() <= TASK_ACTIVITY_COLLAPSE_WINDOW_MS;
+    if (sameSitting) {
+      // The database clock, like every inserted row, so the feed order holds.
+      await this.db
+        .update(taskActivities)
+        .set({ createdAt: sql`now()` })
+        .where(eq(taskActivities.id, newest.id));
+      return;
+    }
+    await this.addActivity({ ...actorColumns, payload: { actorKind }, taskId, type });
+  }
+
+  /**
+   * {@link appendSessionActivity} for a caller that is not already inside a
+   * write on the task: opens the transaction and takes the row lock itself.
+   * Does nothing when the task is not writable in this scope.
+   */
+  async logSessionActivity(
+    taskId: string,
+    type: 'description' | 'verify_config',
+    actor: { agentId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const [locked] = await runner
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), this.ownership()))
+        .for('update')
+        .limit(1);
+      if (!locked) return;
+      await new TaskModel(runner, this.userId, this.workspaceId, {
+        managedSubject: this.managedSubject,
+      }).appendSessionActivity(taskId, type, actor);
+    });
+  }
+
+  /**
    * Record on a parent Issue that it gained a sub-issue through creation —
    * the one way a sub-issue appears without a parent *change* on the child.
    * Skipped when the parent is not readable in this scope.
@@ -4876,6 +4951,13 @@ export class TaskModel {
 
       const { actorKind, ...actorColumns } = taskActivityActor(actor);
       for (const event of events) {
+        // An autosaving editor writes many times a minute; one sitting is
+        // one row, kept current, so it cannot crowd older history out of
+        // the window the feed reads. The task row is locked by this write.
+        if (event.type === 'description') {
+          await scoped.appendSessionActivity(id, event.type, actor);
+          continue;
+        }
         await scoped.addActivity({
           ...actorColumns,
           payload: { ...event.payload, actorKind },

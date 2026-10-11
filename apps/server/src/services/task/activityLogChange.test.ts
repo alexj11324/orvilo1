@@ -161,6 +161,19 @@ describe('acceptancePolicyChanged', () => {
     );
   });
 
+  it('ignores the order keys come back in, at any depth', () => {
+    expect(
+      acceptancePolicyChanged(
+        { config: { enabled: true, rubric: { a: 1, b: [{ x: 1, y: 2 }] } } },
+        { config: { rubric: { b: [{ y: 2, x: 1 }], a: 1 }, enabled: true } },
+      ),
+    ).toBe(false);
+    // Array order is meaning, not storage.
+    expect(
+      acceptancePolicyChanged({ config: { steps: [1, 2] } }, { config: { steps: [2, 1] } }),
+    ).toBe(true);
+  });
+
   it('is true when the requirement or any setting changed', () => {
     expect(
       acceptancePolicyChanged({ config: {}, requirement: 'A' }, { config: {}, requirement: 'B' }),

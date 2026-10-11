@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { users, workspaceMembers, workspaces } from '../../schemas';
@@ -115,6 +115,26 @@ describe('TaskResourceModel', () => {
         { actorKind: 'user', resourceKind: 'link', toLabel: 'Spec v2', url: 'https://x.test/a' },
       ],
     ]);
+  });
+
+  it('rolls a link change back when its feed row cannot be written', async () => {
+    const task = await create();
+    const kept = await model.add(task.id, { kind: 'link', title: 'Kept', url: 'https://x.test/k' });
+    const addActivity = vi
+      .spyOn(TaskModel.prototype, 'addActivity')
+      .mockRejectedValue(new Error('feed write failed'));
+
+    try {
+      await expect(model.add(task.id, { kind: 'link', url: 'https://x.test/new' })).rejects.toThrow(
+        'feed write failed',
+      );
+      await expect(model.remove(task.id, kept.id)).rejects.toThrow('feed write failed');
+    } finally {
+      addActivity.mockRestore();
+    }
+
+    // Neither half-applied: the new link is not attached, the old one still is.
+    expect((await model.list(task.id)).map((row) => row.url)).toEqual(['https://x.test/k']);
   });
 
   it('shares legacy-private workspace Issue resources with active members', async () => {

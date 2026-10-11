@@ -63,6 +63,10 @@ import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { createTaskSchedulerModule } from '../taskScheduler';
 import { resolveTaskAcceptance } from '../verify/taskAcceptance';
 import {
+  resolveReadableActivityContainers,
+  withReadableContainerNames,
+} from './activityContainerAccess';
+import {
   activityLogPropertyChange,
   collectActivityIssueIds,
   type ReadableIssueRefs,
@@ -1918,6 +1922,15 @@ export class TaskService {
         .map((row) => [row.id, { identifier: row.identifier, name: row.name }]),
     );
 
+    // Project / milestone / team / workflow-state names are copied into the
+    // row when it is written; show one only when this reader may read the
+    // container it names.
+    const readableContainers = await resolveReadableActivityContainers(
+      this.db,
+      { userId: this.userId, workspaceId: this.workspaceId },
+      shownLogs,
+    );
+
     const creatorId = task.createdByAgentId ?? task.createdByUserId;
     const createdActivity: TaskDetailActivity | null =
       task.createdAt && creatorId
@@ -2027,7 +2040,10 @@ export class TaskService {
               : // Genuinely nobody: the runner's system fallback.
                 undefined;
 
-        const propertyChange = activityLogPropertyChange(log, activityIssueRefs);
+        const propertyChange = activityLogPropertyChange(
+          withReadableContainerNames(log, readableContainers),
+          activityIssueRefs,
+        );
         if (propertyChange) {
           return [
             {

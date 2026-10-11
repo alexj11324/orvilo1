@@ -164,4 +164,18 @@ export const acceptancePolicyChanged = (
   after: { config?: unknown; requirement?: string | null },
 ): boolean =>
   (before.requirement ?? null) !== (after.requirement ?? null) ||
-  JSON.stringify(before.config ?? {}) !== JSON.stringify(after.config ?? {});
+  stableJson(before.config ?? {}) !== stableJson(after.config ?? {});
+
+/**
+ * JSON with object keys in a fixed order. The stored policy comes back from
+ * jsonb, which does not keep the order the client sent, so a plain
+ * `JSON.stringify` could call an untouched policy changed.
+ */
+const stableJson = (value: unknown): string =>
+  JSON.stringify(value, (_key, nested: unknown) =>
+    nested && typeof nested === 'object' && !Array.isArray(nested)
+      ? Object.fromEntries(
+          Object.entries(nested as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1)),
+        )
+      : nested,
+  );

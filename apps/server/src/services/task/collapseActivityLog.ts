@@ -1,15 +1,12 @@
 import {
+  TASK_ACTIVITY_COLLAPSE_WINDOW_MS,
   TASK_ACTIVITY_LOG_BEHAVIOR,
   type TaskActivityLogPayload,
   type TaskActivityLogType,
 } from '@orvilo/types';
 
-/**
- * How long a run of edits to one property by one person stays a single line.
- * A product knob, not a correctness one: shorter shows more intermediate
- * states, longer hides more fiddling.
- */
-export const ACTIVITY_COLLAPSE_WINDOW_MS = 30 * 60_000;
+/** How long a run of edits to one property by one person stays a single line. */
+export const ACTIVITY_COLLAPSE_WINDOW_MS = TASK_ACTIVITY_COLLAPSE_WINDOW_MS;
 
 interface CollapsibleRow {
   actorAgentId: string | null;

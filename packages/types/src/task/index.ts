@@ -433,6 +433,14 @@ export const TASK_ACTIVITY_LOG_BEHAVIOR: Record<TaskActivityLogType, TaskActivit
   workflow_state: 'value',
 };
 
+/**
+ * How long a run of edits to one property by one actor stays a single feed
+ * entry. A product knob, not a correctness one: shorter shows more
+ * intermediate states, longer hides more fiddling. Shared by the read-time
+ * fold and by the writer that keeps a `session` kind to one row per sitting.
+ */
+export const TASK_ACTIVITY_COLLAPSE_WINDOW_MS = 30 * 60_000;
+
 /** How the other Issue relates to the one whose feed the row sits in. */
 export type TaskActivityRelationKind = 'blocked_by' | 'blocking' | 'related';
 

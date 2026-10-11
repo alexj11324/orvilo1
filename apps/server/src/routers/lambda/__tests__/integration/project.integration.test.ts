@@ -1,11 +1,21 @@
 // @vitest-environment node
 import type { OrviloDatabase } from '@orvilo/database';
-import { agents, knowledgeBases, tasks } from '@orvilo/database/schemas';
+import {
+  agents,
+  knowledgeBases,
+  projects,
+  tasks,
+  teams,
+  teamWorkflowStates,
+  workspaceMembers,
+  workspaces,
+} from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
+import { TaskModel } from '@/database/models/task';
 
 import { projectRouter } from '../../project';
 import { taskRouter } from '../../task';
@@ -452,5 +462,80 @@ describe('Project Router Integration', () => {
 
     const updated = await caller.update({ id: project.data.id, slug: 'team_launch_v2' });
     expect(updated.data.slug).toBe('team_launch_v2');
+  });
+
+  it('names a private team workflow state in the activity feed only for a reader of that team', async () => {
+    const memberId = await createTestUser(serverDB);
+    try {
+      const workspaceId = 'project-feed-state-names-workspace';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Feed state names',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: memberId, workspaceId },
+      ]);
+      const teamId = 'project-feed-private-team';
+      await serverDB.insert(teams).values({
+        id: teamId,
+        key: 'SEC',
+        name: 'Secret team',
+        visibility: 'private',
+        workspaceId,
+      });
+      const [state] = await serverDB
+        .insert(teamWorkflowStates)
+        .values({ category: 'in_progress', name: 'Secret review', teamId, workspaceId })
+        .returning();
+      // The project is open to the workspace; the Issue's team is not.
+      const [project] = await serverDB
+        .insert(projects)
+        .values({ identifier: 'OPEN', name: 'Open project', userId, workspaceId })
+        .returning();
+      const model = new TaskModel(serverDB, userId, workspaceId);
+      const task = await model.create({
+        instruction: 'Shared Issue',
+        projectId: project.id,
+        teamId,
+      });
+      await model.addActivity({
+        actorUserId: userId,
+        payload: {
+          actorKind: 'user',
+          from: 'todo',
+          fromId: null,
+          to: 'in_progress',
+          toId: state.id,
+          toLabel: 'Secret review',
+        },
+        taskId: task.id,
+        type: 'workflow_state',
+      });
+
+      const feed = async (reader: string) =>
+        (
+          await projectRouter
+            .createCaller({ ...createTestContext(reader), workspaceId })
+            .activityFeed({ id: project.id })
+        ).data.items.filter((item) => item.type === 'workflow_state');
+
+      const [forOwner] = await feed(userId);
+      expect(forOwner.payload).toMatchObject({ to: 'in_progress', toLabel: 'Secret review' });
+
+      // The member sees the move by category, not the private team's name for it.
+      const forMember = await feed(memberId);
+      expect(forMember).toHaveLength(1);
+      expect(forMember[0].payload).toMatchObject({
+        to: 'in_progress',
+        toId: state.id,
+        toLabel: null,
+      });
+      expect(JSON.stringify(forMember)).not.toMatch(/Secret review/);
+    } finally {
+      await cleanupTestUser(serverDB, memberId);
+    }
   });
 });

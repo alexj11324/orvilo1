@@ -22,7 +22,6 @@ import { BriefModel } from '@/database/models/brief';
 import { CredentialModel } from '@/database/models/credential';
 import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
 import {
-  taskActivityActor,
   TaskHandoffRequiredError,
   TaskModel,
   TaskRevisionConflictError,
@@ -1254,10 +1253,17 @@ export const taskRouter = router({
         status: createInput.status,
         teamId: createInput.teamId,
       });
+      // `createdByAgentId` arrives from the client and ends up as the author
+      // of feed rows (this Issue's "created" row, the parent's "added the
+      // sub-issue" row). Resolve it like every other claimed agent actor:
+      // the trusted `ctx.actingAgentId` wins, and a claimed id must be an
+      // agent the caller can see and use — anything else is rejected.
+      const creator = await resolveActivityActor(ctx, createInput.createdByAgentId);
       const task = await ctx.taskService.createTask({
         ...createInput,
         ...workflowPreset,
         config: parsedVerify.success ? taskConfig : createInput.config,
+        createdByAgentId: creator.agentId ?? undefined,
       });
       try {
         if (parsedVerify.success) {
@@ -2302,15 +2308,12 @@ export const taskRouter = router({
           )
         ) {
           try {
-            const { actorKind, ...actorColumns } = taskActivityActor(
+            // One row per sitting: the form saves field by field.
+            await model.logSessionActivity(
+              task.id,
+              'verify_config',
               await resolveActivityActor(ctx),
             );
-            await model.addActivity({
-              ...actorColumns,
-              payload: { actorKind },
-              taskId: task.id,
-              type: 'verify_config',
-            });
           } catch (error) {
             console.error('[task:updateVerifyConfig] failed to log activity', error);
           }

@@ -2508,19 +2508,80 @@ describe('TaskModel', () => {
       ]);
     });
 
-    it('logs a description edit once per changed save, without copying the text', async () => {
+    it('keeps one description row per sitting, without copying the text', async () => {
       const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'First draft' });
+      await createAgent('agt_log_desc');
+      const task = await model.create({ instruction: 'Draft 0' });
+      await model.updateWithLog(task.id, { assigneeAgentId: 'agt_log_desc' }, { userId });
 
-      await model.updateWithLog(task.id, { instruction: 'Second draft' }, { userId });
+      await model.updateWithLog(task.id, { instruction: 'Draft 1' }, { userId });
+      const [, first] = await model.getActivities(task.id);
       // An autosave that changes nothing writes neither a history version nor a row.
-      await model.updateWithLog(task.id, { instruction: 'Second draft' }, { userId });
-      await model.updateWithLog(task.id, { instruction: 'Third draft' }, { userId });
+      await model.updateWithLog(task.id, { instruction: 'Draft 1' }, { userId });
+      // An autosaving editor: many saves must not push the assignment out of
+      // the window the feed reads.
+      for (let i = 2; i <= 12; i += 1) {
+        await model.updateWithLog(task.id, { instruction: `Draft ${i}` }, { userId });
+      }
 
       const activities = await model.getActivities(task.id);
       expect(activities.map((a) => [a.type, a.payload])).toEqual([
+        ['assignee_agent', { actorKind: 'user', fromId: null, toId: 'agt_log_desc' }],
         ['description', { actorKind: 'user' }],
-        ['description', { actorKind: 'user' }],
+      ]);
+      // The one row is kept current rather than left at the first save.
+      expect(activities[1].id).toBe(first.id);
+      expect(activities[1].createdAt.getTime()).toBeGreaterThanOrEqual(first.createdAt.getTime());
+    });
+
+    it('starts a new description row after another change, another actor, or the window', async () => {
+      const model = new TaskModel(serverDB, userId);
+      await createAgent('agt_log_writer');
+      const task = await model.create({ instruction: 'Draft 0', name: 'Title' });
+      const types = async () => (await model.getActivities(task.id)).map((a) => a.type);
+
+      await model.updateWithLog(task.id, { instruction: 'Draft 1' }, { userId });
+      // Something else happened in between: the next edit is its own entry.
+      await model.updateWithLog(task.id, { name: 'Retitled' }, { userId });
+      await model.updateWithLog(task.id, { instruction: 'Draft 2' }, { userId });
+      expect(await types()).toEqual(['description', 'title', 'description']);
+
+      // Someone else edits.
+      await model.updateWithLog(
+        task.id,
+        { instruction: 'Draft 3' },
+        { activityActor: { agentId: 'agt_log_writer' } },
+      );
+      expect(await types()).toEqual(['description', 'title', 'description', 'description']);
+
+      // The same actor again, but the sitting ended long ago.
+      await serverDB
+        .update(taskActivities)
+        .set({ createdAt: new Date(Date.now() - 31 * 60_000) })
+        .where(eq(taskActivities.taskId, task.id));
+      await model.updateWithLog(
+        task.id,
+        { instruction: 'Draft 4' },
+        { activityActor: { agentId: 'agt_log_writer' } },
+      );
+      expect(await types()).toHaveLength(5);
+    });
+
+    it('keeps one acceptance criteria row per sitting', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+
+      await model.logSessionActivity(task.id, 'verify_config', { userId });
+      await model.logSessionActivity(task.id, 'verify_config', { userId });
+      await model.logSessionActivity(task.id, 'verify_config', { userId });
+      // Not an Issue this scope can write: nothing is recorded.
+      await new TaskModel(serverDB, 'someone-else').logSessionActivity(task.id, 'verify_config', {
+        userId: 'someone-else',
+      });
+
+      const activities = await model.getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
+        ['verify_config', userId, { actorKind: 'user' }],
       ]);
     });
 

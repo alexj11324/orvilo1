@@ -393,6 +393,69 @@ describe('Task Router Integration', () => {
       expect(result.data.createdByUserId).toBe(userId);
     });
 
+    it("rejects a createdByAgentId the caller cannot use, so no feed row can be forged in another agent's name", async () => {
+      otherUserId = await createTestUser(serverDB);
+      const foreignAgentId = await createTestAgent(serverDB, otherUserId);
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+
+      await expect(
+        caller.create({
+          createdByAgentId: foreignAgentId,
+          instruction: 'Forged author',
+          name: 'Forged',
+          parentTaskId: parent.data.id,
+        }),
+      ).rejects.toThrow();
+
+      // Nothing was created, and the parent's feed gained no sub-issue row.
+      const model = new TaskModel(serverDB, userId);
+      expect(await model.findSubtasks(parent.data.id)).toHaveLength(0);
+      expect(await model.getActivities(parent.data.id)).toHaveLength(0);
+    });
+
+    it('replaces a claimed createdByAgentId with the trusted acting agent on both feed rows', async () => {
+      const claimedAgentId = await createTestAgent(serverDB, userId, 'agt_claimed');
+      const agentCaller = taskRouter.createCaller({
+        ...createTestContext(userId),
+        actingAgentId: testAgentId,
+      });
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+
+      const child = await agentCaller.create({
+        createdByAgentId: claimedAgentId,
+        instruction: 'Child',
+        name: 'Child',
+        parentTaskId: parent.data.id,
+      });
+
+      // The new Issue's own "created" row reads from this column.
+      expect(child.data.createdByAgentId).toBe(testAgentId);
+      const [row] = await new TaskModel(serverDB, userId).getActivities(parent.data.id);
+      expect(row).toMatchObject({
+        actorAgentId: testAgentId,
+        payload: { actorKind: 'agent', toId: child.data.id },
+        type: 'sub_issue_added',
+      });
+    });
+
+    it('credits the signed-in person on the parent when no agent is involved', async () => {
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const child = await caller.create({
+        instruction: 'Child',
+        name: 'Child',
+        parentTaskId: parent.data.id,
+      });
+
+      expect(child.data.createdByAgentId).toBeNull();
+      const [row] = await new TaskModel(serverDB, userId).getActivities(parent.data.id);
+      expect(row).toMatchObject({
+        actorAgentId: null,
+        actorUserId: userId,
+        payload: { actorKind: 'user' },
+        type: 'sub_issue_added',
+      });
+    });
+
     it('should leave createdByAgentId null when omitted (UI-created task)', async () => {
       const result = await caller.create({
         instruction: 'Created via UI',
@@ -579,6 +642,129 @@ describe('Task Router Integration', () => {
       await expect(
         wsCaller.update({ id: created.data.id, workflowCategory: 'todo' }),
       ).rejects.toThrow('No Linear state is mapped to todo');
+    });
+  });
+
+  describe('activity feed container names', () => {
+    it('names a private team, its workflow state, a private project and its milestone only for a reader who can open them', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { projectMilestones, teams, teamWorkflowStates, workspaces, workspaceMembers } =
+        await import('@/database/schemas');
+      const workspaceId = 'activity-container-names-workspace';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Container names',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      const teamId = 'activity-container-private-team';
+      await serverDB.insert(teams).values({
+        id: teamId,
+        key: 'SEC',
+        name: 'Secret team',
+        visibility: 'private',
+        workspaceId,
+      });
+      const [state] = await serverDB
+        .insert(teamWorkflowStates)
+        .values({ category: 'in_progress', name: 'Secret review', teamId, workspaceId })
+        .returning();
+      const [project] = await serverDB
+        .insert(projects)
+        .values({
+          identifier: 'SECRET',
+          name: 'Secret project',
+          userId,
+          visibility: 'private',
+          workspaceId,
+        })
+        .returning();
+      const [milestone] = await serverDB
+        .insert(projectMilestones)
+        .values({ name: 'Secret milestone', projectId: project.id })
+        .returning();
+
+      const ownerCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
+      const memberCaller = taskRouter.createCaller({
+        ...createTestContext(otherUserId),
+        workspaceId,
+      });
+      const task = await ownerCaller.create({ instruction: 'Shared Issue', name: 'Shared Issue' });
+      // The rows as the writers leave them: the name copied in next to the id.
+      const model = new TaskModel(serverDB, userId, workspaceId);
+      const row = { actorUserId: userId, taskId: task.data.id };
+      await model.addActivity({
+        ...row,
+        payload: { actorKind: 'user', fromId: null, toId: teamId, toLabel: 'Secret team' },
+        type: 'team',
+      });
+      await model.addActivity({
+        ...row,
+        payload: { actorKind: 'user', fromId: null, toId: project.id, toLabel: 'Secret project' },
+        type: 'project',
+      });
+      await model.addActivity({
+        ...row,
+        payload: {
+          actorKind: 'user',
+          fromId: null,
+          toId: milestone.id,
+          toLabel: 'Secret milestone',
+        },
+        type: 'milestone',
+      });
+      await model.addActivity({
+        ...row,
+        payload: {
+          actorKind: 'user',
+          from: 'todo',
+          fromId: null,
+          to: 'in_progress',
+          toId: state.id,
+          toLabel: 'Secret review',
+        },
+        type: 'workflow_state',
+      });
+
+      const changes = async (caller: typeof ownerCaller) =>
+        ((await caller.detail({ id: task.data.id })).data.activities ?? []).flatMap((activity) =>
+          activity.type === 'property' ? [activity.propertyChange] : [],
+        );
+
+      // The owner administers the workspace and reads every team and project.
+      expect(await changes(ownerCaller)).toEqual(
+        expect.arrayContaining([
+          { field: 'team', from: null, to: 'Secret team' },
+          { field: 'project', from: null, to: 'Secret project' },
+          { field: 'milestone', from: null, to: 'Secret milestone' },
+          {
+            field: 'workflow',
+            from: { category: 'todo', name: null },
+            to: { category: 'in_progress', name: 'Secret review' },
+          },
+        ]),
+      );
+
+      // A member outside the team and the project can read the Issue, and
+      // learns that it moved — but not the names of what it moved to.
+      const seen = await changes(memberCaller);
+      expect(seen).toEqual(
+        expect.arrayContaining([
+          { field: 'team', from: null, to: '' },
+          { field: 'project', from: null, to: '' },
+          { field: 'milestone', from: null, to: '' },
+          {
+            field: 'workflow',
+            from: { category: 'todo', name: null },
+            to: { category: 'in_progress', name: null },
+          },
+        ]),
+      );
+      expect(JSON.stringify(seen)).not.toMatch(/Secret/);
     });
   });
 

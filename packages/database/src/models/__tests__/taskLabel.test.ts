@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { taskLabelBindings, taskLabels, users, workspaceMembers, workspaces } from '../../schemas';
@@ -149,6 +149,30 @@ describe('TaskLabelModel', () => {
         ['label_added', userId, { actorKind: 'user', toId: label.id, toLabel: 'bug' }],
         ['label_removed', userId, { actorKind: 'user', toId: label.id, toLabel: 'bug' }],
       ]);
+    });
+
+    it('rolls the label change back when its feed row cannot be written', async () => {
+      const task = await createTask(userId, workspaceId);
+      const kept = await workspaceModel.create({ name: 'kept' });
+      const label = await workspaceModel.create({ name: 'bug' });
+      await workspaceModel.assign(task.id, kept.id, { userId });
+      const addActivity = vi
+        .spyOn(TaskModel.prototype, 'addActivity')
+        .mockRejectedValue(new Error('feed write failed'));
+
+      try {
+        await expect(workspaceModel.assign(task.id, label.id, { userId })).rejects.toThrow(
+          'feed write failed',
+        );
+        await expect(workspaceModel.unassign(task.id, kept.id, { userId })).rejects.toThrow(
+          'feed write failed',
+        );
+      } finally {
+        addActivity.mockRestore();
+      }
+
+      // Neither half-applied: the new label is not on the Issue, the old one still is.
+      expect((await workspaceModel.listForTask(task.id)).map((row) => row.id)).toEqual([kept.id]);
     });
 
     it('writes no feed row for a label set without an actor', async () => {

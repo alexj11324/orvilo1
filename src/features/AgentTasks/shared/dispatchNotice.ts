@@ -79,3 +79,14 @@ export const resolveIssueDispatchNotices = (input: {
   );
   return notices;
 };
+
+/**
+ * Whether an Issue offers the manual run control. Once the workspace is
+ * admitted to orchestrated dispatch, the Orchestrator starts work when an
+ * Issue is ready, so a second, manual start would race it. Stopping a run in
+ * progress stays available either way.
+ */
+export const shouldOfferManualRun = (input: {
+  canPause: boolean;
+  orchestrationAdmission?: 'disabled' | 'enabled' | null;
+}): boolean => input.canPause || input.orchestrationAdmission !== 'enabled';

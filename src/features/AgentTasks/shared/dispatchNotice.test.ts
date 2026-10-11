@@ -5,6 +5,7 @@ import {
   ISSUE_DISPATCH_HELD_KEY,
   resolveGoalDispatchNotice,
   resolveIssueDispatchNotices,
+  shouldOfferManualRun,
 } from './dispatchNotice';
 
 describe('resolveGoalDispatchNotice', () => {
@@ -130,5 +131,25 @@ describe('resolveIssueDispatchNotices', () => {
         dispatchWaitingReason: 'Dispatch acknowledgement lost; run may still be executing',
       }),
     ).toEqual([]);
+  });
+});
+
+describe('shouldOfferManualRun', () => {
+  it('keeps the manual start while orchestrated dispatch is not admitted', () => {
+    expect(shouldOfferManualRun({ canPause: false, orchestrationAdmission: 'disabled' })).toBe(
+      true,
+    );
+    // Older payloads carry no admission field.
+    expect(shouldOfferManualRun({ canPause: false })).toBe(true);
+  });
+
+  it('leaves starting to the Orchestrator once dispatch is admitted', () => {
+    expect(shouldOfferManualRun({ canPause: false, orchestrationAdmission: 'enabled' })).toBe(
+      false,
+    );
+  });
+
+  it('always keeps the control that stops a run in progress', () => {
+    expect(shouldOfferManualRun({ canPause: true, orchestrationAdmission: 'enabled' })).toBe(true);
   });
 });

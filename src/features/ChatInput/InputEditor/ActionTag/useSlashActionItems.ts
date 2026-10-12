@@ -9,12 +9,9 @@ import { ArchiveIcon, MessageSquarePlusIcon } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { resolveExecutionTarget } from '@/helpers/executionTarget';
-import { useIsGatewayModeEnabled } from '@/helpers/gatewayMode';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { useFetchProjectSkills } from '@/hooks/useFetchProjectSkills';
-import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors } from '@/store/agent/selectors';
+import { useProjectSkillsDeviceId } from '@/hooks/useProjectSkillsDeviceId';
 import { useChatStore } from '@/store/chat';
 import { useToolStore } from '@/store/tool';
 import { agentDocumentSkillsSelectors } from '@/store/tool/selectors';
@@ -56,32 +53,9 @@ export const useSlashActionItems = (): SlashOptions['items'] => {
   // set (and for local-device runs), not just an explicit agent/topic pick.
   const workingDirectory = useEffectiveWorkingDirectory(agentId);
 
-  // Device-bound (remote) runs scan filesystem skills on that device over the
+  // Device-bound runs scan filesystem skills on that device over the
   // `device.listProjectSkills` RPC; the local desktop reads over Electron IPC.
-  // Mirror the WorkingSidebar exactly: resolve the EFFECTIVE target first, then
-  // treat it as remote only when it lands on `device` with a bound device. The
-  // effective target matters because a hetero agent saved as desktop "This
-  // device" (`local` + boundDeviceId) coerces to `device` when opened on web —
-  // reading the raw stored target would miss that and leave the menu empty even
-  // though the sidebar lists the skills.
-  const agencyConfig = useAgentStore((s) =>
-    agentId ? agentByIdSelectors.getAgencyConfigById(agentId)(s) : undefined,
-  );
-  const isHetero = useAgentStore((s) =>
-    agentId ? agentByIdSelectors.isAgentHeterogeneousById(agentId)(s) : false,
-  );
-  const deviceRoutingAvailable = useIsGatewayModeEnabled(agentId);
-  const isWorkspaceAgent = useAgentStore((s) =>
-    agentId ? agentByIdSelectors.isWorkspaceAgentById(agentId)(s) : false,
-  );
-  const effectiveTarget = resolveExecutionTarget(agencyConfig, {
-    clientExecutionAvailable: isDesktop,
-    deviceRoutingAvailable,
-    isHetero,
-    workspaceScoped: isWorkspaceAgent,
-  });
-  const isDeviceMode = effectiveTarget === 'device' && !!agencyConfig?.boundDeviceId;
-  const remoteDeviceId = isDeviceMode ? agencyConfig.boundDeviceId : undefined;
+  const remoteDeviceId = useProjectSkillsDeviceId(agentId, isDesktop);
 
   // Local desktop reads over IPC; a bound device reads over RPC. Either path
   // makes filesystem skills reachable even when this client isn't the desktop app

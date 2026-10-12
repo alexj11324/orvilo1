@@ -4,7 +4,9 @@ import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { cn } from 'cn';
 import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react';
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { FormControlProvider, useFormControlContext } from '@/components/FormControlContext';
 import { Button } from '@/components/ui/button';
 import { type InputVisualSize } from '@/components/ui/input';
 import {
@@ -16,17 +18,37 @@ import {
 
 import { POPUP_Z_CLASS } from './zIndex';
 
-const Combobox = ComboboxPrimitive.Root;
+function Combobox<Value, Multiple extends boolean | undefined = false, Item = Value>({
+  disabled,
+  ...props
+}: ComboboxPrimitive.Root.Props<Value, Multiple, Item>) {
+  const formControl = useFormControlContext();
+  const resolvedDisabled = disabled ?? formControl.disabled;
+
+  return (
+    <FormControlProvider disabled={resolvedDisabled}>
+      <ComboboxPrimitive.Root disabled={resolvedDisabled} {...props} />
+    </FormControlProvider>
+  );
+}
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
 }
 
-function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Trigger.Props) {
+function ComboboxTrigger({
+  className,
+  children,
+  disabled,
+  ...props
+}: ComboboxPrimitive.Trigger.Props) {
+  const formControl = useFormControlContext();
+
   return (
     <ComboboxPrimitive.Trigger
       className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
       data-slot="combobox-trigger"
+      disabled={disabled ?? formControl.disabled}
       {...props}
     >
       {children}
@@ -35,11 +57,14 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
   );
 }
 
-function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
+function ComboboxClear({ className, disabled, ...props }: ComboboxPrimitive.Clear.Props) {
+  const formControl = useFormControlContext();
+
   return (
     <ComboboxPrimitive.Clear
       className={cn(className)}
       data-slot="combobox-clear"
+      disabled={disabled ?? formControl.disabled}
       render={<InputGroupButton size="icon-xs" variant="ghost" />}
       {...props}
     >
@@ -51,7 +76,7 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
 function ComboboxInput({
   className,
   children,
-  disabled = false,
+  disabled,
   showTrigger = true,
   showClear = false,
   ...props
@@ -59,21 +84,28 @@ function ComboboxInput({
   showTrigger?: boolean;
   showClear?: boolean;
 }) {
+  const formControl = useFormControlContext();
+  const resolvedDisabled = disabled ?? formControl.disabled;
+
   return (
     <InputGroup className={cn('w-auto', className)}>
-      <ComboboxPrimitive.Input render={<InputGroupInput disabled={disabled} />} {...props} />
+      <ComboboxPrimitive.Input
+        disabled={resolvedDisabled}
+        render={<InputGroupInput />}
+        {...props}
+      />
       <InputGroupAddon align="inline-end">
         {showTrigger && (
           <InputGroupButton
             className="group-has-data-[slot=combobox-clear]/input-group:hidden data-pressed:bg-transparent"
             data-slot="input-group-button"
-            disabled={disabled}
+            disabled={resolvedDisabled}
             render={<ComboboxTrigger />}
             size="icon-xs"
             variant="ghost"
           />
         )}
-        {showClear && <ComboboxClear disabled={disabled} />}
+        {showClear && <ComboboxClear disabled={resolvedDisabled} />}
       </InputGroupAddon>
       {children}
     </InputGroup>
@@ -205,19 +237,24 @@ const comboboxChipsSizeClasses: Record<InputVisualSize, string> = {
 
 function ComboboxChips({
   className,
-  visualSize = 'default',
+  visualSize,
   ...props
 }: React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
   ComboboxPrimitive.Chips.Props & {
     /** Minimum field height; selected values can wrap into additional rows. */
     visualSize?: InputVisualSize;
   }) {
+  const formControl = useFormControlContext();
+  const size =
+    visualSize ??
+    (formControl.size === 'small' ? 'small' : formControl.size === 'large' ? 'large' : 'default');
+
   return (
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
         'flex flex-wrap items-center gap-1 rounded-(--radius-input) border border-input bg-transparent bg-clip-padding px-2.5 py-1 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-3 has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:px-1 dark:bg-input/30 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40',
-        comboboxChipsSizeClasses[visualSize],
+        comboboxChipsSizeClasses[size],
         className,
       )}
       {...props}
@@ -229,10 +266,15 @@ function ComboboxChip({
   className,
   children,
   showRemove = true,
+  removeLabel,
   ...props
 }: ComboboxPrimitive.Chip.Props & {
   showRemove?: boolean;
+  /** Accessible name for the actual chip removal button; defaults to the current locale. */
+  removeLabel?: string;
 }) {
+  const { t } = useTranslation('common');
+
   return (
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
@@ -244,9 +286,10 @@ function ComboboxChip({
     >
       {children}
       {showRemove && (
-        <span className="inline-flex shrink-0 coarse:p-2">
+        <span className="inline-flex shrink-0 pointer-coarse:p-2">
           <ComboboxPrimitive.ChipRemove
-            className="relative opacity-50 hover:opacity-100 after:absolute after:hidden after:content-[''] coarse:after:block coarse:after:-inset-[calc(var(--spacing)*2.25)]"
+            aria-label={removeLabel ?? t('remove')}
+            className="relative opacity-50 hover:opacity-100 after:absolute after:hidden after:content-[''] pointer-coarse:after:block pointer-coarse:after:-inset-[calc(var(--spacing)*2.25)]"
             data-slot="combobox-chip-remove"
             render={<Button size="icon-sm" variant="ghost" />}
           >
@@ -258,11 +301,14 @@ function ComboboxChip({
   );
 }
 
-function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
+function ComboboxChipsInput({ className, disabled, ...props }: ComboboxPrimitive.Input.Props) {
+  const formControl = useFormControlContext();
+
   return (
     <ComboboxPrimitive.Input
       className={cn('min-w-16 flex-1 outline-none', className)}
       data-slot="combobox-chip-input"
+      disabled={disabled ?? formControl.disabled}
       {...props}
     />
   );

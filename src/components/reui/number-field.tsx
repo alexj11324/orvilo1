@@ -8,6 +8,7 @@ import { MinusIcon, PlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createContext, use, useId } from 'react';
 
+import { FormControlProvider, useFormControlContext } from '@/components/FormControlContext';
 import { Label } from '@/components/ui/label';
 
 const NumberFieldContext = createContext<{
@@ -75,23 +76,36 @@ const numberFieldInputVariants = cva(
 function NumberField({
   id,
   className,
-  size = 'default',
+  size,
+  disabled,
   ...props
 }: NumberFieldPrimitive.Root.Props & VariantProps<typeof numberFieldGroupVariants>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
-  const sizeValue = size ?? 'default';
+  const formControl = useFormControlContext();
+  const sizeValue =
+    size === undefined
+      ? formControl.size === 'small'
+        ? 'sm'
+        : formControl.size === 'large'
+          ? 'large'
+          : 'default'
+      : (size ?? 'default');
+  const resolvedDisabled = disabled ?? formControl.disabled;
 
   return (
-    <NumberFieldContext value={{ fieldId, size: sizeValue }}>
-      <NumberFieldPrimitive.Root
-        className={cn('flex w-full flex-col items-start gap-2', className)}
-        data-size={sizeValue}
-        data-slot="number-field"
-        id={fieldId}
-        {...props}
-      />
-    </NumberFieldContext>
+    <FormControlProvider disabled={resolvedDisabled}>
+      <NumberFieldContext value={{ fieldId, size: sizeValue }}>
+        <NumberFieldPrimitive.Root
+          className={cn('flex w-full flex-col items-start gap-2', className)}
+          data-size={sizeValue}
+          data-slot="number-field"
+          disabled={resolvedDisabled}
+          id={fieldId}
+          {...props}
+        />
+      </NumberFieldContext>
+    </FormControlProvider>
   );
 }
 

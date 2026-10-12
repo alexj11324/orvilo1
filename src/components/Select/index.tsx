@@ -122,7 +122,7 @@ const Select = <Value extends string | number = string>({
     return (
       <Combobox
         multiple
-        disabled={disabled || loading}
+        disabled={loading ? true : disabled}
         itemToStringLabel={(v) => textFor(v as Value)}
         items={items.map((item) => item.value)}
         value={values}
@@ -134,15 +134,17 @@ const Select = <Value extends string | number = string>({
           id={id}
           style={style}
           visualSize={
-            size === 'small' || size === 'sm'
-              ? 'small'
-              : size === 'compact'
-                ? 'compact'
-                : size === 'large' || size === 'lg'
-                  ? 'large'
-                  : size === 'normal'
-                    ? 'normal'
-                    : 'default'
+            size === undefined
+              ? undefined
+              : size === 'small' || size === 'sm'
+                ? 'small'
+                : size === 'compact'
+                  ? 'compact'
+                  : size === 'large' || size === 'lg'
+                    ? 'large'
+                    : size === 'normal'
+                      ? 'normal'
+                      : 'default'
           }
         >
           {values.map((v) => (
@@ -194,9 +196,9 @@ const Select = <Value extends string | number = string>({
   return (
     <SelectPrimitive
       defaultValue={defaultValue ?? undefined}
-      disabled={disabled || loading}
+      disabled={loading ? true : disabled}
       items={items}
-      value={isScalarValue(value) ? value : undefined}
+      value={value === null ? null : isScalarValue(value) ? value : undefined}
       onOpenChange={(open) => onOpenChange?.(open)}
       onValueChange={(v) => onChange?.(v as Value | null | undefined)}
     >
@@ -206,15 +208,17 @@ const Select = <Value extends string | number = string>({
         id={id}
         style={style}
         size={
-          size === 'small' || size === 'sm'
-            ? 'sm'
-            : size === 'compact'
-              ? 'compact'
-              : size === 'large' || size === 'lg'
-                ? 'large'
-                : size === 'normal'
-                  ? 'normal'
-                  : 'default'
+          size === undefined
+            ? undefined
+            : size === 'small' || size === 'sm'
+              ? 'sm'
+              : size === 'compact'
+                ? 'compact'
+                : size === 'large' || size === 'lg'
+                  ? 'large'
+                  : size === 'normal'
+                    ? 'normal'
+                    : 'default'
         }
       >
         <SelectValue placeholder={placeholder} />

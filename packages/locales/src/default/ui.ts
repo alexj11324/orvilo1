@@ -22,9 +22,12 @@ export default {
   'form.otherBack': 'Back to options',
   'form.reset': 'Reset',
   'form.skip': 'Skip',
+  'form.optional': 'Optional',
   'form.submit': 'Submit',
   'form.unsavedChanges': 'Unsaved changes',
   'form.unsavedWarning': 'You have unsaved changes. Are you sure you want to leave?',
+  'form.validation.invalid': '{{label}} is invalid.',
+  'form.validation.required': '{{label}} is required.',
   'hotkey.conflict': 'This hotkey conflicts with an existing one.',
   'hotkey.invalidCombination':
     'The hotkey must include a modifier key (Ctrl, Alt, Shift) and only one normal key.',

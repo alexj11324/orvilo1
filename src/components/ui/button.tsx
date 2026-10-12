@@ -1,6 +1,10 @@
+'use client';
+
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from 'cn';
+
+import { useFormControlContext } from '@/components/FormControlContext';
 
 import { Spinner } from './spinner';
 
@@ -77,27 +81,42 @@ const multilineMinimumHeight: Record<
 function Button({
   className,
   variant = 'default',
-  size = 'default',
+  size,
   loading = false,
   multiline = false,
   disabled,
   children,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & ButtonLoadingProps) {
+  const formControl = useFormControlContext();
+  const resolvedSize =
+    size === undefined
+      ? formControl.size === 'small'
+        ? 'sm'
+        : formControl.size === 'large'
+          ? 'large'
+          : 'default'
+      : size;
+
   return (
     <ButtonPrimitive
       aria-busy={loading || undefined}
       data-slot="button"
-      disabled={disabled || loading}
+      disabled={(disabled ?? formControl.disabled) || loading}
       className={
         multiline
           ? cn(
-              buttonVariants({ variant, size }),
-              multilineMinimumHeight[size ?? 'default'],
+              buttonVariants({ variant, size: resolvedSize }),
+              size === undefined && formControl.size === 'small' && 'text-sm',
+              multilineMinimumHeight[resolvedSize ?? 'default'],
               'h-auto whitespace-normal',
               className,
             )
-          : cn(buttonVariants({ variant, size, className }))
+          : cn(
+              buttonVariants({ variant, size: resolvedSize }),
+              size === undefined && formControl.size === 'small' && 'text-sm',
+              className,
+            )
       }
       {...props}
     >

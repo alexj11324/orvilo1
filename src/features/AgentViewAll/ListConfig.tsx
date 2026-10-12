@@ -62,7 +62,7 @@ const ListConfig = memo<ListConfigProps>(
           <Select
             className="w-37.5 text-sm leading-5.5"
             options={groupingOptions}
-            size={'small'}
+            size={'compact'}
             value={options.groupBy}
             onChange={(value) => {
               if (Array.isArray(value) || value == null) return;
@@ -93,7 +93,7 @@ const ListConfig = memo<ListConfigProps>(
             <Select
               className="w-28 text-sm leading-5.5"
               options={orderOptions}
-              size={'small'}
+              size={'compact'}
               value={options.orderBy}
               onChange={(value) => {
                 if (Array.isArray(value) || value == null) return;
@@ -139,7 +139,7 @@ const ListConfig = memo<ListConfigProps>(
             </TabsList>
           </Tabs>
         )}
-        <Form items={formItems} itemsType={'flat'} size={'small'} variant={'borderless'} />
+        <Form items={formItems} itemsType={'flat'} size={'middle'} variant={'borderless'} />
       </div>
     );
 

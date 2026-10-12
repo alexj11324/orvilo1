@@ -9,6 +9,7 @@
     "./askUser": "./src/askUser/index.ts",
     "./automationReadiness": "./src/scan/automationReadiness.ts",
     "./builtinMcp": "./src/builtinMcp/index.ts",
+    "./claudeCodeDirectEnv": "./src/claudeCodeDirectEnv.ts",
     "./client": "./src/client/index.ts",
     "./config": "./src/config.ts",
     "./labels": "./src/labels.ts",

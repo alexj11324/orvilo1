@@ -2,8 +2,8 @@ import { isDesktop as defaultIsDesktop } from '@orvilo/const';
 import {
   HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
   HETEROGENEOUS_PROVIDER_BINDING_PERSONAL_ONLY_ERROR,
-  isRemoteHeterogeneousType,
-} from '@orvilo/heterogeneous-agents';
+} from '@orvilo/heterogeneous-agents/claudeCodeDirectEnv';
+import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents/config';
 import { type DeviceExecutionTarget, type HeterogeneousProviderConfig } from '@orvilo/types';
 
 import { resolveExecutionTarget } from '@/helpers/executionTarget';

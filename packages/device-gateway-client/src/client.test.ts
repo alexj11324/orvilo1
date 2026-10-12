@@ -313,6 +313,56 @@ describe('GatewayClient', () => {
       expect(authFailedCb).toHaveBeenCalledWith('Unknown reason');
     });
 
+    describe('auth_failed on an expired token', () => {
+      const jwt = (exp: number) =>
+        `h.${Buffer.from(JSON.stringify({ exp })).toString('base64url')}.s`;
+      const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+      it('reports auth_expired and stays recoverable', () => {
+        // A reconnect reuses the cached token. Once it has expired the gateway
+        // answers auth_failed, which a fresh token fixes.
+        client.updateToken(jwt(nowSeconds() - 60));
+        const expiredCb = vi.fn();
+        const authFailedCb = vi.fn();
+        client.on('auth_expired', expiredCb);
+        client.on('auth_failed', authFailedCb);
+
+        handler(
+          JSON.stringify({ reason: '"exp" claim timestamp check failed', type: 'auth_failed' }),
+        );
+
+        expect(expiredCb).toHaveBeenCalledTimes(1);
+        expect(authFailedCb).not.toHaveBeenCalled();
+        expect(client.connectionStatus).not.toBe('disconnected');
+      });
+
+      it('treats an out-of-range exp as unreadable instead of throwing', () => {
+        client.updateToken(jwt(1e20));
+        const authFailedCb = vi.fn();
+        client.on('auth_failed', authFailedCb);
+
+        expect(() =>
+          handler(JSON.stringify({ reason: 'bad token', type: 'auth_failed' })),
+        ).not.toThrow();
+        expect(authFailedCb).toHaveBeenCalledWith('bad token');
+        expect((client as any).describeTokenExpiry()).toBe('token exp: unparsable');
+      });
+
+      it('still stops for a token that has not expired', () => {
+        client.updateToken(jwt(nowSeconds() + 3600));
+        const expiredCb = vi.fn();
+        const authFailedCb = vi.fn();
+        client.on('auth_expired', expiredCb);
+        client.on('auth_failed', authFailedCb);
+
+        handler(JSON.stringify({ reason: 'invalid audience', type: 'auth_failed' }));
+
+        expect(authFailedCb).toHaveBeenCalledWith('invalid audience');
+        expect(expiredCb).not.toHaveBeenCalled();
+        expect(client.connectionStatus).toBe('disconnected');
+      });
+    });
+
     it('should handle heartbeat_ack', () => {
       const heartbeatCb = vi.fn();
       client.on('heartbeat_ack', heartbeatCb);

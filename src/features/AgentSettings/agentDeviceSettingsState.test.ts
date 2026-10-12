@@ -110,12 +110,12 @@ describe('resolveAgentDeviceSettingsState', () => {
 });
 
 describe('minimal Device section visibility', () => {
-  it('hides the entire settled singleton group without writing a binding', () => {
+  it('keeps the settled singleton binding visible without writing or offering a picker', () => {
     for (const bindingState of ['unset', 'valid'] as const) {
       expect(
         resolveAgentDeviceSettingsState(input({ selectableDeviceCount: 1, bindingState }))
           .showDeviceGroup,
-      ).toBe(false);
+      ).toBe(true);
     }
   });
   it('keeps loading, zero/many candidates and invalid binding repair visible', () => {
@@ -130,7 +130,7 @@ describe('minimal Device section visibility', () => {
 });
 
 describe('confirmed explicit local choice with optional unverified hosts', () => {
-  it('hides the singleton Device group without pretending the inventory is complete', () => {
+  it('keeps the singleton Device group visible without pretending the inventory is complete', () => {
     const state = input({
       bindingState: 'pending',
       selectableDeviceCount: 1,
@@ -138,7 +138,7 @@ describe('confirmed explicit local choice with optional unverified hosts', () =>
       explicitLocalDeviceIsEligible: true,
       runtimeInventoryOfflineOnly: true,
     });
-    expect(resolveAgentDeviceSettingsState(state).showDeviceGroup).toBe(false);
+    expect(resolveAgentDeviceSettingsState(state).showDeviceGroup).toBe(true);
     expect(state.deviceInventoryComplete).toBe(false);
   });
   it('keeps failed online verification and truly unbound uncertainty visible', () => {

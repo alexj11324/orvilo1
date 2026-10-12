@@ -62,10 +62,11 @@ interface AgentDeviceSettingsProps {
  * Per docs/development/device-execution-contract.md:
  * - >1 legal devices + permission → the picker renders (offline devices stay
  *   visible as candidates).
- * - 0 legal devices → hidden + a blocking notice (never an arbitrary backend).
- * - 1 device → hidden; admission resolves it (never a render-time write).
+ * - 0 legal devices → picker hidden + a blocking notice (never an arbitrary backend).
+ * - 1 device → picker hidden; the saved binding remains visible
+ *   (never a render-time write).
  * - Stale binding → DEVICE_BINDING_INVALID repair prompt, never silent rebind.
- * - Policy-fixed / no permission → non-editable display.
+ * - No management permission → non-editable display.
  * - Loading / query failure is never 0 or 1.
  */
 const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {

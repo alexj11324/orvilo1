@@ -22,7 +22,7 @@ browser never receives them. That's why client / SSE / online-gateway are all
 **not** a real local closed loop. Confirm the failure shape by hooking
 `WebSocket` in the page and reading the first frame after the `auth` send.
 
-**Fix — run the gateway yourself.** The gateway is a Go service in the private
+**Fix — run the gateway yourself.** The gateway is a Go service in the public
 repository `alexj11324/orvilo-gateway` (`agent-gateway-go`). Its
 `verifyToken` checks JWTs against a configurable `JWKS_PUBLIC_KEY` secret. Point
 that secret at **your local app's** public key and the local gateway trusts your
@@ -30,7 +30,7 @@ local JWT → `auth_success` → full local loop.
 
 ```bash
 # 1. Build and run the gateway (separate terminal) → http://localhost:8788.
-#    It is the Go service in the private repository alexj11324/orvilo-gateway,
+#    It is the Go service in the public repository alexj11324/orvilo-gateway,
 #    built at a pinned commit; it only receives the PUBLIC half of JWKS_KEY.
 #    Pick another port with GATEWAY_PORT when 8788 is taken (the local device
 #    gateway defaults to 8787).

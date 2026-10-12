@@ -75,7 +75,7 @@ for service,container in [('orvilo','orvilo'),('hatchet-worker','orvilo-hatchet-
     assert env['AGENT_GATEWAY_SERVICE_TOKEN']==token
     assert env['AGENT_GATEWAY_URL']=='https://agent-gateway.aspectlylabs.com'
     assert env['DEVICE_GATEWAY_URL']=='https://device-gateway.aspectlylabs.com'
-receipt={'source_sha':'fed50da75b8916566f87e32fafd852a8a34e336b','binary_sha256':hashlib.sha256(pathlib.Path('/var/lib/orvilo1/agent-gateway/agent-gateway').read_bytes()).hexdigest(),'image_id':subprocess.check_output(['docker','inspect','--format','{{.Image}}','orvilo-agent-gateway'],text=True).strip(),'original_app_images':images,'credentials_match':True,'rollback_snapshot':str(snapshot)}
+receipt={'source_sha':'81f26f8af942484da644921eae08371f834bfd72','binary_sha256':hashlib.sha256(pathlib.Path('/var/lib/orvilo1/agent-gateway/agent-gateway').read_bytes()).hexdigest(),'image_id':subprocess.check_output(['docker','inspect','--format','{{.Image}}','orvilo-agent-gateway'],text=True).strip(),'original_app_images':images,'credentials_match':True,'rollback_snapshot':str(snapshot)}
 (snapshot/'activation-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
 print(json.dumps(receipt))
 CHECK

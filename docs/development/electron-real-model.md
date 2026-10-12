@@ -32,13 +32,12 @@ key. Health responses alone do not prove that the keys and tokens agree.
 
 Use the repository's workspace-capable device gateway from a successful
 [CI build](../../docker-compose/deploy/device-gateway/README.md), and verify its
-SHA256 manifest before running it. The unpatched upstream 0.4.0 device gateway
+SHA256 manifest before running it. LobeHub's upstream 0.4.0 device gateway
 does not implement Orvilo's workspace pools. Use an artifact matching the host
 architecture, or user-mode emulation for an isolated local test. Do not run the
 production activation script or bypass the CI-only build guard.
 
-Point the device gateway's `ORVILO_API_BASE_URL` and the agent gateway's
-`LOBE_API_BASE_URL` at the local Next server. `APP_URL` must match that server's
+Point both gateways' `ORVILO_API_BASE_URL` at the local Next server. `APP_URL` must match that server's
 origin, including its port. Start the web authorization SPA as well as Electron:
 the `/oauth/consent/*` and `/oauth/callback/*` pages use the web SPA. The backend's
 `VITE_DEV_PORT` must match that SPA's port; Electron's renderer is a separate

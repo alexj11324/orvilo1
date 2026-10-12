@@ -62,17 +62,25 @@ export const resolveActiveConversationCoordinate = ({
   // the bridge keeps the conversation mapped instead of treating it as a
   // leave-Agent surface.
   const chatAgentId = chatConversation ? activeAgentId : undefined;
+  // `/settings/agents/:id` configures one Agent and reads it as the active
+  // Agent. Without a route agent the bridge would clear it as a leave-Agent
+  // surface, and the page would wait on its config forever.
+  const settingsSegmentIndex = segments.lastIndexOf('settings');
+  const settingsAgentId =
+    settingsSegmentIndex >= 0 && segments[settingsSegmentIndex + 1] === 'agents'
+      ? segments[settingsSegmentIndex + 2]
+      : undefined;
 
   return {
     agentBasePath,
-    agentId: params.aid ? resolvedAgentId || params.aid : chatAgentId,
+    agentId: params.aid ? resolvedAgentId || params.aid : (chatAgentId ?? settingsAgentId),
     chatBasePath,
     groupBasePath,
     groupId: groupSegmentIndex >= 0 ? params.gid : undefined,
     hash: location.hash,
     isConversation,
     pathname: location.pathname,
-    routeAgentId: params.aid ?? chatAgentId,
+    routeAgentId: params.aid ?? chatAgentId ?? settingsAgentId,
     search: location.search,
     threadId: isConversation ? location.searchParams.get('thread') : null,
     topicId: isConversation ? params.topicId || null : null,

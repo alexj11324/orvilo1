@@ -10,7 +10,6 @@ import AsyncBoundary from '@/components/AsyncBoundary';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import AgentAccessSettings from '@/features/AgentSettings/AgentAccessSettings';
 import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
 import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
 import AgentModelSettings from '@/features/AgentSettings/AgentModelSettings';
@@ -76,7 +75,6 @@ LegacyRuntimeNotice.displayName = 'AgentSettings.LegacyRuntimeNotice';
  * Advanced. Legacy runtimes get the migration notice instead of rows.
  */
 const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId }) => {
-  const { t } = useTranslation('setting');
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const isAgentConfigLoading = useAgentStore(agentSelectors.isAgentConfigLoading);
@@ -120,14 +118,8 @@ const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId })
             {/* Remote platforms carry no local model rows — model/effort is a
                 local-CLI concept. */}
             {externalAgent && isRemoteHetero ? null : <AgentModelSettings agentId={agentId} />}
-            <details className="mt-5 rounded-(--radius-card) border px-4 py-3">
-              <summary className="cursor-pointer text-sm font-medium">
-                {t('settingAgent.executionSettings.title')}
-              </summary>
-              <AgentRuntimeSettings agentId={agentId} />
-              {externalAgent ? <ExternalAgentConnectionSettings agentId={agentId} /> : null}
-            </details>
-            <AgentAccessSettings agentId={agentId} />
+            <AgentRuntimeSettings agentId={agentId} />
+            {externalAgent ? <ExternalAgentConnectionSettings agentId={agentId} /> : null}
             <AgentUseSettings agentId={agentId} />
           </div>
         </AsyncBoundary>

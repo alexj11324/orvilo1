@@ -86,7 +86,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
                           color: failedPaths.has(item.absolutePath)
                             ? 'var(--ant-color-error)'
                             : undefined,
-                          fontFamily: 'var(--ant-font-family-code)',
+                          fontFamily: 'var(--font-mono)',
                           wordBreak: 'break-all',
                         }}
                       >

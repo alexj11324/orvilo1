@@ -40,10 +40,7 @@ export const useTaskWorkflowGlyph = ({
           {t('taskDetail.workflow.businessStatus')}: {categoryLabel}
         </div>
         {workflowStateId && (
-          <div
-            className="text-xs text-muted-foreground"
-            style={{ fontFamily: 'var(--ant-font-family-code)' }}
-          >
+          <div className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
             {workflowStateId}
           </div>
         )}

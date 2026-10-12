@@ -90,10 +90,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
 
   const tooltip = (
     <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
-      <div
-        className="text-xs text-muted-foreground"
-        style={{ fontFamily: 'var(--ant-font-family-code)' }}
-      >
+      <div className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
         {integration.branch} → {integration.baseBranch}
         {integration.integratedSha ? ` @ ${integration.integratedSha.slice(0, 7)}` : ''}
       </div>

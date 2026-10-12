@@ -64,7 +64,7 @@ for (const width of [1280, 900]) {
         await expect(dialog.locator('[data-slot="select-trigger"]')).toHaveCSS('height', '36px');
         await expect(dialog.locator('button[type="submit"]')).toHaveCSS('height', '36px');
         await dialog.locator('button[type="submit"]').click();
-        await expect(dialog.locator('.ant-form-item-explain-error')).toBeVisible();
+        await expect(dialog.locator('[data-slot="field-error"]')).toBeVisible();
         await page.keyboard.press('Escape');
         await expect(dialog).toBeHidden();
       });
@@ -200,9 +200,9 @@ for (const theme of ['light', 'dark']) {
       for (const pair of await contrast('[role="dialog"] [data-slot="input"]', 'borderTopColor'))
         expect(pair.contrast, 'normal input boundary on modal surface').toBeGreaterThanOrEqual(3);
       await dialog.locator('button[type="submit"]').click();
-      await expect(dialog.locator('.ant-form-item-explain-error')).toBeVisible();
+      await expect(dialog.locator('[data-slot="field-error"]')).toBeVisible();
       await expect(input).toHaveAttribute('aria-invalid', 'true');
-      for (const pair of await contrast('[role="dialog"] .ant-form-item-explain-error'))
+      for (const pair of await contrast('[role="dialog"] [data-slot="field-error"]'))
         expect(pair.contrast, 'validation error text on modal surface').toBeGreaterThanOrEqual(4.5);
       for (const pair of await contrast('[role="dialog"] [aria-invalid="true"]', 'borderTopColor'))
         expect(pair.contrast, 'invalid input boundary on modal surface').toBeGreaterThanOrEqual(3);

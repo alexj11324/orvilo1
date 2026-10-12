@@ -50,7 +50,7 @@ const AuthErrorPage = memo(() => {
         </div>
       }
     >
-      <div className="text-muted-foreground" style={{ fontFamily: 'var(--ant-font-family-code)' }}>
+      <div className="text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
         ErrorCode: {error || 'UNKNOWN'}
       </div>
     </AuthCard>

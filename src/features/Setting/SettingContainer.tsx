@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import {
   type CSSProperties,
@@ -35,27 +34,26 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
     ref,
     ...rest
   }) => {
-    const theme = useTheme(); // Keep for colorBgContainerSecondary (not in cssVar)
     return (
       <div
-        className={
-          variant === 'workspace'
-            ? 'flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto bg-card'
-            : 'flex flex-col items-center h-full w-full'
-        }
         {...rest}
         ref={ref}
+        className={
+          variant === 'workspace'
+            ? 'className' in rest
+              ? rest.className
+              : 'flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto bg-card'
+            : [
+                !(style && 'background' in style && !style.background) &&
+                  (variant === 'secondary' ? 'bg-surface-secondary' : 'bg-card'),
+                !(style && 'overflowX' in style && !style.overflowX) && 'overflow-x-hidden',
+                !(style && 'overflowY' in style && !style.overflowY) && 'overflow-y-auto',
+                'className' in rest ? rest.className : 'flex flex-col items-center h-full w-full',
+              ]
+                .filter(Boolean)
+                .join(' ')
+        }
         style={{
-          ...(variant === 'workspace'
-            ? {}
-            : {
-                background:
-                  variant === 'secondary'
-                    ? theme.colorBgContainerSecondary
-                    : cssVar.colorBgContainer,
-                overflowX: 'hidden',
-                overflowY: 'auto',
-              }),
           paddingBlock,
           paddingInline,
           ...style,

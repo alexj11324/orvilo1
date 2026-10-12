@@ -10,7 +10,6 @@ import type {
   VerifyVisualizationDataset,
   VerifyVisualizationManifest,
 } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { clsx } from 'cn';
 import { ArrowDownRight, ArrowUpRight, ChartNoAxesCombined } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -26,27 +25,6 @@ import {
   stringCell,
   tableHighlightRows,
 } from './visualization';
-
-const registeredStyles = createStaticStyles(({ css }) => ({
-  barBefore: css`
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorTextQuaternary};
-  `,
-  tableBestBadge: css`
-    margin-inline-start: 4px;
-    padding-block: 2px;
-    padding-inline: 4px;
-    border-radius: var(--radius-chip);
-
-    font-size: var(--text-xs);
-    font-weight: 600;
-    line-height: calc(1.25 / 0.75);
-    color: ${cssVar.colorInfo};
-
-    background: ${cssVar.colorInfoBgHover};
-  `,
-}));
 
 const styles = {
   axisLabel: 'text-xs leading-5 text-foreground-tertiary',
@@ -81,22 +59,23 @@ const styles = {
   values:
     'flex flex-col gap-2 [@media(width<=640px)]:col-span-full [@media(width<=640px)]:row-start-2',
   valueText: 'flex justify-between text-xs leading-5 tabular-nums',
-  barBefore: registeredStyles.barBefore,
-  tableBestBadge: registeredStyles.tableBestBadge,
+  barBefore: 'h-full rounded-[inherit] bg-(color:--foreground-quaternary)',
+  tableBestBadge:
+    'ms-1 py-0.5 px-1 rounded-(--radius-chip) text-xs leading-5 font-semibold text-info-text bg-(color:--ant-color-info-bg-hover)',
 } as const;
 
 const SERIES_COLORS = [
-  cssVar.colorInfo,
-  cssVar.colorWarning,
-  cssVar.colorSuccess,
-  cssVar.colorInfo,
-  cssVar.colorError,
+  'var(--info)',
+  'var(--warning)',
+  'var(--success)',
+  'var(--info)',
+  'var(--destructive)',
 ];
 
 const lineSeriesColor = (style: VerifyLineChartView['encoding']['series'][number]['style']) => {
-  if (style === 'muted') return cssVar.colorTextQuaternary;
-  if (style === 'accent') return cssVar.colorWarning;
-  return cssVar.colorInfo;
+  if (style === 'muted') return 'var(--foreground-quaternary)';
+  if (style === 'accent') return 'var(--warning)';
+  return 'var(--info)';
 };
 
 const formatValue = (value: number, unit?: string) => {
@@ -263,8 +242,8 @@ const LineChartRenderer = memo<{
           role={'img'}
           viewBox={'0 0 640 230'}
         >
-          <line stroke={cssVar.colorBorderSecondary} x1={48} x2={620} y1={198} y2={198} />
-          <line stroke={cssVar.colorBorderSecondary} x1={48} x2={48} y1={12} y2={198} />
+          <line stroke={'var(--divider)'} x1={48} x2={620} y1={198} y2={198} />
+          <line stroke={'var(--divider)'} x1={48} x2={48} y1={12} y2={198} />
           {view.encoding.series.map((series, seriesIndex) => {
             const semanticStyle =
               series.style ??
@@ -299,10 +278,16 @@ const LineChartRenderer = memo<{
               </g>
             );
           })}
-          <text fill={cssVar.colorTextTertiary} fontSize={12} textAnchor={'middle'} x={334} y={222}>
+          <text
+            fill={'var(--foreground-tertiary)'}
+            fontSize={12}
+            textAnchor={'middle'}
+            x={334}
+            y={222}
+          >
             {view.encoding.xLabel ?? fieldLabel(dataset, view.encoding.x)}
           </text>
-          <text fill={cssVar.colorTextTertiary} fontSize={12} x={4} y={108}>
+          <text fill={'var(--foreground-tertiary)'} fontSize={12} x={4} y={108}>
             {view.encoding.yLabel ?? ''}
           </text>
         </svg>
@@ -342,8 +327,8 @@ const ScatterPlotRenderer = memo<{
           role={'img'}
           viewBox={'0 0 640 230'}
         >
-          <line stroke={cssVar.colorBorderSecondary} x1={48} x2={620} y1={198} y2={198} />
-          <line stroke={cssVar.colorBorderSecondary} x1={48} x2={48} y1={12} y2={198} />
+          <line stroke={'var(--divider)'} x1={48} x2={620} y1={198} y2={198} />
+          <line stroke={'var(--divider)'} x1={48} x2={48} y1={12} y2={198} />
           {points.map((point, index) => {
             const colorIndex = point.category ? categories.indexOf(point.category) : 0;
             return (
@@ -359,10 +344,16 @@ const ScatterPlotRenderer = memo<{
               </circle>
             );
           })}
-          <text fill={cssVar.colorTextTertiary} fontSize={12} textAnchor={'middle'} x={334} y={222}>
+          <text
+            fill={'var(--foreground-tertiary)'}
+            fontSize={12}
+            textAnchor={'middle'}
+            x={334}
+            y={222}
+          >
             {view.encoding.xLabel ?? fieldLabel(dataset, view.encoding.x)}
           </text>
-          <text fill={cssVar.colorTextTertiary} fontSize={12} x={4} y={108}>
+          <text fill={'var(--foreground-tertiary)'} fontSize={12} x={4} y={108}>
             {view.encoding.yLabel ?? fieldLabel(dataset, view.encoding.y)}
           </text>
         </svg>
@@ -422,8 +413,11 @@ const HeatmapRenderer = memo<{
                     className={styles.heatmapCell}
                     key={`${x}-${y}`}
                     style={{
-                      background: `color-mix(in srgb, ${cssVar.colorInfo} ${intensity * 100}%, ${cssVar.colorBgContainer})`,
-                      color: intensity > 0.58 ? cssVar.colorTextLightSolid : cssVar.colorText,
+                      background: `color-mix(in srgb, var(--info) ${intensity * 100}%, var(--card))`,
+                      color:
+                        intensity > 0.58
+                          ? 'var(--ant-color-text-light-solid)'
+                          : 'var(--foreground)',
                     }}
                   >
                     {typeof value === 'number' ? formatValue(value) : '–'}
@@ -467,7 +461,7 @@ const BarChartRenderer = memo<{
           role={'img'}
           viewBox={'0 0 640 250'}
         >
-          <line stroke={cssVar.colorBorderSecondary} x1={56} x2={608} y1={205} y2={205} />
+          <line stroke={'var(--divider)'} x1={56} x2={608} y1={205} y2={205} />
           {dataset.rows.map((row, rowIndex) => {
             const groupStart = 56 + rowIndex * groupWidth;
             return (
@@ -492,7 +486,7 @@ const BarChartRenderer = memo<{
                 })}
                 <text
                   className={styles.barChartLabel}
-                  fill={cssVar.colorTextSecondary}
+                  fill={'var(--muted-foreground)'}
                   textAnchor={'middle'}
                   x={groupStart + groupWidth / 2}
                   y={224}
@@ -514,7 +508,7 @@ const BarChartRenderer = memo<{
             </text>
           ))}
           {view.encoding.valueLabel && (
-            <text fill={cssVar.colorTextTertiary} fontSize={12} x={4} y={112}>
+            <text fill={'var(--foreground-tertiary)'} fontSize={12} x={4} y={112}>
               {view.encoding.valueLabel}
             </text>
           )}

@@ -255,12 +255,12 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
                 items={PROJECT_UPDATE_HEALTH_ORDER.map((state) => ({
                   key: state,
                   label: t(`overview.health.${state}`),
-                  icon: <ProjectHealthIcon health={state} size={12} />,
+                  icon: <ProjectHealthIcon health={state} size={16} />,
                   onClick: () => setHealth(state),
                 }))}
               >
                 <Button size="sm" variant="outline">
-                  <ProjectHealthIcon health={health} size={12} />
+                  <ProjectHealthIcon health={health} size={16} />
                   {t(`overview.health.${health}`, { defaultValue: health })}
                 </Button>
               </DropdownMenu>
@@ -408,7 +408,7 @@ export const ProjectUpdateRow = memo<{
                     : 'success-light'
               }
             >
-              <ProjectHealthIcon health={update.health} size={12} />
+              <ProjectHealthIcon health={update.health} size={16} />
               {t(`overview.health.${update.health}`, { defaultValue: update.health })}
             </Badge>
           )}

@@ -30,23 +30,22 @@ const AuthLangButton = memo(() => {
       <DropdownMenuTrigger
         render={
           <Button
-            size="sm"
+            className="relative pointer-coarse:after:absolute pointer-coarse:after:left-1/2 pointer-coarse:after:top-1/2 pointer-coarse:after:-translate-x-1/2 pointer-coarse:after:-translate-y-1/2 pointer-coarse:after:h-[calc(100%+var(--spacing)*0.5)] pointer-coarse:after:w-[calc(100%+var(--spacing)*0.5)] pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 pointer-coarse:after:content-[''] px-2"
+            size="compact"
+            type="button"
             variant="ghost"
-            style={{
-              height: 32,
-              paddingInline: 8,
-            }}
           >
-            <div className="text-xs">{currentLabel}</div>
-            <GlobeIcon data-icon="inline-end" />
+            <div className="text-sm leading-5.5">{currentLabel}</div>
+            <GlobeIcon className="size-4" data-icon="inline-end" />
           </Button>
         }
       />
-      <DropdownMenuContent style={{ maxHeight: 360, minWidth: 200, overflow: 'auto' }}>
+      <DropdownMenuContent className="max-h-90 min-w-50 overflow-auto">
         {localeOptions.map((item) => (
           <DropdownMenuCheckboxItem
             closeOnClick
             checked={current === item.value}
+            className="min-h-9 rounded-(--radius-button) pointer-coarse:min-h-11"
             key={item.value}
             onCheckedChange={(checked: boolean) => {
               if (!checked) return;
@@ -56,7 +55,7 @@ const AuthLangButton = memo(() => {
             }}
           >
             <div className="flex flex-col gap-1">
-              <div style={{ lineHeight: 1.2 }}>{item.label}</div>
+              <div className="text-sm leading-5.5">{item.label}</div>
             </div>
           </DropdownMenuCheckboxItem>
         ))}

@@ -73,12 +73,15 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --background: ${theme.colorBgLayout};
       --foreground: ${theme.colorText};
       --card: ${surface};
+      --surface-secondary: ${theme.colorBgContainerSecondary};
       --card-foreground: ${theme.colorText};
+      --link-active: ${theme.colorLinkActive};
       --popover: ${theme.colorBgElevated};
       --popover-foreground: ${theme.colorText};
       --overlay-mask: ${theme.colorBgMask};
       --overlay-mask-foreground: ${theme.colorTextLightSolid};
       --primary: ${theme.colorPrimary};
+      --link: ${theme.colorLink};
       --primary-foreground: ${readableColor(theme.colorPrimary)};
       --primary-hover: ${theme.colorPrimaryHover};
       --primary-hover-foreground: ${readableColor(theme.colorPrimaryHover)};
@@ -91,6 +94,7 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --muted: ${theme.colorFillTertiary};
       --muted-foreground: ${theme.colorTextSecondary};
       --loading-ring-fill: ${theme.colorFill};
+      --scrollbar-fill: ${theme.colorFill};
       --foreground-tertiary: ${theme.colorTextTertiary};
       --foreground-quaternary: ${theme.colorTextQuaternary};
       --foreground-description: ${theme.colorTextDescription};

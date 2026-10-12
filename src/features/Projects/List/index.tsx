@@ -140,7 +140,7 @@ const ProjectHealthCell = memo<{ project: ProjectListItem }>(({ project }) => {
       title={health ? undefined : t('list.health.noUpdatesHint')}
       to={getProjectActivityPath(project.slug ?? project.id)}
     >
-      <ProjectHealthIcon health={health} size={14} />
+      <ProjectHealthIcon health={health} size={16} />
       <span
         className={cn(
           'text-xs leading-5',

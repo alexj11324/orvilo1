@@ -2,7 +2,7 @@
 
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
-import { createStaticStyles, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { CircleDollarSignIcon, CoinsIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -16,99 +16,23 @@ import { formatWorkVersionCost } from '@/utils/workVersionCost';
 import { getWorkTypeDescriptor, isSafeExternalUrl } from './descriptors';
 import { useResourceDeletedPrompt } from './useResourceDeletedPrompt';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    overflow: hidden;
-
-    width: 100%;
-    padding-block: 12px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
-  `,
-  clickable: css`
-    cursor: pointer;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  cost: css`
-    flex-shrink: 0;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  description: css`
-    min-width: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  identifier: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  icon: css`
-    flex-shrink: 0;
-
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  inline: css`
-    overflow: hidden;
-
-    width: 100%;
-    padding-block: 8px;
-    padding-inline: 8px;
-    border-radius: 6px;
-
-    transition: background-color 0.12s ease;
-  `,
-  inlineClickable: css`
-    cursor: pointer;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  inlineCost: css`
-    flex-shrink: 0;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  inlineDescription: css`
-    min-width: 0;
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  inlineIdentifier: css`
-    flex-shrink: 0;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  inlineIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  inlineTitle: css`
-    min-width: 0;
-    font-size: 13px;
-    font-weight: 500;
-  `,
-  title: css`
-    min-width: 0;
-    font-size: 15px;
-    font-weight: 500;
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden w-full p-4 border border-solid border-divider rounded-(--radius-card) bg-popover',
+  clickable: 'cursor-pointer hover:bg-fill-quaternary',
+  cost: 'shrink-0 font-mono text-xs leading-5 text-foreground-tertiary',
+  description: 'min-w-0 text-xs leading-5 text-foreground-tertiary',
+  identifier: 'shrink-0 text-xs leading-5 text-foreground-tertiary',
+  icon: 'shrink-0 size-9 rounded-(--radius-card) text-muted-foreground bg-muted',
+  inline:
+    'overflow-hidden w-full p-2 rounded-(--radius-button) transition-[background-color] duration-120 ease-[ease]',
+  inlineClickable: 'cursor-pointer hover:bg-muted',
+  inlineCost: 'shrink-0 font-mono text-xs leading-5 text-foreground-tertiary',
+  inlineDescription: 'min-w-0 text-xs leading-5 text-foreground-tertiary',
+  inlineIdentifier: 'shrink-0 font-mono text-xs leading-5 text-foreground-tertiary',
+  inlineIcon: 'shrink-0 size-4 text-muted-foreground',
+  inlineTitle: 'min-w-0 text-sm leading-5.5 font-medium',
+  title: 'min-w-0 text-sm leading-5.5 font-medium',
+};
 
 interface WorkSummaryCardProps {
   className?: string;
@@ -124,8 +48,8 @@ interface WorkSummaryCardProps {
   onOpen?: (item: WorkSummaryItem) => void;
   /**
    * `card` (default) renders the elevated 36×36 icon-box layout used across the
-   * chat portal and the works gallery. `inline` renders a flat row (17px icon,
-   * 6px hover fill) for the WorkingSidebar Overview, so a shared card doesn't
+   * chat portal and the works gallery. `inline` renders a flat row (standard 16px glyph,
+   * button-role hover fill) for the WorkingSidebar Overview, so a shared card doesn't
    * dictate the flat sidebar's visual vocabulary.
    */
   variant?: 'card' | 'inline';
@@ -219,9 +143,9 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
           )}
           onClick={clickable ? handleOpen : undefined}
         >
-          <Icon className={styles.inlineIcon} size={17} />
-          <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
-            <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+          <Icon className={styles.inlineIcon} size={16} />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex min-w-0 items-center gap-2">
               <div className={cn('truncate min-w-0', styles.inlineTitle)}>{title}</div>
               {showIdentifier && <span className={styles.inlineIdentifier}>{identifier}</span>}
             </div>
@@ -234,7 +158,7 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
               className={cx('flex items-center justify-center gap-0.5', styles.inlineCost)}
               title={usageTitle}
             >
-              {createElement(usage.icon)}
+              {createElement(usage.icon, { className: 'size-4', size: 16 })}
               {usage.value}
             </div>
           )}
@@ -252,14 +176,19 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
         onClick={clickable ? handleOpen : undefined}
       >
         <div className={cx('flex flex-col items-center justify-center', styles.icon)}>
-          <Icon size={18} />
+          <Icon className="size-4" size={16} />
         </div>
-        <div className="flex flex-1 flex-col gap-0.5" style={{ minWidth: 0 }}>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+            <div className="flex min-w-0 items-center gap-2">
               <div className={cn('truncate min-w-0', styles.title)}>{title}</div>
               {showIdentifier && (
-                <div className={cn('font-mono rounded bg-muted px-1 text-xs', styles.identifier)}>
+                <div
+                  className={cn(
+                    'font-mono rounded-(--radius-chip) bg-muted px-1 text-xs leading-5',
+                    styles.identifier,
+                  )}
+                >
                   {identifier}
                 </div>
               )}
@@ -269,7 +198,7 @@ const WorkSummaryCard = memo<WorkSummaryCardProps>(
                 className={cx('flex items-center justify-center gap-0.5', styles.cost)}
                 title={usageTitle}
               >
-                {createElement(usage.icon)}
+                {createElement(usage.icon, { className: 'size-4', size: 16 })}
                 {usage.value}
               </div>
             )}

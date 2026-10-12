@@ -1,6 +1,6 @@
 'use client';
 
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -63,7 +63,7 @@ const RecentDots = memo<{ recent: ExpertiseHabit['recent'] }>(({ recent }) => {
         <TooltipTrigger
           render={
             <span className="inline-flex">
-              <div className="flex gap-0.75" style={{ flex: 'none' }}>
+              <div className="flex flex-none gap-0.75">
                 {recent.length === 0
                   ? [0, 1, 2].map((i) => (
                       <span className={`${styles.dot} ${styles.dotNone}`} key={i} />
@@ -156,13 +156,13 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
   );
   const menu: DropdownItem[] = [
     {
-      icon: <PencilIcon />,
+      icon: <PencilIcon className="size-4" size={16} />,
       key: 'correct',
       label: t('habit.action.correct'),
       onClick: () => setTeaching(true),
     },
     {
-      icon: <MessageSquareTextIcon />,
+      icon: <MessageSquareTextIcon className="size-4" size={16} />,
       key: 'source',
       label: t('habit.action.source'),
       onClick: () => navigate(lessonPath),
@@ -170,7 +170,7 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
     { type: 'divider' },
     {
       danger: true,
-      icon: <ArchiveIcon />,
+      icon: <ArchiveIcon className="size-4" size={16} />,
       key: 'forget',
       label: t('habit.action.forget'),
       onClick: retire,
@@ -178,20 +178,16 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
   ];
 
   return (
-    <div className={cx(styles.row, 'flex flex-col gap-1.5')}>
+    <div className={cn(styles.row, 'flex flex-col gap-1.5')}>
       <div className="flex items-start gap-3">
-        <div
-          className="font-mono rounded bg-muted px-1 text-xs text-muted-foreground"
-          style={{ flex: 'none', marginTop: 2 }}
-        >
+        <div className="flex-none mbs-0.5 rounded-(--radius-chip) bg-fill-quaternary px-1 font-mono text-xs leading-5 text-muted-foreground">
           {habit.code}
         </div>
         <Popover open={previewOpen} onOpenChange={setPreviewOpen}>
           <PopoverTrigger
             render={
               <div
-                className={cx(styles.previewTarget, 'flex flex-col gap-0.5')}
-                style={{ flex: 1, minWidth: 0 }}
+                className={cn(styles.previewTarget, 'flex flex-1 min-w-0 flex-col gap-0.5')}
                 onClick={() => navigate(lessonPath)}
                 onMouseEnter={schedulePreviewOpen}
                 onMouseLeave={schedulePreviewClose}
@@ -201,16 +197,18 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
                   navigate(lessonPath);
                 }}
               >
-                <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                  <div className="font-medium" style={{ fontSize: 13.5 }}>
-                    {habit.title}
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="text-sm leading-5.5 font-medium">{habit.title}</div>
                   {habit.taughtByUser && (
-                    <Badge variant="secondary">
+                    <Badge className="rounded-(--radius-chip)" variant="secondary">
                       {t('habit.taughtTag')} · {dayjs(habit.createdAt).fromNow()}
                     </Badge>
                   )}
-                  {domainTitle && <Badge variant="secondary">{domainTitle}</Badge>}
+                  {domainTitle && (
+                    <Badge className="rounded-(--radius-chip)" variant="secondary">
+                      {domainTitle}
+                    </Badge>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground">{hint}</div>
               </div>
@@ -233,18 +231,23 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
           </PopoverContent>
         </Popover>
         <RecentDots recent={habit.recent} />
-        <div className={cx('teach', 'flex items-center gap-1')} style={{ flex: 'none' }}>
+        <div
+          className="teach flex flex-none items-center gap-1 transition-opacity duration-(--orvilo-motion-mid) ease-[ease]"
+          data-slot="self-learning-habit-actions"
+        >
           <DropdownMenu items={menu}>
             <ActionIcon
               aria-label={t('more', { ns: 'common' })}
+              className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 pointer-coarse:after:content-['']"
+              classNames={{ icon: 'size-4' }}
               icon={MoreHorizontalIcon}
-              size="small"
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             />
           </DropdownMenu>
         </div>
       </div>
       {teaching && (
-        <div className="flex flex-col" style={{ paddingInlineStart: 48 }}>
+        <div className="flex flex-col ps-12">
           <TeachBox autoFocus placeholder={t('habit.teach.placeholderCorrect')} onSubmit={revise} />
         </div>
       )}
@@ -278,7 +281,7 @@ const HabitList = memo<HabitListProps>(
 
     return (
       <div className="flex flex-col gap-2.5">
-        <div className="flex items-center gap-2 justify-between" style={{ flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-2 justify-between">
           <div className="flex items-baseline gap-2">
             <div className="font-semibold">{t('habits.title')}</div>
             <div className="text-xs text-muted-foreground">
@@ -291,24 +294,22 @@ const HabitList = memo<HabitListProps>(
                 {t('habits.viewAll', { count: habits.length })}
               </Link>
             )}
-            <div className="relative" style={{ width: 200 }}>
+            <div className="relative w-50">
               <SearchIcon
-                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                size={14}
+                className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+                size={16}
               />
               <Input
-                className="h-7 pl-7"
+                className="ps-8"
                 placeholder={t('habits.search')}
                 value={search}
+                visualSize="normal"
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
           </div>
         </div>
-        <div
-          className="flex flex-col p-0 border"
-          style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
-        >
+        <div className="flex flex-col p-0 border border-divider bg-card">
           {filtered.map((h) => (
             <HabitRow
               agentId={agentId}

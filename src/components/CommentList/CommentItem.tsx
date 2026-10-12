@@ -3,7 +3,6 @@
 import { AgentIcon } from '@lobehub/icons';
 import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,35 +11,13 @@ import Avatar from '@/components/Avatar';
 import Rate from '@/components/RatingOverview/Rate';
 import { type SkillCommentItem } from '@/types/discover';
 
-// Pending an exact colorLink alias; primary is not assumed equal in custom themes.
-const themeStyles = createStaticStyles(({ css, cssVar }) => ({
-  content: css`
-    color: ${cssVar.colorTextSecondary};
-
-    p {
-      margin-block: 0;
-    }
-
-    p + p {
-      margin-block-start: 0.72em;
-    }
-
-    strong {
-      font-weight: 600;
-      color: ${cssVar.colorText};
-    }
-
-    a {
-      color: ${cssVar.colorLink};
-    }
-  `,
-}));
+import nativeStyles from './CommentItem.module.css';
 
 const styles = {
   author: 'text-base leading-6 font-semibold text-foreground [word-break:break-word]',
   avatar: 'flex-none leading-0',
   card: 'px-6 py-5.5 rounded-(--radius-card) border border-divider bg-card [@media(width<=575.98px)]:px-4 [@media(width<=575.98px)]:py-4.5',
-  content: cx('text-sm leading-5.5', themeStyles.content),
+  content: nativeStyles.content,
   date: 'flex-none text-xs leading-5 font-medium text-foreground-description whitespace-nowrap',
   rate: 'leading-none',
 };

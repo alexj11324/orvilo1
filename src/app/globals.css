@@ -72,6 +72,7 @@
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary: var(--primary);
+    --color-link: var(--link);
     --color-primary-hover: var(--primary-hover);
     --color-primary-hover-foreground: var(--primary-hover-foreground);
     --color-popover-foreground: var(--popover-foreground);
@@ -80,6 +81,7 @@
     --color-overlay-mask-foreground: var(--overlay-mask-foreground);
     --color-card-foreground: var(--card-foreground);
     --color-card: var(--card);
+    --color-surface-secondary: var(--surface-secondary);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
     --radius-sm: calc(var(--radius) * 0.6);
@@ -100,6 +102,7 @@
     --color-primary-on-fill: var(--primary-on-fill);
     --color-primary-subtle: var(--primary-subtle);
     --color-primary-text: var(--primary-text);
+    --color-link-active: var(--link-active);
     --color-warning-on-fill: var(--warning-on-fill);
     --color-warning-subtle: var(--warning-subtle);
     --color-warning-text: var(--warning-text);
@@ -123,12 +126,16 @@
     --popover-foreground: var(--foreground);
     --overlay-mask: var(--ant-color-bg-mask);
     --overlay-mask-foreground: var(--ant-color-text-light-solid);
+    /* Exact link role; no approximation to primary in custom themes. */
+    --link: var(--ant-color-link);
+    --link-active: var(--ant-color-link-active);
     --primary-foreground: var(--primary-on-fill);
     --secondary: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --secondary-foreground: var(--foreground);
     --muted: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --muted-foreground: var(--ant-color-text-secondary, #666666);
     --loading-ring-fill: var(--ant-color-fill);
+    --scrollbar-fill: var(--ant-color-fill);
     --accent: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --accent-foreground: var(--foreground);
     --border: var(--ant-color-border, #e3e3e3);
@@ -210,6 +217,7 @@
     --muted: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
     --muted-foreground: var(--ant-color-text-secondary, #aaaaaa);
     --loading-ring-fill: var(--ant-color-fill);
+    --scrollbar-fill: var(--ant-color-fill);
     --accent: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
     --accent-foreground: var(--foreground);
     --border: var(--ant-color-border, #202020);

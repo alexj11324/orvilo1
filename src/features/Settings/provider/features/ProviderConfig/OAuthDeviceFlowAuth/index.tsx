@@ -1,34 +1,18 @@
 'use client';
 
-import { CheckCircleFilled } from '@ant-design/icons';
-import { CopyButton, Icon } from '@lobehub/ui';
-import { Avatar, Button, confirmModal, Modal, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
-import { LogOutIcon, UnplugIcon } from 'lucide-react';
+import { CopyButton } from '@lobehub/ui';
+import { Avatar, confirmModal, Modal } from '@lobehub/ui/base-ui';
+import { CircleCheckIcon, LogOutIcon, UnplugIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaQuery } from '@/libs/trpc/client';
 
 import { useOAuthDeviceFlow } from './useOAuthDeviceFlow';
-
-const buttonStyles = createStaticStyles(({ css }) => ({
-  compactAction: css`
-    height: 32px;
-    border-radius: var(--radius-button);
-    font-size: var(--text-sm);
-    line-height: ${22 / 14};
-  `,
-  normalAction: css`
-    height: 36px;
-    border-radius: var(--radius-button);
-    font-size: var(--text-sm);
-    line-height: ${22 / 14};
-  `,
-}));
 
 const styles = {
   card: 'w-full max-w-256 overflow-hidden rounded-(--radius-card) border border-divider',
@@ -143,13 +127,15 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
               </div>
             )}
             <Button
-              className={buttonStyles.compactAction}
+              className="relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:top-[calc(var(--spacing)*-1.75)] pointer-coarse:after:bottom-[calc(var(--spacing)*-1.75)] pointer-coarse:after:left-[calc(var(--spacing)*-0.25)] pointer-coarse:after:right-[calc(var(--spacing)*-0.25)] pointer-coarse:after:content-['']"
               disabled={!canManageProvider}
-              icon={<Icon icon={LogOutIcon} size={16} />}
               loading={revokeAuth.isPending}
-              size={'middle'}
+              size="compact"
+              type="button"
+              variant="outline"
               onClick={handleDisconnect}
             >
+              <LogOutIcon className="size-4" />
               {t('providerModels.config.oauth.disconnect')}
             </Button>
           </>
@@ -157,11 +143,12 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
 
       return (
         <Button
-          className={buttonStyles.compactAction}
+          className="relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:top-[calc(var(--spacing)*-1.75)] pointer-coarse:after:bottom-[calc(var(--spacing)*-1.75)] pointer-coarse:after:left-[calc(var(--spacing)*-0.25)] pointer-coarse:after:right-[calc(var(--spacing)*-0.25)] pointer-coarse:after:content-['']"
           disabled={!canManageProvider}
           loading={isAuthenticating}
-          size={'middle'}
-          type={'primary'}
+          size="compact"
+          type="button"
+          variant="default"
           onClick={handleStartAuth}
         >
           {t('providerModels.config.oauth.connect')}
@@ -177,7 +164,9 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
         return (
           <div className={styles.content}>
             <Spinner className="size-6" />
-            <Text type="secondary">{t('providerModels.config.oauth.connecting')}</Text>
+            <span className="text-sm leading-5.5 text-muted-foreground">
+              {t('providerModels.config.oauth.connecting')}
+            </span>
           </div>
         );
 
@@ -187,25 +176,26 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
         return (
           <div className={styles.content}>
             <div className="flex items-center gap-2">
-              <Icon color="var(--destructive-text)" icon={UnplugIcon} size={16} />
-              <Text>
-                <span className={styles.errorText}>{t(errorKey as any)}</span>
-              </Text>
+              <UnplugIcon className="size-4 text-destructive-text" />
+              <span className={styles.errorText}>{t(errorKey as any)}</span>
             </div>
             <div className="flex w-full flex-col gap-3">
               <Button
-                block
-                className={buttonStyles.normalAction}
+                className="relative w-full pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:top-[calc(var(--spacing)*-1.25)] pointer-coarse:after:bottom-[calc(var(--spacing)*-1.25)] pointer-coarse:after:left-[calc(var(--spacing)*-0.25)] pointer-coarse:after:right-[calc(var(--spacing)*-0.25)] pointer-coarse:after:content-['']"
                 disabled={!canManageProvider}
-                type="primary"
+                size="normal"
+                type="button"
+                variant="default"
                 onClick={handleStartAuth}
               >
                 {t('providerModels.config.oauth.retry')}
               </Button>
               <Button
-                block
-                className={buttonStyles.normalAction}
-                type="text"
+                className="relative w-full pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:top-[calc(var(--spacing)*-1.25)] pointer-coarse:after:bottom-[calc(var(--spacing)*-1.25)] pointer-coarse:after:left-[calc(var(--spacing)*-0.25)] pointer-coarse:after:right-[calc(var(--spacing)*-0.25)] pointer-coarse:after:content-['']"
+                disabled={false}
+                size="normal"
+                type="button"
+                variant="ghost"
                 onClick={handleCancelAuth}
               >
                 {t('providerModels.config.oauth.cancel')}
@@ -250,7 +240,7 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
               {title}
               {enabled && isAuthenticated && (
                 <div className={styles.successBadge}>
-                  <CheckCircleFilled />
+                  <CircleCheckIcon className="size-4" />
                   <span>{t('providerModels.config.oauth.connected')}</span>
                 </div>
               )}

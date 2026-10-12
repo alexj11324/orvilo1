@@ -11,8 +11,7 @@ import type {
   VerifyVerdict,
 } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 import type { TFunction } from 'i18next';
 import {
   AlertTriangle,
@@ -80,127 +79,9 @@ import {
   markdownTextEvidenceTypes,
   rendersAsMarkdown,
 } from './MarkdownEvidence';
+import nativeStyles from './ReportViewer.module.css';
 import { readVisualizationManifest } from './visualization';
 import { VisualizationRenderer } from './VisualizationRenderer';
-
-const registeredStyles = createStaticStyles(({ css }) => ({
-  prChip: css`
-    /* Resting: number secondary, title tertiary, icon quaternary — a quiet chip.
-       Hover lifts the WHOLE thing to the primary text color at once (a clearly
-       perceptible emphasis, not a one-gray-step nudge), and never the global
-       link-blue. Vars so number/title/icon rise together. */
-    --pr-number-color: ${cssVar.colorTextSecondary};
-    --pr-title-color: ${cssVar.colorTextTertiary};
-    --pr-icon-color: ${cssVar.colorTextQuaternary};
-
-    cursor: default;
-
-    display: inline-flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    /* Owns its own line, so the title gets the full column before ellipsizing. */
-    min-width: 0;
-    max-width: 100%;
-
-    font-size: 0.75rem;
-    line-height: calc(20 / 12);
-    color: var(--pr-number-color);
-    text-decoration: none;
-
-    transition: color var(--orvilo-motion-mid);
-
-    &[data-link='true'] {
-      cursor: pointer;
-    }
-
-    &[data-link='true']:hover {
-      --pr-number-color: ${cssVar.colorText};
-      --pr-title-color: ${cssVar.colorText};
-      --pr-icon-color: ${cssVar.colorTextSecondary};
-
-      /* Re-assert over the global \`a:hover\` link-blue — the chip's hover is a
-         text-emphasis step, never a recolor. */
-      color: var(--pr-number-color);
-    }
-
-    > svg:first-child {
-      flex: 0 0 auto;
-      color: var(--pr-icon-color);
-      transition: color var(--orvilo-motion-mid);
-
-      @media (prefers-reduced-motion: reduce) {
-        transition: none;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  prNumber: css`
-    flex: 0 0 auto;
-    color: var(--pr-number-color);
-    transition: color var(--orvilo-motion-mid);
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  prTitle: css`
-    overflow: hidden;
-    flex: 1 1 auto;
-
-    min-width: 0;
-
-    color: var(--pr-title-color);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    transition: color var(--orvilo-motion-mid);
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  originLink: css`
-    cursor: pointer;
-    color: ${cssVar.colorTextTertiary};
-    text-decoration: none;
-
-    &:hover {
-      color: ${cssVar.colorLink};
-    }
-
-    &:hover svg {
-      color: ${cssVar.colorLink};
-    }
-  `,
-  evidenceFile: css`
-    cursor: pointer;
-
-    display: grid;
-    grid-template-columns: 16px minmax(0, 1fr);
-    gap: 8px;
-    align-items: center;
-
-    width: min(100%, 520px);
-    padding-block: 8px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    text-align: start;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      border-color: ${cssVar.colorLink};
-      color: ${cssVar.colorLink};
-    }
-  `,
-}));
 
 const styles = {
   scroll: 'h-full w-full overflow-auto',
@@ -220,13 +101,13 @@ const styles = {
     'inline-flex min-w-0 max-w-[min(360px,100%)] flex-[0_1_auto] items-center gap-1.5 text-foreground-tertiary [&_code]:min-w-0 [&_code]:truncate [&_code]:font-mono [&_code]:text-xs [&_code]:leading-5 [&_code]:text-muted-foreground [&_svg]:flex-none [&_svg]:text-foreground-quaternary',
   commitChip:
     'inline-flex flex-none items-center gap-1.5 text-foreground-tertiary [&_code]:font-mono [&_code]:text-xs [&_code]:leading-5 [&_code]:text-foreground-tertiary [&_svg]:flex-none [&_svg]:text-foreground-quaternary',
-  prChip: registeredStyles.prChip,
-  prNumber: registeredStyles.prNumber,
-  prTitle: registeredStyles.prTitle,
+  prChip: nativeStyles.prChip,
+  prNumber: nativeStyles.prNumber,
+  prTitle: nativeStyles.prTitle,
   scopeMetaItem:
     'inline-flex min-w-0 max-w-full items-center gap-1.5 text-xs leading-5 text-foreground-tertiary [&_code]:min-w-0 [&_code]:truncate [&_code]:font-mono [&_code]:text-xs [&_code]:leading-5 [&_code]:text-muted-foreground [&_svg]:flex-none [&_svg]:text-foreground-quaternary',
   scopeEntry: 'max-w-65',
-  originLink: registeredStyles.originLink,
+  originLink: nativeStyles.originLink,
   surfaceList: 'flex flex-wrap gap-1',
   surfaceChip:
     'inline-flex items-center gap-1 rounded-(--radius-chip) bg-muted px-1.5 py-0.5 text-xs leading-5 text-muted-foreground [&_svg]:text-foreground-tertiary',
@@ -254,7 +135,7 @@ const styles = {
   narrativeBody: 'mbs-3 rounded-(--radius-card) border border-divider bg-card p-4',
   interactionCostBody: 'mbs-3',
   evidenceList: 'flex w-full flex-col items-start gap-1.5',
-  evidenceFile: registeredStyles.evidenceFile,
+  evidenceFile: nativeStyles.evidenceFile,
   evidenceFileIcon: 'flex text-foreground-tertiary',
   evidenceFileBody: 'flex min-w-0 flex-col',
   evidenceFileName: 'truncate text-sm leading-5.5 text-foreground',
@@ -273,30 +154,30 @@ const VERDICT_META: Record<
   { bg: string; color: string; dot: string; icon: typeof Check; labelKey: string }
 > = {
   failed: {
-    bg: cssVar.colorErrorBg,
-    color: cssVar.colorErrorText,
-    dot: cssVar.colorError,
+    bg: 'bg-destructive-wash',
+    color: 'text-destructive-text',
+    dot: 'text-destructive',
     icon: X,
     labelKey: 'report.verdict.failed',
   },
   not_executed: {
-    bg: cssVar.colorFillTertiary,
-    color: cssVar.colorTextTertiary,
-    dot: cssVar.colorTextQuaternary,
+    bg: 'bg-muted',
+    color: 'text-foreground-tertiary',
+    dot: 'text-foreground-quaternary',
     icon: CircleDashed,
     labelKey: 'report.verdict.notExecuted',
   },
   passed: {
-    bg: cssVar.colorSuccessBg,
-    color: cssVar.colorSuccessText,
-    dot: cssVar.colorSuccess,
+    bg: 'bg-success-wash',
+    color: 'text-success-text',
+    dot: 'text-success',
     icon: Check,
     labelKey: 'report.verdict.passed',
   },
   uncertain: {
-    bg: cssVar.colorWarningBg,
-    color: cssVar.colorWarningText,
-    dot: cssVar.colorWarning,
+    bg: 'bg-warning-wash',
+    color: 'text-warning-text',
+    dot: 'text-warning',
     icon: CircleHelp,
     labelKey: 'report.verdict.uncertain',
   },
@@ -397,10 +278,7 @@ const EvidenceItem = memo<{
     isInlineProse;
 
   return (
-    <div
-      className="flex flex-col gap-1.5"
-      style={{ ...(isDocument ? { flex: 1, minHeight: 0 } : undefined) }}
-    >
+    <div className={cn('flex flex-col gap-1.5', isDocument && 'flex-1 min-h-0')}>
       {!hideLabel && <div className="font-semibold text-sm">{label}</div>}
       {description && !flat && !isInlineProse && (
         // Inline prose is excluded: its authored description becomes the fold
@@ -408,18 +286,13 @@ const EvidenceItem = memo<{
         <div className="text-sm text-muted-foreground">{description}</div>
       )}
       {e.fileUrl && imageEvidenceTypes.has(e.type) ? (
-        <div
-          className="flex flex-col"
-          style={{ alignItems: flat ? undefined : 'flex-start', maxWidth: '100%' }}
-        >
+        <div className={cn('flex max-w-full flex-col', !flat && 'items-start')}>
           <Image
             preview
             alt={e.description ?? label}
+            className={clsx(nativeStyles.evidenceImage, flat && nativeStyles.evidenceImageFlat)}
             src={e.fileUrl}
             variant={flat ? 'borderless' : 'outlined'}
-            style={
-              flat ? { borderRadius: 0, maxWidth: '100%', width: '100%' } : { maxWidth: '100%' }
-            }
           />
         </div>
       ) : e.fileUrl && e.type === 'video' ? (
@@ -470,10 +343,12 @@ const EvidenceFileButton = memo<{
     evidence.description && evidence.description !== name ? evidence.description : null;
 
   return (
-    <button
-      className={styles.evidenceFile}
+    <Button
+      className={cn(styles.evidenceFile, 'h-auto min-h-9 whitespace-normal')}
+      size="normal"
       title={t('report.evidence.openDetail', { name })}
       type={'button'}
+      variant="ghost"
       onClick={onClick}
     >
       <span className={styles.evidenceFileIcon}>
@@ -483,7 +358,7 @@ const EvidenceFileButton = memo<{
         <span className={styles.evidenceFileName}>{name}</span>
         {description && <span className={styles.evidenceFileDesc}>{description}</span>}
       </span>
-    </button>
+    </Button>
   );
 });
 
@@ -497,25 +372,15 @@ const EvidenceDrawer = memo<{
   title: string;
 }>(({ evidence, onClose, open, title }) => (
   <AcceptanceDrawer
+    classNames={{ bodyContent: 'h-full min-h-0 overflow-hidden p-0' }}
     containerMaxWidth={'100%'}
     open={open}
     placement={'right'}
     title={title}
     width={'min(1120px, calc(100vw - 48px))'}
-    styles={{
-      bodyContent: {
-        height: '100%',
-        minHeight: 0,
-        overflow: 'hidden',
-        padding: 0,
-      },
-    }}
     onClose={onClose}
   >
-    <div
-      className="flex flex-col gap-5 h-full"
-      style={{ paddingBlock: 12, paddingInline: 16, overflow: 'auto' }}
-    >
+    <div className="flex h-full flex-col gap-5 overflow-auto py-3 px-4">
       {evidence.map((e, index) => (
         <EvidenceItem evidence={e} index={index + 1} key={e.id} />
       ))}
@@ -613,7 +478,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
         type={'button'}
         onClick={() => hasBody && setOpen((o) => !o)}
       >
-        <span style={{ color: meta.dot, display: 'flex' }}>
+        <span className={clsx('flex', meta.dot)}>
           <meta.icon size={16} />
         </span>
         <span className={styles.rowTitle} data-failed={state === 'failed'}>
@@ -728,10 +593,7 @@ const ReportPageState = memo<{
   icon: typeof AlertTriangle;
   title: string;
 }>(({ action, description, icon, title }) => (
-  <div
-    className="flex items-center justify-center flex-col gap-4 h-full w-full"
-    style={{ minHeight: '70vh' }}
-  >
+  <div className="flex h-full min-h-[70vh] w-full flex-col items-center justify-center gap-4">
     <Empty>
       <EmptyHeader>
         {icon ? (
@@ -810,9 +672,15 @@ const CodingScopeCard = memo<{
   const pullRequestContent =
     hasPullRequest && pullRequest ? (
       <>
-        <GitPullRequest size={16} />
-        <span className={styles.prNumber}>{pullRequestLabel(pullRequest, t)}</span>
-        {pullRequest.title && <span className={styles.prTitle}>{pullRequest.title}</span>}
+        <GitPullRequest data-slot="report-pr-icon" size={16} />
+        <span className={styles.prNumber} data-slot="report-pr-number">
+          {pullRequestLabel(pullRequest, t)}
+        </span>
+        {pullRequest.title && (
+          <span className={styles.prTitle} data-slot="report-pr-title">
+            {pullRequest.title}
+          </span>
+        )}
         {pullRequestUrl && <ExternalLink size={16} />}
       </>
     ) : null;
@@ -826,6 +694,7 @@ const CodingScopeCard = memo<{
             <a
               className={styles.prChip}
               data-link={true}
+              data-slot="report-pr-chip"
               href={pullRequestUrl}
               rel="noreferrer"
               target="_blank"
@@ -834,7 +703,7 @@ const CodingScopeCard = memo<{
               {pullRequestContent}
             </a>
           ) : (
-            <span className={styles.prChip} title={pullRequest?.title}>
+            <span className={styles.prChip} data-slot="report-pr-chip" title={pullRequest?.title}>
               {pullRequestContent}
             </span>
           )}
@@ -871,7 +740,7 @@ const CodingScopeCard = memo<{
           </span>
         )}
         {entry && (
-          <span className={cx(styles.scopeMetaItem, styles.scopeEntry)} title={entry}>
+          <span className={clsx(styles.scopeMetaItem, styles.scopeEntry)} title={entry}>
             <Terminal size={16} />
             <code>{entry}</code>
           </span>
@@ -880,7 +749,7 @@ const CodingScopeCard = memo<{
             from a bundle fetched by anyone else holding the shared link. */}
         {originTopicId && (
           <a
-            className={cx(styles.scopeMetaItem, styles.originLink)}
+            className={clsx(styles.scopeMetaItem, styles.originLink)}
             href={`/chat?topic=${originTopicId}`}
             rel="noreferrer"
             target="_blank"
@@ -989,13 +858,13 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
                 to its own line anyway, and then reads as an afterthought
                 rather than as the report's headline state. */}
             {verdict && (
-              <div className={styles.heroLine} style={{ marginBlockEnd: 2 }}>
+              <div className={cn(styles.heroLine, 'mbe-0.5')}>
                 <span
-                  className={styles.pill}
-                  style={{
-                    background: VERDICT_META[verdict].bg,
-                    color: VERDICT_META[verdict].color,
-                  }}
+                  className={clsx(
+                    styles.pill,
+                    VERDICT_META[verdict].bg,
+                    VERDICT_META[verdict].color,
+                  )}
                 >
                   {createElement(VERDICT_META[verdict].icon, { size: 16 })}
                   {t(`report.verdict.${verdict}`)}
@@ -1032,7 +901,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center" style={{ padding: 24 }}>
+            <div className="flex flex-col items-center p-6">
               <div className="text-muted-foreground">{t('report.filterEmpty')}</div>
             </div>
           )}

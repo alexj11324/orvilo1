@@ -2,9 +2,9 @@
 
 import { Image } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { useResponsive } from 'antd-style';
 import { cn } from 'cn';
 import { FileText, Film, Paperclip } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
@@ -15,6 +15,26 @@ import { useAcceptanceScope } from '../AcceptanceScope';
 import { checksForTurn } from '../turnChecks';
 import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import { useAcceptanceTurn } from '../useAcceptanceTurn';
+import styles from './AcceptanceResources.module.css';
+
+// Match the existing application Grid defaults, including inclusive boundaries.
+// AppTheme does not expose breakpoint overrides; SSR keeps the former three-column snapshot.
+const COLUMN_QUERIES = ['(min-width: 768px)', '(min-width: 992px)'] as const;
+
+const subscribeColumns = (onChange: () => void) => {
+  const queries = COLUMN_QUERIES.map((query) => window.matchMedia(query));
+  queries.forEach((query) => query.addEventListener?.('change', onChange));
+  return () => queries.forEach((query) => query.removeEventListener?.('change', onChange));
+};
+
+const getColumnsSnapshot = () =>
+  window.matchMedia(COLUMN_QUERIES[1]).matches
+    ? 3
+    : window.matchMedia(COLUMN_QUERIES[0]).matches
+      ? 2
+      : 1;
+
+const getServerColumnsSnapshot = () => 3;
 
 const isVisual = (type: string) => type === 'screenshot' || type === 'gif';
 
@@ -30,7 +50,11 @@ const isVisual = (type: string) => type === 'screenshot' || type === 'gif';
  */
 const AcceptanceResources = () => {
   const { t } = useTranslation('verify');
-  const { lg = true, md = true } = useResponsive();
+  const columnCount = useSyncExternalStore(
+    subscribeColumns,
+    getColumnsSnapshot,
+    getServerColumnsSnapshot,
+  );
   const hydrated = useIsHydrated();
   const { acceptanceId, embedded } = useAcceptanceScope();
   const { turn } = useAcceptanceTurn(embedded);
@@ -66,7 +90,6 @@ const AcceptanceResources = () => {
       </div>
     );
 
-  const columnCount = lg ? 3 : md ? 2 : 1;
   const columns: (typeof items)[] = Array.from({ length: columnCount }, () => []);
   items.forEach((entry, index) => columns[index % columnCount]!.push(entry));
 
@@ -109,9 +132,9 @@ const AcceptanceResources = () => {
                   >
                     <Image
                       alt={name}
+                      className={styles.image}
                       preview={false}
                       src={evidence.fileUrl!}
-                      style={{ height: '100%', objectFit: 'cover', width: '100%' }}
                     />
                   </div>
                 ) : (
@@ -125,8 +148,8 @@ const AcceptanceResources = () => {
                   </div>
                 )}
                 <div className="flex flex-col gap-0.5 py-2 px-2.5">
-                  <div className="truncate min-w-0 text-xs">{name}</div>
-                  <div className="truncate min-w-0 text-xs text-muted-foreground">
+                  <div className="truncate min-w-0 text-xs leading-5">{name}</div>
+                  <div className="truncate min-w-0 text-xs leading-5 text-muted-foreground">
                     {[check, captured].filter(Boolean).join(' · ')}
                   </div>
                 </div>

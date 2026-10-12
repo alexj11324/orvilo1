@@ -318,7 +318,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               type="button"
               onClick={() => toggleHealth(state)}
             >
-              <ProjectHealthIcon health={state} size={14} />
+              <ProjectHealthIcon health={state} size={16} />
               <span className="text-sm">
                 {t(`list.health.${state}`, { defaultValue: state, ns: 'project' })}
               </span>
@@ -365,7 +365,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
             type="button"
             onClick={() => toggleHealth(null)}
           >
-            <ProjectHealthIcon health={null} size={14} />
+            <ProjectHealthIcon health={null} size={16} />
             <span className="text-sm">{t('list.health.noUpdates', { ns: 'project' })}</span>
             <span className={styles.sidebarRowCount}>{summary.updateMissing}</span>
           </button>

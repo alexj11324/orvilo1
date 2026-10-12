@@ -92,7 +92,7 @@ const TimelineHealthIcon = memo<{ health?: null | string }>(({ health }) => {
       <TooltipTrigger
         render={
           <span aria-label={label} role="img">
-            <ProjectHealthIcon health={valid} size={12} />
+            <ProjectHealthIcon health={valid} size={16} />
           </span>
         }
       />

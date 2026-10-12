@@ -1,10 +1,11 @@
 'use client';
 
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import type { ExpertiseDomainItem } from '@/services/expertise';
 
 import { portraitStyles as styles } from './styles';
@@ -27,31 +28,24 @@ const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
       <div className="text-xs text-muted-foreground">
         {t('domains.title')} {domains.length}
       </div>
-      <div
-        className="flex flex-col p-0 border"
-        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
-      >
+      <div className="flex flex-col p-0 border border-divider bg-card">
         {domains.map((d) => (
-          <button
-            className={cx(styles.row, 'flex items-center gap-3')}
+          <Button
             key={d.id}
-            type={'button'}
-            style={{
-              background: 'transparent',
-              color: 'inherit',
-              textAlign: 'start',
-              width: '100%',
-            }}
+            type="button"
+            variant="ghost"
+            className={cn(
+              styles.row,
+              'flex h-auto min-h-9 pointer-coarse:min-h-11 w-full items-center gap-3 justify-start rounded-none font-normal text-foreground text-start whitespace-normal',
+            )}
             onClick={() => onOpen(d.id)}
           >
-            <div className="font-medium" style={{ flex: 'none', width: 140 }}>
-              {d.title}
-            </div>
-            <div className="text-muted-foreground" style={{ fontSize: 12.5, flex: 1 }}>
+            <div className="flex-none w-35 text-sm leading-5.5 font-medium">{d.title}</div>
+            <div className="flex-1 text-xs leading-5 text-muted-foreground">
               {t('domains.meta', { habits: d.lessons.length, runs: d.runCount })}
             </div>
-            <ChevronRightIcon size={13} style={{ flex: 'none', opacity: 0.4 }} />
-          </button>
+            <ChevronRightIcon className="flex-none size-4 text-muted-foreground" size={16} />
+          </Button>
         ))}
       </div>
     </div>

@@ -132,7 +132,7 @@ export default {
     'This group does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'groupNotFound.title': 'Group Unavailable',
   'agentGatewayRequired':
-    'This deployment has no Agent Gateway configured, so the Agent cannot run. Ask an administrator to set AGENT_GATEWAY_URL.',
+    'This deployment has no Agent Gateway configured, so the Agent cannot run. Ask an administrator to set AGENT_GATEWAY_URL',
   'groupSupervisorRequiresGateway':
     'Group orchestration requires Agent Gateway. Enable gateway mode for this agent, then try again.',
   'inaccessibleFile.desc': 'No access — it may have been set to private or deleted by its owner',

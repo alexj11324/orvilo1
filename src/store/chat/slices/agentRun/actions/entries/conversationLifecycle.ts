@@ -1560,8 +1560,9 @@ export class ConversationLifecycleActionImpl {
         const errorMessage = e instanceof Error ? e.message : 'Unknown error';
         this.#get().failOperation(operationId, { message: errorMessage, type: 'GatewayError' });
         // The composer alert is keyed to this send's topic. A first message's
-        // topic is rolled back below, so say it here or nothing explains the failure.
-        if (optimisticTopic && optimisticTopicActive) {
+        // minted topic never comes to exist, so say it here or nothing explains
+        // the failure.
+        if (mintedTopicId && !hasNotifiedMessageAccepted) {
           toast.error(t('input.errorMsg', { errorMsg: errorMessage, ns: 'chat' }));
         }
         restoreComposerAfterFailedSend(e);

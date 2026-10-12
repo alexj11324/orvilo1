@@ -336,6 +336,18 @@ describe('GatewayClient', () => {
         expect(client.connectionStatus).not.toBe('disconnected');
       });
 
+      it('treats an out-of-range exp as unreadable instead of throwing', () => {
+        client.updateToken(jwt(1e20));
+        const authFailedCb = vi.fn();
+        client.on('auth_failed', authFailedCb);
+
+        expect(() =>
+          handler(JSON.stringify({ reason: 'bad token', type: 'auth_failed' })),
+        ).not.toThrow();
+        expect(authFailedCb).toHaveBeenCalledWith('bad token');
+        expect((client as any).describeTokenExpiry()).toBe('token exp: unparsable');
+      });
+
       it('still stops for a token that has not expired', () => {
         client.updateToken(jwt(nowSeconds() + 3600));
         const expiredCb = vi.fn();

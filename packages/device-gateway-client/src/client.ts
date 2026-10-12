@@ -305,7 +305,10 @@ export class GatewayClient extends EventEmitter {
   private readTokenExpiry(): number | 'unparsable' | undefined {
     try {
       const payload = JSON.parse(Buffer.from(this.token.split('.')[1], 'base64url').toString());
-      return typeof payload.exp === 'number' ? payload.exp * 1000 : undefined;
+      if (typeof payload.exp !== 'number') return undefined;
+      const exp = payload.exp * 1000;
+      // Outside the Date range `toISOString()` throws, inside the open handler.
+      return Number.isNaN(new Date(exp).getTime()) ? 'unparsable' : exp;
     } catch {
       return 'unparsable';
     }

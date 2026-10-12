@@ -1,10 +1,9 @@
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { styles as briefStyles } from '@/features/DailyBrief/style';
-import { RECOMMENDATION_ICON_SIZE } from '@/features/Recommendations/iconSize';
 
 import { styles } from './style';
 
@@ -21,66 +20,46 @@ export const TaskTemplateCardSkeleton = memo<TaskTemplateCardSkeletonProps>(
           className="flex flex-row items-center gap-2.5 py-1.5"
           data-testid={'task-template-card-skeleton'}
         >
-          <Skeleton
-            style={{
-              borderRadius: cssVar.borderRadius,
-              flex: 'none',
-              height: RECOMMENDATION_ICON_SIZE.compact,
-              width: RECOMMENDATION_ICON_SIZE.compact,
-            }}
-          />
-          <Skeleton style={{ height: 16, width: '70%' }} />
+          <Skeleton className="size-5 flex-none rounded-(--radius-card)" />
+          <Skeleton className="h-4 w-7/10" />
         </div>
       );
 
     return (
       <div
         data-testid={'task-template-card-skeleton'}
-        className={cx(
+        className={cn(
           briefStyles.card,
           styles.card,
           'rounded-(--radius-card) border bg-card flex flex-col gap-3 p-3',
         )}
       >
         <div className="flex flex-row items-center gap-4 justify-between">
-          <div
-            className="flex flex-row items-center gap-2"
-            style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
-          >
-            <Skeleton
-              style={{
-                borderRadius: cssVar.borderRadius,
-                flex: 'none',
-                height: RECOMMENDATION_ICON_SIZE.regular,
-                width: RECOMMENDATION_ICON_SIZE.regular,
-              }}
-            />
-            <div
-              className="flex flex-row items-center flex-1 gap-1.5"
-              style={{ minWidth: 0, overflow: 'hidden' }}
-            >
-              <Skeleton style={{ height: 20, width: 180 }} />
-              <Skeleton className="rounded-full" style={{ flex: 'none', height: 12, width: 12 }} />
+          <div className="flex min-w-0 flex-1 flex-row items-center gap-2 overflow-hidden">
+            <Skeleton className="size-7 flex-none rounded-(--radius-card)" />
+            <div className="flex min-w-0 flex-1 flex-row items-center gap-1.5 overflow-hidden">
+              <Skeleton className="h-5 w-45" />
+              <Skeleton className="size-8 flex-none rounded-(--radius-button)" />
             </div>
           </div>
 
-          <Skeleton className="rounded-full" style={{ flex: 'none', height: 24, width: 24 }} />
+          <Skeleton className="size-8 flex-none rounded-(--radius-button)" />
         </div>
 
-        <Separator className="border-dashed" style={{ marginBlock: 0 }} />
+        <Separator className="my-0 border-dashed" />
 
-        <div className="flex flex-col gap-1.5" style={{ marginBottom: 0 }}>
+        <div className="mb-0 flex flex-col gap-1.5">
           {Array.from({ length: descriptionRows }, (_, i) => (
             <Skeleton
+              className={cn('h-3.5', i === descriptionRows - 1 ? 'w-4/5' : 'w-full')}
               key={i}
-              style={{ height: 14, width: i === descriptionRows - 1 ? '80%' : '100%' }}
             />
           ))}
         </div>
 
         <div className="flex flex-row items-center gap-2 justify-between flex-wrap">
-          <Skeleton style={{ height: 22, width: 72 }} />
-          <Skeleton style={{ height: 32, width: 96 }} />
+          <Skeleton className="h-5.5 w-18" />
+          <Skeleton className="h-9 w-24 rounded-(--radius-button)" />
         </div>
       </div>
     );

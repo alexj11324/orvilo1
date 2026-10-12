@@ -84,8 +84,10 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
   // started the refresh must not vanish while the refresh it started is running.
   const refresh = showTaskTemplates && (
     <Button
+      aria-busy={isRefreshing || undefined}
+      className={styles.refreshAction}
       disabled={!canRefresh && !isRefreshing}
-      size="sm"
+      size="compact"
       title={tCommon('taskTemplate.action.refresh.button')}
       variant="ghost"
       onClick={handleRefresh}
@@ -93,7 +95,7 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
       <RefreshCw
         className={isRefreshing ? styles.refreshSpin : undefined}
         data-icon="inline-start"
-        size={12}
+        size={16}
       />
     </Button>
   );
@@ -101,7 +103,7 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
   const compact = variant === 'rail';
 
   const body = (
-    <div className="flex flex-col" style={{ gap: compact ? 2 : 8 }}>
+    <div className={cn('flex flex-col', compact ? 'gap-0.5' : 'gap-2')}>
       {actions.map((action) => (
         <RecommendationCard
           compact={compact}
@@ -140,10 +142,12 @@ const Recommendations = memo<RecommendationsProps>(({ variant = 'default' }) => 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 justify-between">
-        <div className={cn('text-xs', styles.subtitle)}>{t('recommendations.subtitle')}</div>
+        <div className={cn('text-xs leading-5', styles.subtitle)}>
+          {t('recommendations.subtitle')}
+        </div>
         {taskTemplatesState.mode === 'cards' && (
-          <Button size="sm" variant="ghost" onClick={taskTemplatesState.onRefresh}>
-            <RefreshCw data-icon="inline-start" size={12} />
+          <Button size="normal" variant="ghost" onClick={taskTemplatesState.onRefresh}>
+            <RefreshCw data-icon="inline-start" size={16} />
             {tCommon('taskTemplate.action.refresh.button')}
           </Button>
         )}

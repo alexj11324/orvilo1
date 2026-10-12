@@ -1,8 +1,7 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import type { CompressionGroupMetadata, UIChatMessage } from '@orvilo/types';
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronUp, History, Sparkles, Undo2 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -126,7 +125,7 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
         label: t('compression.history'),
       },
     ],
-    [],
+    [t],
   );
 
   return (

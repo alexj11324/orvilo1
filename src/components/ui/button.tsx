@@ -53,13 +53,33 @@ const buttonVariants = cva(
 interface ButtonLoadingProps {
   /** Render a spinner before the children and disable the button while pending. */
   loading?: boolean;
+  /** Keep the selected visual-size minimum while allowing a long label to wrap. */
+  multiline?: boolean;
 }
+
+const multilineMinimumHeight: Record<
+  NonNullable<VariantProps<typeof buttonVariants>['size']>,
+  string
+> = {
+  'default': 'min-h-9',
+  'compact': 'min-h-8',
+  'xs': 'min-h-6',
+  'sm': 'min-h-7',
+  'normal': 'min-h-9',
+  'lg': 'min-h-9',
+  'large': 'min-h-10',
+  'icon': 'min-h-8',
+  'icon-xs': 'min-h-6',
+  'icon-sm': 'min-h-7',
+  'icon-lg': 'min-h-9',
+};
 
 function Button({
   className,
   variant = 'default',
   size = 'default',
   loading = false,
+  multiline = false,
   disabled,
   children,
   ...props
@@ -67,9 +87,18 @@ function Button({
   return (
     <ButtonPrimitive
       aria-busy={loading || undefined}
-      className={cn(buttonVariants({ variant, size, className }))}
       data-slot="button"
       disabled={disabled || loading}
+      className={
+        multiline
+          ? cn(
+              buttonVariants({ variant, size }),
+              multilineMinimumHeight[size ?? 'default'],
+              'h-auto whitespace-normal',
+              className,
+            )
+          : cn(buttonVariants({ variant, size, className }))
+      }
       {...props}
     >
       {loading ? <Spinner data-icon="inline-start" /> : null}

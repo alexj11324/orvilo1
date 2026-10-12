@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspector, BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { GitBranch, Hash } from 'lucide-react';
 import { memo } from 'react';
 

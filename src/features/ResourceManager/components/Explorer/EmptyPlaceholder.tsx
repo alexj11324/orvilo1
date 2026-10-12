@@ -1,5 +1,4 @@
 import { FileTypeIcon } from '@lobehub/ui';
-import { cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowUpIcon, PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, useRef } from 'react';
@@ -20,8 +19,8 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 const ICON_SIZE = 80;
 
 const styles = {
-  actionTitle: 'mbs-3 text-base text-muted-foreground',
-  card: 'relative overflow-hidden cursor-pointer w-50 h-35 border border-divider rounded-(--radius-card) text-center font-medium bg-card transition-[background-color] duration-(--orvilo-motion-fast) ease-[ease-in-out] hover:bg-accent',
+  actionTitle: 'mbs-3 text-base leading-6 text-muted-foreground',
+  card: 'relative overflow-hidden cursor-pointer w-50 h-35 border border-divider rounded-(--radius-card) text-center font-medium bg-card transition-[background-color] duration-(--orvilo-motion-fast) ease-[ease-in-out] motion-reduce:transition-none hover:bg-accent',
   glow: 'absolute -inset-be-3 end-0 size-12 opacity-50 blur-[calc(var(--spacing)*6)]',
   icon: 'absolute z-1 -inset-be-6 end-2 flex-none',
 };
@@ -87,10 +86,10 @@ const EmptyPlaceholder = () => {
             <span className={styles.actionTitle}>
               {t('FileManager.emptyStatus.actions.knowledgeBase')}
             </span>
-            <div className={styles.glow} style={{ background: cssVar.purple }} />
+            <div className={styles.glow} style={{ background: 'var(--ant-purple)' }} />
             <FileTypeIcon
               className={styles.icon}
-              color={cssVar.purple}
+              color={'var(--ant-purple)'}
               size={ICON_SIZE}
               type={'folder'}
               icon={
@@ -115,12 +114,12 @@ const EmptyPlaceholder = () => {
             return false;
           }}
         >
-          <div className={cx('flex flex-col p-4', styles.card)}>
+          <div className={cn('flex flex-col p-4', styles.card)}>
             <span className={styles.actionTitle}>{t('FileManager.emptyStatus.actions.file')}</span>
-            <div className={styles.glow} style={{ background: cssVar.gold }} />
+            <div className={styles.glow} style={{ background: 'var(--ant-gold)' }} />
             <FileTypeIcon
               className={styles.icon}
-              color={cssVar.gold}
+              color={'var(--ant-gold)'}
               size={ICON_SIZE}
               icon={
                 <span className="anticon" role="img">
@@ -146,14 +145,14 @@ const EmptyPlaceholder = () => {
             return false;
           }}
         >
-          <div className={cx('flex flex-col p-4', styles.card)}>
+          <div className={cn('flex flex-col p-4', styles.card)}>
             <span className={styles.actionTitle}>
               {t('FileManager.emptyStatus.actions.folder')}
             </span>
-            <div className={styles.glow} style={{ background: cssVar.geekblue }} />
+            <div className={styles.glow} style={{ background: 'var(--ant-geekblue)' }} />
             <FileTypeIcon
               className={styles.icon}
-              color={cssVar.geekblue}
+              color={'var(--ant-geekblue)'}
               size={ICON_SIZE}
               type={'folder'}
               icon={

@@ -1,5 +1,5 @@
 import type { BuiltinPlaceholderProps, SearchQuery } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 

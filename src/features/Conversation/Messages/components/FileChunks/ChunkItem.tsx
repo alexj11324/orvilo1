@@ -1,6 +1,5 @@
 import { type ChatFileChunk } from '@orvilo/types';
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { memo } from 'react';
 
 import FileIcon from '@/components/FileIcon';

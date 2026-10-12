@@ -2521,7 +2521,11 @@ describe('TaskService', () => {
     });
 
     it("records a created sub-issue on its parent, credited to the new Issue's creator", async () => {
-      mockTaskModel.resolve.mockResolvedValue({ id: 'parent_id', visibility: 'public' });
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'parent_id',
+        visibility: 'public',
+        workspaceId: 'ws-1',
+      });
       mockTaskModel.create.mockImplementation(async (data: any) => ({
         ...data,
         createdByAgentId: 'agt_creator',

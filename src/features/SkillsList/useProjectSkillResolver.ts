@@ -1,11 +1,8 @@
 import { isDesktop } from '@orvilo/const';
 import { useCallback } from 'react';
 
-import { resolveExecutionTarget } from '@/helpers/executionTarget';
-import { useIsGatewayModeEnabled } from '@/helpers/gatewayMode';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
-import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors } from '@/store/agent/selectors';
+import { useProjectSkillsDeviceId } from '@/hooks/useProjectSkillsDeviceId';
 
 import { useProjectSkills } from './useProjectSkills';
 
@@ -40,27 +37,7 @@ export const useProjectSkillResolver = (
   // Unified cwd: topic > agent's per-device choice > device default > home.
   const workingDirectory = useEffectiveWorkingDirectory(agentId);
 
-  // Resolve the EFFECTIVE target, then treat it as remote only when it lands on
-  // `device` with a bound device — same coercion the slash menu / sidebar use so
-  // a hetero "This device" run opened on web still resolves.
-  const agencyConfig = useAgentStore((s) =>
-    agentId ? agentByIdSelectors.getAgencyConfigById(agentId)(s) : undefined,
-  );
-  const isHetero = useAgentStore((s) =>
-    agentId ? agentByIdSelectors.isAgentHeterogeneousById(agentId)(s) : false,
-  );
-  const deviceRoutingAvailable = useIsGatewayModeEnabled(agentId);
-  const isWorkspaceAgent = useAgentStore((s) =>
-    agentId ? agentByIdSelectors.isWorkspaceAgentById(agentId)(s) : false,
-  );
-  const effectiveTarget = resolveExecutionTarget(agencyConfig, {
-    clientExecutionAvailable: isDesktop,
-    deviceRoutingAvailable,
-    isHetero,
-    workspaceScoped: isWorkspaceAgent,
-  });
-  const isDeviceMode = effectiveTarget === 'device' && !!agencyConfig?.boundDeviceId;
-  const remoteDeviceId = isDeviceMode ? agencyConfig.boundDeviceId : undefined;
+  const remoteDeviceId = useProjectSkillsDeviceId(agentId, isDesktop);
 
   // Local desktop reads over IPC; a bound device reads over RPC. Shares the SWR
   // key with the slash menu / sidebar, so this adds no extra fetch.

@@ -47,7 +47,6 @@ export const ConfiguredAgentRow = ({
     canSelectExecutionTarget,
     canSelectPersonalDevice,
     isPreferenceLoading,
-    memberSelectedDeviceId,
     workspaceScoped,
   } = useEffectiveAgencyConfig(row.id);
   const workspaceId = useAgentStore((state) => state.agentMap[row.id]?.workspaceId);
@@ -56,7 +55,6 @@ export const ConfiguredAgentRow = ({
     boundDeviceId: agencyConfig?.boundDeviceId,
     canSelectDevice: canSelectExecutionTarget,
     canSelectPersonalDevice,
-    memberSelectedDeviceId,
     permissionsLoaded: !isPreferenceLoading,
     scope: workspaceId ? 'workspace' : 'personal',
   });

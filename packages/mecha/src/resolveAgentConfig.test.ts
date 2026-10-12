@@ -80,52 +80,17 @@ describe('resolveAgentConfig without a host', () => {
     expect(resolved.chatConfig.enableAgentMode).toBe(false);
   });
 
-  it('lets a collaborative builtin member keep their own model, even as a manager', () => {
-    const resolved = resolveAgentConfig(
-      { agentId: 'agt_1' },
-      snapshot({
-        // A collaborative builtin needs all three of these to be recognised.
-        agent: { slug: 'inbox', virtual: true, visibility: 'public', workspaceId: 'ws_1' },
-        canManage: true,
-        memberModelOverride: { model: 'my-own-pick', provider: 'openai' },
-      }),
-    );
-
-    // These rows have no shared default to manage, so an admin reads their own
-    // choice like anyone else. A host that cannot express `slug` and `virtual`
-    // in the snapshot would classify this as an ordinary agent and hand the
-    // member the workspace-shared model instead — invisible from the browser,
-    // which happens to pass a richer object.
-    expect(resolved.agentConfig.model).toBe('my-own-pick');
-  });
-
-  it('keeps the shared model for an ordinary workspace agent a manager owns', () => {
-    const resolved = resolveAgentConfig(
-      { agentId: 'agt_1' },
-      snapshot({
-        // Same row minus the collaborative discriminators.
-        agent: { visibility: 'public', workspaceId: 'ws_1' },
-        canManage: true,
-        memberModelOverride: { model: 'my-own-pick', provider: 'openai' },
-      }),
-    );
-
-    expect(resolved.agentConfig.model).toBe('gpt-5');
-  });
-
-  it('treats a legacy row holding a reserved slug as an ordinary agent', () => {
-    const resolved = resolveAgentConfig(
-      { agentId: 'agt_1' },
-      snapshot({
-        // `virtual` is what provisioning writes; a slug alone is not enough.
-        agent: { slug: 'inbox', visibility: 'public', workspaceId: 'ws_1' },
-        canManage: true,
-        memberModelOverride: { model: 'my-own-pick', provider: 'openai' },
-      }),
-    );
-
-    expect(resolved.agentConfig.model).toBe('gpt-5');
-  });
+  it.each([true, false])(
+    'uses the saved model for managers and members (canManage=%s)',
+    (canManage) => {
+      const resolved = resolveAgentConfig(
+        { agentId: 'agt_1' },
+        snapshot({ agent: { visibility: 'public', workspaceId: 'ws_1' }, canManage }),
+      );
+      expect(resolved.agentConfig.model).toBe('gpt-5');
+      expect(resolved.agentConfig.provider).toBe('openai');
+    },
+  );
 
   it('ignores a member mode override when the caller can manage the agent', () => {
     const resolved = resolveAgentConfig(
@@ -139,21 +104,6 @@ describe('resolveAgentConfig without a host', () => {
 
     // A manager reads the shared row, so their own member pick stays dormant.
     expect(resolved.chatConfig.enableAgentMode).toBeUndefined();
-  });
-
-  it('lets a per-call model override outrank the member pick and the shared default', () => {
-    const resolved = resolveAgentConfig(
-      { agentId: 'agt_1', modelOverride: { model: 'pinned-model' } },
-      snapshot({
-        agent: { visibility: 'public', workspaceId: 'ws_1' },
-        canManage: false,
-        memberModelOverride: { model: 'member-model', provider: 'anthropic' },
-      }),
-    );
-
-    // Model is pinned by the call; provider still comes from the member pick.
-    expect(resolved.agentConfig.model).toBe('pinned-model');
-    expect(resolved.agentConfig.provider).toBe('anthropic');
   });
 
   it('keeps a user-customized system role on a builtin row over the runtime one', () => {

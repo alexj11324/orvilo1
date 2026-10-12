@@ -30,6 +30,7 @@ vi.mock('@/server/featureFlags', () => ({
 vi.mock('@/database/models/agent', () => ({
   AgentModel: class {
     getAgentConfig = mocks.agent;
+    getAgentConfigForExecution = mocks.agent;
   },
 }));
 vi.mock('@/database/models/connector', () => ({
@@ -139,7 +140,11 @@ describe('OpenCode ACP execution evidence', () => {
       id: 'agent',
       updatedAt: new Date('2026-10-06T09:59:00Z'),
       plugins: [],
-      agencyConfig: { heterogeneousProvider: { type: 'opencode', model } },
+      agencyConfig: {
+        boundDeviceId: 'one',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'opencode', model },
+      },
     });
     mocks.probe.mockResolvedValue({
       success: true,
@@ -255,7 +260,11 @@ beforeEach(() => {
   mocks.agent.mockResolvedValue({
     id: 'agent',
     plugins: [],
-    agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+    agencyConfig: {
+      boundDeviceId: 'one',
+      executionTarget: 'device',
+      heterogeneousProvider: { type: 'codex' },
+    },
   });
   mocks.source.mockResolvedValue({ isEnabled: true, status: 'connected' });
   mocks.devices.mockResolvedValue([{ deviceId: 'one', name: 'Device one' }]);
@@ -300,7 +309,7 @@ describe('MCP automation readiness', () => {
     mocks.flags.mockResolvedValue({ mcp_event_automations: ['user'] });
     expect((await checkMcpAutomationReadiness(input())).canEnable).toBe(true);
   });
-  it('auto binds one authorized online device only after a real host probe', async () => {
+  it('validates the saved Agent device through a real host probe', async () => {
     const result = await checkMcpAutomationReadiness(input());
     expect(result).toMatchObject({ canEnable: true, deviceId: 'one', reasons: [] });
     expect(mocks.probe).toHaveBeenCalledWith(
@@ -309,20 +318,19 @@ describe('MCP automation readiness', () => {
       10000,
     );
   });
-  it('requires explicit selection for multiple devices', async () => {
+  it('uses the saved Agent device despite an explicit or task device choice', async () => {
     mocks.devices.mockResolvedValue([{ deviceId: 'one' }, { deviceId: 'two' }]);
     mocks.online.mockResolvedValue([{ deviceId: 'one' }, { deviceId: 'two' }]);
-    const result = await checkMcpAutomationReadiness(input());
-    expect(result.reasons).toContain('DEVICE_SELECTION_REQUIRED');
-    expect(mocks.probe).not.toHaveBeenCalled();
-    expect((await checkMcpAutomationReadiness({ ...input(), deviceId: 'two' })).deviceId).toBe(
-      'two',
+    const request = input();
+    request.task.config.automationDeviceId = 'two';
+    expect((await checkMcpAutomationReadiness({ ...request, deviceId: 'two' })).deviceId).toBe(
+      'one',
     );
   });
-  it('preserves an offline binding instead of switching to the only online device', async () => {
-    const request = input();
-    request.task.config.automationDeviceId = 'offline';
-    const result = await checkMcpAutomationReadiness(request);
+  it('preserves an offline saved Agent device instead of switching to the online device', async () => {
+    const agent = await mocks.agent();
+    agent.agencyConfig.boundDeviceId = 'offline';
+    const result = await checkMcpAutomationReadiness(input());
     expect(result).toMatchObject({ canEnable: false, deviceId: 'offline' });
     expect(result.reasons).toContain('DEVICE_UNAVAILABLE');
     expect(mocks.probe).not.toHaveBeenCalled();

@@ -1,6 +1,5 @@
 import { type OrviloDatabase } from '@orvilo/database';
 import type {
-  AgentDeviceOverride,
   DeviceCandidate,
   DeviceCapabilitySnapshot,
   DeviceResolutionErrorCode,
@@ -10,10 +9,8 @@ import type {
 } from '@orvilo/types';
 import { resolveExecutionDevice } from '@orvilo/types';
 import debug from 'debug';
-import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { DeviceModel } from '@/database/models/device';
-import { topics } from '@/database/schemas';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 
 import { deviceGateway } from './index';
@@ -25,26 +22,7 @@ import { filterAuthorizedDevicePresence } from './scopedDevicePresence';
 
 const log = debug('orvilo-server:execution-admission');
 
-/**
- * Unified execution admission — the ONE place an agent run resolves where it
- * executes (see docs/development/device-execution-contract.md + plan §5).
- *
- * The flow splits into two honest steps:
- *
- * 1. `resolveExecutionTarget` answers the STORED intent — 'device' / 'local' /
- *    'sandbox' / 'auto' / 'none' — including the fixed-policy, workspaceScoped,
- *    and bot-trigger coercions. The sandbox and `canUseDevice` exits short
- *    circuit here; they never touch a device so they never consult the
- *    candidate set.
- * 2. For every device-bearing intent, `resolveExecutionDevice` (the ONLY
- *    resolver) answers WHICH device — fed the authorized candidate set plus
- *    the real inputs (session binding, explicit request, member preference,
- *    agent default, inventory completeness). A blocked answer is returned
- *    verbatim: never downgraded to a default, never silently re-bound.
- *
- * The caller (`dispatchHeteroAgent`) consumes exactly this plan — there is no
- * second device pick downstream.
- */
+/** Admission validates the saved Agent device against the caller's authorized inventory. */
 
 // ─── Candidate inventory ─────────────────────────────────────────────────────
 
@@ -60,18 +38,6 @@ export type AdmissionRequiredOperation =
   | { adapter?: string | null; kind: 'agent-run'; minAdapterVersion?: string }
   | { kind: 'device-tool-call'; toolName: string }
   | { kind: 'device-operation'; operation: string };
-
-/** Existing member-choice policy, evaluated only from trusted server context. */
-export const canSelectCallerPersonalDevice = ({
-  agencyConfig,
-}: {
-  agencyConfig?: OrviloAgentAgencyConfig | null;
-  agentOwnerId?: string;
-  canManageAgent: boolean;
-  userId: string;
-  visibility?: 'private' | 'public';
-  workspaceId?: string;
-}): boolean => agencyConfig?.executionTargetSelectionPolicy !== 'fixed';
 
 /**
  * The caller's grant context. `devicePermissions` is a caller-computed
@@ -659,71 +625,19 @@ export type HeteroExecutionPlan =
   | { kind: 'sandbox' };
 
 export interface ResolveHeteroExecutionPlanParams {
-  /**
-   * The merged agency config for THIS run — already carries the topic pin
-   * (executionConfig) and the caller's member override via
-   * `resolveAgentAgencyConfig`. Member-shadowing is applied below: when a
-   * member override resolved, the shared-row default is never consulted.
-   */
+  /** Saved Agent execution configuration. */
   agencyConfig?: OrviloAgentAgencyConfig;
-  /** Agent metadata only; Device authority always belongs to the actual caller. */
+  /** Device authority always belongs to the actual caller. */
   agentOwnerId?: string;
-  /** Existing effective-policy verdict from trusted run setup, used only for unbound auto. */
-  canSelectPersonalDevice?: boolean;
-  /**
-   * External senders (bot/IM/task surfaces without device grants) pass false —
-   * they degrade to the sandbox when available and are denied otherwise.
-   */
   canUseDevice: boolean;
-  /**
-   * The raw per-request device id the caller sent (e.g. the `deviceId`
-   * execAgent param). NOT the topic pin — the pin is `sessionBoundDeviceId`.
-   */
-  explicitDeviceId?: string;
-  /** Remote notify-based families (openclaw/hermes) never consume a stale bound id for `local`. */
-  isPlatformTask: boolean;
-  /**
-   * The requesting client's own registered deviceId — the "this machine" a
-   * stored `local` target (and a member's own `local` override) resolves to.
-   */
   localDeviceId?: string;
-  /** The caller's resolved `agentDeviceOverrides[agentId]` — undefined when absent. */
-  memberDeviceOverride?: AgentDeviceOverride | null;
-  /**
-   * The caller's grant context for candidate construction — view-only
-   * grants never enter the execution set; an unready grant context makes
-   * the whole inventory 'permissions-unready' (never an accidental set).
-   */
   policy?: AdmissionCandidatePolicy;
   requestTrigger?: RequestTrigger;
-  /**
-   * The operation the run needs — defaults to `{kind:'agent-run'}`: the
-   * registry contract verifies, adapter/version delegated to device-side
-   * admission at launch. A tool/operation requirement probes each online
-   * candidate's advertised `supportedTools`.
-   */
   requiredOperation?: AdmissionRequiredOperation;
-  /**
-   * Whether this agent family may execute in the cloud sandbox at all
-   * (`supportsCloudHeterogeneousSandbox` for local CLI kinds).
-   */
   sandboxExecutionAvailable: boolean;
-  /**
-   * The creator granted `orvilo-cloud-sandbox` on an agent-share visitor run —
-   * the only surface where `canUseDevice === false` may still execute.
-   */
   sandboxFallback?: boolean;
-  /**
-   * The conversation's durable device pin — `topic.metadata.executionConfig
-   * .boundDeviceId` (`turn.topicBoundDeviceId`). This is the session binding
-   * the resolver consults FIRST; an invalid pin blocks, an explicit request
-   * in the same call is a repair proposal, not a takeover.
-   */
-  sessionBoundDeviceId?: string | null;
   userId: string;
   workspaceId?: string;
-  /** Shared-row coercion — a member without their own override never executes the shared config. */
-  workspaceScoped: boolean;
 }
 
 export const resolveHeteroExecutionPlan = async (
@@ -731,183 +645,50 @@ export const resolveHeteroExecutionPlan = async (
   params: ResolveHeteroExecutionPlanParams,
 ): Promise<HeteroExecutionPlan> => {
   const { agencyConfig } = params;
-  const isFixedPolicy = agencyConfig?.executionTargetSelectionPolicy === 'fixed';
-  // The server IS the execution host resolver: a device-gateway dispatch IS
-  // "local execution" for target resolution — `clientExecutionAvailable`
-  // here means "the gateway can reach a machine", not "the sender is a
-  // desktop" (the old platformPlan passed `Boolean(localDeviceId)`, which let
-  // the same stored target resolve differently by sending surface).
   const target = resolveExecutionTarget(agencyConfig, {
     clientExecutionAvailable: true,
     isHetero: true,
     sandboxExecutionAvailable: params.sandboxExecutionAvailable,
     trigger: params.requestTrigger,
-    workspaceScoped: params.workspaceScoped,
+    workspaceScoped: false,
   });
-
-  // An explicit request counts toward device intent ONLY when the run allows
-  // member-initiated requests (mirroring the legacy fixed-policy strip): a
-  // disallowed request is ignored, never a silent override and never an error
-  // — the resolver gates it the same way below.
-  const explicitRequestAllowed = !isFixedPolicy && !params.workspaceScoped;
-  const effectiveExplicitDeviceId = explicitRequestAllowed ? params.explicitDeviceId : undefined;
-  const wantsDevice =
-    !!effectiveExplicitDeviceId || target === 'device' || target === 'local' || target === 'auto';
-
-  if (!wantsDevice || !params.canUseDevice) {
-    if (target === 'sandbox') return { kind: 'sandbox' };
-    if (!params.canUseDevice) {
-      // Device access denied: the only surfaces a denied sender may still
-      // reach are the explicit sandbox grant (share visitors) or a
-      // sandbox-capable family — never a device, never the viewing client's
-      // machine.
-      if (params.sandboxExecutionAvailable || params.sandboxFallback) return { kind: 'sandbox' };
-      return {
-        code: 'DEVICE_ACCESS_DENIED',
-        detail: 'This sender is not allowed to run agents on a bound device.',
-        kind: 'blocked',
-      };
-    }
-    // Stored 'none' is an explicit opt-out — the run stays pending until the
-    // user picks a device or sandbox; it never auto-binds. An UNSET target
-    // still consults the candidate set below: a session pin IS selection
-    // history (the second message needn't re-send a deviceId), and with no
-    // pin the 0/1/N rules answer honestly — blocking here would strand a
-    // bound conversation on EXECUTION_TARGET_NONE forever. Only a STORED
-    // intent short-circuits; a shared/pinned scope never auto-binds off the
-    // shared row either way.
-    const hasStoredIntent = agencyConfig?.executionTarget !== undefined;
-    // A genuinely unset first workspace send may use the existing installed-runtime
-    // singleton/CAS path. Stored choices and every prior binding keep their fences.
-    const firstWorkspaceSelection =
-      !!params.workspaceId &&
-      !hasStoredIntent &&
-      !isFixedPolicy &&
-      !agencyConfig?.boundDeviceId &&
-      !params.sessionBoundDeviceId &&
-      !params.memberDeviceOverride?.executionTarget &&
-      !params.memberDeviceOverride?.boundDeviceId &&
-      !params.explicitDeviceId &&
-      params.requiredOperation?.kind === 'agent-run' &&
-      !!params.requiredOperation.adapter;
-    if (hasStoredIntent || (params.workspaceScoped && !firstWorkspaceSelection) || isFixedPolicy) {
-      return {
-        code: 'EXECUTION_TARGET_NONE',
-        detail: 'No execution target is selected for this agent — pick a device or cloud sandbox.',
-        kind: 'blocked',
-      };
-    }
+  if (target === 'sandbox') return { kind: 'sandbox' };
+  if (!params.canUseDevice) {
+    if (params.sandboxFallback) return { kind: 'sandbox' };
+    return {
+      code: 'DEVICE_ACCESS_DENIED',
+      detail: 'This sender is not allowed to run agents on the saved device.',
+      kind: 'blocked',
+    };
   }
-
-  const candidateOptions: NonNullable<Parameters<typeof listAuthorizedDeviceCandidates>[3]> = {
-    agentOwnerId: params.agentOwnerId,
-    localDeviceId: params.localDeviceId,
-    policy: params.policy,
-    requiredOperation: params.requiredOperation ?? { kind: 'agent-run' },
-    referencedDevices: [
-      // Stored bindings still require the actual caller's registry authority.
-      { deviceId: agencyConfig?.boundDeviceId },
-      { deviceId: params.sessionBoundDeviceId },
-      { deviceId: params.memberDeviceOverride?.boundDeviceId },
-      // The caller's own machine and their explicit request verify only
-      // against the caller's + workspace registries — a member cannot
-      // request the author's personal device by id.
-      { deviceId: params.localDeviceId },
-      { deviceId: effectiveExplicitDeviceId },
-    ],
-  };
-  let { candidates, inventoryComplete } = await listAuthorizedDeviceCandidates(
+  if (!['device', 'local'].includes(target) || !agencyConfig?.boundDeviceId) {
+    return {
+      code: 'EXECUTION_TARGET_NONE',
+      detail: 'Select a run device in the Agent settings.',
+      kind: 'blocked',
+    };
+  }
+  const { candidates, inventoryComplete } = await listAuthorizedDeviceCandidates(
     serverDB,
     params.userId,
     params.workspaceId,
-    candidateOptions,
+    {
+      agentOwnerId: params.agentOwnerId,
+      localDeviceId: params.localDeviceId,
+      policy: params.policy,
+      referencedDevices: [{ deviceId: agencyConfig.boundDeviceId }],
+      requiredOperation: params.requiredOperation ?? { kind: 'agent-run' },
+    },
   );
-
-  // A member override that resolved (executionTarget set) fully shadows the
-  // shared default — a member's `local` pick must not fall back to the shared
-  // `device` binding when the member has no desktop attached. Under a pinned
-  // policy the member override never resolves (only admins can pick), so it
-  // cannot shadow the pinned default either.
-  const memberPicked = !isFixedPolicy && params.memberDeviceOverride?.executionTarget !== undefined;
-  const memberTarget = params.memberDeviceOverride?.executionTarget;
-  const userAgentPreferenceDeviceId = memberPicked
-    ? memberTarget === 'local'
-      ? params.localDeviceId
-      : memberTarget === 'device'
-        ? params.memberDeviceOverride?.boundDeviceId
-        : undefined
-    : undefined;
-
-  // 'local' names the requester's own machine (localDeviceId). A PINNED
-  // policy resolves the pinned `boundDeviceId` instead — the caller's machine
-  // is not a sanctioned stand-in for a fixed contract. Off-desktop
-  // (bot/web call) the stored boundDeviceId is the durable stand-in — the
-  // picker stamps the chosen desktop's id there — EXCEPT for platform task
-  // families (openclaw/hermes), where a stale bound id must not hijack a
-  // `local` intent.
-  const agentDefaultDeviceId = memberPicked
-    ? undefined
-    : target === 'device'
-      ? agencyConfig?.boundDeviceId
-      : target === 'local'
-        ? isFixedPolicy
-          ? agencyConfig?.boundDeviceId
-          : params.localDeviceId ||
-            (params.isPlatformTask ? undefined : agencyConfig?.boundDeviceId)
-        : undefined;
-
-  // A session pin is the conversation's device — `auto` only decides for a
-  // session that has NO binding yet. It never re-picks mid-conversation and
-  // never silently moves a bound run; an invalid pin still blocks below as
-  // DEVICE_BINDING_INVALID rather than erasing the evidence.
-  const sessionBoundDeviceId = params.sessionBoundDeviceId ?? undefined;
-
-  const resolutionInput = {
-    agentDefaultDeviceId,
-    deviceInventoryComplete: inventoryComplete,
-    explicitDeviceId: params.explicitDeviceId,
-    explicitRequestAllowed: !isFixedPolicy && !params.workspaceScoped,
-    sessionBoundDeviceId,
-    userAgentPreferenceDeviceId,
-  };
-  let resolution = resolveExecutionDevice(resolutionInput, candidates);
-
-  // Existing explicit/default/session choices retain their launch proof path.
-  // Only a never-bound automatic choice counts hosts that installed this runtime.
-  const needsAutomaticEligibility =
-    (resolution.status === 'resolved' && resolution.reason === 'single_candidate') ||
-    (resolution.status === 'blocked' &&
-      ['DEVICE_REQUIRED', 'DEVICE_SELECTION_REQUIRED'].includes(resolution.code));
-  if (
-    needsAutomaticEligibility &&
-    !isFixedPolicy &&
-    !agencyConfig?.boundDeviceId &&
-    !params.sessionBoundDeviceId &&
-    !effectiveExplicitDeviceId &&
-    !userAgentPreferenceDeviceId &&
-    params.requiredOperation?.kind === 'agent-run' &&
-    params.requiredOperation.adapter
-  ) {
-    const runtimeInventory = await listAuthorizedDeviceCandidates(
-      serverDB,
-      params.userId,
-      params.workspaceId,
-      {
-        ...candidateOptions,
-        includeCallerPersonalDevices: params.canSelectPersonalDevice === true,
-        runtimeRequirement: {
-          agentType: params.requiredOperation.adapter,
-          command: agencyConfig?.heterogeneousProvider?.command,
-        },
-      },
-    );
-    candidates = runtimeInventory.candidates;
-    inventoryComplete = runtimeInventory.inventoryComplete;
-    resolution = resolveExecutionDevice(
-      { ...resolutionInput, deviceInventoryComplete: inventoryComplete },
-      candidates,
-    );
-  }
+  const resolution = resolveExecutionDevice(
+    {
+      // Strict binding validation prevents fallback when the saved Agent device is revoked.
+      sessionBoundDeviceId: agencyConfig.boundDeviceId,
+      deviceInventoryComplete: inventoryComplete,
+      explicitRequestAllowed: false,
+    },
+    candidates,
+  );
 
   if (resolution.status === 'resolved') {
     const candidate = candidates.find((d) => d.deviceId === resolution.deviceId);
@@ -932,7 +713,7 @@ export const resolveHeteroExecutionPlan = async (
       },
       deviceId: resolution.deviceId,
       kind: 'device',
-      reason: resolution.reason,
+      reason: 'agent_default',
     };
   }
 
@@ -940,250 +721,15 @@ export const resolveHeteroExecutionPlan = async (
     code: resolution.code,
     detail:
       resolution.code === 'DEVICE_BINDING_INVALID'
-        ? 'The device this conversation is bound to is no longer authorized or registered — repair the binding with an explicit device selection.'
+        ? 'The Agent saved device is no longer authorized or registered — change it in Agent settings.'
         : resolution.code === 'DEVICE_REQUEST_UNAUTHORIZED'
           ? 'The requested device is not in the authorized device set for this run.'
           : resolution.code === 'DEVICE_INVENTORY_INCOMPLETE'
             ? 'The device inventory could not be loaded — no device was bound or picked.'
             : resolution.code === 'DEVICE_SELECTION_REQUIRED'
-              ? 'Multiple devices are authorized — pick one in the Execution Device switcher.'
+              ? 'Select a run device in the Agent settings.'
               : 'No device is bound or available for this agent.',
     kind: 'blocked',
     ...(resolution.repairCandidates ? { repairCandidates: resolution.repairCandidates } : {}),
-  };
-};
-
-// ─── Conditional first-bind ──────────────────────────────────────────────────
-
-/**
- * The persisted device binding after the atomic first-bind attempt.
- */
-export interface TopicDeviceBindResult {
-  /** The binding epoch now persisted — the winner's revision on a CAS loss. */
-  bindingRevision: number;
-  /** The binding now persisted — the winner's, which may differ from the request. */
-  boundDeviceId: string;
-  /** `bound`: this call installed the pin. `occupied`: the CAS lost — the
-   * returned id is the pre-existing winner's (adopt it or refuse, never overwrite). */
-  outcome: 'bound' | 'occupied';
-}
-
-/**
- * Atomic conditional first-bind (plan §5.1/§5.2): when unified admission
- * resolves to the ONLY legitimate candidate (`single_candidate`), the server
- * writes that device into the conversation — but ONLY if no binding exists
- * yet, and the binding it writes is the CANONICAL one:
- * `executionConfig.boundDeviceId` + `executionConfig.executionTarget='device'`
- * plus the legacy top-level `metadata.boundDeviceId` mirror (scheduled
- * dispatch still reads it). One UPDATE installs all three so they can never
- * diverge; the `WHERE` clause makes it a real CAS — two concurrent
- * first-binds cannot overwrite each other, and a binding already set by the
- * picker (or an earlier run) is never clobbered.
- *
- * Returns the binding actually persisted — on a CAS loss the winner's pin is
- * re-read and returned, so the caller compares instead of assuming. A
- * write or re-read failure THROWS: persisting the run's device identity is
- * part of admission, not an optional audit — a caller that cannot persist
- * must not spawn.
- */
-export const bindTopicDeviceAtomically = async (
-  serverDB: OrviloDatabase,
-  params: {
-    deviceId: string;
-    topicId: string;
-    userId: string;
-    workspaceId?: string;
-  },
-): Promise<TopicDeviceBindResult> => {
-  const updated = await serverDB
-    .update(topics)
-    .set({
-      metadata: sql`
-        coalesce(${topics.metadata}, '{}'::jsonb)
-        || jsonb_build_object(
-          'boundDeviceId', to_jsonb(${params.deviceId}::text),
-          'bindingRevision',
-            to_jsonb(coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0) + 1),
-          'executionConfig',
-            coalesce(${topics.metadata} -> 'executionConfig', '{}'::jsonb)
-            || jsonb_build_object(
-              'boundDeviceId', to_jsonb(${params.deviceId}::text),
-              'executionTarget', to_jsonb('device'::text)
-            )
-        )`,
-    })
-    .where(
-      and(
-        eq(topics.id, params.topicId),
-        eq(topics.userId, params.userId),
-        params.workspaceId
-          ? eq(topics.workspaceId, params.workspaceId)
-          : isNull(topics.workspaceId),
-        // CAS guard: both the top-level legacy pin and the executionConfig
-        // pin must currently be empty, or the write is dropped.
-        sql`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', '') = ''`,
-        sql`coalesce(${topics.metadata} ->> 'boundDeviceId', '') = ''`,
-      ),
-    )
-    .returning({
-      bindingRevision: sql<number>`(${topics.metadata} ->> 'bindingRevision')::int`,
-      boundDeviceId: sql<string>`${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId'`,
-    });
-  if (updated.length > 0) {
-    return {
-      bindingRevision: updated[0].bindingRevision,
-      boundDeviceId: updated[0].boundDeviceId,
-      outcome: 'bound',
-    };
-  }
-
-  // CAS lost — re-read the winner. Another writer (the picker, a concurrent
-  // run) persisted a pin first; its value is the truth this run must adopt
-  // or refuse — never overwrite. A row that still shows no binding means the
-  // guards rejected a malformed topic (wrong owner/workspace or missing
-  // row): surface that honestly instead of guessing.
-  const rows = await serverDB
-    .select({
-      bindingRevision: sql<
-        number | undefined
-      >`coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0)`,
-      boundDeviceId: sql<
-        string | undefined
-      >`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', ${topics.metadata} ->> 'boundDeviceId')`,
-    })
-    .from(topics)
-    .where(and(eq(topics.id, params.topicId), eq(topics.userId, params.userId)))
-    .limit(1);
-  const winner = rows[0]?.boundDeviceId;
-  if (!winner) {
-    throw new Error(
-      `Topic device bind rejected for ${params.topicId}: no binding persisted (topic missing or malformed)`,
-    );
-  }
-  return {
-    bindingRevision: rows[0]?.bindingRevision ?? 0,
-    boundDeviceId: winner,
-    outcome: 'occupied',
-  };
-};
-
-// ─── Explicit repair ─────────────────────────────────────────────────────────
-
-/**
- * Server-side CAS repair for a device binding — the counterpart of
- * {@link bindTopicDeviceAtomically} for an EXISTING (stale/conflicted) pin.
- * Rebinding an existing pin is an execution-identity decision, not content
- * co-editing: the router gates it on the caller's device authorization, and
- * this write is a real compare-and-swap on BOTH the effective binding AND
- * (when supplied) its `bindingRevision` epoch — a repair can never clobber a
- * binding that changed underneath it.
- *
- * The write installs the same canonical triple the first-bind persists
- * (`executionConfig.boundDeviceId` + `executionTarget:'device'` + the legacy
- * top-level mirror) PLUS `inheritWorkspaceScope:false` — a human repair pick
- * must not be silently re-clamped by workspace-scope inheritance. The
- * `heteroSession*` handles are REMOVED: the repaired device mints a fresh
- * execution session; resurrecting another device's native session under a
- * relabeled config is exactly what admission rejects.
- *
- * Returns the binding actually persisted — on a CAS loss the winner's pin is
- * re-read and returned (`outcome:'occupied'`), so the caller compares instead
- * of assuming. A write or re-read failure THROWS.
- */
-export const repairTopicDeviceBinding = async (
-  serverDB: OrviloDatabase,
-  params: {
-    /** The device the caller is authorized to execute on and picked. */
-    deviceId: string;
-    /**
-     * The effective binding the caller observed (`errorData.deviceId`).
-     * `undefined`/`null` asserts NO binding was in place.
-     */
-    expectedBoundDeviceId?: string | null;
-    /**
-     * The `metadata.bindingRevision` epoch the caller observed (echoed in
-     * admission `errorData`). When present the CAS also requires it — a
-     * first-bind or another repair that landed in between invalidates the
-     * expectation. Omitted by pre-revision clients → epoch check skipped.
-     */
-    expectedBindingRevision?: number | null;
-    topicId: string;
-    workspaceId?: string;
-  },
-): Promise<TopicDeviceBindResult> => {
-  const expectedRevision = params.expectedBindingRevision ?? undefined;
-  const updated = await serverDB
-    .update(topics)
-    .set({
-      metadata: sql`
-        (coalesce(${topics.metadata}, '{}'::jsonb)
-          - 'heteroSessionId'
-          - 'heteroSessionBindingKey'
-          - 'heteroSessionIdByWorkingDirectory'
-          - 'heteroSessionBindingKeyByWorkingDirectory')
-        || jsonb_build_object(
-          'boundDeviceId', to_jsonb(${params.deviceId}::text),
-          'bindingRevision',
-            to_jsonb(coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0) + 1),
-          'executionConfig',
-            coalesce(${topics.metadata} -> 'executionConfig', '{}'::jsonb)
-            || jsonb_build_object(
-              'boundDeviceId', to_jsonb(${params.deviceId}::text),
-              'executionTarget', to_jsonb('device'::text),
-              'inheritWorkspaceScope', to_jsonb(false::boolean)
-            )
-        )`,
-    })
-    .where(
-      and(
-        eq(topics.id, params.topicId),
-        params.workspaceId
-          ? eq(topics.workspaceId, params.workspaceId)
-          : isNull(topics.workspaceId),
-        // Binding CAS: the effective pin must equal what the caller saw —
-        // `coalesce` collapses the canonical + mirror pins into the one truth
-        // the repair client read.
-        sql`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', ${topics.metadata} ->> 'boundDeviceId', '') = ${params.expectedBoundDeviceId ?? ''}`,
-        ...(expectedRevision !== undefined
-          ? [
-              sql`coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0) = ${expectedRevision}`,
-            ]
-          : []),
-      ),
-    )
-    .returning({
-      bindingRevision: sql<number>`(${topics.metadata} ->> 'bindingRevision')::int`,
-      boundDeviceId: sql<string>`${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId'`,
-    });
-  if (updated.length > 0) {
-    return {
-      bindingRevision: updated[0].bindingRevision,
-      boundDeviceId: updated[0].boundDeviceId,
-      outcome: 'bound',
-    };
-  }
-
-  // CAS lost — re-read the winner (same convention as the first-bind CAS: the
-  // truth is the row, not the expectation).
-  const rows = await serverDB
-    .select({
-      bindingRevision: sql<
-        number | undefined
-      >`coalesce((${topics.metadata} ->> 'bindingRevision')::int, 0)`,
-      boundDeviceId: sql<
-        string | undefined
-      >`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', ${topics.metadata} ->> 'boundDeviceId')`,
-    })
-    .from(topics)
-    .where(eq(topics.id, params.topicId))
-    .limit(1);
-  const winner = rows[0];
-  if (!winner) {
-    throw new Error(`Topic device binding repair rejected for ${params.topicId}: topic missing`);
-  }
-  return {
-    bindingRevision: winner.bindingRevision ?? 0,
-    boundDeviceId: winner.boundDeviceId ?? '',
-    outcome: 'occupied',
   };
 };

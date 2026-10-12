@@ -583,16 +583,14 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(userCall![0].files).toEqual(['file-1', 'file-2']);
   });
 
-  it('should pin the CLI default selection and runtime type on a server-created topic', async () => {
+  it('creates a server topic without model or provider snapshots', async () => {
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run the build' });
 
-    expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'default', provider: 'claude-code' }),
-      undefined,
-    );
+    expect(topicMock.create.mock.calls[0][0]).not.toHaveProperty('model');
+    expect(topicMock.create.mock.calls[0][0]).not.toHaveProperty('provider');
   });
 
-  it('should snapshot and execute a selected heterogeneous model on a server-created topic', async () => {
+  it('executes the saved heterogeneous model on a new topic', async () => {
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {
       model: 'opus',
       type: 'claude-code',
@@ -601,7 +599,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run with Opus' });
 
     expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'opus', provider: 'claude-code' }),
+      expect.objectContaining({ agentId: 'agent-1' }),
       undefined,
     );
     expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
@@ -609,7 +607,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
   });
 
-  it('should execute an existing topic with its pinned heterogeneous model', async () => {
+  it('executes an existing topic with the saved Agent model', async () => {
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {
       args: ['--model', 'stale-arg-model'],
       model: 'agent-model',
@@ -630,7 +628,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     expect(topicMock.create).not.toHaveBeenCalled();
     expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
-      expect.objectContaining({ args: ['--model', 'topic-model'] }),
+      expect.objectContaining({ args: ['--model', 'agent-model'] }),
     );
   });
 
@@ -665,7 +663,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       expect.objectContaining({ userId }),
       expect.objectContaining({
         agentId: 'agent-1',
-        model: 'topic-model',
+        model: 'agent-model',
         topicId: 'topic-existing',
       }),
     );
@@ -713,14 +711,14 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(mockDispatchAgentRun).not.toHaveBeenCalled();
   });
 
-  it('should pin the runtime type of a remote platform agent on a server-created topic', async () => {
+  it('creates a topic for a remote platform Agent without routing snapshots', async () => {
     heteroAgentConfig.agencyConfig = { heterogeneousProvider: { type: 'openclaw' } } as any;
     heteroAgentConfig.provider = 'orvilo';
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run the build' });
 
     expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: undefined, provider: 'openclaw' }),
+      expect.objectContaining({ agentId: 'agent-1' }),
       undefined,
     );
   });
@@ -957,7 +955,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(resumeFallbackSystemContext).not.toContain('Continue in cloud');
   });
 
-  it('should encode native Codex args before forwarding them to sandbox orvilo hetero exec', async () => {
+  it('uses the saved Codex model over a conflicting native model argument', async () => {
     heteroAgentConfig.model = 'codex';
     heteroAgentConfig.provider = 'codex';
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {
@@ -974,7 +972,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
       expect.objectContaining({
-        args: ['--agent-arg=-c', '--agent-arg=model = "gpt-5.4"', '--effort', 'xhigh'],
+        args: ['--model', 'gpt-5.5', '--effort', 'xhigh'],
       }),
     );
   });
@@ -1490,7 +1488,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
   describe('terminal hook seeding onto runningOperation (regression guard)', () => {
     beforeAll(async () => {
       await getTestDB();
-    });
+    }, 120_000);
 
     const taskHook = {
       handler: async () => {},
@@ -1553,6 +1551,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     it('threads the parent operation through remote member dispatch', async () => {
       heteroAgentConfig.agencyConfig = {
+        boundDeviceId: 'personal-desktop',
         executionTarget: 'local',
         heterogeneousProvider: { type: 'openclaw' },
       } as any;
@@ -1760,6 +1759,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     it('keeps the conversation workspace separate from a personal platform device scope', async () => {
       heteroAgentConfig.agencyConfig = {
+        boundDeviceId: 'personal-desktop',
         executionTarget: 'local',
         heterogeneousProvider: { platformAgentId: 'researcher', type: 'openclaw' },
       } as any;
@@ -1857,8 +1857,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
     });
 
-    it('routes an authorized Member Device through the actual caller personal principal', async () => {
+    it('routes the saved authorized device through the actual caller personal principal', async () => {
       heteroAgentConfig.agencyConfig = {
+        boundDeviceId: 'member-desktop',
         executionTarget: 'local',
         heterogeneousProvider: { platformAgentId: 'researcher', type: 'openclaw' },
       } as any;

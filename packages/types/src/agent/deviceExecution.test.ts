@@ -65,28 +65,6 @@ describe('resolveExecutionDevice', () => {
     });
   });
 
-  it('lets a member preference win only when policy allows choice', () => {
-    expect(
-      resolveExecutionDevice(
-        { agentDefaultDeviceId: 'device-b', userAgentPreferenceDeviceId: 'device-a' },
-        [A, B],
-      ),
-    ).toEqual({ deviceId: 'device-a', reason: 'user_agent_preference', status: 'resolved' });
-  });
-
-  it('blocks member preference override when the policy is pinned — admin default wins', () => {
-    expect(
-      resolveExecutionDevice(
-        {
-          agentDefaultDeviceId: 'device-b',
-          explicitRequestAllowed: false,
-          userAgentPreferenceDeviceId: 'device-a',
-        },
-        [A, B],
-      ),
-    ).toEqual({ deviceId: 'device-b', reason: 'agent_default', status: 'resolved' });
-  });
-
   it('ignores an explicit request under a pinned policy rather than overriding the default', () => {
     expect(
       resolveExecutionDevice(
@@ -119,8 +97,8 @@ describe('resolveExecutionDevice', () => {
     });
   });
 
-  it('does not auto-resolve a single candidate when a stale preference exists elsewhere', () => {
-    expect(resolveExecutionDevice({ userAgentPreferenceDeviceId: 'device-x' }, [B])).toEqual({
+  it('resolves the single authorized candidate', () => {
+    expect(resolveExecutionDevice({}, [B])).toEqual({
       deviceId: 'device-b',
       reason: 'single_candidate',
       status: 'resolved',

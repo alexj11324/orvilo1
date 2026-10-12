@@ -150,7 +150,8 @@ export const useAgentRuntimeForm = ({
       ? !providerFetch.isLoading &&
         !providerFetch.error &&
         (!!binding || (!!apiKey.trim() && !!apiModel.trim() && !!endpoint.trim()))
-      : scannedHostId === host.deviceId &&
+      : !!model.trim() &&
+        scannedHostId === host.deviceId &&
         state.status === 'success' &&
         installed.some((item) => item.type === choice) &&
         !modelOptions.loading &&

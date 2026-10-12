@@ -240,7 +240,6 @@ describe('Agent action', () => {
       {
         composerAgentId: 'agt_other',
         composerHeteroEffort: undefined,
-        composerModelSelection: undefined,
       },
       false,
       'selectAgent/explicit',
@@ -258,7 +257,6 @@ describe('Agent action', () => {
       {
         composerAgentId: 'agt_other',
         composerHeteroEffort: undefined,
-        composerModelSelection: undefined,
       },
       false,
       'selectAgent/explicit',

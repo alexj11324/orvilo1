@@ -74,7 +74,7 @@ export class DeviceModel {
   }
 
   /**
-   * Whether this workspace device is the enforced target of any fixed agent.
+   * Whether this workspace device is the saved host of an Agent.
    * Returns only a boolean so device-management callers cannot infer private
    * agent metadata from the reference guard.
    */
@@ -87,8 +87,7 @@ export class DeviceModel {
       .where(
         and(
           eq(agents.workspaceId, this.workspaceId),
-          sql`${agents.agencyConfig}->>'executionTargetSelectionPolicy' = 'fixed'`,
-          sql`${agents.agencyConfig}->>'executionTarget' = 'device'`,
+          sql`${agents.agencyConfig}->>'executionTarget' in ('device', 'local')`,
           sql`${agents.agencyConfig}->>'boundDeviceId' = ${deviceId}`,
         ),
       )

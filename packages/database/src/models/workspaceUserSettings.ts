@@ -77,22 +77,6 @@ export class WorkspaceUserSettingsModel {
     const next: WorkspaceUserPreference = {
       ...current,
       ...patch,
-      ...(patch.agentDeviceOverrides
-        ? {
-            agentDeviceOverrides: {
-              ...current.agentDeviceOverrides,
-              ...patch.agentDeviceOverrides,
-            },
-          }
-        : {}),
-      ...(patch.agentModelOverrides
-        ? {
-            agentModelOverrides: {
-              ...current.agentModelOverrides,
-              ...patch.agentModelOverrides,
-            },
-          }
-        : {}),
       ...(patch.notification
         ? { notification: mergeNotificationSettings(current.notification, patch.notification) }
         : {}),

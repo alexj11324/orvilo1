@@ -11,7 +11,7 @@ import type {
 } from '@orvilo/types';
 import {
   deriveWorktreePath,
-  resolveAgentAgencyConfig,
+  normalizeAgencyConfigHeterogeneousProvider,
   sortDevicesByActivity,
   workingDirConfigSchema,
 } from '@orvilo/types';
@@ -33,16 +33,12 @@ import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { signWorkspaceDeviceToken } from '@/libs/trpc/utils/internalJwt';
 import { type DeviceAttachment, deviceGateway } from '@/server/services/deviceGateway';
-import {
-  canSelectCallerPersonalDevice,
-  listAuthorizedDeviceCandidates,
-} from '@/server/services/deviceGateway/executionAdmission';
+import { listAuthorizedDeviceCandidates } from '@/server/services/deviceGateway/executionAdmission';
 import { scanDeviceAgents } from '@/server/services/deviceGateway/installedRuntimeEvidence';
 import { filterAuthorizedDevicePresence } from '@/server/services/deviceGateway/scopedDevicePresence';
 import {
   canManageResourcePermission,
   getResourceMeta,
-  isResourceAuthorOrAdmin,
   isWorkspaceScopedMeta,
 } from '@/server/services/resourcePermission';
 
@@ -1116,49 +1112,13 @@ export const deviceRouter = router({
         ? await ctx.agentModel.getAgentConfigById(input.agentId)
         : await ctx.agentModel.getAgentConfigForExecution(input.agentId);
       if (!agent) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
-      const canManageAgent =
-        agent.userId === ctx.userId ||
-        (!!ctx.workspaceId &&
-          (await isResourceAuthorOrAdmin({
-            db: ctx.serverDB,
-            resourceType: 'agent',
-            userId: ctx.userId,
-            workspaceId: ctx.workspaceId,
-            meta: {
-              userId: agent.userId,
-              visibility: agent.visibility,
-              workspaceId: agent.workspaceId,
-            },
-          })));
-      const preference = await ctx.workspaceUserSettingsModel?.getPreference();
-      const agencyConfig = resolveAgentAgencyConfig(
-        agent.agencyConfig,
-        preference?.agentDeviceOverrides?.[agent.id],
-        {
-          canManage: canManageAgent,
-          visibility: agent.visibility,
-          workspaceId: ctx.workspaceId,
-        },
-      );
-      const memberOverride = preference?.agentDeviceOverrides?.[agent.id];
-      const memberSelectedDeviceId =
-        memberOverride?.executionTarget === 'device' &&
-        memberOverride.boundDeviceId === agencyConfig?.boundDeviceId
-          ? memberOverride.boundDeviceId
-          : undefined;
+      const agencyConfig = normalizeAgencyConfigHeterogeneousProvider(agent.agencyConfig);
       const provider = agencyConfig?.heterogeneousProvider;
       const type = provider?.type ?? 'orvilo';
       return listAuthorizedDeviceCandidates(ctx.serverDB, ctx.userId, ctx.workspaceId, {
         agentOwnerId: agent.userId,
-        includeCallerPersonalDevices: canSelectCallerPersonalDevice({
-          agencyConfig,
-          agentOwnerId: agent.userId,
-          canManageAgent,
-          userId: ctx.userId,
-          visibility: agent.visibility,
-          workspaceId: ctx.workspaceId,
-        }),
-        referencedDevices: [{ deviceId: memberSelectedDeviceId }],
+        includeCallerPersonalDevices: false,
+        referencedDevices: [{ deviceId: agencyConfig?.boundDeviceId }],
         requiredOperation: { kind: 'agent-run', adapter: type },
         runtimeRequirement: { agentType: type, command: provider?.command },
       });

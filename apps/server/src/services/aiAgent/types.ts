@@ -29,7 +29,7 @@ export interface ExecRunContext {
   /** Persisted assistant placeholder row id (spinner anchor / error sink). */
   assistantMessageId: string;
   canUseDevice: boolean;
-  /** Effective model for this run (topic-pinned model already applied). */
+  /** Model from the Agent saved runtime. */
   model: string;
   parentMessageId?: string;
   /** Persistence-attribution agent id (Agent Signal marker aware). */

@@ -27,22 +27,7 @@ export const collectBoundDeviceIds = (
   return ids;
 };
 
-/**
- * Strip device bindings that are not enrolled in `targetWorkspaceId`, and
- * downgrade `fixed` device execution targets that can no longer be resolved.
- * Any `boundDeviceId` / `workingDirByDevice` entry pointing outside the
- * target workspace is dropped, and a `fixed` device target without a valid
- * public device is downgraded to `member` (defaulting to the caller's own
- * device). Shared by every ownership-rehoming path (moving a row into a
- * workspace, duplicating into one, member and group handovers): a leftover
- * reference to a device only the previous owner can reach would otherwise
- * point the re-homed agent at a target nobody else can resolve.
- *
- * `viewerUserId` — when the row is being re-homed to a specific new owner,
- * pass that owner: a workspace device with `private` visibility is only
- * usable by its enrolling member, so bindings to someone ELSE's private
- * device are dropped for the new owner as well.
- */
+/** Drop bindings outside the destination scope; missing hosts require explicit rebinding. */
 export const sanitizeAgencyConfigsForWorkspace = async (
   db: OrviloDatabase | Transaction,
   targetWorkspaceId: string,
@@ -73,9 +58,6 @@ export const sanitizeAgencyConfigsForWorkspace = async (
     ? deviceRows.filter((r) => r.visibility === 'public' || r.userId === viewerUserId)
     : deviceRows;
   const allowed = new Set(visibleRows.map((r) => r.deviceId));
-  const publicDeviceIds = new Set(
-    visibleRows.filter((r) => r.visibility === 'public').map((r) => r.deviceId),
-  );
 
   return agencyConfigs.map((config) => {
     let next: OrviloAgentAgencyConfig | null = config ?? null;
@@ -94,30 +76,7 @@ export const sanitizeAgencyConfigsForWorkspace = async (
         }
         cleaned.workingDirByDevice = Object.keys(filtered).length > 0 ? filtered : undefined;
       }
-      if (
-        cleaned.executionTargetSelectionPolicy === 'fixed' &&
-        cleaned.executionTarget === 'device' &&
-        (!cleaned.boundDeviceId || !allowed.has(cleaned.boundDeviceId))
-      ) {
-        cleaned.executionTargetSelectionPolicy = 'member';
-      }
       next = cleaned;
-    }
-
-    if (
-      next.executionTargetSelectionPolicy === 'fixed' &&
-      (!next.executionTarget ||
-        !['auto', 'device', 'none', 'sandbox'].includes(next.executionTarget))
-    ) {
-      next.executionTargetSelectionPolicy = 'member';
-    }
-
-    if (
-      next.executionTargetSelectionPolicy === 'fixed' &&
-      next.executionTarget === 'device' &&
-      (!next.boundDeviceId || !publicDeviceIds.has(next.boundDeviceId))
-    ) {
-      next.executionTargetSelectionPolicy = 'member';
     }
 
     return next;

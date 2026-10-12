@@ -15,7 +15,6 @@ import {
   resolveExecutionPlan,
   resolveExecutionTarget,
   resolveRuntimeMode,
-  resolveWorkspaceScoped,
 } from './executionTarget';
 
 const cfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({ ...over });
@@ -71,16 +70,6 @@ describe('isHeterogeneousSandboxExecutionAvailable', () => {
 
   it('keeps Cursor on local or connected devices', () => {
     expect(isHeterogeneousSandboxExecutionAvailable('cursor')).toBe(false);
-  });
-});
-
-describe('resolveWorkspaceScoped', () => {
-  it('preserves shared-row coercion until a workspace member explicitly selects a target', () => {
-    expect(resolveWorkspaceScoped(false, undefined)).toBe(false);
-    expect(resolveWorkspaceScoped(true, undefined)).toBe(true);
-    expect(resolveWorkspaceScoped(true, { boundDeviceId: 'member-device' })).toBe(true);
-    expect(resolveWorkspaceScoped(true, { executionTarget: 'local' })).toBe(false);
-    expect(resolveWorkspaceScoped(true, { executionTarget: 'device' })).toBe(false);
   });
 });
 
@@ -617,7 +606,7 @@ describe('resolveRuntimeMode', () => {
 });
 
 describe('resolveExecutionPlan', () => {
-  it('uses a desktop hint only for a platform local target', () => {
+  it('ignores a desktop hint and uses only a saved platform binding', () => {
     expect(
       resolveExecutionPlan({
         agencyConfig: openClawCfg({ executionTarget: 'local' }),
@@ -626,7 +615,7 @@ describe('resolveExecutionPlan', () => {
         localDeviceId: 'this-desktop',
         sandboxExecutionAvailable: false,
       }),
-    ).toEqual({ deviceId: 'this-desktop', kind: 'device', target: 'local' });
+    ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
 
     expect(
       resolveExecutionPlan({
@@ -651,7 +640,7 @@ describe('resolveExecutionPlan', () => {
         isHetero: true,
         sandboxExecutionAvailable: false,
       }),
-    ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
+    ).toEqual({ deviceId: 'stale-remote-device', kind: 'device', target: 'local' });
 
     // Schedules, bots, and other server-only triggers have no "this desktop".
     // A local platform target must fail closed instead of picking an arbitrary
@@ -680,7 +669,6 @@ describe('resolveExecutionPlan', () => {
         agencyConfig: openClawCfg({
           boundDeviceId: 'workspace-device',
           executionTarget: 'device',
-          executionTargetSelectionPolicy: 'fixed',
         }),
         clientExecutionAvailable: true,
         isHetero: true,
@@ -695,7 +683,6 @@ describe('resolveExecutionPlan', () => {
         agencyConfig: openClawCfg({
           boundDeviceId: 'author-desktop',
           executionTarget: 'local',
-          executionTargetSelectionPolicy: 'fixed',
         }),
         clientExecutionAvailable: true,
         isHetero: true,
@@ -727,12 +714,10 @@ describe('resolveExecutionPlan', () => {
       resolveExecutionPlan({
         agencyConfig: cfg({
           boundDeviceId: 'device-a',
-          executionTargetSelectionPolicy: 'fixed',
           executionTarget: 'device',
         }),
         clientExecutionAvailable: false,
         onlineDeviceIds: ONLINE_AB,
-        requestedDeviceId: 'device-b',
       }),
     ).toEqual({ deviceId: 'device-a', kind: 'device', target: 'device' });
   });
@@ -742,11 +727,9 @@ describe('resolveExecutionPlan', () => {
       resolveExecutionPlan({
         agencyConfig: cfg({
           executionTarget: 'sandbox',
-          executionTargetSelectionPolicy: 'fixed',
         }),
         clientExecutionAvailable: false,
         onlineDeviceIds: ONLINE_AB,
-        requestedDeviceId: 'device-b',
       }),
     ).toEqual({ kind: 'sandbox', target: 'sandbox' });
   });
@@ -879,7 +862,7 @@ describe('resolveExecutionPlan', () => {
           isHetero: true,
           localDeviceId: 'this-desktop',
         }),
-      ).toEqual({ deviceId: 'this-desktop', kind: 'device', target: 'local' });
+      ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
     });
 
     it('keeps an unset target pending on every client — no implicit routing', () => {
@@ -961,39 +944,31 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ kind: 'device-unrouted', reason: 'ambiguous-online-devices', target: 'auto' });
     });
 
-    it('still honours an explicit requestedDeviceId over auto-pick', () => {
+    it('ignores request hints when the saved Agent uses auto selection', () => {
       expect(
         resolveExecutionPlan({
           agencyConfig: auto,
           clientExecutionAvailable: true,
           onlineDeviceIds: ONLINE_AB,
-          requestedDeviceId: 'device-b',
+          ...({ requestedDeviceId: 'device-b' } as unknown as {}),
         }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'auto' });
+      ).toEqual({
+        kind: 'device-unrouted',
+        reason: 'ambiguous-online-devices',
+        target: 'auto',
+      });
     });
   });
-
-  describe('requestedDeviceId — explicit per-request override', () => {
-    it('forces device routing regardless of the stored target', () => {
-      expect(
-        resolveExecutionPlan({
-          agencyConfig: cfg({ executionTarget: 'sandbox' }),
-          clientExecutionAvailable: false,
-          onlineDeviceIds: ONLINE_AB,
-          requestedDeviceId: 'device-b',
-        }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'device' });
-    });
-
-    it('wins over the agent-bound device', () => {
+  describe('saved device identity', () => {
+    it('ignores a request for another device', () => {
       expect(
         resolveExecutionPlan({
           agencyConfig: cfg({ boundDeviceId: 'device-a', executionTarget: 'device' }),
           clientExecutionAvailable: false,
           onlineDeviceIds: ONLINE_AB,
-          requestedDeviceId: 'device-b',
+          ...({ requestedDeviceId: 'device-b' } as unknown as {}),
         }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'device' });
+      ).toEqual({ deviceId: 'device-a', kind: 'device', target: 'device' });
     });
   });
 
@@ -1093,19 +1068,20 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'device' });
     });
 
-    it('still routes a requestedDeviceId-pinned local run to that device', () => {
-      // An explicit per-request device always wins over the stored target —
-      // the request IS the provable selection. The plan keeps the `local`
-      // label (the stored spelling) while routing to the requested device.
+    it('ignores a requested device on an unbound local Agent', () => {
       expect(
         resolveExecutionPlan({
           agencyConfig: cfg({ executionTarget: 'local' }),
           clientExecutionAvailable: true,
           onlineDeviceIds: ONLINE_AB,
-          requestedDeviceId: 'device-b',
+          ...({ requestedDeviceId: 'device-b' } as unknown as {}),
           trigger: RequestTrigger.Bot,
         }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'local' });
+      ).toEqual({
+        kind: 'device-unrouted',
+        reason: 'no-bound-device',
+        target: 'local',
+      });
     });
 
     it('still honours chat mode — a bot on a chat-mode agent stays plain chat', () => {
@@ -1141,7 +1117,6 @@ describe('resolveExecutionPlan', () => {
             canUseDevice: false,
             clientExecutionAvailable: true,
             onlineDeviceIds: ONLINE_A,
-            requestedDeviceId: 'device-a',
           }),
         ).toEqual({ kind: 'none', target: 'none' });
       }
@@ -1238,7 +1213,6 @@ describe('resolveExecutionPlan', () => {
           canUseDevice: false,
           clientExecutionAvailable: false,
           isHetero: true,
-          requestedDeviceId: 'device-a',
         }),
       ).toEqual({ kind: 'sandbox', target: 'sandbox' });
     });

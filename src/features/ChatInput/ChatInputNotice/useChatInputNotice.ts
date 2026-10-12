@@ -1,6 +1,6 @@
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
-import { useAgentModelSelection } from '@/features/ChatInput/hooks/useAgentModelSelection';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
+import { useEffectiveModel } from '@/features/ChatInput/hooks/useEffectiveModel';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
@@ -45,8 +45,7 @@ export const resolveChatInputNotice = ({
   // Model-config notices don't apply to heterogeneous agents (own toolchain),
   // before the model runtime config is ready, or before the agent's effective
   // model is settled. The last one matters on a cold page load: until
-  // `agentMap` has the agent (and, for a member-selection workspace agent,
-  // until the member override is fetched), the model resolves to the
+  // `agentMap` has the Agent, the model resolves to the
   // DEFAULT_MODEL/DEFAULT_PROVIDER fallback, which is often absent from the
   // user's enabled list — that used to flash the "model offline" warning for a
   // frame before the real config resolved.
@@ -61,12 +60,6 @@ export const resolveChatInputNotice = ({
     // only; the remedy is picking another model.
     return { key: 'input.modelUnavailable', type: 'warning' } as const;
   }
-
-  // Use-level General access (can chat, can't edit the shared config) is
-  // deliberately NOT a notice: a standing "you can only use this agent" banner
-  // states a permission without naming what it blocks. The locked
-  // controls explain themselves instead — see `useModelLockTooltip` for the
-  // model triggers and the fixed-target tooltip on the device chip.
 };
 
 /** Union of every notice shape `resolveChatInputNotice` can return. */
@@ -80,15 +73,7 @@ export const useChatInputNotice = (): ChatInputNotice | undefined => {
     agentByIdSelectors.isAgentHeterogeneousById(agentId)(s),
   ]);
 
-  // Same source as the model trigger renders, so the notice can never judge a
-  // different model than the one the user sees (member overrides included).
-  const { isPreferenceLoading, model, provider, selectionPolicy } = useAgentModelSelection(agentId);
-
-  // `isPreferenceLoading` is true for every workspace agent while the shared
-  // preferences request is in flight, but the override only feeds the
-  // effective model under the `member` policy (`resolveAgentModelConfig`).
-  // Waiting on it for a `fixed` agent would swallow a genuine warning.
-  const isMemberOverridePending = selectionPolicy === 'member' && isPreferenceLoading;
+  const { model, provider } = useEffectiveModel(agentId);
 
   const enabledChatModelList = useEnabledChatModels();
   const isModelConfigReady = useAiInfraStore((s) =>
@@ -99,7 +84,7 @@ export const useChatInputNotice = (): ChatInputNotice | undefined => {
 
   return resolveChatInputNotice({
     currentChatModel,
-    isAgentModelPending: isAgentConfigLoading || isMemberOverridePending,
+    isAgentModelPending: isAgentConfigLoading,
     isGroupContext,
     isHeterogeneousAgent,
     isModelConfigReady,

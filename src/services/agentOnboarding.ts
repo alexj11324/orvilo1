@@ -108,8 +108,8 @@ export const ensureFirstAgentInWorkspace = async (
   workspaceId: string,
   host: FirstAgentHost,
 ) => {
+  if (!host.boundDeviceId) throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
   if (host.executionTarget === 'device') {
-    if (!host.boundDeviceId) throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
     await verifyFirstAgentDevice(host.boundDeviceId);
   }
   const existing = await getOnboardingWorkspaceAgent(agentId, workspaceId);
@@ -141,8 +141,9 @@ export const ensureFirstAgentInWorkspace = async (
   const saved = await workspaceClient.agent.getAgentConfigById.query({ agentId });
   if (!belongsPrivatelyToWorkspace(saved, workspaceId))
     throw new Error('FIRST_AGENT_WORKSPACE_REQUIRED');
-  await workspaceClient.workspaceUserSettings.updatePreference.mutate({
-    agentDeviceOverrides: { [agentId]: host },
+  await workspaceClient.agent.updateAgentConfig.mutate({
+    agentId,
+    value: { agencyConfig: { ...saved?.agencyConfig, ...host } },
   });
 };
 

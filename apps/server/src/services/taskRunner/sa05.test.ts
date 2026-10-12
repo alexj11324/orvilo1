@@ -301,7 +301,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         );
         await expect(runner.runTask(runParams)).resolves.toMatchObject({ success: true });
         expect(execAgent).toHaveBeenCalledWith(
-          expect.objectContaining({ agentId: 'agt_assignee', deviceId: 'pinned-device' }),
+          expect.objectContaining({ agentId: 'agt_assignee' }),
         );
       } finally {
         await db.delete(workspaces).where(eq(workspaces.id, 'ws-1'));
@@ -431,7 +431,6 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     expect(execAgent).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: expect.stringContaining('NEW OCCURRENCE: update issue 739'),
-        deviceId: 'pinned-device',
       }),
     );
     expect(execAgent.mock.calls[0]?.[0].prompt).not.toContain('FROZEN source instruction');
@@ -501,7 +500,9 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     });
 
     const execInput = execAgent.mock.calls[0]?.[0];
-    expect(execInput).toMatchObject({ deviceId: 'original-device' });
+    expect(execInput).not.toHaveProperty('deviceId');
+    expect(execInput).not.toHaveProperty('model');
+    expect(execInput).not.toHaveProperty('provider');
     expect(execInput?.prompt).toContain('ORIGINAL: investigate this report');
     expect(execInput?.prompt).toContain('UNIQUE_REPORT_931');
     expect(execInput?.prompt).not.toContain('LATER EDIT');
@@ -510,29 +511,22 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     expect(contract?.content?.instruction).toBe('ORIGINAL: investigate this report');
   });
 
-  it.each([
-    {
-      label: 'a conflicting fixed Agent Device policy',
-      agencyConfig: {
-        executionTargetSelectionPolicy: 'fixed',
-        executionTarget: 'device',
-        boundDeviceId: 'other-device',
-        heterogeneousProvider: { type: 'codex' },
-      },
-    },
-    {
-      label: 'a Prime executor without a Device dispatch host',
-      agencyConfig: { heterogeneousProvider: { type: 'orvilo', engine: 'prime' } },
-    },
-  ])('does not start $label after the automation target is pinned', async ({ agencyConfig }) => {
+  it('does not constrain the saved Agent runtime to a stale automation Device', async () => {
     const task = baseTask({
       automationMode: 'schedule',
       status: 'scheduled',
-      config: { model: 'm', provider: 'p', automationDeviceId: 'pinned-device' },
+      config: { model: 'old-model', provider: 'old-provider', automationDeviceId: 'old-device' },
     });
     const { execAgent } = setupHappyPath(task);
     const runner = newRunner();
-    (runner as any).agentModel.getAgentConfigForExecution.mockResolvedValue({ agencyConfig });
+    (runner as any).taskWorkspace = { provision: vi.fn().mockResolvedValue(undefined) };
+    (runner as any).agentModel.getAgentConfigForExecution.mockResolvedValue({
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'saved-device',
+        heterogeneousProvider: { type: 'codex' },
+      },
+    });
     vi.spyOn(TaskDispatchService.prototype, 'freezeAutomationContent').mockResolvedValue(
       undefined as never,
     );
@@ -543,9 +537,11 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         trigger: 'schedule',
         intent: 'fresh_occurrence',
       }),
-    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
-    expect(execAgent).not.toHaveBeenCalled();
-    expect(vi.mocked(TaskTopicModel.prototype.startRun)).not.toHaveBeenCalled();
+    ).resolves.toMatchObject({ success: true });
+    const execInput = execAgent.mock.calls[0]?.[0];
+    expect(execInput).not.toHaveProperty('deviceId');
+    expect(execInput).not.toHaveProperty('model');
+    expect(execInput).not.toHaveProperty('provider');
   });
 
   it('does not allow a manual caller to use fresh occurrence to adopt unauthorized edits', async () => {

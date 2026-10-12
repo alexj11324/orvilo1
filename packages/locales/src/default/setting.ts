@@ -423,12 +423,6 @@ export default {
   'permission.page.accessLevelPrivateHint':
     'Members get this level once the agent is published to the workspace. It can be changed after publishing.',
   'permission.page.configGroup': 'Editable settings',
-  'permission.page.devicePolicyDesc':
-    'Whether members can switch the execution device for their own runs.',
-  'permission.page.devicePolicyFixedDesc': 'Members can only use the device you set',
-  'permission.page.devicePolicyMemberDesc': 'Members can set their own execution device',
-  'permission.page.devicePolicyUnset':
-    'Pick an execution device for the agent first, then you can fix it here.',
   'permission.page.editableWhenShared': 'Can edit when shared',
   'permission.page.documentAccessLevelPrivateHint':
     'Members get this level once the page is published to the workspace. It can be changed after publishing.',
@@ -449,13 +443,6 @@ export default {
     'What every workspace member can do with this agent. The creator and workspace owners always keep full access.',
   'permission.page.groupAccessLevelPrivateHint':
     'Members get this level once the group is published to the workspace. It can be changed after publishing.',
-  'permission.page.groupDevicePolicyDesc':
-    'Whether members can switch the execution device for their own runs in this group.',
-  'permission.page.groupDevicePolicyFixedDesc':
-    'Members can only use the device you set for this group',
-  'permission.page.groupDevicePolicyMemberDesc': 'Members can set their own execution device',
-  'permission.page.groupDevicePolicyUnset':
-    'Pick an execution device for the group host first, then you can fix it here.',
   'permission.page.groupGeneralAccessDesc':
     'What every workspace member can do with this group. The same level is applied to the member agents the group owns. The creator and workspace owners always keep full access.',
   'permission.page.groupPersonalDesc':
@@ -463,11 +450,6 @@ export default {
   'permission.page.groupPersonalTitle': 'Permissions apply to workspace groups',
   'permission.page.groupPrivateNotice':
     'This group is still private. Everything here takes effect once you publish it to the workspace.',
-  'permission.page.groupModelPolicyDesc':
-    'Whether members can switch the model for their own conversations in this group.',
-  'permission.page.groupModelPolicyFixedDesc':
-    'Members can only use the model you set for this group',
-  'permission.page.groupModelPolicyMemberDesc': 'Members can use a model they set themselves',
   'permission.page.groupTopicSharePolicyDesc':
     "Whether members can publish share links for this group's topics.",
   'permission.page.groupTopicSharePolicyMemberDesc':
@@ -475,10 +457,6 @@ export default {
   'permission.page.groupTopicSharePolicyRestrictedDesc':
     'Only you and workspace owners can publish share links for this group',
   'permission.page.memberGroup': 'Access',
-  'permission.page.modelPolicyFixedDesc': 'Members can only use the model you set',
-  'permission.page.modelPolicyMemberDesc': 'Members can use a model they set themselves',
-  'permission.page.modelPolicyDesc':
-    'Whether members can switch the model for their own conversations.',
   'permission.page.personalDesc':
     'This agent only belongs to you, so there is nothing to share yet. Publish it to a workspace to set member permissions.',
   'permission.page.personalTitle': 'Permissions apply to workspace agents',
@@ -1157,13 +1135,12 @@ export default {
   'settingAgent.agentTools.tabWorkspace': 'Workspace Tools',
   'settingAgent.advancedSettings.diagnosticsAction': 'View diagnostics',
   'settingAgent.advancedSettings.diagnosticsLabel': 'Diagnostics',
-  'settingAgent.devicePolicy.selectTarget': 'Select target',
-  'settingAgent.devicePolicy.title': 'Member device switching',
   'settingAgent.deviceSettings.bindingInvalidDesc':
     'The bound device is gone or no longer selectable. Choose a replacement to repair this agent.',
   'settingAgent.deviceSettings.bindingInvalidTitle': 'Device no longer available',
   'settingAgent.deviceSettings.bindingMissing': 'Device binding unavailable',
   'settingAgent.deviceSettings.bindingRepair': 'Use {{name}}',
+  'settingAgent.deviceSettings.selectTarget': 'Select target',
   'settingAgent.deviceSettings.deviceLabel': 'Device',
   'settingAgent.deviceSettings.offlineBoundDesc':
     'Runs will not start until this device reconnects.',
@@ -1178,7 +1155,6 @@ export default {
   'settingAgent.generalSettings.legacyName': 'Legacy chat runtime',
   'settingAgent.generalSettings.name': 'Name',
   'settingAgent.generalSettings.title': 'Basic configuration',
-  'settingAgent.modelPolicy.title': 'Member model switching',
   'settingAgent.modelSettings.bindAction': 'Bind a provider',
   'settingAgent.modelSettings.catalogError': 'Could not load models from the selected device.',
   'settingAgent.modelSettings.catalogPending':
@@ -1196,12 +1172,7 @@ export default {
   'settingAgent.runtimeConfig.reasoningEffortHint':
     'Your default reasoning effort for this model. Shared by every agent using it; each topic keeps the effort it started with and can change it from the chat input.',
   'settingAgent.runtimeConfig.title': 'Model & Reasoning Effort',
-  'settingAgent.selectionPolicy.membersCannotSwitch': 'Locked',
-  'settingAgent.selectionPolicy.membersCannotSwitchWhenShared': 'Locked when shared',
-  'settingAgent.selectionPolicy.membersCanSwitch': 'Can switch',
-  'settingAgent.selectionPolicy.membersCanSwitchWhenShared': 'Can switch when shared',
-  // Not a Can-switch / Locked pair like the policies above: sharing is a
-  // capability rather than a setting members flip, so the labels name who holds it.
+  // Sharing labels name who holds the capability.
   'settingAgent.topicSharePolicy.membersCanShare': 'Members can share',
   'settingAgent.topicSharePolicy.membersCannotShare': 'Creator and owners only',
   'settingAgent.topicSharePolicy.title': 'Topic sharing',

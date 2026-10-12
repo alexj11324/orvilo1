@@ -3,7 +3,7 @@
 import { LINEAR_TOOL_NAMES } from '@orvilo/shared-tool-ui/inspectors';
 import { GitHubRender, LinearRender } from '@orvilo/shared-tool-ui/renders';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { ComponentType } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,13 +24,9 @@ import {
   getMcpToolName,
 } from './mcpToolUtils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  sectionLabel: css`
-    margin-block-end: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  sectionLabel: 'mbe-1 text-xs leading-5 text-muted-foreground',
+};
 
 const LINEAR_TOOL_NAME_SET = new Set<string>([...LINEAR_TOOL_NAMES, 'fetch', 'search']);
 const SharedLinearRender = LinearRender as ComponentType<
@@ -102,9 +98,9 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
             </div>
             <CodeBlock
               wrap
+              className="max-h-55 overflow-auto px-2"
               code={input.text}
               language={input.language}
-              style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
             >
               {input.language !== 'text' ? undefined : <CodeBlockCopyButton />}
@@ -118,9 +114,9 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
             </div>
             <CodeBlock
               wrap
+              className="max-h-90 overflow-auto px-2"
               code={output.text}
               language={output.language}
-              style={{ maxHeight: 360, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
             >
               {output.language !== 'text' ? undefined : <CodeBlockCopyButton />}
@@ -129,14 +125,14 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
         )}
         {error && (
           <div>
-            <div className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
+            <div className={cn(styles.sectionLabel, 'text-destructive-text')}>
               {t('builtins.codex.mcpTool.error', { defaultValue: 'Error' })}
             </div>
             <CodeBlock
               wrap
+              className="max-h-55 overflow-auto px-2"
               code={error}
               language={'text'}
-              style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
               variant="ghost"
             >
               <CodeBlockCopyButton />

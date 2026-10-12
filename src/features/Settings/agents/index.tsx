@@ -75,27 +75,30 @@ const AgentSettingsIndex = memo(() => {
   const { t: tChat } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const { error, mutate } = useFetchAgentList();
-  const { createAgent, isMutatingAgent } = useCreateMenuItems();
+  const { createAgent, createAgentMenuItem, isMutatingAgent } = useCreateMenuItems();
 
   return (
-    <SettingContainer maxWidth={640} paddingBlock={'24px 128px'} paddingInline={24}>
+    <SettingContainer paddingBlock={'24px 128px'} paddingInline={24} width="form">
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <div className="text-[20px] font-semibold">{t('tab.agents')}</div>
-            <div className="text-[13px]" style={{ color: 'var(--ant-color-text-description)' }}>
+            <div className="text-xl font-semibold">{t('tab.agents')}</div>
+            <div
+              className="text-(length:--text-dense)"
+              style={{ color: 'var(--ant-color-text-description)' }}
+            >
               {t('agentsIndexHint')}
             </div>
           </div>
           {/* Settings origin: creating here opens the new Agent's settings,
               not a conversation. */}
           <Button
-            disabled={isMutatingAgent}
-            size="sm"
+            disabled={isMutatingAgent || createAgentMenuItem().disabled}
+            size="lg"
             variant="outline"
             onClick={() => void createAgent({ origin: 'settings' })}
           >
-            <PlusIcon size={14} />
+            <PlusIcon size={16} />
             {tChat('newAgent')}
           </Button>
         </div>

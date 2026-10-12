@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 22px title geometry pending a design-scale choice; no matching role is approved.
 
 import { EyeIcon, PauseIcon, PlayIcon } from 'lucide-react';
 import { memo, type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -53,7 +54,7 @@ import { useGoalChatPanel } from './useGoalChatPanel';
 const styles = {
   header: '[padding-block:8px_4px]',
   metric:
-    'cursor-pointer min-w-28 [padding-block:4px] [padding-inline:10px] rounded-(--ant-border-radius) [transition:background_0.15s] hover:bg-(--ant-color-fill-quaternary)',
+    'cursor-pointer min-w-28 [padding-block:4px] [padding-inline:10px] rounded-(--ant-border-radius) [transition:background_0.15s] hover:bg-fill-quaternary',
   metrics: '-ms-2.5',
 };
 
@@ -63,10 +64,10 @@ const Metric = memo<{
   value: ReactNode;
 }>(({ label, onClick, value }) => (
   <div className={`flex flex-col gap-0.5 ${styles.metric}`} onClick={onClick}>
-    <div className="flex items-center gap-[7px]" style={{ minHeight: 26 }}>
+    <div className="flex items-center gap-1.75" style={{ minHeight: 26 }}>
       {value}
     </div>
-    <div className="text-[12px] text-muted-foreground">{label}</div>
+    <div className="text-xs text-muted-foreground">{label}</div>
   </div>
 ));
 
@@ -77,7 +78,7 @@ Metric.displayName = 'GoalHeaderMetric';
  *  animation, and a second spinner here said the same thing twice. */
 const LivenessValue = memo<{ latest?: Date }>(({ latest }) => {
   const { text } = useActivityTime(latest);
-  return <div className="text-[16px] font-semibold">{text || '—'}</div>;
+  return <div className="text-base font-semibold">{text || '—'}</div>;
 });
 
 LivenessValue.displayName = 'GoalLivenessValue';
@@ -192,7 +193,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   title={<Link to={buildAgentPath('goals')}>{t('goalList.title')}</Link>}
                 />
               ) : (
-                <div className="text-[14px] font-medium">{goal.title}</div>
+                <div className="text-sm font-medium">{goal.title}</div>
               )}
               {/* Not nested under the breadcrumb: an agent-less goal still has to
                   be deletable, and this menu is the only place that can do it. */}
@@ -235,36 +236,34 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   value={
                     <>
                       <GoalStatusGlyph size={16} status={goal.status} />
-                      <div className="text-[16px] font-semibold">
-                        {t(goalStatusKey(goal.status))}
-                      </div>
+                      <div className="text-base font-semibold">{t(goalStatusKey(goal.status))}</div>
                     </>
                   }
                   onClick={open('lifecycle')}
                 />
                 <Metric
                   label={t('goalProcess.metrics.tasks')}
-                  value={<div className="text-[16px] font-semibold">{tasks}</div>}
+                  value={<div className="text-base font-semibold">{tasks}</div>}
                   onClick={open('tasks')}
                 />
                 <Metric
                   label={t('goalProcess.metrics.findings')}
-                  value={<div className="text-[16px] font-semibold">{findings}</div>}
+                  value={<div className="text-base font-semibold">{findings}</div>}
                   onClick={open('findings')}
                 />
                 <Metric
                   label={budgetLabel}
                   value={
                     <>
-                      <div className="text-[16px] font-semibold">{budgetLead}</div>
-                      <div className="text-[12px] text-muted-foreground">{budgetTrail}</div>
+                      <div className="text-base font-semibold">{budgetLead}</div>
+                      <div className="text-xs text-muted-foreground">{budgetTrail}</div>
                     </>
                   }
                   onClick={open('budget')}
                 />
                 <Metric
                   label={t('goalProcess.metrics.duration')}
-                  value={<div className="text-[16px] font-semibold">{durationText}</div>}
+                  value={<div className="text-base font-semibold">{durationText}</div>}
                   onClick={open('duration')}
                 />
                 <Metric
@@ -279,6 +278,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
               {canPause && (
                 <div className="flex items-center gap-2.5" style={{ paddingBlock: '8px 0' }}>
                   <Button
+                    size="compact"
                     variant={paused ? 'default' : 'outline'}
                     onClick={() => void (paused ? resumeGoal(goal.id) : pauseGoal(goal.id))}
                   >
@@ -290,9 +290,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                     {paused ? t('goalProcess.resume') : t('goalProcess.pause')}
                   </Button>
                   {paused && (
-                    <div className="text-[12px] text-muted-foreground">
-                      {t('goalProcess.paused')}
-                    </div>
+                    <div className="text-xs text-muted-foreground">{t('goalProcess.paused')}</div>
                   )}
                 </div>
               )}

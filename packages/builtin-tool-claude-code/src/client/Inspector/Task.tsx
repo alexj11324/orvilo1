@@ -21,7 +21,7 @@ const RING_CIRCUM = 2 * Math.PI * RING_RADIUS;
 const styles = {
   chip: 'overflow-hidden shrink min-w-0 ms-1 py-px px-2 rounded-[999px] text-foreground text-ellipsis whitespace-nowrap bg-selected',
   countChip:
-    'shrink-0 py-px px-1.5 rounded-[999px] font-mono text-[12px] text-muted-foreground bg-accent',
+    'shrink-0 py-px px-1.5 rounded-[999px] font-mono text-xs text-muted-foreground bg-accent',
   ring: '[transform:rotate(-90deg)] shrink-0 me-1.5',
   ringProgress: 'transition-[stroke-dashoffset,stroke] duration-[240ms] ease-[ease]',
   ringTrack: 'stroke-selected',

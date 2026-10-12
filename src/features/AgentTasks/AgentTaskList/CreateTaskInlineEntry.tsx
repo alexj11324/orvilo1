@@ -3,7 +3,6 @@
 import { useEditor } from '@lobehub/editor/react';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import type { TaskIntentAnalysis } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { $getRoot } from 'lexical';
 import { ChevronDown, ChevronUp, Paperclip } from 'lucide-react';
 import { type KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -576,10 +575,10 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     // second boundary the composer does not otherwise have.
     <GeneratingBorder generating={isAnalyzing || isSynthesizing}>
       <div
-        className="relative overflow-hidden rounded-md border"
+        className="relative overflow-hidden rounded-(--radius-card) border"
         style={{
-          borderColor: cssVar.colorBorderSecondary,
-          background: cssVar.colorBgContainer,
+          borderColor: 'var(--ant-color-border-secondary)',
+          background: 'var(--ant-color-bg-container)',
         }}
         onKeyDownCapture={handleKeyDown}
       >
@@ -634,7 +633,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         <div
           className="flex items-center justify-between"
           style={{
-            borderTop: `1px solid ${cssVar.colorBorderSecondary}`,
+            borderTop: `1px solid ${'var(--ant-color-border-secondary)'}`,
             display: isReviewing ? 'none' : undefined,
             paddingBlock: 8,
             paddingInline: '8px 16px',
@@ -642,9 +641,9 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         >
           <div className="flex flex-wrap items-center gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
-              <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
+              <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-muted">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
-                <div className="text-[12px]">
+                <div className="text-xs">
                   {priority === 0
                     ? t('taskDetail.priority.none')
                     : t(
@@ -656,16 +655,19 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
 
             {activeWorkspaceId && (
               <AssigneeMemberSelector currentUserId={assigneeUserId} onChange={handleMemberChange}>
-                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
+                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-muted">
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
-                      <div className="text-[12px]">{memberMeta?.title}</div>
+                      <div className="text-xs">{memberMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div
+                        className="text-xs"
+                        style={{ color: 'var(--ant-color-text-description)' }}
+                      >
                         {t('createTask.member')}
                       </div>
                     </>
@@ -675,22 +677,25 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             )}
 
             {lockAssignee ? (
-              <div className="flex h-6 items-center gap-1.5 rounded-md px-2 py-[3px]">
+              <div className="flex h-6 items-center gap-1.5 rounded-md px-2 py-0.75">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                <div className="text-[12px]">{assigneeMeta?.title}</div>
+                <div className="text-xs">{assigneeMeta?.title}</div>
               </div>
             ) : (
               <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
-                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-[3px] transition-colors hover:bg-(--ant-color-fill-tertiary)">
+                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-muted">
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                      <div className="text-[12px]">{assigneeMeta?.title}</div>
+                      <div className="text-xs">{assigneeMeta?.title}</div>
                     </>
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <div
+                        className="text-xs"
+                        style={{ color: 'var(--ant-color-text-description)' }}
+                      >
                         {t('createTask.assignee')}
                       </div>
                     </>

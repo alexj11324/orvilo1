@@ -1,5 +1,4 @@
 import type { TaskAutomationMode } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarClockIcon, CalendarDays, Clock, RefreshCw, TimerIcon, Zap } from 'lucide-react';
@@ -34,23 +33,11 @@ type IntervalUnit = 'hours' | 'minutes';
 
 const MIN_MINUTES = 10;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  fieldLabel: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  popover: css`
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-    background: ${cssVar.colorBgContainer};
-  `,
-  preview: css`
-    padding-block: 12px;
-    padding-inline: 14px;
-    border-radius: 12px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  fieldLabel: 'text-xs leading-5 text-muted-foreground',
+  popover: 'border border-divider rounded-(--radius-overlay) bg-popover',
+  preview: 'py-3 px-3.5 rounded-(--radius-card) bg-fill-quaternary',
+};
 
 interface IntervalTabProps {
   currentInterval: number;
@@ -125,16 +112,18 @@ const IntervalTab = memo<IntervalTabProps>(({ currentInterval, disabled, taskId 
       <div className="flex items-center gap-2">
         <div className="text-muted-foreground">{t('taskSchedule.every')}</div>
         <InputNumber
+          className="w-25"
           disabled={disabled}
           min={localUnit === 'minutes' ? MIN_MINUTES : 1}
           placeholder={localUnit === 'minutes' ? String(MIN_MINUTES) : '1'}
-          style={{ width: 100 }}
+          size="normal"
           value={localValue}
           onChange={handleValueChange}
         />
         <Select
+          className="flex-1"
           disabled={disabled}
-          style={{ flex: 1 }}
+          size="normal"
           value={localUnit}
           options={[
             { label: t('taskSchedule.minutes'), value: 'minutes' },
@@ -296,26 +285,23 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
 
   const content = (
     <div
-      className="flex flex-col gap-4"
-      style={{ padding: 4, width: 440 }}
+      className="flex flex-col gap-4 w-110 max-w-full p-1 text-sm leading-5.5"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center gap-3">
         <Avatar
-          avatar={<Zap color={cssVar.colorSuccess} size={20} />}
-          background={cssVar.colorSuccessBg}
+          avatar={<Zap className="size-5 text-success-text" size={20} />}
+          background={'var(--success-wash)'}
           shape="square"
           size={40}
         />
         <div className="flex flex-1 flex-col gap-0.5">
           <div className="font-medium">{t('taskSchedule.heading')}</div>
-          <div style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
+          <div className="text-xs leading-5 text-muted-foreground">
             {summary?.primary ?? t('taskSchedule.summary.disabled')}
           </div>
           {summary?.secondary && (
-            <div style={{ color: cssVar.colorTextDescription, fontSize: 11 }}>
-              {summary.secondary}
-            </div>
+            <div className="text-xs leading-5 text-foreground-description">{summary.secondary}</div>
           )}
         </div>
         <Switch checked={enabled} disabled={!canEditTask} onCheckedChange={handleEnableChange} />
@@ -323,11 +309,9 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
 
       {enabled && nextRunText && (
         <div className={`flex items-center gap-2.5 ${styles.preview}`}>
-          <Clock color={cssVar.colorTextDescription} size={16} />
-          <div style={{ color: cssVar.colorTextSecondary }}>{t('taskSchedule.nextRun')}</div>
-          <div className="font-medium" style={{ flex: 1, textAlign: 'right' }}>
-            {nextRunText}
-          </div>
+          <Clock className="size-4 text-foreground-description" size={16} />
+          <div className="text-muted-foreground">{t('taskSchedule.nextRun')}</div>
+          <div className="flex-1 text-end font-medium">{nextRunText}</div>
         </div>
       )}
 
@@ -337,13 +321,13 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
             <TabsList className="flex w-full">
               <TabsTrigger className="flex-1" disabled={!canEditTask} value="schedule">
                 <div className="flex items-center justify-center gap-1.5">
-                  <CalendarDays size={14} />
+                  <CalendarDays className="size-3.5" size={14} />
                   <span>{t('taskSchedule.schedulerTab')}</span>
                 </div>
               </TabsTrigger>
               <TabsTrigger className="flex-1" disabled={!canEditTask} value="heartbeat">
                 <div className="flex items-center justify-center gap-1.5">
-                  <RefreshCw size={14} />
+                  <RefreshCw className="size-3.5" size={14} />
                   <span>{t('taskSchedule.intervalTab')}</span>
                 </div>
               </TabsTrigger>
@@ -364,6 +348,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
               className="w-full"
               disabled={!canEditTask}
               loading={isStartingSchedule}
+              size="lg"
               variant="default"
               onClick={handleStartScheduling}
             >
@@ -384,7 +369,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
     <ActionIcon
       disabled={!canEditTask}
       icon={TimerIcon}
-      size="small"
+      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
       title={t('taskSchedule.title')}
       onClick={(e) => e.stopPropagation()}
     />

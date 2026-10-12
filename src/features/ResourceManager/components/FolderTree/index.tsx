@@ -1,35 +1,16 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
 import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import ActionIcon from '@/components/ActionIcon';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  folderHeader: css`
-    cursor: pointer;
-
-    padding-block: 4px;
-    padding-inline: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition: background-color 0.2s;
-
-    &:hover {
-      background-color: ${cssVar.colorFillTertiary};
-    }
-  `,
-  folderHeaderActive: css`
-    color: ${cssVar.colorText};
-    background-color: ${cssVar.colorFillSecondary};
-  `,
-}));
 
 export interface FolderTreeItem {
   children?: FolderTreeItem[];
@@ -62,6 +43,9 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
     onFolderClick,
   }) => {
     const { t: tCommon } = useTranslation('common');
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const motionDisabled = animationMode === 'disabled' || prefersReducedMotion;
     const itemKey = item.slug || item.id;
     const isExpanded = expandedFolders.has(itemKey);
     // Compare selectedKey with item.id since selectedKey is always the ID
@@ -90,32 +74,38 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
           {...clickableProps()}
           style={{ paddingInlineStart: level * 16 + 8 }}
           className={cn(
-            cx(
+            cn(
               'flex flex-row items-center',
-              cx(styles.folderHeader, isActive && styles.folderHeaderActive),
+              cn(
+                'cursor-pointer py-1 px-2 text-muted-foreground transition-[background-color] duration-200 ease-[ease] hover:bg-accent',
+                isActive && 'text-foreground bg-selected hover:bg-selected',
+              ),
             ),
             CLICKABLE_FOCUS_RING,
           )}
           onClick={handleClick}
         >
           <m.div
-            animate={{ rotate: isExpanded ? 0 : -90 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: motionDisabled ? 0 : 0.2, ease: 'easeInOut' }}
+            animate={{
+              rotate: motionDisabled
+                ? [isExpanded ? 0 : -90, isExpanded ? 0 : -90]
+                : isExpanded
+                  ? 0
+                  : -90,
+            }}
           >
             <ActionIcon
               aria-label={tCommon('toggle')}
               icon={ChevronDown}
-              size={'small'}
+              size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggle();
               }}
             />
           </m.div>
-          <div
-            className="flex flex-row items-center flex-1 gap-2"
-            style={{ minHeight: 28, minWidth: 0 }}
-          >
+          <div className="flex flex-row items-center flex-1 gap-2 min-h-7 min-w-0">
             <span className="anticon" role="img">
               {createElement(isExpanded ? FolderOpenIcon : FolderIcon, {
                 size: 16,
@@ -124,27 +114,19 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
                 fill: 'transparent',
               })}
             </span>
-            <span
-              style={{
-                flex: 1,
-                fontSize: 14,
-                lineHeight: '20px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {item.name}
-            </span>
+            <span className="flex-1 truncate text-sm leading-5.5">{item.name}</span>
           </div>
         </div>
 
         {isExpanded && item.children && item.children.length > 0 && (
           <m.div
-            animate={{ height: 'auto', opacity: 1 }}
-            initial={{ height: 0, opacity: 0 }}
-            style={{ overflow: 'hidden' }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="overflow-hidden"
+            initial={motionDisabled ? false : { height: 0, opacity: 0 }}
+            transition={{ duration: motionDisabled ? 0 : 0.2, ease: 'easeInOut' }}
+            animate={{
+              height: motionDisabled ? ['auto', 'auto'] : 'auto',
+              opacity: motionDisabled ? [1, 1] : 1,
+            }}
           >
             <div className="flex flex-col gap-0.5">
               {item.children.map((child) => (

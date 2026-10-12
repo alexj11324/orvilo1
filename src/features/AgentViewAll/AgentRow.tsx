@@ -4,7 +4,6 @@ import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
 import { formatAbsoluteDate, formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, useCallback, useState } from 'react';
@@ -21,6 +20,7 @@ import {
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import AgentAvatar from './AgentAvatar';
+import nativeStyles from './AgentViewAll.module.css';
 import ItemActions from './ItemActions';
 
 /** Fixed action-column width (the "…" menu) so rows stay aligned. */
@@ -29,53 +29,12 @@ export const ACTION_COL_WIDTH = 32;
 /** Author avatar slot — reserved even when the author is unknown. */
 const AUTHOR_COL_WIDTH = 20;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  // The link spans the name column (not the whole row) — a management list
-  // is for scanning and acting, and a full-row link turns clicks on the
-  // author / timestamp / action columns into a navigation. The name column
-  // stays a generous target, including the space right of a short title.
-  identity: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: 1;
-    gap: 12px;
-    align-items: center;
-
-    min-width: 0;
-
-    color: inherit;
-
-    &:hover .agent-row-title {
-      text-decoration: underline;
-    }
-  `,
-  row: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    color: inherit;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  /**
-   * Reserved width, right-aligned: "3 天前" and "2026-07-22" differ by ~30px,
-   * and a content-sized column puts the author avatar and the label pills at a
-   * different x on every row. `min-width` (not `width`) so an unusually long
-   * relative string — en's "a few seconds ago" — grows instead of truncating.
-   */
-  updatedAt: css`
-    flex: none;
-
-    min-width: 88px;
-
-    color: ${cssVar.colorTextQuaternary};
-    text-align: end;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  identity: nativeStyles.identity,
+  row: 'py-2 px-3 rounded-(--radius-card) text-foreground hover:bg-muted',
+  updatedAt:
+    'flex-none min-w-22 text-xs leading-5 text-muted-foreground text-end whitespace-nowrap',
+};
 
 /** < 7 days → relative time; older → plain date (mirrors TopicSelector). */
 export const formatUpdatedAt = (updatedAt: Date | number | string) =>
@@ -129,15 +88,23 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
             to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
           >
             <AgentAvatar item={item} size={28} />
-            <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+            <div className="flex min-w-0 flex-1 flex-col">
               {/* Single-line row (Linear-style density) — the description only
                 renders in card mode, where there is room to browse. */}
-              <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
-                <div className={cn('truncate', 'block', 'font-medium', 'agent-row-title')}>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <div
+                  className={cn(
+                    'truncate',
+                    'block',
+                    'text-sm leading-5.5 font-medium',
+                    'agent-row-title',
+                    nativeStyles.rowTitle,
+                  )}
+                >
                   {displayTitle}
                 </div>
                 {roleTag ? (
-                  <Tag size="sm" style={{ flex: 'none' }}>
+                  <Tag className="flex-none rounded-(--radius-chip) text-xs leading-5" size="sm">
                     {roleTag}
                   </Tag>
                 ) : null}
@@ -146,20 +113,17 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
           </WorkspaceLink>
           {/* Trailing cluster (Task-list-style): author avatar +
             update time as one tight right-aligned group. */}
-          <div
-            className="flex items-center gap-2 justify-end"
-            style={{ flex: 'none', maxWidth: 420, overflow: 'hidden' }}
-          >
+          <div className="flex flex-none max-w-105 items-center justify-end gap-2 overflow-hidden">
             {showAuthor && (
               // The slot is reserved even without an author, so an unknown
               // author doesn't shift the row's update time sideways.
-              <div className="flex flex-col" style={{ flex: 'none', width: AUTHOR_COL_WIDTH }}>
+              <div className="flex flex-none w-5 flex-col">
                 {author && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger
                         render={
-                          <span style={{ display: 'inline-flex' }}>
+                          <span className="inline-flex">
                             <Avatar
                               avatar={author.avatar || DEFAULT_AVATAR}
                               size={AUTHOR_COL_WIDTH}
@@ -174,16 +138,13 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
               </div>
             )}
             <div
-              className={cn('text-[12px]', styles.updatedAt)}
+              className={cn('text-xs', styles.updatedAt)}
               title={updatedAt ? formatAbsoluteDateTime(updatedAt) : undefined}
             >
               {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
             </div>
           </div>
-          <div
-            className="flex items-center gap-1"
-            style={{ flex: 'none', width: ACTION_COL_WIDTH }}
-          >
+          <div className="flex flex-none w-8 items-center gap-1">
             {/* Visible "…" trigger AND right-click open the same menu — the
               context menu alone proved undiscoverable (users assumed rows had
               no actions). */}

@@ -6,7 +6,6 @@ import {
   confirmModal,
   createModal,
   Input,
-  ModalFooter,
   type ModalInstance,
   Select,
   Text,
@@ -14,13 +13,14 @@ import {
   toast,
   useModalContext,
 } from '@lobehub/ui/base-ui';
-import { Form } from 'antd';
-import { cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import { BrainIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
+import { ModalFooter } from '@/components/Modal';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAiInfraStore } from '@/store/aiInfra/store';
@@ -35,12 +35,21 @@ interface SettingContentProps {
 }
 
 const SectionTitle = memo<{ children: ReactNode }>(({ children }) => (
-  <Text fontSize={13} type={'secondary'} weight={500}>
+  <Text fontSize={14} lineHeight={22 / 14} type={'secondary'} weight={500}>
     {children}
   </Text>
 ));
 
 SectionTitle.displayName = 'SectionTitle';
+
+const buttonStyles = createStaticStyles(({ css }) => ({
+  normalAction: css`
+    height: 36px;
+    border-radius: var(--radius-button);
+    font-size: var(--text-sm);
+    line-height: ${22 / 14};
+  `,
+}));
 
 const itemStyle = { marginBottom: 0 };
 
@@ -174,17 +183,22 @@ const SettingContent = memo<SettingContentProps>(({ initialValues, id }) => {
           </Form.Item>
         </Flexbox>
       </Form>
-      <ModalFooter
-        style={{
-          borderBlockStart: `1px solid ${cssVar.colorBorderSecondary}`,
-          marginTop: 16,
-          padding: 0,
-        }}
-      >
-        <Button danger disabled={loading} type={'primary'} onClick={handleDelete}>
+      <ModalFooter className="mbs-4 border-bs border-divider p-0">
+        <Button
+          danger
+          className={buttonStyles.normalAction}
+          disabled={loading}
+          type={'primary'}
+          onClick={handleDelete}
+        >
           {t('delete', { ns: 'common' })}
         </Button>
-        <Button loading={loading} type={'primary'} onClick={() => form.submit()}>
+        <Button
+          className={buttonStyles.normalAction}
+          loading={loading}
+          type={'primary'}
+          onClick={() => form.submit()}
+        >
           {t('update', { ns: 'common' })}
         </Button>
       </ModalFooter>

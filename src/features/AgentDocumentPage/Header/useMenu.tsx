@@ -1,7 +1,6 @@
 import { useEditor } from '@lobehub/editor/react';
 import { buildAgentDocumentUrl } from '@orvilo/builtin-tool-agent-documents';
 import { isDesktop } from '@orvilo/const';
-import { cssVar, useResponsive } from 'antd-style';
 import { Download, Link2, Maximize2, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +11,7 @@ import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { formatPageEditorInfoTime } from '@/features/PageEditor/formatPageEditorInfoTime';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
+import { useIsLargeViewport } from '@/hooks/useIsMobile';
 import { agentDocumentService } from '@/services/agentDocument';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -40,7 +40,7 @@ export const useMenu = ({
 }: UseMenuParams): { menuItems: DropdownItem[] } => {
   const { t } = useTranslation(['file', 'common', 'chat']);
 
-  const { lg = true } = useResponsive();
+  const lg = useIsLargeViewport();
   const editor = useEditor();
   const appOrigin = useAppOrigin();
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
@@ -158,7 +158,7 @@ export const useMenu = ({
           disabled: true,
           key: 'doc-info',
           label: (
-            <span style={{ color: cssVar.colorTextTertiary, fontSize: 12, lineHeight: 1.6 }}>
+            <span className="text-xs leading-5 text-foreground-tertiary">
               {t('pageEditor.editedAt', {
                 time: formatPageEditorInfoTime(updatedAt),
               })}

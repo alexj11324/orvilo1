@@ -70,6 +70,23 @@ prove it. Source CDP visual comparison and package motion captures pending.
   visible overflow; custom/user avatars keep their original clipping and styles.
   The changed avatar file passed scoped lint; final captures use this correction.
 
+## Desktop tabs: the avatar remounts on reveal
+
+Desktop keeps every tab mounted inside a React `<Activity>` and hides the
+inactive ones. Hiding runs the avatar's effects down and showing runs them
+again on the same canvas. `bot-avatars` keeps its `fabric` drawing layers on
+that canvas and they do not survive the cycle: after a tab switch the body is
+drawn at about 1% opacity and only the eyes stay visible.
+
+`ChatItem/components/Avatar.tsx` therefore keys `<BotAvatar>` on
+`useRevealEpoch()` (`src/hooks/useRevealEpoch.ts`), which counts returns from a
+hidden Activity. Each reveal mounts a fresh canvas; a component that was never
+hidden keeps epoch 0 and is not remounted. The shading stays `fabric`.
+
+To check on the desktop app: open two conversation tabs, switch between them,
+and read the avatar canvas with `getImageData`. A healthy 28px avatar has
+roughly 1,400-1,700 opaque pixels; the failure has fewer than 100.
+
 ## Canary reconciliation
 
 Merged canary ab23ec9c9 after PR creation. Its canonical runtime avatars remain

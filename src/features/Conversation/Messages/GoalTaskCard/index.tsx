@@ -1,7 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
 import { ChevronRightIcon, TargetIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -16,44 +14,6 @@ import { useGoalTaskStatus } from './useGoalTaskStatus';
 
 const ACTIVE_PHASES = new Set<GoalTaskPhase>(['repairing', 'running', 'verifying']);
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    cursor: pointer;
-
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgElevated};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  chevron: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  icon: css`
-    flex-shrink: 0;
-
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  title: css`
-    min-width: 0;
-    font-size: 14px;
-    font-weight: 500;
-  `,
-}));
-
 const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
   const navigate = useWorkspaceAwareNavigate();
   const { agentId, progress, startedAt, title } = useGoalTaskStatus({
@@ -67,7 +27,7 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
 
   return (
     <div
-      className={cn('flex items-center gap-2.5', styles.card)}
+      className="flex w-full cursor-pointer items-center gap-2.5 rounded-(--radius-card) border border-divider bg-card px-3 py-2.5 outline-none hover:bg-accent active:bg-selected focus-visible:ring-3 focus-visible:ring-ring/50"
       role={'button'}
       tabIndex={0}
       onClick={openGoal}
@@ -77,23 +37,19 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
         openGoal();
       }}
     >
-      <div className={cn('flex flex-col items-center justify-center', styles.icon)}>
+      <div className="flex size-9 shrink-0 flex-col items-center justify-center rounded-(--radius-card) bg-muted text-muted-foreground">
         {isActive ? (
-          <RingLoadingIcon
-            ringColor={cssVar.colorBorder}
-            size={18}
-            style={{ color: cssVar.colorWarning }}
-          />
+          <RingLoadingIcon className="text-warning-text" ringColor="var(--border)" size={16} />
         ) : (
-          <TargetIcon size={20} />
+          <TargetIcon size={16} />
         )}
       </div>
-      <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-        <div className={cn('truncate', styles.title)}>{title ?? goal.name}</div>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="min-w-0 truncate text-sm leading-5.5 font-medium">{title ?? goal.name}</div>
         <GoalStatusLine {...progress} />
       </div>
       {isActive && <GoalElapsedTime startedAt={startedAt} />}
-      <ChevronRightIcon className={styles.chevron} size={16} />
+      <ChevronRightIcon className="shrink-0 text-foreground-tertiary" size={16} />
     </div>
   );
 });

@@ -12,7 +12,7 @@ import { memoryCardStyles as styles, MemorySection, SummaryAccordion } from './M
 
 const localStyles = {
   evidence:
-    '[padding-block:8px] [padding-inline:12px] [border-inline-start:2px_solid_var(--border)] text-[13px] italic leading-[1.6] text-muted-foreground',
+    '[padding-block:8px] [padding-inline:12px] [border-inline-start:2px_solid_var(--border)] text-(length:--text-dense) italic leading-[1.6] text-muted-foreground',
 };
 
 export interface IdentityMemoryCardProps {
@@ -76,24 +76,24 @@ export const IdentityMemoryCard = memo<IdentityMemoryCardProps>(
                 style={{ paddingBlock: 12, paddingInline: 12 }}
               >
                 {role && (
-                  <div className={cn('flex', 'items-center', 'gap-[6px]', styles.chip)}>
+                  <div className={cn('flex', 'items-center', 'gap-1.5', styles.chip)}>
                     <span>🎓</span>
                     <span>{role}</span>
                   </div>
                 )}
                 {episodicDate && (
-                  <div className="flex items-center gap-[6px]">
+                  <div className="flex items-center gap-1.5">
                     <span>📅</span>
-                    <div className="text-[12px] text-muted-foreground">{episodicDate}</div>
+                    <div className="text-xs text-muted-foreground">{episodicDate}</div>
                   </div>
                 )}
                 {confidence !== undefined && (
                   <div className="flex items-center gap-2">
-                    <div className="text-[12px] text-muted-foreground font-medium">Confidence</div>
+                    <div className="text-xs text-muted-foreground font-medium">Confidence</div>
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }, (_, index) => (
                         <div
-                          className="h-[2px] w-[12px] rounded-full"
+                          className="h-0.5 w-3 rounded-full"
                           key={index}
                           style={{
                             background:
@@ -104,7 +104,7 @@ export const IdentityMemoryCard = memo<IdentityMemoryCardProps>(
                         />
                       ))}
                     </div>
-                    <div className="text-[12px] text-muted-foreground">{confidence}%</div>
+                    <div className="text-xs text-muted-foreground">{confidence}%</div>
                   </div>
                 )}
               </div>

@@ -1,7 +1,6 @@
 import { ClaudeCode, Codex } from '@lobehub/icons';
 import { DraggablePanel } from '@lobehub/ui/base-ui';
 import type { HeteroSessionDirGroup, HeteroSessionDirPref } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRight, Eye, EyeOff, Folder, FolderGit2, Timer, X } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
@@ -14,54 +13,13 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { baseName, dirKeyOf } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  child: css`
-    cursor: pointer;
-
-    height: 32px;
-    padding-block: 0;
-    padding-inline: 28px 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    .tree-actions {
-      display: none;
-      flex: none;
-      gap: 2px;
-      align-items: center;
-    }
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-
-      .tree-actions {
-        display: flex;
-      }
-
-      .tree-count {
-        display: none;
-      }
-    }
-  `,
-  childActive: css`
-    background: ${cssVar.colorFillSecondary} !important;
-  `,
-  parent: css`
-    cursor: pointer;
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  sidebar: css`
-    width: 100%;
-    height: 100%;
-    padding-block: 12px;
-    padding-inline: 8px;
-  `,
-}));
+const styles = {
+  child:
+    'cursor-pointer h-8 py-0 ps-7 pe-2 rounded-(--radius-button) [&_.tree-actions]:hidden [&_.tree-actions]:flex-none [&_.tree-actions]:gap-0.5 [&_.tree-actions]:items-center hover:bg-accent hover:[&_.tree-actions]:flex focus-within:[&_.tree-actions]:flex hover:[&_.tree-count]:hidden focus-within:[&_.tree-count]:hidden',
+  childActive: 'bg-selected hover:bg-selected',
+  parent: 'cursor-pointer py-1.5 px-2 rounded-(--radius-button) hover:bg-accent',
+  sidebar: 'w-full h-full py-3 px-2',
+};
 
 const BRAND = { 'claude-code': ClaudeCode, 'codex': Codex } as const;
 const AGENT_LABEL = { 'claude-code': 'Claude Code', 'codex': 'Codex' } as const;
@@ -96,17 +54,17 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
           <TooltipTrigger
             render={
               <div
-                className={cx(
-                  cx(styles.child, scope === key && styles.childActive),
+                className={cn(
+                  cn(styles.child, scope === key && styles.childActive),
                   'flex items-center gap-2 justify-between',
                 )}
                 onClick={() => onScopeChange(key)}
               >
-                <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                <div className="flex items-center gap-1.5 min-w-0">
                   {leading}
                   <div
                     {...clickableProps()}
-                    className={cn('truncate block text-[13px]', CLICKABLE_FOCUS_RING)}
+                    className={cn('truncate block text-sm leading-5.5', CLICKABLE_FOCUS_RING)}
                   >
                     {baseName(group.workingDirectory)}
                   </div>
@@ -119,7 +77,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                           <ActionIcon
                             aria-label={t('heteroImport.action.unwatch')}
                             icon={X}
-                            size="small"
+                            size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
                             onClick={() => onSetPref(key, null)}
                           />
                         }
@@ -134,7 +92,11 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                             <ActionIcon
                               aria-label={t('heteroImport.action.watch')}
                               icon={Timer}
-                              size="small"
+                              size={{
+                                blockSize: 24,
+                                borderRadius: 'var(--radius-button)',
+                                size: 16,
+                              }}
                               onClick={() => onSetPref(key, 'watched')}
                             />
                           }
@@ -147,7 +109,11 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                             <ActionIcon
                               aria-label={t('heteroImport.action.ignore')}
                               icon={EyeOff}
-                              size="small"
+                              size={{
+                                blockSize: 24,
+                                borderRadius: 'var(--radius-button)',
+                                size: 16,
+                              }}
                               onClick={() => {
                                 onSetPref(key, 'ignored');
                                 if (scope === key) onScopeChange(group.source);
@@ -160,9 +126,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                     </>
                   )}
                 </span>
-                <div className="tree-count text-[12px] text-muted-foreground">
-                  {group.sessionCount}
-                </div>
+                <div className="tree-count text-xs text-muted-foreground">{group.sessionCount}</div>
               </div>
             }
           />
@@ -174,7 +138,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
 
   return (
     <DraggablePanel
-      backgroundColor={cssVar.colorBgLayout}
+      backgroundColor="var(--background)"
       defaultSize={{ width: 232 }}
       expandable={false}
       maxWidth={420}
@@ -185,25 +149,27 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
         <div
           {...clickableProps()}
           className={cn(
-            cx(
-              cx(styles.parent, scope === 'all' && styles.childActive),
+            cn(
+              cn(styles.parent, scope === 'all' && styles.childActive),
               'flex items-center justify-between',
             ),
             CLICKABLE_FOCUS_RING,
           )}
           onClick={() => onScopeChange('all')}
         >
-          <div className={cn('text-[13px]', scope === 'all' ? 'font-semibold' : 'font-normal')}>
+          <div
+            className={cn('text-sm leading-5.5', scope === 'all' ? 'font-semibold' : 'font-normal')}
+          >
             {t('heteroImport.allSessions')}
           </div>
-          <div className="text-[12px] text-muted-foreground">{totalCount.toLocaleString()}</div>
+          <div className="text-xs text-muted-foreground">{totalCount.toLocaleString()}</div>
         </div>
 
         {watched.length > 0 && (
-          <div className="flex flex-col" style={{ marginBottom: 4 }}>
+          <div className="flex flex-col mbe-1">
             <div
               {...clickableProps()}
-              className={cn(cx(styles.parent, 'flex items-center gap-1'), CLICKABLE_FOCUS_RING)}
+              className={cn(cn(styles.parent, 'flex items-center gap-1'), CLICKABLE_FOCUS_RING)}
               onClick={() =>
                 setCollapsed((prev) => {
                   const next = new Set(prev);
@@ -214,22 +180,22 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
               }
             >
               <ChevronRight
-                size={13}
-                style={{
-                  transform: collapsed.has('watched') ? 'none' : 'rotate(90deg)',
-                  transition: 'transform .15s',
-                }}
+                size={16}
+                className={cn(
+                  'transition-transform duration-(--orvilo-motion-mid) ease-[ease]',
+                  !collapsed.has('watched') && 'rotate-90',
+                )}
               />
-              <Timer size={13} style={{ opacity: 0.55 }} />
-              <div className="text-[13px] font-medium" style={{ flex: 1 }}>
+              <Timer className="opacity-55" size={16} />
+              <div className="text-sm leading-5.5 font-medium flex-1">
                 {t('heteroImport.watchedGroup')}
               </div>
-              <div className="text-[12px] text-muted-foreground">{watched.length}</div>
+              <div className="text-xs text-muted-foreground">{watched.length}</div>
             </div>
             {!collapsed.has('watched') &&
               watched.map((group) => {
                 const Brand = BRAND[group.source];
-                return renderDirRow(group, <Brand size={12} style={{ flex: 'none' }} />);
+                return renderDirRow(group, <Brand className="flex-none" size={12} />);
               })}
           </div>
         )}
@@ -243,18 +209,18 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
           return (
             <div className="flex flex-col" key={source}>
               <div
-                className={cx(
-                  cx(styles.parent, scope === source && styles.childActive),
+                className={cn(
+                  cn(styles.parent, scope === source && styles.childActive),
                   'flex items-center gap-1',
                 )}
                 onClick={() => onScopeChange(source)}
               >
                 <ChevronRight
-                  size={13}
-                  style={{
-                    transform: open ? 'rotate(90deg)' : 'none',
-                    transition: 'transform .15s',
-                  }}
+                  size={16}
+                  className={cn(
+                    'transition-transform duration-(--orvilo-motion-mid) ease-[ease]',
+                    open && 'rotate-90',
+                  )}
                   onClick={(e) => {
                     e.stopPropagation();
                     setCollapsed((prev) => {
@@ -267,20 +233,22 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                 />
                 <Brand size={15} />
                 <div
-                  className={cn('text-[13px]', scope === source ? 'font-semibold' : 'font-medium')}
-                  style={{ flex: 1 }}
+                  className={cn(
+                    'text-sm leading-5.5 flex-1',
+                    scope === source ? 'font-semibold' : 'font-medium',
+                  )}
                 >
                   {AGENT_LABEL[source]}
                 </div>
-                <div className="text-[12px] text-muted-foreground">{count}</div>
+                <div className="text-xs text-muted-foreground">{count}</div>
               </div>
               {open &&
                 dirs.map((group) =>
                   renderDirRow(
                     group,
                     createElement(group.isGit ? FolderGit2 : Folder, {
-                      size: 13,
-                      style: { flex: 'none', opacity: 0.55 },
+                      size: 16,
+                      className: 'flex-none opacity-55',
                     }),
                   ),
                 )}
@@ -289,20 +257,20 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
         })}
 
         {ignored.length > 0 && (
-          <div className="flex flex-col" style={{ marginTop: 8 }}>
+          <div className="flex flex-col mbs-2">
             <div
               {...clickableProps()}
-              className={cn(cx(styles.parent, 'flex items-center gap-1'), CLICKABLE_FOCUS_RING)}
+              className={cn(cn(styles.parent, 'flex items-center gap-1'), CLICKABLE_FOCUS_RING)}
               onClick={() => setShowIgnored((v) => !v)}
             >
               <ChevronRight
-                size={13}
-                style={{
-                  transform: showIgnored ? 'rotate(90deg)' : 'none',
-                  transition: 'transform .15s',
-                }}
+                size={16}
+                className={cn(
+                  'transition-transform duration-(--orvilo-motion-mid) ease-[ease]',
+                  showIgnored && 'rotate-90',
+                )}
               />
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('heteroImport.ignoredGroup', { count: ignored.length })}
               </div>
             </div>
@@ -316,12 +284,14 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                       <TooltipTrigger
                         render={
                           <div
-                            className={cx(styles.child, 'flex items-center gap-2 justify-between')}
-                            style={{ opacity: 0.55 }}
+                            className={cn(
+                              styles.child,
+                              'flex items-center gap-2 justify-between opacity-55',
+                            )}
                           >
-                            <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
-                              <Brand size={12} style={{ flex: 'none' }} />
-                              <div className="truncate block text-[13px]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Brand className="flex-none" size={12} />
+                              <div className="truncate block text-sm leading-5.5">
                                 {baseName(group.workingDirectory)}
                               </div>
                             </div>
@@ -332,7 +302,11 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                                     <ActionIcon
                                       aria-label={t('heteroImport.action.restore')}
                                       icon={Eye}
-                                      size="small"
+                                      size={{
+                                        blockSize: 24,
+                                        borderRadius: 'var(--radius-button)',
+                                        size: 16,
+                                      }}
                                       onClick={() => onSetPref(key, null)}
                                     />
                                   }

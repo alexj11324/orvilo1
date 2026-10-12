@@ -11,7 +11,7 @@ import type { ViewTaskParams, ViewTaskState } from '../../../types';
 
 const styles = {
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground ms-1.5',
+    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground ms-1.5',
 };
 
 export const ViewTaskInspector = memo<BuiltinInspectorProps<ViewTaskParams, ViewTaskState>>(

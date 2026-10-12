@@ -1,6 +1,5 @@
 import { Markdown } from '@lobehub/ui';
 import { type ToolManifestSettings } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -31,13 +30,9 @@ interface PluginSettingsConfigProps {
   schema: ToolManifestSettings;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  markdown: css`
-    p {
-      color: ${cssVar.colorTextDescription};
-    }
-  `,
-}));
+const styles = {
+  markdown: '[&_p]:text-foreground-description',
+};
 
 const PluginSettingsConfig = memo<PluginSettingsConfigProps>(({ schema, id }) => {
   const [updatePluginSettings] = useToolStore((s) => [s.updatePluginSettings]);

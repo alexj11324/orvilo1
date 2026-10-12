@@ -1,7 +1,6 @@
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { isDesktop } from '@orvilo/const';
 import { type UpdaterState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,11 +27,7 @@ import {
 
 import { APP_VERSION } from './appVersion';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  logo: css`
-    border-radius: calc(${cssVar.borderRadiusLG} * 2);
-  `,
-}));
+const styles = { logo: 'rounded-(--radius-card)' };
 
 const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
   const hasNewVersion = useNewVersion();
@@ -97,10 +92,9 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       if (hasNewVersion && showManualUpgrade) {
         return (
           <a
-            className={cn(buttonVariants({ variant: 'default' }), mobile ? 'w-full' : '')}
+            className={cn(buttonVariants({ variant: 'default' }), 'flex-1', mobile ? 'w-full' : '')}
             href={MANUAL_UPGRADE_URL}
             rel="noreferrer"
-            style={{ flex: 1 }}
             target="_blank"
           >
             {t('upgradeVersion.action')}
@@ -114,6 +108,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
             aria-busy={isCheckingUpdate}
             className={mobile ? 'w-full' : ''}
             disabled={isCheckingUpdate}
+            size="lg"
             variant="outline"
             onClick={() => recheckUpdate()}
           >
@@ -134,6 +129,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
             aria-busy={true}
             className={mobile ? 'w-full' : ''}
             disabled={true}
+            size="lg"
             variant="outline"
           >
             <Spinner />
@@ -148,6 +144,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
             aria-busy={true}
             className={mobile ? 'w-full' : ''}
             disabled={true}
+            size="lg"
             variant="outline"
           >
             <Spinner />
@@ -159,6 +156,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
         return (
           <Button
             className={mobile ? 'w-full' : ''}
+            size="lg"
             variant="default"
             onClick={() => void getHostPort().updater.installUpdateNow()}
           >
@@ -168,7 +166,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
       }
       case 'latest': {
         return (
-          <Button disabled className={mobile ? 'w-full' : ''} variant="outline">
+          <Button disabled className={mobile ? 'w-full' : ''} size="lg" variant="outline">
             {t('alreadyUpToDate')}
           </Button>
         );
@@ -177,6 +175,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
         return (
           <Button
             className={mobile ? 'w-full' : ''}
+            size="lg"
             variant="outline"
             onClick={() => void getHostPort().updater.checkUpdate()}
           >
@@ -189,34 +188,25 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   return (
     <div
-      className={'flex min-w-0'}
+      className="flex min-w-0 w-full justify-between gap-4"
       style={{
         flexDirection: !mobile ? 'row' : 'column',
         alignItems: mobile ? 'stretch' : 'center',
-        justifyContent: 'space-between',
-        gap: 16,
-        width: '100%',
       }}
     >
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flex: 'none' }}
-      >
+      <div className="flex min-w-0 flex-none flex-row items-center gap-4">
         <a href={OFFICIAL_SITE} rel="noreferrer" target="_blank">
           <div
-            className={`flex flex-col cursor-pointer items-center h-[64px] justify-center w-[64px] ${styles.logo}`}
+            className={`flex flex-col cursor-pointer items-center h-16 justify-center w-16 ${styles.logo}`}
           >
             <ProductLogo size={52} />
           </div>
         </a>
-        <div
-          className={'flex min-w-0'}
-          style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 'bolder' }}>{BRANDING_NAME}</div>
+        <div className="flex min-w-0 flex-col items-start gap-1.5">
+          <div className="text-xl font-semibold">{BRANDING_NAME}</div>
           <div
-            className={'flex min-w-0'}
-            style={{ flexDirection: !mobile ? 'row' : 'column', gap: 6 }}
+            className="flex min-w-0 gap-1.5"
+            style={{ flexDirection: !mobile ? 'row' : 'column' }}
           >
             <Badge
               style={{ cursor: devDockGestureEnabled ? 'pointer' : 'default' }}
@@ -242,15 +232,11 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
           </div>
         </div>
       </div>
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'row', gap: 8, flex: mobile ? 1 : undefined }}
-      >
+      <div className="flex min-w-0 flex-row gap-2" style={{ flex: mobile ? 1 : undefined }}>
         <a
-          className={cn(buttonVariants({ variant: 'outline' }), mobile ? 'w-full' : '')}
+          className={cn(buttonVariants({ variant: 'outline' }), 'flex-1', mobile ? 'w-full' : '')}
           href={CHANGELOG_URL}
           rel="noreferrer"
-          style={{ flex: 1 }}
           target="_blank"
         >
           {t('changelog')}

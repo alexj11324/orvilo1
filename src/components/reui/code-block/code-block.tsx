@@ -1539,7 +1539,7 @@ function CodeBlockSurface({
           selectable && activeLine !== null ? `${contentId}-L${activeLine}` : undefined
         }
         className={cn(
-          'focus-visible:ring-ring/50 relative min-w-0 rounded-[inherit] outline-none focus-visible:ring-[3px]',
+          'focus-visible:ring-ring/50 relative min-w-0 rounded-[inherit] outline-none focus-visible:ring-3',
           /* Composed under an ancestor scroller the surface scrolls NOTHING
              itself: both axes belong to the ancestor, whose viewport picks up
              the pre's overflowing width, and the sticky number cell anchors

@@ -1,7 +1,7 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx } from 'cn';
 import { ChevronRight, FileText } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,140 +41,27 @@ export const filenameFromUrl = (url: string): string => {
   }
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  foldBody: css`
-    padding-block: 4px 8px;
-    padding-inline: 22px 0;
-
-    @media (width <= 767px) {
-      padding-inline: 0;
-    }
-  `,
-  /* Reviewer-directed: no fill, no border — the row is just a line of text
-     with a chevron; the surrounding check card provides the container. */
-  foldCard: css`
-    overflow: hidden;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  foldChevron: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-    transition: transform 160ms ease;
-  `,
-  foldChevronOpen: css`
-    transform: rotate(90deg);
-  `,
-  foldHeader: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 4px;
-    padding-inline: 0;
-    border: none;
-
-    text-align: start;
-
-    background: transparent;
-
-    /* No fill and no border by design — the hover feedback lives on the text. */
-    &:hover [data-fold-title] {
-      color: ${cssVar.colorText};
-    }
-
-    @media (width <= 767px), (pointer: coarse) {
-      min-height: 44px;
-    }
-  `,
-  foldTitle: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    line-height: 1.35;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    transition: color 120ms ease;
-
-    @media (width <= 767px) {
-      overflow-wrap: anywhere;
-      white-space: normal;
-    }
-  `,
-  /* A plain block, deliberately not a Flexbox: `Markdown`'s root is
-     `overflow: hidden`, so as a flex item its automatic minimum size collapses
-     to 0 and a long document gets squeezed to the viewer's height and clipped
-     instead of overflowing it — leaving this box scrollable in name only. */
-  docViewer: css`
-    overflow: auto;
-    flex: 1;
-
-    height: 100%;
-    min-height: 0;
-    padding-block: 12px;
-    padding-inline: 16px;
-
-    > * {
-      flex-shrink: 0;
-    }
-  `,
-  fileCard: css`
-    cursor: pointer;
-
-    display: grid;
-    grid-template-columns: 18px minmax(0, 1fr);
-    gap: 8px;
-    align-items: center;
-
-    width: min(100%, 520px);
-    padding-block: 7px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    text-align: start;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      border-color: ${cssVar.colorLink};
-      color: ${cssVar.colorLink};
-    }
-  `,
-  fileCardBody: css`
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  `,
-  fileCardDesc: css`
-    overflow: hidden;
-
-    margin-block-start: 2px;
-
-    font-size: 12px;
-    line-height: 1.35;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  fileCardIcon: css`
-    display: flex;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  fileCardName: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    line-height: 1.35;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+/* The disclosure stays unfilled; the surrounding check card owns its surface. */
+const styles = {
+  foldBody: 'pt-1 pb-2 ps-6 pe-0 [@media(width<=767px)]:px-0',
+  foldCard: 'overflow-hidden rounded-(--radius-card)',
+  foldChevron:
+    'size-4 flex-none text-foreground-tertiary transition-transform duration-(--orvilo-motion-mid) ease-[ease] motion-reduce:transition-none',
+  foldChevronOpen: 'rotate-90',
+  // Content-growing native disclosure: normal visual minimum and preserved accessible touch targets.
+  foldHeader:
+    'flex min-h-9 w-full cursor-pointer items-center gap-2 rounded-(--radius-button) border-0 bg-transparent px-0 py-1 text-start focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 focus-visible:-outline-offset-2 [&:hover_[data-fold-title]]:text-foreground [@media(width<=767px)]:min-h-11 [@media(pointer:coarse)]:min-h-11',
+  foldTitle:
+    'min-w-0 overflow-hidden text-sm leading-5.5 text-muted-foreground text-ellipsis whitespace-nowrap transition-colors duration-(--orvilo-motion-fast) ease-[ease] motion-reduce:transition-none [@media(width<=767px)]:[overflow-wrap:anywhere] [@media(width<=767px)]:whitespace-normal',
+  // A plain block lets the document overflow; making Markdown a flex item clips long files.
+  docViewer: 'h-full min-h-0 flex-1 overflow-auto px-4 py-3 [&>*]:shrink-0',
+  fileCard:
+    'grid min-h-9 w-[min(100%,520px)] cursor-pointer grid-cols-[16px_minmax(0,1fr)] items-center gap-2 rounded-(--radius-card) border border-divider bg-fill-quaternary p-4 text-start hover:border-primary hover:text-primary-text focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 focus-visible:-outline-offset-2',
+  fileCardBody: 'flex min-w-0 flex-col',
+  fileCardDesc: 'mt-0.5 truncate text-xs leading-5 text-foreground-tertiary',
+  fileCardIcon: 'flex text-foreground-tertiary',
+  fileCardName: 'truncate text-sm leading-5.5 text-foreground',
+} as const;
 
 /** Content small enough that folding it would cost more than it saves. */
 const INLINE_RENDER_MAX_CHARS = 160;
@@ -266,7 +153,7 @@ export const CollapsibleMarkdownEvidence = memo<{
     [children, title],
   );
   const body = markdown ? (
-    <Markdown fontSize={13} headerMultiple={0.1} variant={'chat'}>
+    <Markdown fontSize={14} headerMultiple={0.1} lineHeight={22 / 14} variant={'chat'}>
       {children}
     </Markdown>
   ) : (
@@ -277,7 +164,7 @@ export const CollapsibleMarkdownEvidence = memo<{
 
   if (!fold) {
     return markdown ? (
-      <Markdown fontSize={13} variant={'chat'}>
+      <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
         {children}
       </Markdown>
     ) : (
@@ -295,11 +182,11 @@ export const CollapsibleMarkdownEvidence = memo<{
         onClick={() => setExpanded(!expanded)}
       >
         <ChevronRight
-          className={cx(styles.foldChevron, expanded && styles.foldChevronOpen)}
-          size={14}
+          className={clsx(styles.foldChevron, expanded && styles.foldChevronOpen)}
+          size={16}
         />
         <span className={styles.fileCardIcon}>
-          <FileText size={13} />
+          <FileText className="size-4" size={16} />
         </span>
         <span data-fold-title className={styles.foldTitle}>
           {foldTitle}
@@ -328,7 +215,9 @@ export const DocumentViewer = memo<{ fileName?: string | null; markdown?: boolea
     if (error || fileData === null)
       return (
         <div className="flex flex-col items-center justify-center flex-1 h-full gap-2">
-          <div className="text-muted-foreground">{t('report.document.failed')}</div>
+          <div className="text-sm leading-5.5 text-muted-foreground">
+            {t('report.document.failed')}
+          </div>
           <a href={url} rel="noreferrer" target="_blank">
             {t('report.document.openOriginal')}
           </a>
@@ -338,7 +227,7 @@ export const DocumentViewer = memo<{ fileName?: string | null; markdown?: boolea
     return (
       <div className={styles.docViewer}>
         {markdown ? (
-          <Markdown fontSize={13} variant={'chat'}>
+          <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
             {fileData}
           </Markdown>
         ) : (
@@ -383,7 +272,7 @@ export const EvidenceFileCard = memo<{
         onClick={() => setOpen(true)}
       >
         <span className={styles.fileCardIcon}>
-          <FileText size={13} />
+          <FileText className="size-4" size={16} />
         </span>
         <span className={styles.fileCardBody}>
           <span className={styles.fileCardName}>{name}</span>

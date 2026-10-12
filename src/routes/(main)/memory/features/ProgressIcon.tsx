@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo, type ReactNode } from 'react';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,7 +22,7 @@ const ProgressIcon = memo<ProgressIconProps>(({ showInfo, format, percent }) => 
         <span
           key={i}
           style={{
-            background: i < filled ? cssVar.colorPrimary : cssVar.colorFillTertiary,
+            background: i < filled ? 'var(--ant-color-primary)' : 'var(--ant-color-fill-tertiary)',
             borderRadius: 1,
             flex: 1,
             height: '100%',
@@ -37,7 +36,7 @@ const ProgressIcon = memo<ProgressIconProps>(({ showInfo, format, percent }) => 
     return (
       <div className="flex items-center gap-2">
         <div style={{ width: 24 }}>{content}</div>
-        <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
+        <div className="text-xs" style={{ color: 'var(--ant-color-text-secondary)' }}>
           {format?.(percent)}
         </div>
       </div>

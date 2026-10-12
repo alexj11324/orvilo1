@@ -1,7 +1,6 @@
 'use client';
 
 import { AGENT_CHAT_URL } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowRight } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -11,49 +10,6 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { type MarkdownElementProps } from '../../type';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  arrowIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  card: css`
-    cursor: pointer;
-
-    padding-block: 14px;
-    padding-inline: 14px;
-    border-radius: 10px;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  description: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  content: css`
-    /* Allow the text column to shrink below its content width so the
-       nowrap title/description ellipsize instead of overflowing the card. */
-    min-width: 0;
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
 
 interface OrviloAgentsProps extends MarkdownElementProps {
   avatar?: string;
@@ -77,7 +33,10 @@ const Render = memo<OrviloAgentsProps>(
     return (
       <div
         {...clickableProps()}
-        className={cn(cn('flex items-center gap-3', styles.card), CLICKABLE_FOCUS_RING)}
+        className={cn(
+          'flex items-center gap-3 cursor-pointer p-4 rounded-(--radius-card) bg-fill-quaternary transition-[background] duration-(--orvilo-motion-mid) ease-[ease] hover:bg-muted motion-reduce:transition-none',
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={handleClick}
       >
         <Avatar
@@ -87,11 +46,13 @@ const Render = memo<OrviloAgentsProps>(
           size={40}
           title={title || undefined}
         />
-        <div className={cn('flex flex-col flex-1 gap-1', styles.content)}>
-          <span className={styles.title}>{title || identifier}</span>
-          {description && <span className={styles.description}>{description}</span>}
+        <div className="flex flex-col flex-1 gap-1 min-w-0">
+          <span className="truncate text-sm leading-5.5 font-medium">{title || identifier}</span>
+          {description && (
+            <span className="truncate text-xs leading-5 text-muted-foreground">{description}</span>
+          )}
         </div>
-        <ArrowRight className={styles.arrowIcon} size={16} />
+        <ArrowRight className="shrink-0 text-foreground-tertiary" size={16} />
       </div>
     );
   },

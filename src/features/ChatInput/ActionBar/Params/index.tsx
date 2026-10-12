@@ -17,24 +17,26 @@ const Params = memo(() => {
   const { t } = useTranslation('setting');
 
   if (isLoading)
-    return <ChatInputAction disabled icon={Settings2Icon} title={t('settingModel.params.title')} />;
+    return (
+      <ChatInputAction
+        disabled
+        icon={Settings2Icon}
+        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+        title={t('settingModel.params.title')}
+      />
+    );
 
   return (
     <ChatInputAction
       icon={Settings2Icon}
       showTooltip={false}
+      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
       title={t('settingModel.params.title')}
       popover={{
         content: <Controls />,
         maxWidth: 384,
         minWidth: 384,
-        styles: {
-          content: {
-            borderRadius: 16,
-            overflow: 'hidden',
-            padding: 0,
-          },
-        },
+        classNames: { content: 'overflow-hidden rounded-(--radius-overlay) p-0' },
       }}
     />
   );

@@ -1,7 +1,6 @@
 'use client';
 
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import React, { memo } from 'react';
@@ -20,15 +19,10 @@ import { agentSelectors } from '@/store/agent/selectors';
 import EditorCanvas from '../EditorCanvas';
 import AgentHeader from './AgentHeader';
 
-const styles = createStaticStyles(({ css }) => ({
-  configStack: css`
-    container-type: inline-size;
-  `,
-  topArea: css`
-    cursor: default;
-    margin-block-end: 28px;
-  `,
-}));
+const styles = {
+  configStack: '[container-type:inline-size]',
+  topArea: 'mbe-7 cursor-default',
+} as const;
 
 const ProfileEditor = memo(() => {
   const agentId = useAgentStore((s) => s.activeAgentId || '');

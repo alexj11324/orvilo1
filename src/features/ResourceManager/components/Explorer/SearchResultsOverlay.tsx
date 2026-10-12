@@ -1,7 +1,6 @@
 'use client';
 
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
-import { cssVar } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -146,7 +145,7 @@ const SearchResultsOverlay = memo(() => {
   return (
     <div
       style={{
-        background: cssVar.colorBgContainer as string,
+        background: 'var(--ant-color-bg-container)' as string,
         bottom: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -158,7 +157,7 @@ const SearchResultsOverlay = memo(() => {
       }}
     >
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-[100%]">
+        <div className="flex flex-col items-center justify-center h-full">
           <NeuralNetworkLoading size={48} />
         </div>
       ) : error && (!data || data.length === 0) ? (
@@ -166,26 +165,26 @@ const SearchResultsOverlay = memo(() => {
         // the user their query matched nothing when the request actually errored
         // (Read §1.1). Branch the failure before the no-match state; the no-match
         // variant below is untouched and still handles a genuine zero-result search.
-        <div className="flex flex-col items-center justify-center h-[100%]">
+        <div className="flex flex-col items-center justify-center h-full">
           <AsyncError error={error} variant={'block'} onRetry={() => mutate()} />
         </div>
       ) : !data || data.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-[100%]">
+        <div className="flex flex-col items-center justify-center h-full">
           <div className="flex flex-col items-center gap-2">
-            <SearchIcon size={32} style={{ color: cssVar.colorTextQuaternary as string }} />
-            <span style={{ color: cssVar.colorTextDescription as string, fontSize: 14 }}>
+            <SearchIcon size={32} style={{ color: 'var(--ant-color-text-quaternary)' as string }} />
+            <span style={{ color: 'var(--ant-color-text-description)' as string, fontSize: 14 }}>
               {t('FileManager.search.noResults')}
             </span>
           </div>
         </div>
       ) : viewMode === 'list' ? (
-        <div className="flex flex-col h-[100%]">
+        <div className="flex flex-col h-full">
           <div style={{ flex: 1, overflow: 'auto hidden' }}>
             <div
               className="flex flex-row items-center px-2"
               style={{
-                borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
-                color: cssVar.colorTextDescription as string,
+                borderBlockEnd: `1px solid ${'var(--ant-color-border-secondary)'}`,
+                color: 'var(--ant-color-text-description)' as string,
                 fontSize: 12,
                 height: 40,
                 minHeight: 40,
@@ -193,7 +192,7 @@ const SearchResultsOverlay = memo(() => {
               }}
             >
               <div
-                className="flex flex-col items-center justify-center h-[40px]"
+                className="flex flex-col items-center justify-center h-10"
                 style={{ paddingInline: 4 }}
               >
                 <Checkbox disabled checked={false} />

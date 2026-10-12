@@ -206,7 +206,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
               if (typeof value === 'string') handleChange(value);
             }}
           >
-            <SelectTrigger className={settingsStyles.select}>
+            <SelectTrigger className={settingsStyles.select} size="normal">
               <SelectValue placeholder={t('settingAgent.execution.selectTarget')} />
             </SelectTrigger>
             <SelectContent>

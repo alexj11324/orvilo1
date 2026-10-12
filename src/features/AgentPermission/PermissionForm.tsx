@@ -1,7 +1,6 @@
 'use client';
 
 import type { AgentTopicSharePolicy } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { InfoIcon, LockIcon, Share2, UsersIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,17 +21,10 @@ import PolicySelect, { type PolicyOption } from '@/features/ResourcePermission/P
 
 import { useAgentPermission } from './useAgentPermission';
 
-const styles = createStaticStyles(({ css }) => ({
-  // FormTitle centres the avatar against title+description; a one-line icon
-  // should sit on the title instead, so pin it to the top and centre it inside
-  // a box the height of the title's own line (`line-height: 1`, inherited size).
-  rowIcon: css`
-    display: flex;
-    align-items: center;
-    align-self: flex-start;
-    height: 1em;
-  `,
-}));
+// Align the icon with the inherited one-line title, rather than the title + description stack.
+const styles = {
+  rowIcon: 'flex h-lh items-center self-start',
+};
 
 interface PermissionFormProps {
   agentId: string;

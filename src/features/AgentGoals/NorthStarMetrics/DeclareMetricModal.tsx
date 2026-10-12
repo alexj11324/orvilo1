@@ -60,27 +60,31 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
   return (
     <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[13px] font-medium">{t('goalProcess.northStar.declare.keyLabel')}</div>
+        <div className="text-(length:--text-dense) font-medium">
+          {t('goalProcess.northStar.declare.keyLabel')}
+        </div>
         <Input
           autoFocus
           placeholder={t('goalProcess.northStar.declare.keyPlaceholder')}
           value={key}
+          visualSize="normal"
           onChange={(e) => setKey(e.target.value)}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[13px] font-medium">
+        <div className="text-(length:--text-dense) font-medium">
           {t('goalProcess.northStar.declare.titleLabel')}
         </div>
         <Input
           placeholder={t('goalProcess.northStar.declare.titlePlaceholder')}
           value={title}
+          visualSize="normal"
           onChange={(e) => setTitle(e.target.value)}
         />
       </div>
       <div className="flex gap-3">
         <div className="flex flex-col flex-1 gap-1.5">
-          <div className="text-[13px] font-medium">
+          <div className="text-(length:--text-dense) font-medium">
             {t('goalProcess.northStar.declare.opLabel')}
           </div>
           <Select
@@ -91,7 +95,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
             }))}
             onValueChange={(value) => setOp(value as GoalMetricComparison)}
           >
-            <SelectTrigger>
+            <SelectTrigger size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -104,12 +108,13 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
           </Select>
         </div>
         <div className="flex flex-col flex-1 gap-1.5">
-          <div className="text-[13px] font-medium">
+          <div className="text-(length:--text-dense) font-medium">
             {t('goalProcess.northStar.declare.targetLabel')}
           </div>
           <Input
             placeholder={'10000'}
             value={target}
+            visualSize="normal"
             onChange={(e) => setTarget(e.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') void submit();
@@ -121,6 +126,7 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
         <Button
           disabled={!key.trim() || !Number.isFinite(Number(target)) || target.trim() === ''}
           loading={busy}
+          size="lg"
           variant="outline"
           onClick={() => void submit()}
         >

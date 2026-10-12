@@ -1,25 +1,14 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 
-const styles = createStaticStyles(({ css }) => ({
-  row: css`
-    flex: none;
-
-    width: 100%;
-    min-height: 40px;
-    padding-block: 2px 4px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  row: 'flex-none w-full min-h-10 pbs-0.5 pbe-1 px-3 border-bs border-divider bg-card',
+};
 
 interface RefreshErrorProps {
   error: unknown;

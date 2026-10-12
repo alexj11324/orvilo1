@@ -1,5 +1,11 @@
-import { cssVar, cx } from 'antd-style';
+'use client';
+
+import { cx } from 'antd-style';
 import { type CSSProperties, type SVGProps } from 'react';
+import { useMediaQuery } from 'react-responsive';
+
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 interface RingLoadingIconProps extends SVGProps<SVGSVGElement> {
   ringColor?: string;
@@ -12,16 +18,20 @@ const RingLoadingIcon = ({
   size = 16,
   className,
   style,
-  ringColor = cssVar.colorBorder,
+  ringColor = 'var(--border)',
   ...rest
 }: RingLoadingIconProps & { ref?: React.RefObject<SVGSVGElement | null> }) => {
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const shouldAnimate = animationMode !== 'disabled' && !prefersReducedMotion;
+
   return (
     <svg
-      className={cx('anticon', className)}
+      className={cx('anticon flex-none leading-none', className)}
       color="currentColor"
       height={size}
       ref={ref}
-      style={{ flex: 'none', lineHeight: 1, ...style }}
+      style={style}
       viewBox="0 0 1024 1024"
       width={size}
       xmlns="http://www.w3.org/2000/svg"
@@ -35,14 +45,16 @@ const RingLoadingIcon = ({
           strokeLinecap="round"
           strokeWidth="128"
         >
-          <animateTransform
-            attributeName="transform"
-            dur="1s"
-            from="0 512 512"
-            repeatCount="indefinite"
-            to="360 512 512"
-            type="rotate"
-          />
+          {shouldAnimate && (
+            <animateTransform
+              attributeName="transform"
+              dur="1s"
+              from="0 512 512"
+              repeatCount="indefinite"
+              to="360 512 512"
+              type="rotate"
+            />
+          )}
         </path>
       </g>
     </svg>

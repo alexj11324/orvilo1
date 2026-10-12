@@ -45,7 +45,7 @@ const NotebookBody = memo(() => {
 
   // Render document list
   return (
-    <div className="flex flex-col gap-2 h-[100%] px-3" style={{ overflow: 'auto' }}>
+    <div className="flex flex-col gap-2 h-full px-3" style={{ overflow: 'auto' }}>
       {documents.map((doc) => (
         <DocumentItem document={doc} key={doc.id} topicId={topicId} />
       ))}

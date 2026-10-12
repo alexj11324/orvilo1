@@ -93,7 +93,7 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
 
   return (
     <div
-      className="flex flex-col items-center h-[100%] svg-renderer"
+      className="flex flex-col items-center h-full svg-renderer"
       style={{ position: 'relative' }}
     >
       <div
@@ -122,6 +122,7 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
         <SimpleTooltip title={t('artifacts.svg.copyAsImage')}>
           <Button
             aria-label={t('artifacts.svg.copyAsImage')}
+            size="compact"
             variant="outline"
             onClick={async () => {
               const dataUrl = await generatePng();

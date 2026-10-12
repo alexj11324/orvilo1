@@ -27,6 +27,7 @@ const ChatInvalidAPIKey = memo<ChatInvalidAPIKeyProps>(({ id, provider }) => {
       title={t(`unlock.credentialsUnavailable.title`, { name: providerName, ns: 'error' })}
       action={
         <Button
+          size="lg"
           type="button"
           variant="default"
           onClick={() => {

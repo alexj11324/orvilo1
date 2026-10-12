@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { captureVisibleTabPreviews } from '@/features/Electron/TabHost';
 import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
@@ -38,7 +39,6 @@ import { useStyles } from './styles';
 import TabItem from './TabItem';
 import {
   allocateTabWidths,
-  OVERFLOW_CONTROL_WIDTH,
   PINNED_DIVIDER_WIDTH,
   PINNED_TAB_WIDTH,
   resolvePlacements,
@@ -47,7 +47,8 @@ import {
 } from './tabLayout';
 
 const NEW_TAB_URL = '/';
-const NEW_TAB_BUTTON_WIDTH = 26 + TAB_GAP;
+const NEW_TAB_BUTTON_SIZE = 32;
+const NEW_TAB_BUTTON_WIDTH = NEW_TAB_BUTTON_SIZE + TAB_GAP;
 
 // Tabs only reorder along the horizontal axis, so lock the drag transform to X.
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
@@ -256,9 +257,8 @@ const TabBar = () => {
 
   return (
     <div
-      className={cx(styles.container, 'flex items-center')}
+      className={cx(styles.container, 'flex items-center gap-0.5')}
       ref={stripRef}
-      style={{ gap: TAB_GAP }}
       onPointerEnter={captureVisibleTabPreviews}
     >
       {measured && (
@@ -318,23 +318,30 @@ const TabBar = () => {
             className={cx(electronStylish.nodrag, styles.newTabButton)}
             disabled={!canCreate}
             icon={Plus}
-            size="small"
             title={canCreate ? t('tab.newTab') : reason}
+            size={{
+              blockSize: NEW_TAB_BUTTON_SIZE,
+              borderRadius: 'var(--radius-button)',
+              size: 16,
+            }}
             onClick={canCreate ? () => handleNewTab() : undefined}
           />
           {layout.hiddenCount > 0 && (
             <SidebarDropdownMenu items={overflowItems} placement={'bottomRight'}>
-              <div
-                style={{ width: OVERFLOW_CONTROL_WIDTH }}
+              {/* Match the public allocator's 34px overflow reservation exactly. */}
+              <Button
+                size="icon"
                 title={t('tab.overflow', { count: layout.hiddenCount })}
+                type={'button'}
+                variant="ghost"
                 className={cx(
                   cx(electronStylish.nodrag, styles.overflowButton),
-                  'flex items-center gap-0.5',
+                  'flex w-8.5 items-center gap-0.5 border-0 p-0 bg-transparent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
                 )}
               >
-                <ChevronDown size={12} />
+                <ChevronDown size={16} />
                 {layout.hiddenCount}
-              </div>
+              </Button>
             </SidebarDropdownMenu>
           )}
         </>

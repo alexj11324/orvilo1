@@ -1,7 +1,6 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
 import { Fragment, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,20 +18,10 @@ import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 
 import { useAgentRoutePath } from './useAgentRoutePath';
 
-const styles = createStaticStyles(({ css }) => ({
-  breadcrumb: css`
-    ol {
-      align-items: center;
-    }
-
-    li,
-    .ant-breadcrumb-link,
-    .ant-breadcrumb-link > a {
-      display: flex;
-      align-items: center;
-    }
-  `,
-}));
+const styles = {
+  breadcrumb:
+    '[&_ol]:items-center [&_li]:flex [&_li]:items-center [&_.ant-breadcrumb-link]:flex [&_.ant-breadcrumb-link]:items-center [&_.ant-breadcrumb-link>a]:flex [&_.ant-breadcrumb-link>a]:items-center',
+};
 
 interface AgentBreadcrumbProps {
   agentId: string;
@@ -66,15 +55,10 @@ const AgentBreadcrumb = memo<AgentBreadcrumbProps>(({ agentId, extraItems, title
 
   return (
     <Breadcrumb className={styles.breadcrumb}>
-      <BreadcrumbList>
+      <BreadcrumbList className="leading-5.5">
         <BreadcrumbItem>
           <BreadcrumbLink className="text-muted-foreground" render={<Link to={agentHomePath} />}>
-            <span
-              className="truncate block font-medium"
-              style={{ maxWidth: 200, color: 'inherit' }}
-            >
-              {displayTitle}
-            </span>
+            <span className="truncate block max-w-50 font-medium text-inherit">{displayTitle}</span>
           </BreadcrumbLink>
         </BreadcrumbItem>
         {title !== undefined && title !== null && (
@@ -83,9 +67,7 @@ const AgentBreadcrumb = memo<AgentBreadcrumbProps>(({ agentId, extraItems, title
               <ChevronRight size={14} />
             </BreadcrumbSeparator>
             <BreadcrumbItem>
-              <span className="font-medium" style={{ color: 'inherit' }}>
-                {title}
-              </span>
+              <span className="font-medium text-inherit">{title}</span>
             </BreadcrumbItem>
           </>
         )}
@@ -95,9 +77,7 @@ const AgentBreadcrumb = memo<AgentBreadcrumbProps>(({ agentId, extraItems, title
               <ChevronRight size={14} />
             </BreadcrumbSeparator>
             <BreadcrumbItem>
-              <span className="font-medium" style={{ color: 'inherit' }}>
-                {item}
-              </span>
+              <span className="font-medium text-inherit">{item}</span>
             </BreadcrumbItem>
           </Fragment>
         ))}

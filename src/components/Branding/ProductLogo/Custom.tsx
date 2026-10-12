@@ -1,22 +1,13 @@
 import { type IconType } from '@lobehub/icons';
 import { type LobeChatProps } from '@lobehub/ui/brand';
 import { BRANDING_LOGO_URL, BRANDING_NAME } from '@orvilo/business-const';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { type HTMLAttributes, type ReactNode } from 'react';
 import { memo } from 'react';
 
 import { type ImageProps } from '@/libs/next/Image';
 import Image from '@/libs/next/Image';
-
-const styles = createStaticStyles(({ css }) => {
-  return {
-    extraTitle: css`
-      font-weight: 300;
-      white-space: nowrap;
-    `,
-  };
-});
 
 const CustomTextLogo = memo<HTMLAttributes<HTMLDivElement> & { size: number }>(
   ({ size, style, ...rest }) => {
@@ -55,6 +46,7 @@ const CustomImageLogo = memo<Omit<ImageProps, 'alt' | 'src'> & { size: number }>
 
 const Divider: IconType = (({ ref, size = '1em', style, ...rest }) => (
   <svg
+    className={'flex-none leading-none'}
     fill="none"
     height={size}
     ref={ref}
@@ -62,7 +54,7 @@ const Divider: IconType = (({ ref, size = '1em', style, ...rest }) => (
     stroke="currentColor"
     strokeLinecap="round"
     strokeLinejoin="round"
-    style={{ flex: 'none', lineHeight: 1, ...style }}
+    style={style}
     viewBox="0 0 24 24"
     width={size}
     {...rest}
@@ -94,16 +86,12 @@ const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, ty
       logoComponent = (
         <>
           <CustomImageLogo size={size} />
-          <CustomTextLogo size={size} style={{ marginLeft: Math.round(size / 4) }} />
+          <CustomTextLogo size={size} style={{ marginInlineStart: Math.round(size / 4) }} />
         </>
       );
 
       if (!extra)
-        logoComponent = (
-          <div className={'flex items-center'} style={{ flex: 'none' }}>
-            {logoComponent}
-          </div>
-        );
+        logoComponent = <div className={'flex flex-none items-center'}>{logoComponent}</div>;
 
       break;
     }
@@ -121,7 +109,7 @@ const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, ty
     <div className={cn('flex items-center', className)} style={{ flex: 'none' }}>
       {logoComponent}
       <Divider size={extraSize} style={{ color: cssVar.colorFill }} />
-      <div className={styles.extraTitle} style={{ fontSize: extraSize }}>
+      <div className="whitespace-nowrap font-normal" style={{ fontSize: extraSize }}>
         {extra}
       </div>
     </div>

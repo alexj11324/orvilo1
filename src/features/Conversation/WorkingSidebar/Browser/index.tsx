@@ -1,6 +1,5 @@
 import { isDesktop } from '@orvilo/const';
 import { nanoid } from '@orvilo/utils';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import {
   Camera,
@@ -22,7 +21,6 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { electronBrowserSidebarService } from '@/services/electron/browserSidebar';
 import { browserWebviewRegistry } from '@/services/electron/browserWebviewRegistry';
@@ -40,118 +38,28 @@ import {
   normalizeBrowserUrl,
 } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  loadingBar: css`
-    pointer-events: none;
+const BROWSER_TOOLBAR_ICON_SIZE = {
+  blockSize: 32,
+  borderRadius: 'var(--radius-button)',
+  size: 16,
+} as const;
 
-    position: absolute;
-    z-index: 3;
-
-    /* Anchored to the toolbar's bottom border. */
-    inset-block-end: -1px;
-    inset-inline: 0;
-
-    overflow: hidden;
-
-    height: 2px;
-
-    &::after {
-      content: '';
-
-      position: absolute;
-      inset-block: 0;
-      inset-inline-start: 0;
-
-      width: 36%;
-
-      background: ${cssVar.colorInfo};
-
-      animation: browser-loading-progress 1.15s ease-in-out infinite;
-    }
-
-    @keyframes browser-loading-progress {
-      from {
-        transform: translateX(-110%);
-      }
-
-      to {
-        transform: translateX(310%);
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      &::after {
-        width: 100%;
-        animation: none;
-      }
-    }
-  `,
-  container: css`
-    position: relative;
-
-    overflow: hidden;
-    flex: 1;
-
-    width: 100%;
-    min-height: 0;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  toolbar: css`
-    position: relative;
-
-    flex-shrink: 0;
-
-    min-height: 56px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  address: css`
-    flex: 1;
-    min-width: 0;
-    max-width: 720px;
-
-    /* The filled variant keeps its tinted fill while focused; lift it to the
-       container surface so the focus ring reads as an editable field. Doubling
-       the class outranks antd's own :focus rule. */
-    &&:focus {
-      background: ${cssVar.colorBgContainer};
-    }
-  `,
-  importBanner: css`
-    container-type: inline-size;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-
-    min-height: 72px;
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  importCopy: css`
-    flex: 1;
-    min-width: 0;
-  `,
-  importActions: css`
-    margin-inline-start: auto;
-
-    @container (max-width: 480px) {
-      flex-basis: 100%;
-      justify-content: flex-end;
-      margin-inline-start: 44px;
-    }
-  `,
-  toolbarActions: css`
-    margin-inline-start: auto;
-  `,
-  /* The retained Electron webview is imperatively attached inside this host. */
-  viewport: css`
-    position: absolute;
-    inset: 0;
-  `,
-}));
+const styles = {
+  // Animation owns the moving stripe width; either motion gate restores the
+  // full-width static primary indicator without changing the loading state.
+  loadingBar:
+    "pointer-events-none absolute z-3 -inset-be-px inset-s-0 inset-e-0 overflow-hidden h-0.5 after:content-[''] after:absolute after:inset-bs-0 after:inset-be-0 after:inset-s-0 after:w-full after:bg-primary after:animate-orvilo-working-browser-loading-progress motion-reduce:after:animate-none",
+  container: 'relative overflow-hidden flex-1 w-full min-h-0 bg-card',
+  toolbar: 'relative shrink-0 min-h-14 px-4 border-be border-divider',
+  address: 'flex-1 min-w-0 max-w-180 focus:bg-card',
+  importBanner:
+    '[container-type:inline-size] shrink-0 flex-wrap min-h-18 py-3 px-4 border-be border-divider bg-card',
+  importCopy: 'flex-1 min-w-0',
+  importActions:
+    'ms-auto [@container(width<=480px)]:basis-full [@container(width<=480px)]:justify-end [@container(width<=480px)]:ms-11',
+  toolbarActions: 'ms-auto',
+  viewport: 'absolute inset-0',
+};
 
 interface BrowserPaneProps {
   /** The conversation the chat input belongs to — screenshots are attached there. */
@@ -356,21 +264,21 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
           <ActionIcon
             disabled={!state.canGoBack}
             icon={ChevronLeft}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            size={BROWSER_TOOLBAR_ICON_SIZE}
             title={t('workingPanel.browser.actions.back')}
             onClick={() => runAction(() => electronBrowserSidebarService.goBack({ sessionId }))}
           />
           <ActionIcon
             disabled={!state.canGoForward}
             icon={ChevronRight}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            size={BROWSER_TOOLBAR_ICON_SIZE}
             title={t('workingPanel.browser.actions.forward')}
             onClick={() => runAction(() => electronBrowserSidebarService.goForward({ sessionId }))}
           />
           <ActionIcon
             disabled={!state.attached}
             icon={state.isLoading ? XCircle : RefreshCw}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            size={BROWSER_TOOLBAR_ICON_SIZE}
             title={
               state.isLoading
                 ? t('workingPanel.browser.actions.stop')
@@ -389,6 +297,7 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
           className={styles.address}
           placeholder={t('workingPanel.browser.addressPlaceholder')}
           value={address}
+          visualSize="compact"
           onBlur={() => setIsEditing(false)}
           onFocus={() => setIsEditing(true)}
           onChange={(event) => {
@@ -407,7 +316,7 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
             <ActionIcon
               active
               icon={SquareDashedMousePointer}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              size={BROWSER_TOOLBAR_ICON_SIZE}
               title={t('workingPanel.browser.context.pickCancel')}
               onClick={() =>
                 void electronBrowserSidebarService.cancelElementPick({ sessionId }).catch(() => {})
@@ -417,7 +326,7 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
             <ActionIcon
               disabled={!state.attached || state.isLoading || !composerTarget.writable}
               icon={SquareDashedMousePointer}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              size={BROWSER_TOOLBAR_ICON_SIZE}
               title={t('workingPanel.browser.context.pickElement')}
               onClick={() => void pickElementContext()}
             />
@@ -425,7 +334,7 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
           <ActionIcon
             disabled={!state.attached}
             icon={ExternalLink}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            size={BROWSER_TOOLBAR_ICON_SIZE}
             title={t('workingPanel.browser.actions.openExternal')}
             onClick={() =>
               runAction(() => electronBrowserSidebarService.openExternal({ sessionId }))
@@ -435,7 +344,7 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
             disabled={!state.attached || !agentId}
             icon={Camera}
             loading={isCapturing}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            size={BROWSER_TOOLBAR_ICON_SIZE}
             title={t('workingPanel.browser.actions.capture')}
             onClick={() => void addScreenshotToInput()}
           />
@@ -454,18 +363,18 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
         <div className={cn('flex items-center gap-3', styles.importBanner)}>
           <BrowserIcon browser={'Chrome'} size={32} />
           <div className={cn('flex flex-col gap-0', styles.importCopy)}>
-            <div className="font-semibold">{t('workingPanel.browser.import.title')}</div>
-            <div className="truncate text-muted-foreground">
+            <div className="text-sm font-semibold">{t('workingPanel.browser.import.title')}</div>
+            <div className="truncate text-sm text-muted-foreground">
               {t('workingPanel.browser.import.desc')}
             </div>
           </div>
           <div className={cn('flex items-center gap-1', styles.importActions)}>
-            <Button loading={isImporting} onClick={handleImportChromeLoginData}>
+            <Button loading={isImporting} size="normal" onClick={handleImportChromeLoginData}>
               <Import /> {t('workingPanel.browser.import.action')}
             </Button>
             <ActionIcon
               icon={XCircle}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              size={BROWSER_TOOLBAR_ICON_SIZE}
               title={t('workingPanel.browser.import.dismiss')}
               onClick={() => setIsImportBannerDismissed(true)}
             />

@@ -18,7 +18,7 @@ describe('ActionIcon', () => {
     const button = screen.getByRole('button');
     expect(button.style.width).toBe('24px');
     expect(button.style.height).toBe('24px');
-    expect(button.style.borderRadius).toBe('4px');
+    expect(button.style.borderRadius).toBe('var(--radius-button)');
     expect(container.querySelector('svg')).not.toBeNull();
   });
 
@@ -27,7 +27,7 @@ describe('ActionIcon', () => {
 
     const button = screen.getByRole('button');
     expect(button.style.width).toBe('28.8px');
-    expect(button.style.borderRadius).toBe('4px');
+    expect(button.style.borderRadius).toBe('var(--radius-button)');
   });
 
   it('loading swaps the glyph for a spinner and disables the button', () => {

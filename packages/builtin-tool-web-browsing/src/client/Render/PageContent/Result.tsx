@@ -13,9 +13,9 @@ import { useChatStore } from '@/store/chat';
 import { WebBrowsingManifest } from '../../../manifest';
 
 const styles = {
-  container: 'overflow-hidden min-w-[360px] max-w-[360px]',
-  footer: 'py-1 ps-3 pe-3 bg-[var(--ant-color-fill-quaternary)]',
-  footerText: 'text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)]',
+  container: 'overflow-hidden min-w-90 max-w-90',
+  footer: 'py-1 ps-3 pe-3 bg-fill-quaternary',
+  footerText: 'text-xs leading-[inherit] text-foreground-tertiary',
   titleRow: 'overflow-hidden',
 };
 
@@ -57,7 +57,7 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
     <div
       className={cn(
         styles.container,
-        'flex flex-col justify-between rounded-md border bg-card cursor-pointer',
+        'flex flex-col justify-between rounded-(--radius-card) border bg-card cursor-pointer',
       )}
       onClick={() => {
         openToolUI(messageId, WebBrowsingManifest.identifier);
@@ -71,7 +71,7 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
             <ActionIcon icon={ExternalLink} size={'small'} />
           </a>
         </div>
-        <div className="line-clamp-2 text-[12px] text-muted-foreground">
+        <div className="line-clamp-2 text-xs text-muted-foreground">
           {description || result.content?.slice(0, 40)}
         </div>
       </div>

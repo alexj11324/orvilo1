@@ -21,6 +21,7 @@ const HighlightRect: FC<HighlightRectProps> = ({ coordinates, highlight }) => {
   const width = Math.max(topLeft[0], topRight[0], bottomRight[0], bottomLeft[0]) - minX;
   const height = Math.max(topLeft[1], topRight[1], bottomRight[1], bottomLeft[1]) - minY;
 
+  // Yellow alpha marks document regions without replacing the underlying PDF colors.
   return (
     <rect
       fill={highlight ? 'rgba(255, 255, 0, 0.5)' : 'rgba(255, 255, 0, 0.3)'}

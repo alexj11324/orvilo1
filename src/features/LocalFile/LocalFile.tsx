@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ExternalLink, EyeIcon, FolderOpen } from 'lucide-react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,91 +8,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 import { useLocalFileActions } from './useLocalFileActions';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    cursor: pointer;
-
-    padding-block: 2px;
-    padding-inline: 4px 8px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorText};
-
-    :hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimaryBorder};
-      outline-offset: 1px;
-    }
-  `,
-  segment: css`
-    cursor: pointer;
-
-    position: relative;
-
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 5px;
-    padding-inline: 11px;
-    border: none;
-
-    font-family: inherit;
-    font-size: 13px;
-    line-height: 20px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    background: transparent;
-
-    & + &::before {
-      content: '';
-
-      position: absolute;
-      inset-block: 5px;
-      inset-inline-start: 0;
-
-      width: 1px;
-
-      background: ${cssVar.colorBorderSecondary};
-    }
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:hover::before,
-    &:hover + &::before {
-      background: transparent;
-    }
-
-    &:focus-visible {
-      border-radius: 6px;
-      outline: 2px solid ${cssVar.colorPrimaryBorder};
-      outline-offset: -2px;
-    }
-  `,
-  segmented: css`
-    overflow: hidden;
-    display: inline-flex;
-    align-items: stretch;
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  title: css`
-    overflow: hidden;
-    display: block;
-
-    line-height: 20px;
-    color: inherit;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  container:
+    'cursor-pointer py-0.5 ps-1 pe-2 rounded-(--radius-chip) text-foreground [&:hover]:text-foreground [&:hover]:bg-accent focus-visible:[outline:2px_solid_var(--ant-color-primary-border)] focus-visible:outline-offset-1',
+  segment:
+    "cursor-pointer relative inline-flex gap-1.5 items-center py-1.25 px-2.75 border-0 border-none [font-family:inherit] text-(length:--text-dense) leading-5 text-muted-foreground whitespace-nowrap [background:transparent] [&+&::before]:content-[''] [&+&::before]:absolute [&+&::before]:[inset-block:5px] [&+&::before]:[inset-inline-start:0] [&+&::before]:w-px [&+&::before]:[background:var(--ant-color-border-secondary)] [&:hover]:text-foreground [&:hover]:bg-accent [&:hover::before]:[background:transparent] [&:hover+&::before]:bg-transparent focus-visible:rounded-[6px] focus-visible:[outline:2px_solid_var(--ant-color-primary-border)] focus-visible:-outline-offset-2",
+  segmented: 'overflow-hidden inline-flex items-stretch rounded-(--ant-border-radius-lg)',
+  title: 'overflow-hidden block leading-5 text-inherit text-ellipsis whitespace-nowrap',
+};
 
 interface LocalFileProps {
   isDirectory?: boolean;
@@ -117,7 +40,7 @@ export const LocalFile = ({
 
   const fileContent = (
     <div
-      className={cx('flex flex-row items-center gap-1', styles.container)}
+      className={cn('flex flex-row items-center gap-1', styles.container)}
       role={handleClick ? 'button' : undefined}
       style={{ display: 'inline-flex', verticalAlign: 'middle' }}
       tabIndex={handleClick ? 0 : undefined}

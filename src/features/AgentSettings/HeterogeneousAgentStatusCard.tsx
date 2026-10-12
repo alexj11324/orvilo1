@@ -12,7 +12,6 @@ import type {
   HeterogeneousAuthMode,
   HeterogeneousProviderConfig,
 } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { Copy, PencilLine, RefreshCw, XCircle } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -38,207 +37,35 @@ import { binaryService } from '@/services/electron/binary';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { copyToClipboard } from '@/utils/clipboard';
 
-const COMMAND_LINE_HEIGHT = 28;
 const SERVER_DEFAULT_PROVIDER_VALUE = 'server-default';
 const USER_PROVIDER_VALUE_PREFIX = 'provider:';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    padding-block: 16px 4px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  cardHeader: css`
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    justify-content: space-between;
-  `,
-  cardTitleWrap: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 8px;
-
-    min-width: 0;
-  `,
-  cardTitle: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  metaRow: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  metaText: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  pathWrap: css`
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: '100%';
-  `,
-  detailList: css`
-    margin-block-start: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  detailRow: css`
-    display: flex;
-    gap: 16px;
-    align-items: center;
-
-    min-height: 48px;
-    padding-block: 8px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  apiModeSelect: css`
-    width: fit-content;
-    min-width: 200px;
-
-    > span {
-      display: flex;
-      flex: 1;
-      min-width: 0;
-    }
-  `,
-  detailLabel: css`
-    flex-shrink: 0;
-
-    width: 96px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  `,
-  detailContent: css`
-    display: flex;
-    flex: 1;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-    height: ${COMMAND_LINE_HEIGHT}px;
-  `,
-  commandField: css`
-    &:hover .command-edit-button {
-      pointer-events: auto;
-      opacity: 1;
-    }
-  `,
-  commandInput: css`
-    width: '100%';
-    font-family: ${cssVar.fontFamilyCode};
-
-    &,
-    &.ant-input,
-    &.ant-input-affix-wrapper,
-    &.ant-input-outlined,
-    & input,
-    & .ant-input,
-    & .ant-input-affix-wrapper,
-    & .ant-input-outlined {
-      box-sizing: border-box;
-      height: ${COMMAND_LINE_HEIGHT}px;
-      min-height: ${COMMAND_LINE_HEIGHT}px;
-      max-height: ${COMMAND_LINE_HEIGHT}px;
-      border-radius: 999px !important;
-
-      font-family: ${cssVar.fontFamilyCode};
-      font-size: 14px;
-      line-height: ${COMMAND_LINE_HEIGHT - 2}px;
-    }
-
-    &,
-    &.ant-input,
-    &.ant-input-outlined,
-    & input,
-    & .ant-input,
-    & .ant-input-outlined {
-      padding-block: 0;
-      padding-inline: 12px;
-    }
-
-    &.ant-input-affix-wrapper,
-    & .ant-input-affix-wrapper {
-      overflow: hidden;
-      padding-block: 0;
-      padding-inline: 12px;
-    }
-
-    &.ant-input-affix-wrapper input,
-    & .ant-input-affix-wrapper input {
-      height: ${COMMAND_LINE_HEIGHT - 2}px;
-      padding: 0;
-      border-radius: 999px !important;
-      line-height: ${COMMAND_LINE_HEIGHT - 2}px;
-    }
-  `,
-  commandInputWrap: css`
-    display: flex;
-    align-items: center;
-
-    width: min(320px, 100%);
-    max-width: '100%';
-    height: ${COMMAND_LINE_HEIGHT}px;
-  `,
-  commandDisplay: css`
-    display: inline-flex;
-    align-items: center;
-
-    box-sizing: border-box;
-    max-width: '100%';
-    height: ${COMMAND_LINE_HEIGHT}px;
-    padding-block: 0;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  commandEditButton: css`
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  `,
-  commandText: css`
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 14px;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-  `,
-  accountValue: css`
-    font-size: 15px;
-    color: ${cssVar.colorText};
-  `,
-  path: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  unavailableText: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  card: 'rounded-(--radius-card) border border-divider bg-card p-4',
+  cardHeader: 'flex items-start justify-between gap-3',
+  cardTitleWrap: 'flex min-w-0 flex-1 flex-col gap-2',
+  cardTitle: 'flex items-center gap-2',
+  metaRow: 'flex min-w-0 flex-wrap items-center gap-2',
+  metaText: 'text-xs leading-5 text-muted-foreground',
+  pathWrap: 'flex min-w-0 max-w-full items-center gap-1',
+  detailList: 'mbs-1 border-bs border-divider',
+  detailRow: 'flex min-h-12 items-center gap-4 py-2 [&+&]:border-bs [&+&]:border-divider',
+  apiModeSelect: 'w-fit min-w-50 [&>span]:flex [&>span]:min-w-0 [&>span]:flex-1',
+  detailLabel:
+    'w-24 shrink-0 text-xs leading-5 tracking-[0.04em] text-foreground-tertiary uppercase',
+  detailContent: 'flex h-7 min-w-0 flex-1 flex-wrap items-center gap-2',
+  commandField: 'group/command',
+  commandInput: 'w-full px-3 py-0 font-mono text-sm leading-5.5',
+  commandInputWrap: 'flex h-7 w-80 max-w-full items-center',
+  commandDisplay:
+    'inline-flex h-7 box-border max-w-full items-center rounded-(--radius-input) border border-divider bg-selected px-3 py-0',
+  commandEditButton:
+    'pointer-events-none opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-[ease] motion-reduce:transition-none group-hover/command:pointer-events-auto group-hover/command:opacity-100 group-focus-within/command:pointer-events-auto group-focus-within/command:opacity-100',
+  commandText: 'min-w-0 font-mono text-sm leading-5.5 text-foreground',
+  accountValue: 'text-sm leading-5.5 text-foreground',
+  path: 'font-mono text-xs leading-5 text-foreground-tertiary',
+  unavailableText: 'text-sm leading-5.5 text-muted-foreground',
+};
 
 interface ServerDefaultModel {
   model: string;
@@ -596,7 +423,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       if (!status || !status.available) {
         return (
           <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-            <XCircle color="var(--ant-color-error)" size={16} />
+            <XCircle color="var(--destructive-text)" size={16} />
             <div className={styles.unavailableText}>
               {t('heterogeneousStatus.unavailable', { name: displayName })}
             </div>
@@ -622,7 +449,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                         <ActionIcon
                           aria-label={t('copy', { ns: 'common' })}
                           icon={Copy}
-                          size="small"
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                           onClick={() => {
                             if (status.path) void copyToClipboard(status.path);
                           }}
@@ -643,7 +470,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       return (
         <div className={`${styles.detailRow} ${styles.commandField}`}>
           <div className={styles.detailLabel}>{t('heterogeneousStatus.command.label')}</div>
-          <div className={styles.detailContent}>
+          <div className={cn(styles.detailContent, 'h-auto min-h-8')}>
             {isEditingCommand ? (
               <div className={styles.commandInputWrap}>
                 <Input
@@ -652,6 +479,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                   placeholder={t('heterogeneousStatus.command.placeholder')}
                   ref={commandInputRef as never}
                   value={commandInput}
+                  visualSize="small"
                   onBlur={() => {
                     void commitCommand();
                   }}
@@ -688,7 +516,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                           className={`command-edit-button ${styles.commandEditButton}`}
                           disabled={!canEdit}
                           icon={PencilLine}
-                          size="small"
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                           onClick={startEditingCommand}
                         />
                       </span>
@@ -716,6 +544,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
           <div className={styles.detailLabel}>{t('heterogeneousStatus.auth.label')}</div>
           <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
             <ToggleGroup
+              className="rounded-(--radius-button) data-[size=sm]:rounded-(--radius-button)"
               disabled={!canEdit}
               size="sm"
               value={[authMode]}
@@ -724,10 +553,17 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                 if (next) void handleAuthModeChange(next);
               }}
             >
-              <ToggleGroupItem value="subscription">
+              <ToggleGroupItem
+                className="rounded-(--radius-button) text-sm leading-5.5 transition-[color,background-color,border-color,box-shadow,opacity]"
+                value="subscription"
+              >
                 {t('heterogeneousStatus.auth.subscription')}
               </ToggleGroupItem>
-              <ToggleGroupItem disabled={!runnableApiAvailable && authMode !== 'api'} value="api">
+              <ToggleGroupItem
+                className="rounded-(--radius-button) text-sm leading-5.5 transition-[color,background-color,border-color,box-shadow,opacity]"
+                disabled={!runnableApiAvailable && authMode !== 'api'}
+                value="api"
+              >
                 {t('heterogeneousStatus.auth.api')}
               </ToggleGroupItem>
             </ToggleGroup>
@@ -739,7 +575,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
               <>
                 <div className={styles.unavailableText}>{serverDefaultUnavailableReason}</div>
                 {onServerDefaultRetry && (
-                  <Button size="sm" variant="ghost" onClick={onServerDefaultRetry}>
+                  <Button size="normal" variant="ghost" onClick={onServerDefaultRetry}>
                     {t('heterogeneousStatus.apiMode.serverDefault.retry')}
                   </Button>
                 )}
@@ -807,7 +643,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                   if (typeof value === 'string') void handleApiProviderChange(value);
                 }}
               >
-                <SelectTrigger className={styles.apiModeSelect}>
+                <SelectTrigger className={styles.apiModeSelect} size="normal">
                   <SelectValue placeholder={t('heterogeneousStatus.apiMode.providerPlaceholder')}>
                     {(value: string) =>
                       flattenSelectOptions(providerOptions).find((option) => option.value === value)
@@ -838,7 +674,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                       if (typeof value === 'string') void handleServerDefaultModelChange(value);
                     }}
                   >
-                    <SelectTrigger className={styles.apiModeSelect}>
+                    <SelectTrigger className={styles.apiModeSelect} size="normal">
                       <SelectValue>
                         {(value: string) =>
                           flattenSelectOptions(serverDefaultModelOptions).find(
@@ -859,7 +695,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                       t('heterogeneousStatus.apiMode.serverDefault.noModels')}
                   </div>
                   {onServerDefaultRetry && (
-                    <Button size="sm" variant="ghost" onClick={onServerDefaultRetry}>
+                    <Button size="normal" variant="ghost" onClick={onServerDefaultRetry}>
                       {t('heterogeneousStatus.apiMode.serverDefault.retry')}
                     </Button>
                   )}
@@ -896,8 +732,8 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                   )}
                 </div>
                 <Button
-                  className={styles.metaText}
-                  size="sm"
+                  className="text-sm leading-5.5"
+                  size="normal"
                   variant="link"
                   onClick={() => navigate('/settings/provider')}
                 >
@@ -950,7 +786,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
           <div className={styles.cardTitleWrap}>
             <div className={styles.cardTitle}>
               {AgentIcon && <AgentIcon size={16} />}
-              <div className="font-semibold">{`${displayName} CLI`}</div>
+              <div className="text-base leading-6 font-semibold">{`${displayName} CLI`}</div>
             </div>
             <div className={styles.metaRow}>
               {renderStatusTag()}
@@ -967,7 +803,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                       disabled={detecting}
                       icon={RefreshCw}
                       loading={detecting}
-                      size="small"
+                      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                       onClick={detect}
                     />
                   </span>

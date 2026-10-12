@@ -1,7 +1,6 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
@@ -10,13 +9,11 @@ import { useTranslation } from 'react-i18next';
 import ShareButton from '@/business/client/features/PageShare/ShareButton';
 import ActionIcon from '@/components/ActionIcon';
 import { DropdownMenu } from '@/components/ItemsMenu';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { AutoSaveHint } from '@/features/EditorCanvas';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
-import { oneLineEllipsis } from '@/styles';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useMenu } from './useMenu';
@@ -52,30 +49,34 @@ const Header = memo<HeaderProps>(
     return (
       <NavHeader
         left={
-          <div className="flex items-center gap-1" style={{ minWidth: 0 }}>
+          <div className="flex min-w-0 items-center gap-1 text-sm leading-5.5">
             {/* Breadcrumb: agent → document. The agent label returns to chat. */}
             <div
               {...clickableProps()}
-              className={cn('flex items-center', CLICKABLE_FOCUS_RING)}
-              style={{ cursor: 'pointer', flexShrink: 0 }}
+              className={cn(
+                'flex min-h-8 flex-none cursor-pointer items-center',
+                CLICKABLE_FOCUS_RING,
+              )}
               onClick={onBack}
             >
-              <div style={{ color: cssVar.colorTextSecondary }}>
+              <div className="text-muted-foreground">
                 {agentDisplayName(meta, t('untitledAgent', { ns: 'chat' }))}
               </div>
             </div>
-            <div style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>/</div>
+            <div className="flex-none text-foreground-quaternary">/</div>
             <div
-              className={cn('font-medium', cx(oneLineEllipsis))}
-              style={{ color: showTitleError ? cssVar.colorError : undefined, minWidth: 0 }}
+              className={cn(
+                'min-w-0 truncate font-medium',
+                showTitleError && 'text-destructive-text',
+              )}
             >
               {resolvedTitle}
             </div>
-            <DropdownMenu items={menuItems} placement={'bottomLeft'} style={{ minWidth: 200 }}>
+            <DropdownMenu items={menuItems} placement={'bottomLeft'} popupClassName="min-w-50">
               <ActionIcon
                 aria-label={t('more', { ns: 'common' })}
                 icon={MoreHorizontal}
-                size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               />
             </DropdownMenu>
           </div>

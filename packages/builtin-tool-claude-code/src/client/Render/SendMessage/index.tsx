@@ -2,7 +2,7 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleCheckBig, SendHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,27 +19,12 @@ const parseResult = (content: unknown): SendMessageResult | undefined => {
   }
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  bodyBox: css`
-    overflow: hidden;
-
-    padding-block: 4px;
-    padding-inline: 8px;
-    border-radius: 8px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  container: css`
-    padding-block: 4px;
-  `,
-  header: css`
-    padding-inline: 4px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  status: css`
-    padding-inline: 4px;
-  `,
-}));
+const styles = {
+  bodyBox: 'overflow-hidden rounded-(--radius-card) bg-muted px-2 py-1',
+  container: 'py-1 text-sm leading-5.5',
+  header: 'px-1 text-muted-foreground',
+  status: 'px-1',
+};
 
 const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }) => {
   const { t } = useTranslation('plugin');
@@ -54,8 +39,8 @@ const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }
   const delivered = result?.success === true;
 
   return (
-    <div className={cx('flex flex-col gap-2', styles.container)}>
-      <div className={cx('flex flex-row items-center gap-2', styles.header)}>
+    <div className={cn('flex flex-col gap-2', styles.container)}>
+      <div className={cn('flex flex-row items-center gap-2', styles.header)}>
         <span className="anticon" role="img">
           <SendHorizontal fill={'transparent'} height={'14'} size={'14'} width={'14'} />
         </span>
@@ -65,7 +50,7 @@ const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }
       </div>
 
       {body && (
-        <div className={cx('flex flex-col', styles.bodyBox)}>
+        <div className={cn('flex flex-col', styles.bodyBox)}>
           <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
             {body}
           </Markdown>
@@ -73,11 +58,11 @@ const SendMessage = memo<BuiltinRenderProps<SendMessageArgs>>(({ args, content }
       )}
 
       {delivered && (
-        <div className={cx('flex flex-row items-center gap-1.5', styles.status)}>
-          <span className="anticon" role="img" style={{ color: cssVar.colorSuccess }}>
+        <div className={cn('flex flex-row items-center gap-1.5', styles.status)}>
+          <span className="anticon text-success-text" role="img">
             <CircleCheckBig fill={'transparent'} height={'14'} size={'14'} width={'14'} />
           </span>
-          <div style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
+          <div className="text-xs leading-5 text-muted-foreground">
             {t('builtins.orvilo-claude-code.sendMessage.queued')}
           </div>
         </div>

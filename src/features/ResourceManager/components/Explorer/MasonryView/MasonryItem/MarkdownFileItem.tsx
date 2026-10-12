@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
@@ -15,108 +14,6 @@ import { formatSize } from '@/utils/format';
 import { isChunkingUnsupported } from '@/utils/isChunkingUnsupported';
 
 import ChunksBadge from '../../ListView/ListItem/ChunkTag';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  floatingChunkBadge: css`
-    position: absolute;
-    z-index: 3;
-    inset-block-end: 8px;
-    inset-inline-end: 8px;
-
-    border-radius: ${cssVar.borderRadius};
-
-    opacity: 0;
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadow};
-
-    transition: opacity ${cssVar.motionDurationMid};
-  `,
-  hoverOverlay: css`
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
-    padding: 16px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    opacity: 0;
-    background: ${cssVar.colorBgMask};
-
-    transition: opacity ${cssVar.motionDurationMid};
-
-    &:hover {
-      opacity: 1;
-    }
-  `,
-  iconWrapper: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    height: 120px;
-    margin-block-end: 12px;
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  markdownPreview: css`
-    position: relative;
-
-    overflow: hidden;
-
-    width: 100%;
-    min-height: 120px;
-    max-height: 300px;
-    padding: 16px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-    word-wrap: break-word;
-    white-space: pre-wrap;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &::after {
-      pointer-events: none;
-      content: '';
-
-      position: absolute;
-      inset-block-end: 0;
-      inset-inline: 0;
-
-      height: 60px;
-
-      background: linear-gradient(to bottom, transparent, ${cssVar.colorFillQuaternary});
-    }
-  `,
-  overlaySize: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextLightSolid};
-    opacity: 0.9;
-  `,
-  overlayTitle: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-
-    max-width: 100%;
-    margin-block-end: 8px;
-
-    font-size: 14px;
-    font-weight: ${cssVar.fontWeightStrong};
-    color: ${cssVar.colorTextLightSolid};
-    text-align: center;
-    word-break: break-word;
-  `,
-}));
 
 interface MarkdownFileItemProps {
   chunkCount?: number | null;
@@ -156,24 +53,33 @@ const MarkdownFileItem = memo<MarkdownFileItemProps>(
 
     return (
       <>
-        <div style={{ position: 'relative' }}>
+        <div className="relative">
           {contentPreview ? (
-            <div className={styles.markdownPreview}>{contentPreview}</div>
+            <div className="relative overflow-hidden w-full min-h-30 max-h-75 p-4 rounded-(--radius-card) text-sm leading-5.5 text-muted-foreground wrap-break-word whitespace-pre-wrap bg-fill-quaternary after:pointer-events-none after:content-[''] after:absolute after:inset-be-0 after:inset-x-0 after:h-15 after:bg-[linear-gradient(to_bottom,transparent,var(--fill-quaternary))]">
+              {contentPreview}
+            </div>
           ) : (
-            <div className={styles.iconWrapper}>
+            <div className="flex items-center justify-center h-30 mbe-3 rounded-(--radius-card) bg-fill-quaternary">
               <FileIcon fileName={name} fileType={fileType} size={64} />
             </div>
           )}
           {/* Hover overlay */}
-          <div className={styles.hoverOverlay}>
-            <div className={styles.overlayTitle}>{name}</div>
-            <div className={styles.overlaySize}>{formatSize(size)}</div>
+          <div className="absolute z-1 inset-0 flex flex-col items-center justify-center p-4 opacity-0 bg-overlay-mask transition-opacity duration-(--orvilo-motion-mid) ease-[ease] hover:opacity-100 rounded-(--radius-card)">
+            <div className="line-clamp-3 max-w-full mbe-2 text-sm leading-5.5 font-semibold text-overlay-mask-foreground text-center [word-break:break-word]">
+              {name}
+            </div>
+            <div className="text-xs leading-5 text-overlay-mask-foreground opacity-90">
+              {formatSize(size)}
+            </div>
           </div>
         </div>
         {/* Floating chunk badge or action button */}
         {!isNull(chunkingStatus) && chunkingStatus ? (
           <div
-            className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
+            className={cn(
+              'floatingChunkBadge',
+              'absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--ant-box-shadow-tertiary) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+            )}
             onClick={(event) => event.stopPropagation()}
           >
             <ChunksBadge
@@ -191,9 +97,11 @@ const MarkdownFileItem = memo<MarkdownFileItemProps>(
             <SimpleTooltip title={t('FileManager.actions.chunkingTooltip')}>
               <div
                 {...clickableProps()}
-                style={{ cursor: 'pointer' }}
                 className={cn(
-                  cx('floatingChunkBadge', styles.floatingChunkBadge),
+                  cn(
+                    'floatingChunkBadge',
+                    'cursor-pointer absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--ant-box-shadow-tertiary) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+                  ),
                   CLICKABLE_FOCUS_RING,
                 )}
                 onClick={(e) => {
@@ -206,7 +114,7 @@ const MarkdownFileItem = memo<MarkdownFileItemProps>(
                 <Button
                   aria-label={t('FileManager.actions.chunkingTooltip')}
                   loading={isCreatingFileParseTask}
-                  size="sm"
+                  size="compact"
                   variant="ghost"
                 >
                   <FileBoxIcon data-icon="inline-start" />

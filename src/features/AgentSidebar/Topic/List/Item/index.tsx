@@ -7,7 +7,7 @@ import {
   getTopicMetadataWorkingDirectorySourcePath,
 } from '@orvilo/utils/client/topic';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import type { DragEvent, RefObject } from 'react';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -49,67 +49,16 @@ import {
 } from './metaCardData';
 import MetaHoverCard from './MetaHoverCard';
 
-const styles = createStaticStyles(({ css }) => ({
-  ciBadge: css`
-    position: absolute;
-    inset-block-end: -3px;
-    inset-inline-end: -3px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-
-    line-height: 0;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  ciPending: css`
-    animation: ci-spin 1s linear infinite;
-
-    @keyframes ci-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-  `,
-  prIcon: css`
-    position: relative;
-    display: inline-flex;
-    flex: none;
-  `,
-  row: css`
-    .nav-item-content {
-      mask-image: none !important;
-    }
-
-    .nav-item-content > .truncate {
-      font-size: ${cssVar.fontSize};
-      font-weight: 400;
-    }
-
-    .nav-item-actions {
-      position: static;
-      flex: none;
-      inline-size: 52px;
-      padding-inline-end: 0;
-    }
-  `,
-  runningElapsedTime: css`
-    flex: none;
-
-    min-width: 42px;
-
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-    color: ${cssVar.colorTextTertiary};
-    text-align: end;
-  `,
-}));
+const styles = {
+  ciBadge:
+    'absolute inset-be-0 inset-ie-0 flex size-5 items-center justify-center rounded-full bg-card leading-none',
+  ciPending: 'animate-spin origin-center motion-reduce:animate-none',
+  prIcon: 'relative inline-flex flex-none',
+  prIconWithCi: 'size-7 items-start justify-start',
+  row: 'pointer-coarse:min-h-11 [--topic-running-ring:color-mix(in_srgb,var(--warning)_45%,transparent)] dark:[--topic-running-ring:var(--warning-border)]',
+  runningElapsedTime:
+    'flex-none min-w-10.5 text-xs leading-5 tabular-nums text-foreground-tertiary text-end',
+};
 
 // Module-scoped so a click on any topic cancels a pending click on another.
 // Per-item refs can't do that, which lets rapid clicks across items all
@@ -225,7 +174,6 @@ const TopicItemRow = memo<TopicItemRowProps>(
     showThreadList,
   }) => {
     const { t } = useTranslation('topic');
-    const { isDarkMode } = useTheme();
     // Rows render by the dozen, so agent-level reads share ONE subscription.
     // Only workspace-shared (`public`) agents get the creator avatar — a
     // workspace-private agent's topics all belong to the viewer.
@@ -243,9 +191,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     // row's owning agent, not the room's.
     const rowAgentId = topicAgentId ?? activeAgentId;
 
-    const loadingRingColor = isDarkMode
-      ? cssVar.colorWarningBorder
-      : `color-mix(in srgb, ${cssVar.colorWarning} 45%, transparent)`;
+    const loadingRingColor = 'var(--topic-running-ring)';
 
     // Construct href for cmd+click support
     const href = useMemo(() => {
@@ -324,9 +270,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
       [metadata, showWorkingDirectory],
     );
     const workingDirectoryNode = workingDirectoryDisplay ? (
-      <div className="flex items-center gap-1" style={{ overflow: 'hidden' }}>
-        <DirIcon repoType={workingDirectoryDisplay.repoType} size={13} />
-        <div className="truncate text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+      <div className="flex items-center gap-1 overflow-hidden">
+        <DirIcon repoType={workingDirectoryDisplay.repoType} size={16} />
+        <div className="truncate text-xs leading-5 text-foreground-description">
           {workingDirectoryDisplay.label}
         </div>
       </div>
@@ -356,9 +302,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     const draftKey = useMemo(() => (id ? topicDraftKey(id) : newTopicDraftKey), [id]);
     const hasDraft = useHasDraft(draftKey);
     const draftPrefix = hasDraft ? (
-      <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
-        {t('draft')}
-      </div>
+      <div className="flex-none text-xs leading-5 text-destructive-text">{t('draft')}</div>
     ) : undefined;
 
     // Codex-style hover detail card: when the topic carries git context, hovering
@@ -371,16 +315,17 @@ const TopicItemRow = memo<TopicItemRowProps>(
       return (
         <NavItem
           active={defaultTopicActive}
+          className={styles.row}
           slots={{ titlePrefix: draftPrefix }}
-          titleColor={cssVar.colorText}
+          titleColor={'var(--foreground)'}
           // Same no-leading-icon rule as a real topic row; the only state it
           // ever showed there was the running ring, which trails instead.
           extra={
             isLoading ? (
               <RingLoadingIcon
+                className="text-warning-text"
                 ringColor={loadingRingColor}
-                size={14}
-                style={{ color: cssVar.colorWarning }}
+                size={16}
               />
             ) : undefined
           }
@@ -388,8 +333,8 @@ const TopicItemRow = memo<TopicItemRowProps>(
             <div className="flex items-center flex-1 gap-1.5">
               {t('defaultTitle')}
               <Badge
+                className="text-xs leading-5 text-foreground-description"
                 size="sm"
-                style={{ color: cssVar.colorTextDescription, fontSize: 10 }}
                 variant="secondary"
               >
                 {t('temp')}
@@ -410,7 +355,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       if (isScheduled) {
         const visual = TOPIC_STATUS_VISUALS.scheduled;
         const runAt = metadata?.scheduledRun?.runAt;
-        const icon = <visual.icon size={14} style={{ color: visual.color }} />;
+        const icon = <visual.icon size={16} style={{ color: visual.color }} />;
         return runAt ? (
           <Tooltip>
             <TooltipTrigger render={<span>{icon}</span>} />
@@ -424,15 +369,11 @@ const TopicItemRow = memo<TopicItemRowProps>(
       }
       if (isWaitingForHuman) {
         const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-        return <visual.icon size={14} style={{ color: visual.color }} />;
+        return <visual.icon size={16} style={{ color: visual.color }} />;
       }
       if (shouldShowRunningIcon) {
         return (
-          <RingLoadingIcon
-            ringColor={loadingRingColor}
-            size={14}
-            style={{ color: cssVar.colorWarning }}
-          />
+          <RingLoadingIcon className="text-warning-text" ringColor={loadingRingColor} size={16} />
         );
       }
       if (isFailed) {
@@ -442,7 +383,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
             <TooltipTrigger
               render={
                 <span>
-                  <visual.icon size={14} style={{ color: visual.color }} />
+                  <visual.icon size={16} style={{ color: visual.color }} />
                 </span>
               }
             />
@@ -461,7 +402,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       // the masked post-output tail cannot fall back to a static running icon.
       if (status && status !== 'active' && status !== 'running') {
         const visual = TOPIC_STATUS_VISUALS[status];
-        return <visual.icon size={14} style={{ color: visual.color }} />;
+        return <visual.icon size={16} style={{ color: visual.color }} />;
       }
       return null;
     })();
@@ -485,13 +426,13 @@ const TopicItemRow = memo<TopicItemRowProps>(
             <TooltipTrigger
               render={
                 <span>
-                  <span className={styles.prIcon}>
-                    <prVisual.icon size={14} style={{ color: prVisual.color }} />
+                  <span className={cn(styles.prIcon, showCiBadge && styles.prIconWithCi)}>
+                    <prVisual.icon size={16} style={{ color: prVisual.color }} />
                     {showCiBadge && (
                       <span className={styles.ciBadge}>
                         <ciVisual.icon
                           className={ciStatus === 'pending' ? styles.ciPending : undefined}
-                          size={9}
+                          size={16}
                           style={{ color: ciVisual.color }}
                         />
                       </span>
@@ -526,12 +467,18 @@ const TopicItemRow = memo<TopicItemRowProps>(
           actions={() => <Actions fav={fav} id={id} status={status} title={title} />}
           active={isTopicActive}
           className={styles.row}
+          contentMask={false}
           description={descriptionNode}
           href={href}
           icon={leadingIconNode}
           slots={{ titlePrefix: draftPrefix }}
           title={title === '...' ? <DotsLoading gap={3} size={4} /> : title}
-          titleColor={cssVar.colorText}
+          titleColor={'var(--foreground)'}
+          classNames={{
+            actions:
+              'static flex-none [inline-size:calc(var(--spacing)*13)] pe-0 pointer-coarse:[inline-size:calc(var(--spacing)*23)]',
+            title: 'font-normal leading-5.5',
+          }}
           extra={
             <>
               {ownIconNode}
@@ -547,12 +494,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     );
 
     return (
-      <div
-        className="flex flex-col"
-        data-testid="topic-item"
-        data-topic-id={id}
-        style={{ position: 'relative' }}
-      >
+      <div className="relative flex flex-col" data-testid="topic-item" data-topic-id={id}>
         {metaCard ? (
           <PreviewCard.Root>
             <PreviewCard.Trigger delay={800} render={<div>{navItem}</div>} />
@@ -560,7 +502,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
               <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'right'} sideOffset={4}>
                 <PreviewCard.Popup
                   className={
-                    'rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10'
+                    'rounded-(--radius-overlay) bg-popover p-4 text-sm text-popover-foreground shadow-(--shadow-popover) ring-1 ring-foreground/10'
                   }
                 >
                   <MetaHoverCard metadata={metadata} title={title} topicId={id} />
@@ -574,12 +516,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
         {showThreadList && (
           <Suspense
             fallback={
-              <div
-                className="flex flex-col gap-2 w-full"
-                style={{ paddingBlock: 8, paddingInline: 24 }}
-              >
-                <Skeleton style={{ height: 18, width: '100%' }} />
-                <Skeleton style={{ height: 18, width: '100%' }} />
+              <div className="flex flex-col gap-2 w-full py-2 px-6">
+                <Skeleton className="h-4.5 w-full" />
+                <Skeleton className="h-4.5 w-full" />
               </div>
             }
           >

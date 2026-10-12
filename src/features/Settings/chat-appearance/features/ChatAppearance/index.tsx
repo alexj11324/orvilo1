@@ -180,6 +180,7 @@ const ChatAppearance = memo(() => {
               }}
             >
               <SelectTrigger
+                size="normal"
                 style={{
                   width: 240,
                 }}
@@ -226,6 +227,7 @@ const ChatAppearance = memo(() => {
               }}
             >
               <SelectTrigger
+                size="normal"
                 style={{
                   width: 240,
                 }}

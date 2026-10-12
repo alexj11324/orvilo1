@@ -45,13 +45,14 @@ const RecordObservationContent = memo<{ goalId: string; metricKey: string; metri
     return (
       <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
         <div className="flex flex-col gap-1.5">
-          <div className="text-[13px] font-medium">
+          <div className="text-(length:--text-dense) font-medium">
             {t('goalProcess.northStar.record.valueLabel', { key: metricKey })}
           </div>
           <Input
             autoFocus
             placeholder={'42180'}
             value={value}
+            visualSize="normal"
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') void submit();
@@ -62,6 +63,7 @@ const RecordObservationContent = memo<{ goalId: string; metricKey: string; metri
           <Button
             disabled={!Number.isFinite(Number(value)) || value.trim() === ''}
             loading={busy}
+            size="lg"
             variant="outline"
             onClick={() => void submit()}
           >

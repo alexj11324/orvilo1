@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { type CSSProperties, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,16 +27,6 @@ const formatDate = (date: string, t: (key: string) => string, template?: string)
   return d.format(t('time.formatOtherYear'));
 };
 
-const styles = createStaticStyles(({ css }) => {
-  return {
-    time: css`
-      font-size: 12px;
-      color: ${cssVar.colorTextSecondary};
-      letter-spacing: 0.02em;
-    `,
-  };
-});
-
 interface PublishedTimeProps {
   className?: string;
   date: string;
@@ -50,7 +40,7 @@ const PublishedTime: FC<PublishedTimeProps> = ({ date, style, className, templat
   return (
     <time
       aria-label={'published-date'}
-      className={cx(styles.time, className)}
+      className={cn('text-xs leading-5 tracking-normal text-muted-foreground', className)}
       dateTime={formatTime(date)}
       style={style}
     >

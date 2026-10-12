@@ -1,33 +1,15 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
-import { createStaticStyles, responsive } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  close: css`
-    position: absolute;
-    inset-block-start: 16px;
-    inset-inline-end: 16px;
-  `,
-  container: css`
-    position: relative;
+import ActionIcon from '@/components/ActionIcon';
 
-    width: 100%;
-    padding-inline: 40px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgContainer};
-
-    ${responsive.sm} {
-      width: 100%;
-      padding-inline: 12px;
-    }
-  `,
-}));
+const styles = {
+  close: 'absolute inset-bs-4 end-4',
+  container:
+    'relative flex w-full flex-col border border-divider rounded-(--radius-card) bg-card px-4',
+};
 
 const Container = ({
   setError,
@@ -41,18 +23,19 @@ const Container = ({
 
   return (
     show && (
-      <Flexbox className={styles.container}>
+      <div className={styles.container}>
         <ActionIcon
           aria-label={tCommon('close')}
           className={styles.close}
           icon={XIcon}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
           onClick={() => {
             setShow(false);
             setError(undefined);
           }}
         />
         {children}
-      </Flexbox>
+      </div>
     )
   );
 };

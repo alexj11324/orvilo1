@@ -1,5 +1,4 @@
 import { type NotebookDocument } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { FileTextIcon, Trash2Icon } from 'lucide-react';
 import { type MouseEvent } from 'react';
@@ -12,26 +11,11 @@ import { useChatStore } from '@/store/chat';
 import { useNotebookStore } from '@/store/notebook';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    cursor: pointer;
-    padding: 12px;
-    border-radius: 8px;
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  description: css`
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    font-weight: 500;
-  `,
-}));
+const styles = {
+  container: 'cursor-pointer p-3 rounded-(--radius-card) bg-fill-quaternary hover:bg-accent',
+  description: 'text-xs leading-5 text-muted-foreground',
+  title: 'text-sm leading-5.5 font-medium',
+};
 
 interface DocumentItemProps {
   document: NotebookDocument;
@@ -69,17 +53,17 @@ const DocumentItem = memo<DocumentItemProps>(({ document, topicId }) => {
   return (
     <div
       {...clickableProps()}
-      className={cn(cx('flex flex-row gap-2', styles.container), CLICKABLE_FOCUS_RING)}
+      className={cn('flex flex-row gap-2', styles.container, CLICKABLE_FOCUS_RING)}
       onClick={handleClick}
     >
       <FileTextIcon size={16} />
-      <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex flex-col flex-1 min-w-0 gap-1">
         <div className="flex flex-row items-center justify-between">
           <div className={cn('truncate min-w-0', styles.title)}>{document.title}</div>
           <ActionIcon
             icon={Trash2Icon}
             loading={deleting}
-            size={'small'}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t('notebook.delete')}
             onClick={handleDelete}
           />

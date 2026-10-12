@@ -1,7 +1,6 @@
 'use client';
 
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
-import { createStaticStyles, keyframes } from 'antd-style';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,6 +10,8 @@ import {
   getOuterCssVariables,
 } from '@/features/DesktopLayoutContainer/cssVariables';
 import { styles as containerStyles } from '@/features/DesktopLayoutContainer/style';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { electronStylish } from '@/styles/electron';
 
 import { readBootShellGeometry } from './geometry';
@@ -25,63 +26,14 @@ export const APP_SHELL_FALLBACK_ID = 'app-shell-fallback';
 
 const HINT_DELAY = 1000;
 
-// The X half of the transform is the centering, not the motion — it has to be
-// restated in both frames or the keyframe overwrites it and the caption jumps
-// to the anchor's left edge.
-const slideUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translate(-50%, 10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-`;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  contentOverlay: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  // Pinned to the bottom edge of the content placeholder so the caption reads
-  // like a status line, not a centered splash.
-  hint: css`
-    position: absolute;
-    inset-block-end: 24px;
-    inset-inline-start: 50%;
-
-    font-size: 13px;
-    white-space: nowrap;
-
-    animation: ${slideUp} 0.42s ${cssVar.motionEaseOut} both;
-  `,
-  dragRegion: css`
-    pointer-events: auto;
-    flex-shrink: 0;
-    width: 100%;
-    height: ${TITLE_BAR_HEIGHT}px;
-  `,
-  root: css`
-    pointer-events: none;
-
-    position: fixed;
-    z-index: 99999;
-    inset: 0;
-
-    display: flex;
-    flex-direction: column;
-  `,
-}));
+const styles = {
+  contentOverlay:
+    'pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground',
+  // Bottom status metadata; centering remains visible when motion is stopped.
+  hint: 'absolute inset-be-6 inset-s-1/2 text-xs leading-5 whitespace-nowrap [--orvilo-boot-shell-hint-offset-x:-50%] rtl:[--orvilo-boot-shell-hint-offset-x:50%] [transform:translate(var(--orvilo-boot-shell-hint-offset-x),0)]',
+  dragRegion: 'pointer-events-auto shrink-0 w-full',
+  root: 'pointer-events-none fixed z-[99999] inset-0 flex flex-col',
+};
 
 /**
  * Split out so `useTranslation` runs only once the hint is due. The boot shell
@@ -91,8 +43,19 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
  */
 const LoadingHint = memo(() => {
   const { t } = useTranslation('common');
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
 
-  return <div className={styles.hint}>{t('stillLoading')}</div>;
+  return (
+    <div
+      className={`${styles.hint} ${
+        animationMode === 'disabled'
+          ? ''
+          : 'motion-safe:animate-[orvilo-boot-shell-hint_var(--orvilo-motion-mid,200ms)_var(--orvilo-motion-ease-out,ease-out)_both]'
+      }`}
+    >
+      {t('stillLoading')}
+    </div>
+  );
 });
 
 LoadingHint.displayName = 'AppShellLoadingHint';
@@ -112,7 +75,12 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
 
   return (
     <div aria-hidden className={`${CSS_VAR_CLASS} ${styles.root}`} id={id}>
-      {isDesktop && <div className={`${styles.dragRegion} ${electronStylish.draggable}`} />}
+      {isDesktop && (
+        <div
+          className={`${styles.dragRegion} ${electronStylish.draggable}`}
+          style={{ height: TITLE_BAR_HEIGHT }}
+        />
+      )}
       <div
         className="flex"
         style={{

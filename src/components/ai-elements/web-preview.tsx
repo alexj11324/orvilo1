@@ -63,7 +63,7 @@ export const WebPreview = ({
   return (
     <WebPreviewContext value={contextValue}>
       <div
-        className={cn('flex size-full flex-col rounded-lg border bg-card', className)}
+        className={cn('flex size-full flex-col rounded-(--radius-card) border bg-card', className)}
         {...props}
       >
         {children}
@@ -93,6 +93,8 @@ export const WebPreviewNavigationButton = ({
   disabled,
   tooltip,
   children,
+  className = 'p-0 hover:text-foreground',
+  size = 'icon',
   ...props
 }: WebPreviewNavigationButtonProps) => (
   <TooltipProvider>
@@ -100,9 +102,9 @@ export const WebPreviewNavigationButton = ({
       <TooltipTrigger
         render={
           <Button
-            className="h-8 w-8 p-0 hover:text-foreground"
+            className={className}
             disabled={disabled}
-            size="sm"
+            size={size}
             variant="ghost"
             onClick={onClick}
             {...props}
@@ -120,7 +122,14 @@ export const WebPreviewNavigationButton = ({
 
 export type WebPreviewUrlProps = ComponentProps<typeof Input>;
 
-export const WebPreviewUrl = ({ value, onChange, onKeyDown, ...props }: WebPreviewUrlProps) => {
+export const WebPreviewUrl = ({
+  value,
+  onChange,
+  onKeyDown,
+  className = 'flex-1 text-sm',
+  visualSize = 'compact',
+  ...props
+}: WebPreviewUrlProps) => {
   const { url, setUrl } = useWebPreview();
   const [prevUrl, setPrevUrl] = useState(url);
   const [inputValue, setInputValue] = useState(url);
@@ -149,9 +158,10 @@ export const WebPreviewUrl = ({ value, onChange, onKeyDown, ...props }: WebPrevi
 
   return (
     <Input
-      className="h-8 flex-1 text-sm"
+      className={className}
       placeholder="Enter URL..."
       value={value ?? inputValue}
+      visualSize={visualSize}
       onChange={onChange ?? handleChange}
       onKeyDown={handleKeyDown}
       {...props}

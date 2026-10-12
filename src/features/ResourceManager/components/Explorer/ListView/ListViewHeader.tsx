@@ -81,7 +81,7 @@ const ListViewHeader = ({
         }}
       >
         <div
-          className="flex flex-col items-center justify-center h-[40px]"
+          className="flex flex-col items-center justify-center h-10"
           style={{ paddingInline: 4 }}
         >
           <Checkbox

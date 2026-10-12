@@ -26,21 +26,21 @@ export interface FlowNodeData extends Record<string, unknown> {
 
 export const flowStateBackground = (state?: string) =>
   state === 'passed'
-    ? 'var(--ant-color-success-bg)'
+    ? 'var(--success-wash)'
     : state === 'failed'
-      ? 'var(--ant-color-error-bg)'
+      ? 'var(--destructive-wash)'
       : state
-        ? 'var(--ant-color-warning-bg)'
+        ? 'var(--warning-wash)'
         : 'var(--accent)';
 
 export const flowStateColor = (state?: string) =>
   state === 'passed'
-    ? 'var(--success)'
+    ? 'var(--success-text)'
     : state === 'failed'
-      ? 'var(--destructive)'
+      ? 'var(--destructive-text)'
       : state
-        ? 'var(--warning)'
-        : 'var(--ant-color-text-tertiary)';
+        ? 'var(--warning-text)'
+        : 'var(--foreground-tertiary)';
 
 // The public style prop keeps these hit targets independent of React Flow stylesheet order.
 export const flowHandleStyle = {
@@ -53,15 +53,16 @@ export const flowHandleStyle = {
 };
 
 const styles = {
-  card: 'overflow-hidden flex flex-col w-[260px] h-full border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card transition-[border-color,box-shadow] duration-150 ease-[ease] hover:border-(--ant-color-primary-border)',
-  selected: 'border-(--ant-color-primary-border) shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
-  head: 'p-3',
+  card: 'overflow-hidden flex flex-col w-65 h-full border border-sidebar-border rounded-(--radius-card) bg-card transition-[border-color,box-shadow] duration-(--orvilo-motion-mid) ease-[ease] motion-reduce:transition-none hover:border-primary-border',
+  selected: 'border-primary-border ring-2 ring-primary-wash',
+  // Four standard text lines and the metadata footer stay inside the graph's 132px box.
+  head: 'p-2',
   glyph:
-    'flex flex-none items-center justify-center size-9 rounded-(--ant-border-radius) text-muted-foreground bg-accent',
-  title: 'line-clamp-2 text-[13px] font-medium leading-[1.4]',
-  subtitle: 'line-clamp-2 text-[11px] leading-4 text-(--ant-color-text-tertiary)',
+    'flex flex-none items-center justify-center size-9 rounded-(--radius-card) text-muted-foreground bg-accent',
+  title: 'line-clamp-2 text-sm font-semibold',
+  subtitle: 'line-clamp-2 text-xs text-foreground-tertiary',
   footer:
-    'mt-auto py-[7px] px-3 border-t border-dashed border-sidebar-border text-[11px] text-(--ant-color-text-tertiary)',
+    'mt-auto py-0.5 px-2 border-bs border-dashed border-sidebar-border text-xs text-foreground-tertiary',
 };
 
 /** Same status/head/summary hierarchy as Goal's exploration cards. */
@@ -93,20 +94,20 @@ export function FlowNode({ data }: { data: FlowNodeData }) {
               color: flowStateColor(data.state),
             }}
           >
-            {createElement(statusIcon, { size: 24 })}
+            {createElement(statusIcon, { size: 16 })}
           </div>
-          <div className="flex flex-col gap-[3px]" style={{ minWidth: 0 }}>
+          <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
             <span className={styles.title}>{data.title}</span>
             <span className={styles.subtitle}>{data.expected}</span>
           </div>
         </div>
         <div className={`flex items-center gap-3 ${styles.footer}`}>
           <div className="flex items-center gap-1">
-            <Repeat2 size={12} />
+            <Repeat2 className="size-4" size={16} />
             {data.attempts}
           </div>
           <div className="flex items-center gap-1">
-            <Paperclip size={12} />
+            <Paperclip className="size-4" size={16} />
             {data.evidence}
           </div>
         </div>

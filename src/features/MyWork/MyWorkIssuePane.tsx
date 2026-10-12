@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowUpRightIcon, XIcon } from 'lucide-react';
 import { createElement, lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,28 +13,6 @@ const LazyIssueContent = lazy(() =>
 const LazyIssuePeekActions = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssuePeekActions })),
 );
-
-const styles = createStaticStyles(({ css }) => ({
-  /**
-   * Sticky inside the pane's own scroll host — the header stays put while
-   * `IssueContent` scrolls beneath it, matching Linear's peek chrome.
-   */
-  paneHeader: css`
-    position: sticky;
-    z-index: 2;
-    inset-block-start: 0;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 16px 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
 
 interface MyWorkIssuePaneProps {
   /** Task identifier — `IssueContent` keys its detail fetch on it. */
@@ -55,12 +32,9 @@ const MyWorkIssuePane = memo<MyWorkIssuePaneProps>(({ identifier, onClose, onOpe
 
   return (
     <>
-      <div className={styles.paneHeader}>
+      <div className="sticky z-2 inset-bs-0 flex items-center gap-1 py-2 ps-4 pe-2 border-be border-solid border-divider bg-card">
         <span className="text-sm font-medium">{identifier}</span>
-        <div
-          className="flex flex-row"
-          style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
-        >
+        <div className="flex flex-row items-center justify-end gap-1 flex-1">
           <Suspense fallback={null}>
             <LazyIssuePeekActions taskId={identifier} onDeleted={onClose} />
           </Suspense>

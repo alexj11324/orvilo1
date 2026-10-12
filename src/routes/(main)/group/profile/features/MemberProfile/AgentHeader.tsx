@@ -241,15 +241,11 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
         onUpload={handleAvatarUpload}
       />
       <Input
+        className="p-0 text-3xl leading-9 font-semibold"
         disabled={disabled}
         placeholder={t('settingAgent.name.placeholder', { ns: 'setting' })}
         value={localTitle}
-        style={{
-          fontSize: 36,
-          fontWeight: 600,
-          padding: 0,
-          width: '100%',
-        }}
+        visualSize="large"
         onChange={(e) => {
           setLocalTitle(e.target.value);
           if (!agentId || disabled) return;

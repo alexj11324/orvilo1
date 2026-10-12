@@ -1,4 +1,3 @@
-import { css, cx } from 'antd-style';
 import { Archive, Hash, Import, LucideCheck, Trash } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,15 +16,6 @@ import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
-
-const hotArea = css`
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-color: transparent;
-  }
-`;
 
 interface UseTopicActionsDropdownMenuOptions {
   onUploadClose?: () => void;
@@ -158,7 +148,9 @@ export const useTopicActionsDropdownMenu = (
         key: 'import',
         label: (
           <Upload accept=".json" beforeUpload={handleImport} disabled={!canCreateTopic}>
-            <div className={cx(hotArea)}>{t('actions.import')}</div>
+            <div className="before:absolute before:inset-0 before:bg-transparent before:content-['']">
+              {t('actions.import')}
+            </div>
           </Upload>
         ),
         ...(onUploadClose ? { closeOnClick: false } : null),

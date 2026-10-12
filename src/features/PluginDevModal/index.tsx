@@ -1,11 +1,10 @@
 import { isDesktop } from '@orvilo/const';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { type OrviloToolCustomPlugin } from '@orvilo/types';
-import { useResponsive } from 'antd-style';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { type FieldPath, FormProvider, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import Form from '@/components/GroupForm';
 import { toast } from '@/components/toast';
 import {
   AlertDialog,
@@ -19,8 +18,16 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { useSingleton } from '@/hooks/useSingleton';
 
 import MCPManifestForm from './MCPManifestForm';
+import {
+  createMcpDevDefaults,
+  getMcpDevPayload,
+  type McpDevFormValues,
+  setMcpDevValues,
+} from './MCPManifestForm/utils';
 import PluginPreview from './PluginPreview';
 
 interface DevModalProps {
@@ -54,9 +61,36 @@ const DevModal = memo<DevModalProps>(
 
     const [submitting, setSubmitting] = useState(false);
 
-    const { mobile } = useResponsive();
-    const [form] = Form.useForm();
-    const authType = Form.useWatch(['customParams', 'mcp', 'auth', 'type'], form);
+    const mobile = useIsMobile();
+    const form = useForm<McpDevFormValues>({
+      defaultValues: createMcpDevDefaults(),
+      mode: 'onChange',
+      shouldUnregister: false,
+    });
+    const mountedFields = useSingleton(() => new Set<FieldPath<McpDevFormValues>>());
+    const onFieldMount = useCallback(
+      (name: FieldPath<McpDevFormValues>, mounted: boolean) => {
+        if (mounted) mountedFields.add(name);
+        else mountedFields.delete(name);
+      },
+      [mountedFields],
+    );
+    const getPayload = (values: McpDevFormValues) =>
+      getMcpDevPayload(values, enableOAuth, [...mountedFields]);
+    const authType = useWatch({ control: form.control, name: 'customParams.mcp.auth.type' });
+
+    useEffect(() => {
+      const subscription = form.watch((_, info) => {
+        // Programmatic seeds/imports/reset update the preview without reporting a user edit.
+        if (info.type === 'change')
+          onValueChange?.(
+            getMcpDevPayload(form.getValues(), enableOAuth, [
+              ...mountedFields,
+            ]) as Partial<OrviloToolCustomPlugin>,
+          );
+      });
+      return () => subscription.unsubscribe();
+    }, [form, onValueChange, enableOAuth, mountedFields]);
 
     // Seed the form once per modal open, waiting for `value` to arrive (it may
     // be undefined initially while edit-mode credentials are being fetched).
@@ -67,10 +101,10 @@ const DevModal = memo<DevModalProps>(
         return;
       }
       if (value !== undefined && !seededRef.current) {
-        form.setFieldsValue(value);
+        setMcpDevValues(form, value);
         seededRef.current = true;
       }
-    }, [open, value]);
+    }, [form, open, value]);
 
     const doSave = async (values: OrviloToolCustomPlugin, ctx?: { oauthPopup?: Window | null }) => {
       if (!onSave) {
@@ -106,23 +140,32 @@ const DevModal = memo<DevModalProps>(
     const runOAuthFlow = async () => {
       const popup = window.open('about:blank', 'orvilo-connector-oauth', 'width=600,height=720');
       try {
-        const values = (await form.validateFields()) as OrviloToolCustomPlugin;
+        const isValid = await form.trigger([...mountedFields]);
+        if (!isValid) {
+          popup?.close();
+          return;
+        }
+        const values = getPayload(form.getValues()) as OrviloToolCustomPlugin;
         await doSave(values, { oauthPopup: popup });
       } catch {
         popup?.close();
       }
     };
 
+    const handleSubmit = form.handleSubmit(async (values) => {
+      await doSave(getPayload(values) as OrviloToolCustomPlugin);
+    });
+
     const handlePrimaryClick = () => {
       if (enableOAuth && authType === 'oauth2') return runOAuthFlow();
-      form.submit();
+      void handleSubmit();
     };
 
     useEffect(() => {
-      if (mode === 'create' && !open) form.resetFields();
-    }, [open]);
+      if (mode === 'create' && !open) form.reset(createMcpDevDefaults());
+    }, [form, mode, open]);
 
-    const buttonStyle = mobile ? { flex: 1 } : { margin: 0 };
+    const buttonClassName = mobile ? 'flex-1' : 'm-0';
 
     const footer = (
       <div className="flex flex-row flex-1 gap-3 justify-between">
@@ -130,7 +173,7 @@ const DevModal = memo<DevModalProps>(
           <AlertDialog>
             <AlertDialogTrigger
               render={
-                <Button style={buttonStyle} variant="destructive">
+                <Button className={buttonClassName} variant="destructive">
                   {t('delete', { ns: 'common' })}
                 </Button>
               }
@@ -158,8 +201,8 @@ const DevModal = memo<DevModalProps>(
         )}
         <div className="flex flex-row gap-3">
           <Button
+            className={buttonClassName}
             size="lg"
-            style={buttonStyle}
             variant="outline"
             onClick={() => {
               onOpenChange(false);
@@ -168,9 +211,9 @@ const DevModal = memo<DevModalProps>(
             {t('cancel', { ns: 'common' })}
           </Button>
           <Button
+            className={buttonClassName}
             loading={submitting}
             size="lg"
-            style={buttonStyle}
             variant={'default'}
             onClick={handlePrimaryClick}
           >
@@ -181,17 +224,10 @@ const DevModal = memo<DevModalProps>(
     );
 
     return (
-      <Form.Provider
-        onFormChange={() => {
-          onValueChange?.(form.getFieldsValue());
-        }}
-        onFormFinish={async (_, info) => {
-          await doSave(info.values as OrviloToolCustomPlugin);
-        }}
-      >
+      <FormProvider {...form}>
         <Sheet open={open} onOpenChange={(next) => !next && onOpenChange(false)}>
           <SheetContent
-            className="gap-0"
+            className="gap-0 rounded-none"
             side="bottom"
             style={{ height: isDesktop ? `calc(100vh - ${TITLE_BAR_HEIGHT}px)` : '100vh' }}
           >
@@ -200,22 +236,22 @@ const DevModal = memo<DevModalProps>(
                 {t(isEditMode ? 'dev.title.skillSettings' : 'dev.title.create')}
               </SheetTitle>
             </SheetHeader>
-            <div
-              className="flex-1 min-h-0"
-              style={{ marginInline: 'auto', maxWidth: mobile ? '100%' : 800, width: '100%' }}
-            >
+            <div className={`flex-1 min-h-0 mx-auto w-full ${mobile ? 'max-w-full' : 'max-w-200'}`}>
               <div
-                className="flex flex-row gap-0 h-[100%]"
+                className="flex flex-row gap-0 h-full"
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
               >
-                <div className="flex flex-col gap-4 p-6" style={{ overflowY: 'auto', flex: 3 }}>
+                <div className="flex flex-3 flex-col gap-4 overflow-y-auto p-6">
                   <MCPManifestForm
                     enableOAuth={enableOAuth}
                     form={form}
+                    getMountedFields={() => [...mountedFields]}
                     isEditMode={isEditMode}
                     onAuthorizeOAuth={runOAuthFlow}
+                    onFieldMount={onFieldMount}
+                    onSubmit={handleSubmit}
                   />
                 </div>
                 <PluginPreview form={form} />
@@ -224,7 +260,7 @@ const DevModal = memo<DevModalProps>(
             <SheetFooter>{footer}</SheetFooter>
           </SheetContent>
         </Sheet>
-      </Form.Provider>
+      </FormProvider>
     );
   },
 );

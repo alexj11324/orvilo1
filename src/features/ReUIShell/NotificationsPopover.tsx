@@ -66,7 +66,7 @@ function NotificationItem({
           </div>
           {content && <p className="text-muted-foreground line-clamp-2 text-xs">{content}</p>}
           <div className="flex items-center gap-2 pt-0.5">
-            <p className="text-muted-foreground text-[11px]">{formatAbsoluteDate(createdAt)}</p>
+            <p className="text-muted-foreground text-xs">{formatAbsoluteDate(createdAt)}</p>
           </div>
         </div>
       </Button>
@@ -128,7 +128,7 @@ function NotificationsPanel({ onNavigate }: { onNavigate: () => void }) {
         </TooltipProvider>
       </div>
       <div className="relative flex max-h-full min-h-0">
-        <ScrollArea className="max-h-[360px] min-h-0 grow md:max-h-[420px]">
+        <ScrollArea className="max-h-90 min-h-0 grow md:max-h-105">
           {error ? (
             <div className="px-3 py-2 text-xs text-muted-foreground">
               {t('reuiShell9.notificationsUnavailable')}

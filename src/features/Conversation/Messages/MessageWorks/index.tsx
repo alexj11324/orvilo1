@@ -1,20 +1,12 @@
 'use client';
 
 import type { WorkSummaryItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
 
 import { dataSelectors, useConversationStore } from '../../store';
-
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    width: 100%;
-  `,
-}));
 
 interface MessageWorksProps {
   rootOperationId?: string | null;
@@ -33,7 +25,7 @@ const MessageWorks = memo<MessageWorksProps>(({ rootOperationId }) => {
   if (data.length === 0) return null;
 
   return (
-    <div className={cn('flex flex-col gap-2', styles.container)}>
+    <div className={'flex flex-col gap-2 w-full'}>
       {data.map((item) => (
         <WorkSummaryCard item={item} key={item.id} />
       ))}

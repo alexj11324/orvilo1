@@ -1,5 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx } from 'cn';
 import { memo } from 'react';
 
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
@@ -15,20 +14,11 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 
 import StatusGlyph from './StatusGlyph';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  meta: css`
-    cursor: pointer;
-  `,
-  taskName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  taskRef: css`
-    flex: none;
-    font-family: ${cssVar.fontFamilyCode};
-  `,
-}));
+const styles = {
+  meta: 'cursor-pointer',
+  taskName: 'truncate',
+  taskRef: 'flex-none font-mono',
+};
 
 interface InboxBriefCardProps {
   /** Rendered inside a rail card, which already draws the shell. */
@@ -67,7 +57,7 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
           entirely in that case and let the title line carry the time. */}
       {hasTaskMeta && (
         <div
-          className={cx(canNavigate ? styles.meta : undefined, 'flex items-center gap-[7px]')}
+          className={cx(canNavigate ? styles.meta : undefined, 'flex items-center gap-2')}
           onClick={canNavigate ? openTask : undefined}
         >
           {/* On error the task glyph would render its paused/scheduled state
@@ -93,12 +83,9 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
 
       <div className="flex items-start gap-2.5">
         {agent && <AssigneeAvatar agentId={agent.id} size={28} />}
-        <div className="flex flex-col flex-1 gap-1.5" style={{ minWidth: 0 }}>
+        <div className="flex flex-col flex-1 min-w-0 gap-1.5">
           <div className="flex items-center gap-2">
-            <div
-              className={cn('truncate', 'block', homeType.itemTitle)}
-              style={{ flex: 1, minWidth: 0 }}
-            >
+            <div className={cx('truncate block flex-1 min-w-0', homeType.itemTitle)}>
               {brief.title}
             </div>
             {!hasTaskMeta && <Time date={brief.createdAt} />}
@@ -126,12 +113,10 @@ const InboxBriefCard = memo<InboxBriefCardProps>(({ bare, brief }) => {
 
   return (
     <div
-      className={cx(briefStyles.card, 'flex flex-col gap-2.5 p-3 border')}
-      style={{
-        borderColor: cssVar.colorBorderSecondary,
-        background: cssVar.colorBgContainer,
-        borderRadius: cssVar.borderRadiusLG,
-      }}
+      className={cx(
+        briefStyles.card,
+        'flex flex-col gap-2.5 p-4 border border-divider rounded-(--radius-card) bg-card',
+      )}
     >
       {content}
     </div>

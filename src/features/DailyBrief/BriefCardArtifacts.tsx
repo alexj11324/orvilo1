@@ -1,5 +1,4 @@
 import type { BriefArtifactDocument, BriefArtifacts } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRightIcon, FileTextIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -7,20 +6,9 @@ import { memo } from 'react';
 import { openDocumentModal, preloadDocumentModal } from '@/features/DocumentModal/loader';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  iconWrap: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  iconWrap: 'flex shrink-0 items-center justify-center size-9 rounded-(--radius-card) bg-card',
+};
 
 const BriefArtifactCard = memo<{ doc: BriefArtifactDocument }>(({ doc }) => {
   const title = doc.title || 'Untitled';
@@ -28,9 +16,8 @@ const BriefArtifactCard = memo<{ doc: BriefArtifactDocument }>(({ doc }) => {
   return (
     <div
       {...clickableProps()}
-      style={{ background: cssVar.colorFillTertiary, borderRadius: cssVar.borderRadius }}
       className={cn(
-        'flex items-center gap-3 py-[10px] px-3 cursor-pointer hover:bg-[var(--ant-color-fill-secondary)]',
+        'flex items-center gap-3 py-2.5 px-3 rounded-(--radius-card) bg-muted cursor-pointer hover:bg-accent',
         CLICKABLE_FOCUS_RING,
       )}
       onClick={() => void openDocumentModal(doc.id)}
@@ -38,12 +25,10 @@ const BriefArtifactCard = memo<{ doc: BriefArtifactDocument }>(({ doc }) => {
       onPointerEnter={preloadDocumentModal}
     >
       <div className={styles.iconWrap}>
-        <FileTextIcon size={20} strokeWidth={1.5} style={{ color: cssVar.colorTextSecondary }} />
+        <FileTextIcon className="text-muted-foreground" size={16} strokeWidth={1.5} />
       </div>
-      <div className="truncate block font-medium" style={{ flex: 1, minWidth: 0 }}>
-        {title}
-      </div>
-      <ChevronRightIcon size={16} style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }} />
+      <div className="truncate block flex-1 min-w-0 text-sm leading-5.5 font-medium">{title}</div>
+      <ChevronRightIcon className="shrink-0 text-muted-foreground" size={16} />
     </div>
   );
 });

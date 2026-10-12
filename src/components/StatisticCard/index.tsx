@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, responsive } from 'antd-style';
 import { cn } from 'cn';
 import { type CSSProperties, type ReactNode } from 'react';
 import { memo } from 'react';
@@ -6,42 +5,13 @@ import { memo } from 'react';
 import { Spinner as Spin } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-const prefixCls = 'ant';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  header: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    ${responsive.sm} {
-      flex-wrap: wrap;
-      margin-block-end: 8px;
-    }
-  `,
-  statistic: css`
-    .${prefixCls}-statistic-content-value-int, .${prefixCls}-statistic-content-value-decimal {
-      font-size: 24px;
-      font-weight: bold;
-      line-height: 1.2;
-    }
-  `,
-  title: css`
-    overflow: hidden;
-    flex: 1;
-
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 32px;
-    color: ${cssVar.colorText};
-
-    ${responsive.sm} {
-      font-size: 14px;
-      line-height: 16px;
-    }
-  `,
-}));
+const styles = {
+  header:
+    'flex items-center justify-between gap-2 [@media(width<=575.98px)]:mb-2 [@media(width<=575.98px)]:flex-wrap',
+  statistic:
+    '[&_.ant-statistic-content-value-int]:text-2xl [&_.ant-statistic-content-value-int]:font-semibold [&_.ant-statistic-content-value-int]:leading-8 [&_.ant-statistic-content-value-decimal]:text-2xl [&_.ant-statistic-content-value-decimal]:font-semibold [&_.ant-statistic-content-value-decimal]:leading-8',
+  title: 'flex-1 overflow-hidden text-sm font-medium leading-5.5 text-foreground',
+};
 
 export interface StatisticConfig {
   description?: ReactNode;
@@ -130,10 +100,10 @@ const StatisticCard = memo<StatisticCardProps>(
         className={cn('flex-1', className)}
         style={{
           ...(variant === 'outlined' && {
-            border: `1px solid ${cssVar.colorBorderSecondary}`,
-            borderRadius: cssVar.borderRadiusLG,
+            border: '1px solid var(--divider)',
+            borderRadius: 'var(--radius-card)',
           }),
-          ...(variant === 'filled' && { background: cssVar.colorFillQuaternary }),
+          ...(variant === 'filled' && { background: 'var(--fill-quaternary)' }),
           padding,
           paddingBlock,
           paddingInline,

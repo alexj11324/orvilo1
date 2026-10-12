@@ -13,7 +13,7 @@ import { useIsDark } from '@/hooks/useIsDark';
 import { detectIndentStyle } from './indent';
 import { getEditorLanguage } from './language';
 import StatusBar, { type CursorPosition } from './StatusBar';
-import { styles } from './style';
+import { getCodeEditorTheme, styles } from './style';
 
 /**
  * The parts of the underlying CodeMirror 6 view that the compat wrapper does
@@ -139,7 +139,7 @@ const CodeEditorPane = memo<CodeEditorPaneProps>(
 
         view.dispatch({
           effects: instance.optionHelper.theme.reconfigure(
-            view.constructor.theme(lobeTheme, { dark: isDark }),
+            getCodeEditorTheme(view.constructor, lobeTheme, { dark: isDark }),
           ),
         });
 
@@ -208,7 +208,7 @@ const CodeEditorPane = memo<CodeEditorPaneProps>(
       const view = instance.view as unknown as EditorViewInternals;
       view.dispatch({
         effects: instance.optionHelper.theme.reconfigure(
-          view.constructor.theme(lobeTheme, { dark: isDark }),
+          getCodeEditorTheme(view.constructor, lobeTheme, { dark: isDark }),
         ),
       });
     }, [isDark]);

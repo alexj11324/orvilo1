@@ -187,7 +187,7 @@ const createEnabledList = (
 
 describe('ModelDetailPanel pricing', () => {
   it('renders the Orvilo-scoped localized description for the Orvilo provider', () => {
-    const { container } = render(
+    render(
       <ModelDetailPanel
         model="test-model"
         provider="orvilo"
@@ -197,13 +197,13 @@ describe('ModelDetailPanel pricing', () => {
       />,
     );
 
-    expect(container.querySelector('.description')).toHaveTextContent(
-      'Localized Orvilo model description.',
-    );
+    expect(
+      screen.getByText('Localized Orvilo model description.', { selector: 'p' }),
+    ).toBeInTheDocument();
   });
 
   it('renders the bare model-id description key for non-Orvilo providers', () => {
-    const { container } = render(
+    render(
       <ModelDetailPanel
         model="test-model"
         provider="openai"
@@ -213,13 +213,11 @@ describe('ModelDetailPanel pricing', () => {
       />,
     );
 
-    expect(container.querySelector('.description')).toHaveTextContent(
-      'Localized model description.',
-    );
+    expect(screen.getByText('Localized model description.', { selector: 'p' })).toBeInTheDocument();
   });
 
   it('falls back to the model card description when no locale key exists', () => {
-    const { container } = render(
+    render(
       <ModelDetailPanel
         model="missing-locale-model"
         provider="orvilo"
@@ -230,13 +228,11 @@ describe('ModelDetailPanel pricing', () => {
       />,
     );
 
-    expect(container.querySelector('.description')).toHaveTextContent(
-      'Fallback model description.',
-    );
+    expect(screen.getByText('Fallback model description.', { selector: 'p' })).toBeInTheDocument();
   });
 
   it('resolves Orvilo descriptions when the model id contains a colon', () => {
-    const { container } = render(
+    render(
       <ModelDetailPanel
         model="gemini-3-pro-image-preview:image"
         provider="orvilo"
@@ -247,9 +243,9 @@ describe('ModelDetailPanel pricing', () => {
       />,
     );
 
-    expect(container.querySelector('.description')).toHaveTextContent(
-      'Localized Orvilo colon-id model description.',
-    );
+    expect(
+      screen.getByText('Localized Orvilo colon-id model description.', { selector: 'p' }),
+    ).toBeInTheDocument();
   });
 
   it('renders branding provider token pricing in credits', () => {
@@ -275,7 +271,7 @@ describe('ModelDetailPanel pricing', () => {
       />,
     );
 
-    const originalPrice = container.querySelector('.originalPriceText');
+    const originalPrice = screen.getByText('5M');
 
     expect(originalPrice).toHaveTextContent('5M');
     expect(originalPrice).not.toHaveTextContent('credits/M tokens');

@@ -1,6 +1,4 @@
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
-import { createGlobalStyle, createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { type ReactNode, type UIEvent } from 'react';
 import { memo, Suspense, useCallback, useLayoutEffect, useRef } from 'react';
 
@@ -13,76 +11,23 @@ import { useActiveNavKey } from './useActiveNavKey';
 
 const scrollOffsets = new Map<string, number>();
 
-// Register the fade custom properties as lengths so scroll-driven animation
-// interpolates smoothly instead of snapping at scroll edges.
-const ScrollFadeProperties = createGlobalStyle`
-  @property --sidebar-fade-top {
-    inherits: true;
-    initial-value: 0;
-    syntax: '<length>';
-  }
-
-  @property --sidebar-fade-bottom {
-    inherits: true;
-    initial-value: 0;
-    syntax: '<length>';
-  }
-`;
-
-const styles = createStaticStyles(({ css }) => ({
-  // Edge fade on the scroll viewport: mask fades content near the top/bottom
-  // edges, driven by distance to each edge (first/last 40px). Base UI's
-  // ScrollArea.Viewport already publishes --scroll-area-overflow-y-* px values.
-  scrollFade: css`
-    --scroll-area-overflow-y-start: inherit;
-    --scroll-area-overflow-y-end: inherit;
-    --sidebar-fade-size: 40px;
-    --sidebar-fade-top: min(var(--sidebar-fade-size), var(--scroll-area-overflow-y-start, 0px));
-    --sidebar-fade-bottom: min(var(--sidebar-fade-size), var(--scroll-area-overflow-y-end, 0px));
-
-    mask-image: linear-gradient(
-      to bottom,
-      transparent 0,
-      #000 var(--sidebar-fade-top),
-      #000 calc(100% - var(--sidebar-fade-bottom)),
-      transparent 100%
-    );
-    mask-repeat: no-repeat;
-    mask-size: 100% 100%;
-
-    @supports (animation-timeline: scroll()) {
-      @keyframes sidebar-scroll-fade-top-in {
-        from {
-          --sidebar-fade-top: 0;
-        }
-
-        to {
-          --sidebar-fade-top: var(--sidebar-fade-size);
-        }
-      }
-
-      @keyframes sidebar-scroll-fade-bottom-out {
-        from {
-          --sidebar-fade-bottom: var(--sidebar-fade-size);
-        }
-
-        to {
-          --sidebar-fade-bottom: 0;
-        }
-      }
-
-      animation-name: sidebar-scroll-fade-top-in, sidebar-scroll-fade-bottom-out;
-      animation-duration: 1ms, 1ms;
-      animation-timing-function: linear, linear;
-      animation-fill-mode: both, both;
-      animation-timeline: scroll(self y), scroll(self y);
-
-      animation-range:
-        0 var(--sidebar-fade-size),
-        calc(100% - var(--sidebar-fade-size)) 100%;
-    }
-  `,
-}));
+// Base UI publishes inherited overflow distances. The opaque mask stops are
+// alpha coverage, not a visual palette. Global @property/keyframes retain the
+// scroll timeline interpolation; ThemeRoles stops the viewport's motion under
+// disabled animation or prefers-reduced-motion without removing its edge mask.
+const scrollFadeClassName = [
+  'size-full [--scroll-area-overflow-y-start:inherit] [--scroll-area-overflow-y-end:inherit]',
+  '[--sidebar-fade-size:calc(var(--spacing)*10)]',
+  '[--sidebar-fade-top:min(var(--sidebar-fade-size),var(--scroll-area-overflow-y-start,0px))]',
+  '[--sidebar-fade-bottom:min(var(--sidebar-fade-size),var(--scroll-area-overflow-y-end,0px))]',
+  '[mask-image:linear-gradient(to_bottom,transparent_0,black_var(--sidebar-fade-top),black_calc(100%_-_var(--sidebar-fade-bottom)),transparent_100%)] [mask-repeat:no-repeat] [mask-size:100%_100%]',
+  'supports-[animation-timeline:scroll()]:[animation-name:orvilo-sidebar-scroll-fade-top-in,orvilo-sidebar-scroll-fade-bottom-out]',
+  'supports-[animation-timeline:scroll()]:[animation-duration:1ms,1ms]',
+  'supports-[animation-timeline:scroll()]:[animation-timing-function:linear,linear]',
+  'supports-[animation-timeline:scroll()]:[animation-fill-mode:both,both]',
+  'supports-[animation-timeline:scroll()]:[animation-timeline:scroll(self_y),scroll(self_y)]',
+  'supports-[animation-timeline:scroll()]:[animation-range:0_var(--sidebar-fade-size),calc(100%_-_var(--sidebar-fade-size))_100%]',
+].join(' ');
 
 interface SidebarLayoutProps {
   body?: ReactNode;
@@ -112,16 +57,15 @@ const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => 
   }, [navKey]);
 
   return (
-    <div className="flex flex-col gap-[1px]" style={{ height: '100%', overflow: 'hidden' }}>
-      <ScrollFadeProperties />
+    <div className="flex h-full flex-col gap-px overflow-hidden">
       <Suspense fallback={<SideBarHeaderSkeleton />}>{header}</Suspense>
       <ScrollAreaPrimitive.Root
         // Preserve the height chain for sidebar bodies containing virtual lists.
-        className="relative"
-        style={{ flex: 1, minHeight: 0 }}
+        className="relative min-h-0 flex-1"
       >
         <ScrollAreaPrimitive.Viewport
-          className={cn('size-full', styles.scrollFade)}
+          className={scrollFadeClassName}
+          data-slot="sidebar-scroll-viewport"
           ref={scrollerRef}
           onScroll={handleScroll}
         >

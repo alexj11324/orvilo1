@@ -42,8 +42,16 @@ const EditorModalFooter = memo<EditorModalFooterProps>(({ editorBridge, okText, 
 
   return (
     <ModalFooter>
-      <Button onClick={close}>{t('cancel')}</Button>
-      <Button disabled={!ready} loading={confirmLoading} variant="default" onClick={handleConfirm}>
+      <Button size="lg" onClick={close}>
+        {t('cancel')}
+      </Button>
+      <Button
+        disabled={!ready}
+        loading={confirmLoading}
+        size="lg"
+        variant="default"
+        onClick={handleConfirm}
+      >
         {okText ?? t('ok', { defaultValue: 'OK' })}
       </Button>
     </ModalFooter>

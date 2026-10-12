@@ -2,7 +2,6 @@
 
 import type { AgentGraph, OrviloAgentChatConfig } from '@orvilo/types';
 import { AgentGraphSchema } from '@orvilo/types/agent/graph';
-import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { CircleAlert } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -15,33 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 
 import { useStore } from '../store';
 import { selectors } from '../store/selectors';
-
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    justify-content: flex-end;
-  `,
-  editor: css`
-    font-family: ${cssVar.fontFamilyCode};
-  `,
-  item: css`
-    padding: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  itemDesc: css`
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  itemTitle: css`
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-}));
 
 const formatGraph = (graph?: AgentGraph | null) => (graph ? JSON.stringify(graph, null, 2) : '');
 
@@ -124,11 +96,15 @@ const AgentGraphRuntime = memo(() => {
   }, [disabled, enabled, graphText, t, updateConfig]);
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      <div className={`flex items-center gap-4 ${styles.item}`}>
+    <div className="flex w-full max-w-160 flex-col gap-4">
+      <div className="flex items-center gap-4 rounded-(--radius-card) border border-divider bg-card p-4">
         <div className="flex flex-col flex-1 gap-1">
-          <h3 className={styles.itemTitle}>{t('settingGraphRuntime.enabled.title')}</h3>
-          <p className={styles.itemDesc}>{t('settingGraphRuntime.enabled.desc')}</p>
+          <h3 className="m-0 text-sm leading-5.5 font-semibold text-foreground">
+            {t('settingGraphRuntime.enabled.title')}
+          </h3>
+          <p className="m-0 text-sm leading-5.5 text-muted-foreground">
+            {t('settingGraphRuntime.enabled.desc')}
+          </p>
         </div>
         <Switch
           checked={enabled}
@@ -140,13 +116,17 @@ const AgentGraphRuntime = memo(() => {
         />
       </div>
 
-      <div className={`flex flex-col gap-3 ${styles.item}`}>
+      <div className="flex flex-col gap-3 rounded-(--radius-card) border border-divider bg-card p-4">
         <div className="flex flex-col gap-1">
-          <h3 className={styles.itemTitle}>{t('settingGraphRuntime.snapshot.title')}</h3>
-          <p className={styles.itemDesc}>{t('settingGraphRuntime.snapshot.desc')}</p>
+          <h3 className="m-0 text-sm leading-5.5 font-semibold text-foreground">
+            {t('settingGraphRuntime.snapshot.title')}
+          </h3>
+          <p className="m-0 text-sm leading-5.5 text-muted-foreground">
+            {t('settingGraphRuntime.snapshot.desc')}
+          </p>
         </div>
         <Textarea
-          className={styles.editor}
+          className="font-mono text-sm leading-5.5"
           disabled={disabled}
           placeholder={t('settingGraphRuntime.snapshot.placeholder')}
           rows={16}
@@ -165,10 +145,11 @@ const AgentGraphRuntime = memo(() => {
         </Alert>
       )}
 
-      <div className={`flex ${styles.actions}`}>
+      <div className="flex justify-end">
         <Button
           disabled={disabled || !isDirty}
           loading={saving}
+          size="lg"
           variant="default"
           onClick={handleSave}
         >

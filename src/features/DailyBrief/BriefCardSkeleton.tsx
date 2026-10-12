@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { Separator } from '@/components/ui/separator';
@@ -10,8 +9,8 @@ const BriefCardSkeleton = memo(() => {
     <div
       className="flex flex-col gap-3 p-3"
       style={{
-        border: `1px solid ${cssVar.colorBorder}`,
-        borderRadius: cssVar.borderRadiusLG,
+        border: `1px solid ${'var(--ant-color-border)'}`,
+        borderRadius: 'var(--ant-border-radius-lg)',
       }}
     >
       <div className="flex items-center gap-4 justify-between">
@@ -21,7 +20,12 @@ const BriefCardSkeleton = memo(() => {
         >
           <Skeleton
             className="rounded-md shrink-0"
-            style={{ borderRadius: cssVar.borderRadius, flex: 'none', width: 28, height: 28 }}
+            style={{
+              borderRadius: 'var(--ant-border-radius)',
+              flex: 'none',
+              width: 28,
+              height: 28,
+            }}
           />
           <Skeleton style={{ height: 20, width: 200 }} />
           <Skeleton style={{ height: 14, width: 72 }} />

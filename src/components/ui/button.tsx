@@ -1,6 +1,10 @@
+'use client';
+
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from 'cn';
+
+import { useFormControlContext } from '@/components/FormControlContext';
 
 import { Spinner } from './spinner';
 
@@ -24,10 +28,17 @@ const buttonVariants = cva(
       },
       size: {
         'default':
+          'h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+        'compact':
           'h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         'xs': "h-6 gap-1 rounded-(--radius-input) px-2 text-xs in-data-[slot=button-group]:rounded-(--radius-button) has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         'sm': "h-7 gap-1 rounded-(--radius-input) px-2.5 text-xs in-data-[slot=button-group]:rounded-(--radius-button) has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        'normal':
+          'h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+        // Existing normal controls use lg; large names the 40px role.
         'lg': 'h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+        'large':
+          'h-10 gap-1.5 px-2.5 text-base has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         'icon': 'size-8',
         'icon-xs':
           "size-6 rounded-(--radius-input) in-data-[slot=button-group]:rounded-(--radius-button) [&_svg:not([class*='size-'])]:size-3",
@@ -46,26 +57,70 @@ const buttonVariants = cva(
 interface ButtonLoadingProps {
   /** Render a spinner before the children and disable the button while pending. */
   loading?: boolean;
+  /** Keep the selected visual-size minimum while allowing a long label to wrap. */
+  multiline?: boolean;
 }
+
+const multilineMinimumHeight: Record<
+  NonNullable<VariantProps<typeof buttonVariants>['size']>,
+  string
+> = {
+  'default': 'min-h-9',
+  'compact': 'min-h-8',
+  'xs': 'min-h-6',
+  'sm': 'min-h-7',
+  'normal': 'min-h-9',
+  'lg': 'min-h-9',
+  'large': 'min-h-10',
+  'icon': 'min-h-8',
+  'icon-xs': 'min-h-6',
+  'icon-sm': 'min-h-7',
+  'icon-lg': 'min-h-9',
+};
 
 function Button({
   className,
   variant = 'default',
-  size = 'default',
+  size,
   loading = false,
+  multiline = false,
   disabled,
   children,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & ButtonLoadingProps) {
+  const formControl = useFormControlContext();
+  const resolvedSize =
+    size === undefined
+      ? formControl.size === 'small'
+        ? 'sm'
+        : formControl.size === 'large'
+          ? 'large'
+          : 'default'
+      : size;
+
   return (
     <ButtonPrimitive
       aria-busy={loading || undefined}
-      className={cn(buttonVariants({ variant, size, className }))}
       data-slot="button"
-      disabled={disabled || loading}
+      disabled={(disabled ?? formControl.disabled) || loading}
+      className={
+        multiline
+          ? cn(
+              buttonVariants({ variant, size: resolvedSize }),
+              size === undefined && formControl.size === 'small' && 'text-sm',
+              multilineMinimumHeight[resolvedSize ?? 'default'],
+              'h-auto whitespace-normal',
+              className,
+            )
+          : cn(
+              buttonVariants({ variant, size: resolvedSize }),
+              size === undefined && formControl.size === 'small' && 'text-sm',
+              className,
+            )
+      }
       {...props}
     >
-      {loading ? <Spinner data-icon="inline-start" /> : null}
+      {loading ? <Spinner aria-hidden="true" data-icon="inline-start" focusable="false" /> : null}
       {children}
     </ButtonPrimitive>
   );

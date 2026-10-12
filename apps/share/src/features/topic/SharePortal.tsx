@@ -1,7 +1,6 @@
 'use client';
 
 import { DraggablePanel } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
 import { CHAT_PORTAL_TOOL_UI_WIDTH } from '@/const/layoutTokens';
@@ -9,35 +8,13 @@ import { PortalContent } from '@/features/Portal/router';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 
-const styles = createStaticStyles(({ cssVar, css }) => ({
-  body: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
+import slotStyles from './SharePortal.module.css';
 
-    height: 0;
-    padding-block-end: 12px;
-  `,
-  content: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    height: 100%;
-    min-height: 100%;
-    max-height: 100%;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  drawer: css`
-    z-index: 10;
-    height: 100%;
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  body: 'overflow-hidden flex flex-1 flex-col h-0 pbe-3',
+  content: slotStyles.content,
+  drawer: 'z-10 h-full bg-card',
+};
 
 const SharePortal = memo(() => {
   const showPortal = useChatStore(chatPortalSelectors.showPortal);

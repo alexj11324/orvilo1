@@ -1,70 +1,16 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { History } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ChatHistoryMenu from './index';
 
-const styles = createStaticStyles(({ css }) => ({
-  // The reference's shared bottom-right utility row floats above page content
-  // in the route's corner. The row container in `(chat)/_layout` is already
-  // `position: relative`, so this anchors to the chat surface's bottom-right.
-  row: css`
-    pointer-events: none;
-
-    position: absolute;
-    z-index: 20;
-    inset-block-end: 12px;
-    inset-inline-end: 12px;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-  `,
-  // Same pill geometry as the header title trigger (28px / 9999r / 12px-500).
-  trigger: css`
-    pointer-events: auto;
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: 9999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowTertiary};
-
-    transition:
-      background 0.15s,
-      color 0.15s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -1px;
-    }
-
-    &[data-popup-open] {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  row: 'pointer-events-none absolute end-3 inset-be-3 z-20 flex items-center gap-1',
+  trigger:
+    'pointer-events-auto inline-flex h-8 pointer-coarse:h-11 cursor-pointer items-center gap-1 rounded-full border-0 bg-popover px-2 text-sm leading-5.5 font-medium text-muted-foreground shadow-(--shadow-raised) transition-[background-color,color] duration-(--orvilo-motion-mid) hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-[-1px] data-[popup-open]:text-foreground data-[popup-open]:bg-accent motion-reduce:transition-none',
+} as const;
 
 /**
  * Bottom-right utility row for the agent chat surface. The reference pairs
@@ -86,7 +32,7 @@ const ChatHistoryUtilityRow = memo(() => {
           'type': 'button',
         }}
       >
-        <History size={14} />
+        <History className="size-4" size={16} />
         <span>{t('chatHistory.title')}</span>
       </ChatHistoryMenu>
     </div>

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -15,7 +15,7 @@ const MATERIAL_ASSET_HOST = '@lobehub/assets-fileicon';
 // The document tree (agent documents) and the code trees (project Files, review
 // diff) share one ExplorerTree component but MUST NOT share a look: documents are
 // prose and get a 36px/14px monochrome outline treatment, code files keep the
-// dense material icon set. These assertions are the guard rail for that split —
+// compact 32px rows and material icon set. These assertions guard that split —
 // they fail the moment a document-only token starts leaking into the code trees.
 describe('document tree and code tree are styled independently', () => {
   it('paints the document tree with inline lucide masks, never the material sprite set', () => {
@@ -64,7 +64,7 @@ describe('document tree and code tree are styled independently', () => {
 // would still pass if a code tree started importing the document bundle.
 describe('code tree call sites', () => {
   const read = (relativePath: string) =>
-    readFileSync(join(__dirname, '..', '..', '..', 'src', relativePath), 'utf8');
+    readFileSync(path.join(__dirname, '..', '..', '..', 'src', relativePath), 'utf8');
 
   const CODE_TREE_FILES = [
     'features/Conversation/WorkingSidebar/Files/index.tsx',
@@ -77,10 +77,11 @@ describe('code tree call sites', () => {
     expect(source).not.toContain('DOCUMENT_TREE_ICON_CSS');
     expect(source).not.toContain('DOCUMENT_TREE_ROW_CSS');
     expect(source).not.toContain('DOCUMENT_TREE_LAYOUT');
-    // They keep their own pre-existing 12px label and pierre's default 30px row
-    // (no `itemHeight` prop) — that is what "文件的那个 tree 渲染保留原样" means.
-    // The document tree's 14px / 36px must never reach them.
-    expect(source).toContain('--trees-font-size-override: 12px');
-    expect(source).not.toContain('itemHeight');
+    // Code labels consume the DESIGN.md body role in compact 32px work rows.
+    // Document masks and 36px row metrics stay separate.
+    expect(source).toContain('[--trees-font-size-override:var(--text-sm)]');
+    expect(source).toContain('line-height: var(--text-sm--line-height)');
+    expect(source).toContain('itemHeight={32}');
+    expect(source).not.toContain('itemHeight={36}');
   });
 });

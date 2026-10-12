@@ -1,7 +1,6 @@
 'use client';
 
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -16,22 +15,11 @@ import PinOnTopButton from './PinOnTopButton';
 // Reserve space for macOS traffic lights when titleBarStyle is hidden.
 const MAC_TRAFFIC_LIGHT_WIDTH = 80;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    user-select: none;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    background: ${cssVar.colorBgLayout};
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  container: 'select-none border-be border-divider bg-background',
+  title:
+    'overflow-hidden text-xs leading-5 text-muted-foreground text-center text-ellipsis whitespace-nowrap',
+};
 
 interface PopupTitleBarProps {
   title?: string;
@@ -50,17 +38,18 @@ const PopupTitleBar = memo<PopupTitleBarProps>(({ title }) => {
 
   return (
     <div
-      className={cn('flex items-center gap-1', cx(styles.container, electronStylish.draggable))}
+      className={cn(
+        'flex items-center flex-none gap-1 w-full px-2',
+        styles.container,
+        electronStylish.draggable,
+      )}
       style={{
-        flex: 'none',
         height: TITLE_BAR_HEIGHT,
-        width: '100%',
         minHeight: TITLE_BAR_HEIGHT,
-        paddingInline: 8,
       }}
     >
       <div style={{ flex: `0 0 ${leftSpacer}px` }} />
-      <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1 min-w-0">
         {title && <div className={styles.title}>{title}</div>}
       </div>
       <PinOnTopButton />

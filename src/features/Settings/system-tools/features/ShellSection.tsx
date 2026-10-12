@@ -76,7 +76,7 @@ const ShellSection = memo(() => {
               if (value !== null) handleChange(value);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

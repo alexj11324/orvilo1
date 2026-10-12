@@ -9,7 +9,7 @@ import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import { resolveAcceptanceVerdictMeta } from '../verdict';
 
 const styles = {
-  pill: 'inline-flex items-center gap-[5px] py-0.5 px-2.5 rounded-[99px] text-[12px] font-medium',
+  pill: 'inline-flex items-center gap-1.25 py-0.5 px-2.5 rounded-[99px] text-xs font-medium',
   interactive:
     'cursor-pointer transition-[filter] duration-(--ant-motion-duration-mid) ease-[ease] hover:brightness-[1.08]',
 };

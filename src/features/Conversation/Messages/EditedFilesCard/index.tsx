@@ -8,8 +8,7 @@ import {
   KindDot,
   LineStats,
 } from '@orvilo/shared-tool-ui/components';
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import {
   ArrowUpRightIcon,
   ChevronDownIcon,
@@ -34,167 +33,37 @@ export const AGGREGATE_EDITED_FILE_ICON_SIZE = 40;
 export const INITIAL_VISIBLE_EDITED_FILES = 3;
 
 /** Fire a toggle on Enter/Space so the div-based expander is keyboard operable. */
-const toggleOnKey = (toggle: () => void) => (event: KeyboardEvent<HTMLDivElement>) => {
+const toggleOnKey = (toggle: () => void) => (event: KeyboardEvent<HTMLElement>) => {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
     toggle();
   }
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
-  `,
-  header: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-  `,
-  headerIcon: css`
-    flex-shrink: 0;
-
-    width: ${AGGREGATE_EDITED_FILE_ICON_SIZE}px;
-    height: ${AGGREGATE_EDITED_FILE_ICON_SIZE}px;
-    border-radius: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  singleHeader: css`
-    position: relative;
-    padding-block: 8px;
-    padding-inline: 12px;
-
-    &:hover [data-view-changes],
-    &:focus-within [data-view-changes] {
-      pointer-events: auto;
-      transform: translateX(0);
-      opacity: 1;
-    }
-  `,
-  singleHeaderClickable: css`
-    cursor: pointer;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  singleTitle: css`
-    min-width: 0;
-    font-size: 14px;
-    font-weight: 500;
-  `,
-  /**
-   * The action slides *over* the line stats instead of displacing them, so the
-   * `+N -M` column stays put on hover. The two stacked gradients composite to
-   * exactly the hovered row colour (fill over elevated), which is why the
-   * opaque end shows no seam against the row behind it.
-   */
-  viewChanges: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block: 0;
-    inset-inline-end: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-
-    padding-inline: 56px 12px;
-
-    opacity: 0;
-    background:
-      linear-gradient(to left, ${cssVar.colorFillQuaternary} 62%, transparent),
-      linear-gradient(to left, ${cssVar.colorBgElevated} 62%, transparent);
-
-    transition: opacity 160ms ${cssVar.motionEaseOut};
-
-    @media (hover: none) {
-      pointer-events: auto;
-      opacity: 1;
-    }
-  `,
-  viewChangesButton: css`
-    height: 22px;
-    padding: 0;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  viewChangesVisible: css`
-    pointer-events: auto;
-    opacity: 1;
-  `,
-  chevron: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  title: css`
-    min-width: 0;
-    font-size: 14px;
-    font-weight: 500;
-  `,
-  stats: css`
-    font-weight: 500;
-  `,
-  list: css`
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  showMore: css`
-    cursor: pointer;
-
-    padding-block: 7px;
-    padding-inline: 12px;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  row: css`
-    position: relative;
-    padding-block: 6px;
-    padding-inline: 12px;
-
-    &:hover [data-view-changes],
-    &:focus-within [data-view-changes] {
-      pointer-events: auto;
-      transform: translateX(0);
-      opacity: 1;
-    }
-  `,
-  rowMain: css`
-    min-height: 24px;
-  `,
-  rowClickable: css`
-    cursor: pointer;
-    border-radius: 6px;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  path: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  patch: css`
-    overflow: hidden;
-    margin-block-start: 6px;
-    padding-inline-start: 18px;
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden w-full border border-divider rounded-(--radius-card) bg-popover',
+  header: 'py-2 px-3',
+  headerIcon: 'shrink-0 size-10 rounded-(--radius-card) text-muted-foreground bg-muted',
+  singleHeader:
+    'relative py-2 px-3 [&:hover_[data-view-changes]]:pointer-events-auto [&:hover_[data-view-changes]]:translate-x-0 [&:hover_[data-view-changes]]:opacity-100 [&:focus-within_[data-view-changes]]:pointer-events-auto [&:focus-within_[data-view-changes]]:translate-x-0 [&:focus-within_[data-view-changes]]:opacity-100',
+  singleHeaderClickable: 'cursor-pointer hover:bg-fill-quaternary',
+  singleTitle: 'min-w-0 text-sm font-medium',
+  viewChanges:
+    'pointer-events-none absolute inset-bs-0 inset-be-0 end-0 flex items-center justify-end ps-14 pe-3 opacity-0 [background:linear-gradient(to_left,var(--fill-quaternary)_62%,transparent),linear-gradient(to_left,var(--popover)_62%,transparent)] rtl:[background:linear-gradient(to_right,var(--fill-quaternary)_62%,transparent),linear-gradient(to_right,var(--popover)_62%,transparent)] transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-out) [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100',
+  viewChangesButton: 'p-0 text-muted-foreground',
+  viewChangesVisible: 'pointer-events-auto opacity-100',
+  chevron: 'shrink-0 text-foreground-tertiary',
+  title: 'min-w-0 text-sm font-medium',
+  stats: 'font-medium',
+  list: '[border-block-start:1px_solid_var(--divider)]',
+  showMore:
+    'cursor-pointer justify-start w-full px-3 text-sm text-muted-foreground hover:bg-fill-quaternary',
+  row: 'relative py-1.5 px-3 [&:hover_[data-view-changes]]:pointer-events-auto [&:hover_[data-view-changes]]:translate-x-0 [&:hover_[data-view-changes]]:opacity-100 [&:focus-within_[data-view-changes]]:pointer-events-auto [&:focus-within_[data-view-changes]]:translate-x-0 [&:focus-within_[data-view-changes]]:opacity-100',
+  rowMain: 'min-h-6',
+  rowClickable: 'cursor-pointer rounded-(--radius-button) hover:bg-fill-quaternary',
+  path: 'overflow-hidden flex flex-1 items-center min-w-0',
+  patch: 'overflow-hidden mbs-1.5 ps-4.5',
+};
 
 const EditedFileDiff = ({ patch, fileName }: { patch: string; fileName: string }) => {
   const files = parseUnifiedDiff(patch).filter((file) => file.lines.length > 0);
@@ -254,7 +123,7 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
             <Button
               aria-expanded={expanded}
               className={styles.viewChangesButton}
-              size={'sm'}
+              size={'compact'}
               variant={'ghost'}
               // Enter/Space on the button must not bubble into the row's own
               // key handler, which would also open the file preview.
@@ -271,9 +140,9 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
         {!onOpen &&
           hasDiff &&
           (expanded ? (
-            <ChevronDownIcon className={styles.chevron} size={14} />
+            <ChevronDownIcon className={styles.chevron} size={16} />
           ) : (
-            <ChevronRightIcon className={styles.chevron} size={14} />
+            <ChevronRightIcon className={styles.chevron} size={16} />
           ))}
       </div>
       {hasDiff && expanded && (
@@ -343,7 +212,7 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
               <Button
                 aria-expanded={showDiff}
                 className={styles.viewChangesButton}
-                size={'sm'}
+                size={'compact'}
                 variant={'ghost'}
                 onKeyDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
@@ -354,7 +223,7 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
                 }}
               >
                 {t(showDiff ? 'editedFiles.hideChanges' : 'editedFiles.viewChanges')}
-                <ArrowUpRightIcon data-icon="inline-end" size={14} />
+                <ArrowUpRightIcon data-icon="inline-end" size={16} />
               </Button>
             </div>
           )}
@@ -398,9 +267,9 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
     <div className={cn('flex flex-col', styles.card)}>
       <div className={cn('flex items-center gap-2.5', styles.header)}>
         <div className={cn('flex flex-col items-center justify-center', styles.headerIcon)}>
-          <FilePenLineIcon size={20} />
+          <FilePenLineIcon size={16} />
         </div>
-        <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+        <div className="flex min-w-0 flex-col flex-1 gap-0.5">
           <div className={cn('truncate', styles.title)}>
             {t('editedFiles.title', { count: entries.length })}
           </div>
@@ -417,11 +286,14 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
           <EditedFileRow entry={entry} key={entry.path} onOpen={getOpenAction(entry)} />
         ))}
         {hiddenCount > 0 && (
-          <div
+          <Button
             aria-expanded={showAll}
             className={cn('flex items-center gap-1.5', styles.showMore)}
             role={'button'}
+            size="normal"
             tabIndex={0}
+            type="button"
+            variant="ghost"
             onClick={toggleShowAll}
             onKeyDown={toggleOnKey(toggleShowAll)}
           >
@@ -429,11 +301,11 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
               ? t('editedFiles.showLess')
               : t('editedFiles.showMore', { count: hiddenCount })}
             {showAll ? (
-              <ChevronUpIcon className={styles.chevron} size={14} />
+              <ChevronUpIcon className={styles.chevron} size={16} />
             ) : (
-              <ChevronDownIcon className={styles.chevron} size={14} />
+              <ChevronDownIcon className={styles.chevron} size={16} />
             )}
-          </div>
+          </Button>
         )}
       </div>
     </div>

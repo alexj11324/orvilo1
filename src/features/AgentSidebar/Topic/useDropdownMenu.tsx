@@ -1,5 +1,4 @@
 import { isDesktop } from '@orvilo/const';
-import { css, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import {
   Archive,
@@ -32,15 +31,6 @@ import { useUserStore } from '@/store/user';
 import { preferenceSelectors, userProfileSelectors } from '@/store/user/selectors';
 
 import { useAgentTopicGroupMode } from './hooks/useAgentTopicGroupMode';
-
-const hotArea = css`
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-color: transparent;
-  }
-`;
 
 interface UseTopicActionsDropdownMenuOptions {
   onUploadClose?: () => void;
@@ -186,7 +176,9 @@ export const useTopicActionsDropdownMenu = (
         key: 'import',
         label: (
           <Upload accept=".json" beforeUpload={handleImport} disabled={!canCreateTopic}>
-            <div className={cx(hotArea)}>{t('actions.import')}</div>
+            <div className="before:absolute before:inset-0 before:bg-transparent before:content-['']">
+              {t('actions.import')}
+            </div>
           </Upload>
         ),
         ...(onUploadClose ? { closeOnClick: false } : null),

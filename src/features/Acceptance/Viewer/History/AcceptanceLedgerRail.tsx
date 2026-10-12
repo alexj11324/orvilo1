@@ -1,13 +1,12 @@
 'use client';
 
 import { DraggablePanel } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
-import { cn } from 'cn';
 import { PanelRightOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+import { Button } from '@/components/ui/button';
+import { useIsLargeViewport } from '@/hooks/useIsMobile';
 
 import { AcceptanceDrawer } from '../../AcceptanceDrawer';
 import ReportViewer from '../../Report/ReportViewer';
@@ -20,44 +19,9 @@ import { canViewAcceptanceHistory } from '../visibility';
 import LedgerPanel, { type AcceptanceRound } from './LedgerPanel';
 import { useAcceptanceRailState } from './useAcceptanceRailState';
 
-const styles = createStaticStyles(({ css }) => ({
-  chipCount: css`
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  /**
-   * Collapsed, the run ledger is a VERTICAL chip hugging the content's right
-   * edge: the rounds are the page's audit trail, not its reading material, so
-   * the affordance keeps the column it would otherwise occupy down to a
-   * thumb-width strip. The icon plus the round count carry it — spelling the
-   * label out sideways would cost the width the collapse just bought back.
-   */
-  toggle: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 10;
-    inset-block-start: 16px;
-    inset-inline-end: 12px;
-
-    padding-block: 8px;
-    padding-inline: 5px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 99px;
-
-    background: ${cssVar.colorBgContainer};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
-
 const AcceptanceLedgerRail = () => {
   const { t } = useTranslation('verify');
-  const { lg = true } = useResponsive();
+  const lg = useIsLargeViewport();
   const isNarrowViewport = !lg;
   const params = useParams<{ checkId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -134,18 +98,23 @@ const AcceptanceLedgerRail = () => {
   return (
     <>
       {!focused && !expand && (
-        <div
-          {...clickableProps()}
+        <Button
+          aria-label={`${t('acceptance.ledger.expand')} (${data.rounds.length})`}
+          className="absolute z-10 inset-bs-4 end-3 w-8 rounded-full border-divider bg-card p-0 hover:border-border hover:bg-fill-quaternary coarse:before:absolute coarse:before:-inset-1.5 coarse:before:content-['']"
+          size="compact"
           title={t('acceptance.ledger.expand')}
-          className={cn(
-            `flex flex-col items-center gap-[5px] ${styles.toggle}`,
-            CLICKABLE_FOCUS_RING,
-          )}
+          type="button"
+          variant="outline"
           onClick={() => onExpandChange(true)}
         >
-          <PanelRightOpen size={14} />
-          <div className={cn(styles.chipCount)}>{data.rounds.length}</div>
-        </div>
+          <PanelRightOpen className="size-4" size={16} />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-bs-1 -end-1 min-w-5 rounded-(--radius-chip) bg-card px-1 text-xs font-medium leading-5 text-muted-foreground"
+          >
+            {data.rounds.length}
+          </span>
+        </Button>
       )}
       {isNarrowViewport ? (
         <AcceptanceDrawer
@@ -162,7 +131,7 @@ const AcceptanceLedgerRail = () => {
         </AcceptanceDrawer>
       ) : (
         <DraggablePanel
-          backgroundColor={cssVar.colorBgLayout}
+          backgroundColor={'var(--background)'}
           defaultSize={{ width: 340 }}
           expand={expand}
           minWidth={300}
@@ -170,15 +139,8 @@ const AcceptanceLedgerRail = () => {
           style={{ flex: 'none', height: '100%' }}
           onExpandChange={onExpandChange}
         >
-          <div
-            className="flex flex-col"
-            style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
-          >
-            {topic ?? (
-              <div className="flex flex-col" style={{ height: '100%', overflow: 'auto' }}>
-                {ledger}
-              </div>
-            )}
+          <div className="flex flex-col h-full min-h-0 overflow-hidden">
+            {topic ?? <div className="flex flex-col h-full overflow-auto">{ledger}</div>}
           </div>
         </DraggablePanel>
       )}
@@ -195,7 +157,7 @@ const AcceptanceLedgerRail = () => {
         onClose={() => openReport(null)}
       >
         {reportRound && (
-          <div className="flex flex-col" style={{ height: '100%', position: 'relative' }}>
+          <div className="flex flex-col h-full relative">
             <ReportViewer runId={reportRound.run.id} />
           </div>
         )}

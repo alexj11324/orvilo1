@@ -1,7 +1,9 @@
 import { type NeutralColors } from '@lobehub/ui';
-import { ColorSwatches, findCustomThemeName, neutralColors } from '@lobehub/ui';
+import { findCustomThemeName, neutralColors } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { ColorSwatches } from '@/components/ColorSwatches';
 
 interface IProps {
   onChange?: (v: NeutralColors) => void;

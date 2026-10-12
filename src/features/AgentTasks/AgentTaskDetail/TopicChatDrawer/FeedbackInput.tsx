@@ -102,7 +102,12 @@ const FeedbackInput = memo<FeedbackInputProps>(
       return (
         <div className="flex flex-col gap-2">
           <OpStatusTray seamless />
-          <Button className="w-full" variant="secondary" onClick={() => setExpanded(true)}>
+          <Button
+            className="w-full"
+            size="compact"
+            variant="secondary"
+            onClick={() => setExpanded(true)}
+          >
             <MessageCirclePlus data-icon="inline-start" />
             {t('taskDetail.sendFollowUp')}
           </Button>

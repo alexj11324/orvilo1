@@ -91,7 +91,9 @@ export const AcceptanceBundleGate = ({
             <EmptyDescription>{t('acceptance.error.description')}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button onClick={() => void mutate()}>{t('report.actions.retry')}</Button>
+            <Button size="lg" onClick={() => void mutate()}>
+              {t('report.actions.retry')}
+            </Button>
           </EmptyContent>
         </Empty>
       </div>

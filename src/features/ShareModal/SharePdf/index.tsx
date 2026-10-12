@@ -1,5 +1,6 @@
 import { type UIChatMessage } from '@orvilo/types';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { DownloadIcon, FileText } from 'lucide-react';
 import { cloneElement, memo, type ReactElement, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -154,7 +155,7 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
   if (error) {
     return (
       <div
-        className={cx(styles.body, 'flex flex-col gap-4')}
+        className={cn(styles.body, 'flex flex-col gap-4')}
         style={{ flexDirection: !isMobile ? 'row' : 'column' }}
       >
         <div
@@ -165,7 +166,7 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
             {t('shareModal.pdfGenerationError')}: {error}
           </div>
         </div>
-        <div className={cx(styles.sidebar, 'flex flex-col gap-3')}>
+        <div className={cn(styles.sidebar, 'flex flex-col gap-3')}>
           <div>{t('shareModal.pdfErrorDescription')}</div>
           <FieldGroup>
             {settings.map((item) => (
@@ -195,11 +196,11 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
 
   return (
     <div
-      className={cx(styles.body, 'flex flex-col gap-4')}
+      className={cn(styles.body, 'flex flex-col gap-4')}
       style={{ flexDirection: !isMobile ? 'row' : 'column' }}
     >
       <PdfPreview loading={loading} pdfData={pdfData} onGeneratePdf={handleGeneratePdf} />
-      <div className={cx(styles.sidebar, 'flex flex-col gap-3')}>
+      <div className={cn(styles.sidebar, 'flex flex-col gap-3')}>
         <FieldGroup>
           {settings.map((item) => (
             <Field

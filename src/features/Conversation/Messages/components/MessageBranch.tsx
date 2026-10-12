@@ -1,59 +1,19 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { useConversationStore } from '../../store';
 
-const prefixCls = 'ant';
-
-const styles = createStaticStyles(({ css }) => ({
-  button: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition: all 0.2s ease;
-
-    &:hover:not(.${prefixCls}-disabled) {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-
-    &.${prefixCls}-disabled {
-      cursor: not-allowed;
-      opacity: 0.4;
-    }
-  `,
-  container: css`
-    user-select: none;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    height: 20px;
-    padding-inline: 4px;
-    border-radius: ${cssVar.borderRadiusSM};
-  `,
-  text: css`
-    min-width: 24px;
-    height: 20px;
-
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-  `,
-}));
+const styles = {
+  button:
+    "relative cursor-pointer flex items-center justify-center rounded-(--radius-button) text-muted-foreground transition-[color,background-color,opacity] duration-(--orvilo-motion-fast) enabled:hover:text-foreground enabled:hover:bg-accent disabled:opacity-40 motion-reduce:transition-none outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']",
+  container:
+    'select-none inline-flex gap-1 items-center h-8 coarse:h-11 px-1 rounded-(--radius-button)',
+  text: 'min-w-6 h-5 text-xs leading-5 tabular-nums text-muted-foreground text-center',
+};
 
 interface MessageBranchProps {
   activeBranchIndex: number;
@@ -62,6 +22,7 @@ interface MessageBranchProps {
 }
 
 const MessageBranch = memo<MessageBranchProps>(({ activeBranchIndex, count, messageId }) => {
+  const { t } = useTranslation('common');
   const switchMessageBranch = useConversationStore((s) => s.switchMessageBranch);
 
   const handlePrevious = () => {
@@ -81,25 +42,39 @@ const MessageBranch = memo<MessageBranchProps>(({ activeBranchIndex, count, mess
 
   return (
     <div className={cn('flex', styles.container)}>
-      <div
-        className={cx(styles.button, !canGoPrevious && `${prefixCls}-disabled`)}
-        role="button"
-        tabIndex={canGoPrevious ? 0 : -1}
-        onClick={handlePrevious}
+      <span
+        className={cn('inline-flex flex-none coarse:p-1.5', !canGoPrevious && 'cursor-not-allowed')}
       >
-        <ChevronLeft size={16} />
-      </div>
+        <Button
+          aria-label={t('previous')}
+          className={styles.button}
+          disabled={!canGoPrevious}
+          size="icon"
+          type="button"
+          variant="ghost"
+          onClick={handlePrevious}
+        >
+          <ChevronLeft size={16} />
+        </Button>
+      </span>
       <div className={cn('flex flex-col items-center justify-center', styles.text)}>
         {activeBranchIndex + 1}/{count}
       </div>
-      <div
-        className={cx(styles.button, !canGoNext && `${prefixCls}-disabled`)}
-        role="button"
-        tabIndex={canGoNext ? 0 : -1}
-        onClick={handleNext}
+      <span
+        className={cn('inline-flex flex-none coarse:p-1.5', !canGoNext && 'cursor-not-allowed')}
       >
-        <ChevronRight size={16} />
-      </div>
+        <Button
+          aria-label={t('next')}
+          className={styles.button}
+          disabled={!canGoNext}
+          size="icon"
+          type="button"
+          variant="ghost"
+          onClick={handleNext}
+        >
+          <ChevronRight size={16} />
+        </Button>
+      </span>
     </div>
   );
 });

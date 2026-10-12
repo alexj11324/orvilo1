@@ -605,7 +605,7 @@ function DateSelectorPeriodTabs({
 
             return (
               <Button
-                className="size-8.5"
+                size="icon"
                 title={i18n.today}
                 variant="ghost"
                 onClick={() => onMonthChange(new Date())}
@@ -615,14 +615,14 @@ function DateSelectorPeriodTabs({
             );
           })()}
           <Button
-            className="size-8.5"
+            size="icon"
             variant="ghost"
             onClick={() => onMonthChange(subMonths(calendarMonth, 1))}
           >
             <ChevronLeftIcon className="size-4" />
           </Button>
           <Button
-            className="size-8.5"
+            size="icon"
             variant="ghost"
             onClick={() => onMonthChange(addMonths(calendarMonth, 1))}
           >
@@ -1086,7 +1086,7 @@ export function DateSelector({
 
   return (
     <DateSelectorContext value={{ i18n: mergedI18n, variant: 'outline', size: 'default' }}>
-      <div className={cn('w-full space-y-4 sm:w-[470px]', className)}>
+      <div className={cn('w-full space-y-4 sm:w-117.5', className)}>
         <div className="flex flex-wrap items-center gap-3">
           {label && (
             <h3 className="text-sm font-medium" data-slot="data-selector-label">
@@ -1107,6 +1107,7 @@ export function DateSelector({
               readOnly={!inputHint}
               type="text"
               value={inputHint ? inputValue : displayValue}
+              visualSize="normal"
               onBlur={handleInputBlur}
               onChange={handleInputChange}
               onFocus={() => setIsInputFocused(true)}
@@ -1154,7 +1155,7 @@ export function DateSelector({
           </div>
         ) : (
           <div className="-mr-3 w-full">
-            <ScrollArea className="h-[200px] w-full pe-3" key={periodType}>
+            <ScrollArea className="h-50 w-full pe-3" key={periodType}>
               {periodType === 'month' && (
                 <DateSelectorPeriodGrid
                   columns={3}

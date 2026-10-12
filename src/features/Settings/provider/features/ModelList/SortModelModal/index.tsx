@@ -1,28 +1,20 @@
-import { Flexbox, SortableList } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { SortableList } from '@lobehub/ui';
 import { type AiProviderModelListItem } from 'model-bank';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useAiInfraStore } from '@/store/aiInfra';
 
 import ListItem from './ListItem';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    height: 36px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-    transition: background 0.2s ease-in-out;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  container:
+    'h-9 rounded-(--radius-button) px-2 text-sm leading-5.5 transition-[background-color] duration-(--orvilo-motion-mid) ease-in-out motion-reduce:transition-none hover:bg-accent',
+};
 
 interface SortModelModalProps {
   defaultItems: AiProviderModelListItem[];
@@ -48,7 +40,7 @@ const SortModelModal = memo<SortModelModalProps>(({ open, onCancel, defaultItems
       width={400}
       onCancel={onCancel}
     >
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         <SortableList
           items={items}
           renderItem={(item: AiProviderModelListItem) => (
@@ -70,11 +62,12 @@ const SortModelModal = memo<SortModelModalProps>(({ open, onCancel, defaultItems
           }}
         />
         <Button
-          block
+          className="sticky inset-be-0 w-full leading-5.5"
           disabled={!canManageProvider}
           loading={loading}
-          style={{ bottom: 0, position: 'sticky' }}
-          type={'primary'}
+          size="lg"
+          type="button"
+          variant="default"
           onClick={async () => {
             if (!canManageProvider) return;
             if (!providerId) return;
@@ -94,7 +87,7 @@ const SortModelModal = memo<SortModelModalProps>(({ open, onCancel, defaultItems
         >
           {t('sortModal.update')}
         </Button>
-      </Flexbox>
+      </div>
     </ImperativeModal>
   );
 });

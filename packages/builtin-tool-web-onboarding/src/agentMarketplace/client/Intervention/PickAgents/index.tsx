@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import type { KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -10,6 +9,7 @@ import useSWR from 'swr';
 
 import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import {
   fetchAgentTemplates,
@@ -135,11 +135,9 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
         <div className="flex flex-col gap-2">
           <div>{prompt}</div>
           {description && (
-            <div className="text-muted-foreground" style={{ fontSize: 13 }}>
-              {description}
-            </div>
+            <div className="text-sm leading-5.5 text-muted-foreground">{description}</div>
           )}
-          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
+          <div className="text-xs leading-5 text-muted-foreground">
             {tTool('agentMarketplace.picker.summary', {
               filtered: templates.length,
               total: allTemplates.length,
@@ -155,11 +153,9 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
     return (
       <div className={cn('flex', 'flex-col', 'gap-3', styles.root)}>
         <div className={styles.header}>
-          <div style={{ fontWeight: 500 }}>{prompt}</div>
+          <div className="text-sm leading-5.5 font-medium">{prompt}</div>
           {description && (
-            <div className="text-muted-foreground" style={{ fontSize: 13 }}>
-              {description}
-            </div>
+            <div className="text-sm leading-5.5 text-muted-foreground">{description}</div>
           )}
         </div>
 
@@ -172,27 +168,28 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
               : tTool('agentMarketplace.picker.empty')}
           </div>
         ) : (
-          <div className={styles.container}>
-            <div aria-orientation="horizontal" className={styles.tabBar} role="tablist">
-              {availableCategories.map((category) => {
-                const isActive = activeCategory === category;
-                return (
-                  <button
-                    aria-selected={isActive}
-                    className={cx(styles.categoryItem, isActive && styles.categoryItemActive)}
-                    disabled={disabled}
-                    key={category}
-                    role="tab"
-                    type="button"
-                    onClick={() => setActiveCategory(category)}
-                  >
-                    {tTool(CATEGORY_LABEL_I18N_KEYS[category])}
-                  </button>
-                );
-              })}
-            </div>
+          <Tabs
+            className={styles.container}
+            value={activeCategory ?? ''}
+            onValueChange={(value) => {
+              const category = availableCategories.find((item) => item === value);
+              if (category) setActiveCategory(category);
+            }}
+          >
+            <TabsList className={styles.tabBar}>
+              {availableCategories.map((category) => (
+                <TabsTrigger
+                  className={styles.categoryItem}
+                  disabled={disabled}
+                  key={category}
+                  value={category}
+                >
+                  {tTool(CATEGORY_LABEL_I18N_KEYS[category])}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-            <div className={styles.content}>
+            <TabsContent className={styles.content} value={activeCategory ?? ''}>
               {visibleTemplates.length === 0 ? (
                 <div className={styles.empty}>{tTool('agentMarketplace.picker.empty')}</div>
               ) : (
@@ -204,10 +201,15 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
                       <div
                         aria-disabled={disabled}
                         aria-pressed={isSelected}
-                        className={cx(styles.card, isSelected && styles.cardSelected)}
                         key={tpl.id}
                         role="button"
                         tabIndex={disabled ? -1 : 0}
+                        className={cn(
+                          styles.card,
+                          isSelected
+                            ? 'border-primary bg-selected hover:bg-selected'
+                            : 'border-divider bg-card hover:border-primary-hover',
+                        )}
                         onClick={() => toggle(tpl.id)}
                         onKeyDown={(event) => handleCardKeyDown(event, tpl.id)}
                       >
@@ -223,20 +225,26 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
                   })}
                 </div>
               )}
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         )}
 
         <div className={styles.footer}>
-          <div
-            className={`text-muted-foreground ${styles.skipLink}`}
-            onClick={disabled ? undefined : handleSkip}
+          <Button
+            className={styles.skipLink}
+            disabled={disabled}
+            size="normal"
+            type="button"
+            variant="ghost"
+            onClick={handleSkip}
           >
             {t('form.skip')}
-          </div>
+          </Button>
           <Button
             disabled={disabled || selected.size === 0}
             loading={submitting}
+            size="normal"
+            type="button"
             variant="default"
             onClick={handleSubmit}
           >

@@ -199,6 +199,7 @@ export const AgentSettingsList = ({
           className="ml-auto w-full sm:w-60"
           placeholder={t('settingAgent.list.search')}
           value={query}
+          visualSize="compact"
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
@@ -212,7 +213,7 @@ export const AgentSettingsList = ({
         {rows.length ? (
           rows.map((row) => <AgentSettingsListRow key={row.id} row={row} onSelect={onSelect} />)
         ) : (
-          <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-(--radius-card) border p-8 text-center text-sm text-muted-foreground">
             {t(query ? 'settingAgent.list.noResults' : 'settingAgent.list.empty')}
           </div>
         )}

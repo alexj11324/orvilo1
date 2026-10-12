@@ -1,11 +1,12 @@
 /**
  * @vitest-environment happy-dom
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ModelRating } from 'model-bank';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { COMPARE_SERIES_COLORS } from './CompareRadar';
 import BenchmarkModalContent from './index';
 
 vi.mock('antd-style', async (importOriginal) => ({
@@ -181,16 +182,16 @@ describe('BenchmarkModalContent', () => {
   });
 
   it('marks missing dimensions with a dash in the detail table', () => {
-    const { container } = render(<BenchmarkModalContent modelId={'model-e'} provider={'orvilo'} />);
+    render(<BenchmarkModalContent modelId={'model-e'} provider={'orvilo'} />);
 
-    // model-e only has intelligence — the other five dimension rows are dashed
-    expect(container.querySelectorAll('.cellMissing').length).toBeGreaterThan(0);
+    // Five missing dimensions each show dashes for score, raw value, source and date.
+    expect(screen.getAllByText('-')).toHaveLength(20);
     // radar vertex label + table row label
     expect(screen.getAllByText('Intelligence').length).toBe(2);
   });
 
   it('switches to a compare matrix when another model is added', () => {
-    const { container } = render(<BenchmarkModalContent modelId={'model-a'} provider={'orvilo'} />);
+    render(<BenchmarkModalContent modelId={'model-a'} provider={'orvilo'} />);
 
     fireEvent.click(screen.getByText('MODEL-B'));
 
@@ -199,8 +200,27 @@ describe('BenchmarkModalContent', () => {
     expect(screen.getByText('Dimension')).toBeInTheDocument();
     // detail-only columns disappear in compare mode
     expect(screen.queryByText('Raw value')).not.toBeInTheDocument();
-    // best-in-row highlighting: model-a wins every dimension, pill tinted with its series color
-    expect(container.querySelectorAll('.bestPill').length).toBe(6);
+    // Model-a wins all six dimensions; these are actual score paint nodes, not mock style keys.
+    const bestScoreCells = screen.getAllByText(/^(90|85|88|80|75|70)$/, {
+      selector: 'span[style]',
+    });
+    expect(bestScoreCells).toHaveLength(6);
+    expect(bestScoreCells.map((cell) => cell.textContent)).toEqual([
+      '90',
+      '85',
+      '88',
+      '80',
+      '75',
+      '70',
+    ]);
+    for (const cell of bestScoreCells) {
+      expect(cell).toHaveStyle({
+        background: `${COMPARE_SERIES_COLORS[0]}26`,
+        color: COMPARE_SERIES_COLORS[0],
+      });
+    }
+    // This proves inline series binding only. Emitted CSS and actual light/dark highlights
+    // and contrast still require the compiled-CSS and native Electron verification gates.
   });
 
   it('caps the selection at four models', () => {
@@ -221,10 +241,8 @@ describe('BenchmarkModalContent', () => {
     fireEvent.click(screen.getByText('MODEL-B'));
     expect(screen.queryByText('Raw value')).not.toBeInTheDocument();
 
-    const removeButtons = screen
-      .getAllByRole('button')
-      .filter((el) => el.classList.contains('chipRemove'));
-    fireEvent.click(removeButtons[1]);
+    const comparedModelChip = screen.getAllByText('MODEL-B')[0].parentElement!;
+    fireEvent.click(within(comparedModelChip).getByRole('button'));
 
     // back to single-model detail view
     expect(screen.getByText('Raw value')).toBeInTheDocument();

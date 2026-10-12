@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { memo } from 'react';
@@ -13,34 +12,12 @@ import ContentLoading from '@/components/Loading/ContentLoading';
 import { Button } from '@/components/ui/button';
 import { agentDocumentService, agentDocumentSWRKeys } from '@/services/agentDocument';
 
-const styles = createStaticStyles(({ css }) => ({
-  article: css`
-    width: 100%;
-    max-width: 840px;
-    margin-inline: auto;
-    padding-block: 28px 80px;
-    padding-inline: 20px;
-  `,
-  body: css`
-    overflow: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  header: css`
-    flex: none;
-
-    min-height: 52px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  page: css`
-    width: 100%;
-    height: 100dvh;
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  article: 'w-full max-w-210 mx-auto pbs-7 pbe-20 px-5',
+  body: 'overflow-auto flex-1 min-h-0',
+  header: 'flex-none min-h-13 px-3 border-be border-divider bg-card',
+  page: 'w-full h-dvh bg-card text-sm leading-5.5',
+};
 
 interface AgentDocumentReaderProps {
   agentId: string;
@@ -61,10 +38,17 @@ const AgentDocumentReader = memo<AgentDocumentReaderProps>(({ agentId, documentI
   return (
     <div className={cn('flex flex-col', styles.page)}>
       <div className={cn('flex flex-row items-center gap-2', styles.header)}>
-        <ActionIcon icon={ArrowLeft} title={t('back')} onClick={backToAgent} />
+        <span className="inline-flex flex-none coarse:p-1.5">
+          <ActionIcon
+            className="relative coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
+            icon={ArrowLeft}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+            title={t('back')}
+            onClick={backToAgent}
+          />
+        </span>
         <div
-          className="truncate block font-semibold"
-          style={{ flex: 1, minWidth: 0 }}
+          className="truncate block flex-1 min-w-0 text-base leading-6 font-semibold text-foreground"
           title={title}
         >
           {title}
@@ -72,32 +56,31 @@ const AgentDocumentReader = memo<AgentDocumentReaderProps>(({ agentId, documentI
       </div>
       <div className={styles.body}>
         {!error && isLoading ? (
-          <div className="flex items-center justify-center" style={{ height: '100%' }}>
+          <div className="flex items-center justify-center h-full">
             <ContentLoading />
           </div>
         ) : error ? (
-          <div
-            className="flex items-center justify-center gap-4"
-            style={{ height: '100%', padding: 24 }}
-          >
+          <div className="flex items-center justify-center gap-4 h-full p-6">
             <div className="text-muted-foreground">{error.message}</div>
-            <Button
-              onClick={() => {
-                void mutate();
-              }}
-            >
-              <RefreshCw data-icon="inline-start" />
-              {t('retry')}
-            </Button>
+            <span className="inline-flex flex-none coarse:p-1">
+              <Button
+                className="relative leading-5.5 coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.25)] coarse:after:content-['']"
+                size="lg"
+                onClick={() => {
+                  void mutate();
+                }}
+              >
+                <RefreshCw data-icon="inline-start" />
+                {t('retry')}
+              </Button>
+            </span>
           </div>
         ) : (
           <article className={styles.article}>
             {data?.content ? (
               <Markdown>{data.content}</Markdown>
             ) : (
-              <div className="flex items-center justify-center" style={{ padding: 64 }}>
-                —
-              </div>
+              <div className="flex items-center justify-center p-16">—</div>
             )}
           </article>
         )}

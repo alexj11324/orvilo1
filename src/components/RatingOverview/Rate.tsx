@@ -1,27 +1,12 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { Star } from 'lucide-react';
 import { memo } from 'react';
 
-const styles = createStaticStyles(({ css }) => {
-  return {
-    rate: css`
-      display: flex;
-      align-items: center;
-    `,
-    star: css`
-      position: relative;
-      display: inline-flex;
-    `,
-    starFill: css`
-      position: absolute;
-      inset-block-start: 0;
-      inset-inline-start: 0;
-
-      overflow: hidden;
-      display: inline-flex;
-    `,
-  };
-});
+const styles = {
+  rate: 'flex items-center',
+  star: 'relative inline-flex',
+  starFill: 'absolute inset-bs-0 start-0 inline-flex overflow-hidden',
+};
 
 interface RateProps {
   allowHalf?: boolean;
@@ -38,7 +23,7 @@ const Rate = memo<RateProps>(
   ({
     allowHalf = true,
     className,
-    color = cssVar.colorWarning,
+    color = 'var(--foreground)',
     count = 5,
     gap,
     size = 16,
@@ -54,10 +39,10 @@ const Rate = memo<RateProps>(
           return (
             <span className={styles.star} key={index}>
               <Star
-                fill={cssVar.colorFill}
+                fill={'transparent'}
                 height={size}
-                strokeWidth={0}
-                style={{ color: cssVar.colorFill }}
+                strokeWidth={1.5}
+                style={{ color: 'var(--muted-foreground)' }}
                 width={size}
               />
               <span className={styles.starFill} style={{ width: `${fillRatio * 100}%` }}>

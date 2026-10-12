@@ -1,8 +1,4 @@
-import { createStaticStyles } from 'antd-style';
-
-export const styles = createStaticStyles(({ css }) => ({
+export const styles = {
   // Left container
-  leftContainer: css`
-    margin-inline-start: 8px;
-  `,
-}));
+  leftContainer: 'ms-2',
+};

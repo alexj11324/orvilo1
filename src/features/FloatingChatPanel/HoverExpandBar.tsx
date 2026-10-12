@@ -1,71 +1,19 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronUp } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  bar: css`
-    pointer-events: auto;
+import { Button } from '@/components/ui/button';
 
-    position: absolute;
-    inset-block-end: 100%;
-    inset-inline: 0;
-    transform: translateY(4px);
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    height: 28px;
-    padding-block-end: 4px;
-
-    opacity: 0;
-    background: transparent;
-
-    transition:
-      opacity 160ms ease-out,
-      transform 160ms ease-out;
-  `,
-  visible: css`
-    transform: translateY(0);
-    opacity: 1;
-  `,
-  trigger: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    height: 24px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    font-size: 12px;
-    line-height: 1;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowTertiary};
-
-    transition:
-      color 160ms,
-      border-color 160ms,
-      background 160ms;
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorBgContainer};
-    }
-  `,
-  hidden: css`
-    pointer-events: none;
-  `,
-}));
+const styles = {
+  bar: 'pointer-events-auto absolute inset-be-full [inset-inline:0] translate-y-1 flex items-center justify-center min-h-10 pbe-1 opacity-0 bg-transparent transition-[opacity,transform] duration-(--orvilo-motion-mid) ease-out',
+  visible: 'translate-y-0 opacity-100',
+  trigger:
+    'px-2.5 rounded-full text-sm leading-5.5 text-muted-foreground bg-popover border-divider shadow-(--shadow-raised) transition-[color,border-color,background-color] duration-(--orvilo-motion-mid) ease-[ease] hover:border-border hover:text-foreground hover:bg-card',
+  hidden: 'pointer-events-none',
+};
 
 export interface HoverExpandBarProps {
   bottomOffset?: number;
@@ -80,20 +28,22 @@ const HoverExpandBar = memo<HoverExpandBarProps>(({ bottomOffset = 0, visible, o
   return (
     <div
       aria-hidden={!visible}
-      className={`${s.bar} ${visible ? s.visible : s.hidden}`}
+      className={cn(s.bar, visible ? s.visible : s.hidden)}
       data-testid="floating-chat-panel-hover-bar"
       style={bottomOffset > 0 ? { insetBlockEnd: `calc(100% + ${bottomOffset}px)` } : undefined}
     >
-      <button
+      <Button
         className={s.trigger}
         data-testid="floating-chat-panel-expand-button"
+        size="normal"
         tabIndex={visible ? 0 : -1}
         type="button"
+        variant="outline"
         onClick={onExpand}
       >
-        <ChevronUp size={12} />
+        <ChevronUp className="size-4" size={16} />
         {t('floatingChatPanel.expand', { defaultValue: 'Expand' })}
-      </button>
+      </Button>
     </div>
   );
 });

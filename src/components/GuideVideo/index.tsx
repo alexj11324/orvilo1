@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 interface GuideVideoProps {
@@ -18,7 +17,7 @@ const GuideVideo = memo<GuideVideoProps>(({ height, width, src }) => {
       src={src}
       width={width}
       style={{
-        background: cssVar.colorFillSecondary,
+        background: 'var(--ant-color-fill-secondary)',
         height: 'auto',
         width: '100%',
       }}

@@ -1,7 +1,6 @@
 'use client';
 
 import type { GitWorkingTreePatch } from '@orvilo/electron-client-ipc';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import {
   ArrowLeftIcon,
@@ -74,157 +73,28 @@ interface ReviewProps {
   workingDirectory: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  caret: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  totalAdditions: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  totalDeletions: css`
-    color: ${cssVar.colorError};
-  `,
-  totalStats: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  `,
-  // Two-pane body: diff list (left, flexes) + tree-nav rail (right, fixed).
-  body: css`
-    overflow: hidden;
-    min-height: 0;
-  `,
-  list: css`
-    position: relative;
-    min-width: 0;
-    border-block: 1px solid ${cssVar.colorBorderSecondary};
-
-    /* Strip the first visible row's own top border — the list's
-       border-block-start already provides the separator under the subheader,
-       so without this we'd render a doubled-up 2px line at the top. */
-    & > :first-child {
-      border-block-start: none;
-    }
-  `,
-  treeRail: css`
-    flex: none;
-
-    width: 240px;
-    min-height: 0;
-    padding-block: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  arrow: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  basePicker: css`
-    cursor: pointer;
-    user-select: none;
-
-    overflow: hidden;
-    display: inline-flex;
-    flex: 0 1 auto;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  compareChip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  headRefText: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-    padding-inline-end: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  refName: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  scopeChip: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: inline-flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  subheader: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 4px 8px;
-    padding-inline: 8px;
-  `,
-  // Empty submodule group — pointer-only bump where the submodule's own
-  // working tree is clean. We still surface the group so the user knows the
-  // submodule pointer moved, just with a softer "no changes" line instead of
-  // a list of files.
-  groupEmpty: css`
-    padding-block: 6px 10px;
-    padding-inline: 10px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  caret: 'shrink-0 text-foreground-tertiary',
+  totalAdditions: 'text-success-text',
+  totalDeletions: 'text-destructive-text',
+  totalStats: 'inline-flex shrink-0 gap-1.5 items-center font-mono text-xs leading-5 tabular-nums',
+  body: 'overflow-hidden min-h-0',
+  list: 'relative min-w-0 border-bs border-be border-divider [&>:first-child]:border-bs-0',
+  treeRail: 'flex-none w-60 min-h-0 py-1 border-bs border-s border-divider',
+  arrow: 'shrink-0 text-foreground-tertiary',
+  basePicker:
+    'cursor-pointer select-none overflow-hidden inline-flex flex-[0_1_auto] gap-1 items-center min-w-0 min-h-8 py-1 px-1.5 rounded-(--radius-button) transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  compareChip: 'overflow-hidden inline-flex flex-[0_1_auto] gap-1.5 items-center min-w-0',
+  headRefText:
+    'overflow-hidden flex-[0_1_auto] min-w-0 pe-1 font-mono text-xs leading-5 text-muted-foreground text-ellipsis whitespace-nowrap',
+  refName:
+    'overflow-hidden flex-[0_1_auto] min-w-0 font-mono text-sm leading-5.5 text-foreground text-ellipsis whitespace-nowrap',
+  scopeChip:
+    'cursor-pointer select-none inline-flex shrink-0 gap-1.5 items-center min-h-8 py-1 px-1.5 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  subheader: 'flex shrink-0 gap-2 items-center justify-between pbs-1 pbe-2 px-2',
+  groupEmpty:
+    'pbs-1.5 pbe-2.5 px-2.5 border-bs border-divider text-xs leading-5 text-foreground-tertiary',
+};
 
 const Review = memo<ReviewProps>(
   ({ active, composerTarget, deviceId, onToggleTree, showTree, workingDirectory }) => {
@@ -512,12 +382,9 @@ const Review = memo<ReviewProps>(
         : t('workingPanel.review.empty');
 
     return (
-      <div className="flex flex-col" style={{ width: '100%', overflow: 'hidden' }}>
+      <div className="flex w-full flex-col overflow-hidden">
         <div className={styles.subheader}>
-          <div
-            className="flex items-center gap-2"
-            style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}
-          >
+          <div className="flex min-w-0 flex-auto items-center gap-2 overflow-hidden">
             <SidebarDropdownMenu items={modeMenuItems} placement={'bottomLeft'}>
               <span className={styles.scopeChip} role={'button'} tabIndex={0}>
                 {mode === 'branch'
@@ -563,7 +430,7 @@ const Review = memo<ReviewProps>(
             {totalEntryCount > 0 && (
               <ActionIcon
                 icon={allExpanded ? FoldVerticalIcon : UnfoldVerticalIcon}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={
                   allExpanded
                     ? t('workingPanel.review.collapseAll')
@@ -576,7 +443,7 @@ const Review = memo<ReviewProps>(
               <ActionIcon
                 active={showTree}
                 icon={showTree ? PanelRightCloseIcon : PanelRightOpenIcon}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={
                   showTree ? t('workingPanel.review.tree.hide') : t('workingPanel.review.tree.show')
                 }
@@ -587,7 +454,7 @@ const Review = memo<ReviewProps>(
               <ActionIcon
                 icon={MoreHorizontalIcon}
                 loading={isValidating}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('workingPanel.review.more')}
               />
             </SidebarDropdownMenu>
@@ -605,12 +472,8 @@ const Review = memo<ReviewProps>(
             </Empty>
           </div>
         ) : (
-          <div className={cn('flex flex-1', styles.body)} style={{ width: '100%' }}>
-            <div
-              className={cn('flex flex-col flex-1', styles.list)}
-              ref={listRef}
-              style={{ overflow: 'auto' }}
-            >
+          <div className={cn('flex w-full flex-1', styles.body)}>
+            <div className={cn('flex flex-1 flex-col overflow-auto', styles.list)} ref={listRef}>
               {groups.map((group) => {
                 const groupTotals = group.patches.reduce(
                   (acc, p) => {

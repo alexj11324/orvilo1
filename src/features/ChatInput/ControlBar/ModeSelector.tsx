@@ -26,20 +26,20 @@ import { SimpleTooltip } from '../SimpleTooltip';
 const styles = {
   activeOption: 'bg-muted bg-none hover:bg-muted hover:bg-none',
   agentTooltip: 'flex flex-col gap-1 min-w-40',
-  agentTooltipCap: 'flex gap-1.5 items-center text-[12px] text-muted-foreground',
-  agentTooltipTitle: 'mbe-0.5 text-[12px] font-semibold text-foreground',
+  agentTooltipCap: 'flex gap-1.5 items-center text-xs text-muted-foreground',
+  agentTooltipTitle: 'mbe-0.5 text-xs font-semibold text-foreground',
   button:
-    'cursor-pointer flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-[12px] text-muted-foreground whitespace-nowrap [transition:all_0.2s] hover:text-foreground hover:bg-accent hover:bg-none',
+    'cursor-pointer flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-xs text-muted-foreground whitespace-nowrap [transition:all_0.2s] hover:text-foreground hover:bg-accent hover:bg-none',
   buttonOpen: 'text-foreground bg-muted bg-none hover:text-foreground hover:bg-muted hover:bg-none',
   buttonDisabled:
     'cursor-not-allowed opacity-50 hover:text-muted-foreground hover:bg-transparent hover:bg-none',
   option:
     'cursor-pointer justify-start w-full h-auto py-2.5 px-2 rounded-[calc(var(--radius)_-_2px)] text-start whitespace-normal [transition:background-color_0.2s] hover:bg-selected hover:bg-none',
   optionDisabled: 'cursor-not-allowed opacity-55 hover:bg-transparent hover:bg-none',
-  optionDesc: 'text-[12px] leading-[1.4] text-[var(--ant-color-text-description)]',
+  optionDesc: 'text-xs leading-[1.4] text-foreground-description',
   optionIcon:
     'shrink-0 border border-solid border-sidebar-border rounded-(--radius-card) bg-popover bg-none',
-  optionTitle: 'text-[14px] font-medium leading-[1.4] text-foreground',
+  optionTitle: 'text-sm font-medium leading-[1.4] text-foreground',
   popoverPopup: 'rounded-(--radius-overlay)',
 };
 
@@ -127,12 +127,7 @@ const ModeSelector = memo(() => {
         )}
         onClick={() => handleSelect('agent')}
       >
-        <div
-          className={cn(
-            'flex flex-col items-center h-[32px] justify-center w-[32px]',
-            styles.optionIcon,
-          )}
-        >
+        <div className={cn('flex flex-col items-center h-8 justify-center w-8', styles.optionIcon)}>
           <span className="anticon" role="img">
             <InfinityIcon fill={'transparent'} height={16} size={16} width={16} />
           </span>
@@ -153,12 +148,7 @@ const ModeSelector = memo(() => {
         )}
         onClick={() => handleSelect('chat')}
       >
-        <div
-          className={cn(
-            'flex flex-col items-center h-[32px] justify-center w-[32px]',
-            styles.optionIcon,
-          )}
-        >
+        <div className={cn('flex flex-col items-center h-8 justify-center w-8', styles.optionIcon)}>
           <span className="anticon" role="img">
             <MessageCircleIcon fill={'transparent'} height={16} size={16} width={16} />
           </span>

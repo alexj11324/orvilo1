@@ -17,11 +17,11 @@ const Content = memo(() => {
   if (!fileId) return;
 
   return (
-    <div className="flex flex-col gap-2 h-[100%]" style={{ paddingBlock: '16px 0' }}>
+    <div className="flex flex-col gap-2 h-full" style={{ paddingBlock: '16px 0' }}>
       <div className="flex flex-col px-3">
         <SearchBar
-          onChange={(text) => {
-            if (!text) useFileStore.setState({ isSimilaritySearch: false });
+          onChange={(e) => {
+            if (!e.target.value) useFileStore.setState({ isSimilaritySearch: false });
           }}
           onSearch={async (text) => {
             useFileStore.setState({ isSimilaritySearch: !!text });

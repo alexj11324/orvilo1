@@ -96,7 +96,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
           {t('creds.oauth.noConnections')}
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onBack}>
+          <Button size="lg" type="button" variant="outline" onClick={onBack}>
             {t('creds.form.back')}
           </Button>
         </div>
@@ -113,7 +113,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
         trigger="onValueChange"
       >
         <Select disabled={disabled} items={connectionOptions}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" size="normal">
             <SelectValue placeholder={t('creds.form.selectConnectionPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
@@ -134,7 +134,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
           { pattern: /^[\w-]+$/, message: t('creds.form.keyPattern') },
         ]}
       >
-        <Input disabled={disabled} placeholder="e.g., github-oauth" />
+        <Input disabled={disabled} placeholder="e.g., github-oauth" visualSize="normal" />
       </Form.Item>
 
       <Form.Item
@@ -142,7 +142,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
         name="name"
         rules={[{ required: true, message: t('creds.form.nameRequired') }]}
       >
-        <Input disabled={disabled} placeholder="e.g., GitHub Connection" />
+        <Input disabled={disabled} placeholder="e.g., GitHub Connection" visualSize="normal" />
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">
@@ -154,12 +154,13 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
       </Form.Item>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>
+        <Button size="lg" type="button" variant="outline" onClick={onBack}>
           {t('creds.form.back')}
         </Button>
         <Button
           disabled={createMutation.isPending || disabled}
           loading={createMutation.isPending}
+          size="lg"
           type="submit"
           variant="default"
         >

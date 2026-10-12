@@ -170,7 +170,8 @@
       "eslint --fix",
       "prettier --parser=typescript --write",
       "tsx scripts/ci/checkNativeControls.mjs",
-      "tsx scripts/ci/checkHostDeviceBoundaries.mjs"
+      "tsx scripts/ci/checkHostDeviceBoundaries.mjs",
+      "node scripts/ci/checkCaseOnlyFilenames.mjs"
     ],
     "*.{yml,yaml}": [
       "eslint --fix"
@@ -448,6 +449,7 @@
     "react-day-picker": "^10.0.1",
     "react-dom": "19.2.7",
     "react-fast-marquee": "^1.6.5",
+    "react-hook-form": "^7.89.0",
     "react-hotkeys-hook": "^5.3.3",
     "react-i18next": "^16.6.6",
     "react-lazy-load": "^4.0.1",

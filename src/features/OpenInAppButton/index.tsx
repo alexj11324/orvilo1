@@ -1,10 +1,10 @@
 import { isDesktop } from '@orvilo/const';
 import type { OpenInAppId } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
@@ -21,73 +21,20 @@ interface AppIconProps {
 
 const AppIcon = ({ id, icon, size = 16 }: AppIconProps) => {
   if (icon) {
-    return (
-      <img
-        alt=""
-        height={size}
-        src={icon}
-        style={{ display: 'block', objectFit: 'contain' }}
-        width={size}
-      />
-    );
+    return <img alt="" className="block object-contain" height={size} src={icon} width={size} />;
   }
   const Fallback = APP_ICONS[id];
   return <Fallback size={size} />;
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  dropdownItem: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  leftButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding-inline: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  rightButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding-inline: 4px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  root: css`
-    overflow: hidden;
-    display: inline-flex;
-    align-items: stretch;
-
-    height: 24px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 6px;
-  `,
-}));
+const styles = {
+  dropdownItem: 'flex items-center gap-2',
+  leftButton:
+    'cursor-pointer rounded-e-none border-divider border-e-0 px-2 text-muted-foreground transition-[color,background-color] duration-(--orvilo-motion-mid) hover:bg-accent hover:text-foreground',
+  rightButton:
+    'cursor-pointer rounded-s-none border-divider px-1 text-muted-foreground transition-[color,background-color] duration-(--orvilo-motion-mid) hover:bg-accent hover:text-foreground',
+  root: 'inline-flex items-stretch',
+};
 
 export interface OpenInAppButtonProps {
   className?: string;
@@ -109,7 +56,7 @@ const OpenInAppButton = memo<OpenInAppButtonProps>(({ workingDirectory, classNam
   const dropdownItems = useMemo<SidebarDropdownMenuProps['items']>(
     () =>
       installedApps.map((app) => ({
-        icon: <AppIcon icon={app.icon} id={app.id} size={14} />,
+        icon: <AppIcon icon={app.icon} id={app.id} size={16} />,
         key: app.id,
         label: app.displayName,
         onClick: () => {
@@ -131,16 +78,18 @@ const OpenInAppButton = memo<OpenInAppButtonProps>(({ workingDirectory, classNam
           <TooltipTrigger
             render={
               <span className="inline-flex">
-                <div
+                <Button
                   aria-label={t('tooltip', { appName: defaultDisplayName })}
                   className={styles.leftButton}
-                  role="button"
+                  size="compact"
+                  type="button"
+                  variant="ghost"
                   onClick={() => {
                     void launch(defaultApp);
                   }}
                 >
-                  <AppIcon icon={defaultIconSrc} id={defaultApp} size={14} />
-                </div>
+                  <AppIcon icon={defaultIconSrc} id={defaultApp} size={16} />
+                </Button>
               </span>
             }
           />
@@ -148,9 +97,15 @@ const OpenInAppButton = memo<OpenInAppButtonProps>(({ workingDirectory, classNam
         </Tooltip>
       </TooltipProvider>
       <SidebarDropdownMenu items={dropdownItems}>
-        <div aria-label={t('dropdownLabel')} className={styles.rightButton} role="button">
-          <ChevronDownIcon size={12} />
-        </div>
+        <Button
+          aria-label={t('dropdownLabel')}
+          className={styles.rightButton}
+          size="compact"
+          type="button"
+          variant="ghost"
+        >
+          <ChevronDownIcon size={16} />
+        </Button>
       </SidebarDropdownMenu>
     </div>
   );

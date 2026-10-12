@@ -11,7 +11,7 @@ import {
   shinyTextStyles,
 } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import type { ComponentType } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

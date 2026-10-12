@@ -63,28 +63,26 @@ const ReadReference = memo<BuiltinRenderProps<ReadReferenceParams, ReadReference
     return (
       <div className={cn('flex flex-col gap-2', styles.container)}>
         <div className="flex flex-row items-center justify-between">
-          <span className="font-mono rounded bg-muted px-1 truncate text-[12px]">
-            {displayPath}
-          </span>
+          <span className="font-mono rounded bg-muted px-1 truncate text-xs">{displayPath}</span>
           {sizeText && (
-            <span className="font-mono rounded bg-muted px-1 whitespace-nowrap text-[12px] text-muted-foreground">
+            <span className="font-mono rounded bg-muted px-1 whitespace-nowrap text-xs text-muted-foreground">
               {sizeText}
             </span>
           )}
         </div>
 
         {isBinary ? (
-          <div className="rounded-md border bg-card" style={{ padding: 12 }}>
-            <div className="text-[12px] text-muted-foreground">Binary file ({sizeText})</div>
+          <div className="rounded-(--radius-card) border bg-card" style={{ padding: 12 }}>
+            <div className="text-xs text-muted-foreground">Binary file ({sizeText})</div>
           </div>
         ) : isMarkdown ? (
-          <div className="rounded-md border bg-card" style={{ padding: 12 }}>
+          <div className="rounded-(--radius-card) border bg-card" style={{ padding: 12 }}>
             <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
               {content}
             </Markdown>
           </div>
         ) : (
-          <div className="rounded-md border bg-card" style={{ padding: 8 }}>
+          <div className="rounded-(--radius-card) border bg-card" style={{ padding: 8 }}>
             <CodeBlock
               wrap
               code={content}

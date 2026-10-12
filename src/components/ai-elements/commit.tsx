@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 export type CommitProps = ComponentProps<typeof Collapsible>;
 
 export const Commit = ({ className, children, ...props }: CommitProps) => (
-  <Collapsible className={cn('rounded-lg border bg-card', className)} {...props}>
+  <Collapsible className={cn('rounded-(--radius-card) border bg-card', className)} {...props}>
     {children}
   </Collapsible>
 );

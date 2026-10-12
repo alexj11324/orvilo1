@@ -110,6 +110,12 @@ expectations, removed retired topic-model fields from expected rows, and gave
 each account's runtime seed its own device ID. Its 39 scoped tests passed. This
 changes test fixtures/assertions only, with no application behavior change.
 
+The final canary integration preserves the upstream Tailwind/control migration
+and in-conversation Agent handoff while retaining the removed runtime and
+device-sharing controls. The affected settings/device/chat tests passed
+178 + 11 regressions, with clean lint. These mechanical styling integrations
+reuse the revision-labelled Electron behavior evidence above.
+
 `runtime-evidence.json` contains only whitelisted fixture identifiers, saved
 runtime fields, operation outcomes and the named offline error. No login tokens,
 environment variables, gateway secrets or private signing keys are included.

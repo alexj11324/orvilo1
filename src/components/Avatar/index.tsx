@@ -113,7 +113,7 @@ const Avatar = memo<AvatarProps>(
           src={src}
           width={numericSize}
           style={{
-            borderRadius,
+            borderRadius: style?.borderRadius ?? borderRadius,
             display: 'block',
             height: '100%',
             objectFit: 'cover',
@@ -140,9 +140,9 @@ const Avatar = memo<AvatarProps>(
           aria-hidden="true"
           style={{
             color: 'var(--foreground)',
-            fontSize: Math.max(9, Math.round(numericSize * 0.38)),
+            fontSize: style?.fontSize ?? Math.max(9, Math.round(numericSize * 0.38)),
             fontWeight: 500,
-            lineHeight: 1,
+            lineHeight: style?.lineHeight ?? 1,
             userSelect: 'none',
           }}
         >

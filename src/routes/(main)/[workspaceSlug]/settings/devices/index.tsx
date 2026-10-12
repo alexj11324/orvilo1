@@ -42,7 +42,7 @@ const WorkspaceDevicesSetting = memo(() => {
             >
               <RefreshCwIcon />
             </Button>
-            <Button onClick={() => openConnect()}>
+            <Button size="compact" onClick={() => openConnect()}>
               <MonitorDownIcon data-icon="inline-start" />
               {t('devices.connectWizard.button')}
             </Button>

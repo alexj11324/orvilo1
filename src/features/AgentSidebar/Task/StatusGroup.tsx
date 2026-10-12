@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -33,18 +32,21 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
   return (
     <AccordionItem value={group.key}>
       <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-        <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
-          <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[24px]">
+        <div className="flex items-center gap-2 h-6" style={{ overflow: 'hidden' }}>
+          <div className="flex flex-col items-center justify-center flex-none h-6 w-6">
             <meta.icon color={meta.color} size={14} strokeWidth={1.75} />
           </div>
-          <div className="truncate text-sm" style={{ color: cssVar.colorTextSecondary, flex: 1 }}>
+          <div
+            className="truncate text-sm"
+            style={{ color: 'var(--ant-color-text-secondary)', flex: 1 }}
+          >
             {t(meta.titleKey as 'taskList.kanban.backlog')}
           </div>
-          <div className="text-[11px] text-muted-foreground">{group.tasks.length}</div>
+          <div className="text-xs text-muted-foreground">{group.tasks.length}</div>
         </div>
       </AccordionTrigger>
       <AccordionContent className="p-0">
-        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+        <div className="flex flex-col gap-px" style={{ paddingBlock: 1 }}>
           {group.tasks.map((task) => (
             <TaskItem
               active={taskId === task.identifier || taskId === task.id}

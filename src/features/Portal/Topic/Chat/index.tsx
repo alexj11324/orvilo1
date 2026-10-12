@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo, Suspense, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -89,13 +88,13 @@ const TopicChat = memo(() => {
     >
       <Suspense
         fallback={
-          <div className="flex flex-col flex-1 h-[100%]">
+          <div className="flex flex-col flex-1 h-full">
             <SkeletonList />
           </div>
         }
       >
         <div
-          className="flex flex-col flex-1 w-[100%]"
+          className="flex flex-col flex-1 w-full"
           style={{
             overflowX: 'hidden',
             overflowY: 'auto',
@@ -110,8 +109,14 @@ const TopicChat = memo(() => {
         </div>
       </Suspense>
       {topicPending ? (
-        <div className="flex flex-row items-center justify-center py-[6px] px-4">
-          <span style={{ color: cssVar.colorTextDescription, fontSize: 12, textAlign: 'center' }}>
+        <div className="flex flex-row items-center justify-center py-1.5 px-4">
+          <span
+            style={{
+              color: 'var(--ant-color-text-description)',
+              fontSize: 12,
+              textAlign: 'center',
+            }}
+          >
             {t(
               migrationJob?.type === 'copy'
                 ? 'transferMigration.inputDisabledHintCopy'

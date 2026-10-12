@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinInspectorProps, SaveUserQuestionInput } from '@orvilo/types';
-import { cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -36,7 +35,7 @@ export const SaveUserQuestionInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={isArgumentsStreaming || isLoading ? shinyTextStyles.shinyText : ''}>
         {t('builtins.orvilo-web-onboarding.apiName.saveUserQuestion')}
       </span>
       {(agentName || agentEmoji) && (

@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { confirmModal, createModal, ModalHost, useModalContext } from '.';
+import { confirmModal, createModal, Modal, ModalHost, useModalContext } from '.';
 
 const originalAnimate = Element.prototype.animate;
 beforeAll(() => {
@@ -139,5 +139,58 @@ describe('confirmModal', () => {
     });
 
     expect(screen.getByText('still-here')).toBeInTheDocument();
+  });
+});
+
+describe('Modal button size forwarding', () => {
+  it('forwards declarative OK and Cancel sizes without dropping either callback', async () => {
+    const onOk = vi.fn();
+    const onCancel = vi.fn();
+    const okClick = vi.fn();
+    const cancelClick = vi.fn();
+    render(
+      <Modal
+        open
+        cancelButtonProps={{ size: 'compact', onClick: cancelClick }}
+        cancelText="Cancel sized"
+        okButtonProps={{ size: 'lg', onClick: okClick }}
+        okText="Save sized"
+        title="Sized dialog"
+        onCancel={onCancel}
+        onOk={onOk}
+      />,
+    );
+    const ok = await screen.findByRole('button', { name: 'Save sized' });
+    const cancel = screen.getByRole('button', { name: 'Cancel sized' });
+    expect(ok).toHaveClass('h-9');
+    expect(cancel).toHaveClass('h-8');
+    act(() => ok.click());
+    act(() => cancel.click());
+    expect(onOk).toHaveBeenCalledOnce();
+    expect(okClick).toHaveBeenCalledOnce();
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(cancelClick).toHaveBeenCalledOnce();
+  });
+
+  it('forwards imperative OK size and retains async completion behavior', async () => {
+    renderHost();
+    const onOk = vi.fn().mockResolvedValue(undefined);
+    const onClick = vi.fn();
+    act(() => {
+      confirmModal({
+        title: 'Sized confirm',
+        okText: 'Confirm sized',
+        okButtonProps: { size: 'lg', onClick },
+        onOk,
+      });
+    });
+    const ok = await screen.findByRole('button', { name: 'Confirm sized' });
+    expect(ok).toHaveClass('h-9');
+    await act(async () => {
+      ok.click();
+    });
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(onOk).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByText('Sized confirm')).not.toBeInTheDocument());
   });
 });

@@ -3,30 +3,15 @@
 import { normalizeAskUserQuestions } from '@orvilo/shared-tool-ui/ask-user';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AskUserQuestionArgs } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-
-    min-width: 0;
-    margin-inline-start: 6px;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  chip: 'overflow-hidden min-w-0 ms-1.5 py-0.5 px-2.5 rounded-(--radius-chip) text-xs leading-5 text-foreground text-ellipsis whitespace-nowrap bg-muted',
+};
 
 export const AskUserQuestionInspector = memo<BuiltinInspectorProps<AskUserQuestionArgs>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading }) => {
@@ -44,7 +29,7 @@ export const AskUserQuestionInspector = memo<BuiltinInspectorProps<AskUserQuesti
     if (isArgumentsStreaming && !summary) {
       return (
         <div
-          className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText)}
+          className={cx(inspectorTextStyles.root, shinyTextStyles.shinyText, 'text-sm leading-5.5')}
           data-testid="ask-user-question-inspector"
         >
           {label}
@@ -53,7 +38,10 @@ export const AskUserQuestionInspector = memo<BuiltinInspectorProps<AskUserQuesti
     }
 
     return (
-      <div className={inspectorTextStyles.root} data-testid="ask-user-question-inspector">
+      <div
+        className={cx(inspectorTextStyles.root, 'text-sm leading-5.5')}
+        data-testid="ask-user-question-inspector"
+      >
         <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {label}
         </span>

@@ -41,7 +41,7 @@ const SearchResultItem = memo<UniformSearchResult & { style?: CSSProperties }>(
           style={style}
           className={cn(
             styles.container,
-            'flex flex-col gap-0.5 justify-between rounded-md border bg-card cursor-pointer',
+            'flex flex-col gap-0.5 justify-between rounded-(--radius-card) border bg-card cursor-pointer',
           )}
         >
           <div className="line-clamp-2">{title}</div>

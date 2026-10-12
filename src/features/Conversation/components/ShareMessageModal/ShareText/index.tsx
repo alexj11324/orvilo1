@@ -38,7 +38,7 @@ const ShareText = memo<ShareTextProps>(({ item }) => {
     <>
       <Button
         className="w-full"
-        size="default"
+        size="lg"
         variant="default"
         onClick={async () => {
           await copyToClipboard(content);
@@ -49,7 +49,7 @@ const ShareText = memo<ShareTextProps>(({ item }) => {
       </Button>
       <Button
         className="w-full"
-        size="default"
+        size="lg"
         onClick={() => {
           exportFile(content, `${title}.md`);
         }}

@@ -13,7 +13,7 @@ import type { BatchCreateAgentsParams, BatchCreateAgentsState } from '../../../t
 
 const styles = {
   avatarGroup: 'flex items-center gap-0.5',
-  count: 'text-[12px] text-muted-foreground',
+  count: 'text-xs text-muted-foreground',
   root: 'flex items-center gap-2 overflow-hidden',
   statusIcon: 'shrink-0 [margin-block-end:-2px]',
   title: 'shrink-0 whitespace-nowrap text-muted-foreground',

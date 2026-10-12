@@ -59,8 +59,8 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
     return (
       <div className="flex flex-col gap-2">
         {questions.map((q, idx) => (
-          <div className="flex flex-col gap-[2px]" key={`${q.question}-${idx}`}>
-            {q.header && <div className="text-[12px] text-muted-foreground">{q.header}</div>}
+          <div className="flex flex-col gap-0.5" key={`${q.question}-${idx}`}>
+            {q.header && <div className="text-xs text-muted-foreground">{q.header}</div>}
             <div>{q.question}</div>
           </div>
         ))}

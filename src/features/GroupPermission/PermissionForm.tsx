@@ -1,7 +1,6 @@
 'use client';
 
 import type { AgentTopicSharePolicy } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { InfoIcon, LockIcon, Share2, UsersIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,17 +32,10 @@ interface PermissionFormGroup {
   title?: ReactNode;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  // Same one-line-icon alignment the Agent Permission form uses: FormTitle
-  // centres the avatar against title+description, which drops a single-line
-  // icon below the label it belongs to.
-  rowIcon: css`
-    display: flex;
-    align-items: center;
-    align-self: flex-start;
-    height: 1em;
-  `,
-}));
+// Same inherited one-line title alignment as AgentPermission.
+const styles = {
+  rowIcon: 'flex h-lh items-center self-start',
+};
 
 interface PermissionFormProps {
   groupId: string;
@@ -195,18 +187,17 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
           .filter((group): group is PermissionFormGroup => !!group)
           .map((group) => (
             <div
-              className="flex flex-col gap-2 rounded-lg p-3"
+              className="flex flex-col gap-2 rounded-(--radius-card) bg-accent p-4"
               key={String(group.title)}
-              style={{ background: cssVar.colorFillTertiary }}
             >
-              <div className="text-sm font-medium">{group.title}</div>
+              <div className="text-base leading-6 font-semibold">{group.title}</div>
               {group.children.map((item, index) => (
                 <div className="flex items-center justify-between gap-4 py-1.5" key={index}>
                   <div className="flex items-start gap-2.5">
                     {item.avatar}
                     <div className="flex flex-col">
                       <span className="text-sm">{item.label}</span>
-                      <span className="text-xs" style={{ color: cssVar.colorTextDescription }}>
+                      <span className="text-xs leading-5 text-foreground-description">
                         {item.desc}
                       </span>
                     </div>

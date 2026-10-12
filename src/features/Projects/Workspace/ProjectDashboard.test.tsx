@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import dayjs from 'dayjs';
 import type { ReactNode } from 'react';
 import { act, useState, useSyncExternalStore } from 'react';
+import { compile } from 'tailwindcss';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getDraft, saveDraft } from '@/features/ChatInput/draftStorage';
@@ -1051,7 +1052,7 @@ describe('project milestone rows', () => {
     }
   });
 
-  it('keeps the rail row inert and puts the unfiltered issues list behind See issues', () => {
+  it('keeps the rail row inert and puts the unfiltered issues list behind See issues', async () => {
     mocks.milestones = [milestoneWithProgress];
     render(<ProjectSidePanel projectId="apollo" />);
 
@@ -1069,12 +1070,23 @@ describe('project milestone rows', () => {
     // Hidden until the row is hovered, like the reference's display:none
     // button — which also empties its accessible name, so find it by text.
     const seeIssues = screen.getByText('overview.milestoneSeeIssues');
-    expect(seeIssues.tagName).toBe('A');
-    expect(seeIssues).not.toBeVisible();
-    expect(seeIssues).toHaveAttribute('href', '/project/apollo/tasks');
-    // Mirrors the reference's tabindex=-1; keyboard users reach the
-    // milestone-filtered list from the overview card's progress link.
-    expect(seeIssues).toHaveAttribute('tabindex', '-1');
+    // jsdom does not load the app's generated utility stylesheet. Compile the
+    // actual rendered classes so visibility still fails if `hidden` is removed.
+    const stylesheet = document.createElement('style');
+    stylesheet.textContent = (await compile('@tailwind utilities;')).build([
+      ...seeIssues.classList,
+    ]);
+    document.head.append(stylesheet);
+    try {
+      expect(seeIssues.tagName).toBe('A');
+      expect(seeIssues).not.toBeVisible();
+      expect(seeIssues).toHaveAttribute('href', '/project/apollo/tasks');
+      // Mirrors the reference's tabindex=-1; keyboard users reach the
+      // milestone-filtered list from the overview card's progress link.
+      expect(seeIssues).toHaveAttribute('tabindex', '-1');
+    } finally {
+      stylesheet.remove();
+    }
   });
 
   it('links each overview milestone to its filtered issues, next to the untouched icon anchor', () => {

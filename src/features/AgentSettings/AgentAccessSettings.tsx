@@ -28,7 +28,7 @@ const AgentAccessSettings = memo<AgentAccessSettingsProps>(({ agentId }) => {
     useAgentSelectionPolicies(agentId);
 
   return (
-    <details className="mt-5 rounded-lg border px-4 py-3">
+    <details className="mt-5 rounded-(--radius-card) border px-4 py-3">
       <summary className="cursor-pointer text-sm font-medium">
         {t('settingAgent.accessSettings.title')}
       </summary>
@@ -54,7 +54,7 @@ const AgentAccessSettings = memo<AgentAccessSettingsProps>(({ agentId }) => {
               if (value === 'member' || value === 'restricted') setTopicSharePolicy(value);
             }}
           >
-            <SelectTrigger className={settingsStyles.select}>
+            <SelectTrigger className={settingsStyles.select} size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

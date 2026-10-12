@@ -1,0 +1,27 @@
+/* Private page title: a heading2 editor needs its complete 42px text line,
+   rather than clipping it to the normal 36px field. Other form fields keep Input defaults. */
+.headingInput.headingInput,
+.headingStatic.headingStatic {
+  padding-block: calc(var(--spacing) * 1) calc(var(--spacing) * 2);
+  font-family: inherit;
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+.headingInput.headingInput[data-slot='input'] {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  min-height: calc(var(--spacing) * 10);
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* The existing public Popup style consumed this exact viewport cap and 12px inset. */
+.adjustmentPopover.adjustmentPopover[data-slot='popover-content'] {
+  width: min(520px, calc(100vw - 32px));
+  padding: calc(var(--spacing) * 3);
+}

@@ -1,85 +1,21 @@
 'use client';
 
 import type { MarkdownPatchHunk } from '@orvilo/markdown-patch';
-import { createStaticStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  added: css`
-    overflow: auto;
-
-    max-height: 200px;
-    margin: 0;
-    padding-block: 6px;
-    padding-inline: 10px;
-    border-inline-start: 2px solid ${cssVar.colorSuccess};
-    border-radius: 0 6px 6px 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorText};
-    word-break: break-word;
-    white-space: pre-wrap;
-
-    background: ${cssVar.colorSuccessBg};
-  `,
-  block: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  `,
-  count: css`
-    flex-shrink: 0;
-
-    margin-inline-start: auto;
-
-    font-size: 12px;
-    font-weight: 400;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  label: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  lineRange: css`
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  removed: css`
-    overflow: auto;
-
-    max-height: 200px;
-    margin: 0;
-    padding-block: 6px;
-    padding-inline: 10px;
-    border-inline-start: 2px solid ${cssVar.colorError};
-    border-radius: 0 6px 6px 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-    word-break: break-word;
-    white-space: pre-wrap;
-
-    background: ${cssVar.colorErrorBg};
-  `,
-}));
+const styles = {
+  added:
+    'overflow-auto max-h-50 m-0 py-1.5 px-2.5 border-s-2 border-success rounded-s-none rounded-e-(--radius-card) font-mono text-sm leading-5.5 text-foreground [word-break:break-word] whitespace-pre-wrap bg-success-wash',
+  block: 'flex flex-col gap-1.5',
+  count: 'shrink-0 ms-auto text-xs leading-5 font-normal text-foreground-tertiary',
+  label: 'flex gap-2 items-center text-xs leading-5 font-medium text-muted-foreground',
+  lineRange:
+    'py-0.25 px-1.5 rounded-(--radius-chip) font-mono text-xs leading-5 text-foreground-tertiary bg-muted',
+  removed:
+    'overflow-auto max-h-50 m-0 py-1.5 px-2.5 border-s-2 border-destructive rounded-s-none rounded-e-(--radius-card) font-mono text-sm leading-5.5 text-muted-foreground [word-break:break-word] whitespace-pre-wrap bg-destructive-wash',
+};
 
 interface HunkBlockProps {
   countLabel?: string;

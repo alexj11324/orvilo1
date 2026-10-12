@@ -1,44 +1,11 @@
-import { lobeStaticStylish } from '@lobehub/ui';
-import { createStaticStyles, cx, responsive } from 'antd-style';
-
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  preview: cx(
-    lobeStaticStylish.noScrollbar,
-    css`
-      overflow: hidden scroll;
-
-      width: 100%;
-      max-width: var(--preview-max-width, none);
-      max-height: 70dvh;
-      margin: var(--preview-margin, 0);
-      border: 1px solid ${cssVar.colorBorder};
-      border-radius: ${cssVar.borderRadiusLG};
-
-      background: ${cssVar.colorBgContainer};
-
-      /* stylelint-disable selector-class-pattern */
-      .react-pdf__Document *,
-      .react-pdf__Page * {
-        pointer-events: none;
-      }
-      /* stylelint-enable selector-class-pattern */
-
-      ::-webkit-scrollbar {
-        width: 0 !important;
-        height: 0 !important;
-      }
-
-      ${responsive.sm} {
-        max-height: 40dvh;
-      }
-    `,
-  ),
-  previewNarrow: css`
-    --preview-max-width: 480px;
-    --preview-margin: 0 auto;
-  `,
-  previewWide: css`
-    --preview-max-width: none;
-    --preview-margin: 0;
-  `,
-}));
+export const styles = {
+  preview: [
+    'overflow-x-hidden overflow-y-scroll w-full max-w-[var(--preview-max-width,none)] max-h-[70dvh] [margin:var(--preview-margin,0)]',
+    'border border-border rounded-(--radius-card) bg-card',
+    String.raw`[&_.react-pdf\_\_Document_*]:pointer-events-none [&_.react-pdf\_\_Page_*]:pointer-events-none`,
+    '[&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:bg-transparent',
+    '[@media(width<=575.98px)]:max-h-[40dvh]',
+  ].join(' '),
+  previewNarrow: '[--preview-max-width:480px] [--preview-margin:0_auto]',
+  previewWide: '[--preview-max-width:none] [--preview-margin:0]',
+};

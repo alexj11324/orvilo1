@@ -1100,28 +1100,49 @@ export const topicRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Intentionally no creator/owner gate: shared topics are co-editable by
-      // members (title/status/metadata); only delete/transfer is creator-scoped.
+      // No creator/owner gate on the co-editable fields: members may edit a
+      // shared topic's title, status and metadata. Only delete and transfer are
+      // creator-scoped; an `agentId` here is the transfer and is gated below.
       // Co-editing still requires `use`-level General access on the agent —
       // view-only members are read-only.
       await assertCanUseTopicTargets(guardCtx(ctx), [input.id]);
       await assertCreatorTopicTargets(guardCtx(ctx), [input.id]);
       const { agentId, ...restValue } = input.value;
-      if (agentId) await assertCanUseConversationTargets(guardCtx(ctx), [{ agentId }]);
+      if (agentId) {
+        await assertCanUseConversationTargets(guardCtx(ctx), [{ agentId }]);
+        // Moving the topic to another agent is a transfer, which stays with the
+        // creator or a workspace owner (as in `batchMoveTopics`).
+        const [owner] = await ctx.topicModel.findOwnersByIds([input.id]);
+        if (owner) assertWorkspaceRowManageable(ctx, owner.userId, 'topic');
+        // The `use` guard skips ids outside the caller's scope, so the target
+        // must be confirmed reachable before it is written to the row.
+        if (!(await ctx.agentModel.existsById(agentId))) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Target agent not found' });
+        }
+      }
 
-      // If agentId is provided, resolve to sessionId
-      let resolvedSessionId = restValue.sessionId;
-      if (agentId && !resolvedSessionId) {
+      // An agentId moves the topic to that agent (the in-conversation handoff),
+      // so the row's agent and its legacy session move together. An agent
+      // without a session clears the previous agent's session instead of
+      // leaving it on the row.
+      // A caller-supplied sessionId is ignored then: it could keep the previous
+      // agent's session next to the new agent.
+      let resolvedSessionId: string | null | undefined = restValue.sessionId;
+      if (agentId) {
         const resolved = await resolveContext(
           { agentId },
           ctx.serverDB,
           ctx.userId,
           ctx.workspaceId ?? undefined,
         );
-        resolvedSessionId = resolved.sessionId ?? undefined;
+        resolvedSessionId = resolved.sessionId ?? null;
       }
 
-      return ctx.topicModel.update(input.id, { ...restValue, sessionId: resolvedSessionId });
+      return ctx.topicModel.update(input.id, {
+        ...restValue,
+        ...(agentId ? { agentId } : {}),
+        sessionId: resolvedSessionId,
+      });
     }),
 
   /**

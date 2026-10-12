@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { PanelRight } from 'lucide-react';
 import { type CSSProperties, memo, type ReactNode } from 'react';
@@ -8,27 +7,11 @@ import { useTranslation } from 'react-i18next';
 
 import { useConversationPanelDrop } from './useConversationPanelDrop';
 
-const styles = createStaticStyles(({ css }) => ({
-  overlay: css`
-    pointer-events: none;
-
-    position: absolute;
-    z-index: 20;
-    inset: 8px;
-
-    border: 2px dashed ${cssVar.colorInfoBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    opacity: 0.9;
-    background: ${cssVar.colorInfoBg};
-  `,
-  root: css`
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    margin-block-end: 8px;
-  `,
-}));
+const styles = {
+  overlay:
+    'pointer-events-none absolute z-20 inset-2 border-2 border-dashed border-info-border rounded-(--radius-overlay) opacity-90 bg-info-wash',
+  root: 'relative flex-1 min-h-0 mbe-2',
+};
 
 /**
  * Wraps the main conversation body so a topic/thread dragged from the sidebar
@@ -54,11 +37,9 @@ const SplitDropZone = memo<{ children: ReactNode; style?: CSSProperties }>(
         {children}
         {dragKind && (
           <div className={cn('flex flex-col items-center justify-center', styles.overlay)}>
-            <div className="flex flex-col items-center gap-2" style={{ color: cssVar.colorInfo }}>
-              <PanelRight size={28} />
-              <div style={{ color: 'inherit', fontSize: 14, fontWeight: 500 }}>
-                {t('openOnRightHint')}
-              </div>
+            <div className="flex flex-col items-center gap-2 text-info-text">
+              <PanelRight size={16} />
+              <div className="text-inherit text-sm font-medium">{t('openOnRightHint')}</div>
             </div>
           </div>
         )}

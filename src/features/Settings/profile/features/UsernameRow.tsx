@@ -123,6 +123,7 @@ const UsernameRow = () => {
           placeholder={t('profile.usernamePlaceholder')}
           ref={inputRef}
           style={{ width: 180, maxWidth: '100%' }}
+          visualSize="normal"
           onBlur={handleSave}
           onChange={handleChange}
           onKeyDown={(e) => {

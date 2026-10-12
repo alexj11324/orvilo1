@@ -10,7 +10,7 @@ import dynamic from '@/libs/next/dynamic';
 
 const Content = dynamic(() => import('./Content'), {
   loading: () => (
-    <div className="flex flex-col gap-[1px] py-[1px] px-[4px]">
+    <div className="flex flex-col gap-px py-px px-1">
       <SkeletonList rows={3} />
     </div>
   ),
@@ -31,12 +31,13 @@ const AllAgentsDrawer = memo<AllAgentsDrawerProps>(({ open, onClose }) => {
       open={open}
       title={t('navPanel.agent')}
       subHeader={
-        <div className="flex flex-col px-[8px] pb-2">
+        <div className="flex flex-col px-2 pb-2">
           <Input
             aria-label={t('navPanel.searchAgent')}
             placeholder={t('navPanel.searchAgent')}
             type="search"
             value={searchKeyword}
+            visualSize="compact"
             onChange={(event) => setSearchKeyword(event.target.value)}
           />
         </div>

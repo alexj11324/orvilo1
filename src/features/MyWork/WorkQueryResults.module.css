@@ -1,0 +1,27 @@
+/* Existing Orvilo-owned display-property hooks, not vendor selectors.
+   Unlayered native rules preserve the former registered selector priority. */
+.rowHideAssignee [data-collab-id$=':assignee'] {
+  display: none;
+}
+
+.rowHideLabels [data-task-labels] {
+  display: none;
+}
+
+.rowHidePriority div:has(> [data-collab-id$=':status']) > :first-child {
+  display: none;
+}
+
+.rowHideStatus [data-collab-id$=':status'] {
+  display: none;
+}
+
+.rowHideUpdated div:has(> [data-collab-id$=':assignee']) > :last-child:not([data-collab-id$=':assignee']) {
+  display: none;
+}
+
+/* Selection is persistent through the actual owned issue-row hover.
+   Two own module classes beat that renderer's single class plus :hover. */
+.rowSelected.rowSelected [data-issue-row] {
+  background: var(--selected);
+}

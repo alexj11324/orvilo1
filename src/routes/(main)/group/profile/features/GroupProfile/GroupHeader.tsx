@@ -204,15 +204,11 @@ const GroupHeader = memo(() => {
       {/* Title Section */}
       <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
         <Input
+          className="p-0 text-3xl leading-9 font-semibold"
           disabled={!canEdit}
           placeholder={t('name.placeholder')}
           value={localTitle}
-          style={{
-            fontSize: 36,
-            fontWeight: 600,
-            padding: 0,
-            width: '100%',
-          }}
+          visualSize="large"
           onChange={(e) => {
             setLocalTitle(e.target.value);
             if (!canEdit || !gid) return;

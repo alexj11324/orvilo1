@@ -108,7 +108,7 @@ const Item = memo<ItemProps>(({ agentId, appSlug, description, icon, identifier,
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-md border border-border ${styles.container}`}
+      className={`flex items-center gap-3 rounded-(--radius-card) border border-border ${styles.container}`}
       style={{ paddingBlock: 12, paddingInline: 12 }}
     >
       {renderIcon()}

@@ -139,7 +139,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   if (!deploymentOptions)
     return (
-      <div className="rounded-md border bg-card">
+      <div className="rounded-(--radius-card) border bg-card">
         <SimpleEmpty
           description={t('plugin:mcpEmpty.deployment')}
           descriptionProps={{ fontSize: 14 }}
@@ -379,7 +379,11 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
           />
         );
         return (
-          <AccordionItem className="rounded-md border" key={String(index)} value={String(index)}>
+          <AccordionItem
+            className="rounded-(--radius-card) border"
+            key={String(index)}
+            value={String(index)}
+          >
             <AccordionTrigger className="px-4">{title}</AccordionTrigger>
             <AccordionContent className="p-[12px_16px]">{content}</AccordionContent>
           </AccordionItem>

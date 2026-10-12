@@ -58,7 +58,7 @@ interface SelectProps<Value = string> {
   'placeholder'?: ReactNode;
   'popupClassName'?: string;
   'showSearch'?: boolean;
-  'size'?: 'sm' | 'default' | 'small' | 'middle' | 'large' | 'lg';
+  'size'?: 'sm' | 'default' | 'small' | 'middle' | 'large' | 'lg' | 'compact' | 'normal';
   'style'?: CSSProperties;
   'value'?: Value | Value[] | null;
 }
@@ -122,13 +122,31 @@ const Select = <Value extends string | number = string>({
     return (
       <Combobox
         multiple
-        disabled={disabled || loading}
+        disabled={loading ? true : disabled}
         itemToStringLabel={(v) => textFor(v as Value)}
         items={items.map((item) => item.value)}
         value={values}
         onValueChange={(v) => onChange?.(v as Value[])}
       >
-        <ComboboxChips aria-label={ariaLabel} className={className} id={id} style={style}>
+        <ComboboxChips
+          aria-label={ariaLabel}
+          className={className}
+          id={id}
+          style={style}
+          visualSize={
+            size === undefined
+              ? undefined
+              : size === 'small' || size === 'sm'
+                ? 'small'
+                : size === 'compact'
+                  ? 'compact'
+                  : size === 'large' || size === 'lg'
+                    ? 'large'
+                    : size === 'normal'
+                      ? 'normal'
+                      : 'default'
+          }
+        >
           {values.map((v) => (
             <ComboboxChip key={String(v)}>{labelFor(v)}</ComboboxChip>
           ))}
@@ -178,9 +196,9 @@ const Select = <Value extends string | number = string>({
   return (
     <SelectPrimitive
       defaultValue={defaultValue ?? undefined}
-      disabled={disabled || loading}
+      disabled={loading ? true : disabled}
       items={items}
-      value={isScalarValue(value) ? value : undefined}
+      value={value === null ? null : isScalarValue(value) ? value : undefined}
       onOpenChange={(open) => onOpenChange?.(open)}
       onValueChange={(v) => onChange?.(v as Value | null | undefined)}
     >
@@ -188,8 +206,20 @@ const Select = <Value extends string | number = string>({
         aria-label={ariaLabel}
         className={className}
         id={id}
-        size={size === 'small' || size === 'sm' ? 'sm' : 'default'}
         style={style}
+        size={
+          size === undefined
+            ? undefined
+            : size === 'small' || size === 'sm'
+              ? 'sm'
+              : size === 'compact'
+                ? 'compact'
+                : size === 'large' || size === 'lg'
+                  ? 'large'
+                  : size === 'normal'
+                    ? 'normal'
+                    : 'default'
+        }
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
@@ -198,8 +228,9 @@ const Select = <Value extends string | number = string>({
           <div className="px-1 pb-1">
             <Input
               aria-label={t('search', { defaultValue: 'Search' })}
-              className="h-7 px-2 text-sm"
+              className="px-2 text-sm"
               value={query}
+              visualSize="small"
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => event.stopPropagation()}
             />

@@ -324,7 +324,7 @@ describe('CreateTaskInlineEntry', () => {
 
     const assigneeControl = screen.getByText('createTask.assignee').parentElement;
     expect(assigneeControl).toHaveClass('h-6');
-    expect(assigneeControl).toHaveClass('py-[3px]');
+    expect(assigneeControl).toHaveClass('py-0.75');
 
     const attachmentAction = container
       .querySelector('svg.lucide-paperclip')

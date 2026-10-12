@@ -96,6 +96,7 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
             defaultValue={cwd ?? ''}
             disabled={!canEdit || status === 'saving'}
             key={`${targetDeviceId}:${cwd ?? ''}`}
+            visualSize="normal"
             onBlur={(event) => {
               const path = event.target.value.trim();
               if (path === (cwd ?? '')) return;
@@ -142,7 +143,7 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
                 });
             }}
           >
-            <SelectTrigger className={settingsStyles.select}>
+            <SelectTrigger className={settingsStyles.select} size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

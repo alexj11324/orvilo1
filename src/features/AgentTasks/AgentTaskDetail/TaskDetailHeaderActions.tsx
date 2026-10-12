@@ -318,6 +318,7 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
                 aria-label={t('taskDetail.menu.searchTeams')}
                 placeholder={t('taskDetail.menu.searchTeams')}
                 value={teamQuery}
+                visualSize="compact"
                 onChange={(event) => setTeamQuery(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key !== 'Escape') event.stopPropagation();

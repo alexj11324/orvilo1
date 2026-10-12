@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { ChevronRight, InfoIcon, UsersIcon } from 'lucide-react';
 import { memo, type ReactNode, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,11 +50,11 @@ interface FormGroupItemType {
  * titled section with an optional description/extra, then label-control rows.
  */
 const AccessFormGroups = ({ groups }: { groups: FormGroupItemType[] }) => (
-  <div className="flex flex-col gap-6">
+  <div className="flex flex-col gap-6 text-sm leading-5.5">
     {groups.map((group, index) => (
       <section className="flex flex-col gap-2" key={group.key ?? index}>
         <div className="flex flex-row items-center justify-between">
-          <span className="font-semibold">{group.title}</span>
+          <span className="text-base leading-6 font-semibold">{group.title}</span>
           {group.extra}
         </div>
         {group.desc ? <div className="text-muted-foreground">{group.desc}</div> : null}
@@ -77,27 +76,6 @@ const AccessFormGroups = ({ groups }: { groups: FormGroupItemType[] }) => (
     ))}
   </div>
 );
-
-const styles = createStaticStyles(({ css }) => ({
-  breadcrumb: css`
-    ol {
-      align-items: center;
-    }
-
-    li,
-    .ant-breadcrumb-link,
-    .ant-breadcrumb-link > a {
-      display: flex;
-      align-items: center;
-    }
-  `,
-  rowIcon: css`
-    display: flex;
-    align-items: center;
-    align-self: flex-start;
-    height: 1em;
-  `,
-}));
 
 interface ResourceAccessPageProps {
   /**
@@ -175,7 +153,7 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
       children: [
         {
           avatar: (
-            <span className={styles.rowIcon}>
+            <span className="flex items-center self-start h-5.5">
               <span className="anticon" role="img">
                 <UsersIcon fill={'transparent'} height={16} size={16} width={16} />
               </span>
@@ -209,9 +187,9 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
     return (
       <WorkSurface>
         <NavHeader
-          styles={{ left: { paddingInlineStart: 4 } }}
+          slotClassNames={{ left: 'ps-1' }}
           left={
-            <Breadcrumb className={styles.breadcrumb}>
+            <Breadcrumb>
               <BreadcrumbList>
                 {resourceName ? (
                   <>
@@ -223,10 +201,7 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
                           />
                         }
                       >
-                        <span
-                          className="truncate min-w-0 font-medium"
-                          style={{ color: 'inherit', maxWidth: 200 }}
-                        >
+                        <span className="truncate min-w-0 max-w-50 font-medium text-inherit">
                           {resourceName}
                         </span>
                       </BreadcrumbLink>
@@ -238,16 +213,14 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
                 ) : null}
                 <BreadcrumbItem>
                   <BreadcrumbPage>
-                    <span className="font-medium" style={{ color: 'inherit' }}>
-                      {t('permission.page.title')}
-                    </span>
+                    <span className="font-medium text-inherit">{t('permission.page.title')}</span>
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           }
         />
-        <WorkSurfaceDocument>
+        <WorkSurfaceDocument className="max-w-160">
           <div className="flex flex-col gap-4">
             {error && !isDenied ? (
               <AsyncError error={error} variant={'inline'} onRetry={() => mutate()} />
@@ -256,8 +229,14 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
             ) : (
               <>
                 {isPrivate ? (
-                  <Alert style={{ width: '100%' }} variant="info">
-                    <InfoIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  <Alert className="w-full rounded-(--radius-card)" variant="info">
+                    <InfoIcon
+                      className="size-4"
+                      fill={'transparent'}
+                      height={16}
+                      size={16}
+                      width={16}
+                    />
                     <AlertTitle>{copy.privateNotice}</AlertTitle>
                   </Alert>
                 ) : null}

@@ -34,10 +34,7 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
   return (
     <div className="flex flex-col gap-3">
       {tasksWithAgents.map((task, index) => (
-        <div
-          className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3"
-          key={task.agentId || index}
-        >
+        <div className="rounded-(--radius-card) bg-fill-quaternary p-3" key={task.agentId || index}>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Avatar
@@ -46,12 +43,12 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
                 shape={'square'}
                 size={20}
               />
-              <span className="text-[13px] font-medium text-foreground">
+              <span className="text-(length:--text-dense) font-medium text-foreground">
                 {task.title || task.agent?.title || 'Task'}
               </span>
             </div>
             {task.instruction && (
-              <div className="text-[13px] text-muted-foreground">
+              <div className="text-(length:--text-dense) text-muted-foreground">
                 <Markdown animated variant={'chat'}>
                   {task.instruction}
                 </Markdown>

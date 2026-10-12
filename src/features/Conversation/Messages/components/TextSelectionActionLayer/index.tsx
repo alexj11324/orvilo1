@@ -1,8 +1,6 @@
 'use client';
 
 import { nanoid } from '@orvilo/utils';
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { MessageCirclePlusIcon } from 'lucide-react';
 import type { CSSProperties, PointerEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -34,26 +32,6 @@ interface TextSelectionActionLayerProps {
   children: ReactNode;
   disabled?: boolean;
 }
-
-const styles = createStaticStyles(({ css }) => ({
-  root: css`
-    display: contents;
-  `,
-  toolbar: css`
-    position: fixed;
-    z-index: 10000;
-    transform: translate(-50%, -100%);
-
-    padding: 4px;
-    border: 1px solid light-dark(rgb(229 231 235), rgb(64 64 64));
-    border-radius: 999px;
-
-    background: light-dark(#fff, #1f1f1f);
-    box-shadow:
-      0 8px 24px rgb(0 0 0 / 12%),
-      0 2px 8px rgb(0 0 0 / 8%);
-  `,
-}));
 
 const focusChatInputSoon = () => {
   window.setTimeout(() => {
@@ -185,7 +163,7 @@ const TextSelectionActionLayer = memo<TextSelectionActionLayerProps>(({ children
 
   return (
     <div
-      className={styles.root}
+      className="contents"
       ref={rootRef}
       onKeyUp={scheduleSelectionUpdate}
       onPointerUp={scheduleSelectionUpdate}
@@ -194,13 +172,13 @@ const TextSelectionActionLayer = memo<TextSelectionActionLayerProps>(({ children
       {activeSelection &&
         createPortal(
           <div
-            className={cn('flex items-center gap-0.5', styles.toolbar)}
+            className="fixed z-10000 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-full border border-border bg-popover p-1 shadow-(--shadow-popover)"
             ref={toolbarRef}
             style={toolbarStyle}
             onPointerDown={handleToolbarPointerDown}
           >
-            <Button size="sm" variant="ghost" onClick={handleAddToConversation}>
-              <MessageCirclePlusIcon size={14} /> {t('textSelection.addToConversation')}
+            <Button size="compact" variant="ghost" onClick={handleAddToConversation}>
+              <MessageCirclePlusIcon size={16} /> {t('textSelection.addToConversation')}
             </Button>
           </div>,
           document.body,

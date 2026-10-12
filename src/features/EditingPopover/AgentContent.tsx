@@ -172,6 +172,7 @@ const AgentContent = memo<AgentContentProps>(({ id, title, avatar, onClose }) =>
         defaultValue={title}
         ref={inputRef}
         style={{ flex: 1 }}
+        visualSize="small"
         onChange={(e) => setNewTitle(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') handleUpdate();

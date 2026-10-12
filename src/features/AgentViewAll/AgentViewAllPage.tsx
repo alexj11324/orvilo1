@@ -2,7 +2,6 @@
 
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import isEqual from 'fast-deep-equal';
@@ -34,7 +33,6 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import AgentCard, { cardStyles } from './AgentCard';
 import AgentRow, { type AgentRowAuthor } from './AgentRow';
@@ -65,71 +63,42 @@ interface GroupHeaderProps {
 
 // Linear-style group header: a full-width subtle bar with chevron +
 // identity (color dot / avatar) + name + count.
-const groupHeaderStyles = createStaticStyles(({ css, cssVar }) => ({
-  bar: css`
-    cursor: pointer;
-    user-select: none;
-
-    width: 100%;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    transition: background 0.15s;
-  `,
-  // Alternating tints (mirrors Linear's group striping).
-  barEven: css`
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  barOdd: css`
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
+const groupHeaderStyles = {
+  bar: 'w-full h-auto min-h-9 justify-start border-0 py-1.5 px-3 rounded-(--radius-button) text-start font-normal whitespace-normal transition-[background-color] duration-(--orvilo-motion-mid) ease-[ease]',
+  barEven:
+    'bg-fill-quaternary hover:bg-muted aria-expanded:bg-fill-quaternary aria-expanded:hover:bg-muted',
+  barOdd: 'bg-muted hover:bg-selected aria-expanded:bg-muted aria-expanded:hover:bg-selected',
+};
 
 const GroupHeader = memo<GroupHeaderProps>(
   ({ avatar, collapsed, color, count, index, label, onToggle }) => (
-    <div
-      {...clickableProps()}
+    <Button
+      aria-expanded={!collapsed}
+      size="normal"
+      type="button"
+      variant="ghost"
       className={cn(
-        cn(
-          'flex items-center gap-2',
-          cx(
-            groupHeaderStyles.bar,
-            index % 2 === 0 ? groupHeaderStyles.barEven : groupHeaderStyles.barOdd,
-          ),
-        ),
-        CLICKABLE_FOCUS_RING,
+        'flex items-center gap-2',
+        groupHeaderStyles.bar,
+        index % 2 === 0 ? groupHeaderStyles.barEven : groupHeaderStyles.barOdd,
       )}
       onClick={onToggle}
     >
       {createElement(collapsed ? ChevronRightIcon : ChevronDownIcon, {
-        color: cssVar.colorTextSecondary,
-        size: 14,
+        className: 'size-4 text-muted-foreground',
+        size: 16,
       })}
       {avatar ? (
         <Avatar avatar={avatar} size={20} />
       ) : color ? (
         <span
-          style={{
-            background: color,
-            borderRadius: '50%',
-            display: 'inline-block',
-            height: 9,
-            width: 9,
-          }}
+          className="inline-block size-2.25 shrink-0 rounded-full"
+          style={{ background: color }}
         />
       ) : null}
-      <div className="text-[13px] font-medium">{label}</div>
-      <div className="text-[12px] text-muted-foreground">{count}</div>
-    </div>
+      <span className="text-sm leading-5.5 font-medium">{label}</span>
+      <span className="text-xs leading-5 text-muted-foreground">{count}</span>
+    </Button>
   ),
 );
 
@@ -140,7 +109,7 @@ GroupHeader.displayName = 'AgentViewAllGroupHeader';
 const SegmentLabel = memo<{ count: number; label: string }>(({ count, label }) => (
   <div className="flex items-center gap-1.5">
     {label}
-    <div className="text-[12px] text-muted-foreground">{count}</div>
+    <div className="text-xs leading-5 text-muted-foreground">{count}</div>
   </div>
 ));
 
@@ -386,11 +355,7 @@ const AgentViewAllPage = memo(() => {
   return (
     <WorkSurface>
       <NavHeader
-        left={
-          <div className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
-            {t('agentViewAll.title')}
-          </div>
-        }
+        left={<div className="ps-1 text-sm leading-5.5 font-medium">{t('agentViewAll.title')}</div>}
         right={
           <ListConfig
             options={effectiveViewOptions}
@@ -420,36 +385,45 @@ const AgentViewAllPage = memo(() => {
               </ToggleGroupItem>
             </ToggleGroup>
           ) : (
-            <div className="relative" style={{ flex: '1 1 160px', maxWidth: 240 }}>
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 opacity-60" size={14} />
+            <div className="relative flex-[1_1_160px] max-w-60">
+              <Search
+                className="absolute inset-s-2 top-1/2 size-4 -translate-y-1/2 opacity-60"
+                size={16}
+              />
               <Input
-                className="pl-7"
+                className="ps-7"
                 placeholder={t('navPanel.searchAgent')}
                 value={keyword}
+                visualSize="compact"
                 onChange={(e) => setKeyword(e.target.value)}
               />
             </div>
           )}
-          <div
-            className="flex items-center gap-2"
-            style={{ marginInlineStart: 'auto', minWidth: 0 }}
-          >
+          <div className="flex min-w-0 items-center gap-2 ms-auto">
             {activeWorkspaceId && (
-              <div className="relative" style={{ flex: '1 1 160px', maxWidth: 240 }}>
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 opacity-60" size={14} />
+              <div className="relative flex-[1_1_160px] max-w-60">
+                <Search
+                  className="absolute inset-s-2 top-1/2 size-4 -translate-y-1/2 opacity-60"
+                  size={16}
+                />
                 <Input
-                  className="pl-7"
+                  className="ps-7"
                   placeholder={t('navPanel.searchAgent')}
                   value={keyword}
+                  visualSize="compact"
                   onChange={(e) => setKeyword(e.target.value)}
                 />
               </div>
             )}
             {canCreate ? (
               <SidebarDropdownMenu items={createMenuItems}>
-                <Button aria-label={t('agentViewAll.createAgent')} loading={isMutatingAgent}>
+                <Button
+                  aria-label={t('agentViewAll.createAgent')}
+                  loading={isMutatingAgent}
+                  size="compact"
+                >
                   <PlusIcon data-icon="inline-start" />
-                  <ChevronDownIcon size={14} />
+                  <ChevronDownIcon className="size-4" size={16} />
                 </Button>
               </SidebarDropdownMenu>
             ) : (
@@ -457,10 +431,10 @@ const AgentViewAllPage = memo(() => {
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
-                        <Button disabled aria-label={t('agentViewAll.createAgent')}>
+                      <span className="inline-flex">
+                        <Button disabled aria-label={t('agentViewAll.createAgent')} size="compact">
                           <PlusIcon data-icon="inline-start" />
-                          <ChevronDownIcon size={14} />
+                          <ChevronDownIcon className="size-4" size={16} />
                         </Button>
                       </span>
                     }
@@ -526,7 +500,7 @@ const AgentViewAllPage = memo(() => {
         ) : (
           // Grouped list shares the card branch's wrapper rhythm (outer gap 8,
           // bare GroupHeader) so toggling the view mode doesn't shift the bars.
-          <div data-agent-list className="flex flex-col" style={{ gap: groupedItems ? 8 : 2 }}>
+          <div data-agent-list className={cn('flex flex-col', groupedItems ? 'gap-2' : 'gap-0.5')}>
             {groupedItems
               ? groupedItems.map((group, index) => {
                   const collapsed = !expandedGroupSet.has(group.key);

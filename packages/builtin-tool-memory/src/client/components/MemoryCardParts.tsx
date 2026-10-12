@@ -22,11 +22,11 @@ import { ENTITY_ICONS, FALLBACK_ENTITY_ICON } from './memoryArgs';
  * reads the same whichever layer it was written to.
  */
 export const memoryCardStyles = {
-  chip: '[padding-block:4px] [padding-inline:8px] rounded-(--radius-input) text-xs leading-[1.4] text-foreground bg-(--ant-color-fill-quaternary)',
-  chipType: 'text-(--ant-color-text-quaternary)',
+  chip: '[padding-block:4px] [padding-inline:8px] rounded-(--radius-input) text-xs leading-[1.4] text-foreground bg-fill-quaternary',
+  chipType: 'text-foreground-quaternary',
   container: 'overflow-hidden w-full border border-sidebar-border rounded-[16px] bg-card',
   content: '[padding-block:12px] [padding-inline:16px]',
-  detail: 'text-[13px] leading-[1.6] text-muted-foreground',
+  detail: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
   header:
     '[padding-block:10px] [padding-inline:12px] [border-block-end:1px_solid_var(--sidebar-border)]',
   section: 'p-1 [border-block-start:1px_solid_var(--sidebar-border)]',
@@ -49,7 +49,7 @@ export const MemorySection = memo<MemorySectionProps>(({ children, title, tone =
     className={cn('flex', 'flex-col', 'gap-2', memoryCardStyles.section)}
     style={{ paddingBlock: 16, paddingInline: 12 }}
   >
-    <div className="text-[12px] font-medium">
+    <div className="text-xs font-medium">
       <span className={highlightTextStyles[tone]}>{title}</span>
     </div>
     {children}
@@ -67,7 +67,7 @@ export const EntityChips = memo<EntityChipsProps>(({ entities }) => (
   <div className="flex gap-2 flex-wrap">
     {entities.map((entity, index) => {
       const chip = (
-        <div className={cn('flex', 'items-center', 'gap-[6px]', memoryCardStyles.chip)} key={index}>
+        <div className={cn('flex', 'items-center', 'gap-1.5', memoryCardStyles.chip)} key={index}>
           <span>{(entity.type && ENTITY_ICONS[entity.type]) || FALLBACK_ENTITY_ICON}</span>
           <span>{entity.name}</span>
           {entity.type && <span className={memoryCardStyles.chipType}>{entity.type}</span>}
@@ -106,7 +106,7 @@ export const SummaryAccordion = memo<SummaryAccordionProps>(({ details, summary,
     <Accordion>
       <AccordionItem value="summary">
         <AccordionTrigger>
-          <div className="text-[12px] text-muted-foreground font-medium">Summary</div>
+          <div className="text-xs text-muted-foreground font-medium">Summary</div>
         </AccordionTrigger>
         <AccordionContent>
           <div className="flex flex-col gap-2 px-2" style={{ paddingBlock: '8px 12px' }}>

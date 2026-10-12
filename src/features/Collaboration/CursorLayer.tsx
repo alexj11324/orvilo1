@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo, useMemo, useSyncExternalStore } from 'react';
 
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -9,17 +8,9 @@ import { cursorPresence, MAX_DYNAMIC_CURSORS, useCollaborationStore } from '@/st
 import { useCollaborationContext } from './context';
 import { HumanCursor } from './HumanCursor';
 
-const styles = createStaticStyles(({ css }) => ({
-  layer: css`
-    pointer-events: none;
-
-    position: fixed;
-    z-index: 1000;
-    inset: 0;
-
-    overflow: hidden;
-  `,
-}));
+const styles = {
+  layer: 'pointer-events-none fixed z-1000 inset-0 overflow-hidden',
+};
 
 /**
  * Fixed viewport overlay for remote human cursors. Subscribes to the room's

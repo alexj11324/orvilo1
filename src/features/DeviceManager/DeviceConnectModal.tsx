@@ -1,7 +1,6 @@
 'use client';
 
 import { DOWNLOAD_URL } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { DownloadIcon, MonitorDownIcon, ShieldCheckIcon, TerminalIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -20,35 +19,12 @@ import { useElectronStore } from '@/store/electron';
 
 import { useConnectDesktopDevice } from './useConnectDesktopDevice';
 
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    margin-block-start: 4px;
-    padding-block-start: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  index: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 600;
-    color: ${cssVar.colorPrimary};
-
-    background: ${cssVar.colorPrimaryBg};
-  `,
-  line: css`
-    flex: 1;
-    width: 1px;
-    margin-block-start: 4px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-}));
+const styles = {
+  footer: 'mbs-1 pbs-4 border-bs border-divider',
+  index:
+    'flex shrink-0 items-center justify-center size-6 rounded-full text-xs leading-5 font-semibold text-primary-text bg-primary-wash',
+  line: 'flex-1 w-px mbs-1 bg-divider',
+};
 
 interface StepProps {
   children?: React.ReactNode;
@@ -64,17 +40,10 @@ const Step = memo<StepProps>(({ index, title, desc, children, last }) => (
       <span className={styles.index}>{index}</span>
       {!last && <span className={styles.line} />}
     </div>
-    <div
-      className="flex flex-col flex-1 gap-1"
-      style={{ minWidth: 0, paddingBlockEnd: last ? 0 : 24 }}
-    >
-      <div className="font-medium">{title}</div>
-      {desc && (
-        <div className="leading-[1.6]" style={{ color: cssVar.colorTextTertiary }}>
-          {desc}
-        </div>
-      )}
-      {children && <div style={{ marginBlockStart: 12 }}>{children}</div>}
+    <div className={cn('flex flex-col flex-1 min-w-0 gap-1', !last && 'pbe-6')}>
+      <div className="text-sm leading-5.5 font-medium">{title}</div>
+      {desc && <div className="text-sm leading-5.5 text-foreground-tertiary">{desc}</div>}
+      {children && <div className="mbs-3">{children}</div>}
     </div>
   </div>
 ));
@@ -123,6 +92,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(({ onClose, open, initi
               <span>{t('devices.connectWizard.cli.unavailable')}</span>
               <Button
                 render={<a href={DOWNLOAD_URL.default} rel="noreferrer" target="_blank" />}
+                size="normal"
                 variant="outline"
               >
                 {t('devices.connectWizard.cli.viewReleases')}
@@ -158,12 +128,8 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(({ onClose, open, initi
         if (!desktop.connecting) onClose();
       }}
     >
-      <div className="flex flex-col gap-5">
-        {
-          <div style={{ color: cssVar.colorTextTertiary }}>
-            {t('devices.connectWizard.subtitle')}
-          </div>
-        }
+      <div className="flex flex-col gap-5 text-sm leading-5.5">
+        {<div className="text-foreground-tertiary">{t('devices.connectWizard.subtitle')}</div>}
 
         {
           <Tabs
@@ -173,12 +139,18 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(({ onClose, open, initi
                 setActive(key as 'cli' | 'desktop');
             }}
           >
-            <TabsList style={{ display: 'flex', width: '100%' }}>
-              <TabsTrigger style={{ flex: 1 }} value="desktop">
+            <TabsList className="flex h-9 w-full rounded-(--radius-button) group-data-horizontal/tabs:h-9">
+              <TabsTrigger
+                className="flex-1 rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)"
+                value="desktop"
+              >
                 <MonitorDownIcon />
                 {t('devices.connectWizard.method.desktop')}
               </TabsTrigger>
-              <TabsTrigger style={{ flex: 1 }} value="cli">
+              <TabsTrigger
+                className="flex-1 rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)"
+                value="cli"
+              >
                 <TerminalIcon />
                 {t('devices.connectWizard.method.cli')}
               </TabsTrigger>
@@ -204,7 +176,12 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(({ onClose, open, initi
                 </AlertDescription>
               </Alert>
             )}
-            <Button loading={desktop.connecting} onClick={() => void desktop.connect()}>
+            <Button
+              loading={desktop.connecting}
+              size="normal"
+              type="button"
+              onClick={() => void desktop.connect()}
+            >
               {t('devices.connectWizard.desktop.connectThisComputer')}
             </Button>
           </div>
@@ -216,7 +193,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(({ onClose, open, initi
               title={t('devices.connectWizard.desktop.step1')}
             >
               <a
-                className={cn(buttonVariants({ variant: 'default' }))}
+                className={cn(buttonVariants({ size: 'normal', variant: 'default' }))}
                 href={DOWNLOAD_URL.default}
                 rel="noreferrer"
                 target="_blank"
@@ -242,8 +219,8 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(({ onClose, open, initi
         )}
 
         <div className={`flex items-center gap-2 ${styles.footer}`}>
-          <ShieldCheckIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
-          <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+          <ShieldCheckIcon className="size-4 text-foreground-tertiary" size={16} />
+          <div className="text-xs leading-5 text-foreground-tertiary">
             {t('devices.connectWizard.footer')}
           </div>
         </div>

@@ -38,14 +38,14 @@ const PREVIEWABLE_IMAGE_EXTENSIONS = new Set([
 const styles = {
   actionBar: 'flex-wrap max-w-80',
   label: 'overflow-hidden self-baseline min-w-0 font-normal text-ellipsis whitespace-nowrap',
-  path: 'max-w-90 py-2 px-2.5 rounded-(--ant-border-radius) font-mono text-[12px] leading-[1.5] text-muted-foreground break-all bg-(--ant-color-fill-quaternary)',
+  path: 'max-w-90 py-2 px-2.5 rounded-(--ant-border-radius) font-mono text-xs leading-[1.5] text-muted-foreground break-all bg-fill-quaternary',
   popover: 'max-w-98',
   previewFrame:
-    'overflow-hidden flex items-center justify-center w-[min(360px,72vw)] max-h-60 border border-selected rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary)',
+    'overflow-hidden flex items-center justify-center w-[min(360px,72vw)] max-h-60 border border-selected rounded-(--ant-border-radius-lg) bg-fill-quaternary',
   previewImage: 'block max-w-full max-h-60 object-contain',
   tag: 'cursor-default select-none inline-flex gap-1.5 items-center box-border max-w-[min(240px,100%)] h-6 py-0.5 px-2 rounded-(--ant-border-radius) text-[length:inherit] leading-5 text-muted-foreground align-baseline hover:bg-selected [&.selected]:outline-2 [&.selected]:outline-solid [&.selected]:outline-info [&.selected]:outline-offset-1',
   thumbnail:
-    'shrink-0 size-4 rounded-(--ant-border-radius-xs) object-cover bg-(--ant-color-fill-quaternary) shadow-[inset_0_0_0_1px_var(--selected)]',
+    'shrink-0 size-4 rounded-(--ant-border-radius-xs) object-cover bg-fill-quaternary shadow-[inset_0_0_0_1px_var(--selected)]',
 };
 
 export interface LocalFileTagData {

@@ -16,7 +16,7 @@ import {
 } from '../Evidence/attachments';
 
 const styles = {
-  warning: 'rounded-(--ant-border-radius-lg) bg-(--ant-color-warning-bg) px-3.5 py-2.5',
+  warning: 'rounded-(--ant-border-radius-lg) bg-warning-wash px-3.5 py-2.5',
 };
 
 /**
@@ -55,24 +55,24 @@ const AcceptContent = memo<AcceptContentProps>(({ exceptions, onConfirm, subject
       <div>{translate('acceptance.accept.summary', { title: subjectTitle })}</div>
       {exceptions.length > 0 && (
         <div className={`flex flex-col gap-1 ${styles.warning}`}>
-          <div className="font-semibold text-[13px]">
+          <div className="font-semibold text-(length:--text-dense)">
             {translate('acceptance.accept.exceptionsTitle', { count: exceptions.length })}
           </div>
           {exceptions.map((title) => (
-            <div className="text-[12px] text-muted-foreground" key={title}>
+            <div className="text-xs text-muted-foreground" key={title}>
               · {title}
             </div>
           ))}
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {translate('acceptance.accept.exceptionsHint')}
           </div>
         </div>
       )}
       <div className="flex gap-2 justify-end">
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {translate('acceptance.actions.cancel')}
         </Button>
-        <Button loading={loading} variant="outline" onClick={handleConfirm}>
+        <Button loading={loading} size="lg" variant="outline" onClick={handleConfirm}>
           {translate('acceptance.actions.confirmAccept')}
         </Button>
       </div>
@@ -117,7 +117,7 @@ const RejectContent = memo<RejectContentProps>(({ onConfirm }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-(length:--text-dense) text-muted-foreground">
         {translate('acceptance.reject.description')}
       </div>
       <Textarea
@@ -128,12 +128,13 @@ const RejectContent = memo<RejectContentProps>(({ onConfirm }) => {
         onChange={(event) => setComment(event.target.value)}
       />
       <div className="flex gap-2 justify-end">
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {translate('acceptance.actions.cancel')}
         </Button>
         <Button
           disabled={!comment.trim()}
           loading={loading}
+          size="lg"
           variant="outline"
           onClick={handleConfirm}
         >
@@ -187,7 +188,7 @@ const GroupFeedbackContent = memo<GroupFeedbackContentProps>(
 
     return (
       <div className="flex flex-col gap-4">
-        <div className="text-[13px] text-muted-foreground">
+        <div className="text-(length:--text-dense) text-muted-foreground">
           {description ?? translate('acceptance.group.feedbackDescription', { label: groupLabel })}
         </div>
         <div className="flex flex-col gap-2">
@@ -211,12 +212,13 @@ const GroupFeedbackContent = memo<GroupFeedbackContentProps>(
           </div>
         </div>
         <div className="flex items-center gap-2 justify-end">
-          <Button disabled={loading} onClick={close}>
+          <Button disabled={loading} size="lg" onClick={close}>
             {translate('acceptance.actions.cancel')}
           </Button>
           <Button
             disabled={!comment.trim() || uploading}
             loading={loading}
+            size="lg"
             variant="outline"
             onClick={handleConfirm}
           >

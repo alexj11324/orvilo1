@@ -34,7 +34,7 @@ const ConfigAlert = memo<ConfigAlertProps>(({ provider, id }) => {
         description={t('search.searchxng.unconfiguredDesc')}
         title={t('search.searchxng.unconfiguredTitle')}
       >
-        <div className="flex flex-col gap-3 w-[100%]">
+        <div className="flex flex-col gap-3 w-full">
           <Button
             className="w-full"
             disabled={loading}

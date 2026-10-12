@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo, Suspense } from 'react';
 
 import { AgentMigrationBadge } from '@/features/AgentTransferMigration';
@@ -20,7 +19,7 @@ const Header = memo(() => {
       right={
         <div
           className="flex items-center gap-2"
-          style={{ backgroundColor: cssVar.colorBgContainer }}
+          style={{ backgroundColor: 'var(--ant-color-bg-container)' }}
         >
           {/* Progress chip for a heavy group transfer/copy still filling in its
               conversations; renders nothing once the backfill finishes. */}

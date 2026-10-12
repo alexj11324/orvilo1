@@ -86,7 +86,7 @@ const CollapsedStatusBadges = memo<{ counts: ProjectTopicStatusCounts }>(({ coun
   if (items.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-[3px]">
+    <div className="flex items-center gap-0.75">
       {items.map(({ className, count, icon, label, loading }) => (
         <Tooltip key={label}>
           <TooltipTrigger
@@ -100,11 +100,11 @@ const CollapsedStatusBadges = memo<{ counts: ProjectTopicStatusCounts }>(({ coun
                   {loading ? (
                     <RingLoadingIcon
                       ringColor={`color-mix(in srgb, ${cssVar.colorWarning} 28%, transparent)`}
-                      size={11}
+                      size={16}
                       style={{ color: cssVar.colorWarning }}
                     />
                   ) : (
-                    icon && createElement(icon, { size: 11, strokeWidth: 2 })
+                    icon && createElement(icon, { size: 16, strokeWidth: 2 })
                   )}
                   {count}
                 </span>
@@ -168,12 +168,12 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
             className={accordionStyles.trigger}
             style={{ paddingBlock: 4, paddingInline: 8 }}
           >
-            <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
-              <div className="flex flex-col items-center justify-center flex-none h-[16px] w-[16px]">
+            <div className="flex items-center gap-1.5 h-6" style={{ overflow: 'hidden' }}>
+              <div className="flex flex-col items-center justify-center flex-none h-4 w-4">
                 <ProjectFolderIcon color={cssVar.colorTextTertiary} size={15} strokeWidth={1.5} />
               </div>
               <div
-                className="truncate text-[12px] text-muted-foreground font-medium"
+                className="truncate text-xs text-muted-foreground font-medium"
                 style={{ flex: 1 }}
               >
                 {title}
@@ -184,7 +184,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
         {action && <div className="flex shrink-0 items-center">{action}</div>}
       </div>
       <AccordionContent className="p-0">
-        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+        <div className="flex flex-col gap-px" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
               agentId={topic.agentId}

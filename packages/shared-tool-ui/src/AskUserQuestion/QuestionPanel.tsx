@@ -12,7 +12,7 @@ const styles = {
   // Keep the free-text row aligned with OptionCard's numbered options.
   customRow: '[margin-block-start:2px] [padding-inline:12px]',
   index:
-    'shrink-0 box-border size-[22px] rounded-(--radius-input) font-mono text-xs font-semibold leading-[22px] text-muted-foreground text-center bg-accent',
+    'shrink-0 box-border size-5.5 rounded-(--radius-input) font-mono text-xs font-semibold leading-5.5 text-muted-foreground text-center bg-accent',
 };
 
 interface QuestionPanelProps {
@@ -72,7 +72,7 @@ export const QuestionPanel = memo<QuestionPanelProps>(
       question.multiSelect ? Array.isArray(answer) && answer.includes(value) : answer === value;
 
     return (
-      <div className="flex flex-col gap-[10px]">
+      <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2">
           {question.header && <div className="text-muted-foreground">{question.header}</div>}
           {question.multiSelect && (

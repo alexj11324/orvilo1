@@ -1,6 +1,5 @@
 'use client';
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,71 +17,15 @@ import type { ProjectListItem } from '@/store/project';
 import type { ProjectListDisplayOptions, ProjectListGroup } from './displayOptions';
 import ProjectMilestoneChip from './MilestoneChip';
 
-const styles = createStaticStyles(({ css }) => ({
-  board: css`
-    overflow-x: auto;
-    overscroll-behavior: contain;
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-
-    padding-block-end: 8px;
-  `,
-  card: css`
-    position: relative;
-
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    padding: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    color: inherit;
-
-    background: ${cssVar.colorBgContainer};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  cardMeta: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
-  `,
-  column: css`
-    flex: none;
-    width: 264px;
-    border-radius: 8px;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  columnBody: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 6px;
-  `,
-  columnHeader: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 10px;
-  `,
-  link: css`
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-  `,
-}));
+const styles = {
+  board: 'flex items-start gap-3 overflow-x-auto overscroll-contain pbe-2',
+  card: 'relative flex flex-col gap-1.5 rounded-(--radius-card) border border-divider bg-card p-4 text-foreground hover:border-border hover:bg-fill-quaternary',
+  cardMeta: 'flex items-center gap-2 text-xs leading-5 text-foreground-tertiary whitespace-nowrap',
+  column: 'w-66 flex-none rounded-(--radius-card) bg-fill-quaternary',
+  columnBody: 'flex flex-col gap-1.5 p-1.5',
+  columnHeader: 'flex items-center gap-1.5 px-2.5 py-2',
+  link: 'absolute inset-0 rounded-(--radius-card)',
+};
 
 interface ProjectBoardProps {
   groups: ProjectListGroup<ProjectListItem>[];
@@ -106,12 +49,8 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
           <div className={styles.column} key={group.key}>
             <div className={styles.columnHeader}>
               <ProjectStatusIcon size={16} status={status} />
-              <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-                {t(`status.${status}`)}
-              </span>
-              <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
-                {group.items.length}
-              </span>
+              <span className="text-sm leading-5.5 font-medium">{t(`status.${status}`)}</span>
+              <span className="text-muted-foreground text-xs leading-5">{group.items.length}</span>
             </div>
             <div className={styles.columnBody}>
               {group.items.map((project) => {
@@ -123,10 +62,7 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
                       className={styles.link}
                       to={`/project/${project.slug ?? project.id}`}
                     />
-                    <div
-                      className="flex flex-row"
-                      style={{ alignItems: 'center', gap: 8, minWidth: 0 }}
-                    >
+                    <div className="flex flex-row items-center gap-2 min-w-0">
                       {project.avatar && project.avatar !== '📦' ? (
                         <Avatar
                           avatar={project.avatar}
@@ -135,9 +71,9 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
                           size={16}
                         />
                       ) : (
-                        <ProjectIcon color={cssVar.colorTextTertiary} size={14} />
+                        <ProjectIcon color="var(--foreground-tertiary)" size={14} />
                       )}
-                      <span className="text-sm truncate" style={{ fontSize: 13, fontWeight: 500 }}>
+                      <span className="truncate text-sm leading-5.5 font-medium">
                         {project.name}
                       </span>
                     </div>
@@ -199,7 +135,7 @@ const ProjectHealthDot = memo<{ health: string }>(({ health }) => {
       <TooltipTrigger
         render={
           <span aria-label={label} role="img">
-            <ProjectHealthIcon health={valid} size={12} />
+            <ProjectHealthIcon health={valid} size={16} />
           </span>
         }
       />

@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from 'cn';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -14,6 +15,7 @@ interface AcceptanceDrawerStyles {
 
 interface AcceptanceDrawerProps {
   children?: ReactNode;
+  classNames?: { bodyContent?: string };
   containerMaxWidth?: string;
   noHeader?: boolean;
   onClose?: () => void;
@@ -28,6 +30,7 @@ interface AcceptanceDrawerProps {
 /** Keep each reading level full-width on phones, with a persistent exit. */
 export const AcceptanceDrawer = ({
   children,
+  classNames,
   noHeader,
   onClose,
   open,
@@ -64,12 +67,8 @@ export const AcceptanceDrawer = ({
           </SheetHeader>
         ) : null}
         <div
-          className="flex flex-col min-h-0 flex-1"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            ...styles?.bodyContent,
-          }}
+          className={cn('flex flex-col min-h-0 flex-1', classNames?.bodyContent)}
+          style={styles?.bodyContent}
         >
           {children}
         </div>

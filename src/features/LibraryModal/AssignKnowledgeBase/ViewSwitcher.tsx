@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { Grid3x3Icon, ListIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,17 +11,11 @@ interface ViewSwitcherProps {
   view: ViewMode;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    gap: 4px;
-  `,
-}));
-
 const ViewSwitcher = memo<ViewSwitcherProps>(({ onViewChange, view }) => {
   const { t } = useTranslation('components');
 
   return (
-    <div className={cx('flex flex-row', styles.container)}>
+    <div className={'flex flex-row gap-1'}>
       <ActionIcon
         active={view === 'list'}
         icon={ListIcon}

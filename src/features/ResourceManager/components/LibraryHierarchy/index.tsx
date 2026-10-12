@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { FolderIcon } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -76,7 +75,7 @@ const LibraryHierarchy = memo(() => {
     >
       <span className="anticon" role="img">
         <FolderIcon
-          color={cssVar.colorTextQuaternary}
+          color={'var(--ant-color-text-quaternary)'}
           fill={'transparent'}
           height={36}
           size={36}

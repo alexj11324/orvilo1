@@ -108,7 +108,7 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="text-[12px] text-muted-foreground">{t('creds.share.toggle')}</div>
+      <div className="text-xs text-muted-foreground">{t('creds.share.toggle')}</div>
       {shared && (
         <ToggleGroup
           disabled={isPending}

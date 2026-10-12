@@ -42,7 +42,7 @@ const List = memo<SessionListProps>(
     if (dataSource.length === 0) return null;
 
     return (
-      <div className="flex flex-col gap-[1px]">
+      <div className="flex flex-col gap-px">
         {dataSource.map((item) =>
           item.type === 'group' ? (
             <GroupItem className={itemClassName} item={item} key={item.id} style={itemStyle} />

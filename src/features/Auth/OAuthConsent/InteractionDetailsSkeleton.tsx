@@ -8,7 +8,7 @@ import AuthCard from '@/features/AuthCard';
 const InteractionDetailsSkeleton = memo(() => (
   <div className="flex flex-col gap-4" style={{ width: 'min(100%,400px)' }}>
     <div className="flex items-center justify-center w-full">
-      <Skeleton className="size-[72px] rounded-full" />
+      <Skeleton className="size-18 rounded-full" />
     </div>
     <AuthCard
       title={<Skeleton style={{ height: 40 }} />}

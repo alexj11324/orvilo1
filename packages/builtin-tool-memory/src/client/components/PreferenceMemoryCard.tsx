@@ -30,14 +30,14 @@ import type { AddPreferenceMemoryParams } from '../../types';
 const styles = {
   container: 'overflow-hidden w-full border border-sidebar-border rounded-[16px] bg-card',
   content: '[padding-block:12px] [padding-inline:16px]',
-  detail: 'text-[13px] leading-[1.6] text-muted-foreground',
+  detail: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
   directive: 'text-sm leading-[1.6] text-foreground',
   header:
     '[padding-block:10px] [padding-inline:12px] [border-block-end:1px_solid_var(--sidebar-border)]',
   section: 'p-1 [border-block-start:1px_solid_var(--sidebar-border)]',
-  stepContent: 'text-[13px] leading-[1.6] text-muted-foreground whitespace-pre-wrap',
+  stepContent: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground whitespace-pre-wrap',
   suggestion:
-    '[padding-block:8px] [padding-inline:12px] rounded-(--radius-card) text-[13px] leading-[1.5] text-muted-foreground bg-(--ant-color-fill-quaternary)',
+    '[padding-block:8px] [padding-inline:12px] rounded-(--radius-card) text-(length:--text-dense) leading-[1.5] text-muted-foreground bg-fill-quaternary',
   summary: 'text-sm leading-[inherit] font-medium text-muted-foreground',
   tags: '[padding-block-start:8px] [border-block-start:1px_dashed_var(--sidebar-border)]',
   title: 'line-clamp-1 font-medium text-foreground',
@@ -114,7 +114,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
             <Accordion>
               <AccordionItem value="summary">
                 <AccordionTrigger>
-                  <div className="text-[12px] text-muted-foreground font-medium">Summary</div>
+                  <div className="text-xs text-muted-foreground font-medium">Summary</div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="flex flex-col gap-2 px-2" style={{ paddingBlock: '8px 12px' }}>
@@ -138,9 +138,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
             <Accordion className={styles.section} defaultValue={['context']}>
               <AccordionItem value="context">
                 <AccordionTrigger>
-                  <div className="text-[12px] text-muted-foreground font-medium">
-                    Origin Context
-                  </div>
+                  <div className="text-xs text-muted-foreground font-medium">Origin Context</div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="flex flex-col px-2" style={{ paddingBlock: '8px 12px' }}>
@@ -167,7 +165,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                               </StepperIndicator>
                               <div className="flex flex-col gap-1">
                                 <StepperTitle>
-                                  <span className="text-[12px] text-muted-foreground font-medium">
+                                  <span className="text-xs text-muted-foreground font-medium">
                                     {item.title}
                                   </span>
                                 </StepperTitle>
@@ -194,7 +192,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
             <Accordion className={styles.section}>
               <AccordionItem value="appContext">
                 <AccordionTrigger>
-                  <div className="text-[12px] text-muted-foreground font-medium">App Context</div>
+                  <div className="text-xs text-muted-foreground font-medium">App Context</div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="flex flex-col px-2" style={{ paddingBlock: '8px 12px' }}>
@@ -221,7 +219,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                               </StepperIndicator>
                               <div className="flex flex-col gap-1">
                                 <StepperTitle>
-                                  <span className="text-[12px] text-muted-foreground font-medium">
+                                  <span className="text-xs text-muted-foreground font-medium">
                                     {item.title}
                                   </span>
                                 </StepperTitle>
@@ -249,7 +247,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               className={cn('flex', 'flex-col', 'gap-2', styles.section)}
               style={{ paddingBlock: 16, paddingInline: 12 }}
             >
-              <div className="text-[12px] font-medium">
+              <div className="text-xs font-medium">
                 <span className={highlightTextStyles.primary}>Directive</span>
               </div>
               <div className={styles.directive}>{conclusionDirectives}</div>
@@ -262,7 +260,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               className={cn('flex', 'flex-col', 'gap-2', styles.section)}
               style={{ paddingBlock: 16, paddingInline: 12 }}
             >
-              <div className="text-[12px] font-medium">
+              <div className="text-xs font-medium">
                 <span className={highlightTextStyles.info}>Suggestions</span>
               </div>
               <div className="flex flex-col gap-2">
@@ -286,7 +284,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               {details && <StreamingMarkdown>{details}</StreamingMarkdown>}
               {conclusionDirectives && (
                 <div className="flex flex-col gap-1 py-2">
-                  <div className="text-[12px] font-medium">
+                  <div className="text-xs font-medium">
                     <span className={highlightTextStyles.primary}>Directive</span>
                   </div>
                   <div className={styles.directive}>{conclusionDirectives}</div>
@@ -294,7 +292,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               )}
               {hasSuggestions && (
                 <div className="flex flex-col gap-2 py-2">
-                  <div className="text-[12px] font-medium">
+                  <div className="text-xs font-medium">
                     <span className={highlightTextStyles.info}>Suggestions</span>
                   </div>
                   <div className="flex flex-col gap-2">

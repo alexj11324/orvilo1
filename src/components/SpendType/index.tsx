@@ -1,26 +1,15 @@
-import { createStaticStyles } from 'antd-style';
 import { CircleDotDashed, Database, ImagePlus, MessageSquareText, Mic, Video } from 'lucide-react';
 import { createElement, memo, type ReactNode } from 'react';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chat: css`
-    color: ${cssVar.colorInfo};
-  `,
-  embedding: css`
-    color: ${cssVar.purple};
-  `,
-  imageGeneration: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  speechRecognition: css`
-    color: ${cssVar.colorInfo};
-  `,
-  videoGeneration: css`
-    color: ${cssVar.colorWarning};
-  `,
-}));
+const typeClasses: Record<SpendTypeValue, string> = {
+  chat: 'text-muted-foreground',
+  embedding: 'text-muted-foreground',
+  imageGeneration: 'text-muted-foreground',
+  speechRecognition: 'text-muted-foreground',
+  videoGeneration: 'text-muted-foreground',
+};
 
 export type SpendTypeValue =
   'chat' | 'embedding' | 'imageGeneration' | 'speechRecognition' | 'videoGeneration';
@@ -57,7 +46,7 @@ const getIcon = (type: string) => {
 const SpendType = memo<SpendTypeProps>(({ type, children }) => (
   <Tooltip>
     <TooltipTrigger render={<span />}>
-      {createElement(getIcon(type), { size: 16, className: styles[type] })}
+      {createElement(getIcon(type), { size: 16, className: typeClasses[type] })}
     </TooltipTrigger>
     <TooltipContent>{children}</TooltipContent>
   </Tooltip>

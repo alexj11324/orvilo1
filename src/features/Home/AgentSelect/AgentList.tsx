@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckIcon, PinIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,29 +15,12 @@ import { homeAgentListSelectors } from '@/store/home/selectors';
 import { ConfiguredAgentRow } from './ConfiguredAgentRow';
 import { type AgentRow, useHomeAgentRows } from './useHomeAgentRows';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  active: css`
-    background: ${cssVar.colorFillTertiary};
-  `,
-  item: css`
-    cursor: pointer;
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  list: css`
-    padding: 8px;
-  `,
-  sectionHeader: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-    line-height: 20px;
-  `,
-}));
+const styles = {
+  active: 'bg-accent',
+  item: "w-full justify-start gap-2 rounded-(--radius-button) px-2 py-0.5 text-left text-sm leading-5.5 hover:bg-selected pointer-coarse:after:absolute pointer-coarse:after:inset-[calc(var(--spacing)*-1.75)] pointer-coarse:after:content-['']",
+  list: 'flex w-full max-h-90 flex-col gap-0.5 overflow-y-auto p-2',
+  sectionHeader: 'flex flex-col px-2 py-1 text-xs font-medium leading-5 text-muted-foreground',
+};
 
 interface AgentListProps {
   activeAgentId: string;
@@ -59,9 +42,7 @@ interface AgentListProps {
 
 // Same spec as the agent-detail SwitchPanel's section header.
 const SectionHeader = memo<{ children: ReactNode }>(({ children }) => (
-  <div className={cx(styles.sectionHeader, 'flex flex-col')}>
-    <div className="text-[12px] text-muted-foreground font-medium">{children}</div>
-  </div>
+  <div className={styles.sectionHeader}>{children}</div>
 ));
 
 const AgentList = memo<AgentListProps>(
@@ -88,27 +69,30 @@ const AgentList = memo<AgentListProps>(
         );
 
       return (
-        <Button
-          aria-pressed={isActive}
-          key={row.id}
-          type="button"
-          variant="ghost"
-          className={cx(
-            `${styles.item} ${isActive ? styles.active : ''}`,
-            'flex h-auto w-full justify-start items-center gap-2 cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-ring hover:bg-[var(--ant-color-fill-tertiary)]',
-          )}
-          onClick={() => onSelect(row.id)}
-        >
-          <AgentRuntimeIcon size={24} type={row.heterogeneousType || 'orvilo'} />
-          <div
-            className={cx('truncate', isActive ? 'font-semibold' : 'font-medium')}
-            style={{ flex: 1, color: isActive ? cssVar.colorText : cssVar.colorTextSecondary }}
+        <div className="contents pointer-coarse:block pointer-coarse:py-1.5" key={row.id}>
+          <Button
+            aria-pressed={isActive}
+            className={cn('relative', styles.item, isActive && styles.active)}
+            size="compact"
+            type="button"
+            variant="ghost"
+            onClick={() => onSelect(row.id)}
           >
-            {row.title}
-          </div>
-          {isActive && <CheckIcon aria-hidden className="shrink-0 text-primary" size={16} />}
-          {row.pinned && <PinIcon aria-hidden size={12} style={{ opacity: 0.5, flexShrink: 0 }} />}
-        </Button>
+            <AgentRuntimeIcon size={24} type={row.heterogeneousType || 'orvilo'} />
+            <div
+              className={cn(
+                'min-w-0 flex-1 truncate',
+                isActive ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground',
+              )}
+            >
+              {row.title}
+            </div>
+            {isActive && <CheckIcon aria-hidden className="shrink-0 text-primary" size={16} />}
+            {row.pinned && (
+              <PinIcon aria-hidden className="shrink-0 text-foreground-tertiary" size={16} />
+            )}
+          </Button>
+        </div>
       );
     };
 
@@ -141,14 +125,9 @@ const AgentList = memo<AgentListProps>(
       return (
         <AsyncBoundary
           {...boundaryProps}
-          loading={<SkeletonList rows={6} style={{ padding: 8 }} />}
+          loading={<SkeletonList className="flex flex-col p-2" rows={6} />}
         >
-          <div
-            className={cx(styles.list, 'flex flex-col gap-0.5')}
-            style={{ maxHeight: 360, overflowY: 'auto', width: '100%' }}
-          >
-            {rows}
-          </div>
+          <div className={styles.list}>{rows}</div>
         </AsyncBoundary>
       );
 
@@ -158,10 +137,7 @@ const AgentList = memo<AgentListProps>(
     // (its data never went through that fetch). The wrapper takes over the
     // skeleton's padding, which is why the loading node changes above.
     return (
-      <div
-        className={cx(styles.list, 'flex flex-col gap-0.5')}
-        style={{ maxHeight: 360, overflowY: 'auto', width: '100%' }}
-      >
+      <div className={styles.list}>
         <AsyncBoundary {...boundaryProps} loading={<SkeletonList rows={6} />}>
           {rows}
         </AsyncBoundary>

@@ -52,5 +52,6 @@ export const DroidIcon = DroidIconBase as typeof DroidIconBase & {
 };
 
 DroidIcon.Avatar = DroidAvatar;
+// Factory Droid branding uses its own primary color, independent of the app palette.
 DroidIcon.colorPrimary = '#020202';
 DroidIcon.title = 'Factory Droid';

@@ -1,7 +1,6 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
 import {
   ChevronRightIcon,
   FolderCogIcon,
@@ -21,139 +20,26 @@ import DeviceDetailPanel from './DeviceDetailPanel';
 import DeviceItem from './DeviceItem';
 import { useDeviceList } from './useDeviceList';
 
-const styles = createStaticStyles(({ css }) => ({
-  // ─── Onboarding empty state ───
-  badge: css`
-    padding-block: 1px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 500;
-    color: ${cssVar.colorPrimary};
-
-    background: ${cssVar.colorPrimaryBg};
-  `,
-  capabilityCard: css`
-    padding: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  capabilityIcon: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 36px;
-    height: 36px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  emptyCard: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  // The personal page renders inside a settings form card, so the list and the
-  // onboarding state drop their own card chrome — one frame, not two nested.
-  plainCol: css`
-    overflow: hidden;
-    min-width: 0;
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  emptyHero: css`
-    padding-block: 40px;
-    padding-inline: 32px;
-    text-align: center;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  heroIcon: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 56px;
-    height: 56px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  option: css`
-    cursor: pointer;
-    padding: 20px;
-    background: ${cssVar.colorBgContainer};
-    transition: background 0.15s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  optionGrid: css`
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  optionIcon: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 40px;
-    height: 40px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  // ─── Master-detail surfaces ───
-  detailCol: css`
-    align-self: stretch;
-
-    min-width: 0;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  listCol: css`
-    overflow: hidden;
-
-    min-width: 0;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  listScroll: css`
-    overflow-y: auto;
-
-    /* Cap the list so long fleets (servers / CLI agents) stay scrollable instead
-       of pushing the page — pairs with the detail panel sitting beside it. */
-    max-height: 480px;
-  `,
-}));
+const styles = {
+  badge:
+    'py-0.25 px-2 rounded-full text-xs leading-5 font-medium text-primary-text bg-primary-wash',
+  capabilityCard: 'p-4 border border-divider rounded-(--radius-card) bg-card',
+  capabilityIcon:
+    'flex items-center justify-center size-9 rounded-(--radius-card) text-muted-foreground bg-muted',
+  emptyCard: 'overflow-hidden border border-divider rounded-(--radius-card) bg-card',
+  plainCol: 'overflow-hidden min-w-0 rounded-(--radius-card)',
+  emptyHero: 'py-10 px-8 text-center bg-fill-quaternary',
+  heroIcon:
+    'flex items-center justify-center size-14 rounded-(--radius-card) text-foreground bg-selected',
+  option:
+    'cursor-pointer p-5 bg-card transition-[background-color] duration-(--orvilo-motion-fast) ease-in-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2 motion-reduce:transition-none',
+  optionGrid: 'grid grid-cols-2 gap-px border-bs border-divider bg-divider',
+  optionIcon:
+    'flex shrink-0 items-center justify-center size-10 rounded-(--radius-card) text-muted-foreground bg-muted',
+  detailCol: 'self-stretch min-w-0 border border-divider rounded-(--radius-card) bg-card',
+  listCol: 'overflow-hidden min-w-0 border border-divider rounded-(--radius-card) bg-card',
+  listScroll: 'overflow-y-auto max-h-120',
+};
 
 interface ConnectOptionProps {
   badge?: string;
@@ -177,18 +63,16 @@ const ConnectOption = memo<ConnectOptionProps>(({ icon: Icon, title, desc, badge
     }}
   >
     <span className={styles.optionIcon}>
-      <Icon size={20} />
+      <Icon size={16} />
     </span>
-    <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
+    <div className="flex flex-col flex-1 min-w-0 gap-1">
       <div className="flex items-center gap-2">
-        <div className="font-medium">{title}</div>
+        <div className="text-sm leading-5.5 font-medium">{title}</div>
         {badge && <span className={styles.badge}>{badge}</span>}
       </div>
-      <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
-        {desc}
-      </div>
+      <div className="text-xs leading-5 text-foreground-tertiary">{desc}</div>
     </div>
-    <ChevronRightIcon size={16} style={{ color: cssVar.colorTextQuaternary }} />
+    <ChevronRightIcon className="size-4 text-foreground-quaternary" size={16} />
   </div>
 ));
 
@@ -213,20 +97,18 @@ const Capabilities = memo(() => {
   ];
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-[12px] text-muted-foreground font-medium">
+      <div className="text-xs text-muted-foreground font-medium">
         {t('devices.capabilities.title')}
       </div>
       <div className="flex gap-4">
         {items.map((cap) => (
           <div className={`flex flex-col flex-1 gap-3 ${styles.capabilityCard}`} key={cap.title}>
             <span className={styles.capabilityIcon}>
-              <cap.icon size={18} />
+              <cap.icon size={16} />
             </span>
             <div className="flex flex-col gap-1">
-              <div className="font-medium">{cap.title}</div>
-              <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
-                {cap.desc}
-              </div>
+              <div className="text-sm leading-5.5 font-medium">{cap.title}</div>
+              <div className="text-xs leading-5 text-foreground-tertiary">{cap.desc}</div>
             </div>
           </div>
         ))}
@@ -239,7 +121,7 @@ const Capabilities = memo(() => {
 // row text — loading → loaded is a content swap, not a relayout (ux §4.1).
 const ListSkeleton = memo<{ bordered?: boolean }>(({ bordered }) => (
   <div className={`flex flex-col flex-1 ${bordered ? styles.listCol : styles.plainCol}`}>
-    <div className="flex flex-col" style={{ padding: bordered ? 4 : 0 }}>
+    <div className={`flex flex-col ${bordered ? 'p-1' : 'p-0'}`}>
       <SharedListSkeleton />
     </div>
   </div>
@@ -253,8 +135,7 @@ interface DeviceManagerProps {
 /**
  * Master-detail device manager shared by the personal (`/settings/devices`) and
  * workspace (`/:slug/settings/devices`) pages — list + detail panel + onboarding
- * empty state, filtered to the given `scope` (and, for workspace, the active
- * visibility tab).
+ * empty state. Both routes list the current member’s own devices.
  */
 const DeviceManager = memo<DeviceManagerProps>(({ onConnect }) => {
   const { t } = useTranslation('setting');
@@ -262,11 +143,6 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect }) => {
   // Workspace-keyed SWR fetch — the shared hook every device-listing surface
   // uses (see `useDeviceList` for why the raw TRPC React Query path is wrong).
   const { data, isLoading, error, mutate } = useDeviceList();
-  // `listDevices` is workspace-aware and returns both pools — keep each surface
-  // to its own scope (and visibility tab). Ghost rows (`visibility: null`,
-  // online but unregistered) belong to the shared pool: the server already
-  // strips other members' private devices, so an unclaimed live connection can
-  // only be a public-pool machine.
   const devices = data ?? [];
   const useFetchDeviceInfo = useElectronStore((s) => s.useFetchGatewayDeviceInfo);
   const gatewayDeviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
@@ -284,8 +160,8 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect }) => {
       <div className={`flex flex-col ${styles.plainCol}`}>
         <div className={`flex flex-col items-center gap-3 ${styles.emptyHero}`}>
           <span className={styles.heroIcon}>{<MonitorDownIcon size={28} />}</span>
-          <div className="text-[18px] font-semibold">{t('devices.empty.title')}</div>
-          <div className="text-muted-foreground" style={{ maxWidth: 440 }}>
+          <div className="text-xl leading-7 font-semibold">{t('devices.empty.title')}</div>
+          <div className="max-w-110 text-sm leading-5.5 text-muted-foreground">
             {t('devices.empty.desc')}
           </div>
         </div>
@@ -327,7 +203,7 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect }) => {
     >
       <div className="flex items-start gap-4">
         <div className={`flex flex-col flex-1 ${styles.plainCol}`}>
-          <div className={`flex flex-col gap-0.5 ${styles.listScroll}`} style={{ padding: 0 }}>
+          <div className={`flex flex-col gap-0.5 p-0 ${styles.listScroll}`}>
             {devices.map((device) => (
               <DeviceItem
                 device={device}

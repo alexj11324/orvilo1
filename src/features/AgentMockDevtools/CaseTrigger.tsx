@@ -1,9 +1,9 @@
 import type { MockCase } from '@orvilo/agent-mock';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown } from 'lucide-react';
 import { isValidElement, memo, type ReactNode, useMemo, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
@@ -11,104 +11,21 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { useMockCases } from './hooks/useMockCases';
 import { useAgentMockStore } from './store/agentMockStore';
 
-const styles = createStaticStyles(({ css }) => ({
-  empty: css`
-    padding: 16px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  group: css`
-    padding-block: 8px 4px;
-    padding-inline: 12px;
-
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  item: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-inline-start: 1px solid transparent;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  itemActive: css`
-    border-inline-start-color: ${cssVar.colorText};
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  itemMeta: css`
-    flex-shrink: 0;
-    font-size: 11px;
-    font-feature-settings: 'tnum';
-    color: ${cssVar.colorTextTertiary};
-  `,
-  itemName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  list: css`
-    overflow-y: auto;
-    max-height: 360px;
-    padding-block: 4px;
-  `,
-  panel: css`
-    width: 320px;
-  `,
-  search: css`
-    padding-block: 8px 4px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  trigger: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    max-width: 240px;
-    padding-block: 4px;
-    padding-inline: 8px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 6px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorBgContainer};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  triggerName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  triggerPlaceholder: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  empty: 'p-4 text-center text-sm leading-5.5 text-foreground-tertiary',
+  group: 'px-3 pbs-2 pbe-1 text-xs font-medium leading-5 text-foreground-tertiary',
+  item: 'flex min-h-9 cursor-pointer items-center justify-between gap-2 border-s border-transparent px-3 py-1.5 text-sm leading-5.5 text-muted-foreground hover:bg-accent pointer-coarse:min-h-11',
+  itemActive: 'border-s-foreground bg-selected font-medium text-foreground',
+  itemMeta: 'shrink-0 text-xs leading-5 tabular-nums text-foreground-tertiary',
+  itemName: 'truncate',
+  list: 'max-h-90 overflow-y-auto py-1',
+  panel: 'w-80',
+  search: 'border-be border-divider px-2 pbs-2 pbe-1',
+  trigger:
+    "relative max-w-60 gap-1.5 rounded-(--radius-input) border-divider bg-card px-2 text-sm font-medium leading-5.5 text-foreground hover:border-border hover:bg-accent pointer-coarse:after:absolute pointer-coarse:after:inset-[calc(var(--spacing)*-1.75)] pointer-coarse:after:content-['']",
+  triggerName: 'min-w-0 truncate',
+  triggerPlaceholder: 'text-foreground-tertiary',
+};
 
 const countTools = (c: MockCase): number => {
   if (typeof c.meta?.toolCount === 'number') return c.meta.toolCount;
@@ -159,6 +76,7 @@ const CasePanel = memo<CasePanelProps>(({ onClose, selectedCaseId, setSelectedCa
           autoFocus
           placeholder="Search cases…"
           value={query}
+          visualSize="compact"
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
@@ -166,7 +84,7 @@ const CasePanel = memo<CasePanelProps>(({ onClose, selectedCaseId, setSelectedCa
         {totalVisible === 0 && <div className={styles.empty}>No cases match.</div>}
         {groups.map((group) =>
           group.items.length === 0 ? null : (
-            <div className="flex flex-col" key={group.key} style={{ paddingBlockEnd: 4 }}>
+            <div className="flex flex-col pbe-1" key={group.key}>
               <div className={styles.group}>
                 {group.label} ({group.items.length})
               </div>
@@ -213,30 +131,39 @@ export const CaseTrigger = memo<CaseTriggerProps>(({ children, placement = 'bott
   const current = all.find((c) => c.id === selectedCaseId);
   const [open, setOpen] = useState(false);
 
+  const trigger = (
+    <PopoverTrigger
+      nativeButton={children !== undefined && !isValidElement(children) ? false : undefined}
+      render={
+        children === undefined ? (
+          <Button className={styles.trigger} size="compact" type="button" variant="outline">
+            {current ? (
+              <span className={styles.triggerName}>{current.name}</span>
+            ) : (
+              <span className={styles.triggerPlaceholder}>Pick a case</span>
+            )}
+            <ChevronDown aria-hidden size={16} />
+          </Button>
+        ) : isValidElement(children) ? (
+          children
+        ) : (
+          <span>{children}</span>
+        )
+      }
+    />
+  );
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          children === undefined ? (
-            <span className={styles.trigger}>
-              {current ? (
-                <span className={styles.triggerName}>{current.name}</span>
-              ) : (
-                <div className={cn(styles.triggerPlaceholder)}>Pick a case</div>
-              )}
-              <ChevronDown size={12} />
-            </span>
-          ) : isValidElement(children) ? (
-            children
-          ) : (
-            <span>{children}</span>
-          )
-        }
-      />
+      {children === undefined ? (
+        <span className="inline-flex pointer-coarse:p-1.5">{trigger}</span>
+      ) : (
+        trigger
+      )}
       <PopoverContent
         align={placement.endsWith('Right') ? 'end' : 'start'}
+        className="w-80 p-0"
         side={placement.startsWith('top') ? 'top' : 'bottom'}
-        style={{ padding: 0 }}
       >
         <CasePanel
           selectedCaseId={selectedCaseId}

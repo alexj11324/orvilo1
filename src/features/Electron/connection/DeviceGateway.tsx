@@ -108,20 +108,22 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
     isDeviceListLoading,
     deviceListError,
   );
-  const scopeConnected = workspaceScoped ? workspaceConnectionState === 'connected' : isConnected;
+  // This device's own connection: what the dot shows, in or out of a workspace.
+  // An Agent can run on a private device that no workspace device list includes.
+  const deviceHint = isConnecting
+    ? t('gateway.statusConnecting')
+    : t(isConnected ? 'gateway.statusConnected' : 'gateway.statusDisconnected');
   const connectionHint = workspaceScoped
     ? workspaceConnectionState === 'unavailable'
       ? t('gateway.workspaceStatusUnavailable')
       : workspaceConnectionState === 'connecting'
-        ? t('gateway.statusConnecting')
+        ? undefined
         : workspaceConnectionState === 'connected'
           ? t('gateway.workspaceStatusConnections', { count: connectionCount })
           : t('gateway.workspaceStatusDisconnected')
-    : isConnecting
-      ? t('gateway.statusConnecting')
-      : isConnected && connectionCount
-        ? t('gateway.statusConnectedConnections', { count: connectionCount })
-        : t(isConnected ? 'gateway.statusConnected' : 'gateway.statusDisconnected');
+    : isConnected && connectionCount
+      ? t('gateway.statusConnectedConnections', { count: connectionCount })
+      : undefined;
 
   const popoverContent = (
     <div className={cx(styles.popoverContent, 'flex flex-col gap-1')}>
@@ -149,7 +151,8 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
           )}
         </div>
       </div>
-      <span className={styles.scopeHint}>{connectionHint}</span>
+      <span className={styles.scopeHint}>{deviceHint}</span>
+      {connectionHint && <span className={styles.scopeHint}>{connectionHint}</span>}
     </div>
   );
 
@@ -167,7 +170,7 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
             />
           }
         />
-        {scopeConnected && <div className={styles.greenDot} />}
+        {isConnected && <div className={styles.greenDot} data-testid="device-gateway-connected" />}
       </div>
       <PopoverContent align="end" className="w-auto" side="bottom" style={{ padding: 8 }}>
         {popoverContent}

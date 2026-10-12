@@ -11,3 +11,7 @@ Working-directory and worktree changes use the active conversation identity and 
 First-login setup creates a real Agent before the workspace wizard, verifies a provider/model and execution device, and persists that Agent through workspace completion. Release acquisition and failed-send recovery are separate dependent layers; integration must preserve their regressions and later corrections.
 
 Verify these connected behaviors in the same fixed Electron candidate before release. Shared component geometry CI, focused tests and remote Typecheck are supporting evidence; development and mock-provider runs do not prove public installer or model-provider acceptance.
+
+## Device gateway indicator
+
+The title-bar indicator (`src/features/Electron/connection/DeviceGateway.tsx`) shows its green dot when this device is connected to the gateway, inside a workspace as well as outside one. An Agent can run on a private device that the workspace device list does not include, so the dot follows the device, not that list. The popover states this device's status first; inside a workspace a second line reports the workspace devices.

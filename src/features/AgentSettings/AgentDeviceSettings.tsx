@@ -21,7 +21,6 @@ import {
   resolveExecutionTargetSelection,
 } from '@/features/ExecutionTargetPicker';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
-import { usePermission } from '@/hooks/usePermission';
 import { useSelectAgentDevice } from '@/hooks/useSelectAgentDevice';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
@@ -71,15 +70,9 @@ interface AgentDeviceSettingsProps {
  */
 const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat']);
-  const { allowed: canEdit } = usePermission('edit_own_content');
   const agent = useAgentStore(agentByIdSelectors.getAgentById(agentId));
-  const {
-    agencyConfig,
-    canSelectExecutionTarget,
-    canSelectPersonalDevice,
-    isPreferenceLoading,
-    memberSelectedDeviceId,
-  } = useEffectiveAgencyConfig(agentId);
+  const { agencyConfig, canSelectExecutionTarget, canSelectPersonalDevice, isPreferenceLoading } =
+    useEffectiveAgencyConfig(agentId);
   const selectAgentDevice = useSelectAgentDevice(agentId);
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
 
@@ -87,14 +80,13 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
 
   // A workspace member's device pick is their own preference write — the
   // shared `edit_own_content` gate applies to personal agents only.
-  const canSelectDevice = canSelectExecutionTarget && (isWorkspaceAgent || canEdit);
+  const canSelectDevice = canSelectExecutionTarget;
 
   const state = useDeviceSelectorState({
     agentId,
     boundDeviceId: agencyConfig?.boundDeviceId,
     canSelectDevice,
     canSelectPersonalDevice,
-    memberSelectedDeviceId,
     permissionsLoaded: !isPreferenceLoading,
     scope: isWorkspaceAgent ? 'workspace' : 'personal',
   });
@@ -145,11 +137,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
     isHeterogeneous: true,
   });
   const selectedDeviceId =
-    selected?.target === 'local'
-      ? agencyConfig?.executionTargetSelectionPolicy === 'fixed'
-        ? agencyConfig.boundDeviceId
-        : (currentDeviceId ?? agencyConfig?.boundDeviceId)
-      : selected?.deviceId;
+    selected?.target === 'local' ? agencyConfig?.boundDeviceId : selected?.deviceId;
   const selectedValue = selectableDevices.some((device) => device.deviceId === selectedDeviceId)
     ? executionTargetValue('device', selectedDeviceId)
     : undefined;
@@ -226,7 +214,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
             }}
           >
             <SelectTrigger className={settingsStyles.select}>
-              <SelectValue placeholder={t('settingAgent.devicePolicy.selectTarget')} />
+              <SelectValue placeholder={t('settingAgent.execution.selectTarget')} />
             </SelectTrigger>
             <SelectContent>
               <SelectOptionItems options={deviceOptions} />

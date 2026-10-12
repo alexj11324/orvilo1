@@ -155,11 +155,7 @@ export type DeviceResolution = DeviceResolutionBlocked | DeviceResolutionResolve
 
 /** Why the resolved device won — the contract's priority chain, in order. */
 export type DeviceResolutionReason =
-  | 'agent_default'
-  | 'explicit_request'
-  | 'session_bound'
-  | 'single_candidate'
-  | 'user_agent_preference';
+  'agent_default' | 'explicit_request' | 'session_bound' | 'single_candidate';
 
 export interface ResolveExecutionDeviceInput {
   /** Workspace/agent shared default (admins set it; members may not override when policy-fixed). */
@@ -175,7 +171,7 @@ export interface ResolveExecutionDeviceInput {
   /** Request-supplied device — honored only when `explicitRequestAllowed`. */
   explicitDeviceId?: string;
   /**
-   * Policy (e.g. `executionTargetSelectionPolicy !== 'fixed'`) permits member
+   * The caller permits explicit
    * choice. When `false`, BOTH explicit requests and member preferences are
    * skipped — a pinned policy cannot be overridden through either door.
    */
@@ -187,8 +183,6 @@ export interface ResolveExecutionDeviceInput {
    * the same call is a repair proposal, not a normal resume.
    */
   sessionBoundDeviceId?: string;
-  /** The user's personal preference for this agent (`agentDeviceOverrides`). */
-  userAgentPreferenceDeviceId?: string;
 }
 
 /**
@@ -245,14 +239,6 @@ export const resolveExecutionDevice = (
     const explicit = pick(input.explicitDeviceId, 'explicit_request');
     if (explicit) return explicit;
     return { code: 'DEVICE_REQUEST_UNAUTHORIZED', status: 'blocked' };
-  }
-
-  // 3. The user's own preference for this agent (member overrides ride here).
-  //    A pinned policy skips this door too — members cannot override a fixed
-  //    workspace default through their personal preference.
-  if (policyAllowsChoice) {
-    const preference = pick(input.userAgentPreferenceDeviceId, 'user_agent_preference');
-    if (preference) return preference;
   }
 
   // 4. Agent/workspace default.

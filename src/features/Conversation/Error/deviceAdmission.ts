@@ -94,3 +94,14 @@ export const resolveRepairCandidates = (
 
 export const deviceDisplayName = (device: DeviceListItem): string =>
   device.friendlyName || device.hostname || device.deviceId;
+
+/** Error recovery belongs to the assistant that failed, which may differ from its conversation owner. */
+export const resolveDeviceAdmissionAgentId = ({
+  explicitAgentId,
+  messageAgentId,
+  conversationAgentId,
+}: {
+  explicitAgentId?: string | null;
+  messageAgentId?: string | null;
+  conversationAgentId?: string | null;
+}) => explicitAgentId ?? messageAgentId ?? conversationAgentId ?? undefined;

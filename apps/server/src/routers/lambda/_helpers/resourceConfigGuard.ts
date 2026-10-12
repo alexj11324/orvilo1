@@ -171,12 +171,7 @@ export const redactAgentConfig = <T extends Record<string, any>>(agent: T): T =>
   // ids, provider args/env, working directories, etc.) behind edit-level
   // config access.
   if (agencyConfig) {
-    const safeAgencySummary = pick(agencyConfig, [
-      'executionTarget',
-      'executionTargetSelectionPolicy',
-      'modelSelectionPolicy',
-      'topicSharePolicy',
-    ]);
+    const safeAgencySummary = pick(agencyConfig, ['executionTarget', 'topicSharePolicy']);
     // The hetero marker is identity, not executable config: without it,
     // use/view members render an external-CLI agent as a plain runtime agent
     // (wrong model selector, wrong composer). Expose the type only — args,

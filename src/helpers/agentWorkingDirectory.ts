@@ -17,22 +17,12 @@ interface ResolveTargetDeviceIdOptions {
  */
 export const resolveTargetDeviceId = (
   agencyConfig: OrviloAgentAgencyConfig | undefined,
-  currentDeviceId: string | undefined,
-  { workspaceScoped = false }: ResolveTargetDeviceIdOptions = {},
+  _currentDeviceId: string | undefined,
+  _options: ResolveTargetDeviceIdOptions = {},
 ): string | undefined => {
-  if (workspaceScoped) {
-    return agencyConfig?.executionTarget === 'local' ||
-      agencyConfig?.executionTarget === 'device' ||
-      agencyConfig?.executionTarget === 'auto'
-      ? agencyConfig.boundDeviceId
-      : undefined;
-  }
-
-  return agencyConfig?.executionTarget === 'device'
+  return ['local', 'device', 'auto'].includes(agencyConfig?.executionTarget ?? '')
     ? agencyConfig?.boundDeviceId
-    : agencyConfig?.executionTarget === 'local'
-      ? currentDeviceId || agencyConfig?.boundDeviceId
-      : currentDeviceId;
+    : undefined;
 };
 
 const toWorkingDirConfig = (

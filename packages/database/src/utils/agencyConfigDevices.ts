@@ -73,9 +73,6 @@ export const sanitizeAgencyConfigsForWorkspace = async (
     ? deviceRows.filter((r) => r.visibility === 'public' || r.userId === viewerUserId)
     : deviceRows;
   const allowed = new Set(visibleRows.map((r) => r.deviceId));
-  const publicDeviceIds = new Set(
-    visibleRows.filter((r) => r.visibility === 'public').map((r) => r.deviceId),
-  );
 
   return agencyConfigs.map((config) => {
     let next: OrviloAgentAgencyConfig | null = config ?? null;
@@ -94,30 +91,7 @@ export const sanitizeAgencyConfigsForWorkspace = async (
         }
         cleaned.workingDirByDevice = Object.keys(filtered).length > 0 ? filtered : undefined;
       }
-      if (
-        cleaned.executionTargetSelectionPolicy === 'fixed' &&
-        cleaned.executionTarget === 'device' &&
-        (!cleaned.boundDeviceId || !allowed.has(cleaned.boundDeviceId))
-      ) {
-        cleaned.executionTargetSelectionPolicy = 'member';
-      }
       next = cleaned;
-    }
-
-    if (
-      next.executionTargetSelectionPolicy === 'fixed' &&
-      (!next.executionTarget ||
-        !['auto', 'device', 'none', 'sandbox'].includes(next.executionTarget))
-    ) {
-      next.executionTargetSelectionPolicy = 'member';
-    }
-
-    if (
-      next.executionTargetSelectionPolicy === 'fixed' &&
-      next.executionTarget === 'device' &&
-      (!next.boundDeviceId || !publicDeviceIds.has(next.boundDeviceId))
-    ) {
-      next.executionTargetSelectionPolicy = 'member';
     }
 
     return next;

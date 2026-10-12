@@ -1,6 +1,5 @@
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import type {
-  AgentDeviceOverride,
   DeviceExecutionTarget,
   DeviceListItem,
   ExecutionPlan,
@@ -15,10 +14,7 @@ import { RequestTrigger } from '@orvilo/types';
  * A member opts out only by explicitly choosing an execution target; a missing
  * or bound-device-only override still inherits the raw shared target.
  */
-export const resolveWorkspaceScoped = (
-  isWorkspaceAgent: boolean,
-  deviceOverride: AgentDeviceOverride | null | undefined,
-): boolean => isWorkspaceAgent && deviceOverride?.executionTarget === undefined;
+export const resolveWorkspaceScoped = (isWorkspaceAgent: boolean): boolean => isWorkspaceAgent;
 
 /**
  * Group the device inventory into the display buckets the execution-target
@@ -145,18 +141,7 @@ export interface ResolveExecutionTargetOptions {
    * and are left untouched.
    */
   trigger?: RequestTrigger;
-  /**
-   * The supplied config is the raw workspace-shared fallback and has NOT been
-   * merged with the current member's `agentDeviceOverrides`. Such a config
-   * must not run `local` on whichever member happened to open it, so this
-   * treats client execution as unavailable and coerces legacy local values to
-   * sandbox/device as appropriate.
-   *
-   * Set this to `false` only when the current member has an explicit
-   * `executionTarget` override. Calling `resolveAgencyConfig` alone is not
-   * sufficient: without an override it returns the raw shared config unchanged.
-   * `useEffectiveAgencyConfig` exposes this distinction as `workspaceScoped`.
-   */
+
   workspaceScoped?: boolean;
 }
 
@@ -512,9 +497,7 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
     chatConfig,
     clientExecutionAvailable,
     isHetero,
-    localDeviceId,
     onlineDeviceIds,
-    requestedDeviceId,
     sandboxExecutionAvailable,
     sandboxFallback,
     trigger,
@@ -541,9 +524,7 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
   // A fixed workspace execution target is an author-controlled contract. A
   // stale member preference or an explicit task/request override must never
   // route the run somewhere else.
-  const effectiveRequestedDeviceId =
-    agencyConfig?.executionTargetSelectionPolicy === 'fixed' ? undefined : requestedDeviceId;
-  const isFixedSelection = agencyConfig?.executionTargetSelectionPolicy === 'fixed';
+  const effectiveRequestedDeviceId = undefined;
   const wantsDevice =
     !!effectiveRequestedDeviceId || target === 'device' || target === 'local' || target === 'auto';
 
@@ -570,7 +551,6 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
   // is what `device` mode is for) — ignore it so `auto` always picks fresh and
   // a stale binding left over from a previous `device` selection can't pin the
   // run. An explicit `requestedDeviceId` still wins everywhere.
-  const isPlatformTask = isRemoteHeterogeneousType(agencyConfig?.heterogeneousProvider?.type ?? '');
   // A `local` target binds only the device identity the row explicitly stored —
   // never the machine running this resolution. A migrated row without a stored
   // `boundDeviceId` is unresolved: binding `localDeviceId` would silently
@@ -580,11 +560,7 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
   const boundDeviceId =
     effectiveRequestedDeviceId ||
     (target === 'local'
-      ? isFixedSelection
-        ? agencyConfig?.boundDeviceId
-        : isPlatformTask
-          ? localDeviceId
-          : agencyConfig?.boundDeviceId
+      ? agencyConfig?.boundDeviceId
       : target === 'auto'
         ? undefined
         : agencyConfig?.boundDeviceId);

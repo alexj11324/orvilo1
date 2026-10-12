@@ -15,7 +15,6 @@ import {
   resolveExecutionPlan,
   resolveExecutionTarget,
   resolveRuntimeMode,
-  resolveWorkspaceScoped,
 } from './executionTarget';
 
 const cfg = (over: Partial<OrviloAgentAgencyConfig> = {}): OrviloAgentAgencyConfig => ({ ...over });
@@ -71,16 +70,6 @@ describe('isHeterogeneousSandboxExecutionAvailable', () => {
 
   it('keeps Cursor on local or connected devices', () => {
     expect(isHeterogeneousSandboxExecutionAvailable('cursor')).toBe(false);
-  });
-});
-
-describe('resolveWorkspaceScoped', () => {
-  it('preserves shared-row coercion until a workspace member explicitly selects a target', () => {
-    expect(resolveWorkspaceScoped(false, undefined)).toBe(false);
-    expect(resolveWorkspaceScoped(true, undefined)).toBe(true);
-    expect(resolveWorkspaceScoped(true, { boundDeviceId: 'member-device' })).toBe(true);
-    expect(resolveWorkspaceScoped(true, { executionTarget: 'local' })).toBe(false);
-    expect(resolveWorkspaceScoped(true, { executionTarget: 'device' })).toBe(false);
   });
 });
 
@@ -617,94 +606,6 @@ describe('resolveRuntimeMode', () => {
 });
 
 describe('resolveExecutionPlan', () => {
-  it('uses a desktop hint only for a platform local target', () => {
-    expect(
-      resolveExecutionPlan({
-        agencyConfig: openClawCfg({ executionTarget: 'local' }),
-        clientExecutionAvailable: true,
-        isHetero: true,
-        localDeviceId: 'this-desktop',
-        sandboxExecutionAvailable: false,
-      }),
-    ).toEqual({ deviceId: 'this-desktop', kind: 'device', target: 'local' });
-
-    expect(
-      resolveExecutionPlan({
-        agencyConfig: openClawCfg({
-          boundDeviceId: 'remote-device',
-          executionTarget: 'device',
-        }),
-        clientExecutionAvailable: true,
-        isHetero: true,
-        localDeviceId: 'this-desktop',
-        sandboxExecutionAvailable: false,
-      }),
-    ).toEqual({ deviceId: 'remote-device', kind: 'device', target: 'device' });
-
-    expect(
-      resolveExecutionPlan({
-        agencyConfig: openClawCfg({
-          boundDeviceId: 'stale-remote-device',
-          executionTarget: 'local',
-        }),
-        clientExecutionAvailable: true,
-        isHetero: true,
-        sandboxExecutionAvailable: false,
-      }),
-    ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
-
-    // Schedules, bots, and other server-only triggers have no "this desktop".
-    // A local platform target must fail closed instead of picking an arbitrary
-    // online device; users must bind an explicit remote device for those runs.
-    expect(
-      resolveExecutionPlan({
-        agencyConfig: openClawCfg({ executionTarget: 'local' }),
-        clientExecutionAvailable: false,
-        isHetero: true,
-        onlineDeviceIds: ['some-online-device'],
-        sandboxExecutionAvailable: false,
-      }),
-    ).toEqual({ kind: 'none', target: 'none' });
-
-    expect(
-      resolveExecutionPlan({
-        agencyConfig: openClawCfg({ boundDeviceId: 'legacy-device' }),
-        clientExecutionAvailable: false,
-        isHetero: true,
-        sandboxExecutionAvailable: false,
-      }),
-    ).toEqual({ deviceId: 'legacy-device', kind: 'device', target: 'device' });
-
-    expect(
-      resolveExecutionPlan({
-        agencyConfig: openClawCfg({
-          boundDeviceId: 'workspace-device',
-          executionTarget: 'device',
-          executionTargetSelectionPolicy: 'fixed',
-        }),
-        clientExecutionAvailable: true,
-        isHetero: true,
-        localDeviceId: 'this-desktop',
-        requestedDeviceId: 'member-device',
-        sandboxExecutionAvailable: false,
-      }),
-    ).toEqual({ deviceId: 'workspace-device', kind: 'device', target: 'device' });
-
-    expect(
-      resolveExecutionPlan({
-        agencyConfig: openClawCfg({
-          boundDeviceId: 'author-desktop',
-          executionTarget: 'local',
-          executionTargetSelectionPolicy: 'fixed',
-        }),
-        clientExecutionAvailable: true,
-        isHetero: true,
-        localDeviceId: 'member-desktop',
-        sandboxExecutionAvailable: false,
-      }),
-    ).toEqual({ deviceId: 'author-desktop', kind: 'device', target: 'local' });
-  });
-
   it('does not dispatch a stale platform binding for none or unsupported sandbox', () => {
     for (const executionTarget of ['none', 'sandbox'] as const) {
       expect(
@@ -850,38 +751,6 @@ describe('resolveExecutionPlan', () => {
       ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
     });
 
-    it('migration — a stored `local` binds only the device identity it saved', () => {
-      // Regression: `localDeviceId ||` let the machine RUNNING the resolution
-      // bind itself — a row opened on a different desktop migrated execution
-      // to that desktop, violating "no guessing the current machine". Unbound
-      // stays unrouted even on a device-capable host; a stored `boundDeviceId`
-      // still wins over the rendering machine.
-      expect(
-        resolveExecutionPlan({
-          agencyConfig: cfg({ executionTarget: 'local' }),
-          clientExecutionAvailable: true,
-          localDeviceId: 'this-desktop',
-        }),
-      ).toEqual({ kind: 'device-unrouted', reason: 'no-bound-device', target: 'local' });
-      expect(
-        resolveExecutionPlan({
-          agencyConfig: cfg({ boundDeviceId: 'saved-device', executionTarget: 'local' }),
-          clientExecutionAvailable: true,
-          localDeviceId: 'this-desktop',
-        }),
-      ).toEqual({ deviceId: 'saved-device', kind: 'device', target: 'local' });
-      // Platform-task `local` keeps its own semantic — the locally registered
-      // runtime IS the provable node.
-      expect(
-        resolveExecutionPlan({
-          agencyConfig: openClawCfg({ executionTarget: 'local' }),
-          clientExecutionAvailable: true,
-          isHetero: true,
-          localDeviceId: 'this-desktop',
-        }),
-      ).toEqual({ deviceId: 'this-desktop', kind: 'device', target: 'local' });
-    });
-
     it('keeps an unset target pending on every client — no implicit routing', () => {
       // unset → `none` everywhere: the run never claims a device the user did
       // not explicitly select, whichever client sent it
@@ -959,41 +828,6 @@ describe('resolveExecutionPlan', () => {
           onlineDeviceIds: ONLINE_AB,
         }),
       ).toEqual({ kind: 'device-unrouted', reason: 'ambiguous-online-devices', target: 'auto' });
-    });
-
-    it('still honours an explicit requestedDeviceId over auto-pick', () => {
-      expect(
-        resolveExecutionPlan({
-          agencyConfig: auto,
-          clientExecutionAvailable: true,
-          onlineDeviceIds: ONLINE_AB,
-          requestedDeviceId: 'device-b',
-        }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'auto' });
-    });
-  });
-
-  describe('requestedDeviceId — explicit per-request override', () => {
-    it('forces device routing regardless of the stored target', () => {
-      expect(
-        resolveExecutionPlan({
-          agencyConfig: cfg({ executionTarget: 'sandbox' }),
-          clientExecutionAvailable: false,
-          onlineDeviceIds: ONLINE_AB,
-          requestedDeviceId: 'device-b',
-        }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'device' });
-    });
-
-    it('wins over the agent-bound device', () => {
-      expect(
-        resolveExecutionPlan({
-          agencyConfig: cfg({ boundDeviceId: 'device-a', executionTarget: 'device' }),
-          clientExecutionAvailable: false,
-          onlineDeviceIds: ONLINE_AB,
-          requestedDeviceId: 'device-b',
-        }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'device' });
     });
   });
 
@@ -1091,21 +925,6 @@ describe('resolveExecutionPlan', () => {
           trigger: RequestTrigger.Bot,
         }),
       ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'device' });
-    });
-
-    it('still routes a requestedDeviceId-pinned local run to that device', () => {
-      // An explicit per-request device always wins over the stored target —
-      // the request IS the provable selection. The plan keeps the `local`
-      // label (the stored spelling) while routing to the requested device.
-      expect(
-        resolveExecutionPlan({
-          agencyConfig: cfg({ executionTarget: 'local' }),
-          clientExecutionAvailable: true,
-          onlineDeviceIds: ONLINE_AB,
-          requestedDeviceId: 'device-b',
-          trigger: RequestTrigger.Bot,
-        }),
-      ).toEqual({ deviceId: 'device-b', kind: 'device', target: 'local' });
     });
 
     it('still honours chat mode — a bot on a chat-mode agent stays plain chat', () => {

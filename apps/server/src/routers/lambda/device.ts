@@ -1130,22 +1130,7 @@ export const deviceRouter = router({
               workspaceId: agent.workspaceId,
             },
           })));
-      const preference = await ctx.workspaceUserSettingsModel?.getPreference();
-      const agencyConfig = resolveAgentAgencyConfig(
-        agent.agencyConfig,
-        preference?.agentDeviceOverrides?.[agent.id],
-        {
-          canManage: canManageAgent,
-          visibility: agent.visibility,
-          workspaceId: ctx.workspaceId,
-        },
-      );
-      const memberOverride = preference?.agentDeviceOverrides?.[agent.id];
-      const memberSelectedDeviceId =
-        memberOverride?.executionTarget === 'device' &&
-        memberOverride.boundDeviceId === agencyConfig?.boundDeviceId
-          ? memberOverride.boundDeviceId
-          : undefined;
+      const agencyConfig = resolveAgentAgencyConfig(agent.agencyConfig);
       const provider = agencyConfig?.heterogeneousProvider;
       const type = provider?.type ?? 'orvilo';
       return listAuthorizedDeviceCandidates(ctx.serverDB, ctx.userId, ctx.workspaceId, {
@@ -1158,7 +1143,7 @@ export const deviceRouter = router({
           visibility: agent.visibility,
           workspaceId: ctx.workspaceId,
         }),
-        referencedDevices: [{ deviceId: memberSelectedDeviceId }],
+        referencedDevices: [{ deviceId: agencyConfig?.boundDeviceId }],
         requiredOperation: { kind: 'agent-run', adapter: type },
         runtimeRequirement: { agentType: type, command: provider?.command },
       });

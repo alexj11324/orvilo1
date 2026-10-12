@@ -172,8 +172,8 @@ describe('resolveAgentConfig', () => {
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
 
-      expect(result.agentConfig.model).toBe('member-model');
-      expect(result.agentConfig.provider).toBe('member-provider');
+      expect(result.agentConfig.model).toBe('gpt-4');
+      expect(result.agentConfig.provider).toBe('openai');
     });
 
     it('uses a retained member model override when a legacy workspace policy is missing', () => {
@@ -193,8 +193,8 @@ describe('resolveAgentConfig', () => {
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
 
-      expect(result.agentConfig.model).toBe('member-model');
-      expect(result.agentConfig.provider).toBe('member-provider');
+      expect(result.agentConfig.model).toBe('gpt-4');
+      expect(result.agentConfig.provider).toBe('openai');
     });
 
     it('uses the member model override on a collaborative builtin the caller created', () => {
@@ -222,8 +222,8 @@ describe('resolveAgentConfig', () => {
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
 
-      expect(result.agentConfig.model).toBe('member-model');
-      expect(result.agentConfig.provider).toBe('member-provider');
+      expect(result.agentConfig.model).toBe('gpt-4');
+      expect(result.agentConfig.provider).toBe('openai');
     });
 
     it('ignores a retained member model override when the workspace policy is fixed', () => {

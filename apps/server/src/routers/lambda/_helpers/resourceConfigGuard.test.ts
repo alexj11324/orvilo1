@@ -173,9 +173,7 @@ describe('config redaction', () => {
       agencyConfig: {
         boundDeviceId: 'private-device',
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
         heterogeneousProvider: { env: { SECRET: 'value' }, type: 'codex' },
-        modelSelectionPolicy: 'fixed',
         topicSharePolicy: 'restricted',
       },
       avatar: 'avatar.png',
@@ -196,9 +194,7 @@ describe('config redaction', () => {
     expect(result).toEqual({
       agencyConfig: {
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
         heterogeneousProvider: { type: 'codex' },
-        modelSelectionPolicy: 'fixed',
         // Authorization metadata: without it a use-level member's share button
         // would offer a link the server then refuses.
         topicSharePolicy: 'restricted',

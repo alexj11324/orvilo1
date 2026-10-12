@@ -1,6 +1,6 @@
 'use client';
 
-import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
+import type { AgentTopicSharePolicy } from '@orvilo/types';
 
 import { useAgentSelectionPolicies } from '@/features/ResourcePermission/useAgentSelectionPolicies';
 import { useResourcePermission } from '@/features/ResourcePermission/useResourcePermission';
@@ -21,17 +21,12 @@ export interface AgentPermissionState {
    */
   canEditPolicies: boolean;
   /** Members can be assigned a target only if one is actually resolvable. */
-  canFixExecutionTarget: boolean;
   /** Only the writable creator or workspace Owner/Admin may manage members. */
   canManageAccess: boolean;
-  executionTargetPolicy: AgentModelSelectionPolicy;
   isPrivate: boolean;
   isWorkspaceAgent: boolean;
-  modelPolicy: AgentModelSelectionPolicy;
   retryAccess: () => void;
   setAccessLevel: (level: ResourceAccessLevel) => void;
-  setExecutionTargetPolicy: (policy: AgentModelSelectionPolicy) => void;
-  setModelPolicy: (policy: AgentModelSelectionPolicy) => void;
   setTopicSharePolicy: (policy: AgentTopicSharePolicy) => void;
   /** Whether members may publish share links for the topics held here. */
   topicSharePolicy: AgentTopicSharePolicy;

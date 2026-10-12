@@ -1,6 +1,6 @@
 'use client';
 
-import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
+import type { AgentTopicSharePolicy } from '@orvilo/types';
 
 import { useAgentSelectionPolicies } from '@/features/ResourcePermission/useAgentSelectionPolicies';
 import { useResourcePermission } from '@/features/ResourcePermission/useResourcePermission';
@@ -22,19 +22,14 @@ export interface GroupPermissionState {
    */
   canEditPolicies: boolean;
   /** Fixing needs an execution environment resolvable on the supervisor. */
-  canFixExecutionTarget: boolean;
   /** Only the creator or a workspace owner may re-level members. */
   canManageAccess: boolean;
-  executionTargetPolicy: AgentModelSelectionPolicy;
   /** No supervisor row yet — the Editable settings have nothing to write to. */
   hasSupervisor: boolean;
   isPrivate: boolean;
   isWorkspaceGroup: boolean;
-  modelPolicy: AgentModelSelectionPolicy;
   retryAccess: () => void;
   setAccessLevel: (level: ResourceAccessLevel) => void;
-  setExecutionTargetPolicy: (policy: AgentModelSelectionPolicy) => void;
-  setModelPolicy: (policy: AgentModelSelectionPolicy) => void;
   setTopicSharePolicy: (policy: AgentTopicSharePolicy) => void;
   /** Whether members may publish share links for the topics held here. */
   topicSharePolicy: AgentTopicSharePolicy;

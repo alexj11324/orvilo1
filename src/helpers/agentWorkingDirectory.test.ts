@@ -18,9 +18,9 @@ describe('resolveTargetDeviceId', () => {
   });
 
   it('uses the current machine for non-device targets', () => {
-    expect(resolveTargetDeviceId(cfg({ executionTarget: 'local' }), 'cur')).toBe('cur');
-    expect(resolveTargetDeviceId(cfg({ executionTarget: 'sandbox' }), 'cur')).toBe('cur');
-    expect(resolveTargetDeviceId(undefined, 'cur')).toBe('cur');
+    expect(resolveTargetDeviceId(cfg({ executionTarget: 'local' }), 'cur')).toBeUndefined();
+    expect(resolveTargetDeviceId(cfg({ executionTarget: 'sandbox' }), 'cur')).toBeUndefined();
+    expect(resolveTargetDeviceId(undefined, 'cur')).toBeUndefined();
   });
 
   it('uses the synced local binding when no current machine id is available', () => {
@@ -65,7 +65,11 @@ describe('resolveTargetDeviceId', () => {
 describe('resolveAgentWorkingDirectory', () => {
   it('follows precedence: topic > agentChoice > legacy > deviceDefault > fallback', () => {
     const base = {
-      agencyConfig: cfg({ executionTarget: 'local', workingDirByDevice: { cur: '/agent' } }),
+      agencyConfig: cfg({
+        boundDeviceId: 'cur',
+        executionTarget: 'local',
+        workingDirByDevice: { cur: '/agent' },
+      }),
       currentDeviceId: 'cur',
       deviceDefaultCwd: '/device-default',
       fallback: '/home',
@@ -159,6 +163,7 @@ describe('resolveAgentWorkingDirectory', () => {
 
   it('uses the active worktree from the per-device source entry as the effective cwd', () => {
     const agencyConfig = cfg({
+      boundDeviceId: 'cur',
       executionTarget: 'local',
       workingDirByDevice: {
         cur: {
@@ -198,6 +203,7 @@ describe('resolveAgentWorkingDirectorySource', () => {
     // A worktree switch records `activeWorktree` but the directory label must
     // keep showing the repo root (where hetero CLI sessions actually anchor).
     const agencyConfig = cfg({
+      boundDeviceId: 'cur',
       executionTarget: 'local',
       workingDirByDevice: {
         cur: {
@@ -256,6 +262,7 @@ describe('resolveAgentWorkingDirectoryConfig', () => {
       repoType: 'git' as const,
     };
     const agencyConfig = cfg({
+      boundDeviceId: 'cur',
       executionTarget: 'local',
       workingDirByDevice: { cur: agentChoice },
     });

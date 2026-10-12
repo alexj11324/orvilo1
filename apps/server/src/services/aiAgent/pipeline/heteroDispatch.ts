@@ -643,7 +643,6 @@ export interface HeteroDispatchInput {
   isPublicWorkspaceAgent: boolean;
   localDeviceId?: string;
   maxSteps?: number;
-  memberDeviceOverride?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
   operationTaskId?: string;
   parentOperationId?: string;
   pinnedHeterogeneousTopicModel?: HeterogeneousTopicPin;
@@ -728,7 +727,6 @@ export const dispatchHeteroAgent = async (
     isPublicWorkspaceAgent,
     localDeviceId,
     maxSteps,
-    memberDeviceOverride,
     operationTaskId,
     parentOperationId,
     pinnedHeterogeneousTopicModel,
@@ -1063,7 +1061,6 @@ export const dispatchHeteroAgent = async (
     explicitDeviceId: requestedDeviceId,
     isPlatformTask: isRemoteHetero,
     localDeviceId,
-    memberDeviceOverride,
     requestTrigger,
     // The operation this run needs: which harness adapter family the device
     // must host — admission records it per candidate so a wrong-adapter
@@ -1076,10 +1073,7 @@ export const dispatchHeteroAgent = async (
     sessionBoundDeviceId,
     userId: deps.userId,
     workspaceId: deps.workspaceId,
-    workspaceScoped: resolveWorkspaceScoped(
-      isPublicWorkspaceAgent && !canManageAgent,
-      memberDeviceOverride,
-    ),
+    workspaceScoped: resolveWorkspaceScoped(isPublicWorkspaceAgent),
   });
   const admittedDeviceId = executionPlan.kind === 'device' ? executionPlan.deviceId : undefined;
   const admittedDeviceWorkspaceId = admittedDeviceId

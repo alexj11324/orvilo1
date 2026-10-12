@@ -265,7 +265,7 @@ describe('AI Agent Router Integration Tests', () => {
       expect(createdTopics[0].title!.length).toBeLessThanOrEqual(53); // 50 + '...'
     });
 
-    it('should persist boundDeviceId when creating a topic with deviceId', async () => {
+    it('ignores a requested per-conversation device instead of persisting it', async () => {
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       const result = await caller.execAgent({
@@ -283,7 +283,7 @@ describe('AI Agent Router Integration Tests', () => {
 
       expect(createdTopics).toHaveLength(1);
       expect(createdTopics[0].metadata).toEqual(
-        expect.objectContaining({ boundDeviceId: 'device-local-1' }),
+        expect.not.objectContaining({ boundDeviceId: 'device-local-1' }),
       );
     });
 
@@ -381,7 +381,7 @@ describe('AI Agent Router Integration Tests', () => {
         model: 'gpt-4o-mini',
         // The persisted provider feeds Prime's model; the runtime dispatch
         // itself uses the builtin Orvilo provider.
-        provider: 'orvilo',
+        provider: 'openai',
         resolvedAgentId: testAgentId,
       });
       expect(input).toBeDefined();

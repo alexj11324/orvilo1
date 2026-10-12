@@ -1,6 +1,6 @@
 import type { AgentRunAdmissionState } from '../agent/acpExecution';
-import type { HeterogeneousTopicPin } from '../agent/agencyConfig';
 import type { OrviloAgentChatConfig } from '../agent/chatConfig';
+import type { HeterogeneousReasoningEffort } from '../agent/heteroSelectorCapabilities';
 import type { CreateThreadWithMessageParams } from '../aiChat';
 import type {
   DeviceAdmissionErrorData,
@@ -293,25 +293,8 @@ export interface ExecAgentParams {
   localDeviceId?: string;
   /** Override the agent's default model */
   model?: string;
-  /**
-   * Model / provider / reasoning effort the user picked in a blank composer,
-   * before the conversation had a topic to pin them to. They are written onto
-   * the topic THIS run creates — the same `topics.model`/`topics.provider`
-   * columns and `metadata.heteroEffort` slot a later turn reads back — and are
-   * never written to the agent row: a chat-side pick is conversation-scoped
-   * (docs/development/chat-agent-model-ia.md §5.2).
-   *
-   * Distinct from {@link model} / {@link provider}, which override the agent's
-   * default model for the whole run through the shared member-policy resolver.
-   * A topic pin is stored in the topic's own vocabulary (a CLI pin carries the
-   * harness type as `provider`) and is subject to the topic-pin compatibility
-   * rules, so the two cannot share a field.
-   *
-   * Ignored when the run reuses an existing topic — an open conversation pins
-   * its model through `updateTopicModel` instead. Absent for every caller that
-   * has no composer pick, which leaves the agent-config snapshot untouched.
-   */
-  newTopicPins?: HeterogeneousTopicPin;
+
+  newTopicEffort?: HeterogeneousReasoningEffort;
   /**
    * Parent operation ID when this run is a sub-agent invocation. Forwarded
    * to `agent_operations.parent_operation_id` so analytics can join the
@@ -354,12 +337,8 @@ export interface ScheduleAgentRunParams {
   fileIds?: string[];
   /** Group to file the topic under, when scheduling from a group conversation */
   groupId?: string | null;
-  /** Override the agent's default model */
-  model?: string;
   /** The user input/prompt, replayed verbatim when the run comes due */
   prompt: string;
-  /** Override the agent's default provider */
-  provider?: string;
   /** When to run. UTC ISO-8601 (`…Z`) — see `TopicScheduledRun.runAt`. */
   runAt: string;
   /** The agent slug to run (either agentId or slug is required) */

@@ -239,28 +239,6 @@ describe('AiAgentService.execAgent - model/provider override', () => {
     service = new AiAgentService(mockDb, userId);
   });
 
-  it.each([null, 'legacy-default-model'])(
-    'uses the pinned inference route for the first Prime turn with legacy model %s',
-    async (legacyModel) => {
-      mockGetAgentConfig.mockResolvedValue({
-        ...defaultAgentConfig,
-        model: legacyModel,
-        provider: null,
-        agencyConfig: {
-          boundDeviceId: 'device-1',
-          executionTarget: 'device',
-          heterogeneousProvider: { model: 'fixture-prime-model', type: 'orvilo' },
-        },
-      });
-      await service.execAgent({ agentId: 'agent-1', prompt: 'First Prime turn' });
-      const topic = mockTopicCreate.mock.calls[0][0];
-      const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
-      expect(topic.model).toBe('fixture-prime-model');
-      expect(runContext.model).toBe(topic.model);
-      expect(runContext.provider).toBe('orvilo');
-    },
-  );
-
   it('keeps an explicit Prime model override ahead of its inference default', async () => {
     mockGetAgentConfig.mockResolvedValue({
       ...defaultAgentConfig,
@@ -323,10 +301,8 @@ describe('AiAgentService.execAgent - model/provider override', () => {
           runAt: new Date(Date.now() + 60_000).toISOString(),
         });
       }
-      expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-        model: 'default',
-        provider: 'claude-code',
-      });
+      expect(mockTopicCreate.mock.calls[0][0]).not.toHaveProperty('model');
+      expect(mockTopicCreate.mock.calls[0][0]).not.toHaveProperty('provider');
       runSpy.mockRestore();
     },
   );
@@ -427,7 +403,7 @@ describe('AiAgentService.execAgent - model/provider override', () => {
     expect(runContext.provider).toBe('stepfun');
   });
 
-  it('keeps the topic provider when only the model is overridden', async () => {
+  it('uses the saved Agent provider when an internal sub-agent overrides only model', async () => {
     mockGetAgentConfig.mockResolvedValue({ ...defaultAgentConfig });
     mockTopicFindById.mockResolvedValue({ model: 'gpt-5.6-terra', provider: 'stepfun' });
 
@@ -440,70 +416,7 @@ describe('AiAgentService.execAgent - model/provider override', () => {
 
     const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
     expect(runContext.model).toBe('step-3.7-flash');
-    expect(runContext.provider).toBe('stepfun');
-  });
-
-  it('uses the caller model preference when the workspace Agent allows member selection', async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      ...defaultAgentConfig,
-      agencyConfig: { modelSelectionPolicy: 'member' },
-      chatConfig: { enableAgentMode: true },
-      visibility: 'public',
-    });
-    mockGetPreference.mockResolvedValue({
-      agentModelOverrides: {
-        'agent-1': { model: 'claude-sonnet-4-6', provider: 'anthropic' },
-      },
-      agentModeOverrides: { 'agent-1': false },
-    });
-    service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
-
-    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
-    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(runContext.agentConfig.provider).toBe('anthropic');
-    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(false);
-  });
-
-  // Model / mode overrides stay member-only, but the caller's own DEVICE
-  // override applies to the author too: a `local` pick binds their personal
-  // desktop, which the shared row must never reference (the server rejects
-  // it), so the author's pick lives in the same override slot members use.
-  it("ignores member model/mode overrides for the Agent author but applies the author's own device override", async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      ...defaultAgentConfig,
-      agencyConfig: {
-        executionTarget: 'sandbox',
-        executionTargetSelectionPolicy: 'member',
-        modelSelectionPolicy: 'member',
-      },
-      userId,
-      chatConfig: { enableAgentMode: true },
-      visibility: 'public',
-      workspaceId: 'workspace-1',
-    });
-    mockGetPreference.mockResolvedValue({
-      agentDeviceOverrides: {
-        'agent-1': { boundDeviceId: 'member-device', executionTarget: 'local' },
-      },
-      agentModelOverrides: {
-        'agent-1': { model: 'claude-sonnet-4-6', provider: 'anthropic' },
-      },
-      agentModeOverrides: { 'agent-1': false },
-    });
-    service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
-
-    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
-    expect(runContext.agentConfig).toMatchObject({
-      agencyConfig: { boundDeviceId: 'member-device', executionTarget: 'local' },
-      chatConfig: { enableAgentMode: true },
-      model: 'gpt-4',
-      provider: 'openai',
-    });
-    expect(mockIsResourceAuthorOrAdmin).not.toHaveBeenCalled();
+    expect(runContext.provider).toBe('openai');
   });
 
   it('ignores member model overrides for a Workspace admin', async () => {
@@ -535,37 +448,6 @@ describe('AiAgentService.execAgent - model/provider override', () => {
     );
   });
 
-  it('uses the caller model preference on a collaborative builtin the caller created', async () => {
-    // The Agent Builder row is provisioned by whichever member opened the panel
-    // first; being that member (or an admin) must not pin everyone to their
-    // model, so the run reads this caller's own override. Chat/Agent mode keeps
-    // the ordinary author rule and stays shared.
-    mockIsResourceAuthorOrAdmin.mockResolvedValue(true);
-    mockGetAgentConfig.mockResolvedValue({
-      ...defaultAgentConfig,
-      chatConfig: { enableAgentMode: true },
-      slug: 'group-agent-builder',
-      userId,
-      virtual: true,
-      visibility: 'public',
-      workspaceId: 'workspace-1',
-    });
-    mockGetPreference.mockResolvedValue({
-      agentModelOverrides: {
-        'agent-1': { model: 'claude-sonnet-4-6', provider: 'anthropic' },
-      },
-      agentModeOverrides: { 'agent-1': false },
-    });
-    service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
-
-    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
-    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(runContext.agentConfig.provider).toBe('anthropic');
-    expect(runContext.agentConfig.chatConfig.enableAgentMode).toBe(true);
-  });
-
   it('ignores the caller model preference when the workspace Agent is private', async () => {
     mockGetAgentConfig.mockResolvedValue({
       ...defaultAgentConfig,
@@ -584,51 +466,6 @@ describe('AiAgentService.execAgent - model/provider override', () => {
     const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
     expect(runContext.agentConfig.model).toBe('gpt-4');
     expect(runContext.agentConfig.provider).toBe('openai');
-  });
-
-  it("applies the owner's own device override while the workspace Agent is private, stripping the policy", async () => {
-    mockGetAgentConfig.mockResolvedValue({
-      ...defaultAgentConfig,
-      agencyConfig: {
-        boundDeviceId: 'shared-device',
-        executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
-      },
-      visibility: 'private',
-    });
-    mockGetPreference.mockResolvedValue({
-      agentDeviceOverrides: {
-        'agent-1': { boundDeviceId: 'owner-desktop', executionTarget: 'local' },
-      },
-    });
-    service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
-
-    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
-    expect(runContext.agentConfig.agencyConfig).toMatchObject({
-      boundDeviceId: 'owner-desktop',
-      executionTarget: 'local',
-    });
-    // The 'fixed' selection policy is stripped so the owner's pick cannot be
-    // overridden by later member writes.
-    expect(runContext.agentConfig.agencyConfig.executionTargetSelectionPolicy).toBeUndefined();
-  });
-
-  it('uses a retained caller preference when a legacy workspace model policy is missing', async () => {
-    mockGetAgentConfig.mockResolvedValue({ ...defaultAgentConfig, visibility: 'public' });
-    mockGetPreference.mockResolvedValue({
-      agentModelOverrides: {
-        'agent-1': { model: 'claude-sonnet-4-6', provider: 'anthropic' },
-      },
-    });
-    service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
-
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Hello' });
-
-    const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
-    expect(runContext.agentConfig.model).toBe('claude-sonnet-4-6');
-    expect(runContext.agentConfig.provider).toBe('anthropic');
   });
 
   it('ignores a retained caller preference when the workspace model policy is fixed', async () => {

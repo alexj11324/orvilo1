@@ -1,6 +1,5 @@
 import { type OrviloDatabase } from '@orvilo/database';
 import type {
-  AgentDeviceOverride,
   DeviceCandidate,
   DeviceCapabilitySnapshot,
   DeviceResolutionErrorCode,
@@ -63,7 +62,8 @@ export type AdmissionRequiredOperation =
 
 /** Existing member-choice policy, evaluated only from trusted server context. */
 export const canSelectCallerPersonalDevice = ({
-  agencyConfig,
+  workspaceId,
+  visibility,
 }: {
   agencyConfig?: OrviloAgentAgencyConfig | null;
   agentOwnerId?: string;
@@ -71,7 +71,7 @@ export const canSelectCallerPersonalDevice = ({
   userId: string;
   visibility?: 'private' | 'public';
   workspaceId?: string;
-}): boolean => agencyConfig?.executionTargetSelectionPolicy !== 'fixed';
+}): boolean => !workspaceId || visibility === 'private';
 
 /**
  * The caller's grant context. `devicePermissions` is a caller-computed
@@ -687,8 +687,6 @@ export interface ResolveHeteroExecutionPlanParams {
    * stored `local` target (and a member's own `local` override) resolves to.
    */
   localDeviceId?: string;
-  /** The caller's resolved `agentDeviceOverrides[agentId]` — undefined when absent. */
-  memberDeviceOverride?: AgentDeviceOverride | null;
   /**
    * The caller's grant context for candidate construction — view-only
    * grants never enter the execution set; an unready grant context makes
@@ -731,7 +729,6 @@ export const resolveHeteroExecutionPlan = async (
   params: ResolveHeteroExecutionPlanParams,
 ): Promise<HeteroExecutionPlan> => {
   const { agencyConfig } = params;
-  const isFixedPolicy = agencyConfig?.executionTargetSelectionPolicy === 'fixed';
   // The server IS the execution host resolver: a device-gateway dispatch IS
   // "local execution" for target resolution — `clientExecutionAvailable`
   // here means "the gateway can reach a machine", not "the sender is a
@@ -749,8 +746,7 @@ export const resolveHeteroExecutionPlan = async (
   // member-initiated requests (mirroring the legacy fixed-policy strip): a
   // disallowed request is ignored, never a silent override and never an error
   // — the resolver gates it the same way below.
-  const explicitRequestAllowed = !isFixedPolicy && !params.workspaceScoped;
-  const effectiveExplicitDeviceId = explicitRequestAllowed ? params.explicitDeviceId : undefined;
+  const effectiveExplicitDeviceId = undefined;
   const wantsDevice =
     !!effectiveExplicitDeviceId || target === 'device' || target === 'local' || target === 'auto';
 
@@ -776,21 +772,7 @@ export const resolveHeteroExecutionPlan = async (
     // bound conversation on EXECUTION_TARGET_NONE forever. Only a STORED
     // intent short-circuits; a shared/pinned scope never auto-binds off the
     // shared row either way.
-    const hasStoredIntent = agencyConfig?.executionTarget !== undefined;
-    // A genuinely unset first workspace send may use the existing installed-runtime
-    // singleton/CAS path. Stored choices and every prior binding keep their fences.
-    const firstWorkspaceSelection =
-      !!params.workspaceId &&
-      !hasStoredIntent &&
-      !isFixedPolicy &&
-      !agencyConfig?.boundDeviceId &&
-      !params.sessionBoundDeviceId &&
-      !params.memberDeviceOverride?.executionTarget &&
-      !params.memberDeviceOverride?.boundDeviceId &&
-      !params.explicitDeviceId &&
-      params.requiredOperation?.kind === 'agent-run' &&
-      !!params.requiredOperation.adapter;
-    if (hasStoredIntent || (params.workspaceScoped && !firstWorkspaceSelection) || isFixedPolicy) {
+    {
       return {
         code: 'EXECUTION_TARGET_NONE',
         detail: 'No execution target is selected for this agent — pick a device or cloud sandbox.',
@@ -808,7 +790,6 @@ export const resolveHeteroExecutionPlan = async (
       // Stored bindings still require the actual caller's registry authority.
       { deviceId: agencyConfig?.boundDeviceId },
       { deviceId: params.sessionBoundDeviceId },
-      { deviceId: params.memberDeviceOverride?.boundDeviceId },
       // The caller's own machine and their explicit request verify only
       // against the caller's + workspace registries — a member cannot
       // request the author's personal device by id.
@@ -816,98 +797,21 @@ export const resolveHeteroExecutionPlan = async (
       { deviceId: effectiveExplicitDeviceId },
     ],
   };
-  let { candidates, inventoryComplete } = await listAuthorizedDeviceCandidates(
+  const { candidates, inventoryComplete } = await listAuthorizedDeviceCandidates(
     serverDB,
     params.userId,
     params.workspaceId,
     candidateOptions,
   );
 
-  // A member override that resolved (executionTarget set) fully shadows the
-  // shared default — a member's `local` pick must not fall back to the shared
-  // `device` binding when the member has no desktop attached. Under a pinned
-  // policy the member override never resolves (only admins can pick), so it
-  // cannot shadow the pinned default either.
-  const memberPicked = !isFixedPolicy && params.memberDeviceOverride?.executionTarget !== undefined;
-  const memberTarget = params.memberDeviceOverride?.executionTarget;
-  const userAgentPreferenceDeviceId = memberPicked
-    ? memberTarget === 'local'
-      ? params.localDeviceId
-      : memberTarget === 'device'
-        ? params.memberDeviceOverride?.boundDeviceId
-        : undefined
-    : undefined;
-
-  // 'local' names the requester's own machine (localDeviceId). A PINNED
-  // policy resolves the pinned `boundDeviceId` instead — the caller's machine
-  // is not a sanctioned stand-in for a fixed contract. Off-desktop
-  // (bot/web call) the stored boundDeviceId is the durable stand-in — the
-  // picker stamps the chosen desktop's id there — EXCEPT for platform task
-  // families (openclaw/hermes), where a stale bound id must not hijack a
-  // `local` intent.
-  const agentDefaultDeviceId = memberPicked
-    ? undefined
-    : target === 'device'
-      ? agencyConfig?.boundDeviceId
-      : target === 'local'
-        ? isFixedPolicy
-          ? agencyConfig?.boundDeviceId
-          : params.localDeviceId ||
-            (params.isPlatformTask ? undefined : agencyConfig?.boundDeviceId)
-        : undefined;
-
-  // A session pin is the conversation's device — `auto` only decides for a
-  // session that has NO binding yet. It never re-picks mid-conversation and
-  // never silently moves a bound run; an invalid pin still blocks below as
-  // DEVICE_BINDING_INVALID rather than erasing the evidence.
-  const sessionBoundDeviceId = params.sessionBoundDeviceId ?? undefined;
-
   const resolutionInput = {
-    agentDefaultDeviceId,
+    sessionBoundDeviceId: agencyConfig?.boundDeviceId,
     deviceInventoryComplete: inventoryComplete,
-    explicitDeviceId: params.explicitDeviceId,
-    explicitRequestAllowed: !isFixedPolicy && !params.workspaceScoped,
-    sessionBoundDeviceId,
-    userAgentPreferenceDeviceId,
+    explicitRequestAllowed: false,
   };
-  let resolution = resolveExecutionDevice(resolutionInput, candidates);
-
-  // Existing explicit/default/session choices retain their launch proof path.
-  // Only a never-bound automatic choice counts hosts that installed this runtime.
-  const needsAutomaticEligibility =
-    (resolution.status === 'resolved' && resolution.reason === 'single_candidate') ||
-    (resolution.status === 'blocked' &&
-      ['DEVICE_REQUIRED', 'DEVICE_SELECTION_REQUIRED'].includes(resolution.code));
-  if (
-    needsAutomaticEligibility &&
-    !isFixedPolicy &&
-    !agencyConfig?.boundDeviceId &&
-    !params.sessionBoundDeviceId &&
-    !effectiveExplicitDeviceId &&
-    !userAgentPreferenceDeviceId &&
-    params.requiredOperation?.kind === 'agent-run' &&
-    params.requiredOperation.adapter
-  ) {
-    const runtimeInventory = await listAuthorizedDeviceCandidates(
-      serverDB,
-      params.userId,
-      params.workspaceId,
-      {
-        ...candidateOptions,
-        includeCallerPersonalDevices: params.canSelectPersonalDevice === true,
-        runtimeRequirement: {
-          agentType: params.requiredOperation.adapter,
-          command: agencyConfig?.heterogeneousProvider?.command,
-        },
-      },
-    );
-    candidates = runtimeInventory.candidates;
-    inventoryComplete = runtimeInventory.inventoryComplete;
-    resolution = resolveExecutionDevice(
-      { ...resolutionInput, deviceInventoryComplete: inventoryComplete },
-      candidates,
-    );
-  }
+  const resolution = agencyConfig?.boundDeviceId
+    ? resolveExecutionDevice(resolutionInput, candidates)
+    : { status: 'blocked' as const, code: 'DEVICE_REQUIRED' as const };
 
   if (resolution.status === 'resolved') {
     const candidate = candidates.find((d) => d.deviceId === resolution.deviceId);
@@ -940,7 +844,7 @@ export const resolveHeteroExecutionPlan = async (
     code: resolution.code,
     detail:
       resolution.code === 'DEVICE_BINDING_INVALID'
-        ? 'The device this conversation is bound to is no longer authorized or registered — repair the binding with an explicit device selection.'
+        ? 'The saved Agent device is unavailable. Choose a device in Agent settings.'
         : resolution.code === 'DEVICE_REQUEST_UNAUTHORIZED'
           ? 'The requested device is not in the authorized device set for this run.'
           : resolution.code === 'DEVICE_INVENTORY_INCOMPLETE'

@@ -10,16 +10,8 @@ import { MESSAGE_CANCEL_FLAT } from '@/const/index';
 import { saveDraft } from '@/features/ChatInput/draftStorage';
 import { isHeterogeneousAgentStatusGuideError } from '@/features/Conversation/Error/heterogeneous';
 import { getEffectiveConversationModel } from '@/features/Conversation/store/utils/effectiveModel';
-import {
-  ensureAgentManagementAccess,
-  getRuntimeCanManageAgent,
-} from '@/helpers/agentManagementAccess';
-import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
-import {
-  getTopicAgencyConfig,
-  getTopicWorkspaceScoped,
-  resolveIsGroupSupervisor,
-} from '@/helpers/topicExecutionConfig';
+import { ensureAgentManagementAccess } from '@/helpers/agentManagementAccess';
+import { getTopicAgencyConfig, resolveIsGroupSupervisor } from '@/helpers/topicExecutionConfig';
 import { getAgentStoreState } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -118,43 +110,12 @@ const ensureEffectiveAgencyAccess = async (agentId: string) => {
 
 const getEffectiveAgencyConfig = (agentId: string, topicId?: string | null) => {
   const agentState = getAgentStoreState();
-  const sharedAgencyConfig = agentSelectors.getAgentConfigById(agentId)(agentState)?.agencyConfig;
+  const config = agentSelectors.getAgentConfigById(agentId)(agentState)?.agencyConfig;
   const agent = agentByIdSelectors.getAgentById(agentId)(agentState);
-  const currentUserId = userProfileSelectors.userId(getUserStoreState());
-  // Author-or-admin, mirroring the picker (`useAgentManagementAccess`) and the
-  // server (`isResourceAuthorOrAdmin`) — an admin's own override must survive
-  // a `fixed` selection policy just like the author's does.
-  const canManage = getRuntimeCanManageAgent({
-    agentId,
-    agentUserId: agent?.userId,
-    currentUserId,
-  });
-  const usesWorkspaceMemberSelection =
-    !!agent?.workspaceId && agent.visibility !== 'private' && !canManage;
-  // Every workspace caller's override matters — a manager's / private owner's
-  // `local` pick also lives in `agentDeviceOverrides` (the shared row must
-  // never reference a personal device); `resolveAgentAgencyConfig` decides how
-  // it applies per role.
-  const deviceOverride = agent?.workspaceId
-    ? getUserStoreState().workspaceUserPreference.agentDeviceOverrides?.[agentId]
-    : undefined;
-
   return {
-    agencyConfig: getTopicAgencyConfig(
-      resolveAgentAgencyConfig(sharedAgencyConfig, deviceOverride, {
-        canManage,
-        visibility: agent?.visibility,
-        workspaceId: agent?.workspaceId,
-      }),
-      topicId,
-    ),
-    /** True workspace membership — stays true for the author, unlike `workspaceScoped`. */
+    agencyConfig: getTopicAgencyConfig(resolveAgentAgencyConfig(config), topicId),
     isWorkspaceAgent: !!agent?.workspaceId,
-    workspaceScoped: getTopicWorkspaceScoped(
-      sharedAgencyConfig,
-      topicId,
-      resolveWorkspaceScoped(usesWorkspaceMemberSelection, deviceOverride),
-    ),
+    workspaceScoped: !!agent?.workspaceId && agent.visibility !== 'private',
   };
 };
 

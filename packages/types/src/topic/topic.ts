@@ -116,8 +116,8 @@ export interface OnboardingSessionSnapshot {
 
 /** Execution routing belongs to a conversation; Agent config supplies defaults only. */
 export const topicExecutionConfigSchema = z.object({
-  /** Automatic snapshots retain the workspace default's execution restrictions. */
-  inheritWorkspaceScope: z.boolean().optional(),
+  boundDeviceId: z.string().optional(),
+  executionTarget: z.enum(['auto', 'device', 'local', 'none', 'sandbox']).optional(),
   permission: z
     .object({
       provider: z.string().min(1),
@@ -125,10 +125,6 @@ export const topicExecutionConfigSchema = z.object({
       value: z.string().min(1),
     })
     .optional(),
-  boundDeviceId: z.string().optional(),
-  executionTarget: z.enum(['auto', 'device', 'local', 'none', 'sandbox']).optional(),
-  localSandbox: z.boolean().optional(),
-  localSandboxNetwork: z.boolean().optional(),
 });
 
 export type TopicExecutionConfig = z.infer<typeof topicExecutionConfigSchema>;
@@ -154,20 +150,12 @@ export const applyTopicExecutionConfig = (
           },
         }
       : defaults;
-  if (defaults?.executionTargetSelectionPolicy === 'fixed') return withPermission;
-  return {
-    ...withPermission,
-    boundDeviceId: execution.boundDeviceId,
-    executionTarget: execution.executionTarget,
-    localSandbox: execution.localSandbox,
-    localSandboxNetwork: execution.localSandboxNetwork,
-  };
+  return withPermission;
 };
 
 export const snapshotTopicExecutionConfig = (
   config: OrviloAgentAgencyConfig | undefined,
 ): TopicExecutionConfig => ({
-  inheritWorkspaceScope: true,
   ...(config?.heterogeneousProvider?.permission
     ? {
         permission: {
@@ -176,10 +164,6 @@ export const snapshotTopicExecutionConfig = (
         },
       }
     : {}),
-  boundDeviceId: config?.boundDeviceId,
-  executionTarget: config?.executionTarget,
-  localSandbox: config?.localSandbox,
-  localSandboxNetwork: config?.localSandboxNetwork,
 });
 
 /** Who last set a topic's title: the user by hand, the external agent (ACP), or Orvilo. */
@@ -306,12 +290,7 @@ export interface ChatTopicMetadata {
    * watching client receives the terminal event after the server cleared the marker.
    */
   lastSettledOperationId?: string;
-  /**
-   * Measured dominant model by token volume, written by the usage roll-up
-   * (`topicUsage.recompute`). This is an analytics projection of "what actually
-   * ran", NOT the topic's configured model — the pinned/config model lives in
-   * the top-level `topics.model` column (see `ChatTopic.model`).
-   */
+
   model?: string;
   /**
    * Free-form feedback collected after agent onboarding completion.
@@ -321,17 +300,7 @@ export interface ChatTopicMetadata {
   onboardingSession?: OnboardingSessionSnapshot;
   /** Measured dominant provider by token volume — see {@link ChatTopicMetadata.model}. */
   provider?: string;
-  /**
-   * Topic-pinned reasoning effort / mode for the pinned API model
-   * (`ChatTopic.model`). Mirrors the model pin: snapshotted from the user's
-   * model-instance reasoning config when the topic is created, re-snapshotted
-   * for the new model when the user switches model while the topic is active,
-   * and overwritten when the user picks an effort while the topic is active.
-   * Generation resolves "topic config if present (and its pinned model matches
-   * the run model), else the user-level model-instance config" — see
-   * `resolveEffectiveReasoningChatConfig`. An empty object is a valid snapshot:
-   * it pins the topic to the model's own defaults.
-   */
+
   reasoningConfig?: AiModelReasoningConfig;
   /**
    * Web (cloud) only. Ordered list of GitHub repos selected for this topic.
@@ -501,10 +470,6 @@ const resumeAfterRateLimitRunSchema = topicScheduledRunBaseSchema.extend({
 
 const delayedStartRunSchema = topicScheduledRunBaseSchema.extend({
   kind: z.literal('delayed_start'),
-  /** Model override captured at schedule time (the agent default is used if absent). */
-  model: z.string().optional(),
-  /** Provider override captured at schedule time. */
-  provider: z.string().optional(),
   /**
    * The user turn to run when due. Persisted as a real message at schedule time,
    * so the pending prompt reads as the user's own words in the topic (and in any
@@ -755,16 +720,7 @@ export interface ChatTopic extends Omit<BaseDataModel, 'meta'> {
   /** Total message count for the topic. */
   messageCount?: number | null;
   metadata?: ChatTopicMetadata;
-  /**
-   * The topic's pinned model — snapshotted from the agent default when the topic
-   * is created, and overwritten when the user switches model while the topic is
-   * active. Generation and ChatInput display resolve the effective model as
-   * "topic model if present, else agent default" (see
-   * `topicSelectors.getTopicModelById`). Distinct from the analytics
-   * `metadata.model` (measured dominant model from the usage roll-up).
-   */
-  model?: string | null;
-  provider?: string | null;
+
   sessionId?: string;
   /**
    * Sort key for the sidebar list: the topic's latest message-activity time
@@ -829,9 +785,7 @@ export interface CreateTopicParams {
   groupId?: string | null;
   messages?: string[];
   metadata?: ChatTopicMetadata;
-  /** Pinned model snapshot for the new topic (see `ChatTopic.model`). */
-  model?: string;
-  provider?: string;
+
   /**
    * Legacy session row id — only for session-backed (non-agent) contexts.
    * Passing an agent id here violates the `topics.session_id` FK for

@@ -459,7 +459,6 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'sandbox',
-        executionTargetSelectionPolicy: 'fixed',
       });
       // `fixed` only engages for workspace-shared agents — the policy strips
       // the request's deviceId override entirely.
@@ -476,7 +475,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(topicMock.create).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: expect.objectContaining({
-            executionConfig: expect.objectContaining({ executionTarget: 'sandbox' }),
+            boundDeviceId: undefined,
           }),
         }),
         undefined,
@@ -559,7 +558,8 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
     });
 
-    it('honours an explicit deviceId request over the stored sandbox target', async () => {
+    it('ignores an explicit deviceId request over the saved sandbox target', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({ executionTarget: 'sandbox' });
 
       await service.execAgent({
@@ -570,22 +570,14 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
 
       // requestedDeviceId forces device routing regardless of the stored
       // target (the shared policy isn't `fixed`).
-      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
-        expect.objectContaining({ deviceId: 'device-001' }),
-      );
-      expect(topicMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: expect.objectContaining({ boundDeviceId: 'device-001' }),
-        }),
-        undefined,
-      );
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
     });
 
     it('does not start a queued workspace run after Agent Use is revoked at admission', async () => {
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
       });
       service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
       vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValue(new TRPCError({ code: 'FORBIDDEN' }));
@@ -600,7 +592,6 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
       });
       service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
 
@@ -628,6 +619,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       topicMock.findById.mockResolvedValue({ metadata: { boundDeviceId: 'device-002' } });
       await useAgencyConfig({ executionTarget: 'sandbox' });
 
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
       await service.execAgent({
         agentId: 'agent-1',
         appContext: { topicId: 'topic-1' },

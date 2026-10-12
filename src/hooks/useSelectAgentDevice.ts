@@ -1,57 +1,15 @@
-'use client';
-
 import type { DeviceExecutionTarget } from '@orvilo/types';
 import { useCallback } from 'react';
 
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors } from '@/store/agent/selectors';
-import { useUserStore } from '@/store/user';
 
-/**
- * The single write path for an agent's device selection
- * (docs/development/device-execution-contract.md — "each setting has exactly
- * one write entry").
- *
- * - Personal agent → `agents.agencyConfig` (the shared row is the only row).
- * - Workspace agent → the caller's own `agentDeviceOverrides` entry — EVERY
- *   workspace caller's pick is per-user (member, manager, private owner
- *   alike), because the shared row must never reference a personal device.
- *   This is what makes one member's pick invisible to everyone else's
- *   default.
- *
- * Callers pass devices their own `useDeviceSelectorState` already screened;
- * this hook re-checks the legal pool so a stale list cannot write a binding
- * the contract forbids.
- */
+/** Device changes are saved on the Agent, through the server management gate. */
 export const useSelectAgentDevice = (agentId: string) => {
-  const agent = useAgentStore((s) => agentByIdSelectors.getAgentById(agentId)(s));
-  const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
-  const updateWorkspaceUserPreference = useUserStore((s) => s.updateWorkspaceUserPreference);
-
+  const update = useAgentStore((s) => s.updateAgentConfigById);
   return useCallback(
-    async ({
-      boundDeviceId,
-      executionTarget,
-    }: {
-      /** Device to bind; omitted when the target itself carries no binding. */
-      boundDeviceId?: string;
-      executionTarget: DeviceExecutionTarget;
-    }) => {
-      if (!agentId) return;
-      const patch = {
-        ...(boundDeviceId ? { boundDeviceId } : {}),
-        executionTarget,
-      };
-      if (agent?.workspaceId) {
-        await updateWorkspaceUserPreference({
-          agentDeviceOverrides: {
-            [agentId]: patch,
-          },
-        });
-        return;
-      }
-      await updateAgentConfigById(agentId, { agencyConfig: patch });
+    async (selection: { boundDeviceId?: string; executionTarget: DeviceExecutionTarget }) => {
+      if (agentId) await update(agentId, { agencyConfig: selection }, { rethrow: true });
     },
-    [agent?.workspaceId, agentId, updateAgentConfigById, updateWorkspaceUserPreference],
+    [agentId, update],
   );
 };

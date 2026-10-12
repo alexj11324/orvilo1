@@ -1,7 +1,6 @@
 import { hasApiKeyScope, isFullAccessApiKey } from '@orvilo/const/apiKeyScope';
-import type { WorkspaceUserPreference } from '@orvilo/types';
+import { type WorkspaceUserPreference, workspaceUserPreferenceSchema } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
-import { z } from 'zod';
 
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentModel } from '@/database/models/agent';
@@ -51,13 +50,7 @@ const workspaceUserSettingsProcedure = wsCompatProcedure.use(serverDatabase).use
 // Kept loose (`.passthrough().partial()`) so a future field addition to
 // `WorkspaceUserPreference` doesn't need a coupled zod-schema bump — the
 // type layer already constrains the write paths.
-const preferencePatchSchema = z
-  .object({
-    defaultAgentId: z.string().min(1).max(128).nullish(),
-    orchestratorAgentId: z.string().min(1).max(128).nullish(),
-  })
-  .passthrough()
-  .partial();
+const preferencePatchSchema = workspaceUserPreferenceSchema;
 
 export const workspaceUserSettingsRouter = router({
   /**

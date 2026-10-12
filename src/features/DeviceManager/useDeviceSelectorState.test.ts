@@ -197,7 +197,7 @@ describe('useDeviceSelectorState', () => {
       expect(result.current.showDeviceSelector).toBe(false);
     });
 
-    it('does not authorize a personal shared binding or a mismatched member override', () => {
+    it('reads the saved personal binding independently of obsolete member overrides', () => {
       setInventory([buildDevice({ deviceId: 'shared' }), buildDevice({ deviceId: 'override' })]);
       for (const memberSelectedDeviceId of [undefined, 'override']) {
         const { result, unmount } = renderState({
@@ -205,8 +205,8 @@ describe('useDeviceSelectorState', () => {
           memberSelectedDeviceId,
           scope: 'workspace',
         });
-        expect(result.current.bindingState).toBe('invalid');
-        expect(result.current.selectableDevices).toEqual([]);
+        expect(result.current.bindingState).toBe('valid');
+        expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['shared']);
         unmount();
       }
     });

@@ -1,4 +1,4 @@
-import type { WorkspaceUserPreference } from '@orvilo/types';
+import { type WorkspaceUserPreference, workspaceUserPreferenceSchema } from '@orvilo/types';
 import { mergeNotificationSettings } from '@orvilo/utils/mergeNotificationSettings';
 import { and, eq } from 'drizzle-orm';
 
@@ -52,7 +52,7 @@ export class WorkspaceUserSettingsModel {
    */
   getPreference = async (): Promise<WorkspaceUserPreference> => {
     const row = await this.get();
-    return row?.preference ?? {};
+    return workspaceUserPreferenceSchema.parse(row?.preference ?? {});
   };
 
   /**
@@ -67,7 +67,8 @@ export class WorkspaceUserSettingsModel {
    * with the newly merged object (so setting a top-level key to `undefined`
    * in the patch is a no-op — pass an explicit `{}` to clear it).
    */
-  updatePreference = async (patch: Partial<WorkspaceUserPreference>) => {
+  updatePreference = async (input: Partial<WorkspaceUserPreference>) => {
+    const patch = workspaceUserPreferenceSchema.parse(input);
     const current = (await this.getPreference()) ?? {};
     // Per-agent override maps merge one level deeper: clients patch a single
     // agent's leaf from a local copy that may be stale or empty (for example a
@@ -77,22 +78,6 @@ export class WorkspaceUserSettingsModel {
     const next: WorkspaceUserPreference = {
       ...current,
       ...patch,
-      ...(patch.agentDeviceOverrides
-        ? {
-            agentDeviceOverrides: {
-              ...current.agentDeviceOverrides,
-              ...patch.agentDeviceOverrides,
-            },
-          }
-        : {}),
-      ...(patch.agentModelOverrides
-        ? {
-            agentModelOverrides: {
-              ...current.agentModelOverrides,
-              ...patch.agentModelOverrides,
-            },
-          }
-        : {}),
       ...(patch.notification
         ? { notification: mergeNotificationSettings(current.notification, patch.notification) }
         : {}),

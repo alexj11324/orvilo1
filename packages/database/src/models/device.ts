@@ -87,7 +87,6 @@ export class DeviceModel {
       .where(
         and(
           eq(agents.workspaceId, this.workspaceId),
-          sql`${agents.agencyConfig}->>'executionTargetSelectionPolicy' = 'fixed'`,
           sql`${agents.agencyConfig}->>'executionTarget' = 'device'`,
           sql`${agents.agencyConfig}->>'boundDeviceId' = ${deviceId}`,
         ),

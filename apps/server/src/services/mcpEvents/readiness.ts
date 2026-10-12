@@ -164,8 +164,7 @@ export async function checkMcpAutomationReadiness(input: {
   if (!deviceId)
     reasons.push(devices.length > 1 ? 'DEVICE_SELECTION_REQUIRED' : 'DEVICE_UNAVAILABLE');
   else if (!devices.some((device) => device.id === deviceId)) reasons.push('DEVICE_UNAVAILABLE');
-  if (agency?.executionTargetSelectionPolicy === 'fixed' && agency.boundDeviceId !== deviceId)
-    reasons.push('CONFIGURATION_INVALID');
+  if (agent && agency?.boundDeviceId !== deviceId) reasons.push('CONFIGURATION_INVALID');
 
   if (
     agent &&

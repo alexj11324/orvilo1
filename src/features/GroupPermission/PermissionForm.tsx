@@ -1,8 +1,8 @@
 'use client';
 
-import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
+import type { AgentTopicSharePolicy } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Bot, InfoIcon, LockIcon, MonitorSmartphone, Share2, UsersIcon } from 'lucide-react';
+import { InfoIcon, LockIcon, Share2, UsersIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,7 +16,6 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import PolicySelect, { type PolicyOption } from '@/features/ResourcePermission/PolicySelect';
-import { getSelectionPolicyLabelKeys } from '@/features/ResourcePermission/selectionPolicyLabels';
 import { useAccessLevelOptions } from '@/features/ResourcePermission/useAccessLevelOptions';
 
 import { resolveGroupPermissionSections } from './permissionSections';
@@ -58,17 +57,12 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
     accessLoading,
     canEditConfig,
     canEditPolicies,
-    canFixExecutionTarget,
     canManageAccess,
-    executionTargetPolicy,
     hasSupervisor,
     isPrivate,
     isWorkspaceGroup,
-    modelPolicy,
     retryAccess,
     setAccessLevel,
-    setExecutionTargetPolicy,
-    setModelPolicy,
     setTopicSharePolicy,
     topicSharePolicy,
   } = useGroupPermission(groupId);
@@ -79,7 +73,6 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
   // policy keys, which the server accepts only from its creator or the
   // workspace owner and silently drops from anyone else's save.
   const policiesDisabled = !canEditConfig || !canEditPolicies;
-  const labelKeys = getSelectionPolicyLabelKeys(isPrivate);
   const sections = resolveGroupPermissionSections({
     accessError,
     canManageAccess,
@@ -106,52 +99,6 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
       },
     ],
     [t],
-  );
-
-  const modelPolicyOptions = useMemo(
-    (): PolicyOption<AgentModelSelectionPolicy>[] => [
-      {
-        desc: t('permission.page.groupModelPolicyMemberDesc'),
-        icon: UsersIcon,
-        label: t(labelKeys.member),
-        value: 'member',
-      },
-      {
-        desc: t('permission.page.groupModelPolicyFixedDesc'),
-        icon: LockIcon,
-        label: t(labelKeys.fixed),
-        value: 'fixed',
-      },
-    ],
-    [labelKeys, t],
-  );
-
-  const executionPolicyOptions = useMemo(
-    (): PolicyOption<AgentModelSelectionPolicy>[] => [
-      {
-        desc: t('permission.page.groupDevicePolicyMemberDesc'),
-        icon: UsersIcon,
-        label: t(labelKeys.member),
-        value: 'member',
-      },
-      // Nothing to pin to yet — say so where the choice is made rather than
-      // letting the click fail silently.
-      canFixExecutionTarget
-        ? {
-            desc: t('permission.page.groupDevicePolicyFixedDesc'),
-            icon: LockIcon,
-            label: t(labelKeys.fixed),
-            value: 'fixed',
-          }
-        : {
-            desc: t('permission.page.groupDevicePolicyUnset'),
-            disabled: true,
-            icon: LockIcon,
-            label: t(labelKeys.fixed),
-            value: 'fixed',
-          },
-    ],
-    [canFixExecutionTarget, labelKeys, t],
   );
 
   if (sections.showPersonalEmpty) {
@@ -228,52 +175,6 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
   // Both rows write to the supervisor agent. Until group detail resolves one
   // there is no row to write to, so the whole card waits rather than offering
   // controls whose save would silently target nothing.
-  const configGroup: PermissionFormGroup | undefined = sections.showConfigCard
-    ? {
-        children: [
-          {
-            avatar: (
-              <span className={styles.rowIcon}>
-                <Bot size={16} />
-              </span>
-            ),
-            children: (
-              <PolicySelect
-                disabled={policiesDisabled}
-                options={modelPolicyOptions}
-                value={modelPolicy}
-                onChange={setModelPolicy}
-              />
-            ),
-            desc: canEditPolicies
-              ? t('permission.page.groupModelPolicyDesc')
-              : t('permission.noManagePermission'),
-            label: t('settingAgent.modelPolicy.title'),
-          },
-          {
-            avatar: (
-              <span className={styles.rowIcon}>
-                <MonitorSmartphone size={16} />
-              </span>
-            ),
-            children: (
-              <PolicySelect
-                disabled={policiesDisabled}
-                options={executionPolicyOptions}
-                value={executionTargetPolicy}
-                onChange={setExecutionTargetPolicy}
-              />
-            ),
-            desc: canEditPolicies
-              ? t('permission.page.groupDevicePolicyDesc')
-              : t('permission.noManagePermission'),
-            label: t('settingAgent.devicePolicy.title'),
-          },
-        ],
-        title: t('permission.page.configGroup'),
-      }
-    : undefined;
-
   return (
     <>
       {/* A failed permission fetch must not read as "this group has no member
@@ -290,7 +191,7 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
         </Alert>
       ) : null}
       <div className="flex flex-col gap-4">
-        {[memberGroup, configGroup]
+        {[memberGroup]
           .filter((group): group is PermissionFormGroup => !!group)
           .map((group) => (
             <div

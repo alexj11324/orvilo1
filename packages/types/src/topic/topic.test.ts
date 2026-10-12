@@ -181,7 +181,6 @@ it('preserves execution selection alongside reasoning when creating a topic', ()
     executionConfig: {
       executionTarget: 'device',
       boundDeviceId: 'selected-device',
-      inheritWorkspaceScope: false,
     },
     reasoningConfig: { gpt5ReasoningEffort: 'high' },
   };

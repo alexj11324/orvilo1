@@ -846,8 +846,8 @@ export class TaskRunnerService {
         const agency = executionAgent?.agencyConfig;
         if (
           !executionAgent ||
-          (agency?.executionTargetSelectionPolicy === 'fixed' &&
-            (agency.executionTarget !== 'device' || agency.boundDeviceId !== pinnedDeviceId))
+          !['device', 'local'].includes(agency?.executionTarget ?? '') ||
+          agency?.boundDeviceId !== pinnedDeviceId
         ) {
           throw new TRPCError({
             code: 'PRECONDITION_FAILED',

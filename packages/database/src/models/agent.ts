@@ -4,7 +4,7 @@ import type { AgentRankItem, AgentTopicShareSubject, OrviloAgentAgencyConfig } f
 import {
   AGENT_PERMISSION_POLICY_KEYS,
   BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
-  DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
+  DEFAULT_WORKSPACE_AGENT_PERMISSION_POLICIES,
   HETEROGENEOUS_AGENT_CONFIGS,
   normalizeAgencyConfigForWrite,
   pruneWorkingDirByDeviceDeletes,
@@ -93,7 +93,10 @@ import {
 } from '../utils/agentKnowledgeMounts';
 import { rehomeAgentLabelsForRecipient } from '../utils/agentLabelsOwnership';
 import { rehomeAgentQuotaBindingsForRecipient } from '../utils/agentQuotaBindings';
-import { assertAgentRuntimeCreation } from '../utils/agentRuntimeCreation';
+import {
+  assertAgentRuntimeCreation,
+  assertAgentRuntimeSelection,
+} from '../utils/agentRuntimeCreation';
 import { normalizeAgentRuntimeIdentity } from '../utils/agentRuntimeIdentity';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { resolveGroupMembershipType } from '../utils/groupMembership';
@@ -275,13 +278,13 @@ export class AgentModel {
    * New workspace agents persist both selection policies instead of relying
    * on the intentionally different legacy fallbacks for missing values.
    */
-  private withWorkspaceSelectionPolicyDefaults = (
+  private withWorkspacePermissionDefaults = (
     agencyConfig: OrviloAgentAgencyConfig | null | undefined,
   ): OrviloAgentAgencyConfig | null | undefined => {
     if (!this.workspaceId) return agencyConfig;
 
     return {
-      ...DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
+      ...DEFAULT_WORKSPACE_AGENT_PERMISSION_POLICIES,
       ...agencyConfig,
     };
   };
@@ -466,49 +469,13 @@ export class AgentModel {
    * missing/private/cross-workspace rows so the write path never reveals a
    * device the caller cannot otherwise see.
    */
-  private assertFixedExecutionTarget = async (
+  private assertSavedDeviceBinding = async (
     agentWorkspaceId: string | null,
     agencyConfig: OrviloAgentAgencyConfig | null | undefined,
+    visibility: 'private' | 'public' = 'public',
   ): Promise<void> => {
-    if (!agentWorkspaceId || agencyConfig?.executionTargetSelectionPolicy !== 'fixed') return;
-
-    if (
-      !agencyConfig.executionTarget ||
-      !['auto', 'device', 'none', 'sandbox'].includes(agencyConfig.executionTarget)
-    ) {
-      throw new TRPCError({
-        cause: { data: { code: 'FixedAgentRequiresSharedExecutionTarget' } },
-        code: 'BAD_REQUEST',
-        message: 'A fixed workspace agent requires a shared execution target.',
-      });
-    }
-
-    if (agencyConfig.executionTarget !== 'device') return;
-
-    if (!agencyConfig.boundDeviceId) {
-      throw new TRPCError({
-        cause: { data: { code: 'FixedAgentRequiresDeviceTarget' } },
-        code: 'BAD_REQUEST',
-        message: 'A fixed device target requires a bound device.',
-      });
-    }
-
-    const row = await this.db.query.devices.findFirst({
-      columns: { deviceId: true },
-      where: and(
-        eq(devices.workspaceId, agentWorkspaceId),
-        eq(devices.deviceId, agencyConfig.boundDeviceId),
-        eq(devices.visibility, 'public'),
-      ),
-    });
-
-    if (!row) {
-      throw new TRPCError({
-        cause: { data: { code: 'FixedAgentRequiresPublicWorkspaceDevice' } },
-        code: 'PRECONDITION_FAILED',
-        message: 'A fixed workspace agent requires a public device from the same workspace.',
-      });
-    }
+    if (!agentWorkspaceId || !agencyConfig?.boundDeviceId) return;
+    await this.assertWorkspaceDeviceBinding(agentWorkspaceId, agencyConfig, undefined, visibility);
   };
 
   /** Resolve identity without returning executable configuration. */
@@ -1427,20 +1394,7 @@ export class AgentModel {
       if (this.workspaceId && options.visibility !== 'private' && source.visibility === 'private')
         throw new TRPCError({ code: 'FORBIDDEN', message: 'ORCHESTRATOR_SOURCE_PRIVATE' });
     }
-    // Device/model overrides live on the workspace member preference only —
-    // a personal agent has exactly one member, so there is nothing to override.
-    const preference = this.workspaceId
-      ? await new WorkspaceUserSettingsModel(this.db, this.userId, this.workspaceId).getPreference()
-      : undefined;
-    const agency = resolveAgentAgencyConfig(
-      source.agencyConfig,
-      preference?.agentDeviceOverrides?.[agentId],
-      {
-        canManage: source.userId === this.userId,
-        visibility: source.visibility ?? undefined,
-        workspaceId: source.workspaceId,
-      },
-    );
+    const agency = resolveAgentAgencyConfig(source.agencyConfig);
     const provider = agency?.heterogeneousProvider;
     if (!provider)
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_RUNTIME_REQUIRED' });
@@ -1460,8 +1414,7 @@ export class AgentModel {
             type: provider.type,
           }
         : withoutEnv;
-    const override = preference?.agentModelOverrides?.[agentId];
-    const selectedModel = options.model ?? override?.model ?? safeProvider.model ?? source.model;
+    const selectedModel = options.model ?? safeProvider.model ?? source.model;
     const config = {
       agencyConfig: {
         ...(options.purpose === 'orchestrator'
@@ -1473,15 +1426,6 @@ export class AgentModel {
               workingDirByDevice: agency?.workingDirByDevice,
             }
           : agency),
-        // `resolveAgentAgencyConfig` strips the stored selection policy on the
-        // owner path — it is a read-time view of the shared row, not the shape
-        // to persist. A copied/inherited runtime must carry the agent's stored
-        // workspace policy, so restore it from the source row.
-        ...(source.agencyConfig?.executionTargetSelectionPolicy
-          ? {
-              executionTargetSelectionPolicy: source.agencyConfig.executionTargetSelectionPolicy,
-            }
-          : {}),
         ...(options.deviceId
           ? { boundDeviceId: options.deviceId, executionTarget: 'device' as const }
           : {}),
@@ -1491,7 +1435,7 @@ export class AgentModel {
         },
       },
       model: selectedModel ?? null,
-      provider: options.provider ?? override?.provider ?? source.provider,
+      provider: options.provider ?? source.provider,
       visibility: options.visibility,
     };
     await assertAgentRuntimeCreation(
@@ -1589,7 +1533,7 @@ export class AgentModel {
       configs.map(async (config) => ({
         ...this.stripReservedSlug(config),
         avatar: this.runtimeAvatar(config),
-        agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
+        agencyConfig: this.withWorkspacePermissionDefaults(
           await assertAgentRuntimeCreation(
             this.db,
             { userId: this.userId, workspaceId: this.workspaceId },
@@ -1607,7 +1551,11 @@ export class AgentModel {
           undefined,
           config.visibility ?? undefined,
         ),
-        this.assertFixedExecutionTarget(this.workspaceId ?? null, config.agencyConfig),
+        this.assertSavedDeviceBinding(
+          this.workspaceId ?? null,
+          config.agencyConfig,
+          config.visibility ?? 'public',
+        ),
       ]),
     );
 
@@ -1705,6 +1653,8 @@ export class AgentModel {
       await this.assertRuntimeUpdate(agent, next);
       sanitizedData.agencyConfig = next.agencyConfig;
     }
+    if (!agent.slug || !getAgentPersistConfig(agent.slug))
+      assertAgentRuntimeSelection({ ...agent, agencyConfig, ...sanitizedData });
     const avatar =
       agent.slug === BUILTIN_AGENT_SLUGS.agentBuilder
         ? agent.avatar
@@ -1768,7 +1718,7 @@ export class AgentModel {
     // Re-check at the publication boundary. A legacy/stale fixed target may
     // predate the config-write guard; a concrete device must never be exposed
     // when workspace members cannot resolve it.
-    await this.assertFixedExecutionTarget(agent.workspaceId, agent.agencyConfig);
+    await this.assertSavedDeviceBinding(agent.workspaceId, agent.agencyConfig);
 
     // Rehome exactly as `setVisibility` does: a folder cannot mix
     // visibilities, so publishing out of a private Category releases the
@@ -1878,7 +1828,7 @@ export class AgentModel {
     // `publishAgentToWorkspace` is the normal client path, but keep the
     // visibility mutation equally safe for direct API callers.
     if (visibility === 'public' && current) {
-      await this.assertFixedExecutionTarget(current.workspaceId, current.agencyConfig);
+      await this.assertSavedDeviceBinding(current.workspaceId, current.agencyConfig);
     }
 
     const groupVisibility = current?.groupVisibility as 'private' | 'public' | null | undefined;
@@ -2135,9 +2085,14 @@ export class AgentModel {
     ) {
       await this.assertRuntimeUpdate(agent, mergedValue, replaceRuntime);
     }
+    if (!agent.slug || !getAgentPersistConfig(agent.slug)) assertAgentRuntimeSelection(mergedValue);
     if (agent.slug !== BUILTIN_AGENT_SLUGS.agentBuilder)
       mergedValue.avatar = this.runtimeAvatar(mergedValue);
-    await this.assertFixedExecutionTarget(agent.workspaceId, mergedValue.agencyConfig);
+    await this.assertSavedDeviceBinding(
+      agent.workspaceId,
+      mergedValue.agencyConfig,
+      agent.visibility ?? 'public',
+    );
 
     // Final cleanup: ensure no undefined or null values enter the database
     if (mergedValue.params) {
@@ -2417,7 +2372,7 @@ export class AgentModel {
           .set({
             ...(persistConfig?.chatConfig ? { chatConfig: persistConfig.chatConfig } : {}),
             ...(healAgency
-              ? { agencyConfig: this.withWorkspaceSelectionPolicyDefaults(healAgency) }
+              ? { agencyConfig: this.withWorkspacePermissionDefaults(healAgency) }
               : {}),
           })
           .where(eq(agents.id, existing.id))
@@ -2490,7 +2445,7 @@ export class AgentModel {
           buildWorkspacePayload(
             { userId: this.userId, workspaceId: this.workspaceId },
             {
-              agencyConfig: this.withWorkspaceSelectionPolicyDefaults(persistConfig.agencyConfig),
+              agencyConfig: this.withWorkspacePermissionDefaults(persistConfig.agencyConfig),
               chatConfig: persistConfig.chatConfig,
               model: persistConfig.model,
               provider: persistConfig.provider,

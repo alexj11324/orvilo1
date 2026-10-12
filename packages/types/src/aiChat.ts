@@ -98,9 +98,7 @@ export interface SendMessageServerParams {
      * post-execution metadata write which can be skipped on cancel/error.
      */
     metadata?: ChatTopicMetadata;
-    /** Pinned model snapshot for the new topic (top-level `topics.model` column). */
-    model?: string;
-    provider?: string;
+
     title?: string;
     topicMessageIds?: string[];
     trigger?: string;

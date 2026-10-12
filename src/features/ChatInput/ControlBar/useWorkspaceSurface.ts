@@ -61,16 +61,7 @@ export const resolveWorkspaceSurface = ({
   return undefined;
 };
 
-/**
- * The workspace surface for an agent, resolved from the EFFECTIVE execution
- * target (shared row + this member's per-user device override).
- *
- * Deliberately not `chatConfigByIdSelectors.getRuntimeModeById`: that store
- * selector only sees the workspace-shared row and treats every workspace agent
- * as workspace-scoped, so a member's "Local device" pick — which lives solely
- * in `agentDeviceOverrides` — never resolves to `local` there. The device chip
- * would say "Local device" while the directory picker stayed hidden.
- */
+/** Workspace controls follow the saved Agent target. */
 export const useWorkspaceSurface = (
   agentId: string,
   alwaysShowWorkspace = false,

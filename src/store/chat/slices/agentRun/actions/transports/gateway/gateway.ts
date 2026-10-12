@@ -11,7 +11,7 @@ import type {
   ChatTopicStatus,
   ConversationContext,
   ExecAgentResult,
-  HeterogeneousTopicPin,
+  HeterogeneousReasoningEffort,
   MessageMetadata,
   RuntimeMentionedAgent,
 } from '@orvilo/types';
@@ -19,11 +19,8 @@ import { resolveAgentAgencyConfig } from '@orvilo/types';
 import { t } from 'i18next';
 
 import { isDesktop } from '@/const/version';
-import {
-  ensureAgentManagementAccess,
-  getRuntimeCanManageAgent,
-} from '@/helpers/agentManagementAccess';
-import { resolveExecutionTarget, resolveWorkspaceScoped } from '@/helpers/executionTarget';
+import { ensureAgentManagementAccess } from '@/helpers/agentManagementAccess';
+import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { getTopicAgencyConfig, getTopicWorkspaceScoped } from '@/helpers/topicExecutionConfig';
 import {
   aiAgentService,
@@ -146,30 +143,8 @@ const resolveDesktopDeviceHints = async (
     visibility: agent?.visibility,
     workspaceId: agent?.workspaceId,
   });
-  const canManage = getRuntimeCanManageAgent({
-    agentId,
-    agentUserId: agent?.userId,
-    currentUserId,
-  });
-  const usesWorkspaceMemberSelection =
-    !!agent?.workspaceId && agent.visibility !== 'private' && !canManage;
-  // Every workspace caller's override matters — a manager's / private owner's
-  // `local` pick also lives in `agentDeviceOverrides` (the shared row must
-  // never reference a personal device); `resolveAgentAgencyConfig` decides how
-  // it applies per role.
-  const deviceOverride = agent?.workspaceId
-    ? userState.workspaceUserPreference.agentDeviceOverrides?.[agentId]
-    : undefined;
   const agencyConfig = getTopicAgencyConfig(
-    resolveAgentAgencyConfig(
-      agentByIdSelectors.getAgencyConfigById(agentId)(agentState),
-      deviceOverride,
-      {
-        canManage,
-        visibility: agent?.visibility,
-        workspaceId: agent?.workspaceId,
-      },
-    ),
+    resolveAgentAgencyConfig(agentByIdSelectors.getAgencyConfigById(agentId)(agentState)),
     topicId,
   );
   const isPlatformTask = isRemoteHeterogeneousType(agencyConfig?.heterogeneousProvider?.type ?? '');
@@ -179,7 +154,7 @@ const resolveDesktopDeviceHints = async (
     workspaceScoped: getTopicWorkspaceScoped(
       agencyConfig,
       topicId,
-      resolveWorkspaceScoped(usesWorkspaceMemberSelection, deviceOverride),
+      !!agent?.workspaceId && agent.visibility !== 'private',
     ),
   });
   // Platform hints are capability claims, not routing overrides. Always send
@@ -630,7 +605,7 @@ export class GatewayActionImpl {
      * and never to the agent row (docs/development/chat-agent-model-ia.md §5.2).
      * Ignored when the send reuses an existing topic.
      */
-    newTopicPins?: HeterogeneousTopicPin;
+    newTopicEffort?: HeterogeneousReasoningEffort;
     /**
      * Temporary message IDs created during the initial sendMessage phase.
      * These are associated with the new gateway operation so the UI doesn't
@@ -658,7 +633,7 @@ export class GatewayActionImpl {
       resumeToolResult,
       selectedToolIds,
       mentionedAgents,
-      newTopicPins,
+      newTopicEffort,
       tempMessageIds,
     } = params;
 
@@ -808,7 +783,7 @@ export class GatewayActionImpl {
               fileIds,
               replacesOperationId,
               mentionedAgents,
-              newTopicPins,
+              newTopicEffort,
               parentMessageId,
               prompt: message,
               resumeApproval,

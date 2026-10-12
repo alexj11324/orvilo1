@@ -28,6 +28,7 @@ import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/componen
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { resolveModelSwitchSelection } from '@/features/AgentSettings/modelSelection';
 import {
   getEffortLabelKeys,
   getModeLabelKey,
@@ -36,18 +37,17 @@ import {
   getStaticModelOptions,
   modelDisplayLabel,
 } from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
-import { resolveModelSwitchSelection } from '@/features/ChatInput/ControlBar/HeteroModel/selectorView';
 import { useModelCatalog } from '@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog';
 import { AgentModelPicker } from '@/features/CreateAgent/AgentModelPicker';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
 import { buildServerDefaultModelOptions } from '@/features/HeterogeneousAgent/modelPicker';
+import { useAgentManagementAccess } from '@/features/ResourcePermission/useAgentManagementAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
-import { usePermission } from '@/hooks/usePermission';
 import { useSaveState } from '@/hooks/useSaveState';
 import { providerBindingService } from '@/services/providerBinding';
 import { useAgentStore } from '@/store/agent';
@@ -74,7 +74,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat', 'common']);
   const navigate = useWorkspaceAwareNavigate();
   const { status, save, lastSavedAt, retry } = useSaveState();
-  const { allowed: canEdit } = usePermission('edit_own_content');
+  const { canManageAgent: canEdit } = useAgentManagementAccess(agentId);
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
   const rawProvider = config?.agencyConfig?.heterogeneousProvider;

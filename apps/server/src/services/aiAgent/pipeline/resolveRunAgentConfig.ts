@@ -1,7 +1,7 @@
 import { resolveSubAgentChatConfig } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
 import { type AgentConfigSnapshot, resolveAgentConfig } from '@orvilo/mecha';
-import type { AgentModelOverride, MessageMapScope, OrviloAgentAgencyConfig } from '@orvilo/types';
+import type { MessageMapScope } from '@orvilo/types';
 import { getDisabledPluginIds, resolveAgentAgencyConfig } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
@@ -53,7 +53,6 @@ export interface ResolvedRunAgentConfig {
   groupSystemContext?: string;
   isGroupSupervisor: boolean;
   isPublicWorkspaceAgent: boolean;
-  memberDeviceOverride?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
   /** Persistence-attribution agent id (Agent Signal marker aware). */
   persistAgentId: string;
   /** The actual executing agent row id resolved from id/slug. */
@@ -61,9 +60,7 @@ export interface ResolvedRunAgentConfig {
 }
 
 interface WorkspaceMemberOverrides {
-  device?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
   mode?: boolean;
-  model?: AgentModelOverride;
 }
 
 /**
@@ -84,9 +81,7 @@ const loadWorkspaceMemberOverrides = async (
       deps.workspaceId,
     ).getPreference();
     return {
-      device: preference.agentDeviceOverrides?.[agentId],
       mode: preference.agentModeOverrides?.[agentId],
-      model: preference.agentModelOverrides?.[agentId],
     };
   } catch (error) {
     log('execAgent: failed to load caller workspace_user_settings preferences: %O', error);
@@ -190,15 +185,7 @@ export const resolveRunAgentConfig = async (
     loadUserInfoForAIGeneration(deps, deps.userId),
   ]);
 
-  // The caller's device preference layers onto the shared row BEFORE the
-  // shared rules run, so a builtin runtime that pins its own execution target
-  // (the onboarding agents set `executionTarget: 'none'`) still wins over a
-  // saved member override when its `agencyConfig` is merged on top.
-  row.agencyConfig = resolveAgentAgencyConfig(row.agencyConfig, overrides.device, {
-    canManage: canManageAgent,
-    visibility: row.visibility,
-    workspaceId: agentWorkspaceId,
-  });
+  row.agencyConfig = resolveAgentAgencyConfig(row.agencyConfig);
 
   const snapshot: AgentConfigSnapshot = {
     agent: {
@@ -216,7 +203,6 @@ export const resolveRunAgentConfig = async (
     group: groupRun?.group,
     groupMembers: groupRun?.groupMembers,
     memberModeOverride: overrides.mode,
-    memberModelOverride: overrides.model,
     slug: row.slug ?? undefined,
     userLocale: userInfo.userLocale,
     userTimezone: userInfo.userTimezone,
@@ -334,7 +320,6 @@ export const resolveRunAgentConfig = async (
       ]
         .filter(Boolean)
         .join('\n\n') || undefined,
-    memberDeviceOverride: overrides.device,
     persistAgentId,
     resolvedAgentId,
   };

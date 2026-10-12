@@ -41,6 +41,7 @@ import { useHeterogeneousAutoRetry } from './useHeterogeneousAutoRetry';
 export { isHeterogeneousAgentStatusGuideError } from './heterogeneous';
 
 interface ErrorMessageData {
+  agentId?: string | null;
   error?: ChatMessageError | null;
   id: string;
 }
@@ -497,6 +498,7 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
     if (isDeviceAdmissionErrorBody(sessionErrorBody)) {
       return (
         <DeviceAdmissionError
+          agentId={data.agentId ?? undefined}
           body={sessionErrorBody}
           error={error ?? undefined}
           id={data.id}

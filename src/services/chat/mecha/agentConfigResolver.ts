@@ -63,7 +63,6 @@ const collectSnapshot = (ctx: AgentConfigResolverContext): AgentConfigSnapshot =
         : undefined,
     isDev,
     memberModeOverride: userState.workspaceUserPreference.agentModeOverrides?.[agentId],
-    memberModelOverride: userState.workspaceUserPreference.agentModelOverrides?.[agentId],
     slug: agentSelectors.getAgentSlugById(agentId)(agentStoreState) ?? undefined,
     userLocale: userGeneralSettingsSelectors.currentResponseLanguage(userState),
   };

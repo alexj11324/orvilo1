@@ -18,33 +18,28 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { fingerprintConfig } from '@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog';
 import { useLocalSandboxCapability } from '@/features/ChatInput/hooks/useLocalSandboxCapability';
+import { useAgentManagementAccess } from '@/features/ResourcePermission/useAgentManagementAccess';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
-import { usePermission } from '@/hooks/usePermission';
 import { useSaveState } from '@/hooks/useSaveState';
 import { getHostContext } from '@/platform';
 import { heterogeneousAgentCatalogService } from '@/services/heterogeneousAgent';
 import { useAgentStore } from '@/store/agent';
 import { useElectronStore } from '@/store/electron';
-import { useUserStore } from '@/store/user';
 
 import { SettingsRow, settingsStyles } from './SettingsGroup';
 
 export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
   const desktop = getHostContext().kind === 'desktop';
   const { t } = useTranslation(['setting', 'chat']);
-  const { allowed: canEdit } = usePermission('edit_own_content');
+  const { canManageAgent: canEdit } = useAgentManagementAccess(agentId);
   const { agencyConfig, workspaceScoped, isPreferenceLoading } = useEffectiveAgencyConfig(agentId);
   const provider = agencyConfig?.heterogeneousProvider;
   const update = useAgentStore((s) => s.updateAgentConfigById);
   const updateRuntimeEnv = useAgentStore((s) => s.updateAgentRuntimeEnvConfigById);
   const workspaceId = useAgentStore((s) => s.agentMap[agentId]?.workspaceId);
-  const preferenceQuery = useUserStore((s) => s.useFetchWorkspaceUserPreference)();
-  const preferenceFallback = useUserStore((s) => s.workspaceUserPreference);
-  const preference = preferenceQuery.data === undefined ? preferenceFallback : preferenceQuery.data;
-  const updatePreference = useUserStore((s) => s.updateWorkspaceUserPreference);
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
   const target = resolveExecutionTarget(agencyConfig, {
     clientExecutionAvailable: desktop,
@@ -165,17 +160,7 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
           <Switch
             checked={agencyConfig?.localSandbox === true}
             disabled={!canEdit || status === 'saving'}
-            onCheckedChange={(localSandbox) =>
-              void save(() =>
-                workspaceId
-                  ? updatePreference({
-                      agentDeviceOverrides: {
-                        [agentId]: { ...preference?.agentDeviceOverrides?.[agentId], localSandbox },
-                      },
-                    })
-                  : update(agentId, { agencyConfig: { localSandbox } }, { rethrow: true }),
-              )
-            }
+            onCheckedChange={(localSandbox) => void patch({ localSandbox })}
           />
         </SettingsRow>
       )}

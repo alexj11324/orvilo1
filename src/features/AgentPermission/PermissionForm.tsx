@@ -1,8 +1,8 @@
 'use client';
 
-import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
+import type { AgentTopicSharePolicy } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
-import { Bot, InfoIcon, LockIcon, MonitorSmartphone, Share2, UsersIcon } from 'lucide-react';
+import { InfoIcon, LockIcon, Share2, UsersIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,7 +19,6 @@ import {
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { AgentUseSettings } from '@/features/AgentSettings/AgentUseSettings';
 import PolicySelect, { type PolicyOption } from '@/features/ResourcePermission/PolicySelect';
-import { getSelectionPolicyLabelKeys } from '@/features/ResourcePermission/selectionPolicyLabels';
 
 import { useAgentPermission } from './useAgentPermission';
 
@@ -45,39 +44,15 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
     accessError,
     canEditConfig,
     canEditPolicies,
-    canFixExecutionTarget,
-    executionTargetPolicy,
     isPrivate,
     isWorkspaceAgent,
-    modelPolicy,
     retryAccess,
-    setExecutionTargetPolicy,
-    setModelPolicy,
     setTopicSharePolicy,
     topicSharePolicy,
   } = useAgentPermission(agentId);
 
-  const labelKeys = getSelectionPolicyLabelKeys(isPrivate);
-
   // Same shape as the access-level options: the label is the decision, the
   // description says what it means for a member day to day.
-  const modelPolicyOptions = useMemo(
-    (): PolicyOption<AgentModelSelectionPolicy>[] => [
-      {
-        desc: t('permission.page.modelPolicyMemberDesc'),
-        icon: UsersIcon,
-        label: t(labelKeys.member),
-        value: 'member',
-      },
-      {
-        desc: t('permission.page.modelPolicyFixedDesc'),
-        icon: LockIcon,
-        label: t(labelKeys.fixed),
-        value: 'fixed',
-      },
-    ],
-    [labelKeys, t],
-  );
 
   // Policy writes use the same creator/Owner/Admin Manage boundary as config.
   const policiesDisabled = !canEditConfig || !canEditPolicies;
@@ -100,34 +75,6 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
       },
     ],
     [t],
-  );
-
-  const executionPolicyOptions = useMemo(
-    (): PolicyOption<AgentModelSelectionPolicy>[] => [
-      {
-        desc: t('permission.page.devicePolicyMemberDesc'),
-        icon: UsersIcon,
-        label: t(labelKeys.member),
-        value: 'member',
-      },
-      // Nothing to pin to yet — say so where the choice is made rather than
-      // letting the click fail silently.
-      canFixExecutionTarget
-        ? {
-            desc: t('permission.page.devicePolicyFixedDesc'),
-            icon: LockIcon,
-            label: t(labelKeys.fixed),
-            value: 'fixed',
-          }
-        : {
-            desc: t('permission.page.devicePolicyUnset'),
-            disabled: true,
-            icon: LockIcon,
-            label: t(labelKeys.fixed),
-            value: 'fixed',
-          },
-    ],
-    [canFixExecutionTarget, labelKeys, t],
   );
 
   if (!isWorkspaceAgent) {
@@ -171,50 +118,6 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
       }
     : undefined;
 
-  const configGroup: FormGroupItemType = {
-    children: [
-      {
-        avatar: (
-          <span className={styles.rowIcon}>
-            <Bot size={16} />
-          </span>
-        ),
-        children: (
-          <PolicySelect
-            disabled={policiesDisabled}
-            options={modelPolicyOptions}
-            value={modelPolicy}
-            onChange={setModelPolicy}
-          />
-        ),
-        desc: canEditPolicies
-          ? t('permission.page.modelPolicyDesc')
-          : t('permission.noManagePermission'),
-        label: t('settingAgent.modelPolicy.title'),
-      },
-      {
-        avatar: (
-          <span className={styles.rowIcon}>
-            <MonitorSmartphone size={16} />
-          </span>
-        ),
-        children: (
-          <PolicySelect
-            disabled={policiesDisabled}
-            options={executionPolicyOptions}
-            value={executionTargetPolicy}
-            onChange={setExecutionTargetPolicy}
-          />
-        ),
-        desc: canEditPolicies
-          ? t('permission.page.devicePolicyDesc')
-          : t('permission.noManagePermission'),
-        label: t('settingAgent.devicePolicy.title'),
-      },
-    ],
-    title: t('permission.page.configGroup'),
-  };
-
   return (
     <>
       {/* A failed permission fetch must not read as "this agent has no member
@@ -232,7 +135,7 @@ const PermissionForm = memo<PermissionFormProps>(({ agentId }) => {
       ) : null}
       <AgentUseSettings agentId={agentId} />
       <Form
-        items={[...(memberGroup ? [memberGroup] : []), configGroup]}
+        items={memberGroup ? [memberGroup] : []}
         itemsType={'group'}
         variant={'filled'}
         {...FORM_STYLE}

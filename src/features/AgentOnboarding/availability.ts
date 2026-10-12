@@ -2,15 +2,15 @@ import type { HeterogeneousAgentScanMap } from '@orvilo/heterogeneous-agents';
 import type { ProviderBinding } from '@orvilo/types';
 import { PROVIDER_CONFIG_ANCHOR_MODEL } from '@orvilo/types';
 
-import { collectPrimeModelRoutes } from '@/features/ChatInput/ControlBar/HeteroModel/useComposerModelSource';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
+import { collectPrimeModelRoutes } from '@/features/HeterogeneousAgent/providerModelRoutes';
 
 /**
  * The initial gate requires a persisted non-virtual profile. Prime additionally
  * needs an enabled personal model binding; `sandbox` is its inference-binding
  * lookup, not an execution host. Prime runs through Gateway on a chosen device.
  * Final onboarding completion separately verifies the workspace and live device
- * and saves the user's device override after private transfer.
+ * and saves the Agent's device after private transfer.
  *
  * Local scans are discovery only: a connected profile may run on another device
  * and must not be duplicated because its CLI is absent on this computer.

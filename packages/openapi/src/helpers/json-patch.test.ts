@@ -7,14 +7,13 @@ describe('mergeJsonPatch', () => {
     // The whole point: `agencyConfig` carries permission policies the public
     // schema cannot express, and an unrelated graph edit must not delete them.
     const merged = mergeJsonPatch(
-      { boundDeviceId: 'device-1', modelSelectionPolicy: 'fixed', topicSharePolicy: 'restricted' },
+      { boundDeviceId: 'device-1', topicSharePolicy: 'restricted' },
       { graph: { nodes: [] } },
     );
 
     expect(merged).toEqual({
       boundDeviceId: 'device-1',
       graph: { nodes: [] },
-      modelSelectionPolicy: 'fixed',
       topicSharePolicy: 'restricted',
     });
   });

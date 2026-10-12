@@ -1,15 +1,10 @@
 import { type BuiltinAgentSlug } from '@orvilo/builtin-agents';
-import {
-  BUILTIN_AGENT_SLUGS,
-  getAgentRuntimeConfig,
-  isCollaborativeBuiltinAgentRow,
-} from '@orvilo/builtin-agents';
+import { BUILTIN_AGENT_SLUGS, getAgentRuntimeConfig } from '@orvilo/builtin-agents';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { TaskIdentifier } from '@orvilo/builtin-tool-task';
 import { type OrviloToolManifest } from '@orvilo/context-engine';
 import {
   type AgentModelConfig,
-  type AgentModelOverride,
   type ChatCompletionTool,
   getActivePluginIds,
   type MessageMapScope,
@@ -98,7 +93,7 @@ export interface AgentConfigSnapshot {
     userId?: string | null;
     /** Written by provisioning; a legacy row merely holding a reserved slug is not collaborative. */
     virtual?: boolean | null;
-    visibility?: AgentModelConfig['visibility'];
+    visibility?: 'private' | 'public';
     workspaceId?: string | null;
   };
   /** The agent's stored config, before runtime merging. */
@@ -119,7 +114,6 @@ export interface AgentConfigSnapshot {
   /** Development build — reaches builtin agents as a prompt flag. */
   isDev?: boolean;
   /** Workspace member's own model pick, when one applies. */
-  memberModelOverride?: AgentModelOverride | null;
   /** Workspace member's own mode pick, when one applies. */
   memberModeOverride?: OrviloAgentChatConfig['enableAgentMode'];
   /**
@@ -173,7 +167,7 @@ export interface AgentConfigResolverContext {
    * an explicit request override). Outranks the member's personal choice and
    * the shared default.
    */
-  modelOverride?: Partial<AgentModelOverride> | null;
+  modelOverride?: Partial<AgentModelConfig> | null;
   /** Plugins enabled for the agent */
   plugins?: string[];
 
@@ -281,36 +275,11 @@ export const resolveAgentConfig = (
   // the author does, so client and gateway execution resolve the same config.
   const { canManage } = snapshot;
   const isPublicWorkspaceAgent = !!agent?.workspaceId && agent.visibility !== 'private';
-  // A collaborative builtin has no real author (the row is provisioned by
-  // whoever opened the feature first), so its *model* stays personal even for
-  // that member — see `AgentModelConfig.personalModelSelection`. Chat/Agent mode
-  // keeps the ordinary author rule.
-  // Spelled out rather than passed the whole row: these three fields are the
-  // entire contract, and a host filling the snapshot has to see that.
-  const personalModelSelection = isCollaborativeBuiltinAgentRow({
-    slug: agent?.slug,
-    virtual: agent?.virtual,
-    workspaceId: agent?.workspaceId,
-  });
   const usesWorkspaceMemberSelection = isPublicWorkspaceAgent && !canManage;
-  const memberModelOverride =
-    isPublicWorkspaceAgent && (personalModelSelection || !canManage)
-      ? snapshot.memberModelOverride
-      : undefined;
   const memberModeOverride = usesWorkspaceMemberSelection ? snapshot.memberModeOverride : undefined;
   const agentConfig = {
     ...sharedAgentConfig,
-    ...resolveAgentModelConfig(
-      {
-        ...sharedAgentConfig,
-        canManage,
-        personalModelSelection,
-        visibility: agent?.visibility,
-        workspaceId: agent?.workspaceId,
-      },
-      memberModelOverride,
-      modelOverride,
-    ),
+    ...resolveAgentModelConfig(sharedAgentConfig, modelOverride),
   };
   // Runtime templates render `{{model}}` for the model the run will actually use.
   const model = ctx.model ?? agentConfig.model;

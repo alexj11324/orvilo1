@@ -65,13 +65,13 @@ describe('resolveExecutionDevice', () => {
     });
   });
 
-  it('lets a member preference win only when policy allows choice', () => {
+  it('ignores an obsolete member preference', () => {
     expect(
       resolveExecutionDevice(
         { agentDefaultDeviceId: 'device-b', userAgentPreferenceDeviceId: 'device-a' },
         [A, B],
       ),
-    ).toEqual({ deviceId: 'device-a', reason: 'user_agent_preference', status: 'resolved' });
+    ).toEqual({ deviceId: 'device-b', reason: 'agent_default', status: 'resolved' });
   });
 
   it('blocks member preference override when the policy is pinned — admin default wins', () => {

@@ -319,13 +319,6 @@ export interface HeterogeneousTopicModel {
   provider: string;
 }
 
-/**
- * Everything a topic pins for a heterogeneous run: the model/provider pair from
- * the top-level `topics.model`/`provider` columns plus the reasoning effort
- * from `topics.metadata.heteroEffort`. Each part is optional — a topic may pin
- * an effort without a model (runtimes without a model selector) or the other
- * way round.
- */
 export interface HeterogeneousTopicPin extends Partial<HeterogeneousTopicModel> {
   effort?: HeterogeneousReasoningEffort;
 }
@@ -1031,25 +1024,6 @@ export type ExecutionPlan = { target: DeviceExecutionTarget } &
   );
 
 /**
- * Whether a workspace member may override the agent's shared execution target.
- *
- * - `member`: the shared config is a default; each member may override it
- * - `fixed`: every caller must use the shared execution target
- *
- * Missing values intentionally resolve as `member` for backwards compatibility.
- */
-export type ExecutionTargetSelectionPolicy = 'fixed' | 'member';
-
-/**
- * Controls whether a workspace agent always uses its shared model or lets
- * each member choose a personal model for that agent.
- *
- * Missing values resolve contextually: public Workspace Agents inherit the
- * current `member` default, while personal/private Agents remain fixed.
- */
-export type AgentModelSelectionPolicy = 'fixed' | 'member';
-
-/**
  * Controls who may publish a share link for the topics a workspace agent
  * holds.
  *
@@ -1097,12 +1071,6 @@ export interface OrviloAgentAgencyConfig {
    */
   executionTarget?: DeviceExecutionTarget;
   /**
-   * Workspace execution-target selection policy. A fixed `device` target is
-   * valid only with a public workspace device; other fixed targets do not bind
-   * a device.
-   */
-  executionTargetSelectionPolicy?: ExecutionTargetSelectionPolicy;
-  /**
    * Graph Agent behavior definition. The `AgentGraph` snapshot describing
    * nodes, edges, field contracts and routing conditions for graph-style
    * orchestration. Together with `enableGraphMode`, this is the agent's
@@ -1143,13 +1111,6 @@ export interface OrviloAgentAgencyConfig {
    * User-facing copy must not promise more than that.
    */
   localSandboxNetwork?: boolean;
-  /**
-   * Workspace model-selection policy. `fixed` keeps the shared agent model
-   * authoritative; `member` enables a per-user model override stored in
-   * `workspace_user_settings.preference`. Missing values on public Workspace
-   * Agents resolve to `member` for legacy rows.
-   */
-  modelSelectionPolicy?: AgentModelSelectionPolicy;
   /**
    * Model override for sub-agents this agent spawns via
    * `orvilo-agent.callSubAgent`. When unset (or nulled to clear a previous
@@ -1222,26 +1183,13 @@ export interface OrviloAgentAgencyConfig {
  * clearing the column.
  */
 export const AGENT_PERMISSION_POLICY_KEYS = [
-  'executionTargetSelectionPolicy',
-  'modelSelectionPolicy',
   'topicSharePolicy',
 ] as const satisfies readonly (keyof OrviloAgentAgencyConfig)[];
 
-/**
- * Explicit defaults written when a workspace agent is created.
- *
- * Members may choose their own model and execution environment, and may share
- * the agent's topics, by default. Legacy public Workspace rows without these
- * policies resolve to the same `member` defaults at runtime.
- */
-export const DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES = {
-  executionTargetSelectionPolicy: 'member',
-  modelSelectionPolicy: 'member',
+/** Default topic-sharing permission for a new workspace Agent. */
+export const DEFAULT_WORKSPACE_AGENT_PERMISSION_POLICIES = {
   topicSharePolicy: 'member',
-} as const satisfies Pick<
-  OrviloAgentAgencyConfig,
-  'executionTargetSelectionPolicy' | 'modelSelectionPolicy' | 'topicSharePolicy'
->;
+} as const satisfies Pick<OrviloAgentAgencyConfig, 'topicSharePolicy'>;
 
 /**
  * Resolve who may publish a share link for a topic held by this agent.
@@ -1286,123 +1234,10 @@ export const canPublishAgentTopicLink = (
   return !!agent.userId && agent.userId === viewer.userId;
 };
 
-/**
- * The raw override merge behind {@link resolveAgencyConfig}, without the
- * `fixed`-policy short-circuit. The owner path of
- * {@link resolveAgentAgencyConfig} needs it directly: the stored selection
- * policy constrains members, not the owner, so the owner's own override
- * applies even while the shared policy is `fixed`.
- */
-const applyAgencyConfigOverride = (
-  base: OrviloAgentAgencyConfig | undefined,
-  override:
-    | Pick<
-        OrviloAgentAgencyConfig,
-        'boundDeviceId' | 'executionTarget' | 'localSandbox' | 'localSandboxNetwork'
-      >
-    | null
-    | undefined,
-): OrviloAgentAgencyConfig | undefined => {
-  if (!override) return base;
-  const hasTarget = override.executionTarget !== undefined;
-  const hasDevice = override.boundDeviceId !== undefined;
-  // `false` is a real value here — a member turning the sandbox (or its network
-  // allowance) back off must override a shared `true`, so test for presence,
-  // not truthiness.
-  const hasLocalSandbox = override.localSandbox !== undefined;
-  const hasLocalSandboxNetwork = override.localSandboxNetwork !== undefined;
-  if (!hasTarget && !hasDevice && !hasLocalSandbox && !hasLocalSandboxNetwork) return base;
-  return {
-    ...base,
-    ...(hasTarget ? { executionTarget: override.executionTarget } : {}),
-    ...(hasDevice ? { boundDeviceId: override.boundDeviceId } : {}),
-    ...(hasLocalSandbox ? { localSandbox: override.localSandbox } : {}),
-    ...(hasLocalSandboxNetwork ? { localSandboxNetwork: override.localSandboxNetwork } : {}),
-  };
-};
-
-/**
- * The workspace-shared `agencyConfig` on the agent row is one row per agent —
- * inherently a *single* execution decision for the whole workspace. Real users
- * want each member to pick their own machine independently (see
- * `UserPreference.agentDeviceOverrides`). This helper merges the shared
- * baseline with the caller's per-agent override so every code path — client
- * device switcher, server dispatch, workingDir resolution — sees one
- * consistent "effective" config.
- *
- * Rules:
- * - `fixed` shared config ignores the caller override entirely
- * - `override.executionTarget` wins when set; falls back to shared
- * - `override.boundDeviceId` wins when set; falls back to shared
- * - `override.localSandbox` wins when set; falls back to shared. It rides along
- *   with the target because it qualifies *this member's* local execution — one
- *   member sandboxing their own machine says nothing about anyone else's.
- * - Nothing else (heterogeneousProvider, verifyRubricId, workingDirByDevice)
- *   is overridable — those describe the agent, not this user's routing
- *
- * A `null`-ish `override` is a no-op — safe to call on personal agents (where
- * no override ever exists) or on paths that don't yet know about the current
- * user's preference.
- */
-export const resolveAgencyConfig = (
-  agencyConfig: OrviloAgentAgencyConfig | null | undefined,
-  override:
-    | Pick<
-        OrviloAgentAgencyConfig,
-        'boundDeviceId' | 'executionTarget' | 'localSandbox' | 'localSandboxNetwork'
-      >
-    | null
-    | undefined,
-): OrviloAgentAgencyConfig | undefined => {
-  const base = normalizeAgencyConfigHeterogeneousProvider(agencyConfig);
-  if (base?.executionTargetSelectionPolicy === 'fixed') return base;
-  return applyAgencyConfigOverride(base, override);
-};
-
-export interface AgentAgencyConfigContext {
-  /** Author/admin callers manage the shared config instead of using member overrides. */
-  canManage?: boolean;
-  visibility?: 'private' | 'public';
-  workspaceId?: string | null;
-}
-
-/**
- * Resolve an Agent's effective agency config in its ownership context.
- *
- * Member execution-target policies apply only after a Workspace Agent is
- * public. The caller's per-user override, however, merges for EVERY workspace
- * agent — member, manager, or private owner alike: a `local` / this-machine
- * pick is inherently per-user (the shared row must never carry a personal
- * device — the server rejects it), so managers and private-agent owners store
- * that pick in the same `agentDeviceOverrides` slot members use. The owner
- * path bypasses the `fixed` short-circuit (the policy constrains members, not
- * the owner) and keeps stripping the stored selection policy, which is
- * retained only as the policy that takes effect once the Agent is published.
- */
+/** Runtime routing always comes from the saved Agent configuration. */
 export const resolveAgentAgencyConfig = (
   agencyConfig: OrviloAgentAgencyConfig | null | undefined,
-  override:
-    | Pick<
-        OrviloAgentAgencyConfig,
-        'boundDeviceId' | 'executionTarget' | 'localSandbox' | 'localSandboxNetwork'
-      >
-    | null
-    | undefined,
-  context: AgentAgencyConfigContext,
-): OrviloAgentAgencyConfig | undefined => {
-  const base = normalizeAgencyConfigHeterogeneousProvider(agencyConfig);
-  const isPublicWorkspaceAgent =
-    !!context.workspaceId && context.visibility !== 'private' && context.canManage !== true;
-
-  if (isPublicWorkspaceAgent) return resolveAgencyConfig(base, override);
-
-  const merged = context.workspaceId ? applyAgencyConfigOverride(base, override) : base;
-
-  if (!merged?.executionTargetSelectionPolicy) return merged;
-
-  const { executionTargetSelectionPolicy, ...ownerConfig } = merged;
-  return executionTargetSelectionPolicy ? ownerConfig : merged;
-};
+): OrviloAgentAgencyConfig | undefined => normalizeAgencyConfigHeterogeneousProvider(agencyConfig);
 
 /**
  * Apply "undefined means delete" semantics to a `workingDirByDevice` patch.

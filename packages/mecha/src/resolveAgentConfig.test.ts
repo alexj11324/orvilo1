@@ -80,7 +80,7 @@ describe('resolveAgentConfig without a host', () => {
     expect(resolved.chatConfig.enableAgentMode).toBe(false);
   });
 
-  it('lets a collaborative builtin member keep their own model, even as a manager', () => {
+  it('keeps the collaborative builtin saved model for every caller', () => {
     const resolved = resolveAgentConfig(
       { agentId: 'agt_1' },
       snapshot({
@@ -96,7 +96,7 @@ describe('resolveAgentConfig without a host', () => {
     // in the snapshot would classify this as an ordinary agent and hand the
     // member the workspace-shared model instead — invisible from the browser,
     // which happens to pass a richer object.
-    expect(resolved.agentConfig.model).toBe('my-own-pick');
+    expect(resolved.agentConfig.model).toBe('gpt-5');
   });
 
   it('keeps the shared model for an ordinary workspace agent a manager owns', () => {
@@ -153,7 +153,7 @@ describe('resolveAgentConfig without a host', () => {
 
     // Model is pinned by the call; provider still comes from the member pick.
     expect(resolved.agentConfig.model).toBe('pinned-model');
-    expect(resolved.agentConfig.provider).toBe('anthropic');
+    expect(resolved.agentConfig.provider).toBe('openai');
   });
 
   it('keeps a user-customized system role on a builtin row over the runtime one', () => {

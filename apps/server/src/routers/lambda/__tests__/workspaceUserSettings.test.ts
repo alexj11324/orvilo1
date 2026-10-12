@@ -270,12 +270,12 @@ describe('workspaceUserSettingsRouter.updatePreference', () => {
     it('does not run the permission check for patches without legacy fields', async () => {
       const caller = workspaceUserSettingsRouter.createCaller(ctx);
 
-      await caller.updatePreference({ agentDeviceOverrides: { agt_1: 'device-1' } });
+      await caller.updatePreference({ agentModeOverrides: { agt_1: true } });
 
       expect(mockHasPermission).not.toHaveBeenCalled();
       expect(mockUpdateSessionGroupId).not.toHaveBeenCalled();
       expect(mockUpdatePreference).toHaveBeenCalledWith({
-        agentDeviceOverrides: { agt_1: 'device-1' },
+        agentModeOverrides: { agt_1: true },
       });
     });
   });

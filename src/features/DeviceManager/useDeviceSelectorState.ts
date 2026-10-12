@@ -57,7 +57,6 @@ export interface UseDeviceSelectorStateOptions {
   /** Authority to choose the caller's personal pool for a workspace Agent. */
   canSelectPersonalDevice?: boolean;
   /** Caller-owned device explicitly selected in the workspace member override. */
-  memberSelectedDeviceId?: string;
   /**
    * Which legal pool to select from. `personal` agents may only bind the
    * caller's own devices; `workspace` agents use workspace-scope devices plus
@@ -79,7 +78,6 @@ export const useDeviceSelectorState = ({
   boundDeviceId,
   canSelectDevice,
   canSelectPersonalDevice = false,
-  memberSelectedDeviceId,
   permissionsLoaded = true,
   scope,
 }: UseDeviceSelectorStateOptions & { permissionsLoaded?: boolean }): DeviceSelectorState => {
@@ -110,8 +108,7 @@ export const useDeviceSelectorState = ({
         ? (devices ?? []).filter(
             (device) =>
               device.scope === 'personal' &&
-              ((canSelectDevice && canSelectPersonalDevice) ||
-                (device.deviceId === boundDeviceId && memberSelectedDeviceId === boundDeviceId)),
+              ((canSelectDevice && canSelectPersonalDevice) || device.deviceId === boundDeviceId),
           )
         : [];
     const authorized = [...scoped, ...personal];
@@ -136,7 +133,6 @@ export const useDeviceSelectorState = ({
     canSelectDevice,
     canSelectPersonalDevice,
     devices,
-    memberSelectedDeviceId,
     scope,
   ]);
 

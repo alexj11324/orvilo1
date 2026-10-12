@@ -35,7 +35,7 @@ import { getAiInfraStoreState } from '@/store/aiInfra';
 import { aiModelSelectors } from '@/store/aiInfra/slices/aiModel/selectors';
 import { type ChatStore } from '@/store/chat';
 import { evictMessageCache } from '@/store/chat/utils/evictMessageCache';
-import { snapshotAgentModel, snapshotAgentReasoning } from '@/store/chat/utils/snapshotAgentModel';
+import { snapshotAgentReasoning } from '@/store/chat/utils/snapshotAgentModel';
 import { snapshotAgentWorkingDirectory } from '@/store/chat/utils/snapshotAgentWorkingDirectory';
 import {
   topicMapKey,
@@ -248,12 +248,10 @@ export class ChatTopicActionImpl {
     // conversation — the agent row is never written (spec §5.2). The pending
     // effort lands on the same `metadata.heteroEffort` column
     // `snapshotAgentReasoning` would have filled.
-    const composerModel = this.#get().composerModelSelection;
     const composerEffort = this.#get().composerHeteroEffort;
-    const modelSnapshot = composerModel ?? snapshotAgentModel(targetAgentId);
     const reasoningSnapshot =
       composerEffort === undefined
-        ? await snapshotAgentReasoning(targetAgentId, modelSnapshot)
+        ? await snapshotAgentReasoning(targetAgentId)
         : { heteroEffort: composerEffort };
     const groupId = resolveIsGroupSupervisor(targetAgentId, activeGroupId)
       ? activeGroupId
@@ -262,7 +260,6 @@ export class ChatTopicActionImpl {
       ? snapshotAgentWorkingDirectory(targetAgentId)
       : undefined;
     const topicId = await internal_createTopic({
-      ...modelSnapshot,
       ...(groupId ? { groupId } : {}),
       ...(reasoningSnapshot || workingDirectoryMetadata
         ? { metadata: { ...reasoningSnapshot, ...workingDirectoryMetadata } }
@@ -279,19 +276,8 @@ export class ChatTopicActionImpl {
     return topicId;
   };
 
-  /**
-   * Blank-composer picks (`composerModelSelection` / `composerHeteroEffort`) are
-   * consumed by whichever path actually creates the topic — `createTopic`,
-   * `saveToTopic`, or the agent-run send lifecycle in `conversationLifecycle` —
-   * so this is the single definition of "the pick has been used". Leaving them
-   * set would leak the pick into the next conversation's first message.
-   */
   clearComposerSelection = () => {
-    this.#set(
-      { composerHeteroEffort: undefined, composerModelSelection: undefined },
-      false,
-      n('composerSelection/consumed'),
-    );
+    this.#set({ composerHeteroEffort: undefined }, false, n('composerSelection/consumed'));
   };
 
   saveToTopic = async (agentId?: string): Promise<string | undefined> => {
@@ -305,15 +291,12 @@ export class ChatTopicActionImpl {
     // 1. create topic and bind these messages. Blank-composer picks outrank the
     // agent's stored model/effort for THIS conversation — the agent row is never
     // written (spec §5.2).
-    const composerModel = this.#get().composerModelSelection;
     const composerEffort = this.#get().composerHeteroEffort;
-    const modelSnapshot = composerModel ?? snapshotAgentModel(targetAgentId);
     const reasoningSnapshot =
       composerEffort === undefined
-        ? await snapshotAgentReasoning(targetAgentId, modelSnapshot)
+        ? await snapshotAgentReasoning(targetAgentId)
         : { heteroEffort: composerEffort };
     const topicId = await internal_createTopic({
-      ...modelSnapshot,
       ...(reasoningSnapshot ? { metadata: reasoningSnapshot } : {}),
       agentId: targetAgentId === INBOX_SESSION_ID ? undefined : targetAgentId,
       title: t('defaultTitle', { ns: 'topic' }),
@@ -756,81 +739,6 @@ export class ChatTopicActionImpl {
   };
 
   /**
-   * Pin a model to a topic by writing the top-level `topics.model`/`provider`
-   * columns (the config source of truth), NOT metadata. Called when the user
-   * switches model while a topic is active so each topic keeps its own model
-   * (see the ChatInput Model control); generation + ChatInput display read it
-   * back via `topicSelectors.getTopicModelById`.
-   */
-  updateTopicModel = async (
-    id: string,
-    { model, provider }: { model: string; provider: string },
-  ): Promise<void> => {
-    await this.#enqueueTopicEffortWrite(id, async () => {
-      // The effort pin belongs to the model it was taken for (the param names
-      // are model-specific), so switching model re-snapshots it from the user's
-      // config for the new model — same "remembers what it started with" rule.
-      const reasoningConfig = await this.#get().internal_resolveTopicReasoningSnapshot({
-        model,
-        provider,
-      });
-      await this.#writeTopicModelPin(id, {
-        metadata: reasoningConfig ? { reasoningConfig } : undefined,
-        model,
-        provider,
-      });
-    });
-  };
-
-  /**
-   * Model + pin land in one server write (`topic.updateTopicModel`) so a run or
-   * a concurrent switch can never see the new model with the old model's pin.
-   * Optimistically mirrors the server merge: `reasoningConfig` is replaced,
-   * `heteroEffort` only when given.
-   */
-  #writeTopicModelPin = async (
-    id: string,
-    value: {
-      metadata?: Pick<ChatTopicMetadata, 'heteroEffort' | 'reasoningConfig'>;
-      model: string;
-      provider: string;
-    },
-  ): Promise<void> => {
-    const containerKey = topicSelectors.getTopicContainerKeyById(id)(this.#get());
-    const previous = topicSelectors.getTopicById(id)(this.#get());
-    const { reasoningConfig: _stale, ...rest } = previous?.metadata ?? {};
-    this.#get().internal_dispatchTopic({
-      containerKey,
-      id,
-      type: 'updateTopic',
-      value: {
-        metadata: { ...rest, ...value.metadata },
-        model: value.model,
-        provider: value.provider,
-      },
-    });
-
-    try {
-      await topicService.updateTopicModel(id, value);
-    } catch (error) {
-      if (previous) {
-        this.#get().internal_dispatchTopic({
-          containerKey,
-          id,
-          type: 'updateTopic',
-          value: {
-            model: previous.model,
-            provider: previous.provider,
-            metadata: previous.metadata,
-          },
-        });
-      }
-      await this.#recoverTopicPinWrite(containerKey, error);
-    }
-    await this.#get().refreshTopic(containerKey);
-  };
-
-  /**
    * Resolve the user-level reasoning config to pin for `model`, fetching it when
    * not cached yet. Returns `undefined` for models without reasoning extend
    * params (nothing to pin).
@@ -876,34 +784,6 @@ export class ChatTopicActionImpl {
   ): Promise<void> => {
     await this.#enqueueTopicEffortWrite(id, () =>
       this.#writeTopicEffortPin(id, { heteroEffort: effort }),
-    );
-  };
-
-  /**
-   * Apply a heterogeneous (Claude Code / Codex) model + effort selection to one
-   * topic. When the selector pairs a model switch with an effort reset (the new
-   * model does not support the current effort) both land in the same write, so
-   * the topic never carries a model with an effort it cannot run.
-   */
-  updateTopicHeteroPin = async (
-    id: string,
-    {
-      effort,
-      model,
-      provider,
-    }: { effort?: HeterogeneousReasoningEffort; model?: string; provider: string },
-  ): Promise<void> => {
-    if (model === undefined) {
-      if (effort !== undefined) await this.#get().updateTopicHeteroEffort(id, effort);
-      return;
-    }
-    /** Model resets and later effort selections must share one persistence order. */
-    await this.#enqueueTopicEffortWrite(id, () =>
-      this.#writeTopicModelPin(id, {
-        metadata: effort === undefined ? undefined : { heteroEffort: effort },
-        model,
-        provider,
-      }),
     );
   };
 

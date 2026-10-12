@@ -126,6 +126,7 @@ stub, the Next.js server and Electron on a temporary profile, then signs the
 seed user in, main process included. It preserves `CLERK_SECRET_KEY` from the
 shell or `.env`; when absent, a local stub-only placeholder lets the server
 check seeded sessions. Normal Clerk sign-in still requires a real key.
+When `JWKS_KEY` is absent, it reuses `.records/env/agent-testing-jwks.json` or generates and privately saves a local signing key there without changing `.env`.
 `bun run dev:desktop:login-local` signs an
 Electron instance that is already running in (CDP port from
 `ORVILO_DESKTOP_CDP_PORT`, default 9263). Both read `DATABASE_URL` from `.env`

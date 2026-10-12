@@ -1,7 +1,8 @@
 // Start the local Next backend (behind the Clerk stub) and Electron, then sign the
 // existing seed user in — renderer and main process — without a browser.
-import { execFileSync, spawn } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -41,6 +42,31 @@ const listening = (port) =>
     });
   });
 if (await listening(cdpPort)) throw new Error(`Electron CDP port ${cdpPort} is already in use`);
+if (!process.env.JWKS_KEY) {
+  const keyFile = '.records/env/agent-testing-jwks.json';
+  try {
+    process.env.JWKS_KEY = (await readFile(keyFile, 'utf8')).trim();
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    const key = await new Promise((resolve, reject) => {
+      execFile(
+        process.execPath,
+        ['scripts/generate-oidc-jwk.mjs'],
+        { encoding: 'utf8' },
+        (error, stdout) => {
+          // The generator also prints the private key to stderr; never surface its output.
+          if (error) reject(new Error('Local signing key generation failed'));
+          else resolve(stdout.trim());
+        },
+      );
+    });
+    await mkdir(path.dirname(keyFile), { recursive: true, mode: 0o700 });
+    await chmod(path.dirname(keyFile), 0o700);
+    await writeFile(keyFile, key, { flag: 'wx', mode: 0o600 });
+    process.env.JWKS_KEY = key;
+  }
+  if (!process.env.JWKS_KEY) throw new Error('Local signing key is empty');
+}
 const clerkStubPort = process.env.CLERK_STUB_PORT || '3411';
 const userDataDir = mkdtempSync(path.join(tmpdir(), 'orvilo-electron-seed-'));
 // Electron writes its authorization request here instead of opening a browser.

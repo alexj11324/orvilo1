@@ -3,6 +3,7 @@
 import { memo, useEffect, useLayoutEffect } from 'react';
 import { useParams } from 'react-router';
 
+import { useOfferedAgentId } from '@/features/DefaultAgent/useDefaultAgent';
 import { useInitAgentConfig } from '@/hooks/useInitAgentConfig';
 import { topicService } from '@/services/topic';
 import { useAgentStore } from '@/store/agent';
@@ -43,9 +44,11 @@ const TopicOwnerSync = memo(() => {
     useChatStore((s) => (routeTopicId ? undefined : s.composerAgentId)),
     useGlobalStore(systemStatusSelectors.lastUsedAgentId),
   ];
+  // The same hand-over `useAgentContext` applies to a remembered Agent.
+  const rememberedAgentId = useOfferedAgentId(composerAgentId ?? lastUsedAgentId);
   const { activeAgentId: boundAgentId, configAgentId } = resolveOwnerBinding({
-    composerAgentId,
-    lastUsedAgentId,
+    composerAgentId: rememberedAgentId,
+    lastUsedAgentId: undefined,
     routeTopicId,
     topicAgentId,
   });

@@ -68,6 +68,8 @@ export interface WorkspaceUserPreference {
   agentModelOverrides?: Record<string /* agentId */, AgentModelOverride>;
   /** Per-member Agent/Chat runtime mode for shared workspace agents. */
   agentModeOverrides?: Record<string /* agentId */, boolean>;
+  /** The Agent this member's entry points open by default in this workspace; null clears it. */
+  defaultAgentId?: string | null;
   /**
    * Legacy notification preferences, retained for storage/API compatibility.
    * Inbox records are always kept for relevant events. External notification
@@ -155,6 +157,8 @@ export const UserGuideSchema = z.object({
 export type UserGuide = z.infer<typeof UserGuideSchema>;
 
 export interface UserPreference {
+  /** The Agent personal entry points open by default; null clears it. */
+  defaultAgentId?: string | null;
   /** Last-used app for "Open working directory in…" split button. Empty/unknown values fall back to platform default. */
   defaultOpenInApp?: string;
   /**
@@ -260,6 +264,7 @@ export interface SSOProvider {
 export const UserPreferenceSchema = z
   .object({
     defaultOpenInApp: z.string().optional(),
+    defaultAgentId: z.string().min(1).max(128).nullish(),
     orchestratorAgentId: z.string().min(1).max(128).nullish(),
     fontFamily: z.string().optional(),
     guide: UserGuideSchema.optional(),

@@ -58,6 +58,11 @@ export interface SettingsCapabilityContext {
   mobile: boolean;
   /** This deployment serves the hosted API-key manager. */
   showApiKeyManage: boolean;
+  /**
+   * This deployment offers user-managed model providers, and with them the
+   * server-side model assignments that only a configured provider can serve.
+   */
+  showProvider: boolean;
 }
 
 export type SettingsCapabilityGate = (context: SettingsCapabilityContext) => boolean;
@@ -132,11 +137,21 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // sidebar entry. (The sidebar *group* of that name holds Credentials and
   // API keys and is unrelated.)
   [SettingsTabs.Security]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
-  [SettingsTabs.ServiceModel]: { scope: 'user', status: 'enabled' },
+  // Model assignments pick from the user's own providers, so the page follows
+  // the provider surface: without one there is nothing to assign.
+  [SettingsTabs.ServiceModel]: {
+    gate: ({ showProvider }) => showProvider,
+    scope: 'user',
+    status: 'enabled',
+  },
   [SettingsTabs.TTS]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
 
   // Personal configuration uses the broker; it does not revive legacy execution.
-  [SettingsTabs.Provider]: { gate: ({ mobile }) => !mobile, scope: 'user', status: 'enabled' },
+  [SettingsTabs.Provider]: {
+    gate: ({ mobile, showProvider }) => showProvider && !mobile,
+    scope: 'user',
+    status: 'enabled',
+  },
 
   // ── Live surfaces ────────────────────────────────────────────────────────
   // Settings that follow the user everywhere.

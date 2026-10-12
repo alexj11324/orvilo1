@@ -11,6 +11,8 @@ import { useModalContext } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import AgentItem from '@/features/PageEditor/Copilot/AgentSelector/AgentItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -73,15 +75,17 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
   );
 
   useFetchAgentList();
+  const keep = useKeepSidebarListed();
+  const builtinOffered = useBuiltinHarnessOffered();
 
   const count = topicIds.length;
 
   // Source agent is excluded — moving topics back to where they already live
   // would be a no-op. The inbox agent is prepended when not already present.
   const targetAgents = useMemo(() => {
-    const available = agents.filter((a) => a.type === 'agent');
+    const available = keep(agents).filter((a) => a.type === 'agent');
     const withInbox =
-      inboxAgentId && !available.some((a) => a.id === inboxAgentId)
+      builtinOffered && inboxAgentId && !available.some((a) => a.id === inboxAgentId)
         ? [
             {
               avatar: inboxMeta?.avatar || DEFAULT_INBOX_AVATAR,
@@ -96,7 +100,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
           ]
         : available;
     return withInbox.filter((a) => a.id !== sourceAgentId);
-  }, [agents, inboxAgentId, inboxMeta, sourceAgentId, t]);
+  }, [agents, builtinOffered, inboxAgentId, inboxMeta, keep, sourceAgentId, t]);
 
   const filteredAgents = useMemo(() => {
     const q = search.trim().toLowerCase();

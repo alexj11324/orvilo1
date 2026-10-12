@@ -42,6 +42,14 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+const harness = vi.hoisted(() => ({ offered: true }));
+vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBuiltinHarnessOffered: () => harness.offered,
+}));
+vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
+  useFallbackAgentId: () => (harness.offered ? 'agt_inbox' : 'agt_default'),
+}));
 vi.mock('@/components/Skeleton/Conversation/Segment', () => ({
   default: () => <div data-testid="loading" />,
 }));
@@ -214,6 +222,26 @@ describe('TaskAgentProvider', () => {
       scope: 'task',
       skipRefreshMessage: false,
     });
+  });
+
+  // The panel must not bind its conversation to the built-in task agent while
+  // that agent's harness is withheld; it opens on the user's default Agent.
+  it('defaults to the default Agent while the built-in harness is withheld', async () => {
+    harness.offered = false;
+    try {
+      render(
+        <TaskAgentProvider>
+          <div>content</div>
+        </TaskAgentProvider>,
+      );
+
+      await waitFor(() => {
+        expect(mocks.providerContexts.at(-1)?.agentId).toBe('agt_default');
+      });
+      expect(mocks.agentState.setActiveAgentId).toHaveBeenCalledWith('agt_default');
+    } finally {
+      harness.offered = true;
+    }
   });
 
   it('defaults to the task agent when the global active agent comes from another page', async () => {

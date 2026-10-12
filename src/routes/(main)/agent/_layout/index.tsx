@@ -3,7 +3,7 @@ import { type FC } from 'react';
 import { Outlet } from 'react-router';
 
 import { isDesktop } from '@/const/version';
-import { AgentNotFoundGuard } from '@/features/AgentNotFound';
+import { AgentNotFoundGuard, AgentRuntimeWithheldGuard } from '@/features/AgentNotFound';
 import AgentSidebar from '@/features/AgentSidebar';
 import ProtocolUrlHandler from '@/features/ProtocolUrlHandler';
 import { TopicNotFoundGuard } from '@/features/TopicNotFound';
@@ -23,9 +23,11 @@ const Layout: FC = () => {
           {/* Deleted / inaccessible topic on a stale row or deep link: swap
               the conversation surface for a 404 card once the detail fetch
               settles — same layered fallback as the agent guard above. */}
-          <TopicNotFoundGuard>
-            <Outlet />
-          </TopicNotFoundGuard>
+          <AgentRuntimeWithheldGuard>
+            <TopicNotFoundGuard>
+              <Outlet />
+            </TopicNotFoundGuard>
+          </AgentRuntimeWithheldGuard>
         </AgentNotFoundGuard>
       </div>
       <RegisterHotkeys />

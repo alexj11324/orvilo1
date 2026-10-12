@@ -592,6 +592,35 @@ describe('HomeRepository', () => {
       expect(result).toEqual([]);
     });
 
+    // The client withholds Agents by runtime, so a hit without its runtime
+    // would be dropped along with the ones that should be.
+    it('reports the runtime of each hit the way the Agent list does', async () => {
+      await clientDB.insert(Schema.agents).values({
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'search-cli',
+        title: 'Runtime Searchable CLI Agent',
+        userId,
+        virtual: false,
+      });
+
+      const result = await homeRepo.searchAgents('Searchable');
+      const runtimes = Object.fromEntries(
+        result.map((item) => [
+          item.id,
+          (item as { heterogeneousType?: string | null }).heterogeneousType,
+        ]),
+      );
+
+      expect(runtimes['search-cli']).toBe('claude-code');
+      const listed = await homeRepo.getSidebarAgentList();
+      const listedRuntime = [...listed.pinned, ...listed.ungrouped].find(
+        (item) => item.id === 'search-cli',
+      )?.heterogeneousType;
+      expect(listedRuntime).toBe('claude-code');
+      // No runtime stamp: built-in, reported as absent in both places.
+      expect(runtimes['search-standalone']).toBeUndefined();
+    });
+
     it('should search agents without agentsToSessions relationship', async () => {
       const result = await homeRepo.searchAgents('Standalone');
 

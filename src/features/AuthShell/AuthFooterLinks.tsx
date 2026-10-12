@@ -1,10 +1,9 @@
 'use client';
 
+import { BRANDING_URL } from '@orvilo/business-const';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { PRIVACY_URL, TERMS_URL } from '@/const/url';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   link: css`
@@ -19,15 +18,25 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 const AuthFooterLinks = memo(() => {
   const { t } = useTranslation('auth');
+  const { privacy, terms } = BRANDING_URL;
+
+  // A deployment that publishes no legal pages has nothing to link to; the
+  // footer is dropped rather than pointing at pages that do not exist.
+  if (!terms && !privacy) return null;
+
   return (
     <div className="text-center text-[13px] text-muted-foreground">
-      <a className={styles.link} href={TERMS_URL} rel="noopener noreferrer" target="_blank">
-        {t('footer.terms')}
-      </a>
-      <span style={{ marginInline: 8 }}>·</span>
-      <a className={styles.link} href={PRIVACY_URL} rel="noopener noreferrer" target="_blank">
-        {t('footer.privacy')}
-      </a>
+      {terms && (
+        <a className={styles.link} href={terms} rel="noopener noreferrer" target="_blank">
+          {t('footer.terms')}
+        </a>
+      )}
+      {terms && privacy && <span style={{ marginInline: 8 }}>·</span>}
+      {privacy && (
+        <a className={styles.link} href={privacy} rel="noopener noreferrer" target="_blank">
+          {t('footer.privacy')}
+        </a>
+      )}
     </div>
   );
 });

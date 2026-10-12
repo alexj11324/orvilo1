@@ -44,19 +44,19 @@ describe('featureFlagOverride slice', () => {
     });
 
     it('merges valid persisted overrides into featureFlags after snapshot', () => {
-      writeStorage({ enableAgentOnboarding: true, showMarket: false });
+      writeStorage({ enableAgentOnboarding: true, showMarket: true });
 
       const store = createStore();
       act(() => store.getState().syncDevFlagOverrides());
 
       expect(store.getState().featureFlags.enableAgentOnboarding).toBe(true);
-      expect(store.getState().featureFlags.showMarket).toBe(false);
+      expect(store.getState().featureFlags.showMarket).toBe(true);
       expect(store.getState()._featureFlagOverrides).toEqual({
         enableAgentOnboarding: true,
-        showMarket: false,
+        showMarket: true,
       });
       // original snapshot stays untouched by the override merge
-      expect(store.getState()._originalFeatureFlags?.showMarket).toBe(true);
+      expect(store.getState()._originalFeatureFlags?.showMarket).toBe(false);
     });
 
     it('drops unknown keys from persisted overrides with a warning', () => {

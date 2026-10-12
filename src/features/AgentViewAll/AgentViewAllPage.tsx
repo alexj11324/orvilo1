@@ -20,6 +20,7 @@ import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from '@/comp
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import NavHeader from '@/features/NavHeader';
@@ -204,13 +205,17 @@ const AgentViewAllPage = memo(() => {
     isEqual,
   );
 
+  const keepListed = useKeepSidebarListed();
   const workspaceItems = useMemo(
-    () => flattenAgentBuckets(pinnedAgents, agentGroups, ungroupedAgents),
-    [pinnedAgents, agentGroups, ungroupedAgents],
+    () => keepListed(flattenAgentBuckets(pinnedAgents, agentGroups, ungroupedAgents)),
+    [pinnedAgents, agentGroups, ungroupedAgents, keepListed],
   );
   const privateItems = useMemo(
-    () => flattenAgentBuckets(privatePinnedAgents, privateAgentGroups, privateUngroupedAgents),
-    [privatePinnedAgents, privateAgentGroups, privateUngroupedAgents],
+    () =>
+      keepListed(
+        flattenAgentBuckets(privatePinnedAgents, privateAgentGroups, privateUngroupedAgents),
+      ),
+    [privatePinnedAgents, privateAgentGroups, privateUngroupedAgents, keepListed],
   );
 
   const items = activeWorkspaceId && segment === 'private' ? privateItems : workspaceItems;

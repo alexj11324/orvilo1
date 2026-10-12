@@ -134,6 +134,14 @@ their existing revision-labelled evidence; no live Claude Code/Codex catalog
 verification is claimed here. Web E2E passed all 36 scenarios and 221 steps
 on the preceding test-fixture revision `a91d6cc3`.
 
+Canary's later flat-settings change (#767) is also retained: Execution is a
+plain section, the retired Access component is removed, and the working
+directory/CLI permission rows retain the Agent management guard. The repair
+controls and refused-save guidance remain in the execution contract. Its
+17 scoped regressions passed with clean lint; Vite built in 28.73 seconds.
+This integrates the upstream settings layout without changing the #759 saved
+model/device, ownership, creation or dispatch outcomes demonstrated above.
+
 `runtime-evidence.json` contains only whitelisted fixture identifiers, saved
 runtime fields, operation outcomes and the named offline error. No login tokens,
 environment variables, gateway secrets or private signing keys are included.

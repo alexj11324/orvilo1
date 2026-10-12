@@ -231,8 +231,8 @@ new write. This does not bulk-migrate existing records.
 ## Settings page
 
 Compact single-page groups: `AgentGeneralSettings` / `AgentModelSettings` /
-`AgentDeviceSettings` / `AgentAccessSettings` /
-`ExternalAgentConnectionSettings` (external only). No Harness/Engine/Embedded
+`AgentDeviceSettings` / `AgentRuntimeSettings` /
+`ExternalAgentConnectionSettings` (external only) / `AgentUseSettings`. No Harness/Engine/Embedded
 rows. Zero-device / invalid-binding / offline states explain the blocking condition
 and keep repair controls available. Failed saves show the server’s reason and
 leave the form editable. The diagnostics page may show the actual

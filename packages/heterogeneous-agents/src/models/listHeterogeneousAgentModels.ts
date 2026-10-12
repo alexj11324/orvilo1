@@ -12,7 +12,7 @@ import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 
 import { getHeterogeneousTypeLabel } from '../labels';
-import { ACP_RUNTIME_AGENT_TYPES } from '../spawn/acpRuntime';
+import { ACP_BRIDGE_NOT_FOUND_ERROR_NAME, ACP_RUNTIME_AGENT_TYPES } from '../spawn/acpRuntime';
 import { resolveCliSpawnPlan } from '../spawn/cliSpawn';
 import { listDroidAcpModels } from '../spawn/droidAcpSession';
 import { resolveHeteroSpawnCommand } from '../spawn/resolveCliCommand';
@@ -20,6 +20,8 @@ import { listStandardAcpModels, resolveAcpSpawnTarget } from '../spawn/standardA
 import { listTraeAcpModels } from '../spawn/traeAcpSession';
 
 const execFilePromise = promisify(execFile);
+/** How `AcpStdioClient.request` words an expired request. */
+const ACP_REQUEST_TIMEOUT_PREFIX = 'ACP request timed out';
 const ACP_ONLY_CATALOG_TYPES = new Set<string>(['claude-code', 'codex']);
 const MODEL_CATALOG_MAX_BUFFER = 256 * 1024;
 const MODEL_CATALOG_TIMEOUT_MS = 15_000;
@@ -236,6 +238,10 @@ const classifyCatalogError = (error: unknown): HeterogeneousAgentModelCatalogErr
   const { code, killed, signal } = getErrorRecord(error);
   if (code === 'ENOENT') return 'cli_not_found';
   if (code === 'ETIMEDOUT' || killed || signal === 'SIGTERM') return 'timeout';
+  if (error instanceof Error) {
+    if (error.name === ACP_BRIDGE_NOT_FOUND_ERROR_NAME) return 'cli_not_found';
+    if (error.message.startsWith(ACP_REQUEST_TIMEOUT_PREFIX)) return 'timeout';
+  }
   return 'command_failed';
 };
 
@@ -276,6 +282,8 @@ export const listHeterogeneousAgentModels = async (
     ...(mergedPath ? { PATH: mergedPath } : {}),
   };
 
+  let acpError: unknown;
+
   try {
     // ACP-first discovery for the migrated runtimes: a throwaway
     // `session/new` exposes the agent's model config option. When the runtime
@@ -287,6 +295,7 @@ export const listHeterogeneousAgentModels = async (
           params.type,
           resolved.command,
           env as NodeJS.ProcessEnv,
+          { allowPackageRunner: false },
         );
         const models = await listStandardAcpModels(params.type, {
           args: params.args,
@@ -302,19 +311,19 @@ export const listHeterogeneousAgentModels = async (
           (model) => model.id !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
         );
         if (selectable.length > 0) return { models: selectable, status: 'success', updatedAt };
-      } catch {
+      } catch (error) {
         // Fall through to the legacy catalog probe below.
+        acpError = error;
       }
     }
 
     // These CLIs have no model-listing command of their own; an invented flag
     // would only fail slower.
     if (ACP_ONLY_CATALOG_TYPES.has(params.type)) {
+      // An ACP session that answered with no models carries no error to classify.
+      const code = acpError === undefined ? 'command_failed' : classifyCatalogError(acpError);
       return {
-        error: {
-          code: 'command_failed',
-          message: getCatalogErrorMessage('command_failed', params.type),
-        },
+        error: { code, message: getCatalogErrorMessage(code, params.type) },
         status: 'error',
         updatedAt,
       };

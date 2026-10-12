@@ -102,6 +102,42 @@ describe('heterogeneous agent model discovery', () => {
     });
   });
 
+  it('never lets a catalog probe fetch a missing bridge through a package runner', async () => {
+    const { listHeterogeneousAgentModels } = await importModule();
+
+    await listHeterogeneousAgentModels({ command: '/custom/claude', type: 'claude-code' });
+
+    expect(resolveAcpSpawnTargetMock).toHaveBeenCalledWith(
+      'claude-code',
+      '/custom/claude',
+      expect.anything(),
+      { allowPackageRunner: false },
+    );
+  });
+
+  it('keeps the reason an ACP probe failed', async () => {
+    const { listHeterogeneousAgentModels } = await importModule();
+    const missingBridge = new Error('Claude Code requires the bridge');
+    missingBridge.name = 'AcpBridgeNotFoundError';
+
+    resolveAcpSpawnTargetMock.mockRejectedValueOnce(missingBridge);
+    await expect(
+      listHeterogeneousAgentModels({ command: '/custom/claude', type: 'claude-code' }),
+    ).resolves.toMatchObject({ error: { code: 'cli_not_found' }, status: 'error' });
+
+    resolveAcpSpawnTargetMock.mockResolvedValueOnce({
+      commandArgs: [],
+      commandPath: 'bridge',
+      env: {},
+    });
+    listStandardAcpModelsMock.mockRejectedValueOnce(
+      new Error('ACP request timed out: session/new'),
+    );
+    await expect(
+      listHeterogeneousAgentModels({ command: '/custom/codex', type: 'codex' }),
+    ).resolves.toMatchObject({ error: { code: 'timeout' }, status: 'error' });
+  });
+
   it.each(['claude-code', 'codex'] as const)(
     'reports an error for %s when ACP discovery fails, without running a made-up CLI flag',
     async (type) => {

@@ -148,11 +148,9 @@ const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
   const pathname = activeTabUrl?.split(/[?#]/)[0] ?? location.pathname;
   const { availability, ready, error, retry, retrying } = useAgentAvailability();
   const isLogin = useUserStore(authSelectors.isLogin);
-  const onboardingFinished = useUserStore((s) => !!s.onboarding?.finishedAt);
   if (
     !shouldCoverAppForAgentSetup({
       isLogin,
-      onboardingFinished,
       onOnboardingPath: location.pathname === '/onboarding' || pathname === '/onboarding',
       onSetupPath: isFirstAgentSetupPath(pathname),
     })

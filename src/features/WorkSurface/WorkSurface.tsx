@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { SlidersHorizontalIcon } from 'lucide-react';
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';

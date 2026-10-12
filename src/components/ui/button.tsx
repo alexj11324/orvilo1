@@ -120,7 +120,7 @@ function Button({
       }
       {...props}
     >
-      {loading ? <Spinner data-icon="inline-start" /> : null}
+      {loading ? <Spinner aria-hidden="true" data-icon="inline-start" focusable="false" /> : null}
       {children}
     </ButtonPrimitive>
   );

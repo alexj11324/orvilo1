@@ -286,7 +286,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
               </Tag>
               <ActionIcon
                 icon={XIcon}
-                size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('devices.share.revoke')}
                 onClick={() => handleRevokeShare(share)}
               />
@@ -380,7 +380,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
             canEdit && (
               <ActionIcon
                 icon={FolderPlusIcon}
-                size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('devices.detail.addDir')}
                 onClick={handleAddRecent}
               />
@@ -409,7 +409,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
                   <ActionIcon
                     aria-label={t('remove', { ns: 'common' })}
                     icon={XIcon}
-                    size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                     onClick={() => handleRemoveRecent(item.id)}
                   />
                 </SortableItem>

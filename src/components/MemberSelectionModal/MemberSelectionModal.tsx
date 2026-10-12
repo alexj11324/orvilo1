@@ -214,7 +214,7 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
                 aria-label={t('remove', { ns: 'common' })}
                 className="text-muted-foreground"
                 icon={X}
-                size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 onClick={() => handleRemoveAgent(agentId)}
               />
             ),

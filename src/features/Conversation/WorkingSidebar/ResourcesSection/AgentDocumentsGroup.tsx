@@ -169,7 +169,7 @@ const DocumentItem = memo<DocumentItemProps>(
               <ActionIcon
                 icon={Trash2Icon}
                 loading={deleting}
-                size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('delete', { ns: 'common' })}
                 onClick={handleDelete}
               />

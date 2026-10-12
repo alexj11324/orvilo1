@@ -470,7 +470,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       return (
         <div className={`${styles.detailRow} ${styles.commandField}`}>
           <div className={styles.detailLabel}>{t('heterogeneousStatus.command.label')}</div>
-          <div className={styles.detailContent}>
+          <div className={cn(styles.detailContent, 'h-auto min-h-8')}>
             {isEditingCommand ? (
               <div className={styles.commandInputWrap}>
                 <Input
@@ -516,7 +516,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                           className={`command-edit-button ${styles.commandEditButton}`}
                           disabled={!canEdit}
                           icon={PencilLine}
-                          size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 16 }}
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                           onClick={startEditingCommand}
                         />
                       </span>

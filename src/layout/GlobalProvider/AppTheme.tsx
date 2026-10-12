@@ -1,5 +1,7 @@
 'use client';
 
+import '@/styles/fonts.css';
+
 import { type NeutralColors, type PrimaryColors } from '@lobehub/ui';
 import ConfigProvider from '@lobehub/ui/es/ConfigProvider/index';
 import FontLoader from '@lobehub/ui/es/FontLoader/index';

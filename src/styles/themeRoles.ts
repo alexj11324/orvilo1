@@ -1,8 +1,16 @@
 'use client';
 
-import { createGlobalStyle, css, useTheme } from 'antd-style';
+import { ThemeContext } from '@emotion/react';
+import type { LobeCustomToken, ThemeProviderProps } from '@lobehub/ui';
 import { getContrast, mix, readableColor } from 'polished';
 import { createContext, createElement, type ReactNode, use, useMemo } from 'react';
+
+// This is the existing SDK's resolved styled-theme value, not another palette
+// or provider. Public SDK types retain custom tokens and numeric screen aliases.
+type ResolvedDocumentTheme = Parameters<
+  NonNullable<ThemeProviderProps['customToken']>
+>[0]['token'] &
+  LobeCustomToken & { isDarkMode: boolean };
 
 // One text role must remain readable on both a status wash and an outline surface.
 export const stateText = (
@@ -19,7 +27,7 @@ export const stateText = (
       getContrast(candidate, surface) >= 4.5,
   ) ?? readableColor(surface);
 
-const stopLocalMotion = css`
+const stopLocalMotion = `
   [data-slot],
   [data-slot]::before,
   [data-slot]::after,
@@ -55,11 +63,11 @@ const stopLocalMotion = css`
 
 // Mount only in a document's top-level App/Auth/Share/Workbench theme host.
 // Resolved values keep body portals independent of scoped .orvilo-vars tokens.
-const ThemeRoleStyles = createGlobalStyle(({ theme }) => {
+const createThemeRoleStyles = (theme: ResolvedDocumentTheme) => {
   const surface = theme.colorBgContainer;
   const status = (name: string, fill: string, text: string) => {
     const wash = mix(0.1, fill, surface);
-    return css`
+    return `
       --${name}: ${fill};
       --${name}-on-fill: ${readableColor(fill)};
       --${name}-subtle: ${wash};
@@ -67,7 +75,7 @@ const ThemeRoleStyles = createGlobalStyle(({ theme }) => {
     `;
   };
 
-  return css`
+  return `
     ${
       theme.isDarkMode
         ? "html[data-theme='dark'], html.dark"
@@ -185,13 +193,13 @@ const ThemeRoleStyles = createGlobalStyle(({ theme }) => {
       transition-duration: var(--orvilo-motion-mid);
     }
 
-    ${theme.motion === false && stopLocalMotion}
+    ${theme.motion === false ? stopLocalMotion : ''}
 
     @media (prefers-reduced-motion: reduce) {
       ${stopLocalMotion}
     }
   `;
-});
+};
 
 // The same value already publishes the existing accent/fill semantic CSS roles.
 // Keep resolution at the single application theme authority, not in leaf UI.
@@ -214,7 +222,9 @@ const DEFAULT_LARGE_MIN_WIDTH = 992;
 const DEFAULT_MEDIUM_MIN_WIDTH = 768;
 
 export function ThemeRoles({ children }: { children?: ReactNode }) {
-  const theme = useTheme();
+  // @lobehub/ui's installed public provider supplies this same complete
+  // Emotion context; SDK style consumers keep their existing authority.
+  const theme = use(ThemeContext) as ResolvedDocumentTheme;
   const values = useMemo(
     () => ({
       fillTertiary: theme.colorFillTertiary,
@@ -227,7 +237,7 @@ export function ThemeRoles({ children }: { children?: ReactNode }) {
   return createElement(
     ResolvedFillTertiaryContext.Provider,
     { value: values },
-    createElement(ThemeRoleStyles),
+    createElement('style', { 'data-orvilo-theme-roles': '' }, createThemeRoleStyles(theme)),
     children,
   );
 }

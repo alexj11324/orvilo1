@@ -120,7 +120,7 @@ const GroupMember = memo<GroupMemberProps>(({ addModalOpen, onAddModalOpenChange
                       disabled={!canEdit}
                       icon={UserMinus}
                       loading={removingMemberIds.includes(item.id)}
-                      size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
+                      size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
                       title={canEdit ? t('groupSidebar.members.removeMember') : reason}
                       onClick={(e) => {
                         e.stopPropagation();

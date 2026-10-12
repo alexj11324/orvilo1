@@ -745,7 +745,7 @@ const TaskVerifyConfig = memo(() => {
                 >
                   <ActionIcon
                     icon={MoreHorizontal}
-                    size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                     title={t('verifyConfig.moreActions')}
                     onClick={(event) => event.stopPropagation()}
                   />

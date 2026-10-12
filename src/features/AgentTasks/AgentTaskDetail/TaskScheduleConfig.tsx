@@ -366,7 +366,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
     <ActionIcon
       disabled={!canEditTask}
       icon={TimerIcon}
-      size={{ blockSize: 28, borderRadius: 'var(--radius-input)', size: 14 }}
+      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
       title={t('taskSchedule.title')}
       onClick={(e) => e.stopPropagation()}
     />

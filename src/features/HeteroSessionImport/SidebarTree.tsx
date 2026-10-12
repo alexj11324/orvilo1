@@ -77,7 +77,7 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                           <ActionIcon
                             aria-label={t('heteroImport.action.unwatch')}
                             icon={X}
-                            size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
+                            size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
                             onClick={() => onSetPref(key, null)}
                           />
                         }
@@ -94,8 +94,8 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                               icon={Timer}
                               size={{
                                 blockSize: 24,
-                                borderRadius: 'var(--radius-input)',
-                                size: 14,
+                                borderRadius: 'var(--radius-button)',
+                                size: 16,
                               }}
                               onClick={() => onSetPref(key, 'watched')}
                             />
@@ -111,8 +111,8 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                               icon={EyeOff}
                               size={{
                                 blockSize: 24,
-                                borderRadius: 'var(--radius-input)',
-                                size: 14,
+                                borderRadius: 'var(--radius-button)',
+                                size: 16,
                               }}
                               onClick={() => {
                                 onSetPref(key, 'ignored');
@@ -304,8 +304,8 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                                       icon={Eye}
                                       size={{
                                         blockSize: 24,
-                                        borderRadius: 'var(--radius-input)',
-                                        size: 14,
+                                        borderRadius: 'var(--radius-button)',
+                                        size: 16,
                                       }}
                                       onClick={() => onSetPref(key, null)}
                                     />

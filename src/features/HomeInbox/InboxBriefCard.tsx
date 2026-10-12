@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo } from 'react';
 
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';

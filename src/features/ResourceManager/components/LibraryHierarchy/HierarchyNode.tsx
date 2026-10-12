@@ -353,7 +353,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
                 <ActionIcon
                   aria-label={t('toggle', { ns: 'common' })}
                   icon={ChevronDown}
-                  size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
+                  size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleToggle();

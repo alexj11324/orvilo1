@@ -98,7 +98,7 @@ export const FolderTreeItemComponent = memo<FolderTreeItemProps>(
             <ActionIcon
               aria-label={tCommon('toggle')}
               icon={ChevronDown}
-              size={{ blockSize: 24, borderRadius: 'var(--radius-input)', size: 14 }}
+              size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggle();

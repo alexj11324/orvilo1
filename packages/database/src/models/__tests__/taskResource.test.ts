@@ -137,7 +137,6 @@ describe('TaskResourceModel', () => {
     expect((await model.list(task.id)).map((row) => row.url)).toEqual(['https://x.test/k']);
   });
 
-
   it('renames a link on its own Issue only, for writers only, and keeps its URL', async () => {
     const task = await create();
     const link = await model.add(task.id, {

@@ -44,7 +44,7 @@ describe('issue rail type scale', () => {
     );
     expect(classes).not.toContain('text-2xl');
     expect(classes).not.toContain('md:text-2xl');
-    expect(classes).not.toContain('text-[26px]');
+    expect(taskStyles.titleInput).not.toMatch(/text-\[\d+px\]/);
     expect(taskStyles.titleInput).not.toContain('.ant-input');
   });
 

@@ -23,6 +23,7 @@ if (
 }
 
 const orchestrator = createDevOrchestrator({
+  cliBuildCommand: { args: ['run', 'build'], bin: 'bun', cwd: path.join(desktopRoot, '..', 'cli') },
   desktopRoot,
   electronArgs,
   electronBin: require('electron'),

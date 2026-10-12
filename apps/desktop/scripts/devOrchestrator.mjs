@@ -23,6 +23,7 @@ export function createDevOrchestrator({
   viteBin,
   vitePort,
   electronArgs = [],
+  cliBuildCommand,
   nodeBin = process.execPath,
   pollIntervalMs = 200,
   bundleQuietMs = 1000,
@@ -47,6 +48,8 @@ export function createDevOrchestrator({
   let shuttingDown = false;
   let poll = null;
   let debounce = null;
+  let cliBuild = null;
+  let cliBuildSettled = !cliBuildCommand;
 
   // Spawn vite through the current node binary instead of a `pnpm` shim:
   // on Windows the shim is `pnpm.cmd`, which a shell-less spawn cannot start.
@@ -59,6 +62,7 @@ export function createDevOrchestrator({
     clearInterval(poll);
     clearTimeout(debounce);
     electron?.kill();
+    cliBuild?.kill();
     for (const child of children) child.kill();
     exit(code);
   }
@@ -114,8 +118,31 @@ export function createDevOrchestrator({
     }
   }
 
+  // A local Agent run spawns the CLI from `apps/cli/dist`, which nothing else in
+  // the dev flow produces. Building it on every start also keeps it from going stale.
+  function buildCli() {
+    if (!cliBuildCommand) return;
+    log('[desktop-dev] building the embedded CLI');
+    const settle = (problem) => {
+      if (cliBuildSettled) return;
+      cliBuildSettled = true;
+      cliBuild = null;
+      if (problem)
+        logError(
+          `[desktop-dev] embedded CLI build failed (${problem}); local Agent runs will fail until it builds`,
+        );
+    };
+    cliBuild = spawn(cliBuildCommand.bin, cliBuildCommand.args, {
+      cwd: cliBuildCommand.cwd,
+      stdio: 'inherit',
+    });
+    cliBuild.on('error', (error) => settle(error.message));
+    cliBuild.on('exit', (code) => settle(code === 0 ? undefined : `exit code ${code}`));
+  }
+
   function start() {
     rmSync(path.join(desktopRoot, 'dist'), { force: true, recursive: true });
+    buildCli();
     children.push(
       spawnVite(['--config', 'vite.renderer.config.ts']),
       spawnVite(['build', '--watch', '--mode', 'development', '--config', 'vite.main.config.ts']),
@@ -167,6 +194,8 @@ export function createDevOrchestrator({
         }
         if (Date.now() - lastChange < bundleQuietMs) return;
         if (!(await checkPort(vitePort))) return;
+        // A failed CLI build is reported and does not hold the app back; a running one does.
+        if (!cliBuildSettled) return;
         clearInterval(poll);
         watchBundles();
         startElectron();

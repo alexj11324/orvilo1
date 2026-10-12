@@ -257,4 +257,60 @@ describe('createDevOrchestrator', () => {
     expect(h.options.exit).toHaveBeenCalledWith(1);
     expect(h.electronSpawns()).toHaveLength(0);
   });
+  describe('embedded CLI', () => {
+    const cliBuildCommand = { args: ['run', 'build'], bin: '/bin/bun', cwd: '/repo/apps/cli' };
+    const cliBuilds = (h) => h.spawned.filter((s) => s.bin === '/bin/bun');
+
+    it('builds the CLI in its own package and holds electron until that finishes', async () => {
+      const h = createHarness({ cliBuildCommand });
+      h.orchestrator.start();
+
+      expect(cliBuilds(h)).toHaveLength(1);
+      expect(cliBuilds(h)[0].args).toEqual(['run', 'build']);
+      expect(cliBuilds(h)[0].opts.cwd).toBe('/repo/apps/cli');
+
+      await h.becomeReady();
+      expect(h.electronSpawns()).toHaveLength(0);
+
+      cliBuilds(h)[0].child.emit('exit', 0);
+      await vi.advanceTimersByTimeAsync(400);
+
+      expect(h.electronSpawns()).toHaveLength(1);
+      expect(h.options.logError).not.toHaveBeenCalled();
+    });
+
+    it('reports a failed CLI build and still starts electron', async () => {
+      const h = createHarness({ cliBuildCommand });
+      h.orchestrator.start();
+
+      cliBuilds(h)[0].child.emit('exit', 1);
+      await h.becomeReady();
+
+      expect(h.electronSpawns()).toHaveLength(1);
+      expect(h.options.logError).toHaveBeenCalledWith(
+        expect.stringContaining('embedded CLI build failed (exit code 1)'),
+      );
+      expect(h.options.exit).not.toHaveBeenCalled();
+    });
+
+    it('reports a build tool that cannot be started', async () => {
+      const h = createHarness({ cliBuildCommand });
+      h.orchestrator.start();
+
+      cliBuilds(h)[0].child.emit('error', new Error('spawn bun ENOENT'));
+      await h.becomeReady();
+
+      expect(h.electronSpawns()).toHaveLength(1);
+      expect(h.options.logError).toHaveBeenCalledWith(expect.stringContaining('spawn bun ENOENT'));
+    });
+
+    it('stops a CLI build that is still running on shutdown', () => {
+      const h = createHarness({ cliBuildCommand });
+      h.orchestrator.start();
+
+      h.orchestrator.shutdown(0);
+
+      expect(cliBuilds(h)[0].child.kill).toHaveBeenCalled();
+    });
+  });
 });

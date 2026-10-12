@@ -128,7 +128,13 @@ start_dev() {
     # Startup checks the publishable key's format. Without a Clerk instance this
     # placeholder names a host that does not exist: seed sessions work, the
     # sign-in page does not.
-    VITE_CLERK_PUBLISHABLE_KEY="$(cd "$ROOT" && bun --print 'process.env.VITE_CLERK_PUBLISHABLE_KEY || "pk_test_" + btoa("clerk.local.test$")')"
+    VITE_CLERK_PUBLISHABLE_KEY="$(cd "$ROOT" && bun --print 'process.env.VITE_CLERK_PUBLISHABLE_KEY || ""')"
+    if [ -z "$VITE_CLERK_PUBLISHABLE_KEY" ]; then
+      VITE_CLERK_PUBLISHABLE_KEY="pk_test_$(printf 'clerk.local.test$' | base64)"
+      # Startup rejects an issuer that disagrees with the key, and a leftover
+      # CLERK_ISSUER belongs to some real instance, not to the placeholder.
+      export CLERK_ISSUER='https://clerk.local.test'
+    fi
     export VITE_CLERK_PUBLISHABLE_KEY
     if ! lsof -nP -iTCP:"$CLERK_STUB_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
       c_step "starting clerk-stub on :$CLERK_STUB_PORT"

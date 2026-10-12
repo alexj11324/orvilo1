@@ -122,8 +122,8 @@ and forwards every other Clerk Backend call unchanged, so a normal sign-in on
 the same server still works. It refuses to start with `NODE_ENV=production`.
 
 This path needs no Clerk keys, so a fork without access to a Clerk instance can
-still develop: when the two keys are unset, `dev-up.sh` fills in placeholders
-that pass the startup format check. Only seed sessions can sign in then; the
+still develop: when the publishable key is unset, `dev-up.sh` fills in a
+placeholder with its matching `CLERK_ISSUER`, and an unset secret key gets one too. Only seed sessions can sign in then; the
 sign-in page needs a real development instance.
 
 `bun run dev:desktop:skip-login` does all of this in one command: it starts the

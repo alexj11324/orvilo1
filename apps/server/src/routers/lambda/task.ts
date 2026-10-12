@@ -68,6 +68,7 @@ import { automationResultWebhookConfigSchema } from '@/server/services/automatio
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
+import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
 import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
@@ -1704,7 +1705,20 @@ export const taskRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const task = await resolveOrThrow(ctx.taskModel, input.taskId);
-        await assertTaskExecutionUse(ctx, [task], [input.toAgentId]);
+        const workspaceId = task.workspaceId ?? ctx.workspaceId;
+        const role = workspaceId
+          ? await getActiveWorkspaceMembershipRole(ctx.serverDB, {
+              userId: ctx.userId,
+              workspaceId,
+            })
+          : undefined;
+        // Taking over skips the check on the incumbent only; the successor is
+        // always checked.
+        await assertTaskExecutionUse(
+          ctx,
+          mayTakeOverExecution({ issue: task, role, userId: ctx.userId }) ? [] : [task],
+          [input.toAgentId],
+        );
         const result = await ctx.taskService.handoffTask(input);
         return { data: result, message: 'Task handed off', success: true };
       } catch (error) {

@@ -224,7 +224,6 @@ describe('resourceTransferRequestRouter', () => {
   describe('getTransferManifest', () => {
     const manifest = {
       cronJobs: 1,
-      deviceBindingAffected: false,
       hiddenReferencedMember: false,
       ownerId: initiatorId,
       tasksToDetach: 0,

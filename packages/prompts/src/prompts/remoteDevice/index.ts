@@ -6,8 +6,6 @@ export interface DeviceItem {
   /** Display name — the user-set alias when present, else the hostname. */
   name: string;
   os: string;
-  /** 'personal' = the user's own machine, 'workspace' = enrolled into the workspace. */
-  scope?: string;
 }
 
 export const devicePrompt = (device: DeviceItem) => {
@@ -17,7 +15,6 @@ export const devicePrompt = (device: DeviceItem) => {
     attrs.push(`hostname="${device.hostname}"`);
   }
   attrs.push(`os="${device.os}"`);
-  if (device.scope) attrs.push(`scope="${device.scope}"`);
   if (device.lastSeen) attrs.push(`last-seen="${device.lastSeen}"`);
   return `  <device ${attrs.join(' ')} />`;
 };

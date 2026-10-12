@@ -10,11 +10,10 @@ const mocks = vi.hoisted(() => ({
   delete: vi.fn(),
   executeToolCall: vi.fn(),
   findByDeviceId: vi.fn(),
-  findWorkspaceDeviceById: vi.fn(),
+  findExecutionDeviceById: vi.fn(),
   hasFixedAgentBinding: vi.fn(),
   membershipRole: vi.fn(),
-  queryPersonal: vi.fn(),
-  setWorkspaceDeviceVisibility: vi.fn(),
+  query: vi.fn(),
   update: vi.fn(),
 }));
 
@@ -28,10 +27,9 @@ vi.mock('@/database/models/device', async (importOriginal) => ({
   DeviceModel: class {
     delete = mocks.delete;
     findByDeviceId = mocks.findByDeviceId;
-    findWorkspaceDeviceById = mocks.findWorkspaceDeviceById;
+    findExecutionDeviceById = mocks.findExecutionDeviceById;
     hasFixedAgentBinding = mocks.hasFixedAgentBinding;
-    queryPersonal = mocks.queryPersonal;
-    setWorkspaceDeviceVisibility = mocks.setWorkspaceDeviceVisibility;
+    query = mocks.query;
     update = mocks.update;
   },
 }));
@@ -46,8 +44,9 @@ const caller = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.membershipRole.mockResolvedValue('member');
-  mocks.findWorkspaceDeviceById.mockResolvedValue(undefined);
-  mocks.queryPersonal.mockResolvedValue([{ deviceId: 'personal-device', workingDirs: [] }]);
+  mocks.findExecutionDeviceById.mockResolvedValue(undefined);
+  mocks.findByDeviceId.mockResolvedValue({ deviceId: 'personal-device', userId: 'owner' });
+  mocks.query.mockResolvedValue([{ deviceId: 'personal-device', workingDirs: [] }]);
 });
 
 describe('personal device metadata with an active workspace selector', () => {
@@ -70,9 +69,7 @@ describe('personal device metadata with an active workspace selector', () => {
 
   it('preserves directory cache from the personal row rather than a same-ID workspace row', async () => {
     const personalCache = { path: '/tmp/project', workspace: { source: 'personal' } };
-    mocks.queryPersonal.mockResolvedValue([
-      { deviceId: 'personal-device', workingDirs: [personalCache] },
-    ]);
+    mocks.query.mockResolvedValue([{ deviceId: 'personal-device', workingDirs: [personalCache] }]);
     mocks.findByDeviceId.mockResolvedValue({
       workingDirs: [{ path: '/tmp/project', workspace: { source: 'workspace' } }],
     });
@@ -96,19 +93,6 @@ describe('personal device metadata with an active workspace selector', () => {
       expect(mocks.executeToolCall).not.toHaveBeenCalled();
     },
   );
-
-  it('still refuses hiding a workspace device bound to a fixed Agent', async () => {
-    mocks.findWorkspaceDeviceById.mockResolvedValue({ userId: 'owner', visibility: 'public' });
-    mocks.hasFixedAgentBinding.mockResolvedValue(true);
-
-    await expect(
-      caller().setWorkspaceDeviceVisibility({
-        deviceId: 'workspace-device',
-        visibility: 'private',
-      }),
-    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
-    expect(mocks.setWorkspaceDeviceVisibility).not.toHaveBeenCalled();
-  });
 
   it('requires authentication for personal metadata', async () => {
     const anonymous = deviceRouter.createCaller({ workspaceId: 'active-workspace' } as never);

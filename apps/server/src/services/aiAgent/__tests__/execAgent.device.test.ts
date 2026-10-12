@@ -28,6 +28,7 @@ vi.mock('@/server/featureFlags', async (importOriginal) => ({
 }));
 
 const {
+  mockQueryOwnedDevices,
   mockComposeDevicePrimeRun,
   mockDeviceFindByDeviceId,
   mockDeviceFindWorkspaceDeviceById,
@@ -41,6 +42,7 @@ const {
   mockSpawnHeteroSandbox,
   realDispatchRef,
 } = vi.hoisted(() => ({
+  mockQueryOwnedDevices: vi.fn(),
   mockComposeDevicePrimeRun: vi.fn(),
   mockDeviceFindByDeviceId: vi.fn(),
   mockDeviceFindWorkspaceDeviceById: vi.fn(),
@@ -145,14 +147,12 @@ vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
       findByDeviceId: mockDeviceFindByDeviceId,
-      findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
+      findExecutionDeviceById: mockDeviceFindWorkspaceDeviceById,
       // Unified admission's authorized candidate set — the devices this suite
       // routes to are registered in both scopes (workspace runs query the
       // workspace list, personal runs the personal one).
-      queryPersonal: vi
-        .fn()
-        .mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
-      queryWorkspaceDevices: vi
+      query: mockQueryOwnedDevices,
+      queryForExecution: vi
         .fn()
         .mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
     };
@@ -296,7 +296,10 @@ vi.mock('@/server/services/deviceGateway', () => ({
     dispatchAgentRun: mockDispatchAgentRun,
     executeToolCall: mockExecuteToolCall,
     isConfigured: false,
-    queryDeviceList: vi.fn().mockResolvedValue([]),
+    queryDeviceList: vi.fn().mockResolvedValue([
+      { deviceId: 'device-001', online: true },
+      { deviceId: 'device-002', online: true },
+    ]),
     resolveDeviceWorkspaceId: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -364,6 +367,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       ok: false,
     });
     mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
+    mockQueryOwnedDevices.mockResolvedValue([
+      { deviceId: 'device-001' },
+      { deviceId: 'device-002' },
+    ]);
     mockDeviceFindByDeviceId.mockResolvedValue(undefined);
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
     // `clearAllMocks` keeps the last-set implementation — re-establish the
@@ -459,7 +466,6 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'sandbox',
-        executionTargetSelectionPolicy: 'fixed',
       });
       // `fixed` only engages for workspace-shared agents — the policy strips
       // the request's deviceId override entirely.
@@ -476,7 +482,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(topicMock.create).toHaveBeenCalledWith(
         expect.objectContaining({
           metadata: expect.objectContaining({
-            executionConfig: expect.objectContaining({ executionTarget: 'sandbox' }),
+            boundDeviceId: undefined,
           }),
         }),
         undefined,
@@ -559,7 +565,8 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
     });
 
-    it('honours an explicit deviceId request over the stored sandbox target', async () => {
+    it('ignores an explicit deviceId request over the saved sandbox target', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({ executionTarget: 'sandbox' });
 
       await service.execAgent({
@@ -570,22 +577,14 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
 
       // requestedDeviceId forces device routing regardless of the stored
       // target (the shared policy isn't `fixed`).
-      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
-        expect.objectContaining({ deviceId: 'device-001' }),
-      );
-      expect(topicMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: expect.objectContaining({ boundDeviceId: 'device-001' }),
-        }),
-        undefined,
-      );
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
     });
 
     it('does not start a queued workspace run after Agent Use is revoked at admission', async () => {
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
       });
       service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
       vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValue(new TRPCError({ code: 'FORBIDDEN' }));
@@ -600,7 +599,6 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
       });
       service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
 
@@ -628,6 +626,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       topicMock.findById.mockResolvedValue({ metadata: { boundDeviceId: 'device-002' } });
       await useAgencyConfig({ executionTarget: 'sandbox' });
 
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
       await service.execAgent({
         agentId: 'agent-1',
         appContext: { topicId: 'topic-1' },
@@ -691,6 +690,29 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       },
     );
 
+    it('dispatches a member’s CLI run to the saved host owner while retaining the run workspace', async () => {
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockQueryOwnedDevices.mockResolvedValue([]);
+      mockDeviceFindWorkspaceDeviceById.mockResolvedValue({
+        deviceId: 'device-001',
+        userId: 'saved-host-owner',
+      });
+      service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Run on the saved host',
+      });
+      expect(result.success).toBe(true);
+      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceId: 'device-001',
+          userId: 'saved-host-owner',
+          workspaceId: undefined,
+          ingestWorkspaceId: 'workspace-1',
+        }),
+      );
+    });
+
     it('surfaces the gateway DEVICE_NOT_FOUND when the trusted binding is unreachable', async () => {
       // The dispatch trusts the bound device; the gateway is where an offline
       // device fails loudly. The failure lands on the assistant message and the
@@ -723,6 +745,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       // is offline/asleep/mid-reconnect — the honest surface code is
       // DEVICE_NOT_CONNECTED, not the registration-gone DEVICE_NOT_FOUND.
       await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDeviceFindWorkspaceDeviceById.mockResolvedValue({
+        friendlyName: 'Alice laptop',
+        deviceId: 'device-001',
+      });
       mockDispatchAgentRun.mockResolvedValue({
         error: 'DEVICE_CHANNEL_UNAVAILABLE',
         errorCode: DeviceTransportErrorCode.DeviceChannelUnavailable,
@@ -735,6 +761,16 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
 
       expect(result).toMatchObject({ error: 'DEVICE_NOT_CONNECTED', success: false });
+      expect(mockMessageUpdate).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          error: expect.objectContaining({
+            body: expect.objectContaining({
+              detail: expect.stringContaining('Device “Alice laptop” is offline'),
+            }),
+          }),
+        }),
+      );
       expect(result.errorData).toMatchObject({
         code: 'DEVICE_NOT_CONNECTED',
         deviceId: 'device-001',

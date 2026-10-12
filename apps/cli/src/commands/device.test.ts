@@ -48,9 +48,9 @@ describe('device command', () => {
     // Default: the deletable ids exist as PERSONAL devices, so `delete` resolves
     // them to the personal `removeDevice` path. Tests override per-scope as needed.
     mockTrpcClient.device.listDevices.query.mockResolvedValue([
-      { deviceId: 'd1', scope: 'personal' },
-      { deviceId: 'd2', scope: 'personal' },
-      { deviceId: '8040798a77ae', scope: 'personal' },
+      { deviceId: 'd1' },
+      { deviceId: 'd2' },
+      { deviceId: '8040798a77ae' },
     ]);
   });
 
@@ -71,38 +71,15 @@ describe('device command', () => {
       const program = createProgram();
       await program.parseAsync(['node', 'test', 'device', 'list', '--json']);
 
-      expect(mockGetTrpcClient).toHaveBeenCalledWith(undefined);
+      expect(mockGetTrpcClient).toHaveBeenCalledWith();
       const printed = JSON.parse(consoleSpy.mock.calls.at(-1)![0]);
       expect(printed.map((d: any) => d.deviceId)).toEqual(['d1', 'd2', '8040798a77ae']);
     });
 
-    it('should filter to workspace-scope devices when --workspace is set', async () => {
-      mockTrpcClient.device.listDevices.query.mockResolvedValue([
-        { deviceId: 'p1', scope: 'personal' },
-        { deviceId: 'ws1', scope: 'workspace' },
-        { deviceId: 'ws2', scope: 'workspace' },
-      ]);
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'device',
-        'list',
-        '--json',
-        '--workspace',
-        'ws-abc',
-      ]);
-
-      expect(mockGetTrpcClient).toHaveBeenCalledWith('ws-abc');
-      const printed = JSON.parse(consoleSpy.mock.calls.at(-1)![0]);
-      expect(printed.map((d: any) => d.deviceId)).toEqual(['ws1', 'ws2']);
-    });
-
     it('should keep the personal+workspace union when the context is ambient (no flag)', async () => {
       mockTrpcClient.device.listDevices.query.mockResolvedValue([
-        { deviceId: 'p1', scope: 'personal' },
-        { deviceId: 'ws1', scope: 'workspace' },
+        { deviceId: 'p1' },
+        { deviceId: 'ws1' },
       ]);
 
       const program = createProgram();
@@ -203,49 +180,8 @@ describe('device command', () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
-    it('should route a workspace device to removeWorkspaceDevice', async () => {
-      mockTrpcClient.device.listDevices.query.mockResolvedValue([
-        { deviceId: 'ws1', scope: 'workspace' },
-      ]);
-      mockTrpcClient.device.removeWorkspaceDevice.mutate.mockResolvedValue({ success: true });
-
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'device', 'delete', 'ws1', '--yes']);
-
-      expect(mockTrpcClient.device.removeWorkspaceDevice.mutate).toHaveBeenCalledWith({
-        deviceId: 'ws1',
-      });
-      expect(mockTrpcClient.device.removeDevice.mutate).not.toHaveBeenCalled();
-    });
-
-    it('should resolve the client under the workspace context when --workspace is set', async () => {
-      mockTrpcClient.device.listDevices.query.mockResolvedValue([
-        { deviceId: 'ws1', scope: 'workspace' },
-      ]);
-      mockTrpcClient.device.removeWorkspaceDevice.mutate.mockResolvedValue({ success: true });
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'device',
-        'delete',
-        'ws1',
-        '--yes',
-        '--workspace',
-        'ws-abc',
-      ]);
-
-      expect(mockGetTrpcClient).toHaveBeenCalledWith('ws-abc');
-      expect(mockTrpcClient.device.removeWorkspaceDevice.mutate).toHaveBeenCalledWith({
-        deviceId: 'ws1',
-      });
-    });
-
     it('should error + exit(1) without deleting when the device is not in the list', async () => {
-      mockTrpcClient.device.listDevices.query.mockResolvedValue([
-        { deviceId: 'other', scope: 'personal' },
-      ]);
+      mockTrpcClient.device.listDevices.query.mockResolvedValue([{ deviceId: 'other' }]);
 
       const program = createProgram();
       await program.parseAsync(['node', 'test', 'device', 'delete', 'missing', '--yes']);

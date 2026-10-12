@@ -2,11 +2,6 @@ import { type DeviceAttachment, RemoteDeviceIdentifier } from '@orvilo/builtin-t
 import { RemoteDeviceExecutionRuntime } from '@orvilo/builtin-tool-remote-device/executionRuntime';
 import debug from 'debug';
 
-import { deviceGateway } from '@/server/services/deviceGateway';
-import {
-  filterAuthorizedDevicePresence,
-  isGatewayOnlyDevicePresenceAllowed,
-} from '@/server/services/deviceGateway/scopedDevicePresence';
 import { getScopedOnlineDevices } from '@/server/services/deviceGateway/scopedDevices';
 
 import { resolveRunWorkspaceId } from './resolveWorkspaceScope';
@@ -61,15 +56,7 @@ export const remoteDeviceRuntime: ServerRuntimeRegistration = {
         // transient fallback. Workspace scope cannot: its registry row is the
         // authorization boundary, and a raw Gateway socket may be a stale
         // process that missed Unshare.
-        if (!serverDB) {
-          const scope = workspaceId ? ('workspace' as const) : ('personal' as const);
-          if (!isGatewayOnlyDevicePresenceAllowed(scope)) return [];
-          const online = await deviceGateway.queryDeviceList(userId, workspaceId);
-          return filterAuthorizedDevicePresence(new Set(), online, scope).map((d) => ({
-            ...d,
-            scope,
-          }));
-        }
+        if (!serverDB) return [];
 
         const devices = await getScopedOnlineDevices(serverDB, userId, workspaceId);
         log(
@@ -80,7 +67,6 @@ export const remoteDeviceRuntime: ServerRuntimeRegistration = {
             id: d.deviceId,
             name: d.friendlyName ?? d.hostname,
             online: d.online,
-            scope: d.scope,
           })),
         );
         return devices;

@@ -45,8 +45,8 @@ vi.mock('@/database/models/connector', () => ({
 }));
 vi.mock('@/database/models/device', () => ({
   DeviceModel: class {
-    queryWorkspaceDevices = mocks.devices;
-    queryPersonal = async () => [];
+    queryForExecution = mocks.devices;
+    query = mocks.devices;
   },
 }));
 vi.mock('@/database/utils/agent-access', () => ({ findUsableAgentExecutionBinding: mocks.usable }));
@@ -139,7 +139,11 @@ describe('OpenCode ACP execution evidence', () => {
       id: 'agent',
       updatedAt: new Date('2026-10-06T09:59:00Z'),
       plugins: [],
-      agencyConfig: { heterogeneousProvider: { type: 'opencode', model } },
+      agencyConfig: {
+        boundDeviceId: 'one',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'opencode', model },
+      },
     });
     mocks.probe.mockResolvedValue({
       success: true,
@@ -255,7 +259,11 @@ beforeEach(() => {
   mocks.agent.mockResolvedValue({
     id: 'agent',
     plugins: [],
-    agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+    agencyConfig: {
+      boundDeviceId: 'one',
+      executionTarget: 'device',
+      heterogeneousProvider: { type: 'codex' },
+    },
   });
   mocks.source.mockResolvedValue({ isEnabled: true, status: 'connected' });
   mocks.devices.mockResolvedValue([{ deviceId: 'one', name: 'Device one' }]);
@@ -300,7 +308,7 @@ describe('MCP automation readiness', () => {
     mocks.flags.mockResolvedValue({ mcp_event_automations: ['user'] });
     expect((await checkMcpAutomationReadiness(input())).canEnable).toBe(true);
   });
-  it('auto binds one authorized online device only after a real host probe', async () => {
+  it('uses the saved Agent device only after a real host probe', async () => {
     const result = await checkMcpAutomationReadiness(input());
     expect(result).toMatchObject({ canEnable: true, deviceId: 'one', reasons: [] });
     expect(mocks.probe).toHaveBeenCalledWith(
@@ -309,19 +317,25 @@ describe('MCP automation readiness', () => {
       10000,
     );
   });
-  it('requires explicit selection for multiple devices', async () => {
-    mocks.devices.mockResolvedValue([{ deviceId: 'one' }, { deviceId: 'two' }]);
+  it('uses the saved Agent device when multiple devices are available', async () => {
+    mocks.devices.mockResolvedValue([
+      { deviceId: 'one', userId: 'owner' },
+      { deviceId: 'two', userId: 'user' },
+    ]);
     mocks.online.mockResolvedValue([{ deviceId: 'one' }, { deviceId: 'two' }]);
     const result = await checkMcpAutomationReadiness(input());
-    expect(result.reasons).toContain('DEVICE_SELECTION_REQUIRED');
-    expect(mocks.probe).not.toHaveBeenCalled();
-    expect((await checkMcpAutomationReadiness({ ...input(), deviceId: 'two' })).deviceId).toBe(
-      'two',
-    );
+    expect(result.reasons).toEqual([]);
+    expect(result.deviceId).toBe('one');
+    expect(mocks.probe).toHaveBeenCalled();
+    expect(mocks.online).toHaveBeenCalledWith('owner');
+    expect(mocks.online).toHaveBeenCalledWith('user');
+    expect(mocks.online).not.toHaveBeenCalledWith('user', 'workspace');
   });
   it('preserves an offline binding instead of switching to the only online device', async () => {
     const request = input();
-    request.task.config.automationDeviceId = 'offline';
+    mocks.agent.mockResolvedValue({
+      agencyConfig: { boundDeviceId: 'offline', heterogeneousProvider: { type: 'codex' } },
+    });
     const result = await checkMcpAutomationReadiness(request);
     expect(result).toMatchObject({ canEnable: false, deviceId: 'offline' });
     expect(result.reasons).toContain('DEVICE_UNAVAILABLE');
@@ -329,7 +343,7 @@ describe('MCP automation readiness', () => {
   });
   it('does not authorize gateway-only workspace devices', async () => {
     mocks.devices.mockResolvedValue([]);
-    const result = await checkMcpAutomationReadiness({ ...input(), deviceId: 'one' });
+    const result = await checkMcpAutomationReadiness(input());
     expect(result.reasons).toContain('DEVICE_UNAVAILABLE');
     expect(mocks.probe).not.toHaveBeenCalled();
   });

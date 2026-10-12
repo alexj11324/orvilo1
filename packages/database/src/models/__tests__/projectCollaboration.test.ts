@@ -90,8 +90,6 @@ describe('Project and Issue collaboration boundaries', () => {
         deviceId: 'collab-delete-host',
         identitySource: 'fallback',
         userId: member,
-        workspaceId,
-        visibility: 'public',
       })
       .onConflictDoNothing();
     const project = await projectModel(member).create(
@@ -100,7 +98,7 @@ describe('Project and Issue collaboration boundaries', () => {
         agencyConfig: {
           boundDeviceId: 'collab-delete-host',
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
+          heterogeneousProvider: { type: 'codex', model: 'default' },
         },
         model: null,
         provider: null,
@@ -460,8 +458,6 @@ describe('Project and Issue collaboration boundaries', () => {
       deviceId: 'collab-host',
       identitySource: 'fallback',
       userId: member,
-      workspaceId,
-      visibility: 'public',
     });
     const project = await projectModel(member).create(
       { identifier: 'NEW', name: 'New', memberIds: [member] },
@@ -469,7 +465,7 @@ describe('Project and Issue collaboration boundaries', () => {
         agencyConfig: {
           boundDeviceId: 'collab-host',
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
+          heterogeneousProvider: { type: 'codex', model: 'default' },
         },
         model: null,
         provider: null,
@@ -494,14 +490,12 @@ describe('Project and Issue collaboration boundaries', () => {
       deviceId: 'collab-private-request-host',
       identitySource: 'fallback',
       userId: member,
-      workspaceId,
-      visibility: 'public',
     });
     const runtime = {
       agencyConfig: {
         boundDeviceId: 'collab-private-request-host',
         executionTarget: 'device' as const,
-        heterogeneousProvider: { type: 'codex' as const },
+        heterogeneousProvider: { type: 'codex' as const, model: 'default' },
       },
       model: null,
       provider: null,
@@ -528,7 +522,6 @@ describe('Project and Issue collaboration boundaries', () => {
       deviceId: 'collab-personal-host',
       identitySource: 'fallback',
       userId: member,
-      visibility: 'private',
     });
     const personal = await new ProjectModel(db, member).create(
       { identifier: 'PERS', name: 'Personal private', visibility: 'private' },

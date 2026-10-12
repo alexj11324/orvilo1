@@ -170,7 +170,7 @@ describe('buildConnectAgentConfig selector picks', () => {
     });
   });
 
-  it('treats the default sentinel as "leave the CLI setting alone"', () => {
+  it('persists the explicit Default model while leaving CLI effort unchanged', () => {
     const config = buildConnectAgentConfig({
       effort: 'default',
       model: 'default',
@@ -178,7 +178,8 @@ describe('buildConnectAgentConfig selector picks', () => {
       target: { deviceId: 'local-desktop', kind: 'local' },
     });
 
-    expect(config.agencyConfig?.heterogeneousProvider).not.toHaveProperty('model');
+    expect(config.agencyConfig?.heterogeneousProvider?.model).toBe('default');
+    expect(config.model).toBe('default');
     expect(config.agencyConfig?.heterogeneousProvider).not.toHaveProperty('effort');
   });
 });

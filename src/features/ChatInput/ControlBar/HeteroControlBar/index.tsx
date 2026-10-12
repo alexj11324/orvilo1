@@ -13,7 +13,6 @@ import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import HeteroDeviceSwitcher from '@/features/ChatInput/ControlBar/HeteroDeviceSwitcher';
 import WorkspaceControls from '@/features/ChatInput/ControlBar/WorkspaceControls';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
@@ -98,11 +97,7 @@ const HeteroControlBar = memo(() => {
   // directory, git, provider quota and runtime details remain author/editor config.
   if (!canConfigureResource) {
     if (!agentId || isLoading) return null;
-    return (
-      <div className={cn('flex flex-row items-center justify-between', styles.bar)}>
-        <HeteroDeviceSwitcher agentId={agentId} />
-      </div>
-    );
+    return <div className={cn('flex flex-row items-center justify-between', styles.bar)} />;
   }
 
   // On web there's no full-access badge / skeleton — just the workspace

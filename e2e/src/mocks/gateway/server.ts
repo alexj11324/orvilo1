@@ -97,7 +97,7 @@ export const startFakeGateway = (
   const operations = new Map<string, OperationState>();
   const subscribers = new Map<string, Set<WsLike>>();
   let nextEventId = 1;
-  let lastDispatchedDeviceId = '';
+  const lastDispatchedDeviceIds = new Map<string, string>();
 
   const pushToSubscribers = (operationId: string, message: Record<string, unknown>) => {
     const subs = subscribers.get(operationId);
@@ -190,19 +190,22 @@ export const startFakeGateway = (
       }
 
       if (req.method === 'POST' && path === '/api/device/devices') {
-        const deviceId = lastDispatchedDeviceId || 'e2e-mock-device';
-        const connectedAt = new Date().toISOString();
-        return json({
-          devices: [
-            {
-              channels: [{ channel: 'default', connectedAt, connectionId: 'e2e-mock-conn' }],
-              connectedAt,
-              deviceId,
-              hostname: 'E2E Mock Device',
-              platform: 'darwin',
-            },
-          ],
-        });
+        return (async () => {
+          const { userId } = (await req.json()) as { userId: string };
+          const deviceId = lastDispatchedDeviceIds.get(userId) || `e2e-mock-device-${userId}`;
+          const connectedAt = new Date().toISOString();
+          return json({
+            devices: [
+              {
+                channels: [{ channel: 'default', connectedAt, connectionId: 'e2e-mock-conn' }],
+                connectedAt,
+                deviceId,
+                hostname: 'E2E Mock Device',
+                platform: 'darwin',
+              },
+            ],
+          });
+        })();
       }
 
       // Device dispatch channel: the server hands the gateway an
@@ -223,7 +226,7 @@ export const startFakeGateway = (
           if (body.deviceId === 'dev-macos-offline-host') {
             return json({ error: 'DEVICE_CHANNEL_UNAVAILABLE', state: 'offline' }, 503);
           }
-          if (body.deviceId) lastDispatchedDeviceId = body.deviceId;
+          if (body.deviceId && body.userId) lastDispatchedDeviceIds.set(body.userId, body.deviceId);
           void runSyntheticHeteroTurn({
             llmBaseUrl,
             orviloBaseUrl,

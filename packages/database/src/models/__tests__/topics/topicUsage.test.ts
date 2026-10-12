@@ -131,12 +131,8 @@ beforeEach(async () => {
   // agent_operations.user_id is intentionally not a FK — clean up explicitly.
   await serverDB.delete(agentOperations);
   await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
-  // Seed a pinned model on the topic (config). The usage roll-up must NEVER touch
-  // these columns — they hold the topic's configured model, not the measured
-  // dominant model (which lives in `cost.llm.byModel`).
-  await serverDB
-    .insert(topics)
-    .values({ id: topicId, model: 'pinned-model', provider: 'pinned-provider', userId });
+  // Topic runtime comes from its Agent; usage remains measured per message.
+  await serverDB.insert(topics).values({ id: topicId, userId });
 });
 
 afterEach(async () => {
@@ -167,10 +163,9 @@ describe('recomputeTopicUsage', () => {
     expect(topic.totalOutputTokens).toBe(50);
     expect(topic.totalTokens).toBe(150);
     expect(topic.totalCost).toBeCloseTo(0.0021, 6);
-    // Roll-up preserves the pinned model (config) — it does not write the
-    // message's model into the column.
-    expect(topic.model).toBe('pinned-model');
-    expect(topic.provider).toBe('pinned-provider');
+    // Usage does not create per-topic runtime fields.
+    expect(topic).not.toHaveProperty('model');
+    expect(topic).not.toHaveProperty('provider');
 
     expect(topic.usage).toEqual({
       humanInteraction: {
@@ -252,8 +247,8 @@ describe('recomputeTopicUsage', () => {
     // The measured per-model breakdown lives in `cost.llm.byModel` (below); the
     // roll-up does NOT promote a dominant model into the `model` column, which
     // stays the pinned config.
-    expect(topic.model).toBe('pinned-model');
-    expect(topic.provider).toBe('pinned-provider');
+    expect(topic).not.toHaveProperty('model');
+    expect(topic).not.toHaveProperty('provider');
 
     const byModel = (topic.cost as any).llm.byModel as any[];
     expect(byModel).toHaveLength(2);
@@ -385,8 +380,8 @@ describe('recomputeTopicUsage', () => {
     expect(topic.usage).toBeNull();
     expect(topic.cost).toBeNull();
     // Usage aggregates reset to NULL, but the pinned model (config) is preserved.
-    expect(topic.model).toBe('pinned-model');
-    expect(topic.provider).toBe('pinned-provider');
+    expect(topic).not.toHaveProperty('model');
+    expect(topic).not.toHaveProperty('provider');
   });
 
   it('short-circuits when the topic row is missing or owned by another user', async () => {
@@ -528,9 +523,9 @@ describe('recomputeTopicUsage', () => {
       expect(topic.totalInputTokens).toBeNull();
       expect(topic.totalOutputTokens).toBeNull();
       expect(topic.totalTokens).toBeNull();
-      // Pinned model (config) is preserved even when usage aggregates reset.
-      expect(topic.model).toBe('pinned-model');
-      expect(topic.provider).toBe('pinned-provider');
+      // Usage roll-up does not introduce a per-topic runtime selection.
+      expect(topic).not.toHaveProperty('model');
+      expect(topic).not.toHaveProperty('provider');
       expect(topic.totalCost).toBeCloseTo(0.05, 6);
 
       expect((topic.usage as any).llm).toEqual({

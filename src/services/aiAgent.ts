@@ -2,7 +2,7 @@ import type {
   AgentMarketplaceRuntimeConfig,
   ExecAgentAppContext,
   ExecAgentResult,
-  HeterogeneousTopicPin,
+  HeterogeneousReasoningEffort,
   RuntimeMentionedAgent,
   ScheduleAgentRunParams,
   ScheduleAgentRunResult,
@@ -132,7 +132,7 @@ export interface ExecAgentTaskParams {
    * (docs/development/chat-agent-model-ia.md §5.2). Ignored when the run reuses
    * an existing topic.
    */
-  newTopicPins?: HeterogeneousTopicPin;
+  newTopicEffort?: HeterogeneousReasoningEffort;
   /** Parent message ID for regeneration/continue (skip user message creation, branch from this message) */
   parentMessageId?: string;
   prompt: string;

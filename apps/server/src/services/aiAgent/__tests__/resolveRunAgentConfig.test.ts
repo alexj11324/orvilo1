@@ -107,14 +107,14 @@ describe('resolveRunAgentConfig', () => {
     expect(getInfoForAIGeneration).toHaveBeenCalledWith(expect.anything(), 'member-1');
   });
 
-  it('applies a saved member device override to a regular workspace agent', async () => {
+  it('ignores a saved member device override for a regular workspace agent', async () => {
     getPreference.mockResolvedValue({
       agentDeviceOverrides: {
         'agent-regular': { boundDeviceId: 'dev-1', executionTarget: 'local' },
       },
     });
 
-    const { agentConfig, memberDeviceOverride } = await resolveRunAgentConfig(
+    const { agentConfig } = await resolveRunAgentConfig(
       {
         ...deps,
         resolveAgentConfigOrThrow: async () =>
@@ -123,8 +123,7 @@ describe('resolveRunAgentConfig', () => {
       { identifier: 'agent-regular', throwIfExecutionAborted: async () => {} },
     );
 
-    expect(memberDeviceOverride).toEqual({ boundDeviceId: 'dev-1', executionTarget: 'local' });
-    expect(agentConfig.agencyConfig?.executionTarget).toBe('local');
+    expect(agentConfig.agencyConfig?.executionTarget).toBeUndefined();
   });
 });
 

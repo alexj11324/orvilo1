@@ -525,22 +525,20 @@ describe('ToolExecutionService', () => {
       expect((result.error as any)?.code).toBe('MCP_DEVICE_UNAVAILABLE');
     });
 
-    it('addresses the personal pool for a personal-scope active device in a workspace run', async () => {
-      // per-user agent device override in workspace: a workspace agent routed to the caller's own machine has no
-      // connection under the workspace principal — a workspace-addressed call
-      // would miss it.
+    it('preserves workspace authorization for a saved device', async () => {
+      // Physical user routing is resolved inside DeviceGateway.
       const service = makeService();
 
       await service.executeTool(
         mcpPayload,
         contextWith(
           { args: [], command: 'npx', name: 'my-mcp', type: 'stdio' },
-          { activeDeviceId: 'device-1', activeDeviceScope: 'personal', workspaceId: 'ws-1' },
+          { activeDeviceId: 'device-1', workspaceId: 'ws-1' },
         ),
       );
 
       expect(deviceGateway.executeMcpCall).toHaveBeenCalledWith(
-        expect.objectContaining({ deviceId: 'device-1', workspaceId: undefined }),
+        expect.objectContaining({ deviceId: 'device-1', workspaceId: 'ws-1' }),
         undefined,
       );
     });

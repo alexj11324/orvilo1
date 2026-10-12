@@ -100,41 +100,9 @@ describe('topicSelectors', () => {
     ] as any;
     const state = merge(initialStore, { topicDataMap: pinTopicDataMap, activeAgentId: 'test' });
 
-    it('getTopicReasoningPinById returns the pinned model with its reasoning config', () => {
-      expect(topicSelectors.getTopicReasoningPinById('pinned')(state)).toEqual({
-        model: 'gpt-5',
-        provider: 'openai',
-        reasoningConfig: { reasoningEffort: 'high' },
-      });
-      expect(topicSelectors.getTopicReasoningPinById('legacy')(state)).toEqual({
-        model: 'gpt-5',
-        provider: 'openai',
-        reasoningConfig: undefined,
-      });
-      expect(topicSelectors.getTopicReasoningPinById('noModel')(state)).toBeUndefined();
-    });
-
-    it('getTopicReasoningConfigForModel only honors a pin taken for the same model', () => {
-      expect(
-        topicSelectors.getTopicReasoningConfigForModel('pinned', 'gpt-5', 'openai')(state),
-      ).toEqual({ reasoningEffort: 'high' });
-      // a sub-agent modelOverride must not inherit the parent topic's effort
-      expect(
-        topicSelectors.getTopicReasoningConfigForModel('pinned', 'gpt-4', 'openai')(state),
-      ).toBeUndefined();
-      expect(
-        topicSelectors.getTopicReasoningConfigForModel('pinned', 'gpt-5', 'azure')(state),
-      ).toBeUndefined();
-      expect(
-        topicSelectors.getTopicReasoningConfigForModel('legacy', 'gpt-5', 'openai')(state),
-      ).toBeUndefined();
-    });
-
     it('getTopicHeteroPinById combines the model columns with the effort pin', () => {
       expect(topicSelectors.getTopicHeteroPinById('heteroBoth')(state)).toEqual({
         effort: 'max',
-        model: 'opus',
-        provider: 'claude-code',
       });
       expect(topicSelectors.getTopicHeteroPinById('heteroEffortOnly')(state)).toEqual({
         effort: 'default',
@@ -147,49 +115,7 @@ describe('topicSelectors', () => {
       expect(topicSelectors.activeTopicHeteroPin(state)).toBeUndefined();
       expect(
         topicSelectors.activeTopicHeteroPin(merge(state, { activeTopicId: 'heteroBoth' })),
-      ).toEqual({ effort: 'max', model: 'opus', provider: 'claude-code' });
-    });
-  });
-
-  describe('getTopicModelById / activeTopicModel', () => {
-    const modelTopicDataMap = createTopicDataMap('test');
-    modelTopicDataMap[WORKSPACE_TOPIC_MAP_KEY].items = [
-      // Pinned model lives in the top-level `model`/`provider` columns, not metadata.
-      { id: 'withModel', name: 'With Model', model: 'gpt-5', provider: 'openai' },
-      { id: 'noModel', name: 'No Model' },
-      { id: 'modelOnly', name: 'Model Only', model: 'claude-opus-4-8' },
-    ] as any;
-
-    it('returns the model/provider pinned to a topic', () => {
-      const state = merge(initialStore, { topicDataMap: modelTopicDataMap, activeAgentId: 'test' });
-      expect(topicSelectors.getTopicModelById('withModel')(state)).toEqual({
-        model: 'gpt-5',
-        provider: 'openai',
-      });
-    });
-
-    it('defaults provider to empty string when only model is recorded', () => {
-      const state = merge(initialStore, { topicDataMap: modelTopicDataMap, activeAgentId: 'test' });
-      expect(topicSelectors.getTopicModelById('modelOnly')(state)).toEqual({
-        model: 'claude-opus-4-8',
-        provider: '',
-      });
-    });
-
-    it('returns undefined when the topic has no model recorded', () => {
-      const state = merge(initialStore, { topicDataMap: modelTopicDataMap, activeAgentId: 'test' });
-      expect(topicSelectors.getTopicModelById('noModel')(state)).toBeUndefined();
-    });
-
-    it('activeTopicModel reads the active topic model, undefined when no active topic', () => {
-      const base = merge(initialStore, { topicDataMap: modelTopicDataMap, activeAgentId: 'test' });
-      expect(topicSelectors.activeTopicModel(base)).toBeUndefined();
-
-      const active = merge(base, { activeTopicId: 'withModel' });
-      expect(topicSelectors.activeTopicModel(active)).toEqual({
-        model: 'gpt-5',
-        provider: 'openai',
-      });
+      ).toEqual({ effort: 'max' });
     });
   });
 

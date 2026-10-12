@@ -384,6 +384,8 @@
   "desktopNotification.aiReplyCompleted.title": "AI 回复完成",
   "desktopNotification.humanApprovalRequired.body": "Agent 需要你的批准后才能继续",
   "desktopNotification.humanApprovalRequired.title": "需要你的批准",
+  "deviceAdmission.agentSettings": "Agent 设置",
+  "deviceAdmission.askManager": "请联系此 Agent 的管理者更新运行设备。",
   "deviceAdmission.bindingChanged": "修复期间设备绑定已变化，未写入任何内容。",
   "deviceAdmission.connect": "连接设备",
   "deviceAdmission.operation": "运行：{{id}}",

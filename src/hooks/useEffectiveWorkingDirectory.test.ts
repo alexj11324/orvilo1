@@ -126,7 +126,11 @@ describe('useEffectiveWorkingDirectory', () => {
 
   it('still resolves explicitly configured directories with homeFallback disabled', () => {
     setupStores({
-      agencyConfig: { workingDirByDevice: { 'device-A': '/repo/project' } },
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'device-A',
+        workingDirByDevice: { 'device-A': '/repo/project' },
+      },
     });
 
     const { result } = renderHook(() =>
@@ -170,7 +174,11 @@ describe('useEffectiveWorkingDirectory', () => {
     (savedDirectory) => {
       setupStores({
         agencyConfig: savedDirectory
-          ? { workingDirByDevice: { 'device-A': savedDirectory } }
+          ? {
+              executionTarget: 'device',
+              boundDeviceId: 'device-A',
+              workingDirByDevice: { 'device-A': savedDirectory },
+            }
           : undefined,
         topicWorkingDirectory: '/repo/other-pane-topic',
         topicWorkingDirectoryConfig: {

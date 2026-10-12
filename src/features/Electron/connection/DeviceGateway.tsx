@@ -4,20 +4,19 @@ import { HardDrive, SettingsIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import {
-  getScopedConnectionCount,
-  getWorkspaceConnectionState,
+  getDeviceConnectionCount,
+  getDeviceConnectionState,
 } from '@/features/DeviceManager/connectionCount';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 
-import { type GatewayHint, resolveGatewayHints } from './gatewayHints';
+import { resolveGatewayHints } from './gatewayHints';
 
 const styles = {
   greenDot:
@@ -27,11 +26,7 @@ const styles = {
   statusTitle: 'text-sm leading-5.5 font-medium text-foreground',
 };
 
-interface DeviceGatewayProps {
-  workspaceScoped: boolean;
-}
-
-const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
+const DeviceGateway = memo(() => {
   const { t } = useTranslation('electron');
   const navigate = useWorkspaceAwareNavigate();
   const [
@@ -52,7 +47,6 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
 
   useFetchGatewayStatus();
   useElectronStore((s) => s.useFetchGatewayDeviceInfo)();
-  const gatewayDeviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
   const { data: devices, error: deviceListError, isLoading: isDeviceListLoading } = useDeviceList();
 
   useWatchBroadcast('gatewayConnectionStatusChanged', ({ localState, status }) => {
@@ -79,28 +73,18 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
     [connectGateway, disconnectGateway],
   );
 
-  const connectionCount = getScopedConnectionCount(
-    devices,
-    workspaceScoped ? 'workspace' : 'personal',
-    workspaceScoped ? undefined : gatewayDeviceInfo?.deviceId,
-  );
-  const workspaceConnectionState = getWorkspaceConnectionState(
-    devices,
-    isDeviceListLoading,
-    deviceListError,
-  );
+  const connectionCount = getDeviceConnectionCount(devices);
+  const connectionState = getDeviceConnectionState(devices, isDeviceListLoading, deviceListError);
   const hints = resolveGatewayHints({
-    // No device list yet counts as no connection.
     connectionCount: connectionCount ?? 0,
+    connectionState,
     isConnected,
     isConnecting,
-    workspaceConnectionState,
-    workspaceScoped,
   });
-  const hintText = ({ count, key }: GatewayHint) =>
-    count === undefined ? t(key) : t(key, { count });
-  const deviceHint = hintText(hints.device);
-  const connectionHint = hints.connection && hintText(hints.connection);
+  const connectionHint =
+    hints.connection.count === undefined
+      ? t(hints.connection.key)
+      : t(hints.connection.key, { count: hints.connection.count });
 
   const popoverContent = (
     <div className={cn(styles.popoverContent, 'flex flex-col gap-1')}>
@@ -117,7 +101,7 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
               navigate('/settings/devices');
             }}
           />
-          {!workspaceScoped && (
+          {
             <Switch
               aria-label={t('gateway.enableConnection')}
               checked={isConnected || isConnecting}
@@ -126,11 +110,10 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
               size="sm"
               onCheckedChange={handleSwitchChange}
             />
-          )}
+          }
         </div>
       </div>
-      <span className={styles.scopeHint}>{deviceHint}</span>
-      {connectionHint && <span className={styles.scopeHint}>{connectionHint}</span>}
+      <span className={styles.scopeHint}>{connectionHint}</span>
     </div>
   );
 
@@ -159,11 +142,10 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
 
 const DeviceGatewayWithAuth = memo(() => {
   const isSyncActive = useElectronStore(electronSyncSelectors.isSyncActive);
-  const activeWorkspaceSlug = useActiveWorkspaceSlug();
 
   if (!isSyncActive) return null;
 
-  return <DeviceGateway workspaceScoped={!!activeWorkspaceSlug} />;
+  return <DeviceGateway />;
 });
 
 export default DeviceGatewayWithAuth;

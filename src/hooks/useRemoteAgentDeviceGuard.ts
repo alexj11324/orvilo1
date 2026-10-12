@@ -27,10 +27,7 @@ export const useRemoteAgentDeviceGuard = ({
   agentId,
   enabled = true,
 }: UseRemoteAgentDeviceGuardOptions): UseRemoteAgentDeviceGuardResult => {
-  // Effective config = shared row + this member's per-agent device override
-  //. Checking the raw shared `boundDeviceId` would probe whichever
-  // machine landed on the shared row (usually the creator's, often offline)
-  // instead of the device THIS member picked — a false "device offline".
+  // Probe the Agent’s saved host; workspace members use the same binding.
   const { agencyConfig, isPreferenceLoading } = useTopicAgencyConfig(agentId);
 
   const boundDeviceId = agencyConfig?.boundDeviceId;
@@ -41,10 +38,7 @@ export const useRemoteAgentDeviceGuard = ({
   const check = useCallback(async () => {
     if (!enabled) return;
 
-    // The override hasn't loaded yet — `boundDeviceId` may still be the shared
-    // row's device. Stay in `checking` (non-blocking) rather than flash an
-    // offline banner for a device this member never picked; the load flips
-    // `isPreferenceLoading` and re-runs the check.
+    // Wait until the saved Agent configuration has loaded.
     if (isPreferenceLoading) {
       setStatus('checking');
       return;
@@ -61,7 +55,7 @@ export const useRemoteAgentDeviceGuard = ({
       const devices = await deviceService.listDevices();
       const device = devices.find((d) => d.deviceId === boundDeviceId);
 
-      // A shared/legacy binding may point at the author's personal principal,
+      // A saved binding may point at another member’s enrolling identity,
       // which is intentionally absent from the caller-scoped device list. The
       // server owns that routing decision; absence here is not proof of offline.
       if (!device) {
@@ -78,7 +72,6 @@ export const useRemoteAgentDeviceGuard = ({
         const capability = await deviceService.checkCapability({
           deviceId: boundDeviceId,
           platform: providerType,
-          scope: device.scope,
         });
         setStatus(capability.available ? 'ok' : 'platform-unavailable');
       } else {

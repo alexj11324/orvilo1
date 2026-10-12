@@ -16,7 +16,7 @@ const dynamicComponentPropsMock = vi.hoisted(() => vi.fn());
 
 const serverConfigMock = vi.hoisted(() => ({ enableBusinessFeatures: false }));
 const shareContextMock = vi.hoisted(() => ({ topicShareId: '' }));
-const repairContextMock = vi.hoisted(() => ({ canSelectPersonalDevice: true }));
+const repairContextMock = vi.hoisted(() => ({}));
 vi.mock('@/hooks/useTopicAgencyConfig', () => ({ useTopicAgencyConfig: () => repairContextMock }));
 const delAndRegenerateMessageMock = vi.hoisted(() => vi.fn());
 const detectHeterogeneousAgentCommandMock = vi.hoisted(() => vi.fn());
@@ -196,7 +196,6 @@ describe('ErrorMessageExtra', () => {
     businessSlot.render = false;
     serverConfigMock.enableBusinessFeatures = false;
     shareContextMock.topicShareId = '';
-    repairContextMock.canSelectPersonalDevice = true;
     businessErrorContentMock.mockReturnValue({
       errorType: undefined,
       hideMessage: false,
@@ -207,41 +206,25 @@ describe('ErrorMessageExtra', () => {
     displayMessageMock.clear();
   });
 
-  it('offers device setup for an admission failure instead of regeneration', () => {
-    displayMessageMock.set('msg-device', { parentId: 'user-1' });
-    render(
-      <ErrorMessageExtra
-        error={{ message: 'Temporary runtime outage' }}
-        data={{
-          id: 'msg-device',
-          error: {
-            type: AgentRuntimeErrorType.AgentRuntimeError,
-            body: { detail: 'DEVICE_REQUIRED: No authorized device.' },
-          },
-        }}
-      />,
-    );
-    expect(screen.getByText('deviceAdmission.required')).toBeInTheDocument();
-    expect(screen.queryByText('card-retry')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
-    expect(navigateMock).toHaveBeenCalledWith('/settings/devices', { escape: true });
-  });
-  it('keeps a fixed workspace device repair on workspace settings', () => {
-    repairContextMock.canSelectPersonalDevice = false;
+  it('routes structured device admission errors to their recovery card', () => {
+    const body = {
+      code: 'DEVICE_REQUIRED',
+      detail: 'Choose a device in Agent settings.',
+      retryable: false,
+    };
     render(
       <ErrorMessageExtra
         error={{ message: 'DEVICE_REQUIRED' }}
         data={{
-          id: 'fixed-device',
-          error: {
-            type: AgentRuntimeErrorType.AgentRuntimeError,
-            body: { detail: 'DEVICE_REQUIRED: Workspace pool is empty.' },
-          },
+          id: 'msg-device',
+          agentId: 'saved-agent',
+          error: { type: AgentRuntimeErrorType.AgentRuntimeError, body },
         }}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
-    expect(navigateMock).toHaveBeenCalledWith('/settings/devices');
+    expect(dynamicComponentPropsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ body, agentId: 'saved-agent', id: 'msg-device' }),
+    );
   });
 
   // Regression: the standalone surfaces (Assistant / Task / AgentCouncil) render

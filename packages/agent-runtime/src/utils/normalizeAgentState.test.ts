@@ -140,7 +140,6 @@ describe('normalizeAgentState', () => {
       ...baseState(),
       metadata: {
         _hooks: [{ id: 'h1', type: 'webhook', webhook: { url: 'https://x' } }],
-        activeDeviceScope: 'workspace',
         agentShareVisitor: { shareId: 'share-1', visitorUserId: 'visitor-1' },
         botContext: { applicationId: 'app-1', isOwner: true, platform: 'discord' },
         clientIp: '10.0.0.1',
@@ -162,7 +161,6 @@ describe('normalizeAgentState', () => {
     expect(normalized.principal).toEqual({
       actor: {
         bot: { applicationId: 'app-1', isOwner: true, platform: 'discord' },
-        deviceScope: 'workspace',
         shareVisitor: { shareId: 'share-1', visitorUserId: 'visitor-1' },
       },
       audit: { clientIp: '10.0.0.1', userAgent: 'orvilo-cli' },

@@ -9,7 +9,7 @@ import type * as WorkspaceModelModule from '@/database/models/workspace';
 import { deviceRouter } from '../device';
 
 const mocks = vi.hoisted(() => ({
-  findWorkspaceDeviceById: vi.fn(),
+  findExecutionDeviceById: vi.fn(),
   membershipRole: vi.fn(),
 }));
 
@@ -21,7 +21,10 @@ vi.mock('@/database/models/workspace', async (importOriginal) => ({
 vi.mock('@/database/models/device', async (importOriginal) => ({
   ...(await importOriginal<typeof DeviceModelModule>()),
   DeviceModel: class {
-    findWorkspaceDeviceById = mocks.findWorkspaceDeviceById;
+    getBoundAgentIds = async () => ['authorized-agent'];
+    findByDeviceId = async () => undefined;
+
+    findExecutionDeviceById = mocks.findExecutionDeviceById;
   },
 }));
 vi.mock('@/envs/gateway', () => ({
@@ -38,7 +41,7 @@ beforeEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
   mocks.membershipRole.mockResolvedValue('member');
-  mocks.findWorkspaceDeviceById.mockResolvedValue({ deviceId: 'device', visibility: 'public' });
+  mocks.findExecutionDeviceById.mockResolvedValue({ deviceId: 'device', userId: 'enroller' });
 });
 
 describe('device model catalog RPC contract', () => {
@@ -65,7 +68,7 @@ describe('device model catalog RPC contract', () => {
         }),
       ).resolves.toEqual(catalog);
       expect(invokeRpc).toHaveBeenCalledWith(
-        { deviceId: 'device', timeout: 20_000, userId: 'owner', workspaceId: 'workspace' },
+        { deviceId: 'device', timeout: 20_000, userId: 'enroller', workspaceId: undefined },
         {
           method: 'listHeterogeneousAgentModels',
           params: {
@@ -93,7 +96,7 @@ describe('device model catalog RPC contract', () => {
   });
 
   it('rejects an invisible device before invoking the catalog RPC', async () => {
-    mocks.findWorkspaceDeviceById.mockResolvedValue(undefined);
+    mocks.findExecutionDeviceById.mockResolvedValue(undefined);
     const invokeRpc = vi.spyOn(GatewayHttpClient.prototype, 'invokeRpc');
     await expect(
       caller().listHeterogeneousAgentModels({ deviceId: 'hidden-device', type: 'opencode' }),
@@ -110,3 +113,7 @@ describe('device model catalog RPC contract', () => {
     expect(invokeRpc).not.toHaveBeenCalled();
   });
 });
+
+vi.mock('../_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));

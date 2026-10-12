@@ -27,7 +27,10 @@ vi.mock('@/libs/trpc/client', () => ({
   createWorkspaceLambdaClient: () => ({
     home: { getSidebarAgentList: { query: api.listWorkspace } },
     workspaceUserSettings: { updatePreference: { mutate: api.preference } },
-    agent: { getAgentConfigById: { query: api.config } },
+    agent: {
+      getAgentConfigById: { query: api.config },
+      updateAgentConfig: { mutate: api.preference },
+    },
   }),
   lambdaClient: {
     creds: {
@@ -115,9 +118,8 @@ describe('first agent workspace checkpoint', () => {
     expect(api.transfer).toHaveBeenCalledTimes(1);
     expect(api.create).not.toHaveBeenCalled();
     expect(api.preference).toHaveBeenCalledWith({
-      agentDeviceOverrides: {
-        'first-agent': { executionTarget: 'device', boundDeviceId: 'chosen-device' },
-      },
+      agentId: 'first-agent',
+      value: { agencyConfig: { executionTarget: 'device', boundDeviceId: 'chosen-device' } },
     });
   });
   it('propagates a failed private transfer so onboarding cannot finish', async () => {
@@ -161,7 +163,8 @@ describe('first agent workspace checkpoint', () => {
     await ensureFirstAgentInWorkspace('first-agent', 'new-workspace', { executionTarget: 'local' });
     expect(api.devices).not.toHaveBeenCalled();
     expect(api.preference).toHaveBeenCalledWith({
-      agentDeviceOverrides: { 'first-agent': { executionTarget: 'local' } },
+      agentId: 'first-agent',
+      value: { agencyConfig: { executionTarget: 'local' } },
     });
   });
   it('rejects an unsupported local Prime target and a missing verified model route before completion', async () => {

@@ -3,7 +3,7 @@ import { mutate } from '@/libs/swr';
 /**
  * SWR cache key for the device list. Fetched via `useClientDataSWR`, which
  * augments the key with the active workspace id (`[KEY, workspaceId]`) so the
- * personal and per-workspace device pools never share a cache entry. Always an
+ * resource authorization contexts have separate cache entries. Always an
  * array so the augmented and personal forms match the same prefix.
  */
 export const DEVICE_LIST_SWR_KEY = 'device/listDevices';

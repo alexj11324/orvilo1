@@ -110,8 +110,8 @@ describe('resolveAgentDeviceSettingsState', () => {
 });
 
 describe('minimal Device section visibility', () => {
-  it('hides the entire settled singleton group without writing a binding', () => {
-    for (const bindingState of ['unset', 'valid'] as const) {
+  it('hides only an already-bound settled singleton group', () => {
+    for (const bindingState of ['valid'] as const) {
       expect(
         resolveAgentDeviceSettingsState(input({ selectableDeviceCount: 1, bindingState }))
           .showDeviceGroup,
@@ -138,7 +138,7 @@ describe('confirmed explicit local choice with optional unverified hosts', () =>
       explicitLocalDeviceIsEligible: true,
       runtimeInventoryOfflineOnly: true,
     });
-    expect(resolveAgentDeviceSettingsState(state).showDeviceGroup).toBe(false);
+    expect(resolveAgentDeviceSettingsState(state).showDeviceGroup).toBe(true);
     expect(state.deviceInventoryComplete).toBe(false);
   });
   it('keeps failed online verification and truly unbound uncertainty visible', () => {

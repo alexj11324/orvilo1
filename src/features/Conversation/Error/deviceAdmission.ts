@@ -14,6 +14,8 @@ const DEVICE_ADMISSION_ERROR_CODES = new Set<string>([
   'DEVICE_BINDING_INVALID',
   'DEVICE_INVENTORY_INCOMPLETE',
   'DEVICE_NOT_FOUND',
+  'DEVICE_OFFLINE',
+  'DEVICE_NOT_CONNECTED',
   'DEVICE_REQUEST_UNAUTHORIZED',
   'DEVICE_REQUIRED',
   'DEVICE_SELECTION_REQUIRED',
@@ -61,6 +63,10 @@ export const resolveDeviceAdmissionAction = (
     case 'EXECUTION_TARGET_NONE': {
       return 'repair';
     }
+    case 'DEVICE_OFFLINE':
+    case 'DEVICE_NOT_CONNECTED': {
+      return 'retry-inventory';
+    }
     case 'DEVICE_NOT_FOUND': {
       // With named repair candidates the user repairs in place; without them
       // the only way forward is to enroll a device.
@@ -94,3 +100,14 @@ export const resolveRepairCandidates = (
 
 export const deviceDisplayName = (device: DeviceListItem): string =>
   device.friendlyName || device.hostname || device.deviceId;
+
+/** Error recovery belongs to the assistant that failed, which may differ from its conversation owner. */
+export const resolveDeviceAdmissionAgentId = ({
+  explicitAgentId,
+  messageAgentId,
+  conversationAgentId,
+}: {
+  explicitAgentId?: string | null;
+  messageAgentId?: string | null;
+  conversationAgentId?: string | null;
+}) => explicitAgentId ?? messageAgentId ?? conversationAgentId ?? undefined;

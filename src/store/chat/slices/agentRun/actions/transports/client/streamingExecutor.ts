@@ -191,18 +191,7 @@ export class StreamingExecutorActionImpl {
       agencyConfig: getTopicAgencyConfig(resolvedAgentConfig.agentConfig.agencyConfig, topicId),
     };
 
-    // Resolve the effective model/provider, in precedence order:
-    // 1. `modelOverride` — forced by the spawn site (see runClientSubAgent); not
-    //    re-derived here because `isSubAgent` is also set for isolated group
-    //    members which must keep their own model, so it can't gate on its own.
-    // 2. Topic-scoped model — a topic snapshots the model it was created with and
-    //    remembers switches made while active (top-level `topics.model`/`provider`
-    //    columns, read via `getTopicModelById`), overriding the agent default so
-    //    the whole model→topic chain (tools, context window, generation) uses it.
-    // resolveAgentConfig returns an immer-frozen config, so build a new object
-    // rather than mutating in place.
-    const topicModel = topicId ? topicSelectors.getTopicModelById(topicId)(this.#get()) : undefined;
-    const modelResolution = modelOverride ?? topicModel;
+    const modelResolution = modelOverride;
     const agentConfig: ResolvedAgentConfig =
       (modelResolution || chatConfigOverride) && resolvedAgentConfig.agentConfig
         ? {
@@ -1093,8 +1082,7 @@ export class StreamingExecutorActionImpl {
       //    — topic-pinned model over the agent default, the same precedence
       //    internal_createAgentState applies to the parent run itself.
       const parentAgentConfig = agentSelectors.getAgentConfigById(agentId)(getAgentStoreState());
-      const parentEffectiveModel =
-        topicSelectors.getTopicModelById(topicId)(this.#get()) ?? parentAgentConfig;
+      const parentEffectiveModel = parentAgentConfig;
       const subAgentModel = resolveSubAgentModel(
         parentAgentConfig?.agencyConfig?.subagent,
         parentEffectiveModel,

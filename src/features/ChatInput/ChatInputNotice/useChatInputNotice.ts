@@ -1,6 +1,6 @@
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
-import { useAgentModelSelection } from '@/features/ChatInput/hooks/useAgentModelSelection';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
+import { useEffectiveModel } from '@/features/ChatInput/hooks/useEffectiveModel';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
@@ -80,15 +80,7 @@ export const useChatInputNotice = (): ChatInputNotice | undefined => {
     agentByIdSelectors.isAgentHeterogeneousById(agentId)(s),
   ]);
 
-  // Same source as the model trigger renders, so the notice can never judge a
-  // different model than the one the user sees (member overrides included).
-  const { isPreferenceLoading, model, provider, selectionPolicy } = useAgentModelSelection(agentId);
-
-  // `isPreferenceLoading` is true for every workspace agent while the shared
-  // preferences request is in flight, but the override only feeds the
-  // effective model under the `member` policy (`resolveAgentModelConfig`).
-  // Waiting on it for a `fixed` agent would swallow a genuine warning.
-  const isMemberOverridePending = selectionPolicy === 'member' && isPreferenceLoading;
+  const { model, provider } = useEffectiveModel(agentId);
 
   const enabledChatModelList = useEnabledChatModels();
   const isModelConfigReady = useAiInfraStore((s) =>
@@ -99,7 +91,7 @@ export const useChatInputNotice = (): ChatInputNotice | undefined => {
 
   return resolveChatInputNotice({
     currentChatModel,
-    isAgentModelPending: isAgentConfigLoading || isMemberOverridePending,
+    isAgentModelPending: isAgentConfigLoading,
     isGroupContext,
     isHeterogeneousAgent,
     isModelConfigReady,

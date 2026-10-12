@@ -3,28 +3,13 @@
 import type { DeviceListItem } from '@orvilo/types';
 import { useEffect, useState } from 'react';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useDeviceList } from '@/features/DeviceManager';
 import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 
-export const eligibleExecutionDevices = (
-  devices: DeviceListItem[],
-  workspaceId?: string,
-  visibility?: 'private' | 'public',
-) =>
-  devices.filter(
-    (device) =>
-      device.registered &&
-      device.online &&
-      (!workspaceId
-        ? device.scope === 'personal'
-        : visibility !== 'private'
-          ? device.scope === 'workspace' && device.visibility === 'public'
-          : true),
-  );
+export const eligibleExecutionDevices = (devices: DeviceListItem[]) =>
+  devices.filter((device) => device.registered && device.online);
 
-export const useExecutionHost = (visibility?: 'private' | 'public') => {
-  const workspaceId = useActiveWorkspaceId();
+export const useExecutionHost = () => {
   const { data: devices, error, mutate } = useDeviceList();
   const [localDeviceId, setLocalDeviceId] = useState<string>();
   const [identityChecked, setIdentityChecked] = useState(false);
@@ -42,9 +27,8 @@ export const useExecutionHost = (visibility?: 'private' | 'public') => {
       active = false;
     };
   }, [identityAttempt]);
-  const pickable = eligibleExecutionDevices(devices ?? [], workspaceId ?? undefined, visibility);
-  const allowLocal = !workspaceId || visibility === 'private';
-  const localId = allowLocal ? localDeviceId : undefined;
+  const pickable = eligibleExecutionDevices(devices ?? []);
+  const localId = localDeviceId;
   const deviceId = selectedId ?? localId ?? pickable[0]?.deviceId;
   const isLocal = !!deviceId && deviceId === localId;
   const device = pickable.find((row) => row.deviceId === deviceId);

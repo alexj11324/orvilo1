@@ -1,37 +1,12 @@
 import type { PartialDeep } from 'type-fest';
 import { z } from 'zod';
 
-import type { DeviceExecutionTarget } from '../agent/agencyConfig';
-import type { AgentModelOverride } from '../agent/modelSelection';
 import type { Plans } from '../subscription';
 import type { TopicGroupMode, TopicSortBy } from '../topic';
 import type { UserAgentOnboarding } from './agentOnboarding';
 import type { UserOnboarding } from './onboarding';
 import type { UserSettings } from './settings';
 import type { NotificationSettings } from './settings/notification';
-
-/**
- * Per-agent override for the device execution decision. Stored on
- * `workspace_user_settings.preference.agentDeviceOverrides` (see
- * {@link WorkspaceUserPreference}) and merged over `agents.agencyConfig` at
- * read time so each workspace member's Cloud Sandbox / workspace-device /
- * local-machine choice is independent — one member's pick never traps
- * another. See `resolveAgencyConfig` in
- * `packages/types/src/agent/agencyConfig.ts` for the merge implementation.
- *
- * Routing fields only, deliberately: `executionTarget`, `boundDeviceId`, and
- * the two `localSandbox*` fields (which qualify *this member's* local execution
- * — how hard their own machine is fenced is theirs to decide).
- * `heterogeneousProvider`, `verifyRubricId`, and `workingDirByDevice` remain
- * agent-shared because they describe *what the agent is*, not *how this user
- * routes it*.
- */
-export interface AgentDeviceOverride {
-  boundDeviceId?: string;
-  executionTarget?: DeviceExecutionTarget;
-  localSandbox?: boolean;
-  localSandboxNetwork?: boolean;
-}
 
 /**
  * Per-user preferences that only make sense inside a specific workspace.
@@ -63,9 +38,6 @@ export interface SidebarLayoutPreference {
 }
 
 export interface WorkspaceUserPreference {
-  agentDeviceOverrides?: Record<string /* agentId */, AgentDeviceOverride>;
-  /** Personal model choices for workspace agents that allow member selection. */
-  agentModelOverrides?: Record<string /* agentId */, AgentModelOverride>;
   /** Per-member Agent/Chat runtime mode for shared workspace agents. */
   agentModeOverrides?: Record<string /* agentId */, boolean>;
   /** The Agent this member's entry points open by default in this workspace; null clears it. */
@@ -124,6 +96,20 @@ export interface WorkspaceUserPreference {
    */
   sidebarPinnedOverrides?: Record<string /* itemId */, boolean>;
 }
+
+/** The only keys stored in workspace preferences. Unknown keys are discarded. */
+export const workspaceUserPreferenceSchema = z.object({
+  agentModeOverrides: z.record(z.string(), z.boolean()).optional(),
+  defaultAgentId: z.string().min(1).max(128).nullish(),
+  notification: z.custom<NotificationSettings>().optional(),
+  orchestratorAgentId: z.string().min(1).max(128).nullish(),
+  sidebar: z.custom<SidebarLayoutPreference>().optional(),
+  sidebarAgentVisibilityOverrides: z.record(z.string(), z.boolean()).optional(),
+  sidebarGroupAssignments: z.record(z.string(), z.string().nullable()).optional(),
+  sidebarHiddenAgentIds: z.array(z.string()).optional(),
+  sidebarHiddenGroupIds: z.array(z.string()).optional(),
+  sidebarPinnedOverrides: z.record(z.string(), z.boolean()).optional(),
+});
 
 export interface OrviloUser {
   avatar?: string;

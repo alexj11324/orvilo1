@@ -54,8 +54,6 @@ const withRuntime = async (
       deviceId: boundDeviceId,
       identitySource: 'installation',
       userId: actor,
-      visibility: workspaceId ? 'public' : 'private',
-      workspaceId,
     })
     .onConflictDoNothing();
   return {
@@ -67,9 +65,23 @@ const withRuntime = async (
       executionTarget: 'device' as const,
       heterogeneousProvider: { type: 'orvilo' as const },
       ...config.agencyConfig,
+      ...(config.agencyConfig?.heterogeneousProvider?.type &&
+      config.agencyConfig.heterogeneousProvider.type !== 'orvilo'
+        ? {
+            heterogeneousProvider: {
+              model: 'default',
+              ...config.agencyConfig.heterogeneousProvider,
+            },
+          }
+        : {}),
     },
   };
 };
+
+const withStoredRuntime = async (config: any): Promise<any> =>
+  Array.isArray(config)
+    ? Promise.all(config.map(withStoredRuntime))
+    : withRuntime(config, config.userId ?? userId, config.workspaceId ?? undefined);
 
 const knowledgeBase = { id: 'kb1', userId, name: 'knowledgeBase' };
 const knowledgeBase2 = { id: 'kb2', userId: userId2, name: 'knowledgeBase2' };
@@ -116,7 +128,6 @@ describe('agent runtime identity', () => {
             permission: { configId: 'approval', value: 'auto' },
           },
           workingDirByDevice: { 'creation-host-agent-model-test-user-id': '/old' },
-          modelSelectionPolicy: 'fixed',
         },
       }),
     );
@@ -131,8 +142,8 @@ describe('agent runtime identity', () => {
     ).agencyConfig;
     await agentModel.updateConfig(coordinator.id, { agencyConfig: nextAgency }, true);
     const updated = await serverDB.query.agents.findFirst({ where: eq(agents.id, coordinator.id) });
-    expect(updated?.agencyConfig).toEqual({ ...nextAgency, modelSelectionPolicy: 'fixed' });
-    expect(updated?.model).toBeNull();
+    expect(updated?.agencyConfig).toEqual(nextAgency);
+    expect(updated?.model).toBe('new-model');
     expect(updated?.provider).toBeNull();
     const builtinRuntime = await withRuntime();
     await agentModel.updateConfig(
@@ -210,7 +221,7 @@ describe('agent runtime identity', () => {
   it('keeps the runtime on rename and partial provider updates, and rejects invalid replacements', async () => {
     const agent = await agentModel.create(
       await withRuntime({
-        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        agencyConfig: { heterogeneousProvider: { type: 'codex', model: 'default' } },
         name: 'Codex',
       }),
     );
@@ -392,7 +403,7 @@ describe('AgentModel', () => {
     it('merges an effort-only provider patch with the persisted runtime type', async () => {
       const agent = await agentModel.create(
         await withRuntime({
-          agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+          agencyConfig: { heterogeneousProvider: { type: 'codex', model: 'default' } },
         }),
       );
       await agentModel.updateConfig(agent.id, {
@@ -416,7 +427,7 @@ describe('AgentModel', () => {
       async (agencyConfig) => {
         const agent = await agentModel.create(
           await withRuntime({
-            agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+            agencyConfig: { heterogeneousProvider: { type: 'codex', model: 'default' } },
           }),
         );
         await expect(agentModel.update(agent.id, { agencyConfig } as any)).rejects.toThrow(
@@ -448,10 +459,12 @@ describe('AgentModel', () => {
     it('is true only for the agent creator (edit-rights gate), not merely visibility', async () => {
       const ownAgent = 'owned-agent-id';
       const othersAgent = 'others-agent-id';
-      await serverDB.insert(agents).values([
-        { id: ownAgent, userId },
-        { id: othersAgent, userId: userId2 },
-      ]);
+      await serverDB.insert(agents).values(
+        await withStoredRuntime([
+          { id: ownAgent, userId },
+          { id: othersAgent, userId: userId2 },
+        ]),
+      );
 
       expect(await agentModel.existsOwnedById(ownAgent)).toBe(true);
       // Another user's agent is not "owned" even if it were visible.
@@ -464,7 +477,7 @@ describe('AgentModel', () => {
   describe('getAgentConfigById', () => {
     it('should return agent config with assigned knowledge', async () => {
       const agentId = 'test-agent-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
       await serverDB
         .insert(agentsKnowledgeBases)
         .values({ agentId, knowledgeBaseId: 'kb1', userId });
@@ -480,7 +493,7 @@ describe('AgentModel', () => {
 
     it('should fetch and include document content for enabled files', async () => {
       const agentId = 'test-agent-with-docs';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
       await serverDB.insert(agentsFiles).values({ agentId, fileId: '1', userId, enabled: true });
       await serverDB.insert(documents).values({
         id: 'doc1',
@@ -504,7 +517,7 @@ describe('AgentModel', () => {
 
     it('should not include content for disabled files', async () => {
       const agentId = 'test-agent-disabled-file';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
       await serverDB.insert(agentsFiles).values({ agentId, fileId: '1', userId, enabled: false });
       await serverDB.insert(documents).values({
         id: 'doc2',
@@ -528,7 +541,7 @@ describe('AgentModel', () => {
 
     it('should handle files without documents', async () => {
       const agentId = 'test-agent-no-docs';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
       await serverDB.insert(agentsFiles).values({ agentId, fileId: '2', userId, enabled: true });
 
       const result = await agentModel.getAgentConfigById(agentId);
@@ -540,7 +553,7 @@ describe('AgentModel', () => {
 
     it('should handle agent with no files', async () => {
       const agentId = 'test-agent-no-files';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
 
       const result = await agentModel.getAgentConfigById(agentId);
 
@@ -551,7 +564,9 @@ describe('AgentModel', () => {
     it('should not return agent belonging to another user', async () => {
       const agentId = 'test-agent-other-user';
       // Create agent for user2
-      await serverDB.insert(agents).values({ id: agentId, userId: userId2 });
+      await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ id: agentId, userId: userId2 }));
 
       // Try to access with user1's model
       const result = await agentModel.getAgentConfigById(agentId);
@@ -562,7 +577,9 @@ describe('AgentModel', () => {
     it('should not return knowledge from another user agent', async () => {
       const agentId = 'test-agent-cross-user-knowledge';
       // Create agent for user2 with knowledge
-      await serverDB.insert(agents).values({ id: agentId, userId: userId2 });
+      await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ id: agentId, userId: userId2 }));
       await serverDB
         .insert(agentsKnowledgeBases)
         .values({ agentId, knowledgeBaseId: 'kb2', userId: userId2 });
@@ -584,15 +601,17 @@ describe('AgentModel', () => {
         .returning();
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          model: 'runtime-model',
-          provider: 'runtime-provider',
-          slug: 'private-execution-agent',
-          systemRole: 'Private configured instructions',
-          userId,
-          visibility: 'private',
-          workspaceId: workspace.id,
-        })
+        .values(
+          await withStoredRuntime({
+            model: 'runtime-model',
+            provider: 'runtime-provider',
+            slug: 'private-execution-agent',
+            systemRole: 'Private configured instructions',
+            userId,
+            visibility: 'private',
+            workspaceId: workspace.id,
+          }),
+        )
         .returning();
       const memberModel = new AgentModel(serverDB, userId2, workspace.id);
       expect(await memberModel.getAgentConfigById(agent.id)).toBeNull();
@@ -663,13 +682,15 @@ describe('AgentModel', () => {
   describe('getAgentSnapshotForTaskCreate', () => {
     it('returns model/provider snapshot + visibility in one call', async () => {
       const agentId = 'snap-task-create-1';
-      await serverDB.insert(agents).values({
-        id: agentId,
-        model: 'claude-sonnet-4-6',
-        provider: 'anthropic',
-        userId,
-        visibility: 'private',
-      });
+      await serverDB.insert(agents).values(
+        await withStoredRuntime({
+          id: agentId,
+          model: 'claude-sonnet-4-6',
+          provider: 'anthropic',
+          userId,
+          visibility: 'private',
+        }),
+      );
 
       const result = await agentModel.getAgentSnapshotForTaskCreate(agentId);
 
@@ -681,12 +702,14 @@ describe('AgentModel', () => {
 
     it('returns null when the agent is not visible to the current caller', async () => {
       const agentId = 'snap-task-create-other-user';
-      await serverDB.insert(agents).values({
-        id: agentId,
-        model: 'gpt-4o',
-        provider: 'openai',
-        userId: userId2,
-      });
+      await serverDB.insert(agents).values(
+        await withStoredRuntime({
+          id: agentId,
+          model: 'gpt-4o',
+          provider: 'openai',
+          userId: userId2,
+        }),
+      );
 
       const result = await agentModel.getAgentSnapshotForTaskCreate(agentId);
 
@@ -697,7 +720,7 @@ describe('AgentModel', () => {
   describe('getAgentConfig', () => {
     it('should find agent by ID', async () => {
       const agentId = 'test-agent-by-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
 
       const result = await agentModel.getAgentConfig(agentId);
 
@@ -708,7 +731,7 @@ describe('AgentModel', () => {
     it('should find agent by slug when ID does not match', async () => {
       const agentId = 'test-agent-slug';
       const slug = 'my-agent-slug';
-      await serverDB.insert(agents).values({ id: agentId, slug, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, slug, userId }));
 
       const result = await agentModel.getAgentConfig(slug);
 
@@ -727,7 +750,9 @@ describe('AgentModel', () => {
       const agentId = 'test-agent-other-user';
       const slug = 'shared-slug';
       // Create agent with same slug but different user
-      await serverDB.insert(agents).values({ id: agentId, slug, userId: userId2 });
+      await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ id: agentId, slug, userId: userId2 }));
 
       const result = await agentModel.getAgentConfig(slug);
 
@@ -736,7 +761,9 @@ describe('AgentModel', () => {
 
     it('should not find agent by ID if it belongs to another user', async () => {
       const agentId = 'test-agent-cross-user';
-      await serverDB.insert(agents).values({ id: agentId, userId: userId2 });
+      await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ id: agentId, userId: userId2 }));
 
       // ID lookup should not work across users for security
       const result = await agentModel.getAgentConfig(agentId);
@@ -748,8 +775,10 @@ describe('AgentModel', () => {
       // Create two agents: one with ID "abc", another with slug "abc"
       const agent1Id = 'abc';
       const agent2Id = 'different-id';
-      await serverDB.insert(agents).values({ id: agent1Id, userId });
-      await serverDB.insert(agents).values({ id: agent2Id, slug: 'abc', userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agent1Id, userId }));
+      await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ id: agent2Id, slug: 'abc', userId }));
 
       const result = await agentModel.getAgentConfig('abc');
 
@@ -760,7 +789,7 @@ describe('AgentModel', () => {
 
     it('should enrich agent with knowledge when found', async () => {
       const agentId = 'test-agent-with-knowledge';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
       await serverDB
         .insert(agentsKnowledgeBases)
         .values({ agentId, knowledgeBaseId: 'kb1', userId });
@@ -778,7 +807,7 @@ describe('AgentModel', () => {
     it('should find agent by session id', async () => {
       const agentId = 'test-agent-id';
       const sessionId = 'test-session-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
       await serverDB.insert(sessions).values({ id: sessionId, userId });
       await serverDB.insert(agentsToSessions).values({ agentId, sessionId, userId });
 
@@ -798,7 +827,9 @@ describe('AgentModel', () => {
       const agentId = 'test-agent-other-user-session';
       const sessionId = 'test-session-other-user';
       // Create agent and session for user2
-      await serverDB.insert(agents).values({ id: agentId, userId: userId2 });
+      await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ id: agentId, userId: userId2 }));
       await serverDB.insert(sessions).values({ id: sessionId, userId: userId2 });
       await serverDB.insert(agentsToSessions).values({ agentId, sessionId, userId: userId2 });
 
@@ -812,7 +843,7 @@ describe('AgentModel', () => {
   describe('getAgentAssignedKnowledge', () => {
     it('should return knowledge bases and files for the agent', async () => {
       const agentId = 'test-agent-knowledge';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
       await serverDB
         .insert(agentsKnowledgeBases)
         .values({ agentId, knowledgeBaseId: 'kb1', userId, enabled: true });
@@ -827,7 +858,9 @@ describe('AgentModel', () => {
     it('should not return knowledge from another user', async () => {
       const agentId = 'test-agent-knowledge-other-user';
       // Create agent with knowledge for user2
-      await serverDB.insert(agents).values({ id: agentId, userId: userId2 });
+      await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ id: agentId, userId: userId2 }));
       await serverDB
         .insert(agentsKnowledgeBases)
         .values({ agentId, knowledgeBaseId: 'kb2', userId: userId2, enabled: true });
@@ -845,7 +878,7 @@ describe('AgentModel', () => {
 
     it('should handle empty knowledge bases and files', async () => {
       const agentId = 'test-agent-no-knowledge';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB.insert(agents).values(await withStoredRuntime({ id: agentId, userId }));
 
       const result = await agentModel.getAgentAssignedKnowledge(agentId);
 
@@ -887,12 +920,14 @@ describe('AgentModel', () => {
       });
 
       const agentId = 'agent-vis';
-      await serverDB.insert(agents).values({
-        id: agentId,
-        userId,
-        workspaceId: wsId,
-        visibility: 'public',
-      });
+      await serverDB.insert(agents).values(
+        await withStoredRuntime({
+          id: agentId,
+          userId,
+          workspaceId: wsId,
+          visibility: 'public',
+        }),
+      );
       await serverDB.insert(agentsKnowledgeBases).values({
         agentId,
         knowledgeBaseId: 'kb-vis',
@@ -940,7 +975,7 @@ describe('AgentModel', () => {
     it('should create a new agent knowledge base association with enabled=true by default', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -961,7 +996,7 @@ describe('AgentModel', () => {
     it('should create a new agent knowledge base association with enabled=false', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -984,7 +1019,7 @@ describe('AgentModel', () => {
     it('should delete an agent knowledge base association', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
       await serverDB
@@ -1003,7 +1038,7 @@ describe('AgentModel', () => {
     it('should not delete another user agent knowledge base association', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
       await serverDB
@@ -1026,7 +1061,7 @@ describe('AgentModel', () => {
     it('should toggle the enabled status of an agent knowledge base association', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1046,7 +1081,7 @@ describe('AgentModel', () => {
     it('should not toggle another user agent knowledge base association', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1070,7 +1105,7 @@ describe('AgentModel', () => {
     it('should create new agent file associations with enabled=true by default', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1092,7 +1127,7 @@ describe('AgentModel', () => {
     it('should create new agent file associations with enabled=false', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1114,7 +1149,7 @@ describe('AgentModel', () => {
     it('should skip files that already exist', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1136,7 +1171,7 @@ describe('AgentModel', () => {
     it('should return early when all files already exist', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1165,7 +1200,7 @@ describe('AgentModel', () => {
     it('should delete an agent file association', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1183,7 +1218,7 @@ describe('AgentModel', () => {
     it('should not delete another user agent file association', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1205,7 +1240,7 @@ describe('AgentModel', () => {
     it('should update agent fields and set updatedAt', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original Title' })
+        .values(await withStoredRuntime({ userId, title: 'Original Title' }))
         .returning()
         .then((res) => res[0]);
 
@@ -1228,7 +1263,7 @@ describe('AgentModel', () => {
     it('should not update another user agent', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original Title' })
+        .values(await withStoredRuntime({ userId, title: 'Original Title' }))
         .returning()
         .then((res) => res[0]);
 
@@ -1244,7 +1279,7 @@ describe('AgentModel', () => {
     it("should strip identity fields when updating the Agent Builder's own row", async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: 'agent-builder', userId })
+        .values(await withStoredRuntime({ slug: 'agent-builder', userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1278,7 +1313,7 @@ describe('AgentModel', () => {
       // agentModel.update(agentId, { editorData: null, systemRole }) directly.
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: 'agent-builder', userId })
+        .values(await withStoredRuntime({ slug: 'agent-builder', userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1297,7 +1332,7 @@ describe('AgentModel', () => {
     it('should not strip identity fields for a regular agent whose slug happens to differ', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: 'my-custom-agent', userId, title: 'Original' })
+        .values(await withStoredRuntime({ slug: 'my-custom-agent', userId, title: 'Original' }))
         .returning()
         .then((res) => res[0]);
 
@@ -1323,12 +1358,14 @@ describe('AgentModel', () => {
       ]);
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          userId,
-          workspaceId: workspace.id,
-          visibility: 'public',
-          title: 'Owner configuration',
-        })
+        .values(
+          await withStoredRuntime({
+            userId,
+            workspaceId: workspace.id,
+            visibility: 'public',
+            title: 'Owner configuration',
+          }),
+        )
         .returning();
       const memberModel = new AgentModel(serverDB, userId2, workspace.id);
       await expect(memberModel.touchUpdatedAt(agent.id)).resolves.toBeDefined();
@@ -1341,7 +1378,9 @@ describe('AgentModel', () => {
     it('should only update updatedAt without changing other fields', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'My Agent', description: 'My Description' })
+        .values(
+          await withStoredRuntime({ userId, title: 'My Agent', description: 'My Description' }),
+        )
         .returning()
         .then((res) => res[0]);
 
@@ -1364,7 +1403,7 @@ describe('AgentModel', () => {
     it('should not touch another user agent updatedAt', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'My Agent' })
+        .values(await withStoredRuntime({ userId, title: 'My Agent' }))
         .returning()
         .then((res) => res[0]);
 
@@ -1441,13 +1480,13 @@ describe('AgentModel', () => {
       // missing-agent FK and retries forever, stranding the copy as pending.
       const [agent] = await serverDB
         .insert(agents)
-        .values({ title: 'Copied Member', userId })
+        .values(await withStoredRuntime({ title: 'Copied Member', userId }))
         .returning();
       // A DIFFERENT source agent, so only the target-side junction guard can
       // catch this — the source-side guard must not be what fires.
       const [sourceAgent] = await serverDB
         .insert(agents)
-        .values({ title: 'Copy Source', userId })
+        .values(await withStoredRuntime({ title: 'Copy Source', userId }))
         .returning();
 
       const [job] = await serverDB
@@ -1477,7 +1516,7 @@ describe('AgentModel', () => {
       // Create agent and session
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Test Agent' })
+        .values(await withStoredRuntime({ userId, title: 'Test Agent' }))
         .returning();
       const [session] = await serverDB
         .insert(sessions)
@@ -1513,7 +1552,7 @@ describe('AgentModel', () => {
       // Create agent with multiple sessions
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Multi-session Agent' })
+        .values(await withStoredRuntime({ userId, title: 'Multi-session Agent' }))
         .returning();
       const [session1] = await serverDB
         .insert(sessions)
@@ -1547,7 +1586,7 @@ describe('AgentModel', () => {
       // Create agent without session
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'No-session Agent' })
+        .values(await withStoredRuntime({ userId, title: 'No-session Agent' }))
         .returning();
 
       // Delete the agent
@@ -1564,7 +1603,7 @@ describe('AgentModel', () => {
       // Create agent for user1
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'User1 Agent' })
+        .values(await withStoredRuntime({ userId, title: 'User1 Agent' }))
         .returning();
       const [session] = await serverDB
         .insert(sessions)
@@ -1595,7 +1634,7 @@ describe('AgentModel', () => {
       // Create agent with files and knowledge bases
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Agent with knowledge' })
+        .values(await withStoredRuntime({ userId, title: 'Agent with knowledge' }))
         .returning();
       await serverDB.insert(agentsFiles).values({ agentId: agent.id, fileId: '1', userId });
       await serverDB
@@ -1629,7 +1668,7 @@ describe('AgentModel', () => {
     it('should toggle the enabled status of an agent file association', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1649,7 +1688,7 @@ describe('AgentModel', () => {
     it('should not toggle another user agent file association', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId })
+        .values(await withStoredRuntime({ userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1673,10 +1712,12 @@ describe('AgentModel', () => {
     it('replaces the profile wholesale so a removed trait can be cleared', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({
-          profile: { artworkStyle: 'anime', fullBodyArtwork: 'https://cdn/full-body.png' },
-          userId,
-        })
+        .values(
+          await withStoredRuntime({
+            profile: { artworkStyle: 'anime', fullBodyArtwork: 'https://cdn/full-body.png' },
+            userId,
+          }),
+        )
         .returning()
         .then((res) => res[0]);
 
@@ -1720,7 +1761,7 @@ describe('AgentModel', () => {
     it('should update updatedAt even when only updating meta fields like avatar', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Test Agent', avatar: 'old-avatar' })
+        .values(await withStoredRuntime({ userId, title: 'Test Agent', avatar: 'old-avatar' }))
         .returning()
         .then((res) => res[0]);
 
@@ -1743,7 +1784,7 @@ describe('AgentModel', () => {
     it('should not update another user agent', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original Title' })
+        .values(await withStoredRuntime({ userId, title: 'Original Title' }))
         .returning()
         .then((res) => res[0]);
 
@@ -1759,7 +1800,7 @@ describe('AgentModel', () => {
     it("should strip systemRole when updating the Agent Builder's own row", async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: 'agent-builder', userId })
+        .values(await withStoredRuntime({ slug: 'agent-builder', userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1782,7 +1823,7 @@ describe('AgentModel', () => {
       // agentModel.updateConfig() rather than update().
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: 'agent-builder', userId })
+        .values(await withStoredRuntime({ slug: 'agent-builder', userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1818,13 +1859,13 @@ describe('AgentModel', () => {
       // GATEWAY_NOT_CONFIGURED.
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: INBOX_SESSION_ID, userId })
+        .values(await withStoredRuntime({ slug: INBOX_SESSION_ID, userId }))
         .returning()
         .then((res) => res[0]);
 
       await agentModel.updateConfig(agent.id, {
         agencyConfig: {
-          heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+          heterogeneousProvider: { command: 'claude', type: 'claude-code', model: 'default' },
         },
         model: 'gpt-4', // non-protected field should still be applied
       } as any);
@@ -1843,7 +1884,7 @@ describe('AgentModel', () => {
       // is silently reverted.
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: INBOX_SESSION_ID, userId })
+        .values(await withStoredRuntime({ slug: INBOX_SESSION_ID, userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1867,7 +1908,9 @@ describe('AgentModel', () => {
         .insert(agents)
         .values({
           ...(await withRuntime({
-            agencyConfig: { heterogeneousProvider: { type: 'claude-code', command: 'claude' } },
+            agencyConfig: {
+              heterogeneousProvider: { type: 'claude-code', command: 'claude', model: 'default' },
+            },
           })),
           slug: 'my-claude-code',
           userId,
@@ -1877,7 +1920,7 @@ describe('AgentModel', () => {
 
       await agentModel.updateConfig(agent.id, {
         agencyConfig: {
-          heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+          heterogeneousProvider: { command: 'claude', type: 'claude-code', model: 'default' },
         },
       } as any);
 
@@ -1888,6 +1931,7 @@ describe('AgentModel', () => {
       expect((result?.agencyConfig as any)?.heterogeneousProvider).toEqual({
         command: 'claude',
         type: 'claude-code',
+        model: 'default',
       });
     });
 
@@ -1897,7 +1941,7 @@ describe('AgentModel', () => {
       // must sanitize the model too.
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: INBOX_SESSION_ID, userId })
+        .values(await withStoredRuntime({ slug: INBOX_SESSION_ID, userId }))
         .returning()
         .then((res) => res[0]);
 
@@ -1910,28 +1954,6 @@ describe('AgentModel', () => {
       expect(result?.model).toBeNull();
     });
 
-    it('should keep a legacy heterogeneous model id for non-inbox agents', async () => {
-      const agent = await serverDB
-        .insert(agents)
-        .values({
-          ...(await withRuntime({
-            agencyConfig: { heterogeneousProvider: { type: 'claude-code', command: 'claude' } },
-          })),
-          slug: 'my-claude-code',
-          userId,
-        })
-        .returning()
-        .then((res) => res[0]);
-
-      await agentModel.updateConfig(agent.id, { model: 'claude-code' } as any);
-
-      const result = await serverDB.query.agents.findFirst({
-        where: eq(agents.id, agent.id),
-      });
-
-      expect(result?.model).toBe('claude-code');
-    });
-
     it('migration — a model switch preserves instructions, memory and device binding', async () => {
       // Contract §migration: switching models never batch-clears the rest of
       // the config surface. Pin the whole row so a future wipe regression
@@ -1940,22 +1962,24 @@ describe('AgentModel', () => {
       const seededAgencyConfig: OrviloAgentAgencyConfig = {
         boundDeviceId: `creation-host-${userId}`,
         executionTarget: 'device',
-        heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+        heterogeneousProvider: { command: 'claude', type: 'claude-code', model: 'default' },
       };
       const agent = await serverDB
         .insert(agents)
-        .values({
-          agencyConfig: seededAgencyConfig,
-          chatConfig: { historyCount: 8 },
-          editorData: { memory: 'user prefers terse replies' },
-          model: 'gpt-4',
-          params: { frequency_penalty: 0.2 },
-          profile: { artworkStyle: 'anime' },
-          provider: 'openai',
-          systemRole: 'You are a careful reviewer.',
-          title: 'Instructions Agent',
-          userId,
-        })
+        .values(
+          await withStoredRuntime({
+            agencyConfig: seededAgencyConfig,
+            chatConfig: { historyCount: 8 },
+            editorData: { memory: 'user prefers terse replies' },
+            model: 'gpt-4',
+            params: { frequency_penalty: 0.2 },
+            profile: { artworkStyle: 'anime' },
+            provider: 'openai',
+            systemRole: 'You are a careful reviewer.',
+            title: 'Instructions Agent',
+            userId,
+          }),
+        )
         .returning()
         .then((res) => res[0]);
 
@@ -1975,7 +1999,13 @@ describe('AgentModel', () => {
       expect(result?.editorData).toEqual({ memory: 'user prefers terse replies' });
       expect(result?.params).toEqual({ frequency_penalty: 0.2 });
       expect(result?.profile).toEqual({ artworkStyle: 'anime' });
-      expect(result?.agencyConfig).toEqual(seededAgencyConfig);
+      expect(result?.agencyConfig).toEqual({
+        ...seededAgencyConfig,
+        heterogeneousProvider: {
+          ...seededAgencyConfig.heterogeneousProvider,
+          model: 'claude-sonnet-4-5',
+        },
+      });
     });
 
     it.each(['updateConfig', 'create'] as const)(
@@ -2035,7 +2065,14 @@ describe('AgentModel', () => {
     ]);
     const [agent] = await serverDB
       .insert(agents)
-      .values({ userId, workspaceId: workspace.id, visibility: 'public', title: 'Shared Agent' })
+      .values(
+        await withStoredRuntime({
+          userId,
+          workspaceId: workspace.id,
+          visibility: 'public',
+          title: 'Shared Agent',
+        }),
+      )
       .returning();
     const memberModel = new AgentModel(serverDB, userId2, workspace.id);
     await expect(memberModel.update(agent.id, { title: 'Changed' })).rejects.toMatchObject({
@@ -2089,9 +2126,7 @@ describe('AgentModel', () => {
       expect(workspaceAgent.agencyConfig).toEqual({
         boundDeviceId: `creation-host-${workspace.id}`,
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'member',
         heterogeneousProvider: { type: 'orvilo' },
-        modelSelectionPolicy: 'member',
         topicSharePolicy: 'member',
       });
       expect(personalAgent.agencyConfig).toEqual({
@@ -2121,12 +2156,7 @@ describe('AgentModel', () => {
         .update(workspaceMembers)
         .set({ suspendedAt: null })
         .where(eq(workspaceMembers.userId, userId));
-      await expect(model.create({ ...config, visibility: 'private' })).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-      });
-      expect(
-        await serverDB.select().from(agents).where(eq(agents.workspaceId, workspace.id)),
-      ).toEqual([]);
+      expect((await model.create({ ...config, visibility: 'private' })).visibility).toBe('private');
       const created = await model.create(config);
       expect(created.visibility).toBe('public');
       expect(
@@ -2305,7 +2335,7 @@ describe('AgentModel', () => {
       expect(created.find((a) => a.title === 'Legit B')?.slug).toBe('fine-slug');
     });
 
-    it('should preserve explicit workspace selection policies over the defaults', async () => {
+    it('persists a selected runtime and the remaining topic-sharing permission', async () => {
       const [workspace] = await serverDB
         .insert(workspaces)
         .values({
@@ -2325,9 +2355,7 @@ describe('AgentModel', () => {
           agencyConfig: {
             boundDeviceId: `creation-host-${workspace.id}`,
             executionTarget: 'device',
-            heterogeneousProvider: { type: 'codex' },
-            executionTargetSelectionPolicy: 'fixed',
-            modelSelectionPolicy: 'member',
+            heterogeneousProvider: { type: 'codex', model: 'default' },
           },
           title: 'Custom Policies',
         },
@@ -2336,9 +2364,7 @@ describe('AgentModel', () => {
       expect(result.agencyConfig).toEqual({
         boundDeviceId: `creation-host-${workspace.id}`,
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
-        heterogeneousProvider: { type: 'codex' },
-        modelSelectionPolicy: 'member',
+        heterogeneousProvider: { type: 'codex', model: 'default' },
         topicSharePolicy: 'member',
       });
     });
@@ -2403,12 +2429,12 @@ describe('AgentModel', () => {
         {
           title: 'Agent 2',
           model: undefined,
-          agencyConfig: { heterogeneousProvider: { type: 'codex' as const } },
+          agencyConfig: { heterogeneousProvider: { type: 'codex' as const, model: 'default' } },
         },
         {
           title: 'Agent 3',
           model: undefined,
-          agencyConfig: { heterogeneousProvider: { type: 'codex' as const } },
+          agencyConfig: { heterogeneousProvider: { type: 'codex' as const, model: 'default' } },
         },
       ];
 
@@ -2648,9 +2674,7 @@ describe('AgentModel', () => {
         expect(result?.workspaceId).toBe(workspace.id);
         expect(result?.userId).toBe(userId);
         expect(result?.agencyConfig).toEqual({
-          executionTargetSelectionPolicy: 'member',
           heterogeneousProvider: { type: 'orvilo' },
-          modelSelectionPolicy: 'member',
           topicSharePolicy: 'member',
         });
       });
@@ -2712,15 +2736,15 @@ describe('AgentModel', () => {
       // Create multiple agents
       const [agent1] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Agent 1' })
+        .values(await withStoredRuntime({ userId, title: 'Agent 1' }))
         .returning();
       const [agent2] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Agent 2' })
+        .values(await withStoredRuntime({ userId, title: 'Agent 2' }))
         .returning();
       const [agent3] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Agent 3' })
+        .values(await withStoredRuntime({ userId, title: 'Agent 3' }))
         .returning();
 
       // Batch delete agent1 and agent2
@@ -2748,7 +2772,7 @@ describe('AgentModel', () => {
       // Create an agent to ensure the test has something to potentially delete
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Test Agent' })
+        .values(await withStoredRuntime({ userId, title: 'Test Agent' }))
         .returning();
 
       // Call batchDelete with empty array
@@ -2768,11 +2792,11 @@ describe('AgentModel', () => {
       // Create agents for user1
       const [agent1] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'User1 Agent 1' })
+        .values(await withStoredRuntime({ userId, title: 'User1 Agent 1' }))
         .returning();
       const [agent2] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'User1 Agent 2' })
+        .values(await withStoredRuntime({ userId, title: 'User1 Agent 2' }))
         .returning();
 
       // Try to batch delete with user2's model
@@ -2793,7 +2817,7 @@ describe('AgentModel', () => {
       // Create an agent
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Valid Agent' })
+        .values(await withStoredRuntime({ userId, title: 'Valid Agent' }))
         .returning();
 
       // Batch delete with one valid and one invalid ID
@@ -2810,7 +2834,7 @@ describe('AgentModel', () => {
       // Create agent with files and knowledge bases
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Agent with knowledge' })
+        .values(await withStoredRuntime({ userId, title: 'Agent with knowledge' }))
         .returning();
       await serverDB.insert(agentsFiles).values({ agentId: agent.id, fileId: '1', userId });
       await serverDB
@@ -3333,40 +3357,44 @@ describe('AgentModel', () => {
     });
 
     it('should count agents with null virtual field (treat as non-virtual)', async () => {
-      await serverDB.insert(agents).values({
-        id: 'null-virtual-agent-count',
-        title: 'Null Virtual Agent',
-        userId,
-        virtual: null as unknown as boolean,
-      });
+      await serverDB.insert(agents).values(
+        await withStoredRuntime({
+          id: 'null-virtual-agent-count',
+          title: 'Null Virtual Agent',
+          userId,
+          virtual: null as unknown as boolean,
+        }),
+      );
 
       expect(await agentModel.countAgents()).toBe(1);
     });
 
     it('should apply endDate / startDate / range filters against createdAt', async () => {
-      await serverDB.insert(agents).values([
-        {
-          id: 'old-agent',
-          title: 'Old Agent',
-          userId,
-          virtual: false,
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-        },
-        {
-          id: 'mid-agent',
-          title: 'Mid Agent',
-          userId,
-          virtual: false,
-          createdAt: new Date('2024-06-01T00:00:00Z'),
-        },
-        {
-          id: 'new-agent',
-          title: 'New Agent',
-          userId,
-          virtual: false,
-          createdAt: new Date('2024-12-01T00:00:00Z'),
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withStoredRuntime([
+          {
+            id: 'old-agent',
+            title: 'Old Agent',
+            userId,
+            virtual: false,
+            createdAt: new Date('2024-01-01T00:00:00Z'),
+          },
+          {
+            id: 'mid-agent',
+            title: 'Mid Agent',
+            userId,
+            virtual: false,
+            createdAt: new Date('2024-06-01T00:00:00Z'),
+          },
+          {
+            id: 'new-agent',
+            title: 'New Agent',
+            userId,
+            virtual: false,
+            createdAt: new Date('2024-12-01T00:00:00Z'),
+          },
+        ]),
+      );
 
       expect(await agentModel.countAgents({ endDate: '2024-03-01' })).toBe(1);
       expect(await agentModel.countAgents({ startDate: '2024-07-01' })).toBe(1);
@@ -3376,11 +3404,13 @@ describe('AgentModel', () => {
 
   describe('checkByMarketIdentifier', () => {
     it('should return true when agent with marketIdentifier exists', async () => {
-      await serverDB.insert(agents).values({
-        userId,
-        title: 'Market Agent',
-        marketIdentifier: 'market-test-123',
-      });
+      await serverDB.insert(agents).values(
+        await withStoredRuntime({
+          userId,
+          title: 'Market Agent',
+          marketIdentifier: 'market-test-123',
+        }),
+      );
 
       const result = await agentModel.checkByMarketIdentifier('market-test-123');
       expect(result).toBe(true);
@@ -3392,11 +3422,13 @@ describe('AgentModel', () => {
     });
 
     it('should not find agents belonging to other users', async () => {
-      await serverDB.insert(agents).values({
-        userId: userId2,
-        title: 'Other User Agent',
-        marketIdentifier: 'other-user-market',
-      });
+      await serverDB.insert(agents).values(
+        await withStoredRuntime({
+          userId: userId2,
+          title: 'Other User Agent',
+          marketIdentifier: 'other-user-market',
+        }),
+      );
 
       const result = await agentModel.checkByMarketIdentifier('other-user-market');
       expect(result).toBe(false);
@@ -3407,7 +3439,13 @@ describe('AgentModel', () => {
     it('should return agent id when found', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Market Agent', marketIdentifier: 'market-get-123' })
+        .values(
+          await withStoredRuntime({
+            userId,
+            title: 'Market Agent',
+            marketIdentifier: 'market-get-123',
+          }),
+        )
         .returning();
 
       const result = await agentModel.getAgentByMarketIdentifier('market-get-123');
@@ -3422,14 +3460,14 @@ describe('AgentModel', () => {
     it('should return the most recently updated agent when multiple match', async () => {
       const [_older] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Older', marketIdentifier: 'dup-market' })
+        .values(await withStoredRuntime({ userId, title: 'Older', marketIdentifier: 'dup-market' }))
         .returning();
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       const [newer] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Newer', marketIdentifier: 'dup-market' })
+        .values(await withStoredRuntime({ userId, title: 'Newer', marketIdentifier: 'dup-market' }))
         .returning();
 
       const result = await agentModel.getAgentByMarketIdentifier('dup-market');
@@ -3437,11 +3475,13 @@ describe('AgentModel', () => {
     });
 
     it('should not return agents from other users', async () => {
-      await serverDB.insert(agents).values({
-        userId: userId2,
-        title: 'Other',
-        marketIdentifier: 'other-market-get',
-      });
+      await serverDB.insert(agents).values(
+        await withStoredRuntime({
+          userId: userId2,
+          title: 'Other',
+          marketIdentifier: 'other-market-get',
+        }),
+      );
 
       const result = await agentModel.getAgentByMarketIdentifier('other-market-get');
       expect(result).toBeNull();
@@ -3452,11 +3492,13 @@ describe('AgentModel', () => {
     it('should return agent id when forkedFromIdentifier matches', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          userId,
-          title: 'Forked Agent',
-          params: { forkedFromIdentifier: 'source-market-id' },
-        })
+        .values(
+          await withStoredRuntime({
+            userId,
+            title: 'Forked Agent',
+            params: { forkedFromIdentifier: 'source-market-id' },
+          }),
+        )
         .returning();
 
       const result = await agentModel.getAgentByForkedFromIdentifier('source-market-id');
@@ -3469,11 +3511,13 @@ describe('AgentModel', () => {
     });
 
     it('should not return agents from other users', async () => {
-      await serverDB.insert(agents).values({
-        userId: userId2,
-        title: 'Other Forked',
-        params: { forkedFromIdentifier: 'other-fork-id' },
-      });
+      await serverDB.insert(agents).values(
+        await withStoredRuntime({
+          userId: userId2,
+          title: 'Other Forked',
+          params: { forkedFromIdentifier: 'other-fork-id' },
+        }),
+      );
 
       const result = await agentModel.getAgentByForkedFromIdentifier('other-fork-id');
       expect(result).toBeNull();
@@ -3516,7 +3560,10 @@ describe('AgentModel', () => {
         .values({ userId, name: 'Test Group' })
         .returning();
 
-      const [agent] = await serverDB.insert(agents).values({ userId, title: 'Agent' }).returning();
+      const [agent] = await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ userId, title: 'Agent' }))
+        .returning();
 
       const result = await agentModel.updateSessionGroupId(agent.id, group.id);
 
@@ -3532,7 +3579,7 @@ describe('AgentModel', () => {
 
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Agent', sessionGroupId: group.id })
+        .values(await withStoredRuntime({ userId, title: 'Agent', sessionGroupId: group.id }))
         .returning();
 
       const result = await agentModel.updateSessionGroupId(agent.id, null);
@@ -3549,7 +3596,10 @@ describe('AgentModel', () => {
         .values({ userId: userId2, name: 'Someone else' })
         .returning();
 
-      const [agent] = await serverDB.insert(agents).values({ userId, title: 'Agent' }).returning();
+      const [agent] = await serverDB
+        .insert(agents)
+        .values(await withStoredRuntime({ userId, title: 'Agent' }))
+        .returning();
 
       await expect(agentModel.updateSessionGroupId(agent.id, foreignGroup.id)).rejects.toThrow(
         /not found in current scope/,
@@ -3562,7 +3612,7 @@ describe('AgentModel', () => {
     it('should not update agents from other users', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'User1 Agent' })
+        .values(await withStoredRuntime({ userId, title: 'User1 Agent' }))
         .returning();
 
       const result = await agentModel2.updateSessionGroupId(agent.id, null);
@@ -3583,10 +3633,8 @@ describe('AgentModel', () => {
       await serverDB.insert(workspaceMembers).values({ workspaceId: wsId, userId, role: 'owner' });
       await serverDB.insert(devices).values({
         deviceId: 'ws-device-1',
-        visibility: 'public',
         identitySource: 'machine-id',
         userId,
-        workspaceId: wsId,
       });
     };
 
@@ -3594,7 +3642,9 @@ describe('AgentModel', () => {
       await seedWorkspace();
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, visibility: 'public', workspaceId: wsId } as NewAgent)
+        .values(
+          await withStoredRuntime({ userId, visibility: 'public', workspaceId: wsId } as NewAgent),
+        )
         .returning();
 
       const wsModel = new AgentModel(serverDB, userId, wsId);
@@ -3609,7 +3659,9 @@ describe('AgentModel', () => {
       await seedWorkspace();
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, visibility: 'public', workspaceId: wsId } as NewAgent)
+        .values(
+          await withStoredRuntime({ userId, visibility: 'public', workspaceId: wsId } as NewAgent),
+        )
         .returning();
 
       const wsModel = new AgentModel(serverDB, userId, wsId);
@@ -3617,44 +3669,7 @@ describe('AgentModel', () => {
         agencyConfig: {
           boundDeviceId: 'ws-device-1',
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
-        },
-      } as any);
-
-      const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
-      expect(result?.agencyConfig).toMatchObject({
-        boundDeviceId: 'ws-device-1',
-        executionTarget: 'device',
-      });
-    });
-
-    it('grandfathers legacy device ids already stored on the agent', async () => {
-      await seedWorkspace();
-      // A stale personal-device reference left from before the agent joined the
-      // workspace (the device row no longer exists at all). Client patches
-      // spread the whole stored agencyConfig, so without grandfathering this
-      // agent could never bind any device again.
-      const [agent] = await serverDB
-        .insert(agents)
-        .values({
-          agencyConfig: {
-            boundDeviceId: 'stale-personal-device',
-            executionTarget: 'local',
-            workingDirByDevice: { 'stale-personal-device': '/Users/old/dir' },
-          },
-          userId,
-          visibility: 'public',
-          workspaceId: wsId,
-        } as NewAgent)
-        .returning();
-
-      const wsModel = new AgentModel(serverDB, userId, wsId);
-      await wsModel.updateConfig(agent.id, {
-        agencyConfig: {
-          boundDeviceId: 'ws-device-1',
-          executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
-          workingDirByDevice: { 'stale-personal-device': '/Users/old/dir' },
+          heterogeneousProvider: { type: 'orvilo' },
         },
       } as any);
 
@@ -3669,15 +3684,17 @@ describe('AgentModel', () => {
       await seedWorkspace();
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          agencyConfig: {
-            boundDeviceId: 'stale-personal-device',
-            executionTarget: 'local',
-          },
-          userId,
-          visibility: 'public',
-          workspaceId: wsId,
-        } as NewAgent)
+        .values(
+          await withStoredRuntime({
+            agencyConfig: {
+              boundDeviceId: 'stale-personal-device',
+              executionTarget: 'local',
+            },
+            userId,
+            visibility: 'public',
+            workspaceId: wsId,
+          } as NewAgent),
+        )
         .returning();
 
       const wsModel = new AgentModel(serverDB, userId, wsId);
@@ -3697,7 +3714,7 @@ describe('AgentModel', () => {
     it('should return early for null data', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original' })
+        .values(await withStoredRuntime({ userId, title: 'Original' }))
         .returning();
 
       const result = await agentModel.updateConfig(agent.id, null);
@@ -3712,7 +3729,7 @@ describe('AgentModel', () => {
     it('should return early for undefined data', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original' })
+        .values(await withStoredRuntime({ userId, title: 'Original' }))
         .returning();
 
       const result = await agentModel.updateConfig(agent.id, undefined);
@@ -3722,7 +3739,7 @@ describe('AgentModel', () => {
     it('should return early for empty object', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original' })
+        .values(await withStoredRuntime({ userId, title: 'Original' }))
         .returning();
 
       const result = await agentModel.updateConfig(agent.id, {});
@@ -3737,11 +3754,13 @@ describe('AgentModel', () => {
     it('should merge nested chatConfig fields without replacing the whole object', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          chatConfig: { enableHistoryCount: true, historyCount: 10 },
-          title: 'Chat Config Agent',
-          userId,
-        } as NewAgent)
+        .values(
+          await withStoredRuntime({
+            chatConfig: { enableHistoryCount: true, historyCount: 10 },
+            title: 'Chat Config Agent',
+            userId,
+          } as NewAgent),
+        )
         .returning();
 
       await agentModel.updateConfig(agent.id, {
@@ -3778,18 +3797,20 @@ describe('AgentModel', () => {
       };
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          agencyConfig: { enableGraphMode: true, graph: oldGraph },
-          title: 'Graph Agent',
-          userId,
-        } as NewAgent)
+        .values(
+          await withStoredRuntime({
+            agencyConfig: { enableGraphMode: true, graph: oldGraph },
+            title: 'Graph Agent',
+            userId,
+          } as NewAgent),
+        )
         .returning();
 
       await agentModel.updateConfig(agent.id, { agencyConfig: { graph } } as any);
 
       const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
 
-      expect(result?.agencyConfig).toEqual({
+      expect(result?.agencyConfig).toMatchObject({
         enableGraphMode: true,
         graph,
       });
@@ -3805,11 +3826,13 @@ describe('AgentModel', () => {
       };
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          chatConfig: { enableGraphMode: true, graph },
-          title: 'Legacy Graph Agent',
-          userId,
-        } as NewAgent)
+        .values(
+          await withStoredRuntime({
+            chatConfig: { enableGraphMode: true, graph },
+            title: 'Legacy Graph Agent',
+            userId,
+          } as NewAgent),
+        )
         .returning();
 
       // A legacy client still writing graph through chatConfig must be
@@ -3820,7 +3843,7 @@ describe('AgentModel', () => {
 
       const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
 
-      expect(result?.agencyConfig).toEqual({ enableGraphMode: true, graph });
+      expect(result?.agencyConfig).toMatchObject({ enableGraphMode: true, graph });
       expect(result?.chatConfig).not.toHaveProperty('graph');
       expect(result?.chatConfig).not.toHaveProperty('enableGraphMode');
     });
@@ -3835,11 +3858,13 @@ describe('AgentModel', () => {
       };
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          chatConfig: { enableGraphMode: true, graph },
-          title: 'Legacy Graph Agent',
-          userId,
-        } as NewAgent)
+        .values(
+          await withStoredRuntime({
+            chatConfig: { enableGraphMode: true, graph },
+            title: 'Legacy Graph Agent',
+            userId,
+          } as NewAgent),
+        )
         .returning();
 
       // An explicit agency-level null must be authoritative: it clears the
@@ -3859,11 +3884,13 @@ describe('AgentModel', () => {
     it('should delete params field when value is undefined', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          userId,
-          title: 'Params Agent',
-          params: { temperature: 0.7, topP: 0.9 },
-        })
+        .values(
+          await withStoredRuntime({
+            userId,
+            title: 'Params Agent',
+            params: { temperature: 0.7, topP: 0.9 },
+          }),
+        )
         .returning();
 
       await agentModel.updateConfig(agent.id, {
@@ -3882,11 +3909,13 @@ describe('AgentModel', () => {
     it('should handle null param values (disable flag)', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          userId,
-          title: 'Params Agent',
-          params: { temperature: 0.7 },
-        })
+        .values(
+          await withStoredRuntime({
+            userId,
+            title: 'Params Agent',
+            params: { temperature: 0.7 },
+          }),
+        )
         .returning();
 
       await agentModel.updateConfig(agent.id, {
@@ -3904,14 +3933,16 @@ describe('AgentModel', () => {
     it('should delete a workingDirByDevice entry when value is undefined', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          userId,
-          title: 'Cwd Agent',
-          agencyConfig: {
-            executionTarget: 'local',
-            workingDirByDevice: { 'device-a': '/a', 'device-b': '/b' },
-          },
-        } as NewAgent)
+        .values(
+          await withStoredRuntime({
+            userId,
+            title: 'Cwd Agent',
+            agencyConfig: {
+              executionTarget: 'local',
+              workingDirByDevice: { 'device-a': '/a', 'device-b': '/b' },
+            },
+          } as NewAgent),
+        )
         .returning();
 
       await agentModel.updateConfig(agent.id, {
@@ -3930,13 +3961,19 @@ describe('AgentModel', () => {
     it('should still upsert a workingDirByDevice entry when value is a path', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          userId,
-          title: 'Cwd Agent',
-          agencyConfig: { workingDirByDevice: { 'device-a': '/a' } },
-        } as NewAgent)
+        .values(
+          await withStoredRuntime({
+            userId,
+            title: 'Cwd Agent',
+            agencyConfig: { workingDirByDevice: { 'device-a': '/a' } },
+          } as NewAgent),
+        )
         .returning();
 
+      await serverDB
+        .insert(devices)
+        .values({ deviceId: 'device-b', userId, identitySource: 'machine-id' })
+        .onConflictDoNothing();
       await agentModel.updateConfig(agent.id, {
         agencyConfig: { workingDirByDevice: { 'device-a': '/a', 'device-b': '/b' } } as any,
       });
@@ -3954,11 +3991,13 @@ describe('AgentModel', () => {
 
   describe('rank', () => {
     it('should rank agents by topic count, excluding agents with no topics', async () => {
-      await serverDB.insert(agents).values([
-        { avatar: 'av1', backgroundColor: 'bg1', id: 'ra1', title: 'Agent 1', userId },
-        { id: 'ra2', title: 'Agent 2', userId },
-        { id: 'ra3', title: 'Agent 3', userId }, // no topics → excluded
-      ]);
+      await serverDB.insert(agents).values(
+        await withStoredRuntime([
+          { avatar: 'av1', backgroundColor: 'bg1', id: 'ra1', title: 'Agent 1', userId },
+          { id: 'ra2', title: 'Agent 2', userId },
+          { id: 'ra3', title: 'Agent 3', userId }, // no topics → excluded
+        ]),
+      );
       await serverDB.insert(topics).values([
         { agentId: 'ra1', id: 'rt1', userId },
         { agentId: 'ra1', id: 'rt2', userId },
@@ -3981,11 +4020,13 @@ describe('AgentModel', () => {
     });
 
     it('should include the inbox agent but exclude other virtual agents', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'inbox-agent', slug: 'inbox', title: 'Inbox', userId, virtual: true },
-        { id: 'virtual-agent', title: 'Virtual', userId, virtual: true },
-        { id: 'normal-agent', title: 'Normal', userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withStoredRuntime([
+          { id: 'inbox-agent', slug: 'inbox', title: 'Inbox', userId, virtual: true },
+          { id: 'virtual-agent', title: 'Virtual', userId, virtual: true },
+          { id: 'normal-agent', title: 'Normal', userId },
+        ]),
+      );
       await serverDB.insert(topics).values([
         { agentId: 'inbox-agent', id: 'it1', userId },
         { agentId: 'virtual-agent', id: 'vt1', userId },
@@ -4003,11 +4044,13 @@ describe('AgentModel', () => {
     // senderId; they reflect the visitor's usage, not the creator's, so they
     // must neither inflate a count nor reorder the ranking.
     it('should not count share-visitor topics', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'shared', title: 'Shared', userId },
-        { id: 'own', title: 'Own', userId },
-        { id: 'visitor-only', title: 'Visitor only', userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withStoredRuntime([
+          { id: 'shared', title: 'Shared', userId },
+          { id: 'own', title: 'Own', userId },
+          { id: 'visitor-only', title: 'Visitor only', userId },
+        ]),
+      );
       await serverDB.insert(topics).values([
         // `shared`: one creator topic + three visitor topics → count 1
         { agentId: 'shared', id: 'sv0', userId },
@@ -4030,10 +4073,12 @@ describe('AgentModel', () => {
     });
 
     it('should only rank the current user agents', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'mine', title: 'Mine', userId },
-        { id: 'theirs', title: 'Theirs', userId: userId2 },
-      ]);
+      await serverDB.insert(agents).values(
+        await withStoredRuntime([
+          { id: 'mine', title: 'Mine', userId },
+          { id: 'theirs', title: 'Theirs', userId: userId2 },
+        ]),
+      );
       await serverDB.insert(topics).values([
         { agentId: 'mine', id: 'mt1', userId },
         { agentId: 'theirs', id: 'tt1', userId: userId2 },
@@ -4045,10 +4090,12 @@ describe('AgentModel', () => {
     });
 
     it('should respect the limit parameter', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'la1', title: 'A1', userId },
-        { id: 'la2', title: 'A2', userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withStoredRuntime([
+          { id: 'la1', title: 'A1', userId },
+          { id: 'la2', title: 'A2', userId },
+        ]),
+      );
       await serverDB.insert(topics).values([
         { agentId: 'la1', id: 'lt1', userId },
         { agentId: 'la2', id: 'lt2', userId },

@@ -423,12 +423,6 @@ export default {
   'permission.page.accessLevelPrivateHint':
     'Members get this level once the agent is published to the workspace. It can be changed after publishing.',
   'permission.page.configGroup': 'Editable settings',
-  'permission.page.devicePolicyDesc':
-    'Whether members can switch the execution device for their own runs.',
-  'permission.page.devicePolicyFixedDesc': 'Members can only use the device you set',
-  'permission.page.devicePolicyMemberDesc': 'Members can set their own execution device',
-  'permission.page.devicePolicyUnset':
-    'Pick an execution device for the agent first, then you can fix it here.',
   'permission.page.editableWhenShared': 'Can edit when shared',
   'permission.page.documentAccessLevelPrivateHint':
     'Members get this level once the page is published to the workspace. It can be changed after publishing.',
@@ -449,13 +443,6 @@ export default {
     'What every workspace member can do with this agent. The creator and workspace owners always keep full access.',
   'permission.page.groupAccessLevelPrivateHint':
     'Members get this level once the group is published to the workspace. It can be changed after publishing.',
-  'permission.page.groupDevicePolicyDesc':
-    'Whether members can switch the execution device for their own runs in this group.',
-  'permission.page.groupDevicePolicyFixedDesc':
-    'Members can only use the device you set for this group',
-  'permission.page.groupDevicePolicyMemberDesc': 'Members can set their own execution device',
-  'permission.page.groupDevicePolicyUnset':
-    'Pick an execution device for the group host first, then you can fix it here.',
   'permission.page.groupGeneralAccessDesc':
     'What every workspace member can do with this group. The same level is applied to the member agents the group owns. The creator and workspace owners always keep full access.',
   'permission.page.groupPersonalDesc':
@@ -463,11 +450,6 @@ export default {
   'permission.page.groupPersonalTitle': 'Permissions apply to workspace groups',
   'permission.page.groupPrivateNotice':
     'This group is still private. Everything here takes effect once you publish it to the workspace.',
-  'permission.page.groupModelPolicyDesc':
-    'Whether members can switch the model for their own conversations in this group.',
-  'permission.page.groupModelPolicyFixedDesc':
-    'Members can only use the model you set for this group',
-  'permission.page.groupModelPolicyMemberDesc': 'Members can use a model they set themselves',
   'permission.page.groupTopicSharePolicyDesc':
     "Whether members can publish share links for this group's topics.",
   'permission.page.groupTopicSharePolicyMemberDesc':
@@ -475,10 +457,6 @@ export default {
   'permission.page.groupTopicSharePolicyRestrictedDesc':
     'Only you and workspace owners can publish share links for this group',
   'permission.page.memberGroup': 'Access',
-  'permission.page.modelPolicyFixedDesc': 'Members can only use the model you set',
-  'permission.page.modelPolicyMemberDesc': 'Members can use a model they set themselves',
-  'permission.page.modelPolicyDesc':
-    'Whether members can switch the model for their own conversations.',
   'permission.page.personalDesc':
     'This agent only belongs to you, so there is nothing to share yet. Publish it to a workspace to set member permissions.',
   'permission.page.personalTitle': 'Permissions apply to workspace agents',
@@ -714,22 +692,11 @@ export default {
   'devices.connectWizard.desktop.thisComputer': 'This computer',
   'devices.connectWizard.desktop.connectFailed':
     'Could not connect this computer. Try connecting again.',
-  'devices.connectWizard.desktop.enrollFailed':
-    'Could not enroll this computer in the workspace. Try again.',
   'devices.connectWizard.desktop.identityUnavailable':
     'Could not read this computer’s identity. Try again.',
   'devices.connectWizard.desktop.registrationPending':
     'This computer is connected, but registration has not completed. Try again once it appears in your personal devices.',
-  'devices.connectWizard.desktop.workspaceRequired':
-    'Select a workspace before connecting this computer.',
   'devices.connectWizard.desktop.personalDesc': 'Connect this computer to your personal devices.',
-  'devices.connectWizard.desktop.workspacePublic':
-    'Connect this computer and share it with workspace members. Members can run agents and tools on it.',
-  'devices.connectWizard.desktop.workspacePrivate':
-    'Connect this computer to this workspace for your use only.',
-  'devices.connectWizard.desktop.workspaceStep': 'Enroll your computer in this workspace',
-  'devices.connectWizard.desktop.workspaceStepDesc':
-    'In Orvilo Desktop, open this workspace’s Settings → Devices, choose Workspace or Private, then Connect Device → Via Desktop → Connect this computer.',
   'devices.connectWizard.desktop.status.connected': 'Connected',
   'devices.connectWizard.desktop.status.connecting': 'Connecting…',
   'devices.connectWizard.desktop.status.authenticating': 'Signing in…',
@@ -806,43 +773,12 @@ export default {
   'devices.remove.currentSessionWarning':
     "This includes the device you're using right now — removing it disconnects your current session.",
   'devices.selection.total': '{{count}} devices',
-  'devices.share.alreadyShared': 'Shared',
-  'devices.share.badge': 'Shared to {{count}} workspaces',
-  'devices.share.confirm': 'Share',
-  'devices.share.detailLabel': 'Shared to workspaces',
-  'devices.share.done': 'Done',
-  'devices.share.empty':
-    "You haven't joined a workspace yet — join or create one to share devices.",
-  'devices.share.goToTarget': 'Go to {{name}}',
-  'devices.share.menu': 'Share to Workspace…',
-  'devices.share.modalDesc':
-    'Pick a workspace to share this device into. Members can dispatch agent runs to it while it stays online.',
-  'devices.share.modalTitle': 'Share device with workspace',
-  'devices.share.offlineDesc': 'The device must be online to share',
-  'devices.share.overwriteConfirmDesc':
-    'This device is already shared with {{name}} as "{{current}}". Sharing again will change access to "{{next}}".',
-  'devices.share.overwriteConfirmOk': 'Overwrite',
-  'devices.share.overwriteConfirmTitle': '{{name}} already has this device — replace it?',
-  'devices.share.revoke': 'Unshare',
-  'devices.share.revokeConfirmDesc':
-    'This removes the device from that workspace. Members can no longer dispatch runs to it; you can share it again anytime.',
-  'devices.share.revokeConfirmTitle': 'Unshare from {{name}}?',
-  'devices.share.selectPlaceholder': 'Select a workspace',
-  'devices.share.sharedByTag': 'Shared by {{name}}',
-  'devices.share.success': 'Device shared to {{name}}',
-  'devices.share.targetLabel': 'Share to',
-  'devices.share.viewerHint': 'Viewers cannot share devices',
-  'devices.share.visibilityTag.private': 'Private',
-  'devices.share.visibilityTag.public': 'Workspace',
   'devices.status.offline': 'Offline',
   'devices.status.online': 'Online',
   'devices.status.onlineConnections_one': 'Online · {{count}} connection',
   'devices.status.onlineConnections_other': 'Online · {{count}} connections',
+  'devices.readonlyHint': 'Only the device owner can change these settings.',
   'devices.title': 'My Devices',
-  'devices.visibility.publish': 'Publish to Workspace',
-  'devices.visibility.publishConfirmTitle': 'Publish this device to the workspace?',
-  'devices.visibilityTabs.private': 'Private',
-  'devices.visibilityTabs.workspace': 'Workspace',
   'devices.workingDirectory': 'Working directory: {{path}}',
   'checkingPermissions': 'Checking permissions...',
   'danger.reset.action': 'Reset Now',
@@ -1157,8 +1093,7 @@ export default {
   'settingAgent.agentTools.tabWorkspace': 'Workspace Tools',
   'settingAgent.advancedSettings.diagnosticsAction': 'View diagnostics',
   'settingAgent.advancedSettings.diagnosticsLabel': 'Diagnostics',
-  'settingAgent.devicePolicy.selectTarget': 'Select target',
-  'settingAgent.devicePolicy.title': 'Member device switching',
+  'settingAgent.execution.selectTarget': 'Select target',
   'settingAgent.deviceSettings.bindingInvalidDesc':
     'The bound device is gone or no longer selectable. Choose a replacement to repair this agent.',
   'settingAgent.deviceSettings.bindingInvalidTitle': 'Device no longer available',
@@ -1178,7 +1113,6 @@ export default {
   'settingAgent.generalSettings.legacyName': 'Legacy chat runtime',
   'settingAgent.generalSettings.name': 'Name',
   'settingAgent.generalSettings.title': 'Basic configuration',
-  'settingAgent.modelPolicy.title': 'Member model switching',
   'settingAgent.modelSettings.bindAction': 'Bind a provider',
   'settingAgent.modelSettings.catalogError': 'Could not load models from the selected device.',
   'settingAgent.modelSettings.catalogPending':
@@ -1196,12 +1130,6 @@ export default {
   'settingAgent.runtimeConfig.reasoningEffortHint':
     'Your default reasoning effort for this model. Shared by every agent using it; each topic keeps the effort it started with and can change it from the chat input.',
   'settingAgent.runtimeConfig.title': 'Model & Reasoning Effort',
-  'settingAgent.selectionPolicy.membersCannotSwitch': 'Locked',
-  'settingAgent.selectionPolicy.membersCannotSwitchWhenShared': 'Locked when shared',
-  'settingAgent.selectionPolicy.membersCanSwitch': 'Can switch',
-  'settingAgent.selectionPolicy.membersCanSwitchWhenShared': 'Can switch when shared',
-  // Not a Can-switch / Locked pair like the policies above: sharing is a
-  // capability rather than a setting members flip, so the labels name who holds it.
   'settingAgent.topicSharePolicy.membersCanShare': 'Members can share',
   'settingAgent.topicSharePolicy.membersCannotShare': 'Creator and owners only',
   'settingAgent.topicSharePolicy.title': 'Topic sharing',
@@ -3410,21 +3338,6 @@ export default {
   'workspace.onboarding.step4.cta': 'Enter workspace',
   'workspaceSetting.breadcrumb.backToApp': 'Back to app',
   'workspaceSetting.breadcrumb.settings': 'Settings',
-  'workspaceSetting.devices.connectTitlePrivate': 'Add private device',
-  'workspaceSetting.devices.connectTitlePublic': 'Add public device',
-  'workspaceSetting.devices.empty': 'No workspace devices yet.',
-  'workspaceSetting.devices.enrollDesc':
-    'Run this on the machine you want to share with the workspace:',
-  'workspaceSetting.devices.enrolledBy': 'Enrolled by {{name}}',
-  'workspaceSetting.devices.enrolledByLabel': 'Enrolled by',
-  'workspaceSetting.devices.enrollTitle': 'Add a device',
-  'workspaceSetting.devices.heroDesc': 'Connect to a device which you can dispatch from anywhere.',
-  'workspaceSetting.devices.heroTitle': 'No device connected',
-  'workspaceSetting.devices.offline': 'Offline',
-  'workspaceSetting.devices.online': 'Online',
-  'workspaceSetting.devices.readonlyHint':
-    'Only the member who enrolled this device or a workspace owner can rename or remove it.',
-  'workspaceSetting.devices.unknownEnroller': 'an unknown member',
   'workspaceSetting.group.admin': 'Admin',
   'workspaceSetting.group.agent': 'Agent',
   'workspaceSetting.group.workspace': 'Workspace',

@@ -126,17 +126,21 @@ describe('ProjectModel', () => {
         await serverDB
           .insert(devices)
           .values({
-            deviceId: 'resource-fixture-host',
+            deviceId:
+              actor.id === userId ? 'resource-fixture-host' : `resource-fixture-host-${actor.id}`,
             identitySource: 'fallback',
             userId: actor.id,
-            workspaceId: scope,
-            visibility: 'public',
           })
           .onConflictDoNothing();
         await serverDB
           .insert(agents)
           .values({
             ...runtimeFixture,
+            agencyConfig: {
+              ...runtimeFixture.agencyConfig,
+              boundDeviceId:
+                actor.id === userId ? 'resource-fixture-host' : `resource-fixture-host-${actor.id}`,
+            },
             id: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
             userId: actor.id,
             workspaceId: scope,

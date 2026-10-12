@@ -852,8 +852,6 @@ describe('TopicModel - Update', () => {
       // the measured dominant model (which lives in cost.llm.byModel).
       await serverDB.insert(topics).values({
         id: topicId,
-        model: 'pinned-model',
-        provider: 'pinned-provider',
         sessionId,
         userId,
       });
@@ -881,9 +879,9 @@ describe('TopicModel - Update', () => {
       expect(topic.totalInputTokens).toBe(60);
       expect(topic.totalOutputTokens).toBe(40);
       expect(topic.totalCost).toBeCloseTo(0.003, 6);
-      // Pinned model (config) is preserved — roll-up does not write the message model.
-      expect(topic.model).toBe('pinned-model');
-      expect(topic.provider).toBe('pinned-provider');
+      // Usage roll-up does not introduce a per-topic runtime selection.
+      expect(topic).not.toHaveProperty('model');
+      expect(topic).not.toHaveProperty('provider');
       expect((topic.usage as any).llm).toEqual({
         apiCalls: 1,
         processingTimeMs: 500,

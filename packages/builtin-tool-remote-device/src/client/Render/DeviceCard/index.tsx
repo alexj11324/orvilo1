@@ -35,10 +35,7 @@ interface DeviceCardProps {
 const DeviceCard = memo<DeviceCardProps>(({ device, activated, variant = 'card' }) => {
   const { t } = useTranslation('plugin');
   const displayName = device.friendlyName || device.hostname;
-  const scopeLabel = device.scope
-    ? t(`builtins.orvilo-remote-device.render.scope.${device.scope}`)
-    : undefined;
-  const details = [device.friendlyName ? device.hostname : undefined, device.platform, scopeLabel]
+  const details = [device.friendlyName ? device.hostname : undefined, device.platform]
     .filter(Boolean)
     .join(' · ');
 

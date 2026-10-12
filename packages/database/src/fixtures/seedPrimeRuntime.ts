@@ -8,17 +8,16 @@ import type { OrviloDatabase } from '../type';
  * a saved agent bound to a resolvable host, plus an enabled provider binding
  * backed by an owned credential.
  *
- * Personal scope (`workspaceId` omitted) binds a private caller-owned host;
- * workspace scope needs a public workspace-filed host to satisfy the strict
- * workspace host rule. Repeated calls select a new saved source Agent without
- * colliding on credential or device row ids.
+ * Both scopes bind a caller-owned host; devices have no workspace visibility.
+ * Repeated calls select a new saved source Agent without colliding on
+ * credential or device row ids.
  */
 export const seedPrimeRuntime = async (
   db: OrviloDatabase,
   { userId, workspaceId }: { userId: string; workspaceId?: string },
 ) => {
   const credentialId = `cred_${userId}_${workspaceId ?? 'personal'}`;
-  const deviceId = `creation-host-${workspaceId ?? userId}`;
+  const deviceId = `creation-host-${userId}`;
 
   await db
     .insert(credentials)
@@ -51,22 +50,7 @@ export const seedPrimeRuntime = async (
   });
   await db
     .insert(devices)
-    .values(
-      workspaceId
-        ? {
-            deviceId,
-            identitySource: 'installation',
-            userId,
-            visibility: 'public' as const,
-            workspaceId,
-          }
-        : {
-            deviceId,
-            identitySource: 'installation',
-            userId,
-            visibility: 'private' as const,
-          },
-    )
+    .values({ deviceId, identitySource: 'installation', userId })
     .onConflictDoNothing();
   const [source] = await db
     .insert(agents)

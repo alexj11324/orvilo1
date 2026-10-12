@@ -5,6 +5,8 @@ import { t } from 'i18next';
 import type { AiModelReasoningConfig } from 'model-bank';
 
 import { MAIN_SIDEBAR_EXCLUDE_TRIGGERS } from '@/const/topic';
+import { getAgentStoreState } from '@/store/agent';
+import { agentSelectors } from '@/store/agent/selectors';
 import {
   type ChatTopic,
   type ChatTopicSummary,
@@ -155,30 +157,6 @@ const currentActiveTopicSummary = (s: ChatStoreState): ChatTopicSummary | undefi
 
 const currentTopicMetadata = (s: ChatStoreState) => currentActiveTopic(s)?.metadata;
 
-/**
- * Get the model/provider pinned to a specific topic (snapshotted on creation,
- * updated when the user switches model while the topic is active).
- * Returns undefined when the topic has no model recorded (e.g. legacy topics),
- * in which case callers should fall back to the agent default.
- */
-const getTopicModelById =
-  (id: string) =>
-  (s: ChatStoreState): { model: string; provider: string } | undefined => {
-    const topic = getTopicById(id)(s);
-    if (!topic?.model) return undefined;
-
-    return { model: topic.model, provider: topic.provider || '' };
-  };
-
-/**
- * The model/provider pinned to the active topic, or undefined when there is no
- * active topic or it has no model recorded.
- */
-const activeTopicModel = (s: ChatStoreState): { model: string; provider: string } | undefined => {
-  if (!s.activeTopicId) return undefined;
-  return getTopicModelById(s.activeTopicId)(s);
-};
-
 export interface TopicReasoningPin {
   model: string;
   provider: string;
@@ -186,24 +164,18 @@ export interface TopicReasoningPin {
   reasoningConfig?: AiModelReasoningConfig;
 }
 
-/**
- * The reasoning effort pinned to a topic together with the model it was pinned
- * for (`ChatTopicMetadata.reasoningConfig` + `ChatTopic.model`). Consumers must
- * only honor `reasoningConfig` when the pinned model matches the model they are
- * about to run — a sub-agent `modelOverride` or a stale snapshot must not leak
- * another model's effort — and fall back to the user-level model-instance
- * config otherwise. Undefined when the topic has no model pinned at all.
- */
 const getTopicReasoningPinById =
   (id: string) =>
   (s: ChatStoreState): TopicReasoningPin | undefined => {
     const topic = getTopicById(id)(s);
-    if (!topic?.model) return undefined;
-
+    const agent = topic?.agentId
+      ? agentSelectors.getAgentConfigById(topic.agentId)(getAgentStoreState())
+      : undefined;
+    if (!agent?.model) return undefined;
     return {
-      model: topic.model,
-      provider: topic.provider || '',
-      reasoningConfig: topic.metadata?.reasoningConfig,
+      model: agent.model,
+      provider: agent.provider ?? '',
+      reasoningConfig: topic?.metadata?.reasoningConfig,
     };
   };
 
@@ -225,14 +197,13 @@ const getTopicReasoningConfigForModel =
  * can pass it straight to `applyTopicModelToHeterogeneousProvider`.
  */
 export const resolveTopicHeteroPin = (
-  topic: Pick<ChatTopic, 'metadata' | 'model' | 'provider'> | undefined,
+  topic: Pick<ChatTopic, 'metadata'> | undefined,
 ): HeterogeneousTopicPin | undefined => {
   if (!topic) return undefined;
   const effort = topic.metadata?.heteroEffort;
-  if (!topic.model && effort === undefined) return undefined;
+  if (effort === undefined) return undefined;
 
   return {
-    ...(topic.model ? { model: topic.model, provider: topic.provider || '' } : {}),
     ...(effort === undefined ? {} : { effort }),
   };
 };
@@ -466,7 +437,6 @@ const isTopicNotFoundById =
 export const topicSelectors = {
   activeTopicIdForAgent,
   activeTopicHeteroPin,
-  activeTopicModel,
   currentActiveTopic,
   currentActiveTopicSummary,
   currentTopicCount,
@@ -482,7 +452,6 @@ export const topicSelectors = {
   getTopicById,
   getTopicContainerKeyById,
   getTopicHeteroPinById,
-  getTopicModelById,
   getTopicReasoningConfigForModel,
   getTopicReasoningPinById,
   getTopicWorkingDirectory,

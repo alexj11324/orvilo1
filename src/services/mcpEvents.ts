@@ -3,14 +3,9 @@ import { lambdaClient } from '@/libs/trpc/client';
 export const mcpEventsService = {
   githubWebhookConfiguration: (taskId: string) =>
     lambdaClient.mcpEvents.githubWebhookConfiguration.mutate({ taskId }),
-  readiness: (taskId: string, deviceId?: string) =>
-    lambdaClient.mcpEvents.readiness.query({ taskId, deviceId }),
-  enable: (input: {
-    taskId: string;
-    triggerRevision: number;
-    definitionVersionId: string;
-    deviceId?: string;
-  }) => lambdaClient.mcpEvents.enable.mutate(input),
+  readiness: (taskId: string) => lambdaClient.mcpEvents.readiness.query({ taskId }),
+  enable: (input: { taskId: string; triggerRevision: number; definitionVersionId: string }) =>
+    lambdaClient.mcpEvents.enable.mutate(input),
   pause: (taskId: string, triggerRevision: number) =>
     lambdaClient.mcpEvents.pause.mutate({ taskId, triggerRevision }),
   stop: (taskId: string) => lambdaClient.mcpEvents.stop.mutate({ taskId }),

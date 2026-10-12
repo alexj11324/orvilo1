@@ -5,6 +5,7 @@ import {
   deviceDisplayName,
   isDeviceAdmissionErrorBody,
   resolveDeviceAdmissionAction,
+  resolveDeviceAdmissionAgentId,
   resolveRepairCandidates,
 } from './deviceAdmission';
 
@@ -123,4 +124,18 @@ describe('deviceDisplayName', () => {
       'x',
     );
   });
+});
+
+it('targets the failed mentioned Agent instead of the conversation owner for recovery', () => {
+  expect(
+    resolveDeviceAdmissionAgentId({ messageAgentId: 'mentioned', conversationAgentId: 'owner' }),
+  ).toBe('mentioned');
+  expect(
+    resolveDeviceAdmissionAgentId({
+      explicitAgentId: 'group-member',
+      messageAgentId: 'group-owner',
+      conversationAgentId: 'owner',
+    }),
+  ).toBe('group-member');
+  expect(resolveDeviceAdmissionAgentId({ conversationAgentId: 'owner' })).toBe('owner');
 });

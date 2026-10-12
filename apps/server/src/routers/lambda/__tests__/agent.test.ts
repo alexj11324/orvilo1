@@ -698,24 +698,17 @@ describe('agentRouter', () => {
       agentModelMock.setVisibility = vi.fn().mockResolvedValue({ id: 'agent-1' });
     });
 
-    it.each(['creator', 'other-member'])(
-      'refuses workspace private target for %s before any side effect',
-      async (creatorId) => {
-        agentModelMock.getAgentVisibilityMeta.mockResolvedValue({
-          slug: null,
-          userId: creatorId,
-          visibility: 'public',
-        });
-        const caller = agentRouter.createCaller(wsCtx());
-        await expect(
-          caller.setAgentVisibility({ id: 'agent-1', visibility: 'private' }),
-        ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-        expect(agentModelMock.getAgentVisibilityMeta).not.toHaveBeenCalled();
-        expect(agentModelMock.setVisibility).not.toHaveBeenCalled();
-        expect(resourcePermissionModelMock.removeAll).not.toHaveBeenCalled();
-        expect(resourcePermissionModelMock.setAccessLevel).not.toHaveBeenCalled();
-      },
-    );
+    it('allows an authorized creator to make their workspace Agent private', async () => {
+      agentModelMock.getAgentVisibilityMeta.mockResolvedValue({
+        slug: null,
+        userId,
+        visibility: 'public',
+      });
+      await agentRouter
+        .createCaller(wsCtx())
+        .setAgentVisibility({ id: 'agent-1', visibility: 'private' });
+      expect(agentModelMock.setVisibility).toHaveBeenCalledWith('agent-1', 'private');
+    });
 
     it('rejects promotion of another member agent even for a workspace owner', async () => {
       agentModelMock.getAgentVisibilityMeta.mockResolvedValue({

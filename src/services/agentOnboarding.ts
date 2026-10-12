@@ -82,9 +82,7 @@ export const getOnboardingWorkspaceAgent = async (agentId: string, workspaceId: 
 /** Retry after a successful/lost transfer response reuses the same private row. */
 export const verifyFirstAgentDevice = async (deviceId: string) => {
   const devices = await deviceService.listDevices();
-  const device = devices.find(
-    (device) => device.deviceId === deviceId && device.online && device.scope === 'personal',
-  );
+  const device = devices.find((device) => device.deviceId === deviceId && device.online);
   if (!device) throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
   return device;
 };
@@ -141,8 +139,9 @@ export const ensureFirstAgentInWorkspace = async (
   const saved = await workspaceClient.agent.getAgentConfigById.query({ agentId });
   if (!belongsPrivatelyToWorkspace(saved, workspaceId))
     throw new Error('FIRST_AGENT_WORKSPACE_REQUIRED');
-  await workspaceClient.workspaceUserSettings.updatePreference.mutate({
-    agentDeviceOverrides: { [agentId]: host },
+  await workspaceClient.agent.updateAgentConfig.mutate({
+    agentId,
+    value: { agencyConfig: host },
   });
 };
 

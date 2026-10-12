@@ -38,11 +38,12 @@ vi.mock('@/database/models/workspace', async (importOriginal) => ({
   getActiveWorkspaceMembershipRole: mocks.membershipRole,
 }));
 vi.mock('@/database/models/device', () => ({
-  WorkspaceDevicePrivateConflictError: class extends Error {},
   DeviceModel: class {
+    getBoundAgentIds = async () => ['authorized-agent'];
+
     findByDeviceId = mocks.personal;
-    findWorkspaceDeviceById = mocks.workspace;
-    updateWorkspaceDevice = mocks.updateWorkspace;
+    findExecutionDeviceById = mocks.workspace;
+    update = mocks.updateWorkspace;
   },
 }));
 vi.mock('@/server/services/deviceGateway', async (importOriginal) => ({
@@ -96,7 +97,7 @@ const input = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.membershipRole.mockResolvedValue('member');
-  mocks.personal.mockResolvedValue({ userId: 'actor', workspaceId: null, defaultCwd: '/approved' });
+  mocks.personal.mockResolvedValue(undefined);
   mocks.workspace.mockResolvedValue({
     userId: 'enroller',
     workspaceId: 'ws',
@@ -115,32 +116,33 @@ describe('direct Device file authorization through real RPC procedures', () => {
     async (role) => {
       mocks.membershipRole.mockResolvedValue(role);
       await expect(
-        caller('ws').updateWorkspaceDevice({ deviceId: 'host', friendlyName: 'renamed' }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+        caller('ws').updateDevice({ deviceId: 'host', friendlyName: 'renamed' }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
       expect(mocks.updateWorkspace).not.toHaveBeenCalled();
     },
   );
   it.each(['owner', 'member'])(
-    'retains %s management under the existing owner/enroller conditions',
+    'allows a device owner with the %s workspace role to manage their device',
     async (role) => {
       mocks.membershipRole.mockResolvedValue(role);
-      if (role === 'member')
-        mocks.workspace.mockResolvedValue({ userId: 'actor', workspaceId: 'ws' });
+      mocks.personal.mockResolvedValue({ userId: 'actor', defaultCwd: '/approved' });
+      mocks.updateWorkspace.mockResolvedValue({ success: true });
       await expect(
-        caller('ws').updateWorkspaceDevice({ deviceId: 'host', friendlyName: 'renamed' }),
+        caller('ws').updateDevice({ deviceId: 'host', friendlyName: 'renamed' }),
       ).resolves.toEqual({ success: true });
     },
   );
-  it('allows Viewer read inside an approved shared root', async () => {
+  it('allows Viewer read inside an approved Agent device root', async () => {
     mocks.membershipRole.mockResolvedValue('viewer');
     mocks.personal.mockResolvedValue(undefined);
     mocks.preview.mockResolvedValue({ content: 'readable' });
     await expect(caller('ws').getLocalFilePreview(input)).resolves.toEqual({ content: 'readable' });
   });
   it('permits the personal owner without Agent Use input', async () => {
+    mocks.personal.mockResolvedValue({ userId: 'actor', defaultCwd: '/approved' });
     await expect(caller().writeProjectFile(input)).resolves.toEqual({ success: true });
   });
-  it('permits a writable member on a shared enrollment owned by another member', async () => {
+  it('permits a writable member on a saved Agent device owned by another member', async () => {
     mocks.personal.mockResolvedValue(undefined);
     await expect(caller('ws').writeProjectFile(input)).resolves.toEqual({ success: true });
   });
@@ -251,7 +253,7 @@ describe('reviewed Device discovery and approved-directory boundaries', () => {
       expect(mocks.directoryRpc).not.toHaveBeenCalled();
     },
   );
-  it('allows shared approved-root Git mutation by a member', async () => {
+  it('allows Agent approved-root Git mutation by a member', async () => {
     mocks.personal.mockResolvedValue(undefined);
     await expect(
       caller('ws').checkoutGitBranch({
@@ -261,7 +263,7 @@ describe('reviewed Device discovery and approved-directory boundaries', () => {
       }),
     ).resolves.toEqual({ success: true });
   });
-  it('allows Viewer content reads under a shared approved root', async () => {
+  it('allows Viewer content reads under a Agent approved root', async () => {
     mocks.membershipRole.mockResolvedValue('viewer');
     mocks.personal.mockResolvedValue(undefined);
     await expect(
@@ -382,3 +384,7 @@ describe('effective native repository root authorization through real RPC proced
     },
   );
 });
+
+vi.mock('../_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
+}));

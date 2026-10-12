@@ -192,11 +192,10 @@ describe('continueHeteroAfterError (FIX-C unified admission)', () => {
     expect(mockCreateMessage).not.toHaveBeenCalled();
   });
 
-  it('workspace agent + member local override still routes through gateway — never a private respawn', async () => {
+  it('ignores a removed member device override when regenerating through the gateway', async () => {
     // Regression for F03: a workspace member's `local` pick used to spawn the
     // private IPC lifecycle on their own desktop, bypassing server admission.
-    // The selector must still see the resolved override context — and must
-    // route it to gateway regardless.
+    // The selector uses the saved binding and routes through the gateway.
     mockIsWorkspaceAgent = true;
     mockSharedExecutionTarget = 'device';
     mockWorkspaceOverride = {
@@ -216,10 +215,10 @@ describe('continueHeteroAfterError (FIX-C unified admission)', () => {
 
     expect(selectRuntimeTypeSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        boundDeviceId: 'personal-device',
-        executionTarget: 'local',
+        boundDeviceId: 'workspace-device',
+        executionTarget: 'device',
         isWorkspaceAgent: true,
-        workspaceScoped: false,
+        workspaceScoped: true,
       }),
     );
     expect(mockExecuteGatewayAgent).toHaveBeenCalled();
@@ -253,10 +252,8 @@ describe('continueHeteroAfterError (FIX-C unified admission)', () => {
     expect(mockExecuteHeterogeneousAgent).not.toHaveBeenCalled();
   });
 
-  it("applies the owner's own local override while the Workspace Agent is private", async () => {
-    // The owner's `local` pick lives in the per-user override even on a
-    // private Workspace Agent — it still reaches the selector, which still
-    // routes to gateway.
+  it('ignores a removed owner device override for a private Workspace Agent', async () => {
+    // A removed owner preference cannot replace the saved device binding.
     mockAgentVisibility = 'private';
     mockIsWorkspaceAgent = true;
     mockSharedExecutionTarget = 'device';
@@ -276,8 +273,8 @@ describe('continueHeteroAfterError (FIX-C unified admission)', () => {
 
     expect(selectRuntimeTypeSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        boundDeviceId: 'personal-device',
-        executionTarget: 'local',
+        boundDeviceId: 'workspace-device',
+        executionTarget: 'device',
         isWorkspaceAgent: true,
         workspaceScoped: false,
       }),

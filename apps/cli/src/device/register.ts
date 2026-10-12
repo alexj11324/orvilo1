@@ -4,21 +4,6 @@ import type { DeviceIdentity } from '@orvilo/device-identity';
 import { resolvePersistentDeviceIdentity } from '@orvilo/device-identity';
 
 import { createLambdaClient } from '../api/client';
-import { isTransientNetworkError } from '../utils/error';
-
-const WORKSPACE_TOKEN_RETRY_DELAYS_MS = [250, 1000, 2500];
-
-async function withWorkspaceTokenRetry<T>(operation: () => Promise<T>): Promise<T> {
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      return await operation();
-    } catch (error) {
-      const delay = WORKSPACE_TOKEN_RETRY_DELAYS_MS[attempt];
-      if (delay === undefined || !isTransientNetworkError(error)) throw error;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-}
 
 /**
  * Resolve a stable device identity. An explicit `--device-id` wins (lets a user
@@ -38,8 +23,7 @@ export async function resolveDeviceIdentity(
 /**
  * Register this device in the server registry. Shared by `orvilo login` (so the
  * device row exists right after auth) and `orvilo connect` (so the row exists
- * before the WS opens). Best-effort by contract: callers should wrap this in a
- * try/catch and treat any failure as non-fatal.
+ * before the WS opens). Connection startup requires successful registration.
  */
 export async function registerDevice(
   auth: { serverUrl: string; token: string; tokenType: 'apiKey' | 'jwt' | 'serviceToken' },
@@ -51,54 +35,5 @@ export async function registerDevice(
     hostname: os.hostname(),
     identitySource: identity.identitySource,
     platform: process.platform,
-  });
-}
-
-type Auth = { serverUrl: string; token: string; tokenType: 'apiKey' | 'jwt' | 'serviceToken' };
-
-/**
- * Identity for a WORKSPACE device: derived from the workspaceId (namespaced) so
- * the same physical machine enrolled into a workspace is a distinct device from
- * its personal identity, and stable across reconnects.
- */
-export async function resolveWorkspaceDeviceIdentity(
-  workspaceId: string,
-  explicitDeviceId?: string,
-): Promise<DeviceIdentity> {
-  if (explicitDeviceId) return { deviceId: explicitDeviceId, identitySource: 'fallback' };
-  return resolvePersistentDeviceIdentity(`workspace:${workspaceId}`);
-}
-
-/**
- * Mint a workspace-device connect token (owner-only on the server). The returned
- * token carries the `workspace_id` claim the gateway routes by.
- */
-export async function mintWorkspaceConnectToken(
-  auth: Auth,
-  workspaceId: string,
-): Promise<{ token: string; workspaceId: string }> {
-  const trpc = createLambdaClient(auth, workspaceId);
-  return withWorkspaceTokenRetry(() => trpc.device.mintWorkspaceConnectToken.mutate());
-}
-
-/**
- * Register this machine as a device of the given workspace (member+).
- * `visibility: 'public'` enrolls it into the shared pool visible to every
- * member (`orvilo connect --workspace <id> --public`); omitted → the server
- * default (private, visible only to the enroller).
- */
-export async function registerWorkspaceDevice(
-  auth: Auth,
-  identity: DeviceIdentity,
-  workspaceId: string,
-  visibility?: 'private' | 'public',
-): Promise<void> {
-  const trpc = createLambdaClient(auth, workspaceId);
-  await trpc.device.registerWorkspaceDevice.mutate({
-    deviceId: identity.deviceId,
-    hostname: os.hostname(),
-    identitySource: identity.identitySource,
-    platform: process.platform,
-    visibility,
   });
 }

@@ -24,7 +24,7 @@ import type { APIRequestContext } from 'playwright';
 import { E2E_PRIME_MODEL } from './seedOrviloProviderBinding';
 import { TEST_USER } from './seedTestUser';
 
-export const E2E_DEVICE_ID = 'e2e-mock-device';
+export const E2E_DEVICE_ID = `e2e-mock-device-${TEST_USER.id}`;
 export const E2E_PRIME_AGENT_TITLE = 'Orvilo AI (E2E Prime)';
 let primeAgentId: string | undefined;
 
@@ -55,20 +55,36 @@ const lambdaCall = async <T>(
 /** A completed account needs a real agent, not only its virtual inbox singleton. */
 export const ensureTestUserPrimeAgent = async (request: APIRequestContext): Promise<string> => {
   if (primeAgentId) return primeAgentId;
-  const created = await lambdaCall<{ agentId: string }>(request, 'agent.createAgent', {
-    config: {
-      agencyConfig: {
-        boundDeviceId: E2E_DEVICE_ID,
-        executionTarget: 'device',
-        heterogeneousProvider: { model: E2E_PRIME_MODEL, type: 'orvilo' },
+  const workspace = await lambdaCall<{ id: string }>(request, 'workspace.ensureDefault', {});
+  if (!workspace?.id) throw new Error('E2E default workspace could not be resolved');
+  const created = await lambdaCall<{ agentId: string }>(
+    request,
+    'agent.createAgent',
+    {
+      config: {
+        agencyConfig: {
+          boundDeviceId: E2E_DEVICE_ID,
+          executionTarget: 'device',
+          heterogeneousProvider: { model: E2E_PRIME_MODEL, type: 'orvilo' },
+        },
+        model: E2E_PRIME_MODEL,
+        provider: 'deepseek',
+        title: E2E_PRIME_AGENT_TITLE,
       },
-      model: E2E_PRIME_MODEL,
-      provider: 'deepseek',
-      title: E2E_PRIME_AGENT_TITLE,
+      visibility: 'private',
     },
-    visibility: 'private',
-  });
+    workspace.id,
+  );
   if (!created?.agentId) throw new Error('E2E Prime agent creation returned no agentId');
+  await lambdaCall(
+    request,
+    'workspaceUserSettings.updatePreference',
+    {
+      defaultAgentId: created.agentId,
+      orchestratorAgentId: created.agentId,
+    },
+    workspace.id,
+  );
   primeAgentId = created.agentId;
   return primeAgentId;
 };
@@ -119,7 +135,7 @@ export const bindTestUserExecutionDevice = async (request: APIRequestContext): P
     await client.query(
       `insert into devices (user_id, device_id, identity_source, hostname, platform, friendly_name, first_seen_at, last_seen_at, created_at, updated_at)
        values ($1, $2, 'machine-id', 'e2e-ci', 'linux', 'E2E Mock Device', now(), now(), now(), now())
-       on conflict (user_id, device_id) where workspace_id is null do nothing`,
+       on conflict (user_id, device_id) do nothing`,
       [TEST_USER.id, E2E_DEVICE_ID],
     );
     await client.query(

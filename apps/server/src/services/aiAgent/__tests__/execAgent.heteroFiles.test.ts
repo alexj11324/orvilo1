@@ -1,3 +1,4 @@
+import type { WorkspaceUserPreference } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import {
   afterEach,
@@ -168,11 +169,11 @@ vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
       findByDeviceId: mockDeviceFindByDeviceId,
-      findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
+      findExecutionDeviceById: mockDeviceFindWorkspaceDeviceById,
       // Unified admission's authorized candidate set — `device-1` is the
       // registered personal device this suite routes to.
-      queryPersonal: mockQueryPersonalDevices,
-      queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
+      query: mockQueryPersonalDevices,
+      queryForExecution: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -290,7 +291,11 @@ vi.mock('@/server/services/deviceGateway', () => ({
     dispatchAgentRun: mockDispatchAgentRun,
     executeToolCall: mockExecuteToolCall,
     isConfigured: false,
-    queryDeviceList: vi.fn().mockResolvedValue([]),
+    queryDeviceList: vi.fn().mockResolvedValue([
+      { deviceId: 'device-1', online: true },
+      { deviceId: 'personal-desktop', online: true },
+      { deviceId: 'member-desktop', online: true },
+    ]),
     resolveDeviceWorkspaceId: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -399,7 +404,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     mockBuildRemoteDeviceHeteroContext.mockImplementation(function ({ conversationHistory }) {
       return conversationHistory ? 'device recovery context' : 'device context';
     });
-    mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'device-1' }]);
+    mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'device-1', userId }]);
     mockDeviceFindByDeviceId.mockResolvedValue({ defaultCwd: '/Users/alice/repo' });
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
     mockCreateOperationMetadata.mockResolvedValue(undefined);
@@ -587,7 +592,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run the build' });
 
     expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'default', provider: 'claude-code' }),
+      expect.objectContaining({ title: 'Run the build' }),
       undefined,
     );
   });
@@ -601,7 +606,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run with Opus' });
 
     expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'opus', provider: 'claude-code' }),
+      expect.objectContaining({ title: 'Run with Opus' }),
       undefined,
     );
     expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
@@ -609,9 +614,8 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
   });
 
-  it('should execute an existing topic with its pinned heterogeneous model', async () => {
+  it('uses the saved Agent model when a topic contains an obsolete model field', async () => {
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {
-      args: ['--model', 'stale-arg-model'],
       model: 'agent-model',
       type: 'claude-code',
     } as any;
@@ -630,7 +634,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     expect(topicMock.create).not.toHaveBeenCalled();
     expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
-      expect.objectContaining({ args: ['--model', 'topic-model'] }),
+      expect.objectContaining({ args: ['--model', 'agent-model'] }),
     );
   });
 
@@ -665,7 +669,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       expect.objectContaining({ userId }),
       expect.objectContaining({
         agentId: 'agent-1',
-        model: 'topic-model',
+        model: 'claude-code',
         topicId: 'topic-existing',
       }),
     );
@@ -720,7 +724,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run the build' });
 
     expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: undefined, provider: 'openclaw' }),
+      expect.objectContaining({ title: 'Run the build' }),
       undefined,
     );
   });
@@ -1554,6 +1558,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     it('threads the parent operation through remote member dispatch', async () => {
       heteroAgentConfig.agencyConfig = {
         executionTarget: 'local',
+        boundDeviceId: 'device-1',
         heterogeneousProvider: { type: 'openclaw' },
       } as any;
       heteroAgentConfig.model = 'openclaw';
@@ -1761,13 +1766,14 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     it('keeps the conversation workspace separate from a personal platform device scope', async () => {
       heteroAgentConfig.agencyConfig = {
         executionTarget: 'local',
+        boundDeviceId: 'personal-desktop',
         heterogeneousProvider: { platformAgentId: 'researcher', type: 'openclaw' },
       } as any;
       (heteroAgentConfig as any).userId = userId;
       (heteroAgentConfig as any).visibility = 'public';
       (heteroAgentConfig as any).workspaceId = 'workspace-a';
       service = await createWorkspaceService();
-      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'personal-desktop' }]);
+      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'personal-desktop', userId }]);
 
       const result = await service.execAgent({
         agentId: 'agent-1',
@@ -1839,7 +1845,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         heterogeneousProvider: { type: 'openclaw' },
       } as any;
       service = await createWorkspaceService('member-user', 'author-user');
-      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'member-desktop' }]);
+      mockQueryPersonalDevices.mockResolvedValue([
+        { deviceId: 'member-desktop', userId: 'member-user' },
+      ]);
       mockDeviceFindByDeviceId.mockResolvedValue(undefined);
 
       const result = await service.execAgent({
@@ -1860,15 +1868,20 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     it('routes an authorized Member Device through the actual caller personal principal', async () => {
       heteroAgentConfig.agencyConfig = {
         executionTarget: 'local',
+        boundDeviceId: 'member-desktop',
         heterogeneousProvider: { platformAgentId: 'researcher', type: 'openclaw' },
       } as any;
       service = await createWorkspaceService('member-user', 'author-user');
       await workspaceDb!.insert(workspaceUserSettings).values({
         userId: 'member-user',
         workspaceId: 'workspace-a',
-        preference: { agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } } },
+        preference: {
+          agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } },
+        } as unknown as WorkspaceUserPreference,
       });
-      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'member-desktop' }]);
+      mockQueryPersonalDevices.mockResolvedValue([
+        { deviceId: 'member-desktop', userId: 'member-user' },
+      ]);
 
       const result = await service.execAgent({
         agentId: 'agent-1',

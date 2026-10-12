@@ -1,4 +1,6 @@
 export default {
+  'deviceAdmission.agentSettings': 'Agent settings',
+  'deviceAdmission.askManager': 'Ask someone who manages this Agent to update its device.',
   'aiElementsMore.audioError': 'Unable to play this audio. Check the file or try again.',
   'aiElementsMore.copyHash': 'Copy commit hash',
   'aiElementsMore.copyStack': 'Copy stack trace',

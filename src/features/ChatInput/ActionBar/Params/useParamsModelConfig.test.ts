@@ -26,8 +26,8 @@ const testState = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../../hooks/useAgentModelSelection', () => ({
-  useAgentModelSelection: () => testState.agentSelection,
+vi.mock('../../hooks/useEffectiveModel', () => ({
+  useEffectiveModel: () => testState.agentSelection,
 }));
 
 vi.mock('@/store/chat', () => ({
@@ -68,7 +68,7 @@ describe('useParamsModelConfig', () => {
     };
   });
 
-  it('uses the active topic model for parameter capabilities', () => {
+  it('uses the saved Agent model despite an old topic choice', () => {
     testState.chat.topicModel = {
       model: 'topic-model',
       provider: 'topic-provider',
@@ -77,10 +77,10 @@ describe('useParamsModelConfig', () => {
     const { result } = renderHook(() => useParamsModelConfig('agent-1'));
 
     expect(result.current).toEqual({
-      disabledParams: ['top_p'],
-      hasModelConfig: true,
-      model: 'topic-model',
-      provider: 'topic-provider',
+      disabledParams: ['temperature'],
+      hasModelConfig: false,
+      model: 'agent-model',
+      provider: 'agent-provider',
     });
   });
 

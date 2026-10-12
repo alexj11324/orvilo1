@@ -22,7 +22,6 @@ import { serverDBEnv } from '@/config/db';
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { ChatGroupModel } from '@/database/models/chatGroup';
-import { DeviceModel } from '@/database/models/device';
 import { FileModel } from '@/database/models/file';
 import { MessageModel } from '@/database/models/message';
 import { RbacModel } from '@/database/models/rbac';
@@ -36,7 +35,6 @@ import { chatGroups } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
-import { repairTopicDeviceBinding } from '@/server/services/deviceGateway/executionAdmission';
 import { FileService } from '@/server/services/file';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import { after } from '@/server/utils/scheduleAfterResponse';
@@ -516,10 +514,6 @@ export const topicRouter = router({
           // Execution routing and reasoning snapshots belong to this Topic;
           // other metadata keys are server-owned.
           metadata: chatTopicCreateMetadataSchema.optional(),
-          // The topic's pinned model snapshot, persisted to the top-level
-          // `topics.model`/`provider` columns (config source of truth).
-          model: z.string().optional(),
-          provider: z.string().optional(),
           title: z.string(),
           trigger: z.string().optional(),
         })
@@ -1099,8 +1093,6 @@ export const topicRouter = router({
           // The topic's pinned model (top-level columns) — written when the user
           // switches model while the topic is active (see updateTopicModel).
           // Nullish to match `Partial<ChatTopic>` whose model/provider are `string | null`.
-          model: z.string().nullish(),
-          provider: z.string().nullish(),
           sessionId: z.string().optional(),
           status: chatTopicStatusSchema.nullish(),
           title: z.string().optional(),
@@ -1157,24 +1149,6 @@ export const topicRouter = router({
    * Switch the topic's pinned model and its effort pin atomically — see
    * `TopicModel.updateModelPin`. Same co-editing rules as `updateTopic`.
    */
-  updateTopicModel: topicProcedure
-    .use(withScopedPermission('topic:update'))
-    .input(
-      z.object({
-        id: z.string(),
-        metadata: chatTopicCreateMetadataSchema.optional(),
-        model: z.string(),
-        provider: z.string(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      await assertCanUseTopicTargets(guardCtx(ctx), [input.id]);
-      await assertCreatorTopicTargets(guardCtx(ctx), [input.id]);
-
-      const { id, ...value } = input;
-      return ctx.topicModel.updateModelPin(id, value);
-    }),
-
   updateTopicMetadata: topicProcedure
     .use(withScopedPermission('topic:update'))
     .input(
@@ -1211,76 +1185,6 @@ export const topicRouter = router({
    * `binding-changed` with the winner's pin, never an overwrite. Workspace
    * repairs are audited (`topic.device_binding.repaired`).
    */
-  repairDeviceBinding: topicProcedure
-    .use(withScopedPermission('topic:update'))
-    .input(
-      z.object({
-        /** The device to bind — must be in the caller's authorized registry. */
-        deviceId: z.string().min(1),
-        /**
-         * The effective binding the caller observed (`errorData.deviceId`).
-         * Absent asserts NO binding was in place — the CAS compares it either
-         * way, so a stale expectation loses honestly.
-         */
-        expectedBoundDeviceId: z.string().optional(),
-        /**
-         * The `metadata.bindingRevision` epoch the admission error echoed
-         * back (`errorData.bindingRevision`). When present the CAS requires
-         * it too — pre-revision clients may omit it and bind on the pin
-         * alone.
-         */
-        expectedBindingRevision: z.number().int().optional(),
-        id: z.string(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      await assertCanUseTopicTargets(guardCtx(ctx), [input.id]);
-      await assertCreatorTopicTargets(guardCtx(ctx), [input.id]);
-
-      // Execution-identity gate: the new device must be in the caller's
-      // authorized registry — their personal row or a workspace pool row they
-      // can see. (Same lookups referenced-device verification trusts.)
-      const deviceModel = new DeviceModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
-      const authorizedRow =
-        (await deviceModel.findByDeviceId(input.deviceId)) ??
-        (ctx.workspaceId ? await deviceModel.findWorkspaceDeviceById(input.deviceId) : undefined);
-      if (!authorizedRow) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'The requested device is not in your authorized device registry.',
-        });
-      }
-
-      const result = await repairTopicDeviceBinding(ctx.serverDB, {
-        deviceId: input.deviceId,
-        expectedBindingRevision: input.expectedBindingRevision,
-        expectedBoundDeviceId: input.expectedBoundDeviceId,
-        topicId: input.id,
-        workspaceId: ctx.workspaceId ?? undefined,
-      });
-
-      if (result.outcome === 'bound' && ctx.workspaceId) {
-        await new WorkspaceAuditLogModel(ctx.serverDB).create({
-          action: 'topic.binding_repaired',
-          metadata: {
-            bindingRevision: result.bindingRevision,
-            boundDeviceId: result.boundDeviceId,
-            expectedBoundDeviceId: input.expectedBoundDeviceId,
-          },
-          resourceId: input.id,
-          resourceType: 'topic',
-          userId: ctx.userId,
-          workspaceId: ctx.workspaceId,
-        });
-      }
-
-      return {
-        bindingRevision: result.bindingRevision,
-        boundDeviceId: result.boundDeviceId,
-        outcome: result.outcome === 'bound' ? 'repaired' : 'binding-changed',
-      } as const;
-    }),
-
   settleRunningOperation: topicProcedure
     .use(withScopedPermission('topic:update'))
     .input(

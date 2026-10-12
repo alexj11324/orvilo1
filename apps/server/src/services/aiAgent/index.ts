@@ -227,7 +227,7 @@ export class AiAgentService {
       this.db,
       this.userId,
       this.workspaceId,
-    ).findWorkspaceDeviceById(deviceId);
+    ).findExecutionDeviceById(deviceId);
     return row ? this.workspaceId : undefined;
   }
 
@@ -376,7 +376,7 @@ export class AiAgentService {
    * One-shot only: recurring execution belongs to `tasks.automationMode = 'schedule'`.
    */
   async scheduleAgentRun(params: ScheduleAgentRunParams): Promise<ScheduleAgentRunResult> {
-    const { agentId, slug, prompt, runAt, fileIds, groupId, model, provider } = params;
+    const { agentId, slug, prompt, runAt, fileIds, groupId } = params;
 
     if (!agentId && !slug) throw new Error('Either agentId or slug must be provided');
 
@@ -388,14 +388,11 @@ export class AiAgentService {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'runAt must be in the future' });
     }
 
-    const agentConfig = await this.resolvePrecreatedTopicConfig(agentId || slug!, {
-      model,
-      provider,
-    });
+    const agentConfig = await this.resolvePrecreatedTopicConfig(agentId || slug!);
     const resolvedAgentId = agentConfig.id;
 
     const titleSource = markdownToTxt(prompt);
-    const snapshot = resolveNewTopicSnapshot(agentConfig, { model, provider });
+    const snapshot = resolveNewTopicSnapshot(agentConfig);
     const topic = await this.topicModel.create({
       ...snapshot,
       agentId: resolvedAgentId,
@@ -425,8 +422,6 @@ export class AiAgentService {
     await this.topicModel.armScheduledRun(topic.id, {
       createdAt: now,
       kind: 'delayed_start',
-      model,
-      provider,
       // Normalize to UTC ISO: the dispatcher's due query compares this as text.
       runAt: runAtDate.toISOString(),
       updatedAt: now,
@@ -718,7 +713,7 @@ export class AiAgentService {
     // Same fresh-send rule for the composer's topic pins: they describe the topic
     // this send is about to create, and a replay would re-write the row the
     // original send already owns.
-    const newTopicPins = isResumeLike ? undefined : params.newTopicPins;
+    const newTopicEffort = isResumeLike ? undefined : params.newTopicEffort;
 
     // Validate that either agentId or slug is provided
     if (!agentId && !slug) {
@@ -776,7 +771,6 @@ export class AiAgentService {
       isPublicWorkspaceAgent,
       isGroupSupervisor,
       groupSystemContext,
-      memberDeviceOverride,
       persistAgentId,
       resolvedAgentId,
     } = await resolveRunAgentConfig(
@@ -960,7 +954,7 @@ export class AiAgentService {
         cronJobId,
         files,
         modelOverride,
-        newTopicPins,
+        newTopicEffort,
         operationTaskId,
         parentMessageId,
         prompt,
@@ -1085,7 +1079,6 @@ export class AiAgentService {
         isPublicWorkspaceAgent,
         localDeviceId,
         maxSteps,
-        memberDeviceOverride,
         operationTaskId,
         parentOperationId,
         pinnedHeterogeneousTopicModel: turn.pinnedHeterogeneousTopicModel,

@@ -183,13 +183,10 @@ describe('localSystemRuntime', () => {
       );
     });
 
-    it('addresses a personal-scope active device via the personal pool even in a workspace run', async () => {
-      // Workspace agent + per-user `local` override: the routed
-      // device only has a connection under the personal principal, so the
-      // workspace id must NOT be forwarded to the gateway call.
+    it('preserves workspace authorization when addressing the saved device', async () => {
+      // DeviceGateway resolves the physical owner after workspace authorization.
       const context: ToolExecutionContext = {
         activeDeviceId: 'device-personal',
-        activeDeviceScope: 'personal',
         toolManifestMap: {},
         userId: 'user-1',
         workspaceId: 'ws-42',
@@ -203,7 +200,7 @@ describe('localSystemRuntime', () => {
       await proxy[apiName]({ path: '/tmp' });
 
       expect(mockExecuteToolCall).toHaveBeenCalledWith(
-        { deviceId: 'device-personal', userId: 'user-1', workspaceId: undefined },
+        { deviceId: 'device-personal', userId: 'user-1', workspaceId: 'ws-42' },
         expect.objectContaining({
           apiName,
           identifier: LocalSystemIdentifier,
@@ -525,12 +522,11 @@ describe('localSystemRuntime', () => {
     });
 
     it('keeps the scope on a personal-scope device, which is addressed personally but still edits workspace content', async () => {
-      const proxy = buildProxy({ activeDeviceScope: 'personal', workspaceId: 'ws-42' });
+      const proxy = buildProxy({ workspaceId: 'ws-42' });
       await proxy[LocalSystemApiName.runCommand]({ command: 'orvilo agent edit agt_1 -t x' });
 
-      // Gateway addressing drops the workspace (no `workspace:<id>` connection
-      // for this device) — the CONTENT scope must not follow it down.
-      expect(mockExecuteToolCall.mock.calls[0][0].workspaceId).toBeUndefined();
+      // The gateway resolves the physical owner independently of resource tenancy.
+      expect(mockExecuteToolCall.mock.calls[0][0].workspaceId).toBe('ws-42');
       expect(parseArgs().env).toEqual({ ORVILO_WORKSPACE_ID: 'ws-42' });
     });
 

@@ -116,8 +116,6 @@ describe('TopicModel - Create', () => {
         totalTokens: null,
         cost: null,
         usage: null,
-        model: null,
-        provider: null,
         senderId: null,
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),
@@ -222,8 +220,6 @@ describe('TopicModel - Create', () => {
         totalTokens: null,
         cost: null,
         usage: null,
-        model: null,
-        provider: null,
         senderId: null,
         sessionId,
         userId,
@@ -614,7 +610,7 @@ describe('TopicModel - Create', () => {
         ]);
       });
 
-      const { topic: duplicatedTopic, messages: duplicatedMessages } = await topicModel.duplicate(
+      const { messages: duplicatedMessages } = await topicModel.duplicate(
         topicId,
         'Duplicated Topic',
       );
@@ -675,7 +671,7 @@ describe('TopicModel - Create', () => {
         });
       });
 
-      const { topic: duplicatedTopic, messages: duplicatedMessages } = await topicModel.duplicate(
+      const { messages: duplicatedMessages } = await topicModel.duplicate(
         topicId,
         'Duplicated Topic',
       );

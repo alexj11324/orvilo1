@@ -65,13 +65,16 @@ describe('resolveExecutionDevice', () => {
     });
   });
 
-  it('lets a member preference win only when policy allows choice', () => {
+  it('ignores an obsolete member preference', () => {
     expect(
       resolveExecutionDevice(
-        { agentDefaultDeviceId: 'device-b', userAgentPreferenceDeviceId: 'device-a' },
+        {
+          agentDefaultDeviceId: 'device-b',
+          userAgentPreferenceDeviceId: 'device-a',
+        } as unknown as Parameters<typeof resolveExecutionDevice>[0],
         [A, B],
       ),
-    ).toEqual({ deviceId: 'device-a', reason: 'user_agent_preference', status: 'resolved' });
+    ).toEqual({ deviceId: 'device-b', reason: 'agent_default', status: 'resolved' });
   });
 
   it('blocks member preference override when the policy is pinned — admin default wins', () => {
@@ -81,7 +84,7 @@ describe('resolveExecutionDevice', () => {
           agentDefaultDeviceId: 'device-b',
           explicitRequestAllowed: false,
           userAgentPreferenceDeviceId: 'device-a',
-        },
+        } as unknown as Parameters<typeof resolveExecutionDevice>[0],
         [A, B],
       ),
     ).toEqual({ deviceId: 'device-b', reason: 'agent_default', status: 'resolved' });
@@ -120,7 +123,14 @@ describe('resolveExecutionDevice', () => {
   });
 
   it('does not auto-resolve a single candidate when a stale preference exists elsewhere', () => {
-    expect(resolveExecutionDevice({ userAgentPreferenceDeviceId: 'device-x' }, [B])).toEqual({
+    expect(
+      resolveExecutionDevice(
+        { userAgentPreferenceDeviceId: 'device-x' } as unknown as Parameters<
+          typeof resolveExecutionDevice
+        >[0],
+        [B],
+      ),
+    ).toEqual({
       deviceId: 'device-b',
       reason: 'single_candidate',
       status: 'resolved',

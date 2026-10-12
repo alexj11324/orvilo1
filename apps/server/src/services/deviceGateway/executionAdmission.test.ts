@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   bindTopicDeviceAtomically,
-  canSelectCallerPersonalDevice,
   listAuthorizedDeviceCandidates,
   resolveHeteroExecutionPlan,
   satisfiesMinAdapterVersion,
@@ -13,19 +12,19 @@ import { getScopedOnlineDevices } from './scopedDevices';
 
 const {
   queryDeviceList,
-  queryPersonal,
-  queryWorkspaceDevices,
+  query,
+  queryForExecution,
   findByDeviceId,
-  findWorkspaceDeviceById,
+  findExecutionDeviceById,
   updateCapabilityEvidence,
   updateRuntimeInstallationEvidence,
   executeToolCall,
 } = vi.hoisted(() => ({
   findByDeviceId: vi.fn(),
-  findWorkspaceDeviceById: vi.fn(),
+  findExecutionDeviceById: vi.fn(),
   queryDeviceList: vi.fn(),
-  queryPersonal: vi.fn(),
-  queryWorkspaceDevices: vi.fn(),
+  query: vi.fn(),
+  queryForExecution: vi.fn(),
   updateCapabilityEvidence: vi.fn(),
   updateRuntimeInstallationEvidence: vi.fn(),
   executeToolCall: vi.fn(),
@@ -41,9 +40,9 @@ vi.mock('@/database/models/device', () => ({
           : findByDeviceId
       ) as typeof findByDeviceId;
     }
-    findWorkspaceDeviceById = findWorkspaceDeviceById;
-    queryPersonal = queryPersonal;
-    queryWorkspaceDevices = queryWorkspaceDevices;
+    findExecutionDeviceById = findExecutionDeviceById;
+    query = query;
+    queryForExecution = queryForExecution;
     updateCapabilityEvidence = updateCapabilityEvidence;
     updateRuntimeInstallationEvidence = updateRuntimeInstallationEvidence;
   },
@@ -96,12 +95,12 @@ const baseParams = {
 
 beforeEach(() => {
   findByDeviceId.mockReset().mockResolvedValue(undefined);
-  findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
-  queryPersonal.mockReset().mockResolvedValue(deviceRows('dev-a', 'dev-b'));
-  queryWorkspaceDevices.mockReset().mockResolvedValue(deviceRows('dev-ws'));
+  findExecutionDeviceById.mockReset().mockResolvedValue(undefined);
+  query.mockReset().mockResolvedValue(deviceRows('dev-a', 'dev-b'));
+  queryForExecution.mockReset().mockImplementation(() => query());
   queryDeviceList.mockReset().mockResolvedValue([]);
   findByDeviceId.mockReset().mockResolvedValue(undefined);
-  findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
+  findExecutionDeviceById.mockReset().mockResolvedValue(undefined);
   updateCapabilityEvidence.mockReset().mockResolvedValue(undefined);
   updateRuntimeInstallationEvidence.mockReset().mockResolvedValue(undefined);
   executeToolCall.mockReset().mockResolvedValue({ success: false, error: 'Device disconnected' });
@@ -109,16 +108,18 @@ beforeEach(() => {
 
 describe('listAuthorizedDeviceCandidates', () => {
   it('never treats an Agent creator binding as authority over their personal machine', async () => {
-    queryWorkspaceDevices.mockResolvedValue([]);
+    query.mockResolvedValue([]);
+    queryForExecution.mockResolvedValue([]);
     const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', {
       agentOwnerId: 'agent-creator',
-      referencedDevices: [{ deviceId: 'creator-private', ownerRegistry: true }],
+      referencedDevices: [{ deviceId: 'creator-private' }],
     });
     expect(inventory.candidates).toEqual([]);
     expect(queryDeviceList.mock.calls.every(([actor]) => actor === 'user-1')).toBe(true);
   });
   it('uses personal gateway presence for an authorized personal binding in a workspace run', async () => {
-    queryWorkspaceDevices.mockResolvedValue([]);
+    query.mockResolvedValue([]);
+    queryForExecution.mockResolvedValue([]);
     findByDeviceId.mockResolvedValue({
       deviceId: 'dev-personal',
       userId: 'user-1',
@@ -138,8 +139,9 @@ describe('listAuthorizedDeviceCandidates', () => {
     });
   });
 
-  it('keeps workspace devices offline when only the personal pool has the same device id', async () => {
-    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws'));
+  it('uses the enrolled owner connection regardless of the run workspace', async () => {
+    query.mockResolvedValue(deviceRows('dev-ws'));
+    queryForExecution.mockResolvedValue(deviceRows('dev-ws'));
     queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
       workspaceId ? [] : [{ deviceId: 'dev-ws', authenticated: true }],
     );
@@ -148,11 +150,12 @@ describe('listAuthorizedDeviceCandidates', () => {
       referencedDevices: [{ deviceId: 'dev-ws' }],
     });
 
-    expect(inventory.candidates).toMatchObject([{ deviceId: 'dev-ws', online: false }]);
+    expect(inventory.candidates).toMatchObject([{ deviceId: 'dev-ws', online: true }]);
   });
 
   it('does not authorize an unregistered personal reference through gateway presence', async () => {
-    queryWorkspaceDevices.mockResolvedValue([]);
+    query.mockResolvedValue([]);
+    queryForExecution.mockResolvedValue([]);
     queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
       workspaceId ? [] : [{ deviceId: 'dev-personal', authenticated: true }],
     );
@@ -162,271 +165,6 @@ describe('listAuthorizedDeviceCandidates', () => {
     });
 
     expect(inventory).toMatchObject({ candidates: [], inventoryComplete: true });
-  });
-});
-
-describe('resolveHeteroExecutionPlan', () => {
-  it('resolves a valid session binding first, even when the device is offline', async () => {
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'device', boundDeviceId: 'dev-b' },
-      sessionBoundDeviceId: 'dev-a',
-    });
-
-    expect(plan).toMatchObject({
-      deviceId: 'dev-a',
-      kind: 'device',
-      reason: 'session_bound',
-    });
-  });
-
-  it('blocks with DEVICE_BINDING_INVALID on a revoked binding even when another device is legal (repair ≠ resume)', async () => {
-    queryPersonal.mockResolvedValue(deviceRows('dev-b'));
-
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'device', boundDeviceId: 'dev-b' },
-      sessionBoundDeviceId: 'dev-gone',
-    });
-
-    expect(plan.kind).toBe('blocked');
-    if (plan.kind === 'blocked') {
-      expect(plan.code).toBe('DEVICE_BINDING_INVALID');
-      expect(plan.repairCandidates).toEqual(['dev-b']);
-    }
-  });
-
-  it('rejects an explicit request for a device outside the authorized set — never silently defaulting', async () => {
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      explicitDeviceId: 'dev-c',
-    });
-
-    expect(plan).toMatchObject({ code: 'DEVICE_REQUEST_UNAUTHORIZED', kind: 'blocked' });
-  });
-
-  it('resolves an explicit request inside the authorized set', async () => {
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      explicitDeviceId: 'dev-b',
-    });
-
-    expect(plan).toMatchObject({
-      deviceId: 'dev-b',
-      kind: 'device',
-      reason: 'explicit_request',
-    });
-  });
-
-  it('lets the pinned policy beat the member preference AND the explicit request', async () => {
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: {
-        boundDeviceId: 'dev-a',
-        executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
-      },
-      explicitDeviceId: 'dev-b',
-      memberDeviceOverride: { boundDeviceId: 'dev-b', executionTarget: 'device' },
-    });
-
-    // Preference is suppressed under a pinned policy; the agent default wins.
-    expect(plan).toMatchObject({
-      deviceId: 'dev-a',
-      kind: 'device',
-      reason: 'agent_default',
-    });
-  });
-
-  it('blocks on an incomplete inventory — never judged as 0/1, never auto-binds', async () => {
-    queryPersonal.mockRejectedValue(new Error('db down'));
-
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'device', boundDeviceId: 'dev-a' },
-      sessionBoundDeviceId: 'dev-a',
-    });
-
-    expect(plan).toMatchObject({ code: 'DEVICE_INVENTORY_INCOMPLETE', kind: 'blocked' });
-  });
-
-  it('auto-resolves the single legitimate candidate for a never-bound principal (conditional first-bind input)', async () => {
-    queryPersonal.mockResolvedValue(deviceRows('dev-only'));
-
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: {},
-    });
-
-    expect(plan).toMatchObject({
-      deviceId: 'dev-only',
-      kind: 'device',
-      reason: 'single_candidate',
-    });
-  });
-
-  it("a member's `local` override shadows the shared default — no fallthrough to the shared binding", async () => {
-    // Member picked 'local' on a workspace agent but is not on a desktop →
-    // no localDeviceId → the shared `device` binding must NOT rescue them.
-    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws', 'dev-ws2'));
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      // merged view: member's override already applied to executionTarget
-      agencyConfig: { boundDeviceId: 'dev-ws', executionTarget: 'local' },
-      memberDeviceOverride: { executionTarget: 'local' },
-      workspaceId: 'ws-1',
-    });
-
-    expect(plan).toMatchObject({ code: 'DEVICE_SELECTION_REQUIRED', kind: 'blocked' });
-  });
-
-  it("a member's `local` override resolves the caller's own workspace-enrolled device", async () => {
-    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws', 'dev-ws2'));
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { boundDeviceId: 'dev-ws', executionTarget: 'local' },
-      // The member's own desktop enrolled into the workspace is a legal
-      // preference device.
-      localDeviceId: 'dev-ws2',
-      memberDeviceOverride: { executionTarget: 'local' },
-      workspaceId: 'ws-1',
-    });
-
-    expect(plan).toMatchObject({
-      deviceId: 'dev-ws2',
-      kind: 'device',
-      reason: 'user_agent_preference',
-    });
-  });
-
-  it('stored `none` is an explicit opt-out — EXECUTION_TARGET_NONE without consulting candidates', async () => {
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'none' },
-      localDeviceId: 'dev-a',
-    });
-
-    expect(plan).toMatchObject({ code: 'EXECUTION_TARGET_NONE', kind: 'blocked' });
-    expect(queryPersonal).not.toHaveBeenCalled();
-  });
-
-  it('returns the sandbox plan for a supported sandbox target without touching the device inventory', async () => {
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'sandbox' },
-      sandboxExecutionAvailable: true,
-    });
-
-    expect(plan).toEqual({ kind: 'sandbox' });
-    expect(queryPersonal).not.toHaveBeenCalled();
-  });
-
-  it('denies senders without device access — degrades to sandbox only when one exists', async () => {
-    const denied = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      canUseDevice: false,
-    });
-    expect(denied).toMatchObject({ code: 'DEVICE_ACCESS_DENIED', kind: 'blocked' });
-
-    const sandboxed = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      canUseDevice: false,
-      sandboxExecutionAvailable: true,
-    });
-    expect(sandboxed).toEqual({ kind: 'sandbox' });
-  });
-
-  it("`local` resolves the requester's own device via the agent default; boundDeviceId stands in off-desktop", async () => {
-    const local = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { boundDeviceId: 'dev-b', executionTarget: 'local' },
-      localDeviceId: 'dev-a',
-    });
-    expect(local).toMatchObject({ deviceId: 'dev-a', kind: 'device' });
-
-    const offDesktop = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { boundDeviceId: 'dev-b', executionTarget: 'local' },
-    });
-    expect(offDesktop).toMatchObject({ deviceId: 'dev-b', kind: 'device' });
-  });
-
-  it('workspace scope reads only workspace devices; an explicit personal device is unauthorized', async () => {
-    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws'));
-
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'device' },
-      // 'dev-a' is a personal device — outside the workspace candidate set.
-      explicitDeviceId: 'dev-a',
-      workspaceId: 'ws-1',
-    });
-
-    expect(plan).toMatchObject({ code: 'DEVICE_REQUEST_UNAUTHORIZED', kind: 'blocked' });
-    expect(queryWorkspaceDevices).toHaveBeenCalled();
-    expect(queryPersonal).not.toHaveBeenCalled();
-  });
-
-  it("a pinned session binding survives 'auto' — auto never re-picks a bound conversation", async () => {
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'auto' },
-      sessionBoundDeviceId: 'dev-a',
-    });
-
-    // The pin is the conversation's device — `auto` cannot steal it.
-    expect(plan).toMatchObject({
-      deviceId: 'dev-a',
-      kind: 'device',
-      reason: 'session_bound',
-    });
-  });
-
-  it('auto + an INVALID session binding blocks for explicit repair — never migrates', async () => {
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'auto' },
-      sessionBoundDeviceId: 'dev-gone',
-    });
-
-    // The pin is invalid → DEVICE_BINDING_INVALID (repair, not silent re-pick).
-    expect(plan.kind).toBe('blocked');
-    if (plan.kind === 'blocked') {
-      expect(plan.code).toBe('DEVICE_BINDING_INVALID');
-      expect(plan.repairCandidates).toEqual(['dev-a', 'dev-b']);
-    }
-  });
-
-  it('auto + no binding still picks the single legitimate candidate', async () => {
-    queryPersonal.mockResolvedValue(deviceRows('dev-only'));
-
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: { executionTarget: 'auto' },
-    });
-
-    expect(plan).toMatchObject({
-      deviceId: 'dev-only',
-      kind: 'device',
-      reason: 'single_candidate',
-    });
-  });
-
-  it('an UNSET execution target still honors the session pin — admission reaches the resolver', async () => {
-    // Regression: an unset `executionTarget` + session pin used to block on
-    // EXECUTION_TARGET_NONE before the resolver ever saw the binding — the
-    // second message of a bound conversation stranded forever.
-    const plan = await resolveHeteroExecutionPlan(db, {
-      ...baseParams,
-      agencyConfig: {},
-      sessionBoundDeviceId: 'dev-a',
-    });
-
-    expect(plan).toMatchObject({
-      deviceId: 'dev-a',
-      kind: 'device',
-      reason: 'session_bound',
-    });
   });
 });
 
@@ -512,7 +250,7 @@ describe('bindTopicDeviceAtomically (conditional first-bind CAS)', () => {
 describe('listAuthorizedDeviceCandidates (F06 — capability/version never assumed)', () => {
   it('settings/picker and admission return the IDENTICAL candidate id set — personal + workspace', async () => {
     // Personal scope: registry rows + one gateway-transient device.
-    queryPersonal.mockResolvedValue(deviceRows('dev-a', 'dev-b'));
+    query.mockResolvedValue(deviceRows('dev-a', 'dev-b'));
     queryDeviceList.mockResolvedValue(onlineAttachments('dev-a', 'dev-transient'));
 
     const picker = await getScopedOnlineDevices(db, 'user-1', undefined);
@@ -523,7 +261,8 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
     );
 
     // Workspace scope: shared + caller-enrolled rows are one membership rule.
-    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws-shared', 'dev-ws-mine'));
+    query.mockResolvedValue(deviceRows('dev-ws-shared', 'dev-ws-mine'));
+    queryForExecution.mockResolvedValue(deviceRows('dev-ws-shared', 'dev-ws-mine'));
     queryDeviceList.mockResolvedValue(onlineAttachments('dev-ws-shared', 'dev-ws-ghost'));
 
     const wsPicker = await getScopedOnlineDevices(db, 'user-1', 'ws-1');
@@ -541,7 +280,7 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
   });
 
   it('a view-only grant never enters execution candidates — registry, transient or referenced', async () => {
-    queryPersonal.mockResolvedValue(deviceRows('dev-a', 'dev-view'));
+    query.mockResolvedValue(deviceRows('dev-a', 'dev-view'));
     queryDeviceList.mockResolvedValue(onlineAttachments('dev-a', 'dev-view-transient'));
     findByDeviceId.mockResolvedValue(deviceRows('dev-view-ref')[0]);
 
@@ -646,12 +385,12 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
       inventoryState: 'permissions-unready',
     });
 
-    queryPersonal.mockRejectedValue(new Error('db down'));
+    query.mockRejectedValue(new Error('db down'));
     const failed = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
     expect(failed.inventoryState).toBe('query-failed');
     expect(failed.inventoryComplete).toBe(false);
 
-    queryPersonal.mockResolvedValue([]);
+    query.mockResolvedValue([]);
     const empty = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
     expect(empty).toEqual({
       candidates: [],
@@ -659,7 +398,7 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
       inventoryState: 'empty',
     });
 
-    queryPersonal.mockResolvedValue(deviceRows('dev-a'));
+    query.mockResolvedValue(deviceRows('dev-a'));
     const complete = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
     expect(complete.inventoryState).toBe('complete');
   });
@@ -682,7 +421,7 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
   it('a resolved plan carries the verified registry-delegated candidate — never a fabricated row', async () => {
     const plan = await resolveHeteroExecutionPlan(db, {
       ...baseParams,
-      explicitDeviceId: 'dev-a',
+      agencyConfig: { boundDeviceId: 'dev-a', executionTarget: 'device' },
     });
 
     expect(plan.kind).toBe('device');
@@ -745,7 +484,7 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
       },
       { ...deviceRows('dev-blank')[0] },
     ];
-    queryPersonal.mockResolvedValue(evidenceRows);
+    query.mockResolvedValue(evidenceRows);
 
     const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
       requiredOperation: { adapter: 'claude-code', kind: 'agent-run', minAdapterVersion: '2.0.0' },
@@ -768,7 +507,7 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
   });
 
   it('a stored adapterVersion below the requirement stays pending — never coerced', async () => {
-    queryPersonal.mockResolvedValue([
+    query.mockResolvedValue([
       {
         ...deviceRows('dev-old')[0],
         adapterVersion: '1.5.0',
@@ -788,7 +527,7 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
   it('a fresh capabilitySnapshot answers a device-tool-call when the device cannot be probed', async () => {
     // dev-a is OFFLINE (no gateway presence) so the live probe never reaches it —
     // but its registry row carries a snapshot from a verified session.
-    queryPersonal.mockResolvedValue([
+    query.mockResolvedValue([
       {
         ...deviceRows('dev-a')[0],
         capabilitySnapshot: { supportedTools: ['mcp.call', 'files.read'] },
@@ -821,7 +560,7 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
   });
 
   it('a stale snapshot is treated as absent — pending, never verified', async () => {
-    queryPersonal.mockResolvedValue([
+    query.mockResolvedValue([
       {
         ...deviceRows('dev-a')[0],
         capabilitySnapshot: { supportedTools: ['mcp.call'] },
@@ -853,291 +592,5 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
     expect(updateCapabilityEvidence).toHaveBeenCalledWith('dev-a', {
       supportedTools: ['mcp.call'],
     });
-  });
-});
-
-describe('installed runtime eligibility for unbound automatic selection', () => {
-  const codex = { available: true, command: 'codex', observedAt: '2026-10-01T00:00:00Z' };
-  const runtimeRows = (...installed: (boolean | undefined)[]) =>
-    installed.map((available, index) => ({
-      ...deviceRows(`dev-${index}`)[0],
-      capabilitySnapshot:
-        available === undefined
-          ? null
-          : {
-              installedRuntimes: { codex: { ...codex, available } },
-            },
-    }));
-  const params = {
-    ...baseParams,
-    requiredOperation: { kind: 'agent-run' as const, adapter: 'codex' },
-  };
-
-  it.each([
-    { available: [false, false], code: 'DEVICE_REQUIRED' },
-    { available: [true, false], deviceId: 'dev-0' },
-    { available: [true, true], code: 'DEVICE_SELECTION_REQUIRED' },
-  ])(
-    'counts matching runtimes, including known offline hosts: $available',
-    async ({ available, code, deviceId }) => {
-      queryPersonal.mockResolvedValue(runtimeRows(...available));
-      const plan = await resolveHeteroExecutionPlan(db, params);
-      expect(plan).toMatchObject(
-        deviceId
-          ? { kind: 'device', deviceId, reason: 'single_candidate', candidate: { online: false } }
-          : { kind: 'blocked', code },
-      );
-    },
-  );
-
-  it('does not shrink unknown offline evidence into an automatic singleton', async () => {
-    queryPersonal.mockResolvedValue(runtimeRows(true, undefined));
-    expect(await resolveHeteroExecutionPlan(db, params)).toMatchObject({
-      kind: 'blocked',
-      code: 'DEVICE_INVENTORY_INCOMPLETE',
-    });
-  });
-
-  it('does not require a new scan for explicit, persisted-default or session-bound choices', async () => {
-    queryPersonal.mockResolvedValue(runtimeRows(undefined, undefined));
-    for (const choice of [
-      { explicitDeviceId: 'dev-0' },
-      { agencyConfig: { executionTarget: 'device' as const, boundDeviceId: 'dev-0' } },
-      { sessionBoundDeviceId: 'dev-0' },
-      { memberDeviceOverride: { executionTarget: 'device' as const, boundDeviceId: 'dev-0' } },
-    ]) {
-      expect(await resolveHeteroExecutionPlan(db, { ...params, ...choice })).toMatchObject({
-        kind: 'device',
-        deviceId: 'dev-0',
-      });
-    }
-  });
-
-  it('preserves established default fallback behavior even when the prior device disappeared', async () => {
-    queryPersonal.mockResolvedValue(runtimeRows(undefined));
-    expect(
-      await resolveHeteroExecutionPlan(db, {
-        ...params,
-        agencyConfig: { executionTarget: 'device', boundDeviceId: 'gone' },
-      }),
-    ).toMatchObject({ kind: 'device', deviceId: 'dev-0' });
-  });
-
-  it('does not auto-bind from a failed live runtime scan even with past positive facts', async () => {
-    queryPersonal.mockResolvedValue(runtimeRows(true, false));
-    queryDeviceList.mockResolvedValue(onlineAttachments('dev-0'));
-    const plan = await resolveHeteroExecutionPlan(db, params);
-    expect(plan).toMatchObject({ kind: 'blocked', code: 'DEVICE_INVENTORY_INCOMPLETE' });
-    expect(updateRuntimeInstallationEvidence).not.toHaveBeenCalled();
-  });
-
-  it('excludes a view-only runtime host from the UI candidate inventory', async () => {
-    queryPersonal.mockResolvedValue(runtimeRows(true, false));
-    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
-      policy: { devicePermissions: { 'dev-0': 'view' } },
-      requiredOperation: params.requiredOperation,
-      runtimeRequirement: { agentType: 'codex' },
-    });
-    expect(inventory.inventoryComplete).toBe(true);
-    expect(inventory.candidates.filter(isSelectableDevice)).toEqual([]);
-  });
-});
-
-describe('server-owned caller personal device pool', () => {
-  const installed = {
-    installedRuntimes: {
-      codex: {
-        available: true,
-        command: 'codex',
-        observedAt: '2026-10-01T00:00:00Z',
-      },
-    },
-  };
-
-  it.each([
-    { workspaceId: undefined, visibility: 'public', canManageAgent: true, allowed: true },
-    { workspaceId: 'ws-1', visibility: 'private', canManageAgent: true, allowed: true },
-    { workspaceId: 'ws-1', visibility: 'public', canManageAgent: false, allowed: true },
-    { workspaceId: 'ws-1', visibility: 'public', canManageAgent: true, allowed: true },
-  ] as const)(
-    'reuses effective policy for $visibility / manager=$canManageAgent',
-    ({ allowed, ...context }) => {
-      expect(
-        canSelectCallerPersonalDevice({ ...context, agentOwnerId: 'user-1', userId: 'user-1' }),
-      ).toBe(allowed);
-      expect(
-        canSelectCallerPersonalDevice({
-          ...context,
-          agentOwnerId: 'user-1',
-          userId: 'user-1',
-          agencyConfig: { executionTargetSelectionPolicy: 'fixed' },
-        }),
-      ).toBe(false);
-    },
-  );
-
-  it('includes the caller personal registry only under the trusted optional policy', async () => {
-    queryWorkspaceDevices.mockResolvedValue([
-      { ...deviceRows('shared')[0], workspaceId: 'ws-1', capabilitySnapshot: installed },
-    ]);
-    queryPersonal.mockResolvedValue([
-      { ...deviceRows('personal')[0], capabilitySnapshot: installed },
-    ]);
-    const options = {
-      requiredOperation: { kind: 'agent-run' as const, adapter: 'codex' },
-      runtimeRequirement: { agentType: 'codex' },
-    };
-    expect(
-      (await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', options)).candidates
-        .filter(isSelectableDevice)
-        .map((candidate) => candidate.deviceId),
-    ).toEqual(['shared']);
-    const union = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', {
-      ...options,
-      includeCallerPersonalDevices: true,
-    });
-    expect(union.inventoryComplete).toBe(true);
-    expect(
-      union.candidates.filter(isSelectableDevice).map((candidate) => candidate.deviceId),
-    ).toEqual(['shared', 'personal']);
-    expect(union.candidates[1].owner).toEqual({ userId: 'user-1', workspaceId: null });
-  });
-
-  it('uses that same authorized pool only for a truly unbound automatic run', async () => {
-    queryWorkspaceDevices.mockResolvedValue([
-      {
-        ...deviceRows('shared')[0],
-        workspaceId: 'ws-1',
-        capabilitySnapshot: {
-          installedRuntimes: { codex: { ...installed.installedRuntimes.codex, available: false } },
-        },
-      },
-    ]);
-    queryPersonal.mockResolvedValue([
-      { ...deviceRows('personal')[0], capabilitySnapshot: installed },
-    ]);
-    expect(
-      await resolveHeteroExecutionPlan(db, {
-        ...baseParams,
-        workspaceId: 'ws-1',
-        canSelectPersonalDevice: true,
-        requiredOperation: { kind: 'agent-run', adapter: 'codex' },
-      }),
-    ).toMatchObject({ kind: 'device', deviceId: 'personal', reason: 'single_candidate' });
-  });
-
-  it('distinguishes optional offline uncertainty from an actual failed online scan', async () => {
-    queryPersonal.mockResolvedValue([
-      { ...deviceRows('local')[0], capabilitySnapshot: installed },
-      deviceRows('unknown')[0],
-    ]);
-    const options = { runtimeRequirement: { agentType: 'codex' } };
-    const offline = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, options);
-    expect(offline).toMatchObject({ inventoryComplete: false, runtimeInventoryOfflineOnly: true });
-    queryDeviceList.mockResolvedValue(onlineAttachments('local'));
-    const failedOnline = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, options);
-    expect(failedOnline).toMatchObject({
-      inventoryComplete: false,
-      runtimeInventoryOfflineOnly: false,
-    });
-  });
-
-  it('does not add a scan prerequisite to an established local choice when another offline host is unknown', async () => {
-    queryPersonal.mockResolvedValue([
-      { ...deviceRows('local')[0], capabilitySnapshot: installed },
-      deviceRows('unknown')[0],
-    ]);
-    expect(
-      await resolveHeteroExecutionPlan(db, {
-        ...baseParams,
-        agencyConfig: { executionTarget: 'local', boundDeviceId: 'local' },
-        localDeviceId: 'local',
-        requiredOperation: { kind: 'agent-run', adapter: 'codex' },
-      }),
-    ).toMatchObject({ kind: 'device', deviceId: 'local', reason: 'agent_default' });
-    expect(executeToolCall).not.toHaveBeenCalled();
-  });
-});
-
-describe('first genuinely unset public workspace send singleton', () => {
-  const params = {
-    ...baseParams,
-    workspaceId: 'ws-1',
-    workspaceScoped: true,
-    agencyConfig: { heterogeneousProvider: { type: 'codex' as const } },
-    canSelectPersonalDevice: true,
-    requiredOperation: { kind: 'agent-run' as const, adapter: 'codex' },
-  };
-  beforeEach(() => {
-    queryWorkspaceDevices.mockResolvedValue([
-      {
-        ...deviceRows('shared')[0],
-        userId: 'enroller',
-        workspaceId: 'ws-1',
-        capabilitySnapshot: {
-          installedRuntimes: {
-            codex: {
-              available: true,
-              command: 'codex',
-              observedAt: '2026-10-01T00:00:00Z',
-            },
-          },
-        },
-      },
-    ]);
-    queryPersonal.mockResolvedValue([]);
-    queryDeviceList.mockResolvedValue([]);
-  });
-  it('auto-resolves the only authorized installed shared device for Use-only caller', async () => {
-    await expect(resolveHeteroExecutionPlan(db, params)).resolves.toMatchObject({
-      kind: 'device',
-      deviceId: 'shared',
-      reason: 'single_candidate',
-      candidate: { online: false, scopeOk: true, capabilityOk: true },
-    });
-  });
-  it('never auto-selects a sole shared device with no installed-runtime evidence', async () => {
-    queryWorkspaceDevices.mockResolvedValue([
-      {
-        ...deviceRows('shared')[0],
-        userId: 'enroller',
-        workspaceId: 'ws-1',
-      },
-    ]);
-    await expect(resolveHeteroExecutionPlan(db, params)).resolves.toMatchObject({
-      kind: 'blocked',
-      code: 'DEVICE_INVENTORY_INCOMPLETE',
-    });
-  });
-  it.each([
-    { executionTarget: 'none' as const },
-    { executionTarget: 'local' as const },
-    { executionTargetSelectionPolicy: 'fixed' as const },
-  ])('retains existing stored choice/fixed coercion: %j', async (stored) => {
-    await expect(
-      resolveHeteroExecutionPlan(db, {
-        ...params,
-        agencyConfig: { ...params.agencyConfig, ...stored },
-      }),
-    ).resolves.toMatchObject({ kind: 'blocked', code: 'EXECUTION_TARGET_NONE' });
-    expect(queryWorkspaceDevices).not.toHaveBeenCalled();
-  });
-  it.each([
-    { sessionBoundDeviceId: 'prior-session' },
-    { memberDeviceOverride: { boundDeviceId: 'prior-preference' } },
-    { explicitDeviceId: 'explicit-choice' },
-    { agencyConfig: { ...params.agencyConfig, boundDeviceId: 'prior-shared' } },
-  ])('never auto-binds when any prior or explicit binding exists: %j', async (prior) => {
-    await expect(resolveHeteroExecutionPlan(db, { ...params, ...prior })).resolves.toMatchObject({
-      kind: 'blocked',
-      code: 'EXECUTION_TARGET_NONE',
-    });
-    expect(queryWorkspaceDevices).not.toHaveBeenCalled();
-  });
-  it('keeps denied Device execution out of singleton inventory', async () => {
-    await expect(
-      resolveHeteroExecutionPlan(db, { ...params, canUseDevice: false }),
-    ).resolves.toMatchObject({ kind: 'blocked', code: 'DEVICE_ACCESS_DENIED' });
-    expect(queryWorkspaceDevices).not.toHaveBeenCalled();
   });
 });

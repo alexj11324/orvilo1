@@ -180,7 +180,7 @@ describe('AgentModel — private/public cross-user isolation', () => {
       });
     };
 
-    it('rejects workspace demotion without changing the public folder placement', async () => {
+    it('moves a private Agent out of its public folder', async () => {
       await insertGroup('pub-group', 'public');
       await insertAgent({ id: 'a-grouped', userId: userA, visibility: 'public', workspaceId });
       await serverDB
@@ -189,17 +189,16 @@ describe('AgentModel — private/public cross-user isolation', () => {
         .where(eq(agents.id, 'a-grouped'));
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const before = await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-grouped') });
-      await expect(callerA.setVisibility('a-grouped', 'private')).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Workspace Agents must be public',
+      await callerA.setVisibility('a-grouped', 'private');
+      expect(
+        await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-grouped') }),
+      ).toMatchObject({
+        visibility: 'private',
+        sessionGroupId: null,
       });
-      expect(await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-grouped') })).toEqual(
-        before,
-      );
     });
 
-    it('rejects workspace demotion without changing the existing private folder reference', async () => {
+    it('keeps a private Agent in its matching private folder', async () => {
       await insertGroup('priv-group', 'private');
       await insertAgent({ id: 'a-priv-grouped', userId: userA, visibility: 'public', workspaceId });
       await serverDB
@@ -208,30 +207,26 @@ describe('AgentModel — private/public cross-user isolation', () => {
         .where(eq(agents.id, 'a-priv-grouped'));
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const before = await serverDB.query.agents.findFirst({
-        where: eq(agents.id, 'a-priv-grouped'),
-      });
-      await expect(callerA.setVisibility('a-priv-grouped', 'private')).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Workspace Agents must be public',
-      });
+      await callerA.setVisibility('a-priv-grouped', 'private');
       expect(
         await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-priv-grouped') }),
-      ).toEqual(before);
+      ).toMatchObject({
+        visibility: 'private',
+        sessionGroupId: 'priv-group',
+      });
     });
 
-    it('rejects workspace demotion and keeps ungrouped agents unchanged', async () => {
+    it('keeps an ungrouped Agent ungrouped when made private', async () => {
       await insertAgent({ id: 'a-ungrouped', userId: userA, visibility: 'public', workspaceId });
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const before = await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-ungrouped') });
-      await expect(callerA.setVisibility('a-ungrouped', 'private')).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Workspace Agents must be public',
-      });
+      await callerA.setVisibility('a-ungrouped', 'private');
       expect(
         await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-ungrouped') }),
-      ).toEqual(before);
+      ).toMatchObject({
+        visibility: 'private',
+        sessionGroupId: null,
+      });
     });
   });
 

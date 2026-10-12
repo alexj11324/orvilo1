@@ -3,19 +3,10 @@
 import type { DeviceListItem } from '@orvilo/types';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
-import {
-  EyeOffIcon,
-  FolderIcon,
-  GlobeIcon,
-  MoreHorizontalIcon,
-  Share2Icon,
-  Trash2Icon,
-  TriangleAlertIcon,
-} from 'lucide-react';
+import { FolderIcon, MoreHorizontalIcon, Trash2Icon, TriangleAlertIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,14 +17,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { lambdaQuery } from '@/libs/trpc/client';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 
 import { refreshDeviceList } from './const';
 import { getDeviceIcon } from './getDeviceIcon';
-import { openShareDeviceModal } from './ShareDeviceModal';
 import { useCanEditDevice } from './useCanEditDevice';
 
 const styles = {
@@ -69,19 +56,12 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
   const { t } = useTranslation('setting');
   const { t: tCommon } = useTranslation('common');
   const canEdit = useCanEditDevice()(device);
-  const currentUserId = useUserStore(userProfileSelectors.userId);
 
-  // Workspace devices are self-or-owner-gated + workspace-scoped on the
-  // server; personal devices stay userId-scoped. Route by the device's own
-  // scope.
   const onRemoveSuccess = () => refreshDeviceList();
   const removePersonal = lambdaQuery.device.removeDevice.useMutation({
     onSuccess: onRemoveSuccess,
   });
-  const removeWorkspace = lambdaQuery.device.removeWorkspaceDevice.useMutation({
-    onSuccess: onRemoveSuccess,
-  });
-  const removeDevice = device.scope === 'workspace' ? removeWorkspace : removePersonal;
+  const removeDevice = removePersonal;
 
   const displayName = device.friendlyName || device.hostname || device.deviceId;
   const isFallback = device.identitySource === 'fallback';
@@ -112,79 +92,6 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
       )}`
     : t('devices.lastSeen', { time: dayjs(device.lastSeen).fromNow() });
 
-  // Publish / make-private for workspace enrollments. Reuses the
-  // shared visibility-confirm body so the consequences copy matches agents /
-  // files. Success feedback is the row itself moving to the other tab after
-  // the list refresh.
-  const setVisibility = lambdaQuery.device.setWorkspaceDeviceVisibility.useMutation({
-    onSuccess: () => refreshDeviceList(),
-  });
-
-  const handlePublish = () =>
-    confirmModal({
-      content: <VisibilityConfirmContent variant={'publish'} />,
-      okText: t('devices.visibility.publish'),
-      onOk: async () => {
-        await setVisibility.mutateAsync({ deviceId: device.deviceId, visibility: 'public' });
-      },
-      title: t('devices.visibility.publishConfirmTitle'),
-    });
-
-  const handleMakePrivate = () =>
-    confirmModal({
-      content: <VisibilityConfirmContent variant={'makePrivate'} />,
-      okButtonProps: { danger: true },
-      okText: tCommon('makePrivate.confirm.ok'),
-      onOk: async () => {
-        await setVisibility.mutateAsync({ deviceId: device.deviceId, visibility: 'private' });
-      },
-      title: tCommon('makePrivate.confirm.title'),
-    });
-
-  // Only persisted workspace rows carry a visibility to toggle — ghosts
-  // (unregistered) and personal devices don't. The toggle is enroller-only
-  //: an owner demoting another member's public device would
-  // move it into that member's private list, appropriating their data. The
-  // server rejects non-enroller writes as the backstop.
-  const isEnroller = !!currentUserId && device.enroller?.userId === currentUserId;
-  const visibilityItems =
-    device.scope === 'workspace' && device.registered && isEnroller
-      ? device.visibility === 'private'
-        ? [
-            {
-              icon: <GlobeIcon />,
-              key: 'publish',
-              label: t('devices.visibility.publish'),
-              onClick: handlePublish,
-            },
-          ]
-        : [
-            {
-              icon: <EyeOffIcon />,
-              key: 'makePrivate',
-              label: tCommon('makePrivate'),
-              onClick: handleMakePrivate,
-            },
-          ]
-      : [];
-
-  // Share-to-workspace entry for personal enrollments. The share
-  // handshake needs a live connection to mint the workspace identity, so the
-  // item stays disabled (with an explanatory desc) while the device is offline.
-  const shareItems =
-    device.scope === 'personal' && device.registered
-      ? [
-          {
-            desc: online ? undefined : t('devices.share.offlineDesc'),
-            disabled: !online,
-            icon: <Share2Icon />,
-            key: 'share',
-            label: t('devices.share.menu'),
-            onClick: () => openShareDeviceModal(device),
-          },
-        ]
-      : [];
-
   const handleRemove = () =>
     confirmModal({
       content: isCurrent
@@ -199,8 +106,6 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
     });
 
   const deviceMenuItems: DeviceMenuItem[] = [
-    ...visibilityItems,
-    ...shareItems,
     {
       danger: true,
       icon: <Trash2Icon />,
@@ -232,23 +137,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
           <div className="truncate block text-sm font-medium">{displayName}</div>
           <span className={online ? styles.statusOnline : styles.statusOffline} />
           {isCurrent && <Tag>{t('devices.currentBadge')}</Tag>}
-          {device.scope === 'workspace' && device.sharedFromPersonal && (
-            // Member-shared machine (vs directly enrolled infra) — mirrors the
-            // "Shared by {name}" tag on workspace connectors/credentials.
-            <Tag>
-              {t('devices.share.sharedByTag', {
-                name:
-                  device.enroller?.fullName ||
-                  device.enroller?.username ||
-                  t('workspaceSetting.devices.unknownEnroller'),
-              })}
-            </Tag>
-          )}
-          {device.scope === 'personal' && !!device.sharedWorkspaces?.length && (
-            // At-a-glance "this machine also lives in N workspaces" marker;
-            // the per-workspace list (and revoke) sits in the detail panel.
-            <Tag>{t('devices.share.badge', { count: device.sharedWorkspaces.length })}</Tag>
-          )}
+
           {isFallback && (
             <Tooltip>
               <TooltipTrigger render={<span />}>
@@ -274,24 +163,6 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
       </div>
 
       <div className="flex flex-none items-center gap-2">
-        {device.scope === 'workspace' && device.enroller && (
-          // Enroller avatar — the at-a-glance "who put this here" answer for
-          // shared workspace pools. Hidden in personal scope (always the
-          // caller) and for ghost rows (no row yet).
-          <Tooltip>
-            <TooltipTrigger render={<span onClick={(e) => e.stopPropagation()} />}>
-              <Avatar avatar={device.enroller.avatar ?? undefined} size={24} />
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('workspaceSetting.devices.enrolledBy', {
-                name:
-                  device.enroller.fullName ||
-                  device.enroller.username ||
-                  t('workspaceSetting.devices.unknownEnroller'),
-              })}
-            </TooltipContent>
-          </Tooltip>
-        )}
         {canEdit && (
           <span onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>

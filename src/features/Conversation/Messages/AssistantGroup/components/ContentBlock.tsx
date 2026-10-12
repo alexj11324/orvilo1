@@ -32,6 +32,9 @@ const ContentBlock = memo<ContentBlockProps>(
     hasToolsOverride,
     projectionKey,
   }) => {
+    const executingAgentId = useConversationStore(
+      (s) => dataSelectors.getDisplayMessageById(assistantId)(s)?.agentId,
+    );
     const errorContent = useErrorContent(error);
     const showImageItems = !!imageList && imageList.length > 0;
     const [isReasoning, retryFailedAssistantStep] = useConversationStore((s) => [
@@ -65,7 +68,7 @@ const ContentBlock = memo<ContentBlockProps>(
         id={id}
         customErrorRender={(alertError) => (
           <ErrorMessageExtra
-            data={{ error, id }}
+            data={{ agentId: executingAgentId, error, id }}
             error={alertError}
             retryScopeId={groupParentId}
             onRegenerate={handleRegenerate}

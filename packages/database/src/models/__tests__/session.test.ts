@@ -28,7 +28,7 @@ const userId = 'session-user';
 const runtimeAgencyConfig = {
   boundDeviceId: 'session-host',
   executionTarget: 'device' as const,
-  heterogeneousProvider: { type: 'codex' as const },
+  heterogeneousProvider: { type: 'codex' as const, model: 'default' },
 };
 const sessionModel = new SessionModel(serverDB, userId);
 
@@ -1195,6 +1195,7 @@ describe('SessionModel', () => {
         });
 
         await trx.insert(agents).values({
+          agencyConfig: runtimeAgencyConfig,
           id: agentId,
           userId,
           model: 'gpt-3.5-turbo',
@@ -1248,6 +1249,7 @@ describe('SessionModel', () => {
         });
 
         await trx.insert(agents).values({
+          agencyConfig: runtimeAgencyConfig,
           id: agentId,
           userId,
           model: 'gpt-3.5-turbo',
@@ -1362,6 +1364,7 @@ describe('SessionModel', () => {
         });
 
         await trx.insert(agents).values({
+          agencyConfig: runtimeAgencyConfig,
           id: agentId,
           userId,
           model: 'gpt-3.5-turbo',
@@ -1416,6 +1419,7 @@ describe('SessionModel', () => {
         });
 
         await trx.insert(agents).values({
+          agencyConfig: runtimeAgencyConfig,
           id: agentId,
           userId,
           model: 'gpt-3.5-turbo',

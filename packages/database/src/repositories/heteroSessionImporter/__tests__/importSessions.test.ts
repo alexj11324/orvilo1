@@ -141,18 +141,18 @@ describe('HeteroSessionImporterRepo.importSessions', () => {
     });
 
     const [topic] = await serverDB.select().from(topics).where(eq(topics.id, result.topicId));
-    // an imported CLI session has no pinned model, but the runtime must be
-    // attributable — a NULL provider reads as "not a hetero session"
-    expect(topic.provider).toBe('codex');
-    expect(topic.model).toBeNull();
+    expect(topic.agentId).toBe(heteroAgentId);
+    expect(topic).not.toHaveProperty('provider');
+    expect(topic).not.toHaveProperty('model');
   });
 
-  it('leaves the topic provider unset when the agent is not heterogeneous', async () => {
+  it('keeps the topic bound to its ordinary Agent without a provider pin', async () => {
     const repo = new HeteroSessionImporterRepo(serverDB, userId);
     const [result] = await repo.importSessions({ agentId, sessions: [basePayload()] });
 
     const [topic] = await serverDB.select().from(topics).where(eq(topics.id, result.topicId));
-    expect(topic.provider).toBeNull();
+    expect(topic.agentId).toBe(agentId);
+    expect(topic).not.toHaveProperty('provider');
   });
 
   it('is idempotent: re-importing the same payload inserts nothing', async () => {

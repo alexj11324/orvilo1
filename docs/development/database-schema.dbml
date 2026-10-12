@@ -1306,9 +1306,6 @@ table credentials {
 table devices {
   id uuid [pk, not null, default: `gen_random_uuid()`]
   user_id text [not null]
-  workspace_id text
-  visibility text [not null, default: 'private']
-  shared_from_device_id varchar(64)
   device_id varchar(64) [not null]
   identity_source varchar(20) [not null]
   hostname text
@@ -1328,10 +1325,8 @@ table devices {
 
   indexes {
     (user_id, device_id) [name: 'devices_user_id_device_id_unique', unique]
-    (workspace_id, device_id) [name: 'devices_workspace_id_device_id_unique', unique]
+    device_id [name: 'devices_device_id_unique', unique]
     user_id [name: 'devices_user_id_idx']
-    workspace_id [name: 'devices_workspace_id_idx']
-    (workspace_id, visibility, user_id) [name: 'devices_workspace_visibility_idx']
   }
 }
 
@@ -5015,8 +5010,6 @@ table topics {
   total_tokens integer
   cost jsonb
   usage jsonb
-  model text
-  provider text
   sender_id text
   workspace_id text
   deleted_at "timestamp with time zone"
@@ -5037,8 +5030,6 @@ table topics {
     project_working_directory_id [name: 'topics_project_working_directory_id_idx']
     trigger [name: 'topics_trigger_idx']
     status [name: 'topics_status_idx']
-    model [name: 'topics_model_idx']
-    provider [name: 'topics_provider_idx']
     (user_id, completed_at) [name: 'topics_user_id_completed_at_idx']
     sender_id [name: 'topics_sender_id_idx']
     workspace_id [name: 'topics_workspace_id_idx']

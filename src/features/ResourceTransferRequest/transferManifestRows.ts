@@ -61,12 +61,6 @@ const MANIFEST_ROWS: Record<ManifestRowField, ManifestRowSpec> = {
     initiatorKey: 'transferRequest.manifestInitiator.cronJobs',
     recipientKey: 'transferRequest.manifest.cronJobs',
   },
-  deviceBindingAffected: {
-    applies: (m) => (m.deviceBindingAffected ? {} : null),
-    impact: 'reset',
-    initiatorKey: 'transferRequest.manifestInitiator.deviceReset',
-    recipientKey: 'transferRequest.manifest.deviceReset',
-  },
   connectorsAffected: {
     applies: (m) => (m.connectorsAffected > 0 ? { count: m.connectorsAffected } : null),
     impact: 'reset',

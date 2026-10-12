@@ -153,8 +153,6 @@ export default {
     '{{count}} scheduled jobs transfer with it, disabled until you re-enable them',
   'transferRequest.manifest.cronJobs_one':
     '{{count}} scheduled job transfer with it, disabled until you re-enable them',
-  'transferRequest.manifest.deviceReset':
-    'Device bindings you cannot access will be reset on transfer',
   'transferRequest.manifest.expertiseAdjust_other':
     '{{count}} private expertise domains adjust — agent-exclusive ones transfer to you, shared ones unbind',
   'transferRequest.manifest.expertiseAdjust_one':
@@ -181,8 +179,6 @@ export default {
     'This private agent will leave {{count}} projects not owned by the recipient',
   'transferRequest.manifestInitiator.projectsLeave_one':
     'This private agent will leave {{count}} project not owned by the recipient',
-  'transferRequest.manifestInitiator.deviceReset':
-    'Device bindings the new owner cannot access will be reset',
   'transferRequest.manifestInitiator.expertiseAdjust_other':
     '{{count}} private expertise domains adjust — ones exclusive to this agent transfer with it, shared ones unbind',
   'transferRequest.manifestInitiator.expertiseAdjust_one':

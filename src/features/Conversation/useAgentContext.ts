@@ -4,10 +4,9 @@ import { type ConversationContext } from '@orvilo/types';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useOfferedAgentId } from '@/features/DefaultAgent/useDefaultAgent';
+import { useDefaultAgentPreference } from '@/features/DefaultAgent/useDefaultAgentPreference';
 import { useChatStore } from '@/store/chat';
 import { useDocumentStore } from '@/store/document';
-import { useGlobalStore } from '@/store/global';
-import { systemStatusSelectors } from '@/store/global/selectors';
 
 import { useAgentConversationCoordinate } from './useAgentConversationCoordinate';
 
@@ -24,12 +23,12 @@ export function useAgentContext(): ConversationContext {
   // user picked in the composer — falling back to the last agent a send ran
   // under — rather than whichever agent's room the route happens to sit in.
   // The first message then binds that agent to the new topic.
-  const [composerAgentId, lastUsedAgentId] = [
+  const [composerAgentId, orchestratorAgentId] = [
     useChatStore((s) => s.composerAgentId),
-    useGlobalStore(systemStatusSelectors.lastUsedAgentId),
+    useDefaultAgentPreference().orchestratorAgentId,
   ];
   // A remembered Agent may since have been withheld with its runtime.
-  const rememberedAgentId = useOfferedAgentId(composerAgentId || lastUsedAgentId);
+  const rememberedAgentId = useOfferedAgentId(composerAgentId || orchestratorAgentId);
   const agentId = topicId || threadId ? routeAgentId : rememberedAgentId || routeAgentId;
 
   const activeTopicDocumentId = useDocumentStore((s) => {

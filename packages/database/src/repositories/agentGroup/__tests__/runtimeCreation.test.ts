@@ -113,7 +113,6 @@ describe('resource-owned runtime creation', () => {
       primaryOwnerId: userId,
     });
     await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
-    await db.update(devices).set({ workspaceId }).where(eq(devices.deviceId, 'resource-host'));
     const copied = await repo.copyToWorkspace(original.group.id, workspaceId, userId, {
       targetVisibility: 'private',
     });
@@ -185,19 +184,22 @@ describe('resource-owned runtime creation', () => {
     expect(await db.select().from(agents)).toHaveLength(3);
   });
 
-  it('requires target-scope host authority for copies and rolls back the group', async () => {
+  it('copies to a workspace while retaining the creator-owned host', async () => {
     await seedPrime();
     const group = await seedLegacyGroup({ title: 'Original' }, [], runtime);
     await db
       .insert(workspaces)
       .values({ id: workspaceId, primaryOwnerId: userId, name: 'Target', slug: workspaceId });
-    await expect(repo.copyToWorkspace(group.group.id, workspaceId, userId)).rejects.toThrow(
-      'AGENT_HOST_UNAVAILABLE',
+    const copied = await repo.copyToWorkspace(group.group.id, workspaceId, userId);
+    expect(copied).toBeTruthy();
+    expect(await db.select().from(chatGroups)).toHaveLength(2);
+    const copy = await new AgentGroupRepository(db, userId, workspaceId).findByIdWithAgents(
+      copied!.groupId,
     );
-    expect(await db.select().from(chatGroups)).toHaveLength(1);
+    expect(copy?.agents[0].agencyConfig?.boundDeviceId).toBe(runtime.agencyConfig.boundDeviceId);
   });
 
-  it('leaves owned and referenced members in place when a transfer clone lacks target authority', async () => {
+  it('transfers a group without enrolling its saved host into the target workspace', async () => {
     await seedPrime();
     const member = await new AgentModel(db, userId).create({ ...runtime, title: 'Referenced' });
     const group = await seedLegacyGroup({ title: 'Original' }, [member.id], runtime);
@@ -207,12 +209,14 @@ describe('resource-owned runtime creation', () => {
       name: 'Target',
       slug: workspaceId,
     });
-    await expect(repo.transferToWorkspace(group.group.id, workspaceId, userId)).rejects.toThrow(
-      'AGENT_HOST_UNAVAILABLE',
-    );
+    await repo.transferToWorkspace(group.group.id, workspaceId, userId);
     const [unchanged] = await db.select().from(chatGroups).where(eq(chatGroups.id, group.group.id));
-    expect(unchanged.workspaceId).toBeNull();
-    for (const agent of await db.select().from(agents)) expect(agent.workspaceId).toBeNull();
+    expect(unchanged.workspaceId).toBe(workspaceId);
+    const transferred = await new AgentGroupRepository(db, userId, workspaceId).findByIdWithAgents(
+      group.group.id,
+    );
+    for (const agent of transferred!.agents)
+      expect(agent.agencyConfig?.boundDeviceId).toBe(runtime.agencyConfig.boundDeviceId);
   });
 
   it('does not repair a legacy group without a runtime', async () => {

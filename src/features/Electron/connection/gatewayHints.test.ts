@@ -4,47 +4,39 @@ import { resolveGatewayHints } from './gatewayHints';
 
 const base = {
   connectionCount: 0,
+  connectionState: 'disconnected' as const,
   isConnected: true,
   isConnecting: false,
-  workspaceConnectionState: 'disconnected' as const,
-  workspaceScoped: true,
 };
-
-describe('resolveGatewayHints', () => {
-  it('marks this device as connected in a workspace that lists no shared device', () => {
+describe('device gateway hints', () => {
+  it('keeps the native connected dot when the inventory has not caught up', () => {
     expect(resolveGatewayHints(base)).toEqual({
-      connection: { key: 'gateway.workspaceStatusDisconnected' },
-      device: { key: 'gateway.statusConnected' },
+      connection: { key: 'gateway.statusConnectedConnections', count: 1 },
       showConnectedDot: true,
     });
   });
-
-  it('shows no dot while this device is disconnected, whatever the workspace reports', () => {
-    const hints = resolveGatewayHints({
-      ...base,
-      connectionCount: 2,
-      isConnected: false,
-      workspaceConnectionState: 'connected',
-    });
-
-    expect(hints.showConnectedDot).toBe(false);
-    expect(hints.device.key).toBe('gateway.statusDisconnected');
-    expect(hints.connection).toEqual({ count: 2, key: 'gateway.workspaceStatusConnections' });
-  });
-
-  it('says the workspace device list is still loading instead of hiding the line', () => {
+  it('counts every owned connection when this desktop is disconnected', () => {
     expect(
-      resolveGatewayHints({ ...base, workspaceConnectionState: 'connecting' }).connection,
-    ).toEqual({ key: 'gateway.workspaceStatusLoading' });
-  });
-
-  it("reports this account's connections outside a workspace only when there are some", () => {
-    const personal = { ...base, workspaceScoped: false };
-
-    expect(resolveGatewayHints(personal).connection).toBeUndefined();
-    expect(resolveGatewayHints({ ...personal, connectionCount: 1 }).connection).toEqual({
-      count: 1,
-      key: 'gateway.statusConnectedConnections',
+      resolveGatewayHints({
+        ...base,
+        isConnected: false,
+        connectionState: 'connected',
+        connectionCount: 2,
+      }),
+    ).toEqual({
+      connection: { key: 'gateway.statusConnectedConnections', count: 2 },
+      showConnectedDot: true,
     });
+  });
+  it('distinguishes failed and loading inventory from offline devices', () => {
+    expect(
+      resolveGatewayHints({ ...base, isConnected: false, connectionState: 'unavailable' })
+        .connection.key,
+    ).toBe('gateway.statusUnavailable');
+    expect(
+      resolveGatewayHints({ ...base, isConnected: false, connectionState: 'connecting' }).connection
+        .key,
+    ).toBe('gateway.statusLoading');
+    expect(resolveGatewayHints({ ...base, isConnected: false }).showConnectedDot).toBe(false);
   });
 });

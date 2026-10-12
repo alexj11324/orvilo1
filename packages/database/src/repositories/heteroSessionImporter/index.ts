@@ -89,7 +89,7 @@ export class HeteroSessionImporterRepo {
     session: HeteroSessionImportPayload,
     agentId: string,
     groupId?: string | null,
-    heteroType?: string | null,
+    _heteroType?: string | null,
   ): Promise<HeteroSessionImportResult> =>
     this.db.transaction(async (tx) => {
       // the source transcript's last raw-record timestamp — the picker compares it
@@ -153,7 +153,6 @@ export class HeteroSessionImporterRepo {
           // records carry it per message — but the runtime is known, and a topic
           // left with a NULL provider reads as "not a hetero session" to every
           // provider-scoped query.
-          provider: heteroType ?? null,
           title: session.title || 'Imported Session',
           userId: this.userId,
           workspaceId: this.workspaceId ?? null,

@@ -113,7 +113,6 @@ export interface RemovalPreview {
   }[];
   reviewingTaskCount: number;
   runningDelegationCount: number;
-  sharedDeviceCount: number;
 }
 
 /** `projectMember.list` → project membership row + public profile. */

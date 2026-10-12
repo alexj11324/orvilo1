@@ -1074,23 +1074,9 @@ const ExecAgentSchema = z
     existingMessageIds: z.array(z.string()).optional().default([]),
     /** File IDs of already-uploaded attachments to attach to the new user message */
     fileIds: z.array(z.string()).optional(),
-    /**
-     * Model / provider / reasoning effort picked in a blank composer before the
-     * conversation existed (`composerModelSelection` / `composerHeteroEffort`
-     * client-side). Written onto the topic THIS run creates and never onto the
-     * agent row — a chat-side pick is conversation-scoped
-     * (docs/development/chat-agent-model-ia.md §5.2). Ignored when the run reuses
-     * an existing topic; absent for every non-composer caller, which leaves the
-     * agent-config topic snapshot exactly as before.
-     */
-    newTopicPins: z
-      .object({
-        effort: z
-          .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
-          .optional(),
-        model: z.string().optional(),
-        provider: z.string().optional(),
-      })
+
+    newTopicEffort: z
+      .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
       .optional(),
     /** Parent message ID for regeneration/continue (skip user message creation, branch from this message) */
     parentMessageId: z.string().optional(),
@@ -1323,12 +1309,8 @@ const ScheduleAgentRunSchema = z
     fileIds: z.array(z.string()).optional(),
     /** Group to file the topic under, when scheduling from a group conversation */
     groupId: z.string().nullish(),
-    /** Override the agent's default model */
-    model: z.string().optional(),
     /** The user input/prompt, replayed verbatim when the run comes due */
     prompt: z.string().min(1),
-    /** Override the agent's default provider */
-    provider: z.string().optional(),
     /**
      * When to run. UTC ISO-8601 (`…Z`) — the dispatcher's due query compares it
      * as text, so a zoned offset would break the ordering.
@@ -2179,7 +2161,7 @@ export const aiAgentRouter = router({
       existingMessageIds = [],
       fileIds,
       mentionedAgents,
-      newTopicPins,
+      newTopicEffort,
       parentMessageId,
       resumeApproval,
       resumeApprovals,
@@ -2383,7 +2365,7 @@ export const aiAgentRouter = router({
         existingMessageIds,
         fileIds,
         mentionedAgents,
-        newTopicPins,
+        newTopicEffort,
         parentMessageId,
         prompt,
         // When parentMessageId is provided, this is a regeneration/continue or a

@@ -358,7 +358,7 @@ describe('workspaceMemberRouter.changeRole / suspend / resume / remove / leave',
     memberModel.updateMemberRole.mockResolvedValue([{ userId: 'u-target' }]);
     memberModel.suspendMember.mockResolvedValue([{ userId: 'u-target' }]);
     memberModel.resumeMember.mockResolvedValue([{ userId: 'u-target' }]);
-    memberModel.removeMember.mockResolvedValue({ removedDeviceIds: ['dev-1'] });
+    memberModel.removeMember.mockResolvedValue(undefined);
     memberModel.getMember.mockResolvedValue({ role: 'member' });
     queries.reassignOpenAssignedTasks.mockResolvedValue(2);
   });
@@ -440,7 +440,7 @@ describe('workspaceMemberRouter.changeRole / suspend / resume / remove / leave',
       userId: 'u-target',
     });
 
-    expect(result).toEqual({ reassignedTaskCount: 2, removedDeviceIds: ['dev-1'] });
+    expect(result).toEqual({ reassignedTaskCount: 2 });
     expect(queries.reassignOpenAssignedTasks).toHaveBeenCalledWith(fakeDb, {
       fromUserId: 'u-target',
       toUserId: 'u-admin',
@@ -543,7 +543,6 @@ describe('workspaceMemberRouter.listInvitations / removalPreview', () => {
     expect(preview).toMatchObject({
       assignedTaskCount: 3,
       runningDelegationCount: 1,
-      sharedDeviceCount: 2,
     });
   });
 });

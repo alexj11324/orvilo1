@@ -35,13 +35,13 @@ export const resolveDeviceDispatchAuthorizationFailure = async (
 
   const device = model
     ? workspaceId
-      ? await model.findWorkspaceDeviceById(deviceId)
+      ? await model.findExecutionDeviceById(deviceId)
       : await model.findByDeviceId(deviceId)
     : undefined;
   if (device) return undefined;
 
   const repairCandidates = model
-    ? (await (workspaceId ? model.queryWorkspaceDevices() : model.queryPersonal()))
+    ? (await model.query())
         .filter((candidate) => candidate.deviceId !== deviceId)
         .map((candidate) => candidate.deviceId)
         .slice(0, 8)

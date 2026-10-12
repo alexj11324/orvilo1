@@ -23,7 +23,7 @@ vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn(function () {
     return {
       findByDeviceId: mockFindByDeviceId,
-      findWorkspaceDeviceById: mockFindWorkspaceDeviceById,
+      findExecutionDeviceById: mockFindWorkspaceDeviceById,
     };
   }),
 }));

@@ -6,13 +6,6 @@ import { memo } from 'react';
 
 import { getDeviceIcon } from '@/features/DeviceManager/getDeviceIcon';
 
-// The grouping/candidate derivations live in the shared helper so settings,
-// chat, connect and repair surfaces all read ONE pool definition.
-export {
-  executionTargetDeviceCandidates,
-  groupExecutionTargetDevices,
-} from '@/helpers/executionTarget';
-
 export const SHARED_EXECUTION_TARGETS = ['auto', 'device', 'none', 'sandbox'] as const;
 
 export const isSharedExecutionTarget = (

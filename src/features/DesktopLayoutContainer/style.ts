@@ -1,33 +1,10 @@
-import { createStaticStyles } from 'antd-style';
-
 import { isDesktop } from '@/const/version';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  // Inner container
-  innerContainer: css`
-    position: relative;
-
-    overflow: hidden;
-
-    border: 1px solid var(--container-border-color, ${cssVar.colorBorder});
-    border-radius: var(--container-border-radius, ${cssVar.borderRadius});
-    border-end-end-radius: var(
-      --container-border-bottom-right-radius,
-      var(--container-border-radius, ${cssVar.borderRadius})
-    );
-
-    background: ${cssVar.colorBgContainer};
-  `,
-
-  // Outer container
-  outerContainer: css`
-    position: relative;
-
-    overflow: hidden;
-
-    padding-block-start: var(--container-padding-top, 8px);
-    padding-inline-start: var(--container-padding-left, 8px);
-
-    background: ${isDesktop ? 'transparent' : cssVar.colorBgLayout};
-  `,
-}));
+export const styles = {
+  // Public container variables retain precedence over the panel role defaults.
+  innerContainer:
+    'relative overflow-hidden border [border-color:var(--container-border-color,var(--border))] rounded-[var(--container-border-radius,var(--radius-card))] rounded-ee-[var(--container-border-bottom-right-radius,var(--container-border-radius,var(--radius-card)))] bg-card',
+  outerContainer: `relative overflow-hidden [padding-block-start:var(--container-padding-top,calc(var(--spacing)*2))] [padding-inline-start:var(--container-padding-left,calc(var(--spacing)*2))] ${
+    isDesktop ? 'bg-transparent' : 'bg-background'
+  }`,
+};

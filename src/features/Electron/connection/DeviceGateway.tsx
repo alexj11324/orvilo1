@@ -1,5 +1,5 @@
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { HardDrive, SettingsIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,34 +17,13 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  greenDot: css`
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline-end: 0;
-
-    width: 8px;
-    height: 8px;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 50%;
-
-    background: #52c41a;
-  `,
-  popoverContent: css`
-    width: 250px;
-  `,
-  scopeHint: css`
-    font-size: 11px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextDescription};
-    white-space: nowrap;
-  `,
-  statusTitle: css`
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  greenDot:
+    'absolute inset-be-0 inset-e-0 size-2 rounded-full border-[length:calc(var(--spacing)*0.375)] border-solid border-card bg-success',
+  popoverContent: 'w-62.5',
+  scopeHint: 'text-xs leading-5 text-foreground-description whitespace-nowrap',
+  statusTitle: 'text-sm leading-5.5 font-medium text-foreground',
+};
 
 interface DeviceGatewayProps {
   workspaceScoped: boolean;
@@ -124,14 +103,14 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
         : t(isConnected ? 'gateway.statusConnected' : 'gateway.statusDisconnected');
 
   const popoverContent = (
-    <div className={cx(styles.popoverContent, 'flex flex-col gap-1')}>
+    <div className={cn(styles.popoverContent, 'flex flex-col gap-1')}>
       <div className="flex items-center justify-between">
         <span className={styles.statusTitle}>{t('gateway.title')}</span>
         <div className="flex items-center gap-1.5">
           <ActionIcon
             aria-label={t('gateway.manageDevices')}
             icon={SettingsIcon}
-            size="small"
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t('gateway.manageDevices')}
             onClick={() => {
               setOpen(false);
@@ -142,6 +121,7 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
             <Switch
               aria-label={t('gateway.enableConnection')}
               checked={isConnected || isConnecting}
+              className="transition-[background-color,border-color,box-shadow,opacity] duration-(--orvilo-motion-fast)"
               disabled={isConnecting}
               size="sm"
               onCheckedChange={handleSwitchChange}
@@ -155,13 +135,13 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <div style={{ position: 'relative' }}>
+      <div className="relative">
         <PopoverTrigger
           render={
             <ActionIcon
               icon={HardDrive}
               loading={isConnecting}
-              size="small"
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('gateway.title')}
               tooltipProps={{ placement: 'bottomRight' }}
             />
@@ -169,7 +149,7 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
         />
         {scopeConnected && <div className={styles.greenDot} />}
       </div>
-      <PopoverContent align="end" className="w-auto" side="bottom" style={{ padding: 8 }}>
+      <PopoverContent align="end" className="w-auto p-2" side="bottom">
         {popoverContent}
       </PopoverContent>
     </Popover>

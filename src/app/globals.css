@@ -560,3 +560,16 @@
     from { --sidebar-fade-bottom: var(--sidebar-fade-size); }
     to { --sidebar-fade-bottom: 0; }
 }
+
+/* The boot shell is visible before AppTheme; its static class also keeps this
+   centering when user-disabled or system-reduced motion suppresses the cue. */
+@keyframes orvilo-boot-shell-hint {
+    from {
+        opacity: 0;
+        transform: translate(var(--orvilo-boot-shell-hint-offset-x), 10px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(var(--orvilo-boot-shell-hint-offset-x), 0);
+    }
+}

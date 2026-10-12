@@ -7,7 +7,6 @@ import { useParams } from 'react-router';
 
 import { Button } from '@/components/ui/button';
 import { AgentSetupPrompt } from '@/features/AgentOnboarding';
-import DefaultAgentSetting from '@/features/DefaultAgent/DefaultAgentSetting';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -103,7 +102,6 @@ const AgentSettingsIndex = memo(() => {
           </Button>
         </div>
         <AgentSetupPrompt />
-        <DefaultAgentSetting />
         <AgentSettingsList
           error={error}
           onRetry={() => mutate()}

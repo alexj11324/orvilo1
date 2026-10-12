@@ -8,6 +8,7 @@ import { initialState as initialChatState } from '@/store/chat/initialState';
 import { useChatStore } from '@/store/chat/store';
 import { createInitialEditorContentState, useDocumentStore } from '@/store/document';
 import { initialEditorState } from '@/store/document/slices/editor';
+import { useGlobalStore } from '@/store/global';
 
 import { useAgentContext } from './useAgentContext';
 
@@ -15,6 +16,7 @@ const activeWorkspaceSlugMock = vi.hoisted(() => ({ value: null as string | null
 
 // The hand-over to the default Agent has its own tests; here every Agent is offered.
 vi.mock('@/features/DefaultAgent/useDefaultAgent', () => ({
+  useDefaultAgent: () => ({ agentId: 'agt_orchestrator', source: 'orchestrator' }),
   useOfferedAgentId: (agentId?: string | null) => agentId ?? undefined,
 }));
 vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
@@ -34,6 +36,39 @@ describe('useAgentContext', () => {
       false,
     );
     useDocumentStore.setState({ ...initialEditorState }, false);
+  });
+
+  it('defaults blank Chat to the Orchestrator instead of the last used Agent', () => {
+    useChatStore.setState({
+      activeAgentId: undefined,
+      activeTopicId: undefined,
+      composerAgentId: undefined,
+    });
+    useGlobalStore.setState({
+      status: { ...useGlobalStore.getState().status, lastUsedAgentId: 'agt_last' },
+    });
+    const { result } = renderHook(() => useAgentContext());
+    expect(result.current.agentId).toBe('agt_orchestrator');
+  });
+
+  it('keeps an explicit composer pick for blank Chat', () => {
+    useChatStore.setState({
+      activeAgentId: undefined,
+      activeTopicId: undefined,
+      composerAgentId: 'agt_picked',
+    });
+    const { result } = renderHook(() => useAgentContext());
+    expect(result.current.agentId).toBe('agt_picked');
+  });
+
+  it('keeps a specific Agent deep link for a blank conversation', () => {
+    useChatStore.setState({
+      activeAgentId: 'agt_deep_link',
+      activeTopicId: undefined,
+      composerAgentId: undefined,
+    });
+    const { result } = renderHook(() => useAgentContext());
+    expect(result.current.agentId).toBe('agt_deep_link');
   });
 
   it('carries the active notebook document for the current topic in main scope', () => {

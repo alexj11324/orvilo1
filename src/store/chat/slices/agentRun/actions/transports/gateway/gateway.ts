@@ -111,9 +111,8 @@ const interruptGatewayTaskOrThrow = async (
  * the hint for local CLI agents; platform tasks always send it as a
  * capability claim for the server's plan to accept or ignore.
  *
- * Desktop-only and best-effort: any failure falls back to the server-side
- * device-resolution heuristics. We don't pre-check online status here — an
- * offline id simply fails the server's `onlineDevices` guard and stays unrouted.
+ * Desktop-only and best-effort. The server admits the saved Agent device and
+ * rejects unavailable bindings regardless of this capability hint.
  */
 const resolveDesktopDeviceHints = async (
   agentId?: string,
@@ -131,11 +130,8 @@ const resolveDesktopDeviceHints = async (
   const agent = agentByIdSelectors.getAgentById(agentId)(agentState);
   const userState = useUserStore.getState();
   const currentUserId = userProfileSelectors.userId(userState);
-  // Author-or-admin, mirroring the picker (`useAgentManagementAccess`) and the
-  // server (`isResourceAuthorOrAdmin`) — an admin's own override must survive
-  // a `fixed` selection policy just like the author's does. Resolve from the
-  // server first when the picker's hook never primed the cache (cold load /
-  // direct mention); no-op for authors and cached answers.
+  // Prime management access on cold loads and direct mentions; the Agent's
+  // saved configuration still determines its runtime.
   await ensureAgentManagementAccess({
     agentId,
     agentUserId: agent?.userId,
@@ -165,13 +161,7 @@ const resolveDesktopDeviceHints = async (
   try {
     const info = await gatewayConnectionService.getDeviceInfo();
     if (!info?.deviceId) return {};
-    // `localDeviceId` is the only hint: it tells unified admission which
-    // registered device IS the requester's own machine. The previous `deviceId`
-    // override asked the server to run on that id as an *explicit request* —
-    // under admission that is a different, authorization-gated input than the
-    // stored `local` intent, so a fixed/workspace-scoped run would reject the
-    // hint it used to accept. The server resolves the actual device from the
-    // session pin + stored target instead.
+    // Identify the requester's desktop without replacing the saved binding.
     return { localDeviceId: info.deviceId };
   } catch {
     return {};
@@ -954,6 +944,17 @@ export class GatewayActionImpl {
     // It has already ended server-side: retain the error row, not a phantom
     // runtime waiting for a terminal event published before we subscribed.
     if (!result.success || result.status === 'error') {
+      // Existing conversations have not been refetched above. Admission failures
+      // finish before a stream subscription exists, so hydrate the persisted
+      // error instead of leaving the optimistic assistant row blank.
+      if (!isCreateNewTopic && !result.createdThreadId) {
+        try {
+          const messages = await messageService.getMessages(resolvedMessageContext);
+          this.#get().replaceMessages(messages, { context: resolvedMessageContext });
+        } catch {
+          /* non-critical */
+        }
+      }
       if (parentOperationId)
         this.#get().failOperation(parentOperationId, {
           message: result.error || result.message,

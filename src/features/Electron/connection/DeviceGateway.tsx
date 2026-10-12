@@ -111,7 +111,8 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
     deviceListError,
   );
   const hints = resolveGatewayHints({
-    connectionCount,
+    // No device list yet counts as no connection.
+    connectionCount: connectionCount ?? 0,
     isConnected,
     isConnecting,
     workspaceConnectionState,

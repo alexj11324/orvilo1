@@ -20,7 +20,8 @@
  * Exit behavior: runs until killed; exits 1 when NODE_ENV=production or the
  * port is taken.
  */
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 import { pathToFileURL } from 'node:url';
 
 export const SEED_SESSION_PREFIX = 'sess_local_seed_';
@@ -45,28 +46,30 @@ export const seedSessionFor = (sessionId) => {
   };
 };
 
-const forward = async (req, res, upstream) => {
-  const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+const forward = (req, res, upstream) => {
   const headers = { ...req.headers };
   delete headers.host;
   delete headers.connection;
-  delete headers['content-length'];
-  try {
-    const response = await fetch(new URL(req.url, upstream), {
-      body: chunks.length ? Buffer.concat(chunks) : undefined,
+  const target = new URL(req.url, upstream);
+  const proxy = (target.protocol === 'https:' ? httpsRequest : httpRequest)(
+    target,
+    {
       headers,
       method: req.method,
       signal: AbortSignal.timeout(10_000),
-    });
-    res.writeHead(response.status, {
-      'content-type': response.headers.get('content-type') ?? 'application/json',
-    });
-    res.end(Buffer.from(await response.arrayBuffer()));
-  } catch {
+    },
+    (response) => {
+      res.writeHead(response.statusCode, response.headers);
+      response.on('error', () => res.destroy());
+      response.pipe(res);
+    },
+  );
+  proxy.on('error', () => {
+    if (res.headersSent) return res.destroy();
     res.writeHead(502, { 'content-type': 'application/json' });
     res.end('{"error":"clerk_upstream_unavailable"}');
-  }
+  });
+  req.pipe(proxy);
 };
 
 export const startClerkStub = ({ port, upstream }) =>

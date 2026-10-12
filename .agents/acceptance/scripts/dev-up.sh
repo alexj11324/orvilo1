@@ -120,6 +120,9 @@ start_dev() {
   fi
   mkdir -p "$(dirname "$LOG_FILE")"
   if [ "${ORVILO_CLERK_STUB:-}" = "1" ]; then
+    # Bun loads this worktree's .env while preserving shell overrides.
+    CLERK_SECRET_KEY="$(cd "$ROOT" && bun --print 'process.env.CLERK_SECRET_KEY || "sk_test_orvilo_local_stub"')"
+    export CLERK_SECRET_KEY
     if ! lsof -nP -iTCP:"$CLERK_STUB_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
       c_step "starting clerk-stub on :$CLERK_STUB_PORT"
       (CLERK_STUB_PORT="$CLERK_STUB_PORT" nohup node "$SCRIPT_DIR/clerk-stub.mjs" >"$CLERK_STUB_LOG" 2>&1 &)

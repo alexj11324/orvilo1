@@ -16,7 +16,7 @@ import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { useProjectSkillsDeviceId } from '@/hooks/useProjectSkillsDeviceId';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
+import { agentSelectors } from '@/store/agent/selectors';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   backLink: css`
@@ -59,7 +59,6 @@ const AgentDocumentSidebarContent = memo(() => {
   const agentMeta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   const agentTitle = agentDisplayName(agentMeta, t('untitledAgent'));
   const agentPath = buildWorkspaceAwarePath(`/agent/${agentId}`, activeWorkspaceSlug);
-  const isHetero = useAgentStore(agentByIdSelectors.isAgentHeterogeneousById(agentId));
   const workingDirectory = useEffectiveWorkingDirectory(agentId);
   const remoteDeviceId = useProjectSkillsDeviceId(agentId, isDesktop);
 

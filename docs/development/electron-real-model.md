@@ -79,7 +79,13 @@ tools directory and put its `bin` directory on the desktop process's PATH.
 On headless Linux, provide a functioning browser opener or have browser
 automation open the exact authorization request created by Electron. Preserve
 the normal cookies, consent, state, PKCE exchange and handoff. Do not replace
-this with a fabricated JWT or injected desktop token. Without a system keyring,
+this with a fabricated JWT or injected desktop token.
+
+For a local development server, `seed-session.mjs --electron <cdpPort> --desktop-auth <file>` is that automation: Electron, started with
+`ORVILO_DESKTOP_AUTH_URL_FILE=<file>`, writes its authorization request to the
+file and opens no browser; the script answers it with the seeded session, and
+Electron exchanges the code itself. It needs the Clerk stub, so it cannot be
+used against a real identity provider. Without a system keyring,
 the desktop may keep credentials only in memory; reauthorize after restarting
 instead of assuming that preserving the profile also preserves credentials.
 

@@ -126,7 +126,16 @@ work any more: they sign in through the removed Better Auth
 `/api/auth/sign-in/email` endpoint.
 
 A seeded renderer session does **not** authorize the Electron main process or
-connect an execution device. For real local-agent requests, follow
+connect an execution device. To do that as well without signing in by hand,
+start Electron with `ORVILO_DESKTOP_AUTH_URL_FILE=<file>` and pass the same path:
+
+```bash
+DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cdpPort> --desktop-auth <file>
+```
+
+A development build then writes its authorization request to the file and opens
+no browser; the script completes it with the seeded session and waits until the
+device gateway connection is up. A packaged build ignores the variable. For real local-agent requests, follow
 [Electron real-model integration](./electron-real-model.md).
 
 ## Running Issues on this machine (device gateway)

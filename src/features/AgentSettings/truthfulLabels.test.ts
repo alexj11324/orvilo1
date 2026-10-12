@@ -19,11 +19,11 @@ describe('agent settings labels name what the control does', () => {
     expect('settingAgent.generalSettings.legacyLabel' in defaultSetting).toBe(false);
   });
 
-  it('renders the diagnostics link without an "Advanced" fold', () => {
+  it('has no "Advanced" fold and no diagnostics link on the settings page', () => {
     const page = read('src/features/Settings/agents/AgentSettingsDetailPage.tsx');
 
     expect(page).not.toContain('advancedSettings.title');
-    expect(page).toContain('<AgentAdvancedSettings');
+    expect(page).not.toContain('AgentAdvancedSettings');
     expect('settingAgent.advancedSettings.title' in defaultSetting).toBe(false);
     expect(locale('en-US')).not.toHaveProperty(['settingAgent.advancedSettings.title']);
     expect(locale('zh-CN')).not.toHaveProperty(['settingAgent.advancedSettings.title']);

@@ -125,6 +125,15 @@ device bindings and repeated seeding, and a live mock-gateway HTTP check
 verified per-owner presence isolation. This changes test setup only and reuses
 the real Electron acceptance evidence; the full web scenarios remain a CI gate.
 
+The subsequent canary CLI model-catalog fix (#766) is retained. Its obsolete
+member-selection-policy label assertions are removed during integration, while
+the new diagnostics-link removal and CLI catalogs remain. The 12 affected
+files passed 79 related tests with clean lint, and the integrated Vite build
+passed in 51.78 seconds. The #759 Electron outcomes use OpenCode and retain
+their existing revision-labelled evidence; no live Claude Code/Codex catalog
+verification is claimed here. Web E2E passed all 36 scenarios and 221 steps
+on the preceding test-fixture revision `a91d6cc3`.
+
 `runtime-evidence.json` contains only whitelisted fixture identifiers, saved
 runtime fields, operation outcomes and the named offline error. No login tokens,
 environment variables, gateway secrets or private signing keys are included.

@@ -570,6 +570,26 @@ describe('Topic Router Integration Tests', () => {
 
       expect(updatedTopic.title).toBe('Updated Title');
       expect(updatedTopic.sessionId).toBe(newSession.id);
+      expect(updatedTopic.agentId).toBe(newAgent.id);
+    });
+
+    it('should move the topic to an agent that has no legacy session', async () => {
+      const caller = topicRouter.createCaller(createTestContext(userId));
+      const topicId = await caller.createTopic({ title: 'Handoff', sessionId: testSessionId });
+
+      const { agents } = await import('@/database/schemas');
+      const [nextAgent] = await serverDB
+        .insert(agents)
+        .values({ userId, title: 'Next Agent' })
+        .returning();
+
+      await caller.updateTopic({ id: topicId, value: { agentId: nextAgent.id } });
+
+      const [updatedTopic] = await serverDB.select().from(topics).where(eq(topics.id, topicId));
+
+      expect(updatedTopic.agentId).toBe(nextAgent.id);
+      // The previous agent's session must not stay on the row.
+      expect(updatedTopic.sessionId).toBeNull();
     });
   });
 

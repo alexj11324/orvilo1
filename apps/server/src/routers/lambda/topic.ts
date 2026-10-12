@@ -1117,8 +1117,11 @@ export const topicRouter = router({
       const { agentId, ...restValue } = input.value;
       if (agentId) await assertCanUseConversationTargets(guardCtx(ctx), [{ agentId }]);
 
-      // If agentId is provided, resolve to sessionId
-      let resolvedSessionId = restValue.sessionId;
+      // An agentId moves the topic to that agent (the in-conversation handoff),
+      // so the row's agent and its legacy session move together. An agent
+      // without a session clears the previous agent's session instead of
+      // leaving it on the row.
+      let resolvedSessionId: string | null | undefined = restValue.sessionId;
       if (agentId && !resolvedSessionId) {
         const resolved = await resolveContext(
           { agentId },
@@ -1126,10 +1129,14 @@ export const topicRouter = router({
           ctx.userId,
           ctx.workspaceId ?? undefined,
         );
-        resolvedSessionId = resolved.sessionId ?? undefined;
+        resolvedSessionId = resolved.sessionId ?? null;
       }
 
-      return ctx.topicModel.update(input.id, { ...restValue, sessionId: resolvedSessionId });
+      return ctx.topicModel.update(input.id, {
+        ...restValue,
+        ...(agentId ? { agentId } : {}),
+        sessionId: resolvedSessionId,
+      });
     }),
 
   /**

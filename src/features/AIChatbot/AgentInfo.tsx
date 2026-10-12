@@ -13,13 +13,16 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
-/** Reads the same selected agent as the existing selector; it never selects a model. */
+/**
+ * The selected Agent's description and instructions. The Agent picker beside the
+ * settings button already names the Agent, so nothing renders without either.
+ */
 export function AgentInfo() {
   const { t } = useTranslation('chat');
   const agentId = useAgentId();
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId));
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
-  if (!config) return null;
+  if (!config || !(meta.description || config.systemRole)) return null;
   const runtime = resolveAgentRuntimeType(config);
 
   return (
@@ -28,12 +31,10 @@ export function AgentInfo() {
         model={runtime === 'orvilo' ? config.model : runtime}
         name={meta.title || t('untitledAgent')}
       />
-      {(meta.description || config.systemRole) && (
-        <AgentContent className="max-h-64 overflow-auto">
-          {meta.description && <p className="text-sm text-muted-foreground">{meta.description}</p>}
-          {config.systemRole && <AgentInstructions>{config.systemRole}</AgentInstructions>}
-        </AgentContent>
-      )}
+      <AgentContent className="max-h-64 overflow-auto">
+        {meta.description && <p className="text-sm text-muted-foreground">{meta.description}</p>}
+        {config.systemRole && <AgentInstructions>{config.systemRole}</AgentInstructions>}
+      </AgentContent>
     </Agent>
   );
 }

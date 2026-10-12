@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 interface MockGlobalConfigOptions {
+  agentGatewayServiceToken?: string;
   agentGatewayUrl?: string;
   enableAgentGateway?: boolean;
   toolNameMaxLengthEnv?: string;
@@ -40,6 +41,9 @@ const mockGlobalConfigDependencies = (
   vi.doMock('@/envs/app', () => ({
     appEnv: {
       ...(options.agentGatewayUrl ? { AGENT_GATEWAY_URL: options.agentGatewayUrl } : {}),
+      ...(options.agentGatewayServiceToken === undefined
+        ? { AGENT_GATEWAY_SERVICE_TOKEN: 'service-token' }
+        : { AGENT_GATEWAY_SERVICE_TOKEN: options.agentGatewayServiceToken }),
       ...(options.enableAgentGateway === undefined
         ? {}
         : { ENABLE_AGENT_GATEWAY: options.enableAgentGateway }),
@@ -159,6 +163,16 @@ describe('getServerGlobalConfig', () => {
     await expect(loadServerConfig(true)).resolves.toMatchObject({
       enableGatewayMode: true,
     });
+  });
+
+  it('does not publish a gateway url the server cannot push run events to', async () => {
+    const config = await loadServerConfig(false, {
+      agentGatewayServiceToken: '',
+      agentGatewayUrl: 'https://gateway.test.com',
+      enableAgentGateway: true,
+    });
+
+    expect(config.agentGatewayUrl).toBeUndefined();
   });
 
   it('should enable gateway mode for self-hosted builds only when explicitly enabled with a gateway url', async () => {

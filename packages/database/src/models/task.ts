@@ -70,6 +70,7 @@ import { teams, teamWorkflowStates } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
+import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { lockTaskDependencyGraph } from '../utils/taskDependencyLock';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
@@ -94,6 +95,7 @@ import {
   TASK_OPEN_WORKFLOW,
   taskAttentionReasonExpr,
 } from './taskExecutionSql';
+import { TaskSubscriptionModel } from './taskSubscription';
 import {
   type TaskWorkflowPosition,
   workflowCategoryForLegacyStatus,
@@ -814,6 +816,12 @@ export class TaskModel {
           workspaceId: this.workspaceId ?? null,
         } as NewTask)
         .returning(taskRowColumns);
+
+      // People named on a new Issue are involved from the start (agents are
+      // never subscribers; these are member ids only).
+      const subscriptions = new TaskSubscriptionModel(runner, this.userId, this.workspaceId);
+      await subscriptions.ensureSubscribed(task.id, [task.assigneeUserId], 'assigned');
+      await subscriptions.ensureSubscribed(task.id, [task.reviewerUserId], 'reviewer');
 
       if (this.workspaceId && !options.mutation?.suppressDomainEvent) {
         await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
@@ -1636,9 +1644,11 @@ export class TaskModel {
           .set({ visibility })
           .where(and(inArray(taskTopics.taskId, taskIds), this.topicsOwnership()));
 
+        // A visibility flip is not an edit: keep `updatedAt`, which the
+        // comment card reads as "edited".
         await tx
           .update(taskComments)
-          .set({ visibility })
+          .set({ updatedAt: taskComments.updatedAt, visibility })
           .where(and(inArray(taskComments.taskId, taskIds), this.commentsOwnership()));
 
         await tx
@@ -4274,6 +4284,15 @@ export class TaskModel {
         .insert(taskComments)
         .values({ ...data, visibility, workspaceId: this.workspaceId ?? null })
         .returning();
+      // A member who joins the discussion keeps hearing about the Issue.
+      // Agent-authored comments subscribe nobody.
+      if (!comment.authorAgentId) {
+        await new TaskSubscriptionModel(runner, this.userId, this.workspaceId).ensureSubscribed(
+          comment.taskId,
+          [comment.authorUserId],
+          'commented',
+        );
+      }
       await this.recordCommentMutation(runner, {
         action: 'created',
         comment,
@@ -4832,6 +4851,11 @@ export class TaskModel {
       if (!updated) return null;
 
       const events: { payload: TaskActivityLogPayload; type: TaskActivityLogType }[] = [];
+      const subscriptions = new TaskSubscriptionModel(
+        runner,
+        this.userId,
+        updated.workspaceId ?? undefined,
+      );
 
       // The two assignee slots are independent — one edit can move both, and
       // each gets its own row so the feed reads one change per line.
@@ -4846,6 +4870,9 @@ export class TaskModel {
           payload: { fromId: before.assigneeUserId, toId: updated.assigneeUserId },
           type: 'assignee_user',
         });
+        // Being assigned is being involved: the new assignee keeps hearing
+        // about the Issue after it is handed on, unless they unsubscribed.
+        await subscriptions.ensureSubscribed(id, [updated.assigneeUserId], 'assigned');
       }
       // Only an explicit reviewer write earns a feed row — the COALESCE
       // backfill stamped on a paused transition is the system's fallback
@@ -4856,6 +4883,7 @@ export class TaskModel {
           payload: { fromId: before.reviewerUserId, toId: updated.reviewerUserId },
           type: 'reviewer',
         });
+        await subscriptions.ensureSubscribed(id, [updated.reviewerUserId], 'reviewer');
       }
       // Where the Issue sits in its workflow, in the words the board uses.
       const workflowPayload = workflowStatePayload(
@@ -5199,12 +5227,19 @@ export class TaskModel {
         .where(inArray(taskDocuments.taskId, ids));
       await (trx as OrviloDatabase)
         .update(taskComments)
-        .set({ ...ownershipUpdate, ...visibilityUpdate })
+        // Moving an Issue is not an edit of its comments (see the "edited" marker).
+        .set({ ...ownershipUpdate, ...visibilityUpdate, updatedAt: taskComments.updatedAt })
         .where(inArray(taskComments.taskId, ids));
       await (trx as OrviloDatabase)
         .update(taskActivities)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskActivities.taskId, ids));
+      // A subscription belongs to its subscriber, so only the scope moves:
+      // recipients are matched on it when a notification is projected.
+      await (trx as OrviloDatabase)
+        .update(taskSubscriptions)
+        .set({ updatedAt: taskSubscriptions.updatedAt, workspaceId: targetWorkspaceId })
+        .where(inArray(taskSubscriptions.taskId, ids));
 
       return { taskIds: ids };
     });

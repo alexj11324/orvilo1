@@ -32,6 +32,7 @@ import {
 } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
+import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
@@ -1628,6 +1629,7 @@ export class TaskService {
       taskLabels,
       admitted,
       activeDispatch,
+      isSubscribed,
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
       this.taskModel.getIssueRelations(task.id),
@@ -1640,6 +1642,16 @@ export class TaskService {
       this.taskLabelModel.listForTask(task.id).catch(() => []),
       isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }),
       new TaskDispatchModel(this.db, this.workspaceId).findActiveByTaskId(task.id),
+      // Rides on the detail read so the header toggle needs no request of its own.
+      new TaskSubscriptionModel(this.db, this.userId, this.workspaceId)
+        .isSubscribed(task.id)
+        .catch((error) => {
+          console.warn(
+            '[TaskService] reading the Issue subscription failed:',
+            error instanceof Error ? error.name : 'unknown error',
+          );
+          return false;
+        }),
     ]);
 
     // What the reader is shown, not what was written: a burst of edits to one
@@ -1933,6 +1945,9 @@ export class TaskService {
       shownLogs,
     );
 
+    const topicSeqById = new Map<string, number>();
+    for (const t of topics) if (t.topicId && t.seq != null) topicSeqById.set(t.topicId, t.seq);
+
     const creatorId = task.createdByAgentId ?? task.createdByUserId;
     const createdActivity: TaskDetailActivity | null =
       task.createdAt && creatorId
@@ -2017,6 +2032,12 @@ export class TaskService {
           editorData: c.editorData ?? undefined,
           files: files.length > 0 ? files : undefined,
           id: c.id,
+          // A follow-up left on one run says which run, so it does not read as
+          // an unanswered comment on the Issue. `seq` is null when that run is
+          // older than the loaded window of runs.
+          replyToRun: c.topicId
+            ? { seq: topicSeqById.get(c.topicId) ?? null, topicId: c.topicId }
+            : undefined,
           time: toISO(c.createdAt),
           updatedAt: c.updatedAt ? toISO(c.updatedAt) : undefined,
           type: 'comment' as const,
@@ -2159,6 +2180,7 @@ export class TaskService {
       id: task.id,
       identifier: task.identifier,
       instruction: task.instruction,
+      isSubscribed,
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,

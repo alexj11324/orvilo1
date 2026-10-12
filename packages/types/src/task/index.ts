@@ -1416,6 +1416,12 @@ export interface TaskDetailActivity {
    */
   propertyChange?: TaskDetailPropertyChange;
   readAt?: string | null;
+  /**
+   * Comment-only: the run this comment was left on. `seq` is that run's
+   * number in the Issue (`#3`), or null when the run is outside the loaded
+   * window of runs and cannot be numbered or linked.
+   */
+  replyToRun?: { seq: number | null; topicId: string } | null;
   resolvedAction?: string | null;
   resolvedAt?: string | null;
   resolvedComment?: string | null;
@@ -1540,6 +1546,12 @@ export interface TaskDetailData {
   id?: string;
   identifier: string;
   instruction: string;
+  /**
+   * Whether the requesting user has an active subscription to this Issue
+   * (manual, or added when they commented / were mentioned / assigned / made
+   * reviewer). False after an explicit unsubscribe.
+   */
+  isSubscribed?: boolean;
   /** Labels assigned to the task (Linear-style issue labels). */
   labels?: TaskLabelSummary[];
   name?: string | null;

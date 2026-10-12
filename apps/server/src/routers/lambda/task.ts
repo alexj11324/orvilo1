@@ -33,6 +33,7 @@ import {
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskReminderModel } from '@/database/models/taskReminder';
+import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
@@ -539,6 +540,31 @@ function collectTaskCommentRecipients(params: {
   return [...byUserId].map(([userId, kind]) => ({ kind, userId }));
 }
 
+/**
+ * A member @mentioned in a comment is involved from then on, so they are
+ * subscribed (never re-subscribed after an explicit unsubscribe, see
+ * `ensureSubscribed`). The ids were already validated as active members of
+ * the caller's workspace; whether each one can read the Issue is re-checked
+ * per recipient when a notification is projected. A failure here must not
+ * fail the comment that was just saved.
+ */
+async function subscribeMentionedBestEffort(
+  ctx: { serverDB: OrviloDatabase; userId: string; workspaceId?: string | null },
+  taskId: string,
+  mentionedUserIds: string[],
+) {
+  if (mentionedUserIds.length === 0) return;
+  try {
+    await new TaskSubscriptionModel(
+      ctx.serverDB,
+      ctx.userId,
+      ctx.workspaceId ?? undefined,
+    ).ensureSubscribed(taskId, mentionedUserIds, 'mentioned');
+  } catch (error) {
+    console.error('[task-comment] Failed to subscribe mentioned members', error);
+  }
+}
+
 interface TaskNotificationCtx {
   serverDB: OrviloDatabase;
   taskModel: TaskModel;
@@ -1026,6 +1052,7 @@ export const taskRouter = router({
           topicId: input.topicId,
           userId: ctx.userId,
         });
+        await subscribeMentionedBestEffort(ctx, task.id, mentionedUserIds);
         // Member comment ping (Linear-style): the task creator and the member
         // assignee learn about new discussion; @mentioned members get the
         // stronger "mentioned" notification instead. Agent-authored progress
@@ -1135,6 +1162,7 @@ export const taskRouter = router({
         if (!comment) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Comment not found' });
         }
+        await subscribeMentionedBestEffort(ctx, comment.taskId, addedMentionUserIds);
         if (workspaceId && addedMentionUserIds.length > 0) {
           notifyCommentActivityBestEffort(
             { serverDB: ctx.serverDB, taskModel: ctx.taskModel, workspaceId },

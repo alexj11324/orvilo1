@@ -137,6 +137,32 @@ describe('TaskResourceModel', () => {
     expect((await model.list(task.id)).map((row) => row.url)).toEqual(['https://x.test/k']);
   });
 
+  it('renames a link on its own Issue only, for writers only, and keeps its URL', async () => {
+    const task = await create();
+    const link = await model.add(task.id, {
+      kind: 'link',
+      title: 'Desing',
+      url: 'https://example.com/design',
+    });
+
+    expect(await model.updateTitle(task.id, link.id, '  Design  ')).toMatchObject({
+      id: link.id,
+      title: 'Design',
+      url: 'https://example.com/design',
+    });
+    await expect(model.updateTitle(task.id, link.id, '   ')).rejects.toThrow('Title is required');
+    await db
+      .update(workspaceMembers)
+      .set({ role: 'viewer' })
+      .where(eq(workspaceMembers.userId, readerId));
+    await expect(reader.updateTitle(task.id, link.id, 'Viewer title')).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    // A link is addressed through the Issue it belongs to.
+    const other = await create();
+    expect(await model.updateTitle(other.id, link.id, 'Elsewhere')).toBeUndefined();
+    expect(await model.list(task.id)).toMatchObject([{ title: 'Design' }]);
+  });
   it('shares legacy-private workspace Issue resources with active members', async () => {
     const task = await create('private');
     await model.add(task.id, { kind: 'link', url: 'https://example.com/private' });

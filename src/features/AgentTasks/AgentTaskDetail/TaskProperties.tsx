@@ -4,7 +4,7 @@ import { cn } from 'cn';
 import { parseISO } from 'date-fns';
 import { CalendarIcon, ClockIcon, PlusIcon, TagIcon, UserCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -43,9 +43,11 @@ import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskExecutionSection from './TaskExecutionSection';
 import TaskPrerequisites from './TaskPrerequisites';
 import {
+  addsWithoutRow,
   createPropertyRevealState,
   reconcilePropertyReveal,
   revealProperty,
+  settleOpening,
 } from './taskPropertyReveal';
 import TaskScheduleConfig from './TaskScheduleConfig';
 import { useIssueDetailCapabilities } from './useIssueDetailActions';
@@ -86,6 +88,15 @@ const TaskProperties = memo(() => {
   const currentReveal = reconcilePropertyReveal(revealState, taskId);
   if (currentReveal !== revealState) setRevealState(currentReveal);
   const revealed = currentReveal.keys;
+  // The property that was just added: its picker opens as its row mounts.
+  const opening = currentReveal.opening;
+  // Choosing an item from "+ Add property" hands focus to the picker it opens;
+  // the menu must not pull it back to its own button.
+  const addedFromMenu = useRef(false);
+  useEffect(() => {
+    // The added row has mounted with its picker open; open it only this once.
+    if (opening) setRevealState(settleOpening);
+  }, [opening]);
 
   const status = useTaskDetailSelector(taskDetailSelectors.taskStatus) as TaskStatus | undefined;
   const workflowCategory = useTaskDetailSelector(taskDetailSelectors.taskWorkflowCategory);
@@ -141,11 +152,18 @@ const TaskProperties = memo(() => {
   const optionalFields = {
     dueDate: !!dueDate || revealed.has('dueDate'),
     labels: labels.length > 0 || revealed.has('labels'),
+    reviewer:
+      (workflowCategory === 'in_review' || !!reviewerUserId || revealed.has('reviewer')) &&
+      shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId),
     schedule: !!(schedulePattern || heartbeatInterval) || revealed.has('schedule'),
   };
   const addableFields = [
     { key: 'dueDate', label: t('taskDetail.dueDate'), shown: optionalFields.dueDate },
     { key: 'labels', label: t('taskDetail.labels.title'), shown: optionalFields.labels },
+    // Only where there are members to pick from (see `shouldShowMemberAssignee`).
+    ...(shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId)
+      ? [{ key: 'reviewer', label: t('taskDetail.reviewer'), shown: optionalFields.reviewer }]
+      : []),
     { key: 'schedule', label: t('taskDetail.property.schedule'), shown: optionalFields.schedule },
     ...ISSUE_RELATION_KINDS.map((kind) => ({
       key: kind,
@@ -153,8 +171,17 @@ const TaskProperties = memo(() => {
       shown: revealed.has(kind),
     })),
   ];
-  const reveal = (key: string) =>
+  // Adding a property goes straight to choosing its value. A due date is
+  // chosen in a dialog, so no row appears until there is a date to show; the
+  // others need their row as the picker's anchor, and it opens with the picker.
+  const addProperty = (key: string) => {
+    addedFromMenu.current = true;
+    if (addsWithoutRow(key)) {
+      openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId });
+      return;
+    }
     setRevealState((prev) => revealProperty(reconcilePropertyReveal(prev, taskId), key));
+  };
 
   const railControl: PickerControl = { className: RAIL_CONTROL_CLASS };
   const statusValue = (
@@ -278,6 +305,7 @@ const TaskProperties = memo(() => {
             <TaskLabelSelector
               assignedLabels={labels}
               control={railControl}
+              defaultOpen={opening === 'labels'}
               disabled={status === 'running'}
               taskIdentifier={taskId}
             >
@@ -295,53 +323,53 @@ const TaskProperties = memo(() => {
           </PropertyRow>
         )}
 
-        {(workflowCategory === 'in_review' || reviewerUserId) &&
-          shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
-            <PropertyRow label={t('taskDetail.reviewer')}>
-              <AssigneeMemberSelector
-                control={{ ...railControl, title: t('taskDetail.reviewer') }}
-                currentUserId={reviewerUserId}
-                disabled={status === 'running'}
-                taskCreatorId={createdByUserId}
-                taskIdentifier={taskId}
-                taskVisibility={visibility}
-                onChange={(userId, member) =>
-                  void updateTask(
-                    taskId,
-                    { reviewerUserId: userId },
-                    {
-                      optimisticReviewer: member
-                        ? {
-                            avatar: member.user?.avatar ?? null,
-                            id: member.userId,
-                            name: member.user?.fullName ?? null,
-                            type: 'user',
-                          }
-                        : undefined,
-                    },
-                  )
-                }
-              >
-                {reviewerUserId ? (
-                  <>
-                    <AssigneeUserAvatar size={16} userId={reviewerUserId} />
-                    <span className="truncate">{reviewerMeta?.title}</span>
-                  </>
-                ) : (
-                  <>
-                    <UserCheckIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} size={16} />
-                    <span className={RAIL_PLACEHOLDER_CLASS}>
-                      {t('taskDetail.property.addReviewer')}
-                    </span>
-                  </>
-                )}
-              </AssigneeMemberSelector>
-            </PropertyRow>
-          )}
+        {optionalFields.reviewer && (
+          <PropertyRow label={t('taskDetail.reviewer')}>
+            <AssigneeMemberSelector
+              control={{ ...railControl, title: t('taskDetail.reviewer') }}
+              currentUserId={reviewerUserId}
+              defaultOpen={opening === 'reviewer'}
+              disabled={status === 'running'}
+              taskCreatorId={createdByUserId}
+              taskIdentifier={taskId}
+              taskVisibility={visibility}
+              onChange={(userId, member) =>
+                void updateTask(
+                  taskId,
+                  { reviewerUserId: userId },
+                  {
+                    optimisticReviewer: member
+                      ? {
+                          avatar: member.user?.avatar ?? null,
+                          id: member.userId,
+                          name: member.user?.fullName ?? null,
+                          type: 'user',
+                        }
+                      : undefined,
+                  },
+                )
+              }
+            >
+              {reviewerUserId ? (
+                <>
+                  <AssigneeUserAvatar size={16} userId={reviewerUserId} />
+                  <span className="truncate">{reviewerMeta?.title}</span>
+                </>
+              ) : (
+                <>
+                  <UserCheckIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} size={16} />
+                  <span className={RAIL_PLACEHOLDER_CLASS}>
+                    {t('taskDetail.property.addReviewer')}
+                  </span>
+                </>
+              )}
+            </AssigneeMemberSelector>
+          </PropertyRow>
+        )}
 
         {optionalFields.schedule && (
           <PropertyRow label={t('taskDetail.property.schedule')}>
-            <TaskScheduleConfig>
+            <TaskScheduleConfig defaultOpen={opening === 'schedule'}>
               <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
                 {!(schedulePattern || heartbeatInterval) && (
                   <ClockIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} size={16} />
@@ -360,10 +388,14 @@ const TaskProperties = memo(() => {
 
         {/* Linear parks relations in the properties sidebar: Blocked by, Blocks,
             Related — one flag-marked field per kind. */}
-        <TaskPrerequisites revealedKinds={revealed} />
+        <TaskPrerequisites openKind={opening} revealedKinds={revealed} />
 
         {!readOnly && addableFields.some((field) => !field.shown) && (
-          <DropdownMenu>
+          <DropdownMenu
+            onOpenChange={(open) => {
+              if (open) addedFromMenu.current = false;
+            }}
+          >
             <DropdownMenuTrigger
               render={
                 <Button className={styles.addProperty} size="sm" variant="ghost">
@@ -372,12 +404,12 @@ const TaskProperties = memo(() => {
                 </Button>
               }
             />
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="start" finalFocus={() => !addedFromMenu.current}>
               <DropdownMenuGroup>
                 {addableFields
                   .filter((field) => !field.shown)
                   .map((field) => (
-                    <DropdownMenuItem key={field.key} onClick={() => reveal(field.key)}>
+                    <DropdownMenuItem key={field.key} onClick={() => addProperty(field.key)}>
                       {field.label}
                     </DropdownMenuItem>
                   ))}

@@ -4219,6 +4219,32 @@ describe('TaskModel', () => {
       });
     });
 
+    it('does not count a visibility change as an edit of the Issue comments', async () => {
+      const personal = new TaskModel(serverDB, userId);
+      const task = await personal.create({ instruction: 'Flip me', visibility: 'public' });
+      const comment = await personal.addComment({
+        authorUserId: userId,
+        content: 'Untouched',
+        taskId: task.id,
+        userId,
+      });
+      // Make a bumped `updatedAt` unmistakable.
+      const posted = new Date('2024-01-01T00:00:00Z');
+      await serverDB
+        .update(taskComments)
+        .set({ createdAt: posted, updatedAt: posted })
+        .where(eq(taskComments.id, comment.id));
+
+      expect((await personal.updateVisibility(task.id, 'private'))?.visibility).toBe('private');
+
+      const [after] = await serverDB
+        .select()
+        .from(taskComments)
+        .where(eq(taskComments.id, comment.id));
+      expect(after.visibility).toBe('private');
+      expect(after.updatedAt).toEqual(posted);
+    });
+
     it('shares legacy comment and activity metadata without exposing historical private runs', async () => {
       const owner = new TaskModel(serverDB, userId, wsId);
       const peer = new TaskModel(serverDB, userId2, wsId);

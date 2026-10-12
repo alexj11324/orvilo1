@@ -5,6 +5,7 @@ import type { TaskDetailActivity } from '@orvilo/types';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useHomeStore } from '@/store/home';
@@ -80,6 +81,8 @@ describe('TopicCard', () => {
           },
         }}
       />,
+      // The card reads the URL fragment for `#run-<topicId>` deep links.
+      { wrapper: MemoryRouter },
     );
     const brand = screen.getByRole('img', { name: /: JV$/ });
     expect(brand.querySelector('svg title')?.textContent).toBe('Codex');
@@ -101,7 +104,7 @@ describe('TopicCard', () => {
    * into the hook timeout.
    */
   it('leaves links in the run output clickable', async () => {
-    render(<TopicCard activity={activity} />);
+    render(<TopicCard activity={activity} />, { wrapper: MemoryRouter });
 
     const link = screen.getByRole('link', { name: 'primes.py' });
 

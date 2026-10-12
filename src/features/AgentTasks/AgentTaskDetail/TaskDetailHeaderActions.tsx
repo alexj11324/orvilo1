@@ -48,6 +48,7 @@ import { useIssueStatusMove } from '../features/useIssueStatusMove';
 import { taskDeleteConfirmCopy } from '../shared/taskDeleteConfirm';
 import { openTaskIssueResourceModal } from './createTaskIssueResourceModal';
 import { issueResourceRef } from './issueResourceRef';
+import IssueSubscribeToggle from './IssueSubscribeToggle';
 import { relationKindOf } from './relationGroups';
 import { openTaskDescriptionHistoryModal } from './TaskDescriptionHistoryModal';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -592,6 +593,7 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
 
   return (
     <div className="flex shrink-0 items-center gap-1">
+      <IssueSubscribeToggle />
       <Button
         aria-label={favoriteLabel}
         aria-pressed={pinned}

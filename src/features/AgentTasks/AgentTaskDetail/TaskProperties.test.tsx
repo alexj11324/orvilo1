@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +11,7 @@ import TaskProperties from './TaskProperties';
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
+  labelSelectorDefaultOpen: vi.fn(),
   moveWorkflow: vi.fn(),
   openTaskScheduleDialog: vi.fn(),
   taskState: {
@@ -72,7 +73,10 @@ vi.mock('../features/AssigneeUserAvatar', () => ({
 }));
 
 vi.mock('../features/TaskLabelSelector', () => ({
-  default: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  default: ({ children, defaultOpen }: { children?: ReactNode; defaultOpen?: boolean }) => {
+    mocks.labelSelectorDefaultOpen(defaultOpen);
+    return <>{children}</>;
+  },
 }));
 
 vi.mock('../features/TaskPriorityTag', () => ({
@@ -121,6 +125,7 @@ describe('TaskProperties', () => {
     mocks.activeWorkspaceId = 'workspace-1';
     mocks.moveWorkflow.mockClear();
     mocks.openTaskScheduleDialog.mockClear();
+    mocks.labelSelectorDefaultOpen.mockClear();
   });
 
   afterEach(() => {
@@ -404,26 +409,46 @@ describe('TaskProperties', () => {
     }
     expect(screen.queryByText('taskDetail.property.addReviewer')).toBeNull();
 
+    // Adding a due date goes straight to its dialog. No empty row is left
+    // behind, so there is nothing to lose by looking at another Issue.
     fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
     fireEvent.click(await screen.findByText('taskDetail.dueDate'));
 
-    expect(screen.getByRole('group', { name: 'taskDetail.dueDate' })).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
+    expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({ dueDate: null, identifier: 'T-1' });
+    expect(screen.queryByRole('group', { name: 'taskDetail.dueDate' })).toBeNull();
+
+    // Labels need their row as the picker's anchor: it appears with the picker open.
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+    fireEvent.click(await screen.findByText('taskDetail.labels.title'));
+
+    expect(screen.getByRole('group', { name: 'taskDetail.labels.title' })).toBeTruthy();
+    // Open on mount, and only then: a later rebuild of the row must not reopen it.
+    expect(mocks.labelSelectorDefaultOpen.mock.calls[0]).toEqual([true]);
+    await waitFor(() => expect(mocks.labelSelectorDefaultOpen).toHaveBeenLastCalledWith(false));
   });
 
   // The due date used to be a clickable <div>: no role, no tab stop, so the
   // dialog could not be opened from the keyboard.
   it('exposes the due date as a focusable button that opens the schedule dialog', async () => {
-    render(<TaskProperties />);
+    const detailMap = mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>;
+    const original = detailMap['T-1'];
+    detailMap['T-1'] = { ...original, dueDate: '2026-05-01T00:00:00.000Z' };
+    try {
+      render(<TaskProperties />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
-    fireEvent.click(await screen.findByText('taskDetail.dueDate'));
+      const dueDate = within(screen.getByRole('group', { name: 'taskDetail.dueDate' })).getByRole(
+        'button',
+      );
+      expect(dueDate.tagName).toBe('BUTTON');
+      expect(dueDate.tabIndex).toBe(0);
 
-    const dueDate = screen.getByRole('button', { name: 'taskDetail.property.addDueDate' });
-    expect(dueDate.tagName).toBe('BUTTON');
-    expect(dueDate.tabIndex).toBe(0);
-
-    fireEvent.click(dueDate);
-    expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({ dueDate: null, identifier: 'T-1' });
+      fireEvent.click(dueDate);
+      expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({
+        dueDate: '2026-05-01T00:00:00.000Z',
+        identifier: 'T-1',
+      });
+    } finally {
+      detailMap['T-1'] = original;
+    }
   });
 });

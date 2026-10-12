@@ -112,6 +112,19 @@ export class TaskResourceModel {
     });
   }
 
+  /** Rename a link or pull request. Same write access as {@link add}; the URL never changes. */
+  async updateTitle(taskId: string, resourceId: string, title: string) {
+    const task = await this.resolve(taskId, true);
+    const next = title.trim();
+    if (!next) throw new Error('Title is required');
+    const [row] = await this.db
+      .update(taskResources)
+      .set({ title: next, updatedAt: new Date() })
+      .where(and(eq(taskResources.taskId, task.id), eq(taskResources.id, resourceId)))
+      .returning();
+    return row;
+  }
+
   async remove(taskId: string, resourceId: string) {
     const task = await this.resolve(taskId, true);
     return this.db.transaction(async (tx) => {

@@ -2261,6 +2261,143 @@ describe('Task Router Integration', () => {
       };
     };
 
+    it('toggles the reader own subscription through the router and refuses an Issue they cannot read', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { wsCaller, wsOtherCaller, workspaceId } = await setupWorkspace();
+      const { workAttentionRouter } = await import('../../workAttention');
+      const attention = (id: string, scoped = true) =>
+        workAttentionRouter.createCaller({
+          ...createTestContext(id),
+          ...(scoped ? { workspaceId } : {}),
+        });
+      const task = await wsCaller.create({ instruction: 'Follow me', name: 'Followed' });
+      const subscribed = async (reader: typeof wsCaller) =>
+        (await reader.detail({ id: task.data.id })).data?.isSubscribed;
+
+      // The creator follows their own Issue from the start; a bystander does not.
+      expect(await subscribed(wsCaller)).toBe(true);
+      expect(await subscribed(wsOtherCaller)).toBe(false);
+
+      await attention(userId).unsubscribe({ taskId: task.data.id });
+      expect(await subscribed(wsCaller)).toBe(false);
+      await attention(otherUserId).subscribe({ taskId: task.data.id });
+      expect(await subscribed(wsOtherCaller)).toBe(true);
+      // One person's toggle never moves another's.
+      expect(await subscribed(wsCaller)).toBe(false);
+      await attention(userId).subscribe({ taskId: task.data.id });
+      expect(await subscribed(wsCaller)).toBe(true);
+
+      // A personal Issue of someone else is not readable, so not followable.
+      const personal = await caller.create({ instruction: 'Mine alone', name: 'Personal' });
+      await expect(
+        attention(otherUserId, false).subscribe({ taskId: personal.data.id }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(
+        attention(otherUserId, false).unsubscribe({ taskId: personal.data.id }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      const { taskSubscriptions } = await import('@/database/schemas');
+      expect(
+        await serverDB
+          .select()
+          .from(taskSubscriptions)
+          .where(eq(taskSubscriptions.taskId, personal.data.id)),
+      ).toEqual([]);
+    });
+
+    it('subscribes people who comment, are mentioned, are assigned or review, but never over an unsubscribe', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const thirdUserId = await createTestUser(serverDB);
+      const { wsCaller, wsOtherCaller, workspaceId } = await setupWorkspace();
+      const { taskSubscriptions, workspaceMembers } = await import('@/database/schemas');
+      await serverDB
+        .insert(workspaceMembers)
+        .values({ role: 'member', userId: thirdUserId, workspaceId });
+      const { TaskSubscriptionModel } = await import('@/database/models/taskSubscription');
+      const subscriptionsOf = async (taskId: string) =>
+        Object.fromEntries(
+          (
+            await serverDB
+              .select()
+              .from(taskSubscriptions)
+              .where(eq(taskSubscriptions.taskId, taskId))
+          ).map((row) => [row.userId, row.unsubscribedAt ? 'unsubscribed' : row.reason]),
+        );
+
+      const task = await wsCaller.create({ instruction: 'Involve', name: 'Involve' });
+      expect(await subscriptionsOf(task.data.id)).toEqual({});
+      expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(false);
+
+      // Commenting subscribes the author; the detail payload says so.
+      await wsOtherCaller.addComment({ content: 'I am in', id: task.data.id });
+      expect(await subscriptionsOf(task.data.id)).toEqual({ [otherUserId!]: 'commented' });
+      expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(true);
+      // The creator has no row and still follows their own Issue.
+      expect((await wsCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(true);
+
+      // A mention subscribes the mentioned member, and the author as a commenter.
+      await wsCaller.addComment({
+        content: '@third',
+        editorData: editorDataWith(thirdUserId),
+        id: task.data.id,
+      });
+      expect(await subscriptionsOf(task.data.id)).toEqual({
+        [otherUserId!]: 'commented',
+        [thirdUserId]: 'mentioned',
+        [userId]: 'commented',
+      });
+
+      // An explicit unsubscribe survives every automatic rule.
+      await new TaskSubscriptionModel(serverDB, otherUserId!, workspaceId).unsubscribe(
+        task.data.id,
+      );
+      await wsOtherCaller.addComment({ content: 'still talking', id: task.data.id });
+      await wsCaller.addComment({
+        content: '@other',
+        editorData: editorDataWith(otherUserId!),
+        id: task.data.id,
+      });
+      await wsCaller.update({
+        assigneeUserId: otherUserId!,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+        reviewerUserId: otherUserId!,
+      });
+      expect((await subscriptionsOf(task.data.id))[otherUserId!]).toBe('unsubscribed');
+      expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(false);
+
+      // Assignee and reviewer are subscribed at creation and on change.
+      const assigned = await wsCaller.create({
+        assigneeUserId: otherUserId!,
+        instruction: 'Yours',
+        name: 'Yours',
+      });
+      expect(await subscriptionsOf(assigned.data.id)).toEqual({ [otherUserId!]: 'assigned' });
+      await wsCaller.update({ id: assigned.data.id, reviewerUserId: thirdUserId });
+      expect(await subscriptionsOf(assigned.data.id)).toEqual({
+        [otherUserId!]: 'assigned',
+        [thirdUserId]: 'reviewer',
+      });
+    });
+
+    it('does not subscribe anyone for an agent-authored comment', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { wsCaller } = await setupWorkspace();
+      const { taskSubscriptions } = await import('@/database/schemas');
+      const task = await wsCaller.create({ instruction: 'Agent notes', name: 'Agent notes' });
+      await new TaskModel(serverDB, userId, 'task-comment-notify-workspace').addComment({
+        authorAgentId: testAgentId,
+        content: 'progress',
+        taskId: task.data.id,
+        userId,
+      });
+      expect(
+        await serverDB
+          .select()
+          .from(taskSubscriptions)
+          .where(eq(taskSubscriptions.taskId, task.data.id)),
+      ).toEqual([]);
+    });
+
     it('should ping the task creator and @mentioned members on a new member comment', async () => {
       otherUserId = await createTestUser(serverDB);
       const { wsCaller, wsOtherCaller, workspaceId } = await setupWorkspace();

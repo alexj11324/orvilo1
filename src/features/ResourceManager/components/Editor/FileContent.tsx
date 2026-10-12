@@ -19,8 +19,8 @@ const FilePreviewer = memo<FilePreviewerProps>(({ fileId }) => {
   if (!fileId || !displayFile) return null;
 
   return (
-    <div className="flex flex-col h-[100%] w-[100%]">
-      <div className="flex flex-col flex-1 h-[100%]" style={{ overflow: 'auto' }}>
+    <div className="flex flex-col h-full w-full">
+      <div className="flex flex-col flex-1 h-full" style={{ overflow: 'auto' }}>
         <FileViewer {...displayFile} />
       </div>
     </div>

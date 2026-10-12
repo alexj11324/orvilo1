@@ -1,0 +1,21 @@
+/* Noninteractive 3x3 import-operation artwork, not a control or text size.
+   The 28px grid stride places dot centers at -28/0/28 after the exact -56px
+   centering transform. Maximum 16px dot diameter fits a 72px painted square
+   inside the actual 80px importer loading frame, with 4px outer clearance. */
+.loader {
+  transform: translateX(-56px);
+  aspect-ratio: 1;
+  width: 6px;
+  border-radius: 50%;
+  color: var(--primary);
+  box-shadow:
+        28px -28px 0 0,
+        56px -28px 0 0,
+        84px -28px 0 0,
+        28px 0 0 5px,
+        56px 0 0 5px,
+        84px 0 0 5px,
+        28px 28px 0 0,
+        56px 28px 0 0,
+        84px 28px 0 0;
+}

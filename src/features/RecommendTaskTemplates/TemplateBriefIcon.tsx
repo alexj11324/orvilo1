@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -24,7 +23,7 @@ export const TemplateBriefIcon = memo<TemplateBriefIconProps>(
       <div
         className="flex items-center justify-center"
         style={{
-          background: cssVar.colorFillSecondary,
+          background: 'var(--ant-color-fill-secondary)',
           flexShrink: 0,
           height: tileSize,
           width: tileSize,
@@ -41,8 +40,8 @@ export const TemplateBriefIcon = memo<TemplateBriefIconProps>(
         ) : (
           <span className="anticon" role="img">
             <spec.Comp
-              color={cssVar.colorTextSecondary}
-              fill={cssVar.colorTextSecondary}
+              color={'var(--ant-color-text-secondary)'}
+              fill={'var(--ant-color-text-secondary)'}
               height={glyphSize}
               size={glyphSize}
               width={glyphSize}

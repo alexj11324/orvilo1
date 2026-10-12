@@ -20,6 +20,10 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 
+import styles from './ActionBar/components/ActionMenu.module.css';
+
+const menuRowClassName = 'min-h-9 leading-5.5 pointer-coarse:min-h-11';
+
 /**
  * The menu-item union `renderDropdownMenuItems` accepted (Base UI's
  * `BaseMenuItemType`): plain items, `submenu` (header/footer slots), `group`,
@@ -84,7 +88,7 @@ const ItemContent = ({
     ) : (
       <span className="min-w-0 flex-1">{label}</span>
     )}
-    {extra ? <span className="ml-auto flex items-center">{extra}</span> : null}
+    {extra ? <span className="ml-auto flex min-w-0 items-center">{extra}</span> : null}
   </>
 );
 
@@ -100,7 +104,11 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
     if (item.type === 'group')
       return (
         <DropdownMenuGroup key={itemKey}>
-          {item.label ? <DropdownMenuLabel>{item.label}</DropdownMenuLabel> : null}
+          {item.label ? (
+            <DropdownMenuLabel className={cn(styles.groupLabel, 'leading-5')}>
+              {item.label}
+            </DropdownMenuLabel>
+          ) : null}
           {item.children ? renderMenuItems(item.children, nextKeyPath) : null}
         </DropdownMenuGroup>
       );
@@ -109,7 +117,7 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
       return (
         <DropdownMenuCheckboxItem
           checked={item.checked}
-          className={item.danger ? 'text-destructive' : undefined}
+          className={cn(menuRowClassName, item.danger && 'text-destructive-text')}
           closeOnClick={item.closeOnClick}
           defaultChecked={item.defaultChecked}
           disabled={item.disabled}
@@ -128,7 +136,7 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
     if (item.type === 'switch')
       return (
         <DropdownMenuItem
-          className={cn(item.className)}
+          className={cn(menuRowClassName, item.className)}
           closeOnClick={item.closeOnClick ?? false}
           disabled={item.disabled}
           key={itemKey}
@@ -160,6 +168,7 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
           onOpenChange={item.onOpenChange}
         >
           <DropdownMenuSubTrigger
+            className={cn(menuRowClassName, styles.submenuTrigger)}
             disabled={item.disabled}
             onClick={
               item.onClick
@@ -190,12 +199,16 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
               sideOffset={-1}
             >
               <MenuPrimitive.Popup
+                data-slot="dropdown-menu-sub-content"
                 className={cn(
                   POPUP_Z_CLASS,
-                  'cn-menu-target cn-menu-translucent w-auto min-w-[96px] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 outline-none duration-100 data-[side=right]:slide-in-from-left-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+                  'cn-menu-target cn-menu-translucent w-auto min-w-24 overflow-x-hidden overflow-y-auto overscroll-contain rounded-(--radius-overlay) bg-popover p-1 text-popover-foreground shadow-(--shadow-popover) leading-5.5 ring-1 ring-foreground/10 outline-none',
+                  styles.submenuPopup,
                 )}
               >
-                {item.header != null && <div className="px-1.5 py-1">{item.header}</div>}
+                {item.header != null && (
+                  <div className={cn('px-1.5 py-1', styles.submenuHeader)}>{item.header}</div>
+                )}
                 {item.children ? renderMenuItems(item.children, nextKeyPath) : null}
                 {item.footer != null && <div className="px-1.5 py-1">{item.footer}</div>}
               </MenuPrimitive.Popup>
@@ -206,7 +219,7 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
 
     return (
       <DropdownMenuItem
-        className={cn(item.className)}
+        className={cn(menuRowClassName, item.className)}
         closeOnClick={item.closeOnClick}
         disabled={item.disabled}
         key={itemKey}

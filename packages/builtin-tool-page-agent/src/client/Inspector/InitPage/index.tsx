@@ -47,7 +47,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
           </span>
           {displayLines > 0 && (
             <span
-              className="font-mono rounded bg-muted px-1 text-[12px]"
+              className="font-mono rounded bg-muted px-1 text-xs"
               style={{ color: 'var(--success)' }}
             >
               {' '}
@@ -58,7 +58,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
           )}
           {chars > 0 && (
             <span
-              className="font-mono rounded bg-muted px-1 text-[12px]"
+              className="font-mono rounded bg-muted px-1 text-xs"
               style={{ color: 'var(--ant-color-text-description)' }}
             >
               {' '}
@@ -77,7 +77,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
         </span>
         {displayLines > 0 && (
           <span
-            className="font-mono rounded bg-muted px-1 text-[12px]"
+            className="font-mono rounded bg-muted px-1 text-xs"
             style={{ color: 'var(--success)' }}
           >
             <Plus size={12} />
@@ -87,7 +87,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
         )}
         {chars > 0 && (
           <span
-            className="font-mono rounded bg-muted px-1 text-[12px]"
+            className="font-mono rounded bg-muted px-1 text-xs"
             style={{ color: 'var(--ant-color-text-description)' }}
           >
             {' '}

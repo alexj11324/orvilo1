@@ -1,44 +1,21 @@
 import { PatchDiff } from '@lobehub/ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 import { ChevronDownIcon, FileDiffIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+
 import CommentComposer from './CommentComposer';
 import type { ReviewFile, WriteOutcome } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  cardHeader: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  commentBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-  `,
-  threadHeader: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  cardHeader:
+    'cursor-pointer flex h-auto min-h-9 w-full items-center justify-start gap-2 rounded-none border-0 [border-block-end:1px_solid_var(--divider)] bg-fill-quaternary px-4 py-1.5 text-start font-normal whitespace-normal hover:bg-fill-quaternary hover:text-foreground aria-expanded:bg-fill-quaternary aria-expanded:text-foreground focus-visible:border-divider focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 focus-visible:-outline-offset-2 active:not-aria-[haspopup]:translate-y-0',
+  commentBox: '[border-block-start:1px_dashed_var(--divider)] px-4 py-2',
+  threadHeader: 'font-mono text-sm leading-5.5 text-muted-foreground',
+} as const;
 
 /**
  * One changed file: patch diff (unified or split) plus the line-comment
@@ -61,11 +38,15 @@ const ReviewFileCard = memo<{
 
   return (
     <div
-      className={cx('flex flex-col', styles.card)}
+      className={clsx('flex flex-col', styles.card)}
       id={`file-${encodeURIComponent(file.filename)}`}
     >
-      <div
-        className={cx('flex flex-row items-center', styles.cardHeader)}
+      <Button
+        aria-expanded={!collapsed}
+        className={clsx('flex flex-row items-center', styles.cardHeader)}
+        size="normal"
+        type="button"
+        variant="ghost"
         onClick={() => setCollapsed((current) => !current)}
       >
         <span
@@ -73,27 +54,27 @@ const ReviewFileCard = memo<{
           role="img"
           style={{ transform: collapsed ? 'rotate(-90deg)' : undefined }}
         >
-          <ChevronDownIcon fill={'transparent'} height={14} size={14} width={14} />
+          <ChevronDownIcon fill={'transparent'} height={16} size={16} width={16} />
         </span>
         <span className="anticon" role="img">
           <FileDiffIcon
-            color={cssVar.colorTextSecondary}
+            className="text-muted-foreground"
             fill={'transparent'}
-            height={14}
-            size={14}
-            width={14}
+            height={16}
+            size={16}
+            width={16}
           />
         </span>
-        <div className={cn('font-medium', styles.threadHeader)}>
+        <span className={cn('font-medium', styles.threadHeader)}>
           {file.status === 'renamed' && file.previousFilename
             ? `${file.previousFilename} → ${file.filename}`
             : file.filename}
-        </div>
-        <div className="flex flex-col flex-1" />
-        <div className="text-[12px] text-muted-foreground">
+        </span>
+        <span className="flex flex-col flex-1" />
+        <span className="text-xs text-muted-foreground">
           +{file.additions} −{file.deletions}
-        </div>
-      </div>
+        </span>
+      </Button>
       {collapsed ? null : file.patch ? (
         <>
           <PatchDiff
@@ -114,7 +95,7 @@ const ReviewFileCard = memo<{
             }}
           />
           {commentAt ? (
-            <div className={cx('flex flex-col gap-2', styles.commentBox)}>
+            <div className={clsx('flex flex-col gap-2', styles.commentBox)}>
               <div className={cn(styles.threadHeader)}>
                 {file.filename}:{commentAt.line} ·{' '}
                 {commentAt.side === 'LEFT'
@@ -141,8 +122,8 @@ const ReviewFileCard = memo<{
           ) : null}
         </>
       ) : (
-        <div className="flex flex-col p-3">
-          <div className="text-[12px] text-muted-foreground">{t('reviews.diffUnavailable')}</div>
+        <div className="flex flex-col p-4">
+          <div className="text-xs text-muted-foreground">{t('reviews.diffUnavailable')}</div>
         </div>
       )}
     </div>

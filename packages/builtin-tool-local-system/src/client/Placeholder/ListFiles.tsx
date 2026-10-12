@@ -9,7 +9,7 @@ export const ListFiles = memo<BuiltinPlaceholderProps<ListLocalFileParams>>(({ a
   return (
     <div className="flex flex-col gap-3">
       {args?.path && <LocalFolder path={args.path} />}
-      <div className="flex flex-col items-center justify-center h-[140px]">
+      <div className="flex flex-col items-center justify-center h-35">
         <div className="flex flex-col gap-1 w-[90%]">
           <Skeleton style={{ height: 16 }} />
           <Skeleton style={{ height: 16 }} />

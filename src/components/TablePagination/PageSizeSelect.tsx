@@ -23,7 +23,7 @@ const PageSizeSelect = memo<PageSizeSelectProps>(
     <Select
       className={className}
       disabled={disabled}
-      size={'small'}
+      size={'compact'}
       value={value}
       options={options.map((option) => ({
         label: option.label ?? String(option.value),

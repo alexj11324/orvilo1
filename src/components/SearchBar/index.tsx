@@ -86,14 +86,18 @@ const SearchBar = memo<SearchBarProps>(
 
     return (
       <div className={cn('relative flex items-center', className)} style={style}>
-        <Search className="pointer-events-none absolute left-2.5 text-muted-foreground" size={14} />
+        <Search
+          className="pointer-events-none absolute start-2 size-4 text-muted-foreground"
+          size={16}
+        />
         <Input
           aria-label={placeholder ?? 'Type keywords...'}
           autoFocus={autoFocus}
-          className="h-8 bg-secondary pr-7 pl-8"
+          className="bg-secondary pe-8 ps-8"
           placeholder={placeholder ?? 'Type keywords...'}
           ref={inputRef}
           value={inputValue}
+          visualSize="compact"
           onBlur={(e) => {
             onBlur?.(e);
             setInnerValue(e.target.value);
@@ -122,12 +126,12 @@ const SearchBar = memo<SearchBarProps>(
           }}
         />
         {loading ? (
-          <Spinner className="absolute right-2 text-muted-foreground size-3" />
+          <Spinner className="absolute end-2 size-4 text-muted-foreground" />
         ) : inputValue ? (
           <Button
             aria-label={t('clearSearch', { defaultValue: 'Clear search' })}
-            className="absolute right-1 text-muted-foreground"
-            size="icon-xs"
+            className="absolute end-0 rounded-(--radius-button) text-muted-foreground"
+            size="icon"
             type="button"
             variant="ghost"
             onClick={() => {
@@ -135,10 +139,10 @@ const SearchBar = memo<SearchBarProps>(
               inputRef.current?.focus();
             }}
           >
-            <X size={12} />
+            <X className="size-4" size={16} />
           </Button>
         ) : enableShortKey && showTag ? (
-          <Kbd className="pointer-events-none absolute right-2">{hotkey.replace('mod', '⌘')}</Kbd>
+          <Kbd className="pointer-events-none absolute end-2">{hotkey.replace('mod', '⌘')}</Kbd>
         ) : null}
       </div>
     );

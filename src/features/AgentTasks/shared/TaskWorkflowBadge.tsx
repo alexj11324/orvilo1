@@ -1,7 +1,6 @@
 'use client';
 
 import type { TaskWorkflowCategory } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import type { ReactNode } from 'react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,10 +40,7 @@ export const useTaskWorkflowGlyph = ({
           {t('taskDetail.workflow.businessStatus')}: {categoryLabel}
         </div>
         {workflowStateId && (
-          <div
-            className="text-xs text-muted-foreground"
-            style={{ fontFamily: cssVar.fontFamilyCode }}
-          >
+          <div className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
             {workflowStateId}
           </div>
         )}

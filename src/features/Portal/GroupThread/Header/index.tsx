@@ -1,5 +1,4 @@
 import { agentDisplayName } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -48,7 +47,7 @@ const Header = memo(() => {
         </div>
       }
       style={{
-        background: cssVar.colorBgContainer,
+        background: 'var(--ant-color-bg-container)',
         paddingBlock: 6,
         paddingInline: 8,
       }}

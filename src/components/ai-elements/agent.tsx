@@ -28,7 +28,7 @@ function AgentLabel({
 export type AgentProps = ComponentProps<'div'>;
 
 export const Agent = memo(({ className, ...props }: AgentProps) => (
-  <div className={cn('not-prose w-full rounded-md border', className)} {...props} />
+  <div className={cn('not-prose w-full rounded-(--radius-card) border', className)} {...props} />
 ));
 
 export type AgentHeaderProps = ComponentProps<'div'> & {
@@ -66,7 +66,7 @@ export const AgentInstructions = memo(
       <span className="font-medium text-muted-foreground text-sm">
         <AgentLabel name="instructions" />
       </span>
-      <div className="rounded-md bg-muted/50 p-3 text-muted-foreground text-sm">
+      <div className="rounded-(--radius-card) bg-muted/50 p-3 text-muted-foreground text-sm">
         <p className="whitespace-pre-wrap break-words">{children}</p>
       </div>
     </div>
@@ -80,7 +80,7 @@ export const AgentTools = memo(({ className, ...props }: AgentToolsProps) => (
     <span className="font-medium text-muted-foreground text-sm">
       <AgentLabel name="tools" />
     </span>
-    <Accordion className="rounded-md border" {...props} />
+    <Accordion className="rounded-(--radius-card) border" {...props} />
   </div>
 ));
 
@@ -101,7 +101,7 @@ export const AgentTool = memo(({ className, tool, value, ...props }: AgentToolPr
         )}
       </AccordionTrigger>
       <AccordionContent className="px-3 pb-3">
-        <div className="rounded-md bg-muted/50">
+        <div className="rounded-(--radius-card) bg-muted/50">
           <CodeBlock code={JSON.stringify(schema, null, 2)} language="json" />
         </div>
       </AccordionContent>
@@ -118,7 +118,7 @@ export const AgentOutput = memo(({ className, schema, ...props }: AgentOutputPro
     <span className="font-medium text-muted-foreground text-sm">
       <AgentLabel name="outputSchema" />
     </span>
-    <div className="rounded-md bg-muted/50">
+    <div className="rounded-(--radius-card) bg-muted/50">
       <CodeBlock code={schema} language="typescript" />
     </div>
   </div>

@@ -1,0 +1,13 @@
+/* LiteTable's public root className and data attributes preserve the
+   single shared header/lifecycle bands across table and mobile-list layouts. */
+.directoryTable.directoryTable tbody tr[data-list-section] td {
+  background: var(--fill-quaternary);
+}
+
+/* Keep actions operable and visible on touch/coarse pointers and keyboard focus.
+   Opacity only changes for the same exact original hover-capable fine query. */
+@media (hover: hover) and (pointer: fine) {
+  .directoryTable.directoryTable tbody tr:not([data-list-section], :hover, :focus-within) td[data-list-slot='actions'] {
+    opacity: 0;
+  }
+}

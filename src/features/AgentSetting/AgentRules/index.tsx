@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -14,23 +13,6 @@ import { buttonVariants } from '@/components/ui/button';
 import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useExpertiseOverview } from '@/features/SelfLearning/hooks';
 import { useAgentStore } from '@/store/agent';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  row: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 10px;
-    padding-inline: 14px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-}));
 
 /**
  * 规则与经验 —— Agent 配置里的入口。
@@ -64,35 +46,39 @@ const AgentRules = memo(() => {
             folding it into the empty copy. */}
         <AsyncBoundary
           data={data}
-          empty={<div className="text-muted-foreground">{t('agentRules.empty')}</div>}
           error={error}
           errorVariant={'block'}
           isEmpty={!error && domains.length === 0}
           isLoading={isLoading}
-          loading={<div className="text-muted-foreground">{t('agentRules.loading')}</div>}
+          empty={
+            <div className="text-sm leading-5.5 text-muted-foreground">{t('agentRules.empty')}</div>
+          }
+          loading={
+            <div className="text-sm leading-5.5 text-muted-foreground">
+              {t('agentRules.loading')}
+            </div>
+          }
           onRetry={() => mutate()}
         >
-          <div
-            className="flex flex-col overflow-hidden p-0"
-            style={{
-              border: `1px solid ${cssVar.colorBorder}`,
-              borderRadius: cssVar.borderRadiusLG,
-            }}
-          >
+          <div className="flex flex-col overflow-hidden rounded-(--radius-card) border border-border p-0">
             {domains.map((domain) => {
               const content = (
                 <>
-                  <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
-                    <div className="font-medium">{domain.title}</div>
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <div className="text-sm leading-5.5 font-medium text-foreground">
+                      {domain.title}
+                    </div>
                     {/* Scope and size, in counts — the same facts the rules page leads with. */}
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs leading-5 text-muted-foreground">
                       {t('agentRules.domainMeta', {
                         habits: domain.lessons.length,
                         runs: domain.runCount,
                       })}
                     </div>
                   </div>
-                  {openPath && <ChevronRightIcon size={14} style={{ opacity: 0.4 }} />}
+                  {openPath && (
+                    <ChevronRightIcon className="shrink-0 text-muted-foreground" size={14} />
+                  )}
                 </>
               );
 
@@ -100,14 +86,17 @@ const AgentRules = memo(() => {
               // rules page as the "open" button below (keyboard reachable).
               return openPath ? (
                 <Link
-                  className={`${styles.row} outline-none transition-colors hover:bg-accent focus-visible:bg-accent`}
+                  className="flex items-center justify-between gap-3 [border-block-end:1px_solid_var(--divider)] px-3.5 py-2.5 last:[border-block-end:none] outline-none transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   key={domain.id}
                   to={openPath}
                 >
                   {content}
                 </Link>
               ) : (
-                <div className={styles.row} key={domain.id}>
+                <div
+                  className="flex items-center justify-between gap-3 [border-block-end:1px_solid_var(--divider)] px-3.5 py-2.5 last:[border-block-end:none]"
+                  key={domain.id}
+                >
                   {content}
                 </div>
               );
@@ -115,11 +104,11 @@ const AgentRules = memo(() => {
           </div>
         </AsyncBoundary>
         <div className="flex items-center gap-2 justify-between flex-wrap">
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs leading-5 text-muted-foreground">
             {t('agentRules.summary', { count: ruleCount })}
           </div>
           {openPath && (
-            <Link className={cn(buttonVariants({ size: 'sm', variant: 'ghost' }))} to={openPath}>
+            <Link className={cn(buttonVariants({ size: 'lg', variant: 'ghost' }))} to={openPath}>
               {t('agentRules.open')}
             </Link>
           )}

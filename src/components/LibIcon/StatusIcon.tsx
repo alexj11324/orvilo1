@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { LockIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 
@@ -38,7 +37,10 @@ const LibraryStatusIcon = memo<LibraryStatusIconProps>(
     const variant = getLibraryIconVariant({ memberRestricted, visibility });
 
     if (variant === 'private') {
-      return createElement(LockIcon, { size: 16, style: { color: cssVar.colorTextDescription } });
+      return createElement(LockIcon, {
+        size: 16,
+        style: { color: 'var(--ant-color-text-description)' },
+      });
     }
     if (variant === 'restricted') return <LockedLibIcon size={size} />;
 

@@ -7,14 +7,14 @@ import { useVerifyResults, useVerifyState } from '../hooks';
 import { countResults, type DockPhase, phaseFromStatus } from '../utils';
 
 const styles = {
-  body: 'px-4 py-3 text-[13px] leading-[1.7] text-muted-foreground',
+  body: 'px-4 py-3 text-(length:--text-dense) leading-[1.7] text-muted-foreground',
   card: 'overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
-  cardFailed: 'border-(--ant-color-error-border)',
-  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-[12px] text-(--ant-color-text-tertiary)',
+  cardFailed: 'border-destructive-border',
+  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-xs text-foreground-tertiary',
   head: 'flex items-start gap-3.5 border-b border-sidebar-border px-4 py-3.5',
-  status: 'text-[13px] font-semibold',
-  sub: 'mt-1 text-[12px] leading-normal text-(--ant-color-text-tertiary)',
-  title: 'text-[15px] font-bold text-foreground',
+  status: 'text-(length:--text-dense) font-semibold',
+  sub: 'mt-1 text-xs leading-normal text-foreground-tertiary',
+  title: 'text-sm font-bold text-foreground',
 };
 
 interface BadgeMeta {
@@ -101,7 +101,7 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
   const header = (
     <div className={styles.head}>
       <div className="flex flex-col">
-        <div className="flex items-center gap-[7px]">
+        <div className="flex items-center gap-1.75">
           <meta.badge.icon
             color={meta.badge.color === 'default' ? undefined : badgeColorMap[meta.badge.color]}
             size={16}

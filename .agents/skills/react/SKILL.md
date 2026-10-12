@@ -29,29 +29,38 @@ A static value never belongs in `style`. Do not start a new `createStaticStyles`
 
 Pick the role, then write the class in this table. A literal such as `text-[13px]`, `rounded-[8px]`, `h-[32px]`, `#080808` or `rgba(...)` in a component means a row here was skipped.
 
-| Need                                               | Write                                                                                 | Resolves to                        |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------- |
-| Primary / secondary text                           | `text-foreground` / `text-muted-foreground`                                           | `colorText` / `colorTextSecondary` |
-| Canvas / panel / overlay surface                   | `bg-background` / `bg-card` / `bg-popover`                                            | layout / container / elevated      |
-| Hover wash / selected or pressed                   | `hover:bg-accent` (static: `bg-muted`) / `bg-selected`                                | `colorFillTertiary` / `…Secondary` |
-| Stronger edge                                      | `border-border`                                                                       | `colorBorder`                      |
-| Status text or icon                                | `text-destructive-text`, `text-success-text`, …                                       | contrast-checked `*-text` role     |
-| Filled action                                      | `<Button>`; else `bg-primary text-primary-foreground`                                 | primary pair                       |
-| Metadata / body / emphasis text                    | `text-xs` / `text-sm` / `text-base`                                                   | 12 / 14 / 16px                     |
-| Dense label, on a surface DESIGN.md scopes to 13px | `text-(length:--text-dense)`                                                          | 13px                               |
-| Chip or tag radius                                 | `rounded-(--radius-chip)`                                                             | 4px                                |
-| Input or small-control radius                      | `rounded-(--radius-input)`                                                            | 6px                                |
-| Button / card radius                               | `rounded-(--radius-button)` / `rounded-(--radius-card)`                               | 8px                                |
-| Menu, popover or dialog radius                     | `rounded-(--radius-overlay)`                                                          | 12px                               |
-| Pill, avatar, circular action                      | `rounded-full`                                                                        |                                    |
-| Control height                                     | `<Button size>`: `lg` 36 normal, `default` 32 compact toolbar, `sm` 28 dense, `xs` 24 | never `h-*` on a Button            |
-| Any other whole-pixel size or gap                  | px ÷ 4 on the scale: `h-11` 44px, `w-70` 280px, `gap-2` 8px                           | 4px rhythm; half steps allowed     |
-| Full width or height                               | `w-full` / `h-full`                                                                   | not `w-[100%]`                     |
+| Need                                               | Write                                                                                       | Resolves to                                      |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Primary / secondary text                           | `text-foreground` / `text-muted-foreground`                                                 | `colorText` / `colorTextSecondary`               |
+| Tertiary / disabled / existing description text    | `text-foreground-tertiary` / `text-foreground-quaternary` / `text-foreground-description`   | exact engine text roles                          |
+| Faint neutral fill / everyday divider              | `bg-fill-quaternary` / `border-divider`                                                     | `colorFillQuaternary` / `colorBorderSecondary`   |
+| Existing status background / edge                  | `bg-success-wash` / `border-success-border` (also primary, warning, info, destructive)      | exact engine `*Bg` / `*Border`                   |
+| Canvas / panel / overlay surface                   | `bg-background` / `bg-card` / `bg-popover`                                                  | layout / container / elevated                    |
+| Existing raised document/card shadow               | `shadow-(--shadow-raised)`                                                                  | exact `boxShadowTertiary`; opt-in raised surface |
+| Hover wash / selected or pressed                   | `hover:bg-accent` (static: `bg-muted`) / `bg-selected`                                      | `colorFillTertiary` / `…Secondary`               |
+| Stronger edge                                      | `border-border`                                                                             | `colorBorder`                                    |
+| Status text or icon                                | `text-destructive-text`, `text-success-text`, …                                             | contrast-checked `*-text` role                   |
+| Filled action                                      | `<Button>`; else `bg-primary text-primary-foreground`                                       | primary pair                                     |
+| Metadata / body / emphasis text                    | `text-xs` / `text-sm` / `text-base`                                                         | 12px/20px / 14px/22px / 16px                     |
+| Dense label, on a surface DESIGN.md scopes to 13px | `text-(length:--text-dense)`                                                                | 13px                                             |
+| Chip or tag radius                                 | `rounded-(--radius-chip)`                                                                   | 4px                                              |
+| Input or small-control radius                      | `rounded-(--radius-input)`                                                                  | 6px                                              |
+| Button / card radius                               | `rounded-(--radius-button)` / `rounded-(--radius-card)`                                     | 8px                                              |
+| Menu, popover or dialog radius                     | `rounded-(--radius-overlay)`                                                                | 12px                                             |
+| Pill, avatar, circular action                      | `rounded-full`                                                                              |                                                  |
+| Control height                                     | `<Button size>`: `default` / `normal` / `lg` 36, `compact` 32, `sm` 28, `large` 40, `xs` 24 | never `h-*` on a Button                          |
+| Any other whole-pixel size or gap                  | px ÷ 4 on the scale: `h-11` 44px, `w-70` 280px, `gap-2` 8px                                 | 4px rhythm; half steps allowed                   |
+| Full width or height                               | `w-full` / `h-full`                                                                         | not `w-[100%]`                                   |
+
+`Input` names visual height with `visualSize`: `small` 28px, `compact` 32px, omitted/`default`/`normal` 36px, and `large` 40px. Native numeric `size` still means character width. Set `InputGroup visualSize` to size both the group and its `InputGroupInput`; an explicit child value overrides inheritance. `SelectTrigger size` supports `sm` 28px, `compact` 32px, omitted/`default`/`normal` 36px and `large` 40px. The local Select adapter maps `small`/`sm` to 28px, `compact` to 32px, omitted/`middle`/`default`/`normal` to 36px and `large`/`lg` to 40px for both single-select and multiple modes. Multiple mode forwards these roles to `ComboboxChips visualSize` using the shared `InputVisualSize` values `small`, `compact`, `default`, `normal`, and `large`. Chips uses minimum height and `flex-wrap` so selected values can form additional rows; its editable query uses 14px/22px normally and 16px/24px for `large`. Public caller `className` is merged after the role classes, and native `style`/props remain forwarded. NumberField and the local InputNumber adapter support `sm` 28px, `compact` 32px, omitted/`default`/`normal` 36px and `large` 40px; existing `lg` remains 36px. NumberField child overrides retain precedence, and InputNumber forwards that size contract. Button `lg` also remains the existing normal 36px spelling; use `large` for 40px. Modal OK/Cancel button props forward the local Button's `size`. Retain a nonstandard role only with current necessity evidence and independent review, not a legacy default.
 
 - **`rounded-lg` is 10px and `rounded-xl` is 14px** until the Tailwind radius scale is re-pinned; neither is an approved role. Use the role forms above. `rounded-sm` (6px) and `rounded-md` (8px) happen to match and appear in installed primitives; new code still names the role.
+- Raised-surface shadows use the ordinary `--shadow-raised` variable supplied by ThemeRoles and globals. Keep `shadow-(--shadow-raised)` as the variable form; do not create an `@theme` self-reference or give all cards a shadow.
 - **Do not invent a utility name for a role.** `cn` cannot classify one: `cn('text-foreground', 'text-dense')` drops the text color and `cn('rounded-md', 'rounded-card')` keeps both. The variable forms above merge correctly, which is why role variables live in `:root` in [globals.css](../../../src/app/globals.css) and not in `@theme`.
-- `text-xs` and `text-sm` carry Tailwind's line height (16px / 20px), not the 20px / 22px in DESIGN.md; the variable form sets font size only. Add `leading-5` to prose or multi-line metadata that needs the DESIGN.md line box. Re-pinning `--text-xs--line-height` and `--text-sm--line-height` is a scoped migration, like the radius scale.
-- `border-border` is the stronger edge. The everyday divider (`colorBorderSecondary`) has a role class only in the sidebar (`border-sidebar-border`); elsewhere keep the surrounding file's divider and add a role to DESIGN.md and `globals.css` before repeating a literal.
+- `text-xs` and `text-sm` use the DESIGN.md default line boxes: 12px/20px metadata and 14px/22px body at a 16px root. [globals.css](../../../src/app/globals.css) pins their unitless line-height ratios so they scale with the existing rem font sizes.
+- Explicit `leading-*` utilities still override those defaults. Keep an override only when the owner's approved role and current layout justify it; old pixels alone do not justify an exception. When an explicit DESIGN.md line box is needed, use `leading-5` for metadata or `leading-5.5` for body.
+- The dense-role variable form sets font size only. Keep the scoped role's explicit line height, including the documented 13px/1.7 description; do not apply the metadata or body default to every dense or heading role.
+- `border-border` is the stronger edge; `border-divider` is the everyday divider (`colorBorderSecondary`). `border-sidebar-border` remains the sidebar alias. Description text uses `text-foreground-description` to preserve its value; it is not interchangeable with secondary text. Status `*-wash` preserves the engine background, while `*-subtle` is the existing computed mix.
 - An arbitrary value is right only when no row fits: `calc()`, viewport units, a CSS variable owned by the component, or a measured optical correction. Explain the last kind on the line, as DESIGN.md requires. If a role is missing, add it to DESIGN.md and `globals.css` rather than repeating a literal.
 
 ## Component Priority
@@ -62,6 +71,8 @@ Pick the role, then write the class in this table. A literal such as `text-[13px
 3. **`@lobehub/ui`** — kept-feature components only: Markdown, Mermaid, Image lightbox, HotkeyInput, ColorSwatches, Freeze, MaskShadow, DraggablePanel, FileTypeIcon, MaterialFileTypeIcon, CodeDiff/PatchDiff, Tree, FloatingSheet/FloatingPanel, EditableMessage, ChatHeader/TabBar mobile shells, Highlighter/Snippet, FluentEmoji, GroupAvatar, ContextMenuHost/ModalHost libs.
 4. **antd** — only as `GroupForm`'s validation layer; never import antd controls directly.
 5. **Custom implementation** — true last resort.
+
+Settings → Proxy is the first migrated form: use local `Field` components with `react-hook-form` and the existing `zod` validation; no resolver package is needed. Its schema only validates: submit raw values with the page's mounted-field payload contract. Unmigrated forms keep `GroupForm` until their own behavior and caller migration is reviewed; do not remove shared providers based on this one page.
 
 For Modal specifically, see the dedicated **modal** skill — use the imperative `createModal({ content: … })` pattern over `<Modal open … />`. The new `ModalHost` and sonner `ToastHost` are mounted in `SPAGlobalProvider` and every app shell; the lobehub base-ui hosts stay mounted until call-site slices finish migrating.
 
@@ -96,6 +107,7 @@ Use plain Tailwind flex utilities — no `Flexbox`/`Center` imports. See `refere
 - `gap-*` instead of `margin` for spacing between flex children
 - `flex-1` to fill available space; `flex-none` for fixed-size items
 - Nest flex containers for complex layouts; `overflow-auto` for scrollable regions
+- Settings content width belongs to [SettingContainer](../../../src/features/Setting/SettingContainer.tsx) and its [named role map](../../../src/features/Setting/settingWidth.ts), with approved values in [DESIGN.md](../../../DESIGN.md#density-and-exceptions). Select `form` or `wide`; do not repeat a numeric page cap. A page that owns its panes, or a mobile content branch, consumes the same role without moving headers or adding a second scroll owner. Workspace settings use the shared wrapper's workspace surface rather than replacing its background.
 
 ## Related Skills
 

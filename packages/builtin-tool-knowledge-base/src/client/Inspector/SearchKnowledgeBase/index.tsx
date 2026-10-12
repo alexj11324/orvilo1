@@ -53,7 +53,7 @@ export const SearchKnowledgeBaseInspector = memo<
             <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
           ) : (
             <span
-              className="text-[12px]"
+              className="text-xs"
               style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
             >
               ({t('builtins.orvilo-knowledge-base.inspector.noResults')})

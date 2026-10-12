@@ -1,6 +1,6 @@
 import { isDesktop, numberedAgentName } from '@orvilo/const';
 import { type AgentContextDocument } from '@orvilo/context-engine';
-import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents/labels';
 import {
   isChatGroupSessionId,
   normalizeAgencyConfigForWrite,

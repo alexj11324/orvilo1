@@ -6,7 +6,6 @@ import {
   type TaskWorkflowCategory,
   type WorkQueryLayout,
 } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -97,59 +96,14 @@ import {
 } from './workQueryPaging';
 import WorkQueryResults from './WorkQueryResults';
 
-const styles = createStaticStyles(({ css }) => ({
-  /**
-   * Peek layout mirrors the saved-view page: list keeps its flexible width,
-   * the detail pane is a fixed 400px column that overlays under 900px of
-   * surface width (Linear's My issues proportions).
-   */
-  detailLayout: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-
-    height: 0;
-    min-height: 0;
-  `,
-  detailPane: css`
-    overflow-y: auto;
-    flex: none;
-
-    width: 400px;
-    padding-block-end: 12px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-
-    @container work-surface (max-width: 900px) {
-      position: absolute;
-      z-index: 10;
-      inset-block: 0;
-      inset-inline-end: 0;
-
-      width: min(400px, calc(100% - 40px));
-
-      box-shadow: ${cssVar.boxShadowSecondary};
-    }
-  `,
-  filterChips: css`
-    padding-block: 4px;
-    padding-inline: 4px;
-  `,
-  resultsBody: css`
-    box-sizing: border-box;
-    min-height: 100%;
-    padding-block: 8px;
-  `,
-  resultsScroll: css`
-    overflow: auto;
-    overscroll-behavior: contain;
-    flex: 1;
-    min-width: 0;
-  `,
-}));
+const styles = {
+  detailLayout: 'relative flex flex-1 h-0 min-h-0 overflow-hidden',
+  detailPane:
+    'flex-none w-100 overflow-y-auto pbe-3 border-s border-divider bg-card [@container_work-surface_(width<=900px)]:absolute [@container_work-surface_(width<=900px)]:z-10 [@container_work-surface_(width<=900px)]:inset-y-0 [@container_work-surface_(width<=900px)]:end-0 [@container_work-surface_(width<=900px)]:[max-width:calc(100%_-_var(--spacing)*10)] [@container_work-surface_(width<=900px)]:shadow-(--shadow-popover)',
+  filterChips: 'items-center gap-2 p-1',
+  resultsBody: 'box-border min-h-full py-2',
+  resultsScroll: 'flex-1 min-w-0 overflow-auto overscroll-contain',
+};
 
 // Board mode bounds the collection body to the scrollport so the kanban's own
 // column scrollers engage; list mode lets the body grow and the scroll host
@@ -842,12 +796,12 @@ const MyWorkPage = memo(() => {
   );
   const groupIcon = useCallback((axis: string, key: string) => {
     if (axis === 'priority') {
-      return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
+      return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={16} />;
     }
     if (axis === 'project') {
       return createElement(PROJECT_ENTITY_ICON, {
         className: 'size-4 shrink-0',
-        color: key === 'none' ? cssVar.colorTextQuaternary : undefined,
+        color: key === 'none' ? 'var(--foreground-quaternary)' : undefined,
       });
     }
     if (axis === 'assignee') {
@@ -1024,20 +978,17 @@ const MyWorkPage = memo(() => {
 
   const chipsRow =
     noProject || delegated || activeFilterCount > 0 ? (
-      <div
-        className={cn('flex flex-row', styles.filterChips)}
-        style={{ alignItems: 'center', gap: 8 }}
-      >
+      <div className={cn('flex flex-row', styles.filterChips)}>
         {noProject ? (
           <Badge variant="secondary">
             {t('myWork.noProject')}
             <Button
               aria-label={t('close')}
-              size="icon-xs"
+              size="icon-sm"
               variant="ghost"
               onClick={() => writeParams({ noProject: false })}
             >
-              <XIcon />
+              <XIcon className="size-3.5" />
             </Button>
           </Badge>
         ) : null}
@@ -1046,11 +997,11 @@ const MyWorkPage = memo(() => {
             {t('myWork.delegated')}
             <Button
               aria-label={t('close')}
-              size="icon-xs"
+              size="icon-sm"
               variant="ghost"
               onClick={() => writeParams({ delegated: false })}
             >
-              <XIcon />
+              <XIcon className="size-3.5" />
             </Button>
           </Badge>
         ) : null}
@@ -1059,11 +1010,11 @@ const MyWorkPage = memo(() => {
             {t('myWork.filtersActive', { count: activeFilterCount })}
             <Button
               aria-label={t('close')}
-              size="icon-xs"
+              size="icon-sm"
               variant="ghost"
               onClick={() => setBuilder(EMPTY_FILTER_BUILDER)}
             >
-              <XIcon />
+              <XIcon className="size-3.5" />
             </Button>
           </Badge>
         ) : null}
@@ -1150,13 +1101,7 @@ const MyWorkPage = memo(() => {
 
   return (
     <WorkSurface>
-      <NavHeader
-        left={
-          <span className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
-            {t('tab.myWork')}
-          </span>
-        }
-      />
+      <NavHeader left={<span className="text-sm font-medium ps-1">{t('tab.myWork')}</span>} />
       <WorkSurfaceCollection
         style={boardActive || detailVisible ? boundedBodyStyle : listBodyStyle}
         toolbar={

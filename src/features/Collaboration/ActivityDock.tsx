@@ -1,11 +1,11 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { memo, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import {
   liveActivities,
   MAX_EXPANDED_BUBBLES,
@@ -17,70 +17,14 @@ import { AGENT_PHASE_ICON } from './AgentActionCursor';
 import { collabIdForTarget } from './anchors';
 import { useCollaborationContext } from './context';
 
-const styles = createStaticStyles(({ css }) => ({
-  dock: css`
-    position: absolute;
-    inset-block-end: 16px;
-    inset-inline-end: 16px;
-
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    max-width: 260px;
-  `,
-  item: css`
-    pointer-events: none;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 5px;
-    padding-inline: 8px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    font-size: 12px;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  itemText: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  phaseIcon: css`
-    flex-shrink: 0;
-  `,
-  toggle: css`
-    pointer-events: auto;
-    cursor: pointer;
-    user-select: none;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    align-self: flex-end;
-
-    padding-block: 4px;
-    padding-inline: 8px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 999px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorBgElevated};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
+const styles = {
+  dock: 'absolute inset-be-4 inset-e-4 flex flex-col gap-1.5 max-w-65',
+  item: 'pointer-events-none flex gap-1.5 items-center py-1 px-2 border border-divider rounded-(--radius-card) text-xs leading-5 text-foreground bg-popover shadow-(--shadow-popover)',
+  itemText: 'truncate',
+  phaseIcon: 'shrink-0',
+  toggle:
+    'pointer-events-auto self-end rounded-full px-2 text-sm leading-5.5 text-muted-foreground bg-popover border-divider hover:text-foreground hover:bg-accent',
+};
 
 /**
  * Live activities that resolved on-screen already have bubbles/pulses — the
@@ -138,26 +82,32 @@ export const ActivityDock = memo(() => {
             <span className={styles.itemText}>
               {t('teammates.activity.bubble', { action: event.action, name })}
             </span>
-            <PhaseIcon className={styles.phaseIcon} size={12} />
+            <PhaseIcon className={styles.phaseIcon} size={16} />
           </div>
         );
       })}
       <div className="flex justify-end">
-        <button className={styles.toggle} type="button" onClick={() => setExpanded((v) => !v)}>
+        <Button
+          className={styles.toggle}
+          size="normal"
+          type="button"
+          variant="outline"
+          onClick={() => setExpanded((v) => !v)}
+        >
           {expanded ? (
             <>
-              <ChevronUp size={12} />
+              <ChevronUp className="size-4" size={16} />
               {t('teammates.activity.collapse')}
             </>
           ) : (
             <>
-              <ChevronDown size={12} />
+              <ChevronDown className="size-4" size={16} />
               {moreCount > 0
                 ? t('teammates.activity.more', { count: moreCount })
                 : t('teammates.activity.expand')}
             </>
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );

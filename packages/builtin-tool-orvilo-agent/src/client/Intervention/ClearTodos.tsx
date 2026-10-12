@@ -11,10 +11,10 @@ import type { ClearTodosParams } from '../../types';
 
 const styles = {
   container: 'rounded-(--ant-border-radius) bg-accent p-3',
-  dangerText: 'text-[13px] text-destructive',
+  dangerText: 'text-(length:--text-dense) text-destructive',
   header: 'text-warning',
-  label: 'text-[13px] text-muted-foreground',
-  normalText: 'text-[13px]',
+  label: 'text-(length:--text-dense) text-muted-foreground',
+  normalText: 'text-(length:--text-dense)',
 };
 
 /**

@@ -1,6 +1,6 @@
 import { Markdown } from '@lobehub/ui';
 import { agentDisplayName, type ConversationContext, type UIChatMessage } from '@orvilo/types';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { ProductLogo } from '@/components/Branding';
@@ -89,7 +89,7 @@ const Preview = memo<PreviewProps>(
 
     return (
       <div
-        className={cx(
+        className={cn(
           containerStyles.preview,
           widthMode === WidthMode.Narrow
             ? containerStyles.previewNarrow
@@ -98,15 +98,16 @@ const Preview = memo<PreviewProps>(
       >
         <div className={withBackground ? styles.background : undefined} id={previewId}>
           <div
-            className={cx(
+            className={cn(
               'flex flex-col gap-4',
-              cx(styles.container, withBackground && styles.container_withBackground_true),
+              styles.container,
+              withBackground && styles.container_withBackground_true,
             )}
           >
             <div className={styles.header}>
               <div className="flex flex-row items-center gap-3">
                 <AssigneeAvatar agentId={displayAgentId} size={28} />
-                <div className="font-semibold text-[16px]">{displayTitle}</div>
+                <div className="font-semibold text-base leading-6">{displayTitle}</div>
                 <div className="flex flex-row gap-1">
                   <ModelTag model={displayModel} />
                   {withPluginInfo && displayPlugins?.length > 0 && (
@@ -116,13 +117,15 @@ const Preview = memo<PreviewProps>(
               </div>
               {withSystemRole && systemRole && (
                 <div className={styles.role}>
-                  <Markdown variant={'chat'}>{systemRole}</Markdown>
+                  <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
+                    {systemRole}
+                  </Markdown>
                 </div>
               )}
             </div>
             <ChatList context={context} ids={[]} messages={messages} />
             {withFooter ? (
-              <div className={cx('flex flex-col items-center gap-1', styles.footer)}>
+              <div className={cn('flex flex-col items-center gap-1', styles.footer)}>
                 <ProductLogo type={'combine'} />
                 <div className={styles.url}>{pkg.homepage}</div>
               </div>

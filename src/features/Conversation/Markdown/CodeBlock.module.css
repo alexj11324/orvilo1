@@ -1,0 +1,9 @@
+/* Markdown owns prose; the public native code root owns this pre's font and
+   its single viewport. Scope to the public root so prose injection order cannot
+   restore an extra scrollport or replace the renderer's code tokens. */
+.surface[data-slot='code-block'] pre {
+  overflow: visible;
+  margin: 0;
+  font-size: var(--code-block-font-size);
+  line-height: var(--code-block-line-height);
+}

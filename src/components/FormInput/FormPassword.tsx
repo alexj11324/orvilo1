@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 
-interface FormPasswordProps extends Omit<React.ComponentProps<'input'>, 'onChange' | 'type'> {
+interface FormPasswordProps extends Omit<React.ComponentProps<typeof Input>, 'onChange' | 'type'> {
   onChange?: (value: string) => void;
   /** lobehub Input parity: 'error' marks the field invalid. */
   status?: 'error' | 'warning';

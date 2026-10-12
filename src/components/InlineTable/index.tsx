@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { type CSSProperties, memo, type ReactNode } from 'react';
 
@@ -6,77 +6,14 @@ import { Spinner } from '@/components/ui/spinner';
 
 import { type InlineTableSortOrder, sortIconActiveClass } from './sortOrder';
 
-const styles = createStaticStyles(({ css }) => ({
-  hoverToActive: css`
-    opacity: 0.6;
-
-    &:hover {
-      opacity: 1;
-    }
-  `,
-  sortButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding: 0;
-    border: none;
-
-    font: inherit;
-    font-weight: inherit;
-    color: inherit;
-
-    background: transparent;
-  `,
-  sortIcon: css`
-    display: inline-flex;
-    color: ${cssVar.colorTextTertiary};
-
-    &.active {
-      color: ${cssVar.colorText};
-    }
-  `,
-  table: css`
-    overflow-x: auto;
-
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      font-size: 13px;
-    }
-
-    th {
-      padding-block: 8px;
-      padding-inline: 12px;
-
-      font-weight: 500;
-      color: ${cssVar.colorTextSecondary};
-      text-align: start;
-
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    td {
-      padding-block: 8px;
-      padding-inline: 12px;
-      vertical-align: middle;
-    }
-
-    tr {
-      td:first-child,
-      th:first-child {
-        padding-inline-start: 24px;
-      }
-
-      td:last-child,
-      th:last-child {
-        padding-inline-end: 24px;
-      }
-    }
-  `,
-}));
+const styles = {
+  hoverToActive: 'opacity-60 hover:opacity-100 focus-within:opacity-100',
+  sortButton:
+    'inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-(--radius-button) border-0 bg-transparent p-0 [font:inherit] [font-weight:inherit] text-inherit focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 pointer-coarse:min-h-11',
+  sortIcon: 'inline-flex text-foreground-tertiary [&.active]:text-foreground',
+  table:
+    'overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_table]:leading-5.5 [&_th]:bg-fill-quaternary [&_th]:px-3 [&_th]:py-2 [&_th]:text-start [&_th]:font-medium [&_th]:text-muted-foreground [&_td]:px-3 [&_td]:py-2 [&_td]:align-middle [&_tr>:is(td,th):first-child]:ps-6 [&_tr>:is(td,th):last-child]:pe-6',
+};
 
 export type { InlineTableSortOrder };
 
@@ -170,9 +107,9 @@ const InlineTable = memo(<RecordType,>(props: InlineTableProps<RecordType>) => {
                     {column.title}
                     <span className={cx(styles.sortIcon, sortIconActiveClass(column.sortOrder))}>
                       {column.sortOrder === 'descend' ? (
-                        <ArrowDown size={12} />
+                        <ArrowDown className="size-4" size={16} />
                       ) : (
-                        <ArrowUp size={12} />
+                        <ArrowUp className="size-4" size={16} />
                       )}
                     </span>
                   </button>
@@ -193,8 +130,8 @@ const InlineTable = memo(<RecordType,>(props: InlineTableProps<RecordType>) => {
           ) : dataSource.length === 0 ? (
             <tr>
               <td
+                className="text-center text-foreground-tertiary"
                 colSpan={Math.max(columns.length, 1)}
-                style={{ color: cssVar.colorTextTertiary, textAlign: 'center' }}
               >
                 No data
               </td>

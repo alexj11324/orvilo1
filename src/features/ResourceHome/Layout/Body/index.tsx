@@ -12,7 +12,7 @@ const SidebarBody = memo<{ itemKey: string }>(({ itemKey }) => {
     <AccordionItem value={itemKey}>
       <div className="group flex items-center">
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <div className="truncate min-w-0 text-[12px] text-muted-foreground font-medium">
+          <div className="truncate min-w-0 text-xs text-muted-foreground font-medium">
             {t('library.title')}
           </div>
         </AccordionTrigger>

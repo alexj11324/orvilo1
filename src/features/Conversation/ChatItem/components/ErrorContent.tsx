@@ -52,13 +52,15 @@ const ErrorContent = memo<ErrorContentProps>(({ customErrorRender, error, id, on
       action={
         onRegenerate && (
           <Button
+            multiline
+            className="min-w-0 max-w-full break-words [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             disabled={retrying}
             loading={retrying}
-            size="sm"
+            size="compact"
             variant="secondary"
             onClick={onRegenerate}
           >
-            <RotateCcw size={14} /> {t('regenerate')}
+            <RotateCcw className="size-4" size={16} /> {t('regenerate')}
           </Button>
         )
       }

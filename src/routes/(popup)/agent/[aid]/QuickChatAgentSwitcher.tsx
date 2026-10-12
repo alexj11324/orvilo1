@@ -238,6 +238,7 @@ const QuickChatAgentSwitcher = memo(() => {
               <Input
                 placeholder={t('agentSwitcher.searchPlaceholder')}
                 value={search}
+                visualSize="compact"
                 onChange={(e) => setSearch(e.target.value)}
               />
               <div className={styles.popoverList} style={{ marginTop: 8 }}>

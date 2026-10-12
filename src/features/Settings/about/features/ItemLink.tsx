@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -14,13 +13,13 @@ export interface ItemLinkProps {
 
 const ItemLink = memo<ItemLinkProps>(({ label, href }) => {
   return (
-    <a href={href} rel="noreferrer" style={{ color: 'inherit' }} target="_blank">
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-      >
+    <a href={href} rel="noreferrer" target="_blank">
+      <div className="flex min-w-0 items-center gap-2 text-sm leading-5.5 text-foreground">
         {label}
-        {createElement(SquareArrowOutUpRight, { color: cssVar.colorTextDescription, size: 14 })}
+        {createElement(SquareArrowOutUpRight, {
+          className: 'text-foreground-description',
+          size: 14,
+        })}
       </div>
     </a>
   );

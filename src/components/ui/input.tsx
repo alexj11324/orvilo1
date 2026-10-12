@@ -1,14 +1,40 @@
+'use client';
+
 import { Input as InputPrimitive } from '@base-ui/react/input';
 import { cn } from 'cn';
 import * as React from 'react';
 
-function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+import { useFormControlContext } from '@/components/FormControlContext';
+
+type InputVisualSize = 'default' | 'compact' | 'small' | 'normal' | 'large';
+
+const inputVisualSizeClasses: Record<InputVisualSize, string> = {
+  default: 'h-9',
+  compact: 'h-8',
+  small: 'h-7',
+  normal: 'h-9',
+  large: 'h-10 text-base',
+};
+
+interface InputProps extends React.ComponentProps<'input'> {
+  /** Visual height; native `size` remains the input's character-width hint. */
+  visualSize?: InputVisualSize;
+}
+
+function Input({ className, type, disabled, visualSize, ...props }: InputProps) {
+  const formControl = useFormControlContext();
+  const size =
+    visualSize ??
+    (formControl.size === 'small' ? 'small' : formControl.size === 'large' ? 'large' : 'default');
+
   return (
     <InputPrimitive
       data-slot="input"
+      disabled={disabled ?? formControl.disabled}
       type={type}
       className={cn(
-        'h-8 w-full min-w-0 rounded-(--radius-input) border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40',
+        'w-full min-w-0 rounded-(--radius-input) border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40',
+        inputVisualSizeClasses[size],
         className,
       )}
       {...props}
@@ -16,4 +42,5 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
   );
 }
 
-export { Input };
+export { Input, inputVisualSizeClasses };
+export type { InputProps, InputVisualSize };

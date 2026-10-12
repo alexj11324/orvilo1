@@ -1,6 +1,11 @@
 /** @vitest-environment happy-dom */
 
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+import tailwindcss from '@tailwindcss/postcss';
 import { cleanup, render, screen } from '@testing-library/react';
+import postcss from 'postcss';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -42,7 +47,7 @@ describe('shouldShowInboxAgentLanding', () => {
     ).toBe(false);
   });
 
-  it('keeps a multiline authorization stack inside a vertically scrollable landing', () => {
+  it('keeps a multiline authorization stack inside a vertically scrollable landing', async () => {
     const authorizationRows = createElement(
       'div',
       null,
@@ -61,7 +66,53 @@ describe('shouldShowInboxAgentLanding', () => {
 
     expect(scrollRegion).toContainElement(content);
     expect(content).toContainElement(lastAuthorizationAction);
-    expect(getComputedStyle(scrollRegion).overflow).toBe('hidden auto');
+
+    const globalsPath = path.resolve(process.cwd(), 'src/app/globals.css');
+    const globals = postcss.parse(await readFile(globalsPath, 'utf8'), { from: globalsPath });
+    // Compile only this rendered element's candidates, without discovering workspace sources.
+    globals.walkAtRules('source', (rule) => {
+      rule.remove();
+    });
+    globals.walkAtRules('import', (rule) => {
+      if (/^(['"])tailwindcss\1(?:\s|$)/.test(rule.params)) {
+        rule.params = rule.params.replace(/\s+source\([^)]*\)/, '') + ' source(none)';
+      }
+    });
+    globals.append(
+      postcss.atRule({
+        name: 'source',
+        params: `inline(${JSON.stringify([...scrollRegion.classList].join(' '))})`,
+      }),
+    );
+    const { root: compiled } = await postcss([
+      tailwindcss({ base: process.cwd(), optimize: false }),
+    ]).process(globals, { from: globalsPath });
+    const scrollStyles = postcss.root();
+    // HappyDOM drops @layer rules. Project only matching, unconditional compiled overflow
+    // declarations into consumable CSS; this tests axis semantics, not browser layer precedence.
+    compiled.walkRules((rule) => {
+      let parent = rule.parent;
+      while (parent && parent.type !== 'root') {
+        if (parent.type !== 'atrule' || parent.name !== 'layer') return;
+        parent = parent.parent;
+      }
+      if (!scrollRegion.matches(rule.selector)) return;
+      const declarations = rule.nodes.filter(
+        (node) => node.type === 'decl' && /^overflow(?:-[xy])?$/.test(node.prop),
+      );
+      if (declarations.length === 0) return;
+      scrollStyles.append(rule.clone({ nodes: declarations.map((node) => node.clone()) }));
+    });
+    const stylesheet = document.createElement('style');
+    stylesheet.textContent = scrollStyles.toString();
+    document.head.append(stylesheet);
+    try {
+      const computed = getComputedStyle(scrollRegion);
+      expect(computed.overflowX).toBe('hidden');
+      expect(computed.overflowY).toBe('auto');
+    } finally {
+      stylesheet.remove();
+    }
   });
 });
 

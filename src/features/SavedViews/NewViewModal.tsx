@@ -161,8 +161,16 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
       width={640}
       footer={
         <div className="flex justify-end gap-2">
-          <Button onClick={onClose}>{t('cancel')}</Button>
-          <Button disabled={!ready} loading={saving} variant="default" onClick={() => void save()}>
+          <Button size="lg" onClick={onClose}>
+            {t('cancel')}
+          </Button>
+          <Button
+            disabled={!ready}
+            loading={saving}
+            size="lg"
+            variant="default"
+            onClick={() => void save()}
+          >
             {t('savedViews.createView')}
           </Button>
         </div>
@@ -184,13 +192,13 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
             borderRadius: 8,
           }}
         >
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {preview
               ? t('savedViews.previewCount', { count: preview.total })
               : t('savedViews.previewPending')}
           </div>
           {preview?.titles.map((title) => (
-            <div className="truncate block text-[12px]" key={title}>
+            <div className="truncate block text-xs" key={title}>
               · {title}
             </div>
           ))}

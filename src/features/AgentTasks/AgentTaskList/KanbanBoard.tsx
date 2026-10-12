@@ -12,7 +12,6 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { WorkQuerySortMode } from '@orvilo/types';
 import { workQueryBoardAxisOfKey } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -90,54 +89,11 @@ import TaskBoardCard from './TaskBoardCard';
 import { useKanbanBoardPan } from './useKanbanBoardPan';
 import { useKanbanDragSettle } from './useKanbanDragSettle';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  board: css`
-    overflow-x: auto;
-    display: flex;
-    flex: 1;
-    gap: 12px;
-    align-items: stretch;
-
-    padding-block: 4px 16px;
-    padding-inline: 12px;
-  `,
-  loadMore: css`
-    cursor: pointer;
-
-    width: 100%;
-    margin-block-start: 2px;
-    padding-block: 8px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: ${cssVar.borderRadius};
-
-    font-family: inherit;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-
-    background: transparent;
-
-    transition:
-      color 0.2s,
-      background 0.2s;
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-
-    &:disabled {
-      cursor: default;
-      opacity: 0.6;
-    }
-
-    &:hover:not(:disabled) {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  board: 'overflow-x-auto flex flex-1 gap-3 items-stretch pbs-1 pbe-4 px-3',
+  loadMore:
+    'cursor-pointer w-full mbs-0.5 py-1.5 px-2 border-0 rounded-(--radius-button) [font-family:inherit] text-sm leading-5.5 text-foreground-tertiary text-center bg-transparent transition-[color,background-color] duration-(--orvilo-motion-mid) focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2 disabled:cursor-default disabled:opacity-60 enabled:hover:text-foreground enabled:hover:bg-accent motion-reduce:transition-none',
+};
 
 /**
  * Externally-sourced board data for surfaces whose queries can't map to the
@@ -951,11 +907,13 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                           }
                         />
                       ) : group?.hasMore && (!external || external.onLoadMoreGroup) ? (
-                        <button
+                        <Button
                           data-no-board-pan
                           className={styles.loadMore}
                           disabled={pagingAction === 'viewAll' && !onViewAll}
+                          size="normal"
                           type="button"
+                          variant="ghost"
                           onClick={
                             pagingAction === 'viewAll' ? onViewAll : () => loadMoreGroup(cellKey)
                           }
@@ -969,7 +927,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                               total: group.total,
                             },
                           )}
-                        </button>
+                        </Button>
                       ) : undefined
                     }
                     onStatusChange={handleCardStatusChange}
@@ -1043,15 +1001,15 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   // Error gated ahead of empty by AsyncBoundary so a failed fetch shows Retry
   // instead of the "no tasks" empty. `data` is the SWR result —
   // undefined until the first fetch settles.
+  // Status boards always have their columns — an empty workspace still
+  // renders the empty board (Cordy's behavior), not a centered empty state.
+  // Only dynamic groupings with zero groups fall back to `empty`.
   return (
     <AsyncBoundary
       data={(isQueryScopeCurrent && isTaskGroupListInit) || undefined}
       error={error}
-      isEmpty={totalTasks === 0 && groupBy !== 'status'}
       errorVariant={'block'}
-      // Status boards always have their columns — an empty workspace still
-      // renders the empty board (Cordy's behavior), not a centered empty state.
-      // Only dynamic groupings with zero groups fall back to `empty`.
+      isEmpty={totalTasks === 0 && groupBy !== 'status'}
       isLoading={isLoading || (!isQueryScopeCurrent && !error) || (!isTaskGroupListInit && !error)}
       loading={skeletonBoard}
       empty={

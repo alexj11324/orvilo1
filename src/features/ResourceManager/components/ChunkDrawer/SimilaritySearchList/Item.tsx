@@ -1,32 +1,16 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo, useMemo } from 'react';
 
 import { Badge } from '@/components/reui/badge';
 import { type SemanticSearchChunk } from '@/types/chunk';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 12px;
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 4px;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  pageNumber: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  text: css`
-    font-size: 14px;
-    line-height: 24px;
-  `,
-  title: css`
-    font-size: 18px;
-  `,
-}));
+const styles = {
+  container:
+    'pbs-3 pbe-3 px-2 border-be border-solid border-divider rounded-(--radius-card) hover:bg-accent',
+  pageNumber: 'text-xs leading-5 text-foreground-description',
+  text: 'text-sm leading-5.5 text-foreground',
+  title: 'text-xl leading-7 font-semibold text-foreground',
+};
 
 interface ChunkItemProps extends Omit<SemanticSearchChunk, 'index'> {
   index: number;

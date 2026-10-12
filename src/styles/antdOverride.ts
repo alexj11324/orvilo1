@@ -1,33 +1,31 @@
 import { isDesktop } from '@orvilo/const';
-import { type Theme } from 'antd-style';
-import { css } from 'antd-style';
-import { rgba } from 'polished';
 
-const antdOverride = ({ token }: { prefixCls: string; token: Theme }) => css`
-  .${token.prefixCls}-popover {
+// Application overlay policy for the actual ant prefix configured by AppTheme.
+// Native document rules stay unlayered; current vendor declarations are layered
+// and ordinary, so the mask policy requires no important override.
+const desktopMask = isDesktop
+  ? `
+  .ant-modal-mask.ant-modal-mask-blur {
+    background: rgb(from var(--background) r g b / 0.8);
+    backdrop-filter: none;
+  }
+`
+  : '';
+
+const antdOverride = `
+  .ant-popover {
     z-index: 1100;
   }
 
-  .${token.prefixCls}-menu-item-selected {
-    .${token.prefixCls}-menu-title-content {
-      color: ${token.colorText};
-    }
+  .ant-menu-item-selected .ant-menu-title-content {
+    color: var(--foreground);
   }
 
-  .${token.prefixCls}-modal-mask, .${token.prefixCls}-drawer-mask {
-    background: ${rgba(token.colorBgLayout, 0.5)} !important;
+  .ant-modal-mask, .ant-drawer-mask {
+    background: rgb(from var(--background) r g b / 0.5);
     backdrop-filter: blur(2px);
   }
-
-  ${
-    isDesktop &&
-    css`
-      .${token.prefixCls}-modal-mask.${token.prefixCls}-modal-mask-blur {
-        background: ${rgba(token.colorBgLayout, 0.8)} !important;
-        backdrop-filter: none !important;
-      }
-    `
-  }
+  ${desktopMask}
 `;
 
 export default antdOverride;

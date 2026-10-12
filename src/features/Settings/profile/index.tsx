@@ -1,11 +1,13 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
+import { cn } from 'cn';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { SettingsProfileRowSkeleton } from '@/components/Skeleton/Settings/Profile';
 import { Separator } from '@/components/ui/separator';
+import { settingWidthClassNames } from '@/features/Setting/settingWidth';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
@@ -65,7 +67,12 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('profile.title')} />}
-      <div className="mx-auto flex w-full max-w-160 flex-col rounded-xl border border-border bg-card px-4">
+      <div
+        className={cn(
+          'mx-auto flex w-full flex-col rounded-(--radius-card) border border-border bg-card px-4',
+          settingWidthClassNames.form,
+        )}
+      >
         <div className="flex flex-col" style={{ display: isLoading ? 'flex' : 'none' }}>
           <SettingsProfileRowSkeleton />
           <Separator />

@@ -1,7 +1,6 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
@@ -9,69 +8,15 @@ import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/cod
 
 import type { WebSearchArgs, WebSearchPluginState, WebSearchResult } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  hostname: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  metadata: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  queryRow: css`
-    align-items: center;
-    justify-content: space-between;
-
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 4px;
-  `,
-  resultItem: css`
-    min-width: 0;
-    padding-block: 5px;
-    padding-inline: 4px;
-    border-block-end: 1px solid ${cssVar.colorSplit};
-
-    &:last-child {
-      border-block-end: 0;
-    }
-  `,
-  root: css`
-    overflow: auto;
-    min-width: 0;
-    max-height: 280px;
-    padding-block: 2px;
-  `,
-  snippet: css`
-    font-size: 12px;
-    line-height: 1.45;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.45;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    &:hover {
-      color: ${cssVar.colorLink};
-    }
-  `,
-}));
+const styles = {
+  hostname: 'truncate text-xs leading-5 text-foreground-tertiary',
+  metadata: 'min-w-0 truncate text-xs leading-5 text-muted-foreground',
+  queryRow: 'min-w-0 items-center justify-between px-1 py-0.5',
+  resultItem: 'min-w-0 border-be border-divider px-1 py-1.5 last:border-be-0',
+  root: 'min-w-0 max-h-70 overflow-auto py-0.5',
+  snippet: 'text-xs leading-5 text-muted-foreground',
+  title: 'truncate text-sm leading-5.5 font-medium text-foreground hover:text-primary-text',
+};
 
 const getWebSearchHostname = (link: string): string | undefined => {
   try {
@@ -120,9 +65,9 @@ const WebSearch = memo<BuiltinRenderProps<WebSearchArgs, WebSearchPluginState>>(
         : undefined;
 
     return (
-      <div className={cx('flex flex-col gap-0', styles.root)}>
+      <div className={cn('flex flex-col gap-0', styles.root)}>
         {(query || duration) && (
-          <div className={cx('flex flex-row gap-2', styles.queryRow)}>
+          <div className={cn('flex flex-row gap-2', styles.queryRow)}>
             <span className={styles.metadata}>{query}</span>
             {duration && <span className={styles.metadata}>{duration}</span>}
           </div>
@@ -133,7 +78,7 @@ const WebSearch = memo<BuiltinRenderProps<WebSearchArgs, WebSearchPluginState>>(
 
           return (
             <div
-              className={cx('flex flex-col gap-[3px]', styles.resultItem)}
+              className={cn('flex flex-col gap-1', styles.resultItem)}
               key={`${result.link}-${index}`}
             >
               <a href={result.link} rel={'noreferrer'} target={'_blank'}>

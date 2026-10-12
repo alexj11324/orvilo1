@@ -21,7 +21,7 @@ dayjs.extend(relativeTime);
 
 const styles = {
   headerRow:
-    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-(--ant-color-text-tertiary) grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
+    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-xs font-medium text-foreground-tertiary grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
   row: 'grid cursor-pointer items-center gap-3 rounded-(--radius-card) p-2 hover:bg-accent grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
 };
 
@@ -40,20 +40,20 @@ const RunRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
 
   return (
     <div {...clickableProps()} className={cn(styles.row, CLICKABLE_FOCUS_RING)} onClick={open}>
-      <div className="truncate min-w-0 text-[13px] font-medium">
+      <div className="truncate min-w-0 text-(length:--text-dense) font-medium">
         {activity.title || t(`run_source.${runTriggerLabel(activity.trigger)}`)}
       </div>
-      <div className="text-[12px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t(`run_source.${runTriggerLabel(activity.trigger)}`)}
       </div>
       <div
-        className="truncate min-w-0 text-[12px] text-muted-foreground"
+        className="truncate min-w-0 text-xs text-muted-foreground"
         title={activity.time ? formatAbsoluteDateTime(activity.time) : undefined}
       >
         {activity.time ? dayjs(activity.time).fromNow() : '—'}
       </div>
       <RunStatusBadge status={activity.status} />
-      <div className="text-[12px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {runDuration(activity.time, activity.completedAt)}
       </div>
       <ActionIcon

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo, useMemo } from 'react';
 
 import {
@@ -12,26 +11,12 @@ import {
 
 import { buildReviewTreeNodes, type ReviewTreeData, type ReviewTreeGroup } from './reviewTreeNodes';
 
-const FILE_TREE_UNSAFE_CSS = `${FOLDER_ICON_CSS}\n${HIDE_POINTER_FOCUS_RING_CSS}`;
+const FILE_TREE_UNSAFE_CSS = `${FOLDER_ICON_CSS}\n${HIDE_POINTER_FOCUS_RING_CSS}
+[data-item-section='content'] { line-height: var(--text-sm--line-height); }`;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  tree: css`
-    --trees-bg-override: transparent;
-    --trees-border-color-override: transparent;
-    --trees-selected-bg-override: ${cssVar.colorFillSecondary};
-    --trees-selected-fg-override: ${cssVar.colorText};
-    --trees-bg-muted-override: ${cssVar.colorFillTertiary};
-    --trees-fg-override: ${cssVar.colorTextSecondary};
-    --trees-fg-muted-override: ${cssVar.colorTextSecondary};
-    --trees-accent-override: ${cssVar.colorPrimary};
-    --trees-padding-inline-override: 0px;
-    --trees-font-size-override: 12px;
-    --trees-border-radius-override: 6px;
-
-    flex: 1;
-    min-height: 0;
-  `,
-}));
+const styles = {
+  tree: '[--trees-bg-override:transparent] [--trees-border-color-override:transparent] [--trees-selected-bg-override:var(--selected)] [--trees-selected-fg-override:var(--foreground)] [--trees-bg-muted-override:var(--accent)] [--trees-fg-override:var(--muted-foreground)] [--trees-fg-muted-override:var(--muted-foreground)] [--trees-accent-override:var(--primary)] [--trees-padding-inline-override:0px] [--trees-font-size-override:var(--text-sm)] [--trees-border-radius-override:var(--radius-button)] flex-1 min-h-0',
+};
 
 interface FileTreeNavProps {
   /** itemKey of the file whose diff is currently focused — highlighted in the tree. */
@@ -72,11 +57,12 @@ const FileTreeNav = memo<FileTreeNavProps>(
       <div className={styles.tree} style={treeStyleVars}>
         <ExplorerTree<ReviewTreeData>
           iconsColored
+          className="h-full"
           defaultExpandedIds={defaultExpandedIds}
           iconSet="complete"
+          itemHeight={32}
           nodes={nodes}
           selectedIds={selectedIds}
-          style={{ height: '100%' }}
           unsafeCSS={FILE_TREE_UNSAFE_CSS}
           onNodeClick={(node) => {
             if (node.isFolder || !node.data) return;

@@ -58,10 +58,10 @@ const styles = {
   batchBar:
     'sticky bottom-4 mx-auto flex w-fit items-center gap-2 rounded-[12px] border border-sidebar-border bg-popover px-4 py-2 shadow-(--shadow-popover)',
   headerRow:
-    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-(--ant-color-text-tertiary) grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
+    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-xs font-medium text-foreground-tertiary grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
   row: 'grid cursor-pointer items-center gap-3 rounded-(--radius-card) p-2 hover:bg-accent grid-cols-[28px_minmax(0,2fr)_130px_110px_minmax(0,1.4fr)_110px_40px]',
   titleCell: 'flex min-w-0 items-center gap-2',
-  titleText: 'truncate text-[13px] font-medium',
+  titleText: 'truncate text-(length:--text-dense) font-medium',
 };
 
 const CreatedByCell = memo<{ userId: string | null }>(({ userId }) => {
@@ -69,7 +69,7 @@ const CreatedByCell = memo<{ userId: string | null }>(({ userId }) => {
   return (
     <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
       <AssigneeUserAvatar size={16} userId={userId} />
-      <div className="truncate min-w-0 text-[12px] text-muted-foreground">{meta?.title ?? ''}</div>
+      <div className="truncate min-w-0 text-xs text-muted-foreground">{meta?.title ?? ''}</div>
     </div>
   );
 });
@@ -114,16 +114,16 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
       </div>
       <CreatedByCell userId={task.createdByUserId} />
       {eventStateUnavailable ? (
-        <span className="text-[12px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {t(eventBindings.error ? 'events.bindingUnavailable' : 'page.loading')}
         </span>
       ) : (
         <AutomationStatusBadge status={status} />
       )}
-      <div className="truncate min-w-0 text-[12px] text-muted-foreground">
+      <div className="truncate min-w-0 text-xs text-muted-foreground">
         {automationTriggerSummary(task, t)}
       </div>
-      <div className="truncate min-w-0 text-[12px] text-muted-foreground">
+      <div className="truncate min-w-0 text-xs text-muted-foreground">
         {nextRun ? dayjs(nextRun.toDate()).fromNow() : '—'}
       </div>
       <div onClick={(e) => e.stopPropagation()}>
@@ -385,7 +385,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
         )}
         {selected.size > 0 && (
           <div className={styles.batchBar}>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('batch.selected', { count: selected.size })}
             </div>
             <Button size="sm" onClick={() => handleBatch('resume')}>

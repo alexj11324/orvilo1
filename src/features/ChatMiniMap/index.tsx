@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useRef, useState } from 'react';
 
 import { MinimapIndicator } from './MinimapIndicator';
@@ -43,14 +43,15 @@ const ChatMinimap = memo(() => {
   };
 
   return (
-    <div className={cx(styles.container, 'flex flex-col')}>
+    <div className={cn(styles.container, 'flex flex-col')}>
       <div
-        className={cx(styles.hoverArea, 'flex flex-col')}
+        className={cn(styles.hoverArea, 'flex flex-col')}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
       >
         <div
-          className={cx(cx(styles.rail, hovered && styles.railFaded), 'flex flex-col')}
+          className={cn(styles.rail, 'flex flex-col', hovered && 'pointer-events-none opacity-0')}
+          inert={hovered}
           role={'group'}
         >
           {indicators.map(({ id, width, virtuosoIndex }, position) => (
@@ -67,7 +68,13 @@ const ChatMinimap = memo(() => {
         </div>
         <div
           aria-hidden={!hovered}
-          className={cx(styles.previewPanel, hovered && styles.previewPanelVisible)}
+          inert={!hovered}
+          className={cn(
+            styles.previewPanel,
+            hovered
+              ? 'pointer-events-auto opacity-100 [transform:translateY(-50%)_scale(1)]'
+              : 'pointer-events-none opacity-0 [transform:translateY(-50%)_scale(0.96)]',
+          )}
         >
           <MinimapPreview
             activePosition={activeIndicatorPosition}

@@ -29,7 +29,7 @@ export const FieldRow = ({ children, className, desc, footer, label }: FieldRowP
   >
     <div className="flex min-w-0 flex-col">
       <div className="font-medium">{label}</div>
-      {desc ? <div className="text-xs leading-[18px] text-muted-foreground">{desc}</div> : null}
+      {desc ? <div className="text-xs leading-4.5 text-muted-foreground">{desc}</div> : null}
     </div>
     <div className="flex min-w-0 items-center justify-end gap-2 max-sm:justify-start [&_.ant-form-item]:min-w-0 [&_.ant-form-item]:flex-1 [&_.ant-form-item-control-input-content]:flex [&_.ant-form-item-control-input-content]:justify-end [&_[data-slot=input]]:h-9">
       {children}

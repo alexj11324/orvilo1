@@ -30,7 +30,7 @@ export const AcceptedNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revi
   return (
     <div className="flex items-center gap-1.5">
       <BadgeCheck color={'var(--ant-color-text-quaternary)'} size={13} />
-      <div className="text-[12px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t('acceptance.review.acceptedNote', {
           time: hydrated ? formatAbsoluteDateTime(review.createdAt) : '',
         })}
@@ -45,7 +45,7 @@ export const IgnoredNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revie
   return (
     <div className="flex items-center gap-1.5">
       <Ban color={'var(--ant-color-text-quaternary)'} size={13} />
-      <div className="text-[12px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t('acceptance.review.ignoredNote', {
           time: hydrated ? formatAbsoluteDateTime(review.createdAt) : '',
         })}
@@ -85,7 +85,7 @@ export const FeedbackCard = memo<{
         <div style={{ color: 'var(--destructive)', fontSize: 12 }}>
           {t('acceptance.review.feedbackLabel')}
         </div>
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {hydrated ? formatAbsoluteDateTime(review.createdAt) : null}
         </div>
       </div>
@@ -98,7 +98,7 @@ export const FeedbackCard = memo<{
           return annotations
             .filter((annotation) => annotation.comment)
             .map((annotation, index) => (
-              <div className="text-[12px] text-muted-foreground" key={`${evidenceId}-${index}`}>
+              <div className="text-xs text-muted-foreground" key={`${evidenceId}-${index}`}>
                 {annotation.comment}
               </div>
             ));
@@ -298,10 +298,10 @@ export const IterationTimeline = memo<{
       })}
       {check.result?.suggestion && (
         <div className="flex gap-3" style={{ marginBlockStart: 12 }}>
-          <div className="text-[12px] text-muted-foreground" style={{ flex: 'none', minWidth: 64 }}>
+          <div className="text-xs text-muted-foreground" style={{ flex: 'none', minWidth: 64 }}>
             {t('acceptance.detail.suggestion')}
           </div>
-          <div className="text-[12px] text-muted-foreground">{check.result.suggestion}</div>
+          <div className="text-xs text-muted-foreground">{check.result.suggestion}</div>
         </div>
       )}
     </div>

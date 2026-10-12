@@ -1,0 +1,35 @@
+/* PageEditor-owned table bleed and private comment-row geometry. */
+.editorContent {
+  :global(.orvilo-editor-table-scroll-wrapper.orvilo-editor-table-scroll-wrapper) {
+    --lobe-block-anchor-padding: var(--orvilo-pageeditor-table-bleed-inline);
+
+    position: relative;
+    box-sizing: border-box;
+    width: 100cqi;
+    margin-inline: calc(var(--orvilo-pageeditor-table-bleed-inline) * -1);
+  }
+
+  :global(.orvilo-editor-table-scroll-wrapper) :global(.editor_table) {
+    width: max-content;
+  }
+}
+
+/* Exact private comment-row geometry. The later reply rules win by source
+   order when both classes are present; author avatars remain32/28px. */
+.commentCard {
+  padding-block: 20px 12px;
+}
+
+.commentReplyCard {
+  padding-block: 12px 8px;
+}
+
+.commentBody,
+.commentActions {
+  margin-inline-start: 40px;
+}
+
+.commentReplyBody,
+.commentReplyActions {
+  margin-inline-start: 36px;
+}

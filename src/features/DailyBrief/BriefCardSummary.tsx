@@ -59,7 +59,7 @@ const BriefCardSummary = memo<BriefCardSummaryProps>(({ summary }) => {
       {isOverflow && (
         <Button
           className={cn('w-full', styles.expandLink)}
-          size="sm"
+          size="compact"
           variant="ghost"
           onClick={() => setExpanded(!expanded)}
         >

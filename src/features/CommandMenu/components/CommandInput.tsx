@@ -76,39 +76,70 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
             menuContext !== 'general' && <Tag className={cn(styles.contextTag)}>{contextName}</Tag>
           )}
           {typeFilter && (
-            <Tag
-              className={cn(styles.backTag)}
-              onClick={() => {
-                onTypeFilterChange();
-                setTypeFilter(undefined);
-              }}
-            >
-              <XIcon size={12} />
-              {getTypeLabel(typeFilter)}
-            </Tag>
+            <span className="inline-flex pointer-coarse:py-[calc(var(--spacing)*1.75)]">
+              <Button
+                size="compact"
+                type="button"
+                variant="ghost"
+                className={cn(
+                  styles.backTag,
+                  "relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']",
+                )}
+                onClick={() => {
+                  onTypeFilterChange();
+                  setTypeFilter(undefined);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+                }}
+              >
+                <XIcon size={16} />
+                {getTypeLabel(typeFilter)}
+              </Button>
+            </span>
           )}
         </div>
       )}
       <div className={styles.inputWrapper}>
         {hasPages && !hasSelectedAgent && (
-          <Tag className={cn(styles.backTag)} onClick={handleBack}>
-            <ArrowLeft size={12} />
-          </Tag>
+          <span className="inline-flex pointer-coarse:p-[calc(var(--spacing)*1.75)]">
+            <Button
+              aria-label={t('back')}
+              size="icon"
+              type="button"
+              variant="ghost"
+              className={cn(
+                styles.backTag,
+                "relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']",
+              )}
+              onClick={handleBack}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+              }}
+            >
+              <ArrowLeft size={16} />
+            </Button>
+          </span>
         )}
         {hasSelectedAgent && (
           <Tag>
             <AssigneeAvatar agentId={selectedAgent.id} size={14} />
             {agentDisplayName(selectedAgent)}
-            <Button
-              aria-label={t('close', { ns: 'common' })}
-              className="size-4 rounded-sm"
-              size="icon-xs"
-              type="button"
-              variant="ghost"
-              onClick={() => setSelectedAgent(undefined)}
-            >
-              <XIcon size={12} />
-            </Button>
+            <span className="inline-flex pointer-coarse:p-[calc(var(--spacing)*1.75)]">
+              <Button
+                aria-label={t('close', { ns: 'common' })}
+                className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                size="icon"
+                type="button"
+                variant="ghost"
+                onClick={() => setSelectedAgent(undefined)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+                }}
+              >
+                <XIcon size={16} />
+              </Button>
+            </span>
           </Tag>
         )}
         <Command.Input
@@ -123,7 +154,7 @@ const CommandInput = memo<CommandInputProps>(({ onInputChange, onTypeFilterChang
         />
         {page !== 'ask-ai' && !hasSelectedAgent && search.trim() ? (
           <>
-            <span style={{ fontSize: '14px', opacity: 0.6 }}>{t('cmdk.askAI')}</span>
+            <span className="text-sm leading-5.5 text-muted-foreground">{t('cmdk.askAI')}</span>
             <Tag>{t('cmdk.keyboard.Tab')}</Tag>
           </>
         ) : (

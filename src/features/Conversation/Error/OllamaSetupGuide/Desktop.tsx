@@ -19,6 +19,7 @@ const OllamaDesktopSetupGuide = memo<{ id?: string }>(({ id }) => {
       title={t('OllamaSetupGuide.install.title')}
       action={
         <Button
+          size="lg"
           variant="default"
           onClick={() => {
             if (id) delAndRegenerateMessage(id);

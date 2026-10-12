@@ -63,7 +63,7 @@ const PrivateList = memo<PrivateListProps>(({ onMoreClick }) => {
   if (!hasPinned && !hasGroups && !hasUngrouped) return null;
 
   return (
-    <div className="flex flex-col gap-[1px] py-[1px]">
+    <div className="flex flex-col gap-px py-px">
       {hasPinned && <SessionList dataSource={privatePinned} />}
       {hasGroups && <Group dataSource={privateGroups} />}
       {hasUngrouped && <SessionList dataSource={privateUngrouped} />}

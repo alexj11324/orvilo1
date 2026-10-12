@@ -1,7 +1,6 @@
 'use client';
 
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   ChevronRight,
@@ -17,8 +16,10 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import ActionIcon from '@/components/ActionIcon';
+import { EXECUTION_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
@@ -39,48 +40,26 @@ import { useSingleton } from '@/hooks/useSingleton';
 import { type VerifyCriterionDraft, verifyService } from '@/services/verify';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { resolveTaskAcceptanceGoal } from './resolveTaskAcceptanceGoal';
 import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import { useTaskVerifyModel } from './useTaskVerifyModel';
 
+const LoadingStatusIcon = EXECUTION_STATUS_VISUALS.running.icon;
+
 const SAVE_DEBOUNCE_MS = 600;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  collapsedRequirement: css`
-    /* full requirement, wrapping to as many lines as it needs — readable at a glance.
-       Inset past the trigger icon so it reads flat under the title, not as a clickable row. */
-    padding-inline: 32px 8px;
-    line-height: 1.5;
-  `,
-  list: css`
-    width: 100%;
-  `,
-  row: css`
-    cursor: pointer;
-    padding-block: 10px;
-    padding-inline: 12px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  rowTitle: css`
-    flex: 1;
-  `,
-  section: css`
-    padding-block: 12px;
-    padding-inline: 12px;
-  `,
-  subtitle: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  collapsedRequirement: 'ps-8 pe-2 text-sm leading-5.5',
+  list: 'w-full',
+  row: 'cursor-pointer py-2.5 px-3 [&+&]:border-bs [&+&]:border-divider hover:bg-accent',
+  rowTitle: 'flex-1',
+  section: 'p-3 text-sm leading-5.5',
+  subtitle: 'text-muted-foreground',
+};
 
 /** Working item: a draft plus a stable client id, so reorder/edit is jitter-free. */
 interface DraftItem extends VerifyCriterionDraft {
@@ -127,6 +106,9 @@ export const toTemplateCriterionDrafts = (drafts: DraftItem[]): VerifyCriterionD
 
 const TaskVerifyConfig = memo(() => {
   const { t } = useTranslation(['chat', 'verify']);
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const motionDisabled = animationMode === 'disabled' || prefersReducedMotion;
 
   const { allowed: canEditTask } = usePermission('create_content');
 
@@ -523,24 +505,21 @@ const TaskVerifyConfig = memo(() => {
     const showRequirement = savedCount === 0 && requirementPreview.length > 0;
     const trigger = (
       <div
-        className="flex cursor-pointer items-center gap-2"
-        style={{ paddingBlock: 4, paddingInline: 8, width: 'fit-content' }}
+        className="flex cursor-pointer items-center gap-2 py-1 px-2 w-fit min-h-8"
         onClick={handleCollapsedClick}
       >
         {isConfigured ? (
-          <ShieldCheck color={cssVar.colorTextDescription} size={16} />
+          <ShieldCheck className="size-4 text-foreground-description" size={16} />
         ) : (
-          <Plus color={cssVar.colorTextDescription} size={16} />
+          <Plus className="size-4 text-foreground-description" size={16} />
         )}
-        <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
+        <div className="text-sm leading-5.5 font-medium text-muted-foreground">
           {t('verifyConfig.empty.title')}
         </div>
         {savedCount > 0 ? (
           <Tag>{t('verifyConfig.criteriaCount', { count: savedCount })}</Tag>
         ) : showRequirement ? null : (
-          <div className={cn('text-[12px]', styles.subtitle)}>
-            {t('verifyConfig.collapsedHint')}
-          </div>
+          <div className={cn('text-xs', styles.subtitle)}>{t('verifyConfig.collapsedHint')}</div>
         )}
       </div>
     );
@@ -548,7 +527,7 @@ const TaskVerifyConfig = memo(() => {
     return (
       <div className="flex flex-col gap-0.5">
         {trigger}
-        <div className={cn('text-[14px]', styles.collapsedRequirement)}>{requirementPreview}</div>
+        <div className={cn('text-sm', styles.collapsedRequirement)}>{requirementPreview}</div>
       </div>
     );
   }
@@ -556,9 +535,18 @@ const TaskVerifyConfig = memo(() => {
   // ---- B. generating ----
   if (generating) {
     return (
-      <div className={`rounded-md border border-border ${styles.section}`}>
+      <div className={`rounded-(--radius-card) border border-border ${styles.section}`}>
         <div className="flex items-center gap-3">
-          <NeuralNetworkLoading size={20} />
+          {motionDisabled ? (
+            <LoadingStatusIcon
+              aria-label={t('loading', { ns: 'common' })}
+              color={EXECUTION_STATUS_VISUALS.running.color}
+              role="status"
+              size={20}
+            />
+          ) : (
+            <NeuralNetworkLoading size={20} />
+          )}
           <div className={cn(styles.subtitle)}>{t('verifyConfig.generating')}</div>
         </div>
       </div>
@@ -585,11 +573,11 @@ const TaskVerifyConfig = memo(() => {
       },
     ];
     return (
-      <div className={`rounded-md border border-border ${styles.section}`}>
+      <div className={`rounded-(--radius-card) border border-border ${styles.section}`}>
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ShieldCheck size={18} />
+              <ShieldCheck size={16} />
               <div className="font-semibold">{t('verifyConfig.empty.title')}</div>
             </div>
             {/* Actions live top-right, de-emphasized, so they never outweigh the
@@ -598,7 +586,7 @@ const TaskVerifyConfig = memo(() => {
               <Button
                 disabled={!requirement.trim() || !generationModelReady}
                 loading={generationModelLoading}
-                size="sm"
+                size="normal"
                 title={generationHint}
                 onClick={handleGenerate}
               >
@@ -609,13 +597,13 @@ const TaskVerifyConfig = memo(() => {
                 <ActionIcon
                   aria-label={t('more', { ns: 'common' })}
                   icon={MoreHorizontal}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 />
               </DropdownMenu>
               <ActionIcon
                 aria-label={t('taskDetail.collapseReply', { ns: 'chat' })}
                 icon={ChevronUp}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 onClick={() => setExpanded(false)}
               />
             </div>
@@ -631,9 +619,9 @@ const TaskVerifyConfig = memo(() => {
             </div>
           )}
           <Textarea
+            className="[max-height:4lh] rounded-(--radius-input) text-sm leading-5.5 md:text-sm"
             placeholder={t('verifyConfig.requirementPlaceholder')}
             rows={2}
-            style={{ maxHeight: '4lh' }}
             value={requirement}
             onChange={(e) => handleRequirementChange(e.target.value)}
             onBlur={() => {
@@ -709,7 +697,7 @@ const TaskVerifyConfig = memo(() => {
           <DropdownMenu items={headerMenuItems} placement={'bottomRight'}>
             <ActionIcon
               icon={MoreHorizontal}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('verifyConfig.moreActions')}
             />
           </DropdownMenu>
@@ -722,9 +710,7 @@ const TaskVerifyConfig = memo(() => {
         )}
 
         <div className="flex flex-col gap-1.5">
-          <div className={cn('text-[12px]', styles.subtitle)}>
-            {t('taskDetail.acceptance.goal')}
-          </div>
+          <div className={cn('text-xs', styles.subtitle)}>{t('taskDetail.acceptance.goal')}</div>
           <div className={cn(requirementText ? undefined : 'text-muted-foreground')}>
             {requirementText || t('verifyConfig.requirementEmpty')}
           </div>
@@ -759,18 +745,14 @@ const TaskVerifyConfig = memo(() => {
                 >
                   <ActionIcon
                     icon={MoreHorizontal}
-                    size={'small'}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                     title={t('verifyConfig.moreActions')}
                     onClick={(event) => event.stopPropagation()}
                   />
                 </DropdownMenu>
               }
               icon={
-                <CircleDashed
-                  color={cssVar.colorTextQuaternary}
-                  size={16}
-                  style={{ flex: 'none' }}
-                />
+                <CircleDashed className="flex-none size-4 text-foreground-quaternary" size={16} />
               }
               onOpen={() => openCriterionDetail(item)}
             >
@@ -785,7 +767,7 @@ const TaskVerifyConfig = memo(() => {
         </CriterionList>
 
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={handleManualAdd}>
+          <Button size="normal" variant="ghost" onClick={handleManualAdd}>
             <Plus data-icon="inline-start" />
             {t('verifyConfig.addCriterion')}
           </Button>

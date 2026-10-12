@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { ClaudeCodeApiName, type TaskStopArgs } from '../../types';
 
 const styles = {
-  chip: 'overflow-hidden inline-flex shrink items-center min-w-0 ms-1.5 py-px px-2 rounded-[999px] font-mono text-[12px] text-foreground text-ellipsis whitespace-nowrap bg-accent',
+  chip: 'overflow-hidden inline-flex shrink items-center min-w-0 ms-1.5 py-px px-2 rounded-[999px] font-mono text-xs text-foreground text-ellipsis whitespace-nowrap bg-accent',
 };
 
 /**

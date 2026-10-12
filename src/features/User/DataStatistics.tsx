@@ -1,12 +1,12 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { isUndefined } from 'es-toolkit/compat';
 import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Badge } from '@/components/reui/badge';
+import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
 import { statsKeys } from '@/libs/swr/keys';
@@ -17,31 +17,12 @@ import { useServerConfigStore } from '@/store/serverConfig';
 import { formatShortenNumber } from '@/utils/format';
 import { today } from '@/utils/time';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  count: css`
-    font-size: 16px;
-    font-weight: bold;
-    line-height: 1.2;
-  `,
-  title: css`
-    font-size: 12px;
-    line-height: 1.2;
-    color: ${cssVar.colorTextDescription};
-  `,
-  today: css`
-    font-size: 12px;
-  `,
-}));
+const styles = {
+  card: 'min-w-0 p-4 rounded-(--radius-card) bg-fill-quaternary hover:bg-accent',
+  count: 'text-base leading-6 font-semibold',
+  title: 'wrap-anywhere text-xs leading-5 text-foreground-description',
+  today: 'text-xs leading-5',
+};
 
 const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, ...rest }) => {
   const mobile = useServerConfigStore((s) => s.isMobile);
@@ -67,7 +48,7 @@ const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, .
 
   const { t } = useTranslation('common');
 
-  const loading = <NeuralNetworkLoading size={20} />;
+  const loading = <Spinner />;
 
   const items = [
     {
@@ -89,17 +70,13 @@ const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, .
   ];
 
   return (
-    <div
-      className="flex items-center gap-1 px-2 w-full"
-      style={{ marginBottom: 8, ...style }}
-      {...rest}
-    >
+    <div className="flex items-stretch gap-1 px-2 w-full mbe-2" style={style} {...rest}>
       {items.map((item) => {
         if (item.key === 'messages') {
           const showBadge = Boolean(item.countToady && item.countToady > 0);
           return (
             <div
-              className={cx(styles.card, 'flex items-center gap-1 justify-between')}
+              className={cn(styles.card, 'flex flex-wrap items-center gap-1 justify-between')}
               key={item.key}
               style={{ flex: showBadge && !mobile ? 2 : 1 }}
             >
@@ -112,13 +89,10 @@ const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, .
                   <Tooltip>
                     <TooltipTrigger
                       render={
-                        <span className="inline-flex">
+                        <span className="inline-flex max-w-full">
                           <Badge
-                            style={{
-                              background: cssVar.colorSuccess,
-                              color: cssVar.colorSuccessBg,
-                              cursor: 'pointer',
-                            }}
+                            className="cursor-pointer h-auto max-w-full whitespace-normal wrap-anywhere text-xs leading-5"
+                            variant="success"
                           >
                             {`+${item.countToady}`}
                           </Badge>
@@ -134,7 +108,7 @@ const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, .
         }
 
         return (
-          <div className={cx(styles.card, 'flex flex-col flex-1 gap-0.5')} key={item.key}>
+          <div className={cn(styles.card, 'flex flex-col flex-1 gap-0.5')} key={item.key}>
             <div className="flex">
               <div className={styles.count}>{formatShortenNumber(item.count)}</div>
             </div>

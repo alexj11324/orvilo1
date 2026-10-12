@@ -26,7 +26,7 @@ const ThreadList = memo(({ topicId }: { topicId: string }) => {
 
   return (
     <ScrollArea ref={containerRef} style={{ maxHeight: MAX_HEIGHT }}>
-      <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+      <div className="flex flex-col gap-px" style={{ paddingBlock: 1 }}>
         {threads?.map((item, index) => (
           <ThreadItem
             id={item.id}

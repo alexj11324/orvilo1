@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,12 +11,7 @@ import { lambdaQuery } from '@/libs/trpc/client';
 
 import ShareToggle from './ShareToggle';
 
-const styles = createStaticStyles(({ css }) => ({
-  empty: css`
-    padding-block: 32px;
-    padding-inline: 0;
-  `,
-}));
+const styles = { empty: 'py-8 px-0 rounded-(--radius-card)' };
 
 interface PersonalCredsSectionProps {
   /**
@@ -72,7 +66,7 @@ const PersonalCredsSection: FC<PersonalCredsSectionProps> = ({ onWorkspaceCredsC
       empty={
         <Empty className={styles.empty}>
           <EmptyHeader>
-            <EmptyDescription>{t('creds.empty')}</EmptyDescription>
+            <EmptyDescription className="text-sm leading-5.5">{t('creds.empty')}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       }

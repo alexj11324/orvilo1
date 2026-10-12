@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import type React from 'react';
 
 const resolveCssVar = (ref: string, context: Element): string => {
@@ -34,10 +33,10 @@ export const setDragLabelPreview = (
   const preview = document.createElement('div');
   Object.assign(preview.style, {
     alignItems: 'center',
-    background: resolveCssVar(cssVar.colorBgElevated, host),
-    border: `1px solid ${resolveCssVar(cssVar.colorInfoBorder, host)}`,
+    background: resolveCssVar('var(--ant-color-bg-elevated)', host),
+    border: `1px solid ${resolveCssVar('var(--ant-color-info-border)', host)}`,
     borderRadius: '10px',
-    color: resolveCssVar(cssVar.colorInfo, host),
+    color: resolveCssVar('var(--ant-color-info)', host),
     display: 'inline-flex',
     fontSize: '13px',
     gap: '8px',

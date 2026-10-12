@@ -1,5 +1,4 @@
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
@@ -12,41 +11,20 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import { Button } from '@/components/ui/button';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  button: css`
-    position: absolute;
-    z-index: 10;
-    inset-block-start: 50%;
-    transform: translateY(-50%);
-
-    color: ${cssVar.colorTextSecondary};
-
-    opacity: 0;
-
-    transition: opacity ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder} !important;
-      box-shadow: ${cssVar.boxShadowTertiary} !important;
-    }
-  `,
-  container: css`
-    position: relative;
-
-    &:hover .scroll-button {
-      opacity: 1;
-    }
-  `,
-  leftButton: css`
-    inset-inline-start: 16px;
-  `,
-  rightButton: css`
-    inset-inline-end: 16px;
-  `,
-}));
+const styles = {
+  button:
+    "absolute z-10 top-1/2 [transform:translateY(-50%)] text-muted-foreground opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) hover:border-border hover:shadow-(--shadow-raised) focus-visible:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']",
+  container:
+    'relative [&:hover_.scroll-button]:opacity-100 [&:focus-within_.scroll-button]:opacity-100 [@media(hover:none)]:[&_.scroll-button]:opacity-100',
+  leftButton: 'start-4',
+  rightButton: 'end-4',
+};
 
 type ScrollShadowWithButtonProps = ComponentProps<'div'> & {
   justify?: CSSProperties['justifyContent'];
@@ -55,6 +33,9 @@ type ScrollShadowWithButtonProps = ComponentProps<'div'> & {
 const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
   ({ children, justify, style, ...rest }) => {
     const { t: tCommon } = useTranslation('common');
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const motionEnabled = animationMode !== 'disabled' && !reducedMotion;
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
@@ -80,18 +61,31 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
             : container.scrollLeft + scrollAmount;
 
         container.scrollTo({
-          behavior: 'smooth',
+          behavior: motionEnabled ? 'smooth' : 'instant',
           left: targetScroll,
         });
 
         setTimeout(checkScrollability, 300);
       },
-      [checkScrollability],
+      [checkScrollability, motionEnabled],
     );
+
+    // A preference change must also stop a native smooth scroll already in flight.
+    // Preserve the browser's current continuous coordinates; do not round or reset them.
+    useEffect(() => {
+      if (motionEnabled) return;
+      const container = scrollRef.current;
+      if (!container) return;
+      container.scrollTo({
+        behavior: 'instant',
+        left: container.scrollLeft,
+        top: container.scrollTop,
+      });
+    }, [motionEnabled]);
 
     useEffect(() => {
       checkScrollability();
-    }, []);
+    }, [checkScrollability]);
 
     return (
       <div
@@ -102,11 +96,13 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
         {canScrollLeft && (
           <Button
             aria-label={tCommon('previous')}
-            className={cx(styles.button, styles.leftButton, 'scroll-button', 'rounded-full')}
+            className={cn(styles.button, styles.leftButton, 'scroll-button', 'rounded-full')}
+            size="icon"
+            type="button"
             variant="outline"
             onClick={() => handleScroll('left')}
           >
-            <ChevronLeft data-icon="inline-start" />
+            <ChevronLeft className="size-4" data-icon="inline-start" />
           </Button>
         )}
         <ScrollAreaPrimitive.Root>
@@ -122,11 +118,13 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
         {canScrollRight && (
           <Button
             aria-label={tCommon('next')}
-            className={cx(styles.button, styles.rightButton, 'scroll-button', 'rounded-full')}
+            className={cn(styles.button, styles.rightButton, 'scroll-button', 'rounded-full')}
+            size="icon"
+            type="button"
             variant="outline"
             onClick={() => handleScroll('right')}
           >
-            <ChevronRight data-icon="inline-start" />
+            <ChevronRight className="size-4" data-icon="inline-start" />
           </Button>
         )}
       </div>

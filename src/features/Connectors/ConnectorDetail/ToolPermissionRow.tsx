@@ -42,14 +42,14 @@ const ToolPermissionRow = memo<ToolPermissionRowProps>(({ disabled, tool, onPerm
   return (
     <div
       className={
-        'flex items-center gap-2 border-be border-sidebar-border px-3 py-2 last:border-be-0 hover:bg-(--ant-color-fill-quaternary)'
+        'flex items-center gap-2 border-be border-sidebar-border px-3 py-2 last:border-be-0 hover:bg-fill-quaternary'
       }
     >
       <div className={'min-w-0 flex-1 overflow-hidden'}>
-        <div className={'truncate font-mono text-[14px] text-foreground'}>{tool.toolName}</div>
+        <div className={'truncate font-mono text-sm text-foreground'}>{tool.toolName}</div>
         {tool.description && (
           <SimpleTooltip title={tool.description}>
-            <div className={'truncate text-[12px] leading-[1.4] text-(--ant-color-text-tertiary)'}>
+            <div className={'truncate text-xs leading-[1.4] text-foreground-tertiary'}>
               {tool.description}
             </div>
           </SimpleTooltip>

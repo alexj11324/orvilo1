@@ -1,7 +1,6 @@
 'use client';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { LayersEnum } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { Brain, ClipboardCheck } from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
@@ -23,16 +22,9 @@ const MEMORY_ROUTE_BY_LAYER: Partial<Record<LayersEnum, { idParam: string; path:
   [LayersEnum.Preference]: { idParam: 'preferenceId', path: '/memory/preferences' },
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  list: css`
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    width: 100%;
-    margin-block-start: 8px;
-  `,
-}));
+const styles = {
+  list: 'flex flex-col gap-2 w-full mbs-2',
+};
 
 const RECEIPT_LUCIDE_ICON_BY_KIND = {
   memory: Brain,

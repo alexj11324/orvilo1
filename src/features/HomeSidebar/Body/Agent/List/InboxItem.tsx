@@ -1,7 +1,6 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { Loader2 } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
@@ -18,32 +17,11 @@ import { operationSelectors } from '@/store/chat/selectors';
 
 import { usePreservedAgentUrl } from './usePreservedAgentUrl';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  runningBadge: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block-end: -3px;
-    inset-inline-end: -3px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 14px;
-    height: 14px;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 999px;
-
-    color: ${cssVar.colorWarning};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  wrapper: css`
-    position: relative;
-    display: inline-flex;
-  `,
-}));
+const styles = {
+  runningBadge:
+    'pointer-events-none absolute -inset-be-1 -end-1 inline-flex size-5 items-center justify-center rounded-full border-[length:calc(var(--spacing)*0.375)] border-card bg-card text-warning-text',
+  wrapper: 'relative inline-flex',
+};
 
 interface InboxItemProps {
   className?: string;
@@ -78,7 +56,7 @@ const InboxItem = memo<InboxItemProps>(({ className, style }) => {
             <span className={styles.wrapper}>
               {avatarNode}
               <span className={styles.runningBadge}>
-                <Loader2 className="animate-spin" size={9} />
+                <Loader2 className="animate-spin" size={16} />
               </span>
             </span>
           ) : (

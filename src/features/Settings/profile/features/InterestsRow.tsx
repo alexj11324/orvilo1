@@ -88,6 +88,7 @@ const InterestsRow = () => {
                 aria-pressed={isSelected}
                 className={isSelected ? 'bg-muted' : undefined}
                 key={item.key}
+                size="compact"
                 type="button"
                 variant="outline"
                 onClick={() => toggleInterest(item.key)}
@@ -102,6 +103,7 @@ const InterestsRow = () => {
             .map((interest) => (
               <Button
                 key={interest}
+                size="compact"
                 type="button"
                 variant="outline"
                 onClick={() => removeCustomInterest(interest)}
@@ -110,6 +112,7 @@ const InterestsRow = () => {
               </Button>
             ))}
           <Button
+            size="compact"
             type="button"
             variant="outline"
             onClick={() => setShowCustomInput(!showCustomInput)}
@@ -122,8 +125,9 @@ const InterestsRow = () => {
           <Input
             placeholder={tOnboarding('interests.placeholder')}
             style={{ width: 200 }}
-
             value={customInput}
+
+            visualSize="normal"
             onChange={(e) => setCustomInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) {

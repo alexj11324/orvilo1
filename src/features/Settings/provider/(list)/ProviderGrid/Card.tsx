@@ -97,7 +97,7 @@ const ProviderCard = memo<ProviderCardProps>(
             </>
           )}
         </div>
-        <p className="pointer-events-none relative line-clamp-2 min-h-9 text-xs leading-[18px] text-muted-foreground">
+        <p className="pointer-events-none relative line-clamp-2 min-h-9 text-xs leading-4.5 text-muted-foreground">
           {source === 'custom'
             ? description
             : description && t(`${id}.description`, { defaultValue: description })}

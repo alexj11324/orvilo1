@@ -1,58 +1,20 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { IndentStyle } from './indent';
 
-const styles = createStaticStyles(({ css }) => ({
-  bar: css`
-    flex-shrink: 0;
-
-    height: 24px;
-    padding-inline: 10px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 11px;
-    line-height: 1;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  button: css`
-    cursor: pointer;
-
-    height: 18px;
-    padding-inline: 6px;
-    border: none;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-size: 11px;
-    line-height: 1;
-    color: inherit;
-    white-space: nowrap;
-
-    background: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  item: css`
-    padding-inline: 6px;
-    white-space: nowrap;
-  `,
-  readOnly: css`
-    padding-inline: 6px;
-    border-radius: ${cssVar.borderRadiusSM};
-    color: ${cssVar.colorTextSecondary};
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  bar: 'h-8 shrink-0 border-bs border-divider bg-card px-2.5 text-xs leading-5 text-foreground-tertiary',
+  button:
+    'cursor-pointer px-1.5 font-normal leading-5 whitespace-nowrap text-inherit hover:bg-accent hover:text-foreground focus-visible:ring-inset',
+  item: 'px-1.5 whitespace-nowrap',
+  readOnly: 'rounded-(--radius-chip) bg-accent px-1.5 text-muted-foreground',
+};
 
 export interface CursorPosition {
   column: number;
@@ -100,14 +62,16 @@ const StatusBar = ({
         </span>
         <Tooltip>
           <TooltipTrigger render={<span />}>
-            <button
+            <Button
               aria-pressed={lineWrapping}
               className={styles.button}
+              size="sm"
               type={'button'}
+              variant="ghost"
               onClick={() => onLineWrappingChange(!lineWrapping)}
             >
               {t(lineWrapping ? 'CodeEditorPane.wrapOn' : 'CodeEditorPane.wrapOff')}
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent>{t('CodeEditorPane.toggleWordWrap')}</TooltipContent>
         </Tooltip>

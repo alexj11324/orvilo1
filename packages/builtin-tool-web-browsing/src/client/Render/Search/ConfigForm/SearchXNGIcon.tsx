@@ -1,3 +1,4 @@
+// Keep the search-provider artwork blue when the application theme changes.
 const SearchXNGIcon = () => {
   return (
     <svg height={48} viewBox="0 0 300 300" width={48} xmlns="http://www.w3.org/2000/svg">

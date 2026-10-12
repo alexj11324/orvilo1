@@ -41,7 +41,7 @@ const GroupIndex = () => {
       )}
       {groups.map((group) => (
         <WorkspaceLink
-          className="flex items-center gap-3 rounded-lg border p-4 hover:bg-muted"
+          className="flex items-center gap-3 rounded-(--radius-card) border p-4 hover:bg-muted"
           key={group.id}
           to={`/group/${group.id}`}
         >

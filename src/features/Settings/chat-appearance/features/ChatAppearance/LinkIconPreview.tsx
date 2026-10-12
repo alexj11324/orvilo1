@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { Trans } from 'react-i18next';
 
@@ -8,21 +7,10 @@ import { OFFICIAL_SITE } from '@/const/url';
 import { type OrviloLinkKind } from '@/features/Conversation/Markdown/plugins/Link/parse';
 import LinkRender from '@/features/Conversation/Markdown/plugins/Link/Render';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  bubble: css`
-    align-self: flex-start;
-
-    padding-block: 10px;
-    padding-inline: 14px;
-    border-radius: 12px;
-
-    font-size: 14px;
-    line-height: 1.8;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  bubble:
+    'self-start rounded-(--radius-card) bg-accent px-3.5 py-2.5 text-sm leading-5.5 text-foreground',
+};
 
 interface SampleLinkProps {
   domain?: string;

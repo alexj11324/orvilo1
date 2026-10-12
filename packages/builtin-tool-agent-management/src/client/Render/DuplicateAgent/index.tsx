@@ -14,19 +14,19 @@ export const DuplicateAgentRender = memo<
   if (!pluginState?.success) return null;
 
   return (
-    <div className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
+    <div className="rounded-(--radius-card) bg-fill-quaternary p-3">
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-0.5">
           <span className="text-xs leading-[inherit] font-medium text-muted-foreground">
             {t('builtins.orvilo-agent-management.render.duplicateAgent.sourceId')}
           </span>
-          <span className="text-[13px]">{pluginState.sourceAgentId}</span>
+          <span className="text-(length:--text-dense)">{pluginState.sourceAgentId}</span>
         </div>
         <div className="flex flex-col gap-0.5">
           <span className="text-xs leading-[inherit] font-medium text-muted-foreground">
             {t('builtins.orvilo-agent-management.render.duplicateAgent.newId')}
           </span>
-          <span className="text-[13px]">{pluginState.newAgentId}</span>
+          <span className="text-(length:--text-dense)">{pluginState.newAgentId}</span>
         </div>
       </div>
     </div>

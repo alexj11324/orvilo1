@@ -30,18 +30,19 @@ const RING_CIRCUM = 2 * Math.PI * RING_RADIUS;
 
 const styles = {
   countChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground me-2',
+    'shrink-0 rounded-(--radius-chip) bg-muted px-2 py-0.5 font-mono text-xs leading-5 text-muted-foreground me-2',
   header:
-    'flex items-center gap-2 bg-[var(--ant-color-fill-quaternary)] px-3 py-2.5 [border-block-end:1px_solid_var(--sidebar-border)]',
+    'flex items-center gap-2 bg-fill-quaternary px-3 py-2.5 text-sm leading-5.5 [border-block-end:1px_solid_var(--sidebar-border)]',
   headerCount:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-muted px-2 py-0.5 font-mono text-xs leading-5 text-muted-foreground',
   headerDetail: 'min-w-0 overflow-hidden text-ellipsis text-foreground',
   headerLabel: 'flex min-w-0 flex-1 items-center gap-0 truncate text-muted-foreground',
   ring: 'shrink-0 [transform:rotate(-90deg)] me-1.5',
-  ringProgress: 'transition-[stroke-dashoffset,stroke] duration-[240ms] ease-[ease]',
-  ringTrack: 'stroke-selected',
+  ringProgress:
+    'transition-[stroke-dashoffset,stroke] duration-(--orvilo-motion-mid) ease-in-out motion-reduce:transition-none',
+  ringTrack: 'stroke-divider',
   summaryDetail: 'text-foreground',
-  summaryText: 'min-w-0 truncate',
+  summaryText: 'min-w-0 truncate text-sm leading-5.5',
 };
 
 const STATE_ICONS = {
@@ -54,13 +55,13 @@ const STATE_ICONS = {
 const stateColor = (state: TodoSummaryState) => {
   switch (state) {
     case 'inProgress': {
-      return 'var(--info)';
+      return 'var(--info-text)';
     }
     case 'idle': {
       return 'var(--muted-foreground)';
     }
     default: {
-      return 'var(--success)';
+      return 'var(--success-text)';
     }
   }
 };
@@ -73,7 +74,7 @@ interface TodoProgressRingProps {
 export const TodoProgressRing = memo<TodoProgressRingProps>(({ completed, total }) => {
   const ratio = total > 0 ? completed / total : 0;
   const allDone = total > 0 && completed === total;
-  const color = allDone ? 'var(--success)' : 'var(--info)';
+  const color = allDone ? 'var(--success-text)' : 'var(--info-text)';
 
   return (
     <svg className={styles.ring} height={RING_SIZE} width={RING_SIZE}>

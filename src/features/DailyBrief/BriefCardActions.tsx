@@ -1,5 +1,4 @@
 import { type BriefAction, DEFAULT_BRIEF_ACTIONS, type TaskStatus } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { Check, SquarePen, Workflow } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useState } from 'react';
@@ -46,7 +45,7 @@ type CommentMode = { type: 'feedback' } | { key: string; type: 'comment' };
 
 const SuccessTag = memo<{ label: string }>(({ label }) => (
   <div className="flex items-center gap-1">
-    <Check color={cssVar.colorTextQuaternary} size={14} />
+    <Check color={'var(--ant-color-text-quaternary)'} size={14} />
     <div className={cn(styles.resolvedTag)}>{label}</div>
   </div>
 ));
@@ -96,7 +95,7 @@ const BriefCardActions = memo<BriefCardActionsProps>(
       <Button
         className={cn('brief-view-run-btn')}
         size="sm"
-        style={{ color: cssVar.colorTextSecondary }}
+        style={{ color: 'var(--ant-color-text-secondary)' }}
         variant="ghost"
         onClick={handleViewRun}
       >
@@ -276,8 +275,9 @@ const BriefCardActions = memo<BriefCardActionsProps>(
                     <span className="inline-flex">
                       <Button
                         className={cn('rounded-full', 'brief-comment-btn')}
+                        size="compact"
                         style={{
-                          color: cssVar.colorTextSecondary,
+                          color: 'var(--ant-color-text-secondary)',
                         }}
                         onClick={() => setCommentMode({ type: 'feedback' })}
                       >
@@ -310,6 +310,7 @@ const BriefCardActions = memo<BriefCardActionsProps>(
                 className={cn('rounded-full', styles.actionBtn)}
                 disabled={loadingKey === action.key}
                 key={action.key}
+                size="compact"
                 onClick={() => handleResolve(action.key)}
               >
                 {getActionLabel(action)}
@@ -320,6 +321,7 @@ const BriefCardActions = memo<BriefCardActionsProps>(
             <Button
               className={cn('rounded-full', styles.actionBtn)}
               disabled={loadingKey === 'ignore'}
+              size="compact"
               onClick={() => handleResolve('ignore')}
             >
               {t('brief.action.ignore')}
@@ -343,6 +345,7 @@ const BriefCardActions = memo<BriefCardActionsProps>(
               <Button
                 className={cn('rounded-full', styles.actionBtnPrimary)}
                 disabled={loadingKey === primaryActions.key}
+                size="compact"
                 onClick={() => handleResolve(primaryActions.key)}
               >
                 {getActionLabel(primaryActions)}

@@ -1,8 +1,11 @@
 'use client';
 
+import '@/styles/fonts.css';
+
 import { type NeutralColors, type PrimaryColors } from '@lobehub/ui';
-import { ConfigProvider, FontLoader, ThemeProvider } from '@lobehub/ui';
-import { createStaticStyles, cx } from 'antd-style';
+import ConfigProvider from '@lobehub/ui/es/ConfigProvider/index';
+import FontLoader from '@lobehub/ui/es/FontLoader/index';
+import ThemeProvider from '@lobehub/ui/es/ThemeProvider/ThemeProvider';
 import * as m from 'motion/react-m';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -24,61 +27,7 @@ import { ThemeRoles } from '@/styles/themeRoles';
 import { setCookie } from '@/utils/client/cookie';
 
 import AntdStyleLayer from './AntdStyleLayer';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  app: css`
-    position: relative;
-
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-
-    height: 100%;
-    min-height: 100dvh;
-    max-height: 100dvh;
-
-    @media (device-width >= 576px) {
-      overflow: hidden;
-    }
-  `,
-  // scrollbar-width and scrollbar-color are supported from Chrome 121
-  // https://developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color
-  scrollbar: css`
-    scrollbar-color: ${cssVar.colorFill} transparent;
-    scrollbar-width: thin;
-
-    #orvilo-mobile-scroll-container {
-      scrollbar-width: none;
-
-      ::-webkit-scrollbar {
-        width: 0;
-        height: 0;
-      }
-    }
-  `,
-
-  // so this is a polyfill for older browsers
-  scrollbarPolyfill: css`
-    ::-webkit-scrollbar {
-      width: 0.75em;
-      height: 0.75em;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      border-radius: 10px;
-    }
-
-    :hover::-webkit-scrollbar-thumb {
-      border: 3px solid transparent;
-      background-color: ${cssVar.colorText};
-      background-clip: content-box;
-    }
-
-    ::-webkit-scrollbar-track {
-      background-color: transparent;
-    }
-  `,
-}));
+import styles from './AppTheme.module.css';
 
 export interface AppThemeProps {
   children?: ReactNode;
@@ -86,6 +35,7 @@ export interface AppThemeProps {
   customFontURL?: string;
   defaultNeutralColor?: NeutralColors;
   defaultPrimaryColor?: PrimaryColors;
+  enableCustomFonts?: boolean;
   globalCDN?: boolean;
 }
 
@@ -95,6 +45,7 @@ const AppTheme = memo<AppThemeProps>(
     defaultPrimaryColor,
     defaultNeutralColor,
     globalCDN,
+    enableCustomFonts,
     customFontURL,
     customFontFamily,
   }) => {
@@ -173,9 +124,10 @@ const AppTheme = memo<AppThemeProps>(
         >
           <ThemeProvider
             appearance={currentAppearence}
-            className={cx(styles.app, styles.scrollbar, styles.scrollbarPolyfill)}
+            className={styles.app}
             defaultAppearance={currentAppearence}
             defaultThemeMode={currentAppearence}
+            enableCustomFonts={enableCustomFonts}
             enableGlobalStyle={false}
             customTheme={{
               neutralColor: neutralColor ?? defaultNeutralColor,
@@ -194,8 +146,7 @@ const AppTheme = memo<AppThemeProps>(
             {!!customFontURL && <FontLoader url={customFontURL} />}
             <BaseGlobalStyle />
             <GlobalStyle />
-            <ThemeRoles />
-            {children}
+            <ThemeRoles>{children}</ThemeRoles>
           </ThemeProvider>
         </ConfigProvider>
       </AntdStyleLayer>

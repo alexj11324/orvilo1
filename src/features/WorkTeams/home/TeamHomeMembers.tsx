@@ -14,11 +14,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { TeamHomeMember } from './teamHomeMembersModel';
 
 const styles = {
-  email: 'overflow-hidden text-[12px] text-muted-foreground text-ellipsis whitespace-nowrap',
-  joined: 'flex-none text-[12px] leading-(--text-sm--line-height) text-(--ant-color-text-tertiary)',
+  email: 'overflow-hidden text-xs text-muted-foreground text-ellipsis whitespace-nowrap',
+  joined: 'flex-none text-xs leading-(--text-sm--line-height) text-foreground-tertiary',
   list: 'flex flex-col [@container_work-surface_(max-width:1000px)]:px-1.5',
   memberCell: 'flex flex-1 gap-2.5 items-center min-w-0',
-  name: 'overflow-hidden text-[14px] font-medium text-ellipsis whitespace-nowrap',
+  name: 'overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap',
   row: 'flex gap-3 items-center py-2.5 px-1 [border-block-end:1px_solid_var(--sidebar-border)]',
 };
 

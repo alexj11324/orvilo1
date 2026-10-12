@@ -14,10 +14,7 @@ const ChatListContent = memo<ChatListContentProps>(({ ids }) => {
   const renderedIds = ids.length > 0 ? ids : displayMessageIds;
 
   return (
-    <div
-      className="flex flex-col h-full w-full"
-      style={{ padding: 24, pointerEvents: 'none', position: 'relative' }}
-    >
+    <div className="relative flex flex-col h-full w-full p-6 pointer-events-none">
       {renderedIds.map((id, index) => (
         <MessageItem id={id} index={index} key={id} />
       ))}

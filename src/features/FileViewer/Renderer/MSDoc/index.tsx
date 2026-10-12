@@ -28,7 +28,7 @@ const MSDocViewer = memo<MSDocViewerProps>(({ url }) => {
   if (!url) return null;
 
   return (
-    <div className={cx('flex flex-col h-[100%] w-[100%]', cx(container))} id="msdoc-renderer">
+    <div className={cx('flex flex-col h-full w-full', cx(container))} id="msdoc-renderer">
       <iframe
         className={cx(content)}
         id="msdoc-iframe"

@@ -1,110 +1,31 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Plus } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
-const styles = createStaticStyles(({ css, cssVar: cv }) => ({
-  addButton: css`
-    cursor: pointer;
-
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-
-    color: ${cv.colorTextTertiary};
-
-    background: transparent;
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cv.colorTextSecondary};
-      background: ${cv.colorFillTertiary};
-    }
-  `,
-  addButtonDisabled: css`
-    cursor: not-allowed;
-    color: ${cv.colorTextQuaternary};
-
-    &:hover {
-      color: ${cv.colorTextQuaternary};
-      background: transparent;
-    }
-  `,
-  container: css`
-    display: flex;
-    gap: 2px;
-    align-items: center;
-  `,
-  externalTag: css`
-    flex-shrink: 0;
-
-    padding-block: 1px;
-    padding-inline: 4px;
-    border-radius: 4px;
-
-    font-size: 10px;
-    line-height: 1.2;
-
-    background: ${cv.colorFillSecondary};
-  `,
-  tab: css`
-    cursor: pointer;
-
-    display: flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    height: 32px;
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-radius: 8px;
-
-    color: ${cv.colorTextTertiary};
-
-    background: transparent;
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cv.colorTextSecondary};
-      background: ${cv.colorFillTertiary};
-    }
-  `,
-  tabActive: css`
-    color: ${cv.colorText};
-    background: ${cv.colorFillTertiary};
-
-    &:hover {
-      color: ${cv.colorText};
-      background: ${cv.colorFillTertiary};
-    }
-  `,
-  tabTitle: css`
-    overflow: hidden;
-
-    max-width: 120px;
-
-    font-size: 13px;
-    line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  addButton:
+    'w-8 p-0 border-0 text-foreground-tertiary bg-transparent transition-colors duration-(--orvilo-motion-mid) hover:text-muted-foreground hover:bg-accent motion-reduce:transition-none',
+  addButtonDisabled:
+    'cursor-not-allowed text-foreground-quaternary hover:text-foreground-quaternary hover:bg-transparent',
+  container: 'flex gap-0.5 items-center',
+  externalTag: 'shrink-0 py-0.25 px-1 rounded-(--radius-chip) text-xs leading-5 bg-selected',
+  tab: "gap-1.5 py-1 px-3 border-0 rounded-(--radius-button) font-normal text-foreground-tertiary bg-transparent transition-colors duration-(--orvilo-motion-mid) hover:text-muted-foreground hover:bg-accent motion-reduce:transition-none [&_svg:not([class*='size-'])]:size-auto",
+  tabActive: 'text-foreground bg-selected hover:text-foreground hover:bg-selected',
+  tabTitle: 'overflow-hidden max-w-30 text-sm leading-5.5 text-ellipsis whitespace-nowrap',
+};
 
 export interface ChromeTabItem {
   avatar?: string;
@@ -132,6 +53,9 @@ const ChromeTabs = memo<ChromeTabsProps>(
   ({ items, activeId, onChange, onAdd, addMenuItems, addDisabled, addDisabledReason }) => {
     const { t } = useTranslation('chat');
     const containerRef = useRef<HTMLDivElement>(null);
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const shouldAnimateScroll = animationMode !== 'disabled' && !prefersReducedMotion;
 
     useEffect(() => {
       if (!containerRef.current || !activeId) return;
@@ -145,9 +69,13 @@ const ChromeTabs = memo<ChromeTabsProps>(
       const isVisible = tabRect.left >= containerRect.left && tabRect.right <= containerRect.right;
 
       if (!isVisible) {
-        activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        activeTab.scrollIntoView({
+          behavior: shouldAnimateScroll ? 'smooth' : 'instant',
+          block: 'nearest',
+          inline: 'nearest',
+        });
       }
-    }, [activeId]);
+    }, [activeId, shouldAnimateScroll]);
 
     return (
       <div className={styles.container} ref={containerRef}>
@@ -155,36 +83,51 @@ const ChromeTabs = memo<ChromeTabsProps>(
           const isActive = item.id === activeId;
 
           return (
-            <div
-              className={cx(styles.tab, isActive && styles.tabActive)}
+            <Button
+              aria-pressed={isActive}
+              className={cn(styles.tab, isActive && styles.tabActive)}
               data-tab-id={item.id}
               key={item.id}
+              size="compact"
+              type="button"
+              variant="ghost"
               onClick={() => onChange(item.id)}
             >
               <div className="flex items-center gap-1.5">
-                {item.icon || (item.avatar ? <Avatar avatar={item.avatar} size={18} /> : null)}
+                {item.icon || (item.avatar ? <Avatar avatar={item.avatar} size={16} /> : null)}
                 <span className={styles.tabTitle}>{item.title}</span>
                 {item.isExternal && (
                   <span className={styles.externalTag}>{t('group.profile.external')}</span>
                 )}
               </div>
-            </div>
+            </Button>
           );
         })}
         {(addMenuItems || onAdd) &&
           (addMenuItems ? (
             addDisabled ? (
-              <div
-                className={cx(styles.addButton, styles.addButtonDisabled)}
+              <Button
+                disabled
+                aria-label={t('memberSelection.addMember')}
+                className={cn(styles.addButton, styles.addButtonDisabled)}
+                size="compact"
                 title={addDisabledReason}
+                type="button"
+                variant="ghost"
               >
-                <Plus size={16} />
-              </div>
+                <Plus className="size-4" size={16} />
+              </Button>
             ) : (
               <SidebarDropdownMenu items={addMenuItems} placement="bottomLeft">
-                <div className={styles.addButton}>
-                  <Plus size={16} />
-                </div>
+                <Button
+                  aria-label={t('memberSelection.addMember')}
+                  className={styles.addButton}
+                  size="compact"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Plus className="size-4" size={16} />
+                </Button>
               </SidebarDropdownMenu>
             )
           ) : (
@@ -192,16 +135,21 @@ const ChromeTabs = memo<ChromeTabsProps>(
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <span style={{ display: 'inline-flex' }}>
-                      <div
-                        className={cx(styles.addButton, addDisabled && styles.addButtonDisabled)}
+                    <span className="inline-flex">
+                      <Button
+                        aria-label={t('memberSelection.addMember')}
+                        className={cn(styles.addButton, addDisabled && styles.addButtonDisabled)}
+                        disabled={addDisabled}
+                        size="compact"
+                        type="button"
+                        variant="ghost"
                         onClick={() => {
                           if (addDisabled) return;
                           onAdd?.();
                         }}
                       >
-                        <Plus size={16} />
-                      </div>
+                        <Plus className="size-4" size={16} />
+                      </Button>
                     </span>
                   }
                 />

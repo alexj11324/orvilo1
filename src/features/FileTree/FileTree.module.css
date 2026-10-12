@@ -1,0 +1,11 @@
+/* The local Input public caller class composes after its ordinary layered base.
+   This private selector restores inline-rename chrome without old !important.
+   The public Input keeps its property28 height and real focus-visible ring. */
+.editingInput.editingInput[data-slot='input'] {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+  line-height: inherit;
+  background: transparent;
+}

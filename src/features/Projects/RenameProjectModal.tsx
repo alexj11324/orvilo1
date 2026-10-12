@@ -48,6 +48,7 @@ const RenameProjectContent = ({ project }: RenameProjectContentProps) => {
           autoFocus
           maxLength={255}
           value={name}
+          visualSize="normal"
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.nativeEvent.isComposing) void handleRename();
@@ -55,12 +56,13 @@ const RenameProjectContent = ({ project }: RenameProjectContentProps) => {
         />
       </div>
       <ModalFooter>
-        <Button variant="outline" onClick={close}>
+        <Button size="lg" variant="outline" onClick={close}>
           {t('cancel', { ns: 'common' })}
         </Button>
         <Button
           aria-busy={loading}
           disabled={!normalizedName || normalizedName === project.name || loading}
+          size="lg"
           variant="default"
           onClick={handleRename}
         >

@@ -1,6 +1,5 @@
 import { GROUP_CHAT_URL } from '@orvilo/const';
 import { type SidebarAgentItem } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { Loader2, PinIcon } from 'lucide-react';
 import { type CSSProperties, type DragEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -36,11 +35,11 @@ const GroupItem = memo<GroupItemProps>(({ item, style, className, onNavigate }) 
 
   // Group conversations show a "群组" tag so they stand out from single agents.
   const titleNode = (
-    <div className="flex items-center gap-[4px]">
+    <div className="flex items-center gap-1">
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {displayTitle}
       </span>
-      <span className="shrink-0 rounded-md bg-muted px-1.5 text-xs text-muted-foreground">
+      <span className="shrink-0 rounded-(--radius-chip) bg-muted px-1.5 text-xs text-muted-foreground">
         {t('group.title')}
       </span>
     </div>
@@ -80,7 +79,9 @@ const GroupItem = memo<GroupItemProps>(({ item, style, className, onNavigate }) 
   // Memoize avatar icon (show loader when updating)
   const avatarIcon = useMemo(() => {
     if (isUpdating) {
-      return <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={18} />;
+      return (
+        <Loader2 className="animate-spin" color={'var(--ant-color-text-description)'} size={18} />
+      );
     }
 
     // If avatar is a string, it's a custom group avatar

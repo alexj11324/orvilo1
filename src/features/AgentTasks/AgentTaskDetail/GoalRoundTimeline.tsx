@@ -1,8 +1,13 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
+
+import { Button } from '@/components/ui/button';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import GoalRoundPopover from './GoalRoundPopover';
 
@@ -20,58 +25,14 @@ interface GoalRound {
   usage?: { cost: number; tokens: number } | null;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  dot: css`
-    position: absolute;
-    inset-block-end: -2px;
-    inset-inline-end: -2px;
-
-    width: 7px;
-    height: 7px;
-    border: 2px solid ${cssVar.colorBgContainer};
-    border-radius: 50%;
-
-    background: ${cssVar.colorError};
-  `,
-  rail: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  round: css`
-    cursor: pointer;
-
-    position: relative;
-
-    height: 11px;
-    border-radius: 4px;
-
-    background: ${cssVar.colorInfoBgHover};
-
-    transition:
-      transform 0.15s,
-      filter 0.15s;
-
-    &[data-active='true'] {
-      background: ${cssVar.colorInfo};
-    }
-
-    /* Grow vertically and brighten — never horizontally: width is what encodes
-      the round's duration, so stretching it on hover would lie about the data. */
-    &:hover {
-      transform: scaleY(1.45);
-      filter: brightness(1.25);
-    }
-  `,
-  total: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  dot: 'absolute -inset-be-0.5 -inset-e-0.5 size-1.75 border-2 border-card rounded-full bg-destructive',
+  rail: 'flex flex-wrap gap-1.25 items-center min-w-0',
+  round:
+    'relative block h-2.75 shrink-0 rounded-(--radius-chip) bg-info-hover-wash transition-[transform,filter] duration-(--orvilo-motion-fast) data-[active=true]:bg-info',
+  target: 'group/goal-round min-w-8 gap-0 border-0 bg-transparent px-0 hover:bg-transparent',
+  total: 'flex-none text-xs leading-5 text-foreground-tertiary',
+};
 
 export const formatGoalDuration = (milliseconds: number) => {
   const minutes = milliseconds / 60_000;
@@ -123,6 +84,9 @@ export const goalRoundWidth = (durationMs: number, baseMs: number): number => {
 
 const GoalRoundTimeline = memo<{ rounds?: GoalRound[] }>(({ rounds = [] }) => {
   const { t } = useTranslation('chat');
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const motionEnabled = animationMode !== 'disabled' && !reducedMotion;
   if (!shouldShowGoalRoundTimeline(rounds.length)) return null;
 
   const now = Date.now();
@@ -144,7 +108,9 @@ const GoalRoundTimeline = memo<{ rounds?: GoalRound[] }>(({ rounds = [] }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-[12px] text-muted-foreground">{t('taskDetail.goalTimeline.title')}</div>
+      <div className="text-xs leading-5 text-muted-foreground">
+        {t('taskDetail.goalTimeline.title')}
+      </div>
       <div className={styles.rail}>
         {rounds.map(({ report, run, usage }, index) => (
           <GoalRoundPopover
@@ -155,18 +121,34 @@ const GoalRoundTimeline = memo<{ rounds?: GoalRound[] }>(({ rounds = [] }) => {
             usage={usage}
             verdict={report?.verdict}
           >
-            <div
-              className={styles.round}
-              data-active={run.status === 'running' || index === rounds.length - 1}
-              data-goal-round={run.roundIndex ?? index + 1}
+            <Button
+              className={styles.target}
+              size="compact"
               style={{ width: goalRoundWidth(durations[index], base) }}
+              type="button"
+              variant="ghost"
+              aria-label={t('taskDetail.goalTimeline.round', {
+                index: run.roundIndex ?? index + 1,
+              })}
             >
-              {/* An agent-verified round may carry no report at all, so the
+              <span
+                data-active={run.status === 'running' || index === rounds.length - 1}
+                data-goal-round={run.roundIndex ?? index + 1}
+                data-slot="goal-round"
+                style={{ width: goalRoundWidth(durations[index], base) }}
+                className={cn(
+                  styles.round,
+                  motionEnabled &&
+                    'group-hover/goal-round:scale-y-[1.45] group-hover/goal-round:brightness-125',
+                )}
+              >
+                {/* An agent-verified round may carry no report at all, so the
                 run's own status is the more reliable failure signal. */}
-              {(report?.verdict === 'failed' || run.status === 'failed') && (
-                <span className={styles.dot} />
-              )}
-            </div>
+                {(report?.verdict === 'failed' || run.status === 'failed') && (
+                  <span className={styles.dot} />
+                )}
+              </span>
+            </Button>
           </GoalRoundPopover>
         ))}
         {/* Reads as the rail's own caption, right where the rounds end. */}

@@ -1,0 +1,64 @@
+/* Scope sticky submenu geometry to the actual repo-owned Popup. Public BaseUI
+ * state attributes and owned renderer/marker contracts; no vendor selectors. */
+.submenuPopup {
+  will-change: auto;
+  transform: none;
+  max-width: min(90vw, calc(var(--spacing) * 100));
+  max-height: min(50vh, calc(var(--spacing) * 160));
+  padding-block-end: var(--spacing);
+}
+
+.submenuPopup:has(:global(.orvilo-skill-submenu-search)) {
+  width: min(90vw, calc(var(--spacing) * 100));
+}
+
+.submenuHeader:has(:global(.orvilo-skill-submenu-search)) {
+  padding-block: var(--spacing);
+  padding-inline: var(--spacing);
+}
+
+.groupLabel:has([data-skill-activation-group]) {
+  padding-block: 0;
+}
+
+/* Own DropdownMenuSubTrigger appends this named direct disclosure glyph.
+ * Keep the actual custom extra; hide only that default direct child. */
+.submenuTrigger:has(:global(.orvilo-submenu-chevron)) > :global(.cn-rtl-flip):last-child {
+  display: none;
+}
+
+.submenuTrigger :global(.orvilo-submenu-chevron) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Opacity-only frames retain the non-transform sticky containing block.
+ * Positioner's actual essential floating translation remains untouched. */
+@keyframes action-menu-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes action-menu-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.submenuPopup[data-open] {
+  animation: action-menu-fade-in var(--orvilo-motion-fast) var(--orvilo-motion-ease-out);
+}
+
+.submenuPopup[data-closed] {
+  animation: action-menu-fade-out var(--orvilo-motion-fast) var(--orvilo-motion-ease-out);
+}
+
+/* Existing ThemeRoles motion=false [data-slot] gate stops recipients live.
+ * System reduce also works before ThemeRoles has mounted. */
+@media (prefers-reduced-motion: reduce) {
+  .submenuPopup[data-open],
+  .submenuPopup[data-closed] {
+    animation: none;
+  }
+}

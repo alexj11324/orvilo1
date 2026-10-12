@@ -25,11 +25,11 @@ export const openInviteTeammateModal = (options: OpenInviteTeammateOptions = {})
     onOpenChangeComplete: (open) => {
       if (!open) options.onClosed?.();
     },
-    styles: { content: { padding: 0 } },
+    classNames: { content: 'p-0' },
     title: (
       <Suspense fallback={null}>
         <InviteTeammateTitle />
       </Suspense>
     ),
-    width: 520,
+    width: 640,
   });

@@ -254,6 +254,7 @@ const FilterMenuPopover = memo<FilterMenuPopoverProps>(
               aria-label={picker.placeholder}
               placeholder={picker.placeholder}
               value={textDraft}
+              visualSize="small"
               onChange={(event) => setTextDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') apply();
@@ -348,6 +349,7 @@ const FilterMenuPopover = memo<FilterMenuPopoverProps>(
               aria-label={labels.aiPlaceholder}
               placeholder={labels.aiPlaceholder}
               value={aiText}
+              visualSize="normal"
               onChange={(event) => {
                 setAiText(event.target.value);
                 setAiError(false);

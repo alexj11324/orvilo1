@@ -302,7 +302,7 @@ const FileViewer = memo<FileViewerProps>(({ id, style, fileType, url, name }) =>
   if (isPDF) {
     if (pdfRendererState.status === 'error')
       return (
-        <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+        <div className="flex flex-col items-center justify-center h-full w-full">
           <AsyncError error={pdfRendererState.error} variant={'block'} onRetry={retryPDFRenderer} />
         </div>
       );
@@ -313,7 +313,7 @@ const FileViewer = memo<FileViewerProps>(({ id, style, fileType, url, name }) =>
     }
 
     return (
-      <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+      <div className="flex flex-col items-center justify-center h-full w-full">
         <NeuralNetworkLoading size={36} />
       </div>
     );

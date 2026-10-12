@@ -27,7 +27,9 @@ const TopicPanel = memo<OriginTopicPanelProps>(
             background={agentBackgroundColor ?? undefined}
             size={20}
           />
-          <div className="truncate min-w-0 flex-1 font-semibold text-[13px]">{title}</div>
+          <div className="truncate min-w-0 flex-1 font-semibold text-(length:--text-dense)">
+            {title}
+          </div>
           <ActionIcon
             icon={PanelRightClose}
             size={'small'}

@@ -86,7 +86,12 @@ const ActionsDropdown = memo<ActionsDropdownProps>(({ getMenuItems, hideTrigger,
 
   return (
     <SidebarDropdownMenu items={items}>
-      <ActionIcon icon={EllipsisIcon} size={'small'} title={t('more')} />
+      <ActionIcon
+        className="relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-11 pointer-coarse:before:-translate-x-1/2 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']"
+        icon={EllipsisIcon}
+        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+        title={t('more')}
+      />
     </SidebarDropdownMenu>
   );
 });
@@ -200,7 +205,13 @@ const ItemActions = memo<ItemActionsProps>((props) => {
           {/* Explicit aria-label: outside a popup trigger, ActionIcon does not
               derive one from `title`, leaving the focusable placeholder
               unnamed for screen readers until the real trigger mounts. */}
-          <ActionIcon aria-label={t('more')} icon={EllipsisIcon} size={'small'} title={t('more')} />
+          <ActionIcon
+            aria-label={t('more')}
+            className="relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-11 pointer-coarse:before:-translate-x-1/2 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']"
+            icon={EllipsisIcon}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+            title={t('more')}
+          />
         </span>
       )}
     </span>

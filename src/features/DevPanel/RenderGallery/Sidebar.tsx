@@ -1,63 +1,20 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  menu: css`
-    padding-block: 4px;
-    border-inline-end: none !important;
+import menuStyles from './Sidebar.module.css';
 
-    .ant-menu-item,
-    .ant-menu-submenu-title {
-      width: 100%;
-      margin-inline: 0;
-      border-radius: 0;
-    }
-  `,
-  menuItem: css`
-    cursor: pointer;
-
-    display: block;
-
-    width: 100%;
-    padding-block: 6px;
-    padding-inline: 12px;
-    border: none;
-    border-radius: 0;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: none;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  menuItemActive: css`
-    color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorPrimaryBg};
-  `,
-  sidebar: css`
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-
-    width: 260px;
-    height: 100%;
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  scroll: css`
-    overflow: auto;
-    flex: 1;
-  `,
-}));
+const styles = {
+  menuItem:
+    'cursor-pointer block w-full min-h-8 py-1 px-3 border-0 rounded-(--radius-button) text-sm leading-5.5 text-foreground text-start bg-none bg-transparent hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  menuItemActive: 'text-foreground bg-selected hover:bg-selected',
+  sidebar: 'flex flex-col shrink-0 w-65 h-full border-e border-divider bg-card',
+  scroll: 'overflow-auto flex-1',
+  menu: menuStyles.menu,
+};
 
 export interface DevMenuItem {
   key: string;
@@ -73,13 +30,15 @@ interface SidebarProps {
 const Sidebar = memo<SidebarProps>(({ items, selectedKey, onSelect }) => (
   <aside className={styles.sidebar}>
     <div className={devDockPanelStyles.paneHeader}>
-      <div className="text-[13px] text-muted-foreground font-semibold">Builtin Tool Renders</div>
+      <div className="text-sm leading-5.5 text-muted-foreground font-semibold">
+        Builtin Tool Renders
+      </div>
     </div>
     <div className={styles.scroll}>
       <div className={styles.menu} role="menu">
         {items.map((item) => (
           <button
-            className={cx(styles.menuItem, item.key === selectedKey && styles.menuItemActive)}
+            className={cn(styles.menuItem, item.key === selectedKey && styles.menuItemActive)}
             key={item.key}
             role="menuitem"
             onClick={() => onSelect(item.key)}

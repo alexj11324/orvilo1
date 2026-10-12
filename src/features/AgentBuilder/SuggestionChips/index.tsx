@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { RefreshCw } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -41,21 +40,20 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
     <div
       {...clickableProps()}
       className={cn(
-        'flex flex-col cursor-pointer rounded-md border border-border',
+        'flex flex-col cursor-pointer rounded-(--radius-card) border border-border',
         CLICKABLE_FOCUS_RING,
       )}
       style={{
-        borderRadius: cssVar.borderRadiusLG,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.65 : undefined,
       }}
       onClick={handleClick}
     >
       <div className="flex flex-col gap-1" style={{ paddingBlock: 12, paddingInline: 14 }}>
-        <div className="truncate block text-[14px]" style={{ fontWeight: 500 }}>
+        <div className="truncate block text-sm" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+        <div className="line-clamp-2 text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
           {prompt}
         </div>
       </div>
@@ -69,10 +67,7 @@ const ChipItem = memo<ChipItemProps>(({ title, prompt, index, tracingId, disable
  * skeleton lines — minimising layout shift (CLS) when real chips arrive.
  */
 const ChipSkeleton = memo(() => (
-  <div
-    className="flex flex-col rounded-md border border-border"
-    style={{ borderRadius: cssVar.borderRadiusLG }}
-  >
+  <div className="flex flex-col rounded-(--radius-card) border border-border">
     <div className="flex flex-col gap-2" style={{ paddingBlock: 12, paddingInline: 14 }}>
       <Skeleton style={{ height: 14, width: 96 }} />
       <div className="flex flex-col gap-2">
@@ -160,7 +155,7 @@ const SuggestionChips = memo<SuggestionChipsProps>(
             }}
           >
             <ActionIcon disabled={disabled} icon={RefreshCw} size={'small'} />
-            <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
+            <div className="text-xs" style={{ color: 'var(--ant-color-text-secondary)' }}>
               {tCommon('switch')}
             </div>
           </div>

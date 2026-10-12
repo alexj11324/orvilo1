@@ -1,27 +1,20 @@
 'use client';
 
 import { BRANDING_NAME, BRANDING_URL } from '@orvilo/business-const';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { LucideArrowUpRightFromSquare, TelescopeIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import Notification from '@/components/Notification';
 import { Button } from '@/components/ui/button';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  desc: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    font-size: 18px;
-    font-weight: bold;
-  `,
-}));
+const styles = {
+  desc: 'text-sm leading-5.5 text-muted-foreground',
+  title: 'text-xl leading-7 font-semibold',
+};
 
 const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
   const { t } = useTranslation('common');
@@ -42,11 +35,9 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
   return (
     <Notification mobile={mobile} show={showModal} showCloseIcon={false}>
       <div className="flex flex-col">
-        <Avatar
-          avatar={<TelescopeIcon />}
-          background={cssVar.geekblue1}
-          style={{ color: cssVar.geekblue7 }}
-        />
+        <span className="flex size-8 flex-none items-center justify-center overflow-hidden rounded-full bg-info-wash">
+          <TelescopeIcon className="size-4 text-info-text" />
+        </span>
       </div>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3">
@@ -59,7 +50,7 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
               <span>
                 <a href={BRANDING_URL.privacy} rel="noreferrer" target="_blank">
                   {t('telemetry.learnMore')}
-                  <LucideArrowUpRightFromSquare style={{ marginInlineStart: 4 }} />
+                  <LucideArrowUpRightFromSquare className="ms-1 inline-block size-4 align-middle" />
                 </a>
               </span>
             )}
@@ -67,6 +58,7 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
         </div>
         <div className="flex gap-2">
           <Button
+            type="button"
             onClick={() => {
               updateTelemetry(true);
             }}
@@ -74,6 +66,7 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
             {t('telemetry.allow')}
           </Button>
           <Button
+            type="button"
             variant="ghost"
             onClick={() => {
               updateTelemetry(false);

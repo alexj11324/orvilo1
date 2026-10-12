@@ -9,8 +9,8 @@ import { getRemoveIdentityViewModel } from './identityMemoryViewModel';
 import { memoryCardStyles as styles } from './MemoryCardParts';
 
 const localStyles = {
-  id: 'font-mono text-xs leading-[inherit] text-(--ant-color-text-quaternary)',
-  reason: 'text-[13px] leading-[1.6] text-muted-foreground',
+  id: 'font-mono text-xs leading-[inherit] text-foreground-quaternary',
+  reason: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
 };
 
 export interface RemovedIdentityCardProps {
@@ -31,7 +31,7 @@ export const RemovedIdentityCard = memo<RemovedIdentityCardProps>(({ data }) => 
       <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
         <Trash2 size={14} />
         <div className="flex flex-col flex-1">
-          <div className="text-[13px] font-medium">Identity removed</div>
+          <div className="text-(length:--text-dense) font-medium">Identity removed</div>
         </div>
         {id && <span className={localStyles.id}>{id}</span>}
       </div>

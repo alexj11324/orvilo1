@@ -1,5 +1,5 @@
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
@@ -11,21 +11,9 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { resolveTopicTriggerTime, RunningElapsedTime } from './RunningElapsedTime';
 import { type InboxTopic } from './useHomeInboxTopics';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  row: css`
-    cursor: pointer;
-
-    padding-block: 8px;
-    padding-inline: 10px;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: background ${cssVar.motionDurationFast};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
+const styles = {
+  row: 'cursor-pointer py-2 px-2.5 rounded-(--radius-card) transition-[background-color] duration-(--orvilo-motion-fast) ease-[ease] hover:bg-accent',
+};
 
 interface TopicRowProps {
   /** Status glyph or live spinner — supplied by the caller so a running row can spin. */
@@ -47,7 +35,7 @@ const TopicRow = memo<TopicRowProps>(({ topic, leading, trailing }) => {
     <div
       role="button"
       tabIndex={0}
-      className={cx(
+      className={cn(
         styles.row,
         'flex items-center gap-2.5 outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset',
       )}
@@ -56,10 +44,8 @@ const TopicRow = memo<TopicRowProps>(({ topic, leading, trailing }) => {
     >
       {leading}
       {agent && <AssigneeAvatar agentId={topic.agentId} size={22} />}
-      <div className="flex items-center flex-1 gap-1.5" style={{ minWidth: 0 }}>
-        <div className="truncate block text-[13px]" style={{ minWidth: 0 }}>
-          {topic.title}
-        </div>
+      <div className="flex items-center flex-1 min-w-0 gap-1.5">
+        <div className="truncate block text-sm leading-5.5 min-w-0">{topic.title}</div>
         <RunningElapsedTime startTime={topic.runStartedAt} />
       </div>
       {trailing}

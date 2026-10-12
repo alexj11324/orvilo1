@@ -60,7 +60,7 @@ const TimeLineCard = memo<TimeLineCardProps>(
             }}
           >
             {title && typeof title === 'string' ? (
-              <h2 className="text-[16px] font-medium" style={{ lineHeight: 1.5, margin: 0 }}>
+              <h2 className="text-base font-medium" style={{ lineHeight: 1.5, margin: 0 }}>
                 {title}
               </h2>
             ) : (

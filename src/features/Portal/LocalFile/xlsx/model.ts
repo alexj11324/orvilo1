@@ -124,6 +124,7 @@ const BORDER_WIDTH: Record<string, number> = {
   thin: 1,
 };
 
+// Preserve workbook border colors; a missing color uses the document renderer fallback.
 const borderSide = (side?: Partial<Border>): [number, string] | undefined =>
   side?.style ? [BORDER_WIDTH[side.style] ?? 1, hex(side.color) ?? '#bfbfbf'] : undefined;
 

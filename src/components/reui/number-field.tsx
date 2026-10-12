@@ -8,24 +8,25 @@ import { MinusIcon, PlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createContext, use, useId } from 'react';
 
+import { FormControlProvider, useFormControlContext } from '@/components/FormControlContext';
 import { Label } from '@/components/ui/label';
 
 const NumberFieldContext = createContext<{
   fieldId: string;
-  size: 'sm' | 'default' | 'lg';
+  size: 'sm' | 'default' | 'compact' | 'normal' | 'lg' | 'large';
 } | null>(null);
 
 const numberFieldGroupVariants = cva(
-  'relative flex w-full justify-between border border-input data-disabled:pointer-events-none data-disabled:opacity-50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus-within:has-aria-invalid:border-destructive focus-within:has-aria-invalid:ring-destructive/20 dark:focus-within:has-aria-invalid:ring-destructive/40 rounded-lg bg-transparent dark:bg-input/30 transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-3',
+  'relative flex w-full justify-between border border-input data-disabled:pointer-events-none data-disabled:opacity-50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus-within:has-aria-invalid:border-destructive focus-within:has-aria-invalid:ring-destructive/20 dark:focus-within:has-aria-invalid:ring-destructive/40 rounded-(--radius-input) bg-transparent dark:bg-input/30 transition-colors focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-3',
   {
     variants: {
-      // Ladders restored from the pre-rename source. Rhea was added after they
-      // were written, so its rungs are new: rhea tracks nova here because
-      // .cn-input is h-8 px-2.5 in both sheets, where luma is h-9 px-3.
       size: {
         sm: 'h-7 text-sm',
-        default: 'h-8 text-sm',
+        default: 'h-9 text-sm',
+        compact: 'h-8 text-sm',
+        normal: 'h-9 text-sm',
         lg: 'h-9 text-sm',
+        large: 'h-10 text-base',
       },
     },
     defaultVariants: {
@@ -41,6 +42,9 @@ const numberFieldButtonVariants = cva(
       size: {
         sm: ['px-1.5', "[&_svg:not([class*='size-'])]:size-3.5"],
         default: ['px-2', "[&_svg:not([class*='size-'])]:size-4"],
+        compact: ['px-2', "[&_svg:not([class*='size-'])]:size-4"],
+        normal: ['px-2', "[&_svg:not([class*='size-'])]:size-4"],
+        large: ['px-2.5', "[&_svg:not([class*='size-'])]:size-4"],
         lg: ['px-2.5', "[&_svg:not([class*='size-'])]:size-4"],
       },
     },
@@ -57,6 +61,9 @@ const numberFieldInputVariants = cva(
       size: {
         sm: 'px-2 py-0.5',
         default: 'px-2.5 py-1',
+        compact: 'px-2.5 py-1',
+        normal: 'px-2.5 py-1',
+        large: 'px-2.5 py-1.5',
         lg: 'px-2.5 py-1.5',
       },
     },
@@ -69,23 +76,36 @@ const numberFieldInputVariants = cva(
 function NumberField({
   id,
   className,
-  size = 'default',
+  size,
+  disabled,
   ...props
 }: NumberFieldPrimitive.Root.Props & VariantProps<typeof numberFieldGroupVariants>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
-  const sizeValue = size ?? 'default';
+  const formControl = useFormControlContext();
+  const sizeValue =
+    size === undefined
+      ? formControl.size === 'small'
+        ? 'sm'
+        : formControl.size === 'large'
+          ? 'large'
+          : 'default'
+      : (size ?? 'default');
+  const resolvedDisabled = disabled ?? formControl.disabled;
 
   return (
-    <NumberFieldContext value={{ fieldId, size: sizeValue }}>
-      <NumberFieldPrimitive.Root
-        className={cn('flex w-full flex-col items-start gap-2', className)}
-        data-size={sizeValue}
-        data-slot="number-field"
-        id={fieldId}
-        {...props}
-      />
-    </NumberFieldContext>
+    <FormControlProvider disabled={resolvedDisabled}>
+      <NumberFieldContext value={{ fieldId, size: sizeValue }}>
+        <NumberFieldPrimitive.Root
+          className={cn('flex w-full flex-col items-start gap-2', className)}
+          data-size={sizeValue}
+          data-slot="number-field"
+          disabled={resolvedDisabled}
+          id={fieldId}
+          {...props}
+        />
+      </NumberFieldContext>
+    </FormControlProvider>
   );
 }
 
@@ -126,8 +146,12 @@ function NumberFieldDecrement({
 
   return (
     <NumberFieldPrimitive.Decrement
-      className={cn(numberFieldButtonVariants({ size }), 'rounded-s-lg border-e-0', className)}
       data-slot="number-field-decrement"
+      className={cn(
+        numberFieldButtonVariants({ size }),
+        'rounded-s-(--radius-input) border-e-0',
+        className,
+      )}
       {...props}
     >
       {children ?? <MinusIcon />}
@@ -152,8 +176,12 @@ function NumberFieldIncrement({
 
   return (
     <NumberFieldPrimitive.Increment
-      className={cn(numberFieldButtonVariants({ size }), 'rounded-e-lg border-s-0', className)}
       data-slot="number-field-increment"
+      className={cn(
+        numberFieldButtonVariants({ size }),
+        'rounded-e-(--radius-input) border-s-0',
+        className,
+      )}
       {...props}
     >
       {children ?? <PlusIcon />}

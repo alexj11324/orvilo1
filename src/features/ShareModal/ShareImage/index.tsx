@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { CopyIcon } from 'lucide-react';
 import { cloneElement, memo, type ReactElement, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -139,11 +139,11 @@ const ShareImage = memo<{ mobile?: boolean }>(() => {
   return (
     <>
       <div
-        className={cx(styles.body, 'flex flex-col gap-4')}
+        className={cn(styles.body, 'flex flex-col gap-4')}
         style={{ flexDirection: !isMobile ? 'row' : 'column' }}
       >
         <Preview context={context} messages={dbMessages} title={title} {...fieldValue} />
-        <div className={cx(styles.sidebar, 'flex flex-col gap-3')}>
+        <div className={cn(styles.sidebar, 'flex flex-col gap-3')}>
           <FieldGroup>
             {settings.map((item) => (
               <Field
@@ -167,7 +167,7 @@ const ShareImage = memo<{ mobile?: boolean }>(() => {
           {!isMobile && button}
         </div>
       </div>
-      {isMobile && <div className={cx(styles.footer, 'flex gap-2')}>{button}</div>}
+      {isMobile && <div className={cn(styles.footer, 'flex gap-2')}>{button}</div>}
     </>
   );
 });

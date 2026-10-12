@@ -1,61 +1,25 @@
 'use client';
 
 import type { GitWorkingTreePatch } from '@orvilo/electron-client-ipc';
-import { createStaticStyles } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { type KeyboardEvent, memo, useCallback } from 'react';
+import { useMediaQuery } from 'react-responsive';
+
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import type { ComposerTarget } from '../../types';
 import FileItemBody, { FileItemHeader } from './FileItem';
 import type { ReviewMode } from './useReviewPatches';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  item: css`
-    /* Skip layout/paint of off-screen rows. Preserved from the previous
-       implementation. */
-    content-visibility: auto;
-    contain-intrinsic-size: auto 32px;
-    flex: none;
-
-    /* Every row carries its own top border — separates file-from-file AND
-       file-from-header without doubling up when a group is collapsed. */
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  row: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 5px;
-    padding-inline: 10px;
-
-    transition: background 0.12s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-  `,
-  chevron: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-    transition: transform 0.2s;
-
-    &[data-expanded='true'] {
-      transform: rotate(90deg);
-    }
-  `,
-}));
+const styles = {
+  item: '[content-visibility:auto] [contain-intrinsic-size:auto_32px] flex-none border-bs border-divider',
+  row: 'cursor-pointer select-none flex gap-1.5 items-center w-full min-h-8 py-1 px-2.5 transition-colors duration-(--orvilo-motion-fast) hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2',
+  chevron:
+    'flex-none text-foreground-tertiary transition-transform duration-(--orvilo-motion-fast) data-[expanded=true]:rotate-90',
+};
 
 interface FileRowProps {
   composerTarget: ComposerTarget;
@@ -99,6 +63,9 @@ const FileRow = memo<FileRowProps>(
     viewMode,
     wordWrap,
   }) => {
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const motionDisabled = animationMode === 'disabled' || reducedMotion;
     const onKeyDown = useCallback(
       (e: KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -141,10 +108,10 @@ const FileRow = memo<FileRowProps>(
           {expanded && (
             <m.div
               animate={'open'}
+              className="overflow-hidden"
               exit={'collapsed'}
               initial={'collapsed'}
-              style={{ overflow: 'hidden' }}
-              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: motionDisabled ? 0 : 0.2, ease: [0.4, 0, 0.2, 1] }}
               variants={{
                 collapsed: { height: 0, opacity: 0 },
                 open: { height: 'auto', opacity: 1 },

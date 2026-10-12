@@ -1,104 +1,25 @@
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ClipboardList } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import referenceStyles from '../ReferenceRender.module.css';
 import { type MarkdownElementProps } from '../type';
 import { useTaskCardScope } from './context';
 import { type ParsedTaskContent, parseTaskContent } from './parseTaskContent';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  divider: css`
-    inline-size: 100%;
-    block-size: 1px;
-    background: ${cssVar.colorSplit};
-  `,
-  fallback: css`
-    overflow: auto;
-
-    padding-block: 12px;
-    padding-inline: 14px;
-    border: 1px dashed ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: pre-wrap;
-  `,
-  fieldKey: css`
-    flex: none;
-    min-inline-size: 64px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  fieldRow: css`
-    font-size: 13px;
-    line-height: 1.6;
-  `,
-  fieldValue: css`
-    color: ${cssVar.colorTextSecondary};
-    word-break: break-word;
-  `,
-  headerIcon: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    inline-size: 32px;
-    block-size: 32px;
-
-    color: ${cssVar.colorTextSecondary};
-  `,
-  identifier: css`
-    flex: none;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  instruction: css`
-    font-size: 13px;
-    line-height: 1.7;
-    color: ${cssVar.colorText};
-    white-space: pre-wrap;
-  `,
-  rawList: css`
-    margin: 0;
-    padding: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-    list-style: none;
-
-    li {
-      white-space: pre-wrap;
-    }
-  `,
-  section: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    summary {
-      cursor: pointer;
-      padding-block: 4px;
-      color: ${cssVar.colorTextSecondary};
-
-      &:hover {
-        color: ${cssVar.colorText};
-      }
-    }
-  `,
-}));
+const styles = {
+  divider: 'w-full h-px bg-divider',
+  fieldKey: 'flex-none min-w-16 text-foreground-tertiary',
+  fieldRow: 'text-sm leading-5.5',
+  fieldValue: 'text-muted-foreground [word-break:break-word]',
+  headerIcon: 'flex flex-none items-center justify-center size-8 text-muted-foreground',
+  identifier:
+    'flex-none py-0.25 px-1.5 rounded-(--radius-chip) font-mono text-xs leading-5 text-muted-foreground bg-fill-quaternary',
+  instruction: 'text-sm leading-5.5 text-foreground whitespace-pre-wrap',
+  section:
+    'text-xs leading-5 text-foreground-tertiary [&_summary]:cursor-pointer [&_summary]:py-1 [&_summary]:text-muted-foreground [&_summary:hover]:text-foreground',
+};
 
 const FieldRow = memo<{ label: string; value?: string }>(({ label, value }) => {
   if (!value) return null;
@@ -114,10 +35,10 @@ const RawSection = memo<{ items: string[]; label: string }>(({ items, label }) =
   if (!items || items.length === 0) return null;
   return (
     <details className={styles.section}>
-      <summary>
+      <summary data-slot="markdown-task-summary">
         {label} ({items.length})
       </summary>
-      <ul className={styles.rawList}>
+      <ul className={referenceStyles.taskRawList} data-slot="markdown-task-raw-list">
         {items.map((line, idx) => (
           <li key={idx}>{line}</li>
         ))}
@@ -137,7 +58,11 @@ const Render = memo<TaskRenderProps>(({ children }) => {
   const parsed = useMemo<ParsedTaskContent>(() => parseTaskContent(text), [text]);
 
   if (!enabled) {
-    return <pre className={styles.fallback}>{text}</pre>;
+    return (
+      <pre className={referenceStyles.taskFallback} data-slot="markdown-task-fallback">
+        {text}
+      </pre>
+    );
   }
 
   const titleText = parsed.name || parsed.identifier || '';
@@ -148,10 +73,10 @@ const Render = memo<TaskRenderProps>(({ children }) => {
         <span className={styles.headerIcon}>
           <ClipboardList size={16} />
         </span>
-        <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
-          <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-2">
             {parsed.identifier && <span className={styles.identifier}>{parsed.identifier}</span>}
-            <div className="truncate font-medium" style={{ flex: 1, minWidth: 0 }}>
+            <div className="min-w-0 flex-1 truncate text-sm leading-5.5 font-medium">
               {titleText}
             </div>
           </div>
@@ -162,7 +87,9 @@ const Render = memo<TaskRenderProps>(({ children }) => {
         <>
           <div className={styles.divider} />
           <div className="flex flex-col gap-1">
-            <div className="text-[12px] text-muted-foreground">{t('task.card.instruction')}</div>
+            <div className="text-xs leading-5 text-muted-foreground">
+              {t('task.card.instruction')}
+            </div>
             <div className={styles.instruction}>{parsed.instruction}</div>
           </div>
         </>

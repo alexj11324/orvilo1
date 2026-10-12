@@ -52,7 +52,7 @@ const Agent = memo<AgentProps>(({ itemKey }) => {
         <div className="flex items-center">
           <div className="min-w-0 flex-1">
             <AccordionTrigger>
-              <div className="flex items-center gap-[4px]">
+              <div className="flex items-center gap-1">
                 <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                   {t(titleKey)}
                 </span>
@@ -79,7 +79,7 @@ const Agent = memo<AgentProps>(({ itemKey }) => {
       </SidebarContextMenu>
       <AccordionContent>
         <Suspense fallback={<SkeletonList rows={6} />}>
-          <div className="flex flex-col gap-[1px] py-[1px]">
+          <div className="flex flex-col gap-px py-px">
             <List />
           </div>
         </Suspense>

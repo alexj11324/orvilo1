@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo, useSyncExternalStore } from 'react';
 
 import type { ActivityPhase, ServerActivityEvent } from '@/store/collaboration';
@@ -8,37 +8,15 @@ import type { ActivityPhase, ServerActivityEvent } from '@/store/collaboration';
 import { collabIdForTarget } from './anchors';
 import { useCollaborationContext } from './context';
 
-const styles = createStaticStyles(({ css }) => ({
-  pulse: css`
-    pointer-events: none;
-    will-change: transform;
-
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-  `,
-  committed: css`
-    background: ${cssVar.colorSuccess};
-  `,
-  failed: css`
-    background: ${cssVar.colorError};
-  `,
-  proposed: css`
-    border: 1.5px dashed ${cssVar.colorTextSecondary};
-    background: transparent;
-  `,
-  started: css`
-    background: ${cssVar.colorPrimary};
-
-    @media (prefers-reduced-motion: no-preference) {
-      animation: collab-dot-pulse 1.4s ease-out infinite;
-    }
-  `,
-}));
+const styles = {
+  pulse:
+    'pointer-events-none will-change-transform absolute inset-bs-0 inset-s-0 size-2.5 rounded-full',
+  committed: 'bg-success',
+  failed: 'bg-destructive',
+  proposed: 'border-[1.5px] border-dashed border-muted-foreground bg-transparent',
+  started:
+    'bg-primary motion-safe:animate-pulse motion-safe:[animation-duration:1.4s] motion-safe:[animation-timing-function:ease-out]',
+};
 
 const PHASE_CLASS: Record<ActivityPhase, string> = {
   committed: styles.committed,
@@ -68,6 +46,7 @@ export const ActivityPulse = memo<{ event: ServerActivityEvent }>(({ event }) =>
     <span
       aria-hidden
       className={cx(styles.pulse, phaseClass(event.phase))}
+      data-slot="collaboration-activity-pulse"
       style={{
         transform: `translate(${rect.left + rect.width - 5}px, ${rect.top - 4}px)`,
       }}

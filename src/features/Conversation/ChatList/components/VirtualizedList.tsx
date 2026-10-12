@@ -3,6 +3,7 @@
 import isEqual from 'fast-deep-equal';
 import type { KeyboardEvent, PointerEvent, ReactElement, ReactNode } from 'react';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useMediaQuery } from 'react-responsive';
 import type { VListHandle } from 'virtua';
 import { VList } from 'virtua';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,6 +11,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useChatbotSurface } from '@/features/AIChatbot/context';
 import { useDevDockMounted } from '@/hooks/useDevDockMounted';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import WideScreenContainer from '../../../WideScreenContainer';
 import { MessageForwardSelectToHere } from '../../MessageForward';
@@ -56,6 +59,9 @@ interface VirtualizedListProps {
 const VirtualizedList = memo<VirtualizedListProps>(
   ({ dataSource, footerSlot, headerSlot, itemContent, messageDeepLink }) => {
     const chatbotSurface = useChatbotSurface();
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const motionDisabled = animationMode === 'disabled' || prefersReducedMotion;
     const storeApi = useConversationStoreApi();
     const dataSourceRef = useRef(dataSource);
     dataSourceRef.current = dataSource;
@@ -63,6 +69,14 @@ const VirtualizedList = memo<VirtualizedListProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastUserScrollIntentAtRef = useRef(0);
+
+    // Use VList's public immediate scroll API to cancel a pending or active
+    // smooth request at the exact current offset when either preference stops motion.
+    useEffect(() => {
+      if (!motionDisabled) return;
+      const list = virtuaRef.current;
+      if (list) list.scrollTo(list.scrollOffset);
+    }, [motionDisabled]);
 
     // A header slot prepends one synthetic row to the VList, shifting every
     // virtua row index off the message index. All index-based APIs exposed to
@@ -451,7 +465,7 @@ const VirtualizedList = memo<VirtualizedListProps>(
               atBottom={atBottom}
               bottomOffset={overlayHeight}
               visible={!atBottom}
-              onScrollToBottom={() => scrollToBottom(true)}
+              onScrollToBottom={() => scrollToBottom(!motionDisabled)}
             />
           </WideScreenContainer>
         )}

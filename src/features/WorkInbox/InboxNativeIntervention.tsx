@@ -85,7 +85,7 @@ export const InboxNativeIntervention = ({
 
   return (
     <div
-      className="flex flex-col gap-3 rounded-lg border p-3"
+      className="flex flex-col gap-3 rounded-(--radius-card) border p-3"
       data-native-question={reference.messageId}
     >
       <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
+import { ConnectorToolPermission } from '@orvilo/database/connector-permission';
 import { type ToolManifest } from '@orvilo/types';
 
-import { ConnectorToolPermission } from '@/database/schemas';
 import type { ConnectorWithTools } from '@/store/tool/slices/connector/types';
 
 /**

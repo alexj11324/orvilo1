@@ -1,5 +1,4 @@
 import { Image } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
 import type { ComponentProps } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 
@@ -68,7 +67,7 @@ const MarkdownImage = memo<MarkdownImageProps>(
           role={alt ? 'img' : undefined}
           title={markdownSrc}
           style={{
-            background: cssVar.colorFillQuaternary,
+            background: 'var(--ant-color-fill-quaternary)',
             borderRadius: 6,
             display: 'inline-block',
             minHeight: 120,

@@ -18,7 +18,7 @@ import { openAddResourceModal } from './AddResourceModal';
 
 const styles = {
   card: 'rounded-[12px] border border-sidebar-border bg-[color-mix(in_srgb,var(--card)_82%,var(--ant-color-fill-quaternary))] px-3.5 py-3 hover:border-border', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
-  icon: 'flex size-9 flex-none items-center justify-center rounded-[10px] bg-[var(--ant-color-fill-quaternary)] text-primary', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
+  icon: 'flex size-9 flex-none items-center justify-center rounded-[10px] bg-fill-quaternary text-primary', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
   list: 'grid gap-2.5',
 };
 
@@ -95,7 +95,7 @@ const ProjectResources = memo<ProjectResourcesProps>(({ detail, onRefresh, proje
           </span>
           <span className="text-sm text-muted-foreground">{t('resources.description')}</span>
         </div>
-        <Button variant="default" onClick={handleAdd}>
+        <Button size="compact" variant="default" onClick={handleAdd}>
           {createElement(Plus, { 'size': 16, 'aria-hidden': true })}
           {t('resources.add')}
         </Button>

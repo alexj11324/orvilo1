@@ -1,5 +1,4 @@
 import type { RecentItem } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { BookmarkIcon, FileTextIcon, HashIcon, MoreHorizontalIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,7 +79,9 @@ const RecentListItem = memo<RecentItem>((item) => {
             return <TaskStatusIcon size={16} status={status ?? 'backlog'} />;
           }
 
-          return <IconComponent size={'small'} style={{ color: cssVar.colorTextDescription }} />;
+          return (
+            <IconComponent size={'small'} style={{ color: 'var(--ant-color-text-description)' }} />
+          );
         })()}
         onMouseEnter={handleMouseEnter}
       />

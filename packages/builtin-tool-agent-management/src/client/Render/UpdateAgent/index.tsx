@@ -30,13 +30,13 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
   if (!hasConfig && !hasMeta) return null;
 
   return (
-    <div className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
+    <div className="rounded-(--radius-card) bg-fill-quaternary p-3">
       {meta?.title && (
         <div className="[margin-block-end:8px] last:[margin-block-end:0]">
           <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
             Title
           </div>
-          <div className="text-[13px]">{meta.title}</div>
+          <div className="text-(length:--text-dense)">{meta.title}</div>
         </div>
       )}
       {meta?.description && (
@@ -44,7 +44,7 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
           <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
             Description
           </div>
-          <div className="text-[13px]">{meta.description}</div>
+          <div className="text-(length:--text-dense)">{meta.description}</div>
         </div>
       )}
       {config?.systemRole && (
@@ -53,7 +53,7 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
             System Prompt
           </div>
           <div
-            className="rounded-md border bg-card"
+            className="rounded-(--radius-card) border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
           >
             <Markdown fontSize={13} variant={'chat'}>
@@ -67,7 +67,7 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
           <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
             Model
           </div>
-          <div className="text-[13px]">{config.model as string}</div>
+          <div className="text-(length:--text-dense)">{config.model as string}</div>
         </div>
       )}
     </div>

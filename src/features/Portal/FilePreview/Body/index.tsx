@@ -55,7 +55,7 @@ const FilePreview = () => {
   const showChunk = tab === FilePreviewTab.Chunk && !!chunkText;
   return (
     <div
-      className="flex flex-col h-[100%] px-1"
+      className="flex flex-col h-full px-1"
       style={{ borderRadius: 4, overflow: 'hidden', paddingBlock: '0 4px' }}
     >
       {chunkText && (

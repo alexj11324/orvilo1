@@ -1,49 +1,15 @@
 import { unescapeXml } from '@orvilo/prompts';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { ChatInputHistoryEntry } from '../inputHistoryStorage';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  item: css`
-    cursor: pointer;
-
-    overflow: hidden;
-
-    padding-block: 6px;
-    padding-inline: 10px;
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 13px;
-    line-height: 20px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    transition: background 0.1s ${cssVar.motionEaseOut};
-  `,
-  itemActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  root: css`
-    position: absolute;
-    z-index: 50;
-    inset-block-end: calc(100% + 8px);
-    inset-inline: 0;
-
-    overflow-y: auto;
-
-    max-height: 240px;
-    padding: 4px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-}));
+const styles = {
+  item: 'cursor-pointer overflow-hidden min-h-8 py-1.5 px-2.5 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground text-ellipsis whitespace-nowrap transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  itemActive: 'text-foreground bg-selected hover:bg-selected',
+  root: 'absolute z-50 inset-be-[calc(100%+8px)] inset-x-0 overflow-y-auto max-h-60 p-1 border border-divider rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)',
+};
 
 /**
  * Normalize a stored markdown prompt into a single-line plain-text preview for
@@ -107,7 +73,7 @@ const InputHistoryPopup = memo<InputHistoryPopupProps>(
           const entry = entries[index];
           return (
             <div
-              className={cx(styles.item, index === activeIndex && styles.itemActive)}
+              className={cn(styles.item, index === activeIndex && styles.itemActive)}
               data-index={index}
               key={`${entry.createdAt}-${index}`}
               onMouseEnter={() => onHover(index)}

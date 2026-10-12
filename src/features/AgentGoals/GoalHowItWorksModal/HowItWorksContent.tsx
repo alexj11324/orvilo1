@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { RotateCcwIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,30 +14,10 @@ import {
   StepperTitle,
 } from '@/components/reui/stepper';
 
-const styles = createStaticStyles(({ css }) => ({
-  loopBack: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px dashed ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-  `,
-  loopIcon: css`
-    flex: none;
-    margin-block-start: 1px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  steps: css`
-    .ant-steps-item-title {
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .ant-steps-item-description {
-      font-size: 12px;
-      line-height: 1.65;
-    }
-  `,
-}));
+const styles = {
+  loopBack: 'p-4 border border-dashed border-divider rounded-(--radius-card)',
+  loopIcon: 'flex-none text-foreground-quaternary',
+};
 
 /**
  * The mechanism behind a goal: what each round does and how it ends.
@@ -59,15 +38,17 @@ const HowItWorksContent = memo(() => {
 
   return (
     <div className="flex flex-col gap-3">
-      <Stepper className={styles.steps} orientation={'vertical'} value={0}>
+      <Stepper orientation={'vertical'} value={0}>
         <StepperNav>
           {[1, 2, 3].map((index) => (
             <StepperItem key={index} step={index}>
               <div className="flex items-start gap-2">
-                <StepperIndicator>{index}</StepperIndicator>
+                <StepperIndicator className="text-xs leading-5">{index}</StepperIndicator>
                 <div className="flex flex-col">
-                  <StepperTitle>{t(`goalEmpty.step${index}.title` as never)}</StepperTitle>
-                  <StepperDescription>
+                  <StepperTitle className="text-base leading-6 font-semibold">
+                    {t(`goalEmpty.step${index}.title` as never)}
+                  </StepperTitle>
+                  <StepperDescription className="text-sm leading-5.5">
                     {t(`goalEmpty.step${index}.desc` as never)}
                   </StepperDescription>
                 </div>
@@ -78,10 +59,8 @@ const HowItWorksContent = memo(() => {
         </StepperNav>
       </Stepper>
       <div className={`flex items-start gap-2 ${styles.loopBack}`}>
-        <RotateCcwIcon className={styles.loopIcon} size={13} />
-        <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.6 }}>
-          {t('goalEmpty.loop')}
-        </div>
+        <RotateCcwIcon className={styles.loopIcon} size={16} />
+        <div className="text-sm leading-5.5 text-muted-foreground">{t('goalEmpty.loop')}</div>
       </div>
     </div>
   );

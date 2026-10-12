@@ -93,7 +93,11 @@ export const DesktopNotificationSettings = () => {
           <AlertDescription>{t('completionSound.error')}</AlertDescription>
           <AlertAction>
             {
-              <Button variant="outline" onClick={() => run(completionSoundService.getSettings)}>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => run(completionSoundService.getSettings)}
+              >
                 {t('completionSound.retry')}
               </Button>
             }
@@ -168,7 +172,7 @@ export const DesktopNotificationSettings = () => {
                             })(value);
                         }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger size="normal">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

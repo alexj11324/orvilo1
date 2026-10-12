@@ -1,7 +1,6 @@
 'use client';
 
 import type { SkillResourceTreeNode } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight, File, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -14,50 +13,14 @@ import {
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  item: css`
-    cursor: pointer;
+import nativeStyles from './FileTree.module.css';
 
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline-end: 8px;
-    border-radius: 6px;
-
-    font-size: 13px;
-    line-height: 1.4;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  itemSelected: css`
-    color: ${cssVar.colorPrimary};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  label: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  // Inline rename should look like plain filename text.
-  // Ant Input adds default spacing/border/font styles (and `size="small"` adds extra scaling),
-  // so we fully neutralize visual chrome to avoid layout jump when entering edit mode.
-  editingInput: css`
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-
-    font-size: 13px !important;
-    line-height: 1.4 !important;
-
-    background: transparent !important;
-    outline: none !important;
-    box-shadow: none !important;
-  `,
-}));
+const styles = {
+  item: 'flex min-h-8 cursor-pointer items-center gap-1.5 pe-2 rounded-(--radius-button) text-sm leading-5.5 hover:bg-muted',
+  itemSelected: 'bg-selected text-primary-text hover:bg-selected',
+  label: 'min-w-0 truncate',
+  editingInput: nativeStyles.editingInput,
+};
 
 interface FileTreeProps {
   editableFilePath?: string | null;
@@ -178,14 +141,22 @@ const TreeNode = memo<{
         )}
         onClick={handleClick}
       >
-        {isDir && createElement(isExpanded ? ChevronDown : ChevronRight, { size: 14 })}
-        {!isDir && <span style={{ flexShrink: 0, width: 14 }} />}
-        {createElement(isDir ? (isExpanded ? FolderOpenIcon : FolderIcon) : File, { size: 16 })}
+        {isDir &&
+          createElement(isExpanded ? ChevronDown : ChevronRight, {
+            className: 'size-4 shrink-0',
+            size: 16,
+          })}
+        {!isDir && <span className="w-4 shrink-0" />}
+        {createElement(isDir ? (isExpanded ? FolderOpenIcon : FolderIcon) : File, {
+          className: 'size-4 shrink-0',
+          size: 16,
+        })}
         {isEditing ? (
           <Input
             className={styles.editingInput}
             ref={inputRef}
             value={editingName}
+            visualSize="small"
             onBlur={() => void handleCommitRename()}
             onChange={(e) => setEditingName(e.target.value)}
             onClick={(e) => e.stopPropagation()}
@@ -300,21 +271,20 @@ const FileTree = memo<FileTreeProps>(
     const rootFileContent = rootFilePath && rootFileLabel && (
       <div
         {...clickableProps()}
-        style={{ paddingInlineStart: 8 }}
         className={cn(
-          `${styles.item} ${isRootFileSelected ? styles.itemSelected : ''}`,
+          `${styles.item} ps-2 ${isRootFileSelected ? styles.itemSelected : ''}`,
           CLICKABLE_FOCUS_RING,
         )}
         onClick={() => onSelectFile(rootFilePath)}
       >
-        <span style={{ flexShrink: 0, width: 14 }} />
-        <File size={16} />
+        <span className="w-4 shrink-0" />
+        <File className="size-4 shrink-0" size={16} />
         <span className={styles.label}>{rootFileLabel}</span>
       </div>
     );
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div className="flex flex-col gap-0.5">
         {rootFileContent && rootFileContextMenuItems && rootFileContextMenuItems.length > 0 ? (
           <ContextMenu>
             <ContextMenuTrigger>{rootFileContent}</ContextMenuTrigger>

@@ -28,7 +28,7 @@ const Layout = memo(({ children, mobile }: ProviderMenuProps) => {
       aria-label={t('menu.searchProviders')}
       className={cn(
         'flex flex-col bg-background',
-        !mobile && 'w-[264px] min-w-[264px] overflow-y-auto border-r border-border',
+        !mobile && 'w-66 min-w-66 overflow-y-auto border-r border-border',
       )}
     >
       <div className="sticky top-0 z-10 flex gap-2 bg-background px-3 pt-3 pb-2">

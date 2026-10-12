@@ -38,16 +38,15 @@ const styles = {
   bodyEmbedded: 'border-t-0',
   checkRow:
     'grid grid-cols-[20px_minmax(0,1fr)_auto] items-start gap-2 py-3 not-last:border-b not-last:border-sidebar-border',
-  chevron: 'flex-none text-(--ant-color-text-quaternary)',
+  chevron: 'flex-none text-foreground-quaternary',
   clickable:
-    'cursor-pointer transition-[background] duration-150 ease-(--ant-motion-ease-out) hover:bg-(--ant-color-fill-quaternary)',
-  desc: 'mt-[3px] text-[12px] leading-[1.45] text-(--ant-color-text-tertiary)',
+    'cursor-pointer transition-[background] duration-150 ease-(--ant-motion-ease-out) hover:bg-fill-quaternary',
+  desc: 'mt-0.75 text-xs leading-[1.45] text-foreground-tertiary',
   dock: 'overflow-hidden rounded-[16px] border border-border bg-popover',
-  head: 'flex cursor-pointer items-center justify-between gap-3 px-3 py-[11px]',
-  inputPanel:
-    'mt-2.5 rounded-[12px] border border-sidebar-border bg-(--ant-color-fill-quaternary) p-2.5',
-  sub: 'truncate text-[12px] text-(--ant-color-text-tertiary)',
-  title: 'text-[13px] font-bold text-foreground',
+  head: 'flex cursor-pointer items-center justify-between gap-3 px-3 py-2.75',
+  inputPanel: 'mt-2.5 rounded-[12px] border border-sidebar-border bg-fill-quaternary p-2.5',
+  sub: 'truncate text-xs text-foreground-tertiary',
+  title: 'text-(length:--text-dense) font-bold text-foreground',
 };
 
 const statusIcon = (
@@ -178,10 +177,11 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
   const renderEditor = () => (
     <div className="flex flex-col gap-2">
       {draftItems.map((item, index) => (
-        <div className="flex items-center gap-[7px]" key={item.id}>
+        <div className="flex items-center gap-1.75" key={item.id}>
           <Input
             placeholder={t('editor.placeholder')}
             value={item.title}
+            visualSize="small"
             onChange={(e) => {
               const next = [...draftItems];
               next[index] = { ...item, title: e.target.value };

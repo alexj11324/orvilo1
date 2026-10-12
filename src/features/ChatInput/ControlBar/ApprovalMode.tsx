@@ -21,7 +21,7 @@ import { type ApprovalMode } from '@/store/user/slices/settings/selectors';
 import { SimpleTooltip } from '../SimpleTooltip';
 
 const styles = {
-  desc: 'text-[12px] leading-[1.4] text-[var(--ant-color-text-description)]',
+  desc: 'text-xs leading-[1.4] text-foreground-description',
   icon: 'border border-solid border-accent rounded-(--radius-card) bg-popover bg-none',
   modeButton: 'text-xs text-muted-foreground',
   selectedItem:
@@ -29,17 +29,14 @@ const styles = {
   modeButtonOpen:
     'text-foreground bg-muted bg-none hover:text-foreground hover:bg-muted hover:bg-none',
   modeButtonDisabled: 'cursor-not-allowed opacity-50',
-  title: 'text-[14px] font-medium leading-[1.4] text-foreground',
+  title: 'text-sm font-medium leading-[1.4] text-foreground',
 };
 
 const ModeItemLabel = memo<{ desc: string; icon: LucideIcon; title: string }>(
   ({ desc, icon, title }) => (
     <div className="flex flex-row items-start gap-3">
       <div
-        className={cn(
-          'flex flex-col items-center justify-center flex-none h-[32px] w-[32px]',
-          styles.icon,
-        )}
+        className={cn('flex flex-col items-center justify-center flex-none h-8 w-8', styles.icon)}
       >
         <span className="anticon" role="img">
           {createElement(icon, { size: '1em', width: '1em', height: '1em', fill: 'transparent' })}

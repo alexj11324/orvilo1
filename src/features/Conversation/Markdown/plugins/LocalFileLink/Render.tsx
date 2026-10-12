@@ -2,7 +2,6 @@
 
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
-import { createStaticStyles } from 'antd-style';
 import type { MouseEvent } from 'react';
 import { memo, useCallback } from 'react';
 
@@ -11,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
+import referenceStyles from '../ReferenceRender.module.css';
 import type { MarkdownElementProps } from '../type';
 import type { ParsedLocalFileHref } from './parse';
 import { parseLocalFileHref } from './parse';
@@ -20,57 +20,10 @@ interface LocalFileLinkProperties {
   linkLabel?: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  reference: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-    vertical-align: -0.16em;
-  `,
-  icon: css`
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-  `,
-  link: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    margin-inline: -2px;
-    padding-inline: 2px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    text-decoration: none;
-    vertical-align: -0.16em;
-
-    transition:
-      color 0.2s ${cssVar.motionEaseOut},
-      background 0.2s ${cssVar.motionEaseOut},
-      box-shadow 0.2s ${cssVar.motionEaseOut};
-
-    &:hover {
-      color: ${cssVar.colorLinkHover};
-      text-decoration: underline;
-      text-underline-offset: 2px;
-
-      background: ${cssVar.colorFillSecondary};
-      box-shadow: inset 0 0 0 1px ${cssVar.colorPrimaryBorder};
-    }
-
-    &:active {
-      color: ${cssVar.colorLinkActive};
-      background: ${cssVar.colorFill};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimaryBorder};
-      outline-offset: 2px;
-    }
-  `,
-}));
+const styles = {
+  reference: 'inline-flex gap-1 items-center align-[-0.16em]',
+  icon: 'inline-flex shrink-0 items-center',
+};
 
 const getFileName = (filePath: string) => filePath.split(/[\\/]/).at(-1) || filePath;
 
@@ -113,7 +66,7 @@ const Render = memo<MarkdownElementProps<LocalFileLinkProperties>>(({ node }) =>
         <Tooltip>
           <TooltipTrigger
             render={
-              <span style={{ display: 'inline-flex' }}>
+              <span className="inline-flex">
                 <span className={styles.reference} data-file-path={parsed?.filePath}>
                   <span aria-hidden className={styles.icon}>
                     <FileIcon fileName={iconFileName} size={16} variant={'raw'} />
@@ -136,10 +89,11 @@ const Render = memo<MarkdownElementProps<LocalFileLinkProperties>>(({ node }) =>
       <Tooltip>
         <TooltipTrigger
           render={
-            <span style={{ display: 'inline-flex' }}>
+            <span className="inline-flex">
               <a
                 {...(parsed ? { [RENDERER_HANDLED_LINK_ATTR]: 'true' } : {})}
-                className={styles.link}
+                className={referenceStyles.localFileLink}
+                data-slot="markdown-local-file-link"
                 href={linkHref}
                 onClick={handleClick}
               >

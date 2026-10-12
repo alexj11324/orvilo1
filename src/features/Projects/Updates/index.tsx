@@ -1,7 +1,6 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
 import { CircleDotIcon, EllipsisIcon, PencilIcon, Trash2Icon } from 'lucide-react';
@@ -41,112 +40,24 @@ import { ProjectUpdateEditor } from './ProjectUpdateEditor';
  */
 const UPDATE_ACTIONS_CLASS = 'project-update-actions';
 
-const styles = createStaticStyles(({ css }) => ({
-  collapsed: css`
-    cursor: text;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      border-color: ${cssVar.colorPrimaryBorder};
-    }
-  `,
-  collapsedEmpty: css`
-    cursor: pointer;
-
-    justify-content: center;
-
-    box-sizing: border-box;
-    width: auto;
-    min-width: 32px;
-    height: 32px;
-    min-height: 32px;
-    padding-block: 0;
-    padding-inline: 10px 12px;
-    border-color: transparent;
-    border-radius: 9999px;
-
-    font-size: 13px;
-    font-weight: 500;
-    line-height: normal;
-    white-space: nowrap;
-  `,
-  emptyContainer: css`
-    display: flex;
-    justify-content: center;
-
-    box-sizing: border-box;
-    width: 100%;
-    padding: 16px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 10px;
-  `,
-  composer: css`
-    overflow: hidden;
-
-    min-height: 172px;
-    border: 0.5px solid ${cssVar.colorBorder};
-    border-radius: 10px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  composerFooter: css`
-    margin-block-start: auto;
-    padding-block: 14px;
-    padding-inline: 12px 14px;
-  `,
-  healthPick: css`
-    cursor: pointer;
-  `,
-  modeTab: css`
-    height: 24px;
-    min-height: 24px;
-    padding-block: 0;
-    padding-inline: 8px;
-
-    font-size: 12px;
-  `,
-  modeTabs: css`
-    flex: none;
-    width: auto;
-  `,
-  updateActions: css`
-    opacity: 0;
-    transition: opacity 120ms;
-  `,
-  updateRow: css`
-    padding-block: 10px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: 0;
-    }
-
-    /* Linear parity: the row's ⋯ menu is a secondary control that appears on
-       hover/focus, like the milestone cards' hover-only controls. */
-    &:hover .${UPDATE_ACTIONS_CLASS}, &:focus-within .${UPDATE_ACTIONS_CLASS} {
-      opacity: 1;
-    }
-  `,
-  updateRowMenuOpen: css`
-    .${UPDATE_ACTIONS_CLASS} {
-      opacity: 1;
-    }
-  `,
-}));
+const styles = {
+  collapsed:
+    'flex w-full cursor-text items-center gap-2 rounded-(--radius-card) border border-border bg-transparent px-3 py-2 text-start text-sm leading-5.5 text-muted-foreground hover:border-primary-border',
+  collapsedEmpty:
+    'box-border h-9 min-h-9 min-w-9 w-auto cursor-pointer justify-center rounded-(--radius-button) border-transparent ps-2.5 pe-3 py-0 text-sm leading-5.5 font-medium whitespace-nowrap',
+  emptyContainer:
+    'box-border flex w-full justify-center rounded-(--radius-card) border border-border p-4',
+  composer: 'min-h-43 overflow-hidden rounded-(--radius-card) border-[0.5px] border-border bg-card',
+  composerFooter: 'mbs-auto py-3.5 ps-3 pe-3.5',
+  healthPick: 'cursor-pointer',
+  modeTab:
+    'min-h-8 h-8 px-2 py-0 text-sm leading-5.5 transition-[color,background-color,border-color,box-shadow,opacity] duration-(--orvilo-motion-fast)',
+  modeTabs: 'w-auto flex-none',
+  updateActions: 'opacity-0 transition-opacity duration-(--orvilo-motion-fast)',
+  updateRow:
+    'border-be border-divider py-2.5 last:border-be-0 [&:hover_.project-update-actions]:opacity-100 [&:focus-within_.project-update-actions]:opacity-100',
+  updateRowMenuOpen: '[&_.project-update-actions]:opacity-100',
+};
 
 const toUpdate = (row: {
   authorAvatar?: null | string;
@@ -292,10 +203,9 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
             .join(' ')}
           onClick={() => (onExpand ? onExpand() : setExpanded(true))}
         >
-          <CircleDotIcon size={14} style={{ opacity: 0.5 }} />
+          <CircleDotIcon className="opacity-50" size={14} />
           <span
-            className="text-sm text-muted-foreground"
-            style={{ fontSize: 13, fontWeight: emptyState ? 500 : undefined }}
+            className={cn('text-sm leading-5.5 text-muted-foreground', emptyState && 'font-medium')}
           >
             {emptyState
               ? t('overview.firstUpdate', { defaultValue: 'Write first project update' })
@@ -319,7 +229,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
         {/* A posted row keeps its kind — edit mode drops the Comment/Update tabs.
           Editing a comment leaves the header empty, so it is skipped entirely. */}
         {(!editing || mode === 'update') && (
-          <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, padding: 8 }}>
+          <div className="flex flex-row items-center gap-1 p-2">
             {!editing && (
               <Tabs
                 className={styles.modeTabs}
@@ -328,7 +238,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
                   if (key === 'comment' || key === 'update') setMode(key);
                 }}
               >
-                <TabsList className="w-full">
+                <TabsList className="w-full group-data-horizontal/tabs:h-9 rounded-(--radius-button)">
                   {[
                     { key: 'comment', label: t('overview.updateModeComment') },
                     { key: 'update', label: t('overview.updateModeUpdate') },
@@ -345,12 +255,12 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
                 items={PROJECT_UPDATE_HEALTH_ORDER.map((state) => ({
                   key: state,
                   label: t(`overview.health.${state}`),
-                  icon: <ProjectHealthIcon health={state} size={12} />,
+                  icon: <ProjectHealthIcon health={state} size={16} />,
                   onClick: () => setHealth(state),
                 }))}
               >
                 <Button size="sm" variant="outline">
-                  <ProjectHealthIcon health={health} size={12} />
+                  <ProjectHealthIcon health={health} size={16} />
                   {t(`overview.health.${health}`, { defaultValue: health })}
                 </Button>
               </DropdownMenu>
@@ -370,12 +280,15 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
             onSubmit={() => void post()}
           />
           <div
-            className={cn('flex flex-row', styles.composerFooter)}
-            style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
+            className={cn(
+              cn('flex flex-row', styles.composerFooter),
+              'items-center justify-end gap-2',
+            )}
           >
             {editing && (
               <Button
                 disabled={posting}
+                size="lg"
                 variant="outline"
                 onClick={() => {
                   settle();
@@ -388,6 +301,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
             <Button
               aria-busy={posting}
               disabled={!canPost || !body.trim() || posting}
+              size="lg"
               variant="default"
               onClick={() => void post()}
             >
@@ -468,21 +382,24 @@ export const ProjectUpdateRow = memo<{
     });
   return (
     <div
-      className={cn('flex flex-row', cx(styles.updateRow, menuOpen && styles.updateRowMenuOpen))}
-      style={{ alignItems: 'flex-start', gap: 12 }}
+      className={cn(
+        cn('flex flex-row', cn(styles.updateRow, menuOpen && styles.updateRowMenuOpen)),
+        'items-start gap-3',
+      )}
     >
       {hideAuthorAvatar ? null : (
         <Avatar avatar={update.authorAvatar} name={update.authorName} size={24} />
       )}
-      <div className="flex flex-col" style={{ gap: 4, flex: 1, minWidth: 0 }}>
-        <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
-          <span className="text-sm" style={{ fontSize: 14, fontWeight: 500 }}>
+      <div className="flex flex-col gap-1 flex-1 min-w-0">
+        <div className="flex flex-row items-center gap-2">
+          <span className="text-sm leading-5.5 font-medium">
             {update.authorName || t('overview.updateAnonymous', { defaultValue: 'Member' })}
           </span>
           {meta && update.health && (
             <Badge
+              className="h-auto leading-5"
               radius="full"
-              size="sm"
+              size="default"
               variant={
                 meta.tag === 'error'
                   ? 'destructive-light'
@@ -491,17 +408,19 @@ export const ProjectUpdateRow = memo<{
                     : 'success-light'
               }
             >
-              <ProjectHealthIcon health={update.health} size={12} />
+              <ProjectHealthIcon health={update.health} size={16} />
               {t(`overview.health.${update.health}`, { defaultValue: update.health })}
             </Badge>
           )}
-          <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+          <span className="text-muted-foreground text-xs leading-5">
             {formatProjectDay(update.createdAt)}
           </span>
           {(canEdit || canDelete) && (
             <div
-              className={cn('flex flex-row', cx(UPDATE_ACTIONS_CLASS, styles.updateActions))}
-              style={{ justifyContent: 'flex-end', flex: 1 }}
+              className={cn(
+                cn('flex flex-row', cn(UPDATE_ACTIONS_CLASS, styles.updateActions)),
+                'justify-end flex-1',
+              )}
             >
               <DropdownMenu
                 items={[
@@ -537,7 +456,9 @@ export const ProjectUpdateRow = memo<{
             </div>
           )}
         </div>
-        <Markdown fontSize={14}>{update.body}</Markdown>
+        <Markdown fontSize={14} lineHeight={22 / 14}>
+          {update.body}
+        </Markdown>
       </div>
     </div>
   );

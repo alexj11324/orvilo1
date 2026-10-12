@@ -1,13 +1,13 @@
-import { FORM_STYLE } from '@orvilo/const';
 import { exportFile } from '@orvilo/utils/client';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { CopyIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useId } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import Form, { type FormItemProps } from '@/components/GroupForm';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -18,15 +18,6 @@ import Preview from './Preview';
 import { generateMarkdown } from './template';
 import { type FieldType } from './type';
 
-interface FieldSwitchProps {
-  checked?: boolean;
-  onChange?: (checked: boolean) => void;
-}
-
-const FieldSwitch = ({ checked, onChange }: FieldSwitchProps) => (
-  <Switch checked={checked} onCheckedChange={onChange} />
-);
-
 const DEFAULT_FIELD_VALUE: FieldType = {
   includeTool: true,
   includeUser: true,
@@ -35,42 +26,16 @@ const DEFAULT_FIELD_VALUE: FieldType = {
 };
 
 const ShareText = memo(() => {
-  const [fieldValue, setFieldValue] = useState(DEFAULT_FIELD_VALUE);
+  const { control, watch } = useForm<FieldType>({ defaultValues: DEFAULT_FIELD_VALUE });
+  const fieldValue = watch();
+  const formId = useId();
   const { t } = useTranslation(['chat', 'common']);
 
-  const settings: FormItemProps[] = [
-    {
-      children: <FieldSwitch />,
-      label: t('shareModal.withSystemRole'),
-      layout: 'horizontal',
-      minWidth: undefined,
-      name: 'withSystemRole',
-      valuePropName: 'checked',
-    },
-    {
-      children: <FieldSwitch />,
-      label: t('shareModal.withRole'),
-      layout: 'horizontal',
-      minWidth: undefined,
-      name: 'withRole',
-      valuePropName: 'checked',
-    },
-    {
-      children: <FieldSwitch />,
-      label: t('shareModal.includeUser'),
-      layout: 'horizontal',
-      minWidth: undefined,
-      name: 'includeUser',
-      valuePropName: 'checked',
-    },
-    {
-      children: <FieldSwitch />,
-      label: t('shareModal.includeTool'),
-      layout: 'horizontal',
-      minWidth: undefined,
-      name: 'includeTool',
-      valuePropName: 'checked',
-    },
+  const settings: { label: string; name: keyof FieldType }[] = [
+    { label: t('shareModal.withSystemRole'), name: 'withSystemRole' },
+    { label: t('shareModal.withRole'), name: 'withRole' },
+    { label: t('shareModal.includeUser'), name: 'includeUser' },
+    { label: t('shareModal.includeTool'), name: 'includeTool' },
   ];
 
   const { displayMessages, systemRole, title } = useShareData();
@@ -112,21 +77,40 @@ const ShareText = memo(() => {
 
   return (
     <>
-      <div className={cx('flex flex-row gap-4', styles.body)}>
+      <div className={cn('flex flex-row gap-4', styles.body)}>
         <Preview content={content} />
-        <div className={cx('flex flex-col gap-3', styles.sidebar)}>
-          <Form
-            initialValues={DEFAULT_FIELD_VALUE}
-            itemMinWidth={FORM_STYLE.itemMinWidth}
-            items={settings}
-            itemsType={'flat'}
-            style={FORM_STYLE.style}
-            onValuesChange={(_, v) => setFieldValue(v)}
-          />
+        <div className={cn('flex flex-col gap-3', styles.sidebar)}>
+          <FieldGroup className="max-w-256 gap-0">
+            {settings.map((item) => (
+              <Controller
+                control={control}
+                key={item.name}
+                name={item.name}
+                render={({ field }) => (
+                  <Field className="min-h-11 gap-4 py-2" orientation="horizontal">
+                    <FieldLabel
+                      className="min-w-0 text-sm leading-5.5"
+                      htmlFor={`${formId}-${field.name}`}
+                    >
+                      {item.label}
+                    </FieldLabel>
+                    <Switch
+                      checked={field.value}
+                      id={`${formId}-${field.name}`}
+                      inputRef={field.ref}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      onCheckedChange={field.onChange}
+                    />
+                  </Field>
+                )}
+              />
+            ))}
+          </FieldGroup>
           {!isMobile && button}
         </div>
       </div>
-      {isMobile && <div className={cx('flex flex-row gap-2', styles.footer)}>{button}</div>}
+      {isMobile && <div className={cn('flex flex-row gap-2', styles.footer)}>{button}</div>}
     </>
   );
 });

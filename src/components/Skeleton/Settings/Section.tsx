@@ -1,42 +1,28 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
-
 import { FormGroup } from '@/components/GroupForm';
 
 import SkeletonBar from '../Bar';
 
-const styles = createStaticStyles(({ css }) => ({
-  divider: css`
-    width: 100%;
-    height: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  row: css`
-    display: flex;
-    gap: 24px;
-    align-items: center;
-    justify-content: space-between;
-
-    min-height: 64px;
-    padding-block: 16px;
-  `,
-}));
+const styles = {
+  divider: 'h-px w-full bg-divider',
+  row: 'flex min-h-16 items-center justify-between gap-6 py-4',
+};
 
 const Row = ({ index }: { index: number }) => (
   <div className={styles.row}>
     <div className="flex flex-col gap-2">
-      <SkeletonBar height={16} width={112 + (index % 2) * 40} />
+      <SkeletonBar height={14} width={112 + (index % 2) * 40} />
       <SkeletonBar height={12} width={224 + (index % 3) * 36} />
     </div>
-    <SkeletonBar height={32} width={index % 2 ? 152 : 88} />
+    <SkeletonBar height={36} radius={'var(--radius-input)'} width={index % 2 ? 152 : 88} />
   </div>
 );
 
 const Group = ({ rows, titleWidth }: { rows: number; titleWidth: number }) => (
   <FormGroup
     collapsible={false}
-    title={<SkeletonBar height={18} width={titleWidth} />}
+    title={<SkeletonBar height={16} width={titleWidth} />}
     variant={'filled'}
   >
     <div className="flex flex-col">
@@ -51,7 +37,7 @@ const Group = ({ rows, titleWidth }: { rows: number; titleWidth: number }) => (
 );
 
 const SettingsSectionSkeleton = () => (
-  <div aria-busy className="flex flex-col gap-9" data-testid={'settings-section-skeleton'}>
+  <div aria-busy className="flex flex-col gap-8" data-testid={'settings-section-skeleton'}>
     <Group rows={2} titleWidth={104} />
     <Group rows={3} titleWidth={136} />
   </div>

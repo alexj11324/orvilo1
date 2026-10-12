@@ -96,7 +96,7 @@ const Head = memo<{ id: string }>(({ id }) => {
       item: {
         icon: (
           <div
-            className={cx('flex flex-col items-center justify-center w-[16px]', styles.menuIcon)}
+            className={cx('flex flex-col items-center justify-center w-4', styles.menuIcon)}
             style={{ minWidth: 16 }}
           >
             <LibraryStatusIcon
@@ -111,7 +111,7 @@ const Head = memo<{ id: string }>(({ id }) => {
         key: library.id,
         label: library.name,
         onClick: () => handleLibrarySwitch(library.id),
-        className: library.id === id ? 'bg-[var(--ant-control-item-bg-active)]' : undefined,
+        className: library.id === id ? 'bg-(--ant-control-item-bg-active)' : undefined,
       },
       visibility: library.visibility,
     }));
@@ -138,7 +138,7 @@ const Head = memo<{ id: string }>(({ id }) => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex flex-col items-center justify-center w-[32px]" style={{ minWidth: 32 }}>
+      <div className="flex flex-col items-center justify-center w-8" style={{ minWidth: 32 }}>
         <LibraryStatusIcon
           memberRestricted={activeLibrary?.memberRestricted}
           size={18}

@@ -69,19 +69,26 @@ export const GoalContent = memo<GoalContentProps>(({ initialGoal, onDelete, onSu
       />
       <div className="flex items-center justify-between">
         {onDelete ? (
-          <Button disabled={busy} loading={deleting} variant="destructive" onClick={handleDelete}>
+          <Button
+            disabled={busy}
+            loading={deleting}
+            size="lg"
+            variant="destructive"
+            onClick={handleDelete}
+          >
             {tv('acceptance.tray.goalModal.delete')}
           </Button>
         ) : (
           <span />
         )}
         <div className="flex gap-2">
-          <Button disabled={busy} onClick={close}>
+          <Button disabled={busy} size="lg" onClick={close}>
             {tv('acceptance.actions.cancel')}
           </Button>
           <Button
             disabled={!goal.trim() || busy}
             loading={saving}
+            size="lg"
             variant="default"
             onClick={handleSave}
           >

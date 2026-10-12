@@ -91,7 +91,7 @@ export const List = memo(() => {
   const masonryContext = useMemo(() => ({}), []);
 
   return (
-    <div className="flex flex-col h-[500px]">
+    <div className="flex flex-col h-125">
       {/*
        * Toolbar sits flush with the list items below: Virtuoso uses
        * `marginInline: -16` to pull rows back to the outer edge and each

@@ -58,6 +58,7 @@ const CliTestSection = memo(() => {
           placeholder={t('systemTools.cliTest.customArgsPlaceholder')}
           style={{ flex: 1 }}
           value={customCmd}
+          visualSize="normal"
           onChange={(e) => setCustomCmd(e.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.nativeEvent.isComposing && customCmd && !running) {

@@ -30,9 +30,9 @@ const frameVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border border-[var(--frame-border-color)] bg-clip-padding',
+        default: 'border border-(--frame-border-color) bg-clip-padding',
         inverse:
-          '[--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)] border border-[var(--frame-border-color)] bg-background bg-clip-padding',
+          '[--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)] border border-(--frame-border-color) bg-background bg-clip-padding',
         ghost: '[--frame-panel-radius:calc(var(--frame-radius)-var(--frame-px))]',
       },
       // Bars read as chrome, not a second content block: py runs 0.5/1.5/2/2.5
@@ -62,7 +62,7 @@ const frameVariants = cva(
       dense: {
         // Parent selectors, not CSS vars: these are positional. Panels are
         // pulled flush (-mx-px), so corners align with the frame's own radius.
-        true: 'p-0 gap-0 border-[var(--frame-border-color)] [--frame-panel-radius:var(--frame-radius)] [&_[data-slot=frame-panel]]:-mx-px [&_[data-slot=frame-panel]]:before:hidden [&_[data-slot=frame-panel]:last-child]:-mb-px [&:not(:has([data-slot=frame-panel-header]))_[data-slot=frame-panel]:is(:first-child)]:-mt-px',
+        true: 'p-0 gap-0 border-(--frame-border-color) [--frame-panel-radius:var(--frame-radius)] [&_[data-slot=frame-panel]]:-mx-px [&_[data-slot=frame-panel]]:before:hidden [&_[data-slot=frame-panel]:last-child]:-mb-px [&:not(:has([data-slot=frame-panel-header]))_[data-slot=frame-panel]:is(:first-child)]:-mt-px',
         false: '',
       },
     },

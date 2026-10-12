@@ -1,4 +1,5 @@
 'use client';
+// #691: Preserve the existing 28px title geometry pending a design-scale choice; no matching role is approved.
 
 import {
   ReactCodeblockPlugin,
@@ -21,7 +22,7 @@ import type { CreatePlanParams } from '../../types';
 
 const styles = {
   description:
-    'text-[14px] leading-(--text-base--line-height) text-muted-foreground md:text-[14px] md:leading-(--text-sm--line-height)',
+    'text-sm leading-(--text-base--line-height) text-muted-foreground md:text-sm md:leading-(--text-sm--line-height)',
   title:
     'text-[28px] leading-(--text-base--line-height) font-semibold md:text-[28px] md:leading-(--text-sm--line-height)',
 };

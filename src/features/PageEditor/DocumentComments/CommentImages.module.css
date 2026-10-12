@@ -1,0 +1,80 @@
+/* The real editor/renderer own inline image dimensions; see priority-proof.json.
+   These four priority declarations transfer existing capability, not a new reset. */
+.commentContent figure:has(> img) {
+  margin-block: 8px;
+  text-align: start;
+}
+
+.commentContent img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.commentContent img:not(img:is([style^="width:"], [style*=" width:"]):not([style^="width: inherit"]):not([style*=" width: inherit"])) {
+  width: auto;
+  max-height: 480px;
+}
+
+.commentEditor {
+  min-width: 0;
+  padding-inline: 16px;
+}
+
+/* The SDK root sets document16 by inheritance; comments use the body14/22 role. */
+.commentEditor [contenteditable='true'],
+.commentEditor [contenteditable='true'] ~ div {
+  font-size: var(--text-sm);
+  line-height: calc(1.375 / 0.875);
+}
+
+.commentEditor [contenteditable='true'] ~ div {
+  margin-block-start: 0;
+}
+
+.commentEditor [contenteditable='true'] > :first-child {
+  margin-block-start: 0;
+}
+
+.commentEditor [contenteditable='true'] > :last-child {
+  margin-block-end: 0;
+}
+
+.commentEditor [contenteditable='true'] :has(> img) {
+  width: auto !important;
+  max-width: 100%;
+  text-align: start;
+}
+
+.commentEditor [contenteditable='true'] > div:has(img) {
+  margin-block: 8px;
+  text-align: start;
+}
+
+.commentEditor [contenteditable='true'] img {
+  max-width: 100% !important;
+  height: auto;
+}
+
+.commentEditor [contenteditable='true'] img:not(img:is([style^="width:"], [style*=" width:"]):not([style^="width: inherit"]):not([style*=" width: inherit"])) {
+  /* Untouched non-SVG width:inherit inherits the immediate parent's auto width;
+     numeric SVG/resize width matches the original resized selector and is excluded. */
+  width: auto;
+  max-height: 400px;
+}
+
+/* Parent stops only its own editor image paint. SDK resize/upload/preview events stay intact. */
+.commentEditor[data-motion-disabled] [contenteditable='true'] :has(> img),
+.commentEditor[data-motion-disabled] [contenteditable='true'] :has(> img)::after,
+.commentEditor[data-motion-disabled] [contenteditable='true'] :has(> img) * {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .commentEditor [contenteditable='true'] :has(> img),
+  .commentEditor [contenteditable='true'] :has(> img)::after,
+  .commentEditor [contenteditable='true'] :has(> img) * {
+    animation: none;
+    transition: none;
+  }
+}

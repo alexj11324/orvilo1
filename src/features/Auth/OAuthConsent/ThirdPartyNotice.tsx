@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { ExternalLinkIcon, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,8 +28,10 @@ const ThirdPartyNotice = memo<ThirdPartyNoticeProps>(({ developerName, policyUri
       {policyUri && (
         <a href={policyUri} rel={'noreferrer'} target={'_blank'}>
           <div className="flex items-center gap-1">
-            <div style={{ color: cssVar.colorLink }}>{t('consent.thirdParty.privacyPolicy')}</div>
-            <ExternalLinkIcon style={{ color: cssVar.colorLink, fontSize: 14 }} />
+            <div style={{ color: 'var(--ant-color-link)' }}>
+              {t('consent.thirdParty.privacyPolicy')}
+            </div>
+            <ExternalLinkIcon style={{ color: 'var(--ant-color-link)', fontSize: 14 }} />
           </div>
         </a>
       )}

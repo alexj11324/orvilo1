@@ -41,7 +41,7 @@ import {
   resolveProviderStatus,
 } from './providerStatus';
 
-const SwitchSkeleton = () => <Skeleton className="h-[18px] w-8 rounded-full" />;
+const SwitchSkeleton = () => <Skeleton className="h-4.5 w-8 rounded-full" />;
 
 export interface ProviderConfigProps extends Omit<AiProviderDetailItem, 'enabled' | 'source'> {
   apiKeyItems?: FormItemProps[];

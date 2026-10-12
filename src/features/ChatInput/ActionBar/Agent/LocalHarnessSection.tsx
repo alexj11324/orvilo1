@@ -1,7 +1,6 @@
 'use client';
 
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { CircleAlert } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo } from 'react';
@@ -11,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useAgentScan } from '@/features/ConnectAgent/useAgentScan';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
+import { CLICKABLE_FOCUS_RING } from '@/utils/clickableProps';
 
 import {
   buildLocalHarnessRows,
@@ -18,68 +18,15 @@ import {
   type LocalHarnessRow,
 } from './localHarnessRows';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  hint: css`
-    padding-block: 6px;
-    padding-inline: 8px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  root: css`
-    margin-block-start: 4px;
-    padding-block-start: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  row: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  status: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  statusText: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  text: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-width: 0;
-  `,
-}));
+const styles = {
+  hint: 'py-1.5 px-2 text-sm leading-5.5 text-foreground-tertiary',
+  name: 'truncate text-sm leading-5.5 text-muted-foreground',
+  root: 'mbs-1 pbs-1 border-bs border-divider',
+  row: 'cursor-pointer flex gap-2 items-center py-1.5 px-2 rounded-(--radius-button) hover:bg-accent focus-visible:bg-accent',
+  status: 'flex gap-1.5 items-center py-1.5 px-2 text-sm leading-5.5 text-foreground-tertiary',
+  statusText: 'truncate flex-1 min-w-0',
+  text: 'flex flex-1 flex-col min-w-0',
+};
 
 interface LocalHarnessSectionProps {
   /**
@@ -138,12 +85,15 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
     void scan({ kind: 'local' });
   }, [scan]);
 
+  const compactActionClass =
+    "pointer-coarse:relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']";
+
   const renderRow = (row: LocalHarnessRow) => {
     const { provider } = row;
 
     return (
       <div
-        className={styles.row}
+        className={`${styles.row} ${CLICKABLE_FOCUS_RING}`}
         key={provider.type}
         role={'button'}
         tabIndex={0}
@@ -162,7 +112,8 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
           <div className={styles.name}>{provider.title}</div>
         </div>
         <Button
-          size={'xs'}
+          className={compactActionClass}
+          size={'compact'}
           onClick={(event) => {
             event.stopPropagation();
             onConnect(provider.type);
@@ -192,11 +143,11 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
           and belongs in the bin with the rest. */}
       {state.status === 'error' && (
         <div className={styles.status}>
-          <CircleAlert size={13} />
+          <CircleAlert size={16} />
           <span className={styles.statusText} title={state.error}>
             {t('localHarness.scanFailed')}
           </span>
-          <Button size={'xs'} variant={'ghost'} onClick={retry}>
+          <Button className={compactActionClass} size={'compact'} variant={'ghost'} onClick={retry}>
             {t('retry', { ns: 'common' })}
           </Button>
         </div>
@@ -206,10 +157,7 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
         <>
           {installed.length > 0 ? (
             <>
-              <div
-                className={'text-[12px] text-muted-foreground font-medium'}
-                style={{ paddingBlock: 4, paddingInline: 8 }}
-              >
+              <div className={'py-1 px-2 text-xs leading-5 text-muted-foreground font-medium'}>
                 {t('localHarness.title')}
               </div>
               {installed.map(renderRow)}
@@ -220,7 +168,12 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
               {/* The probe reports per-harness failures instead of rejecting, so
                   "found nothing" is also how a broken PATH or a missing desktop
                   bridge shows up. Rescan is the recovery for both. */}
-              <Button size={'xs'} variant={'ghost'} onClick={retry}>
+              <Button
+                className={compactActionClass}
+                size={'compact'}
+                variant={'ghost'}
+                onClick={retry}
+              >
                 {t('connectAgent.create.rescan')}
               </Button>
             </>

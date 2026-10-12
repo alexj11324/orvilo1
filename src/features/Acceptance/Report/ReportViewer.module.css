@@ -1,0 +1,82 @@
+/* Local report provenance links keep a text-emphasis hover over retained anchor
+   resets; doubled owned classes preserve specificity without importance or layer changes. */
+.prChip.prChip {
+  --pr-number-color: var(--muted-foreground);
+  --pr-title-color: var(--foreground-tertiary);
+  --pr-icon-color: var(--foreground-quaternary);
+  cursor: default;
+  display: inline-flex;
+  flex: 0 1 auto;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.75rem;
+  line-height: calc(20 / 12);
+  color: var(--pr-number-color);
+  text-decoration: none;
+  transition: color var(--orvilo-motion-mid);
+}
+.prChip.prChip[data-link='true'] { cursor: pointer; }
+.prChip.prChip[data-link='true']:hover {
+  --pr-number-color: var(--foreground);
+  --pr-title-color: var(--foreground);
+  --pr-icon-color: var(--muted-foreground);
+  color: var(--pr-number-color);
+}
+.prChip.prChip > svg:first-child {
+  flex: 0 0 auto;
+  color: var(--pr-icon-color);
+  transition: color var(--orvilo-motion-mid);
+}
+.prNumber.prNumber {
+  flex: 0 0 auto;
+  color: var(--pr-number-color);
+  transition: color var(--orvilo-motion-mid);
+}
+.prTitle.prTitle {
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--pr-title-color);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--orvilo-motion-mid);
+}
+.originLink.originLink {
+  cursor: pointer;
+  color: var(--foreground-tertiary);
+  text-decoration: none;
+}
+.originLink.originLink:hover,
+.originLink.originLink:hover svg {
+  color: var(--ant-color-link);
+}
+.evidenceFile.evidenceFile {
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: min(100%, 520px);
+  padding-block: 8px;
+  padding-inline: 16px;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-button);
+  text-align: start;
+  background: var(--fill-quaternary);
+}
+.evidenceFile.evidenceFile:hover {
+  border-color: var(--ant-color-link);
+  color: var(--ant-color-link);
+}
+/* Image className is its public outer frame. Inner image attributes and slots
+   stay under Image, including preview/lazy/error behavior and author content. */
+.evidenceImage.evidenceImage { max-width: 100%; }
+.evidenceImageFlat.evidenceImageFlat { width: 100%; border-radius: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .prChip.prChip,
+  .prChip.prChip > svg:first-child,
+  .prNumber.prNumber,
+  .prTitle.prTitle { transition: none; }
+}

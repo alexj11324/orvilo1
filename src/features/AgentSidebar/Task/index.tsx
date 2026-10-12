@@ -73,8 +73,8 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
 
   const titleNode = (
     <div className="flex items-center gap-1">
-      <div className="truncate text-[12px] text-muted-foreground font-medium">{t('tab.tasks')}</div>
-      {totalTasks > 0 && <div className="text-[11px] text-muted-foreground">{totalTasks}</div>}
+      <div className="truncate text-xs text-muted-foreground font-medium">{t('tab.tasks')}</div>
+      {totalTasks > 0 && <div className="text-xs text-muted-foreground">{totalTasks}</div>}
     </div>
   );
 
@@ -114,7 +114,7 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
       {header}
       <AccordionContent className="p-0">
         {orderedGroups.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground" style={{ padding: '8px 12px' }}>
+          <div className="text-xs text-muted-foreground" style={{ padding: '8px 12px' }}>
             {t('taskList.kanban.emptyColumn')}
           </div>
         ) : (

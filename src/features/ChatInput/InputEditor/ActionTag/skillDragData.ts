@@ -1,5 +1,4 @@
 import { SKILL_DRAG_MIME } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import type React from 'react';
 
 import type { ActionTagCategory, ActionTagType } from './types';
@@ -80,10 +79,10 @@ const setSkillDragImage = (event: React.DragEvent, label: string): void => {
   const preview = document.createElement('div');
   Object.assign(preview.style, {
     alignItems: 'center',
-    background: resolveCssVar(cssVar.colorBgElevated, host),
-    border: `1px solid ${resolveCssVar(cssVar.colorBorderSecondary, host)}`,
+    background: resolveCssVar('var(--ant-color-bg-elevated)', host),
+    border: `1px solid ${resolveCssVar('var(--ant-color-border-secondary)', host)}`,
     borderRadius: '10px',
-    color: resolveCssVar(cssVar.colorText, host),
+    color: resolveCssVar('var(--ant-color-text)', host),
     display: 'inline-flex',
     fontSize: '13px',
     gap: '8px',
@@ -110,7 +109,7 @@ const setSkillDragImage = (event: React.DragEvent, label: string): void => {
   if (iconSvg) {
     const iconClone = iconSvg.cloneNode(true) as SVGElement;
     iconClone.style.flexShrink = '0';
-    iconClone.style.color = resolveCssVar(cssVar.colorTextTertiary, host);
+    iconClone.style.color = resolveCssVar('var(--ant-color-text-tertiary)', host);
     preview.append(iconClone);
   }
 

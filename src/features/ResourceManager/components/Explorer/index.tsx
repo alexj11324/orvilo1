@@ -128,7 +128,7 @@ const ResourceExplorer = memo(() => {
 
   return (
     <KnowledgeBaseListProvider>
-      <div className="flex flex-col h-[100%]">
+      <div className="flex flex-col h-full">
         <Header />
         <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {/*

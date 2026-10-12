@@ -1,24 +1,27 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { styles as taskStyles } from '../shared/style';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
+import { taskDetailLayoutStyles } from './taskDetailLayoutStyles';
 
 const readSource = (file: string) => readFileSync(path.join(__dirname, file), 'utf8');
 
 /**
- * Rail values stay at 13px. The issue title follows Plane: 20px medium, drawn
- * on the control itself (the old rule only matched `.ant-input`, so the
- * textarea kept its field chrome). Description stays 15px/450.
+ * Rail values keep DESIGN.md's scoped 13px role. The issue title consumes the
+ * 20px/600 heading role on the control itself, including the responsive override.
+ * Description keeps the scoped 15px/450 reading role.
  */
 describe('issue rail type scale', () => {
   it('pins the shared rail value size to the measured step', () => {
     expect(RAIL_VALUE_FONT_SIZE).toBe(13);
   });
 
-  it('sizes property rows at Plane’s 13px regular step', () => {
-    const source = readSource('taskDetailLayoutStyles.ts');
-    expect(source).toContain('font-size: 13px');
-    expect(source).toContain('font-weight: 400');
+  it('sizes property rows with the scoped dense role and regular weight', () => {
+    const classes = taskDetailLayoutStyles.propertyValue.split(' ');
+    expect(classes).toEqual(
+      expect.arrayContaining(['text-(length:--text-dense)', 'leading-5', 'font-normal']),
+    );
   });
 
   it.each([
@@ -34,14 +37,15 @@ describe('issue rail type scale', () => {
     expect(unstyled).toEqual([]);
   });
 
-  it('keeps the issue title at Plane’s 20px medium step', () => {
-    const source = readSource('../shared/style.ts');
-    const block = source.slice(source.indexOf('titleInput:'), source.indexOf('breadcrumb:'));
-    expect(block).toContain('font-size: 20px');
-    expect(block).toContain('font-weight: 500');
-    expect(block).not.toContain('&.ant-input');
-    expect(block).not.toContain('font-size: 24px');
-    expect(block).not.toContain('font-size: 26px');
+  it('keeps the issue title at the DESIGN.md 20px strong heading role', () => {
+    const classes = taskStyles.titleInput.split(' ');
+    expect(classes).toEqual(
+      expect.arrayContaining(['text-xl', 'md:text-xl', 'leading-7', 'font-semibold']),
+    );
+    expect(classes).not.toContain('text-2xl');
+    expect(classes).not.toContain('md:text-2xl');
+    expect(taskStyles.titleInput).not.toMatch(/text-\[\d+px\]/);
+    expect(taskStyles.titleInput).not.toContain('.ant-input');
   });
 
   it('keeps the description at 15px/450 rather than the editor default', () => {

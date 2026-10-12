@@ -1,58 +1,22 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { X } from 'lucide-react';
 import { memo } from 'react';
 
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { useAgentSelectionStore } from './store';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  item: css`
-    cursor: pointer;
-
-    margin-block: 1px;
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    transition: background 0.2s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  removeButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s ease;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  title: css`
-    overflow: hidden;
-    flex: 1;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  item: 'my-0.25 py-1 px-2 rounded-(--radius-card) text-sm leading-5.5 transition-[background-color] duration-(--orvilo-motion-mid) ease-in-out hover:bg-accent motion-reduce:transition-none',
+  removeButton:
+    'shrink-0 w-8 rounded-(--radius-button) p-0 text-foreground-tertiary transition-colors duration-(--orvilo-motion-mid) ease-in-out hover:text-foreground hover:bg-selected motion-reduce:transition-none',
+  title: 'overflow-hidden flex-1 text-ellipsis whitespace-nowrap text-sm leading-5.5',
+};
 
 export interface AgentItemData {
   avatar: string | null;
@@ -89,11 +53,14 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
 
   return (
     <div
-      className={styles.item}
-      style={{ cursor: showCheckbox ? 'pointer' : 'default' }}
+      className={cn(
+        styles.item,
+        showCheckbox ? 'cursor-pointer' : 'cursor-default',
+        isSelected && 'bg-selected hover:bg-selected',
+      )}
       onClick={showCheckbox ? handleClick : undefined}
     >
-      <div className="flex items-center gap-2" style={{ width: '100%' }}>
+      <div className="flex w-full items-center gap-2">
         {showCheckbox && (
           <Checkbox
             aria-label={title}
@@ -104,12 +71,21 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
             }}
           />
         )}
-        <AgentRuntimeIcon size={28} type={agent.heterogeneousType} />
+        <span className="flex size-8 flex-none items-center justify-center">
+          <AgentRuntimeIcon size={16} type={agent.heterogeneousType} />
+        </span>
         <div className={cn('truncate', styles.title)}>{title}</div>
         {showRemove && (
-          <div className={styles.removeButton} onClick={handleRemove}>
-            <X size={14} />
-          </div>
+          <Button
+            aria-label={title}
+            className={styles.removeButton}
+            size="compact"
+            type="button"
+            variant="ghost"
+            onClick={handleRemove}
+          >
+            <X className="size-4" size={16} />
+          </Button>
         )}
       </div>
     </div>

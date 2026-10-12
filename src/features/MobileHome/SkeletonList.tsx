@@ -1,46 +1,8 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
-
-const prefixCls = 'ant';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  item: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    .${prefixCls}-skeleton-header {
-      padding: 0;
-    }
-  `,
-  paragraph: css`
-    margin-block: 8px 0 !important;
-
-    > li {
-      height: 12px !important;
-    }
-  `,
-  title: css`
-    height: 16px !important;
-    margin-block-end: 0 !important;
-
-    > li {
-      height: 16px !important;
-    }
-  `,
-}));
 
 interface SkeletonListProps {
   count?: number;
@@ -48,16 +10,18 @@ interface SkeletonListProps {
 
 const SkeletonList = memo<SkeletonListProps>(({ count = 4 }) => {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col">
       {Array.from({ length: count }).map((_, index) => (
-        <div className={cx(styles.item, 'flex items-center gap-3')} key={index}>
-          <Skeleton
-            style={{ borderRadius: cssVar.borderRadius, flex: 'none', height: 40, width: 40 }}
-          />
-          <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
-            <div className="flex flex-col gap-4 w-full">
-              <Skeleton style={{ height: 18, marginBlock: 2, width: '60%' }} />
-              <Skeleton style={{ height: 18, marginBlock: 2, width: '80%' }} />
+        <div
+          className="flex min-h-11 items-center gap-3 rounded-(--radius-card) px-4 pbs-2.5 pbe-2.5 hover:bg-accent"
+          key={index}
+        >
+          <Skeleton className="size-10 flex-none rounded-full motion-reduce:animate-none" />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex w-full flex-col">
+              {/* Match TopicRow's 14/22 title and 12/20 secondary line boxes. */}
+              <Skeleton className="my-1 h-3.5 w-3/5 rounded-(--radius-chip) motion-reduce:animate-none" />
+              <Skeleton className="my-1 h-3 w-4/5 rounded-(--radius-chip) motion-reduce:animate-none" />
             </div>
           </div>
         </div>

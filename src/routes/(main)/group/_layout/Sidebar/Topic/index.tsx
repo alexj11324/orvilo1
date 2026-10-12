@@ -35,7 +35,7 @@ const Topic = memo<TopicProps>(({ itemKey }) => {
             <div className="min-w-0 flex-1">
               <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
                 <div className="flex items-center gap-1">
-                  <div className="truncate text-[12px] text-muted-foreground font-medium">
+                  <div className="truncate text-xs text-muted-foreground font-medium">
                     {`${t('title')} ${topicCount > 0 ? topicCount : ''}`}
                   </div>
                   {isRevalidating && <NeuralNetworkLoading size={14} />}

@@ -37,6 +37,7 @@ const Editing = memo<EditingProps>(({ id, title, toggleEditing }) => {
         <Input
           autoFocus
           defaultValue={title}
+          visualSize="small"
           onChange={(e) => setNewTitle(e.target.value)}
           onClick={(e) => e.stopPropagation()}
           onBlur={() => {

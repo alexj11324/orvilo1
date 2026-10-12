@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { MoreHorizontal, RefreshCw, Settings2, Trash2, UserPlus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -43,64 +42,17 @@ import {
   filterDirectoryRows,
 } from './directoryRows';
 import { formatMemberDate } from './memberDate';
+import nativeStyles from './MembersPage.module.css';
 
-const styles = createStaticStyles(({ css }) => ({
-  cell: css`
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    min-width: 0;
-  `,
-  directoryTable: css`
-    /* Reference bands each lifecycle group under one shared column header. */
-    tbody tr[data-list-section] td {
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    /* Reference reveals row actions on hover; keep them rendered on coarse
-       pointers and whenever the trigger holds keyboard focus. */
-    @media (hover: hover) and (pointer: fine) {
-      tbody tr:not([data-list-section], :hover, :focus-within) td[data-list-slot='actions'] {
-        opacity: 0;
-      }
-    }
-  `,
-  ellipsis: css`
-    overflow: hidden;
-    display: block;
-
-    min-width: 0;
-    max-width: 240px;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  groupLabel: css`
-    font-size: 13px;
-    font-weight: 500;
-  `,
-  groupCount: css`
-    margin-inline-start: 6px;
-    font-weight: 400;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  meta: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  cell: 'flex min-w-0 items-center gap-2.5',
+  directoryTable: nativeStyles.directoryTable,
+  ellipsis: 'block min-w-0 max-w-60 truncate',
+  groupLabel: 'text-sm leading-5.5 font-semibold',
+  groupCount: 'ms-1.5 text-xs leading-5 font-normal text-muted-foreground',
+  meta: 'truncate text-xs leading-5 text-muted-foreground',
+  name: 'truncate text-sm leading-5.5 font-semibold text-foreground',
+};
 
 const normalize = (value: string | null | undefined) => (value ?? '').toLowerCase();
 
@@ -228,7 +180,7 @@ const MembersPage = memo(() => {
           return (
             <div className={styles.cell}>
               <Avatar avatar={avatar} size={28} title={name} />
-              <div style={{ minWidth: 0 }}>
+              <div className="min-w-0">
                 <div className={styles.name}>{name}</div>
                 {secondary ? <div className={styles.meta}>{secondary}</div> : null}
               </div>
@@ -247,7 +199,7 @@ const MembersPage = memo(() => {
                 ? row.value.email
                 : null;
           return (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-sm leading-5.5 text-muted-foreground">
               <span className={styles.ellipsis}>{email || '—'}</span>
             </span>
           );
@@ -328,7 +280,7 @@ const MembersPage = memo(() => {
                 ? row.value.projects?.length
                 : undefined;
           return (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-sm leading-5.5 text-muted-foreground">
               {count === undefined ? '—' : t('members.projectCount', { count, ns: 'common' })}
             </span>
           );
@@ -339,7 +291,7 @@ const MembersPage = memo(() => {
       {
         key: 'joined',
         render: (row) => (
-          <span className="text-[13px] text-muted-foreground">
+          <span className="text-sm leading-5.5 text-muted-foreground">
             {formatMemberDate(
               row.kind === 'person'
                 ? row.value.joinedAt
@@ -371,7 +323,13 @@ const MembersPage = memo(() => {
                   {
                     icon: (
                       <span className="anticon" role="img">
-                        <Settings2 fill={'transparent'} height={14} size={14} width={14} />
+                        <Settings2
+                          className="size-4"
+                          fill={'transparent'}
+                          height={16}
+                          size={16}
+                          width={16}
+                        />
                       </span>
                     ),
                     key: 'manage',
@@ -383,7 +341,7 @@ const MembersPage = memo(() => {
                 <ActionIcon
                   aria-label={t('members.manageInSettings', { ns: 'common' })}
                   icon={MoreHorizontal}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 />
               </DropdownMenu>
             ) : null;
@@ -395,7 +353,13 @@ const MembersPage = memo(() => {
                   {
                     icon: (
                       <span className="anticon" role="img">
-                        <RefreshCw fill={'transparent'} height={14} size={14} width={14} />
+                        <RefreshCw
+                          className="size-4"
+                          fill={'transparent'}
+                          height={16}
+                          size={16}
+                          width={16}
+                        />
                       </span>
                     ),
                     key: 'resend',
@@ -406,7 +370,13 @@ const MembersPage = memo(() => {
                     danger: true,
                     icon: (
                       <span className="anticon" role="img">
-                        <Trash2 fill={'transparent'} height={14} size={14} width={14} />
+                        <Trash2
+                          className="size-4"
+                          fill={'transparent'}
+                          height={16}
+                          size={16}
+                          width={16}
+                        />
                       </span>
                     ),
                     key: 'revoke',
@@ -418,7 +388,7 @@ const MembersPage = memo(() => {
                 <ActionIcon
                   aria-label={t('inbox.moreActions', { ns: 'notification' })}
                   icon={MoreHorizontal}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 />
               </DropdownMenu>
             );
@@ -440,7 +410,7 @@ const MembersPage = memo(() => {
     <WorkSurface>
       <NavHeader
         left={
-          <span className="font-medium" style={{ paddingInlineStart: 4 }}>
+          <span className="ps-1 text-sm leading-5.5 font-semibold">
             {t('members.title', { ns: 'common' })}
           </span>
         }
@@ -451,14 +421,14 @@ const MembersPage = memo(() => {
                 <ActionIcon
                   aria-label={t('members.manageInSettings', { ns: 'common' })}
                   icon={Settings2}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   onClick={() => navigate(settingsPath)}
                 />
               </SimpleTooltip>
             ) : null}
             {capabilities.canInvite ? (
-              <Button size="sm" variant="default" onClick={() => openInviteTeammateModal()}>
-                <UserPlus data-icon="inline-start" />
+              <Button size="normal" variant="default" onClick={() => openInviteTeammateModal()}>
+                <UserPlus className="size-4" data-icon="inline-start" />
                 {t('workspaceSetting.members.inviteButton', { ns: 'setting' })}
               </Button>
             ) : null}
@@ -471,29 +441,41 @@ const MembersPage = memo(() => {
             asideLabel={t('members.filter', { ns: 'common' })}
             aside={
               <ToggleGroup
-                className="w-full"
-                size="sm"
+                className="w-full rounded-(--radius-button)"
+                size="default"
                 value={[groupFilter]}
                 onValueChange={(value) => value[0] && setGroupFilter(value[0] as DirectoryFilter)}
               >
-                <ToggleGroupItem value="all">
+                <ToggleGroupItem
+                  className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)"
+                  value="all"
+                >
                   {t('members.filterAll', { ns: 'common' })}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="person">
+                <ToggleGroupItem
+                  className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)"
+                  value="person"
+                >
                   {t('members.groupPeople', { ns: 'common' })}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="agent">
+                <ToggleGroupItem
+                  className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)"
+                  value="agent"
+                >
                   {t('members.groupAgents', { ns: 'common' })}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="invitation">
+                <ToggleGroupItem
+                  className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)"
+                  value="invitation"
+                >
                   {t('members.groupInvitations', { ns: 'common' })}
                 </ToggleGroupItem>
               </ToggleGroup>
             }
           >
             <SearchBar
+              className="max-w-70"
               placeholder={t('members.searchPlaceholder', { ns: 'common' })}
-              style={{ maxWidth: 280 }}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />

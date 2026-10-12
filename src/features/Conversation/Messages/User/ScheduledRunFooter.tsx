@@ -1,7 +1,6 @@
 'use client';
 
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { cssVar } from 'antd-style';
 import { BanIcon, ClockIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +43,7 @@ const ScheduledRunFooter = memo<ScheduledRunFooterProps>(({ id }) => {
 
   return (
     <div className="flex items-center gap-1 justify-end py-1">
-      <ClockIcon size={14} style={{ color: cssVar.colorTextQuaternary }} />
+      <ClockIcon size={14} style={{ color: 'var(--ant-color-text-quaternary)' }} />
       <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('input.schedule.pending', { time: formatAbsoluteDateTime(runAt) })}
       </div>

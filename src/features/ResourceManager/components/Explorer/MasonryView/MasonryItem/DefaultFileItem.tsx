@@ -1,5 +1,4 @@
 import { CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon, Folder } from 'lucide-react';
@@ -16,35 +15,6 @@ import { formatSize } from '@/utils/format';
 import { isChunkingUnsupported } from '@/utils/isChunkingUnsupported';
 
 import ChunksBadge from '../../ListView/ListItem/ChunkTag';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  floatingChunkBadge: css`
-    position: absolute;
-    z-index: 3;
-    inset-block-end: 8px;
-    inset-inline-end: 8px;
-
-    border-radius: ${cssVar.borderRadius};
-
-    opacity: 0;
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadow};
-
-    transition: opacity ${cssVar.motionDurationMid};
-  `,
-  name: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    margin-block-end: 12px;
-
-    font-weight: ${cssVar.fontWeightStrong};
-    color: ${cssVar.colorText};
-    word-break: break-word;
-  `,
-}));
 
 interface DefaultFileItemProps {
   chunkCount?: number | null;
@@ -83,26 +53,17 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
 
     return (
       <>
-        <div
-          className="flex flex-col items-center gap-3 justify-center py-6 px-3"
-          style={{ minHeight: 180 }}
-        >
+        <div className="flex flex-col items-center gap-3 justify-center py-6 px-3 min-h-45">
           {isFolder ? (
             <Folder size={64} strokeWidth={1.5} />
           ) : (
             <FileIcon fileName={name} fileType={fileType} size={64} />
           )}
-          <div className={styles.name} style={{ textAlign: 'center' }}>
+          <div className="line-clamp-2 mbe-3 text-sm leading-5.5 font-semibold text-foreground [word-break:break-word] text-center">
             {name}
           </div>
           {!isFolder && (
-            <div
-              style={{
-                color: cssVar.colorTextTertiary,
-                fontSize: 12,
-                textAlign: 'center',
-              }}
-            >
+            <div className="text-xs leading-5 text-foreground-tertiary text-center">
               {formatSize(size)}
             </div>
           )}
@@ -111,7 +72,10 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
         {!isFolder &&
           (!isNull(chunkingStatus) && chunkingStatus ? (
             <div
-              className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
+              className={cn(
+                'floatingChunkBadge',
+                'absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--ant-box-shadow-tertiary) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+              )}
               onClick={(event) => event.stopPropagation()}
             >
               <ChunksBadge
@@ -129,9 +93,11 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
               <SimpleTooltip title={t('FileManager.actions.chunkingTooltip')}>
                 <div
                   {...clickableProps()}
-                  style={{ cursor: 'pointer' }}
                   className={cn(
-                    cx('floatingChunkBadge', styles.floatingChunkBadge),
+                    cn(
+                      'floatingChunkBadge',
+                      'cursor-pointer absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--ant-box-shadow-tertiary) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+                    ),
                     CLICKABLE_FOCUS_RING,
                   )}
                   onClick={(e) => {
@@ -144,7 +110,7 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
                   <Button
                     aria-label={t('FileManager.actions.chunkingTooltip')}
                     loading={isCreatingFileParseTask}
-                    size="sm"
+                    size="compact"
                     variant="ghost"
                   >
                     <FileBoxIcon data-icon="inline-start" />

@@ -22,11 +22,11 @@ const ResourceCategorySkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => {
   return (
     <div
       aria-busy
-      className="flex flex-col flex-1 h-[100%]"
+      className="flex flex-col flex-1 h-full"
       style={{ minHeight: 0, overflow: 'hidden' }}
     >
       {chrome !== 'body' && (
-        <div className="flex flex-row items-center flex-none h-[44px] justify-between px-4">
+        <div className="flex flex-row items-center flex-none h-11 justify-between px-4">
           <SkeletonBar height={20} width={144} />
           <SkeletonBar height={28} width={72} />
         </div>

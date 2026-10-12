@@ -1,44 +1,17 @@
 import { shinyTextStyles as sharedShinyTextStyles } from '@orvilo/shared-tool-ui/styles';
-import { createStaticStyles, css } from 'antd-style';
 
-export const dotLoading = css`
-  &::after {
-    content: '\\2026'; /* ascii code for the ellipsis character */
+import nativeStyles from './textLoading.module.css';
 
-    overflow: hidden;
-    display: inline-block;
+// This class is a motion-gate hook, not a second Tailwind animation producer.
+export const dotLoading = `animate-orvilo-dot-loading ${nativeStyles.dotLoading}`;
 
-    width: 0;
+export const elapsedTimeStyles = {
+  elapsedTime: 'text-foreground-tertiary',
+};
 
-    vertical-align: bottom;
-
-    animation: ellipsis steps(4, end) 900ms infinite;
-  }
-
-  @keyframes ellipsis {
-    to {
-      width: 1.25em;
-    }
-  }
-
-  @keyframes ellipsis {
-    to {
-      width: 1.25em;
-    }
-  }
-`;
-
-export const elapsedTimeStyles = createStaticStyles(({ css, cssVar }) => ({
-  elapsedTime: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
-
-export const errorTextStyles = createStaticStyles(({ css, cssVar }) => ({
-  errorText: css`
-    color: ${cssVar.colorError};
-  `,
-}));
+export const errorTextStyles = {
+  errorText: 'text-destructive-text',
+};
 
 export const shinyTextStyles = {
   errorText: errorTextStyles.errorText,

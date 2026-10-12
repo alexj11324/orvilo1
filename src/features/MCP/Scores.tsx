@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CircleDashedIcon, HammerIcon, LayersIcon, MessageSquareQuoteIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -15,59 +14,18 @@ import {
   getGradeStyleClass,
 } from './calculateScore';
 
-const styles = createStaticStyles(({ css }) => {
-  return {
-    active: css`
-      background: ${cssVar.colorSuccessBgHover};
-    `,
-    disable: css`
-      color: ${cssVar.colorTextDescription};
-    `,
-    extraTag: css`
-      padding-block: 4px;
-      padding-inline: 10px 12px;
-      border-radius: 16px;
-
-      color: ${cssVar.colorTextSecondary};
-
-      background: ${cssVar.colorFillTertiary};
-    `,
-    extraTagActive: css`
-      &:hover {
-        color: ${cssVar.colorText};
-      }
-    `,
-    gradeA: css`
-      color: ${cssVar.colorSuccess};
-      background: ${cssVar.colorSuccessBg};
-    `,
-    gradeB: css`
-      color: ${cssVar.colorWarning};
-      background: ${cssVar.colorWarningBg};
-    `,
-    gradeF: css`
-      color: ${cssVar.colorError};
-      background: ${cssVar.colorErrorBg};
-    `,
-    gradeIcon: css`
-      flex: none;
-
-      width: 22px;
-      height: 22px;
-      border: 1.5px solid;
-      border-radius: 50%;
-
-      font-size: 12px;
-      font-weight: 600;
-    `,
-    tag: css`
-      padding-block: 4px;
-      padding-inline: 8px 12px;
-      border-radius: 16px;
-      background: ${cssVar.colorFillTertiary};
-    `,
-  };
-});
+const styles = {
+  disable: 'text-foreground-description',
+  extraTag:
+    'rounded-(--radius-chip) bg-muted ps-2.5 pe-3 py-1 text-xs leading-5 text-muted-foreground',
+  extraTagActive: 'hover:text-foreground',
+  gradeA: 'text-success-text bg-success-wash',
+  gradeB: 'text-warning-text bg-warning-wash',
+  gradeF: 'text-destructive-text bg-destructive-wash',
+  gradeIcon:
+    'flex-none size-5.5 rounded-full border-[1.5px] border-current text-xs leading-5 font-semibold',
+  tag: 'rounded-(--radius-chip) bg-muted ps-2 pe-3 py-1 text-xs leading-5',
+};
 
 interface ScoresProps {
   deploymentOptions?: Array<{
@@ -148,32 +106,18 @@ const Scores = memo<ScoresProps>(
         <Tooltip>
           <TooltipTrigger
             render={
-              <span style={{ display: 'inline-flex' }}>
+              <span className="inline-flex max-w-full">
                 <div
                   className={cn(
-                    'flex items-center gap-2',
-                    cx(styles.tag, getGradeStyleClass(grade, styles)),
+                    'flex max-w-full items-center gap-2',
+                    styles.tag,
+                    getGradeStyleClass(grade, styles),
                   )}
-                  style={{
-                    paddingLeft: 4,
-                  }}
                 >
-                  <div
-                    className={cn('flex items-center justify-center', styles.gradeIcon)}
-                    style={{
-                      borderColor:
-                        grade === 'a'
-                          ? cssVar.colorSuccess
-                          : grade === 'b'
-                            ? cssVar.colorWarning
-                            : grade === 'f'
-                              ? cssVar.colorError
-                              : cssVar.colorTextSecondary,
-                    }}
-                  >
+                  <div className={cn('flex items-center justify-center', styles.gradeIcon)}>
                     {grade.toUpperCase()}
                   </div>
-                  <span style={{ fontWeight: 500 }}>
+                  <span className="min-w-0 wrap-anywhere font-medium">
                     {t(`mcp.details.scoreLevel.${grade}.title`).toUpperCase()}
                   </span>
                 </div>
@@ -190,15 +134,15 @@ const Scores = memo<ScoresProps>(
         <Tooltip>
           <TooltipTrigger
             render={
-              <span style={{ display: 'inline-flex' }}>
+              <span className="inline-flex max-w-full">
                 <div
-                  className={cn('flex items-center gap-2', styles.tag)}
-                  style={{
-                    color: cssVar.colorTextDescription,
-                    paddingLeft: 4,
-                  }}
+                  className={cn(
+                    'flex items-center gap-2 text-foreground-description',
+                    styles.tag,
+                    'ps-1',
+                  )}
                 >
-                  <CircleDashedIcon color={cssVar.colorTextQuaternary} size={22} />
+                  <CircleDashedIcon className="text-foreground-quaternary" size={22} />
                   {t('mcp.unvalidated.title')}
                 </div>
               </span>
@@ -211,8 +155,7 @@ const Scores = memo<ScoresProps>(
 
     return (
       <div
-        className="flex items-center gap-2"
-        style={{ flex: 'none' }}
+        className="flex max-w-full flex-none flex-wrap items-center gap-2"
         onClick={(e) => {
           e.stopPropagation();
         }}
@@ -225,7 +168,7 @@ const Scores = memo<ScoresProps>(
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
+                      <span className="inline-flex max-w-full">
                         <div className={cn('flex items-center gap-2', styles.extraTagActive)}>
                           <HammerIcon size={14} />
                           {toolsCount}
@@ -246,7 +189,7 @@ const Scores = memo<ScoresProps>(
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
+                      <span className="inline-flex max-w-full">
                         <div className={cn('flex items-center gap-2', styles.extraTagActive)}>
                           <MessageSquareQuoteIcon size={14} />
                           {promptsCount}
@@ -268,7 +211,7 @@ const Scores = memo<ScoresProps>(
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
+                      <span className="inline-flex max-w-full">
                         <div className={cn('flex items-center gap-2', styles.extraTagActive)}>
                           <LayersIcon size={14} />
                           {resourcesCount}

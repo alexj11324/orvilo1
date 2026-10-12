@@ -75,12 +75,14 @@ const AgentUsage = memo(() => {
       <WorkSurfaceDocument>
         <div className="flex flex-col gap-4">
           <div
-            className="flex flex-col gap-4 rounded-md border border-border"
+            className="flex flex-col gap-4 rounded-(--radius-card) border border-border"
             style={{ padding: 20 }}
           >
             <div className="flex items-center gap-4 justify-between flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="text-[13px] text-muted-foreground">{t('usageStats.dimension')}</div>
+                <div className="text-(length:--text-dense) text-muted-foreground">
+                  {t('usageStats.dimension')}
+                </div>
                 <ToggleGroup
                   size="sm"
                   value={[granularity]}
@@ -93,7 +95,9 @@ const AgentUsage = memo(() => {
                 </ToggleGroup>
               </div>
               <div className="flex items-center gap-2">
-                <div className="text-[13px] text-muted-foreground">{t('usageStats.range')}</div>
+                <div className="text-(length:--text-dense) text-muted-foreground">
+                  {t('usageStats.range')}
+                </div>
                 <ToggleGroup
                   size="sm"
                   value={[range]}
@@ -130,13 +134,13 @@ const AgentUsage = memo(() => {
           {!showError && (
             <>
               <div
-                className="flex flex-col rounded-md border border-border"
+                className="flex flex-col rounded-(--radius-card) border border-border"
                 style={{ padding: 20 }}
               >
                 <UsageTrendChart buckets={data?.buckets} isLoading={isLoading} />
               </div>
               <div
-                className="flex flex-col rounded-md border border-border"
+                className="flex flex-col rounded-(--radius-card) border border-border"
                 style={{ padding: 20 }}
               >
                 <ModelBreakdown isLoading={isLoading} rows={data?.byModel ?? []} />

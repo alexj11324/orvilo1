@@ -1,0 +1,56 @@
+.root {
+  display: grid;
+  grid-template-areas: 'left rail';
+  grid-template-columns: minmax(0, 700px) 212px;
+  column-gap: 48px;
+  width: 100%;
+}
+.left { display: flex; grid-area: left; flex-direction: column; min-width: 0; }
+.main { min-width: 0; padding-block-start: 20px; }
+.memberGroup { display: flex; flex-direction: column; gap: 8px; }
+.navGroup { display: flex; flex-direction: column; gap: 4px; }
+/* Native WorkspaceLink: own selector specificity preserves the approved text
+   and hover wash over retained unlayered anchor resets. Public link props and
+   name/destination remain unchanged. */
+.navLink.navLink {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  width: fit-content;
+  min-height: 32px;
+  padding-block: 0;
+  padding-inline: 0;
+  border-radius: var(--radius-button);
+  color: var(--foreground);
+  text-decoration: none;
+}
+.navLink.navLink:hover { color: var(--foreground); background: var(--muted); }
+.navLink.navLink:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ring) 50%, transparent);
+  outline-offset: 2px;
+}
+.rail {
+  display: flex;
+  grid-area: rail;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  padding-block-start: 42px;
+}
+.rest { min-width: 0; }
+.railTitle {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: calc(1.375 / 0.875);
+  color: var(--foreground-description);
+}
+@container work-surface (max-width: 1000px) {
+  .root { display: flex; flex-direction: column; gap: 0; }
+  .left { display: contents; }
+  .main { order: 0; padding-block-start: 4px; }
+  .memberGroup { flex-direction: row; gap: 4px; align-items: center; padding-inline: 12px; }
+  .navGroup { flex-flow: row wrap; gap: 0; align-items: center; padding-inline: 6px; }
+  .rail { flex-flow: row wrap; gap: 4px; align-items: center; order: 1; padding-block-start: 16px; }
+  .rest { order: 2; }
+  .railTitle { display: none; }
+}

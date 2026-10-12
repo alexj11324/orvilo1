@@ -1,5 +1,5 @@
 'use client';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { DiamondIcon, EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { createElement, memo, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,9 +10,7 @@ import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
-import { MILESTONE_ICON_PAINT } from '@/features/Projects/milestoneRow';
 import { formatProjectDate } from '@/features/Projects/projectPlanningDate';
-import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
@@ -25,124 +23,20 @@ import {
   sortMilestonesForList,
 } from './milestonePageData';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  addRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 40px;
-    padding-block: 6px;
-    padding-inline: 10px;
-    border: 0;
-    border-radius: 8px;
-
-    font-size: 13px;
-    font-weight: 450;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  body: css`
-    overflow-y: auto;
-    flex: 1;
-
-    min-height: 0;
-    padding-block: 24px 32px;
-    padding-inline: max(24px, calc((100% - 800px) / 2));
-  `,
-  date: css`
-    flex: none;
-
-    min-width: 96px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: end;
-  `,
-  dateEmpty: css`
-    color: ${cssVar.colorTextDescription};
-  `,
-  list: css`
-    display: flex;
-    flex-direction: column;
-  `,
-  progressBar: css`
-    position: relative;
-
-    overflow: hidden;
-    flex: none;
-
-    width: 64px;
-    height: 4px;
-    border-radius: 9999px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressBarFill: css`
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-
-    border-radius: 9999px;
-
-    background: ${MILESTONE_ICON_PAINT.fill};
-  `,
-  /* Same "issues · percent" pill the overview milestone card links to the
-     filtered issues list with. */
-  progressLink: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 8px;
-    border-radius: 9999px;
-
-    font-size: 13px;
-    font-weight: 450;
-    color: ${cssVar.colorTextSecondary};
-    text-decoration: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  progressPlaceholder: css`
-    flex: none;
-
-    width: 64px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-    text-align: end;
-  `,
-  row: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    min-height: 44px;
-    padding-block: 6px;
-    padding-inline: 10px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-}));
+const styles = {
+  addRow:
+    'w-full justify-start px-2.5 text-sm leading-5.5 font-medium text-muted-foreground bg-transparent hover:text-foreground hover:bg-accent',
+  body: 'overflow-y-auto flex-1 min-h-0 pbs-6 pbe-8 [padding-inline:max(24px,calc((100%_-_800px)/2))]',
+  date: 'flex-none min-w-24 text-xs leading-5 text-muted-foreground text-end',
+  dateEmpty: 'text-foreground-description',
+  list: 'flex flex-col',
+  progressBar: 'relative overflow-hidden flex-none w-16 h-1 rounded-full bg-muted',
+  progressBarFill: 'absolute inset-y-0 inset-s-0 rounded-full bg-primary',
+  progressLink:
+    'flex flex-none gap-2 items-center min-h-8 px-2 rounded-full text-xs leading-5 font-medium text-muted-foreground no-underline hover:text-foreground hover:bg-accent',
+  progressPlaceholder: 'flex-none w-16 text-xs leading-5 text-foreground-description text-end',
+  row: 'flex gap-3 items-center min-h-11 py-1.5 px-2.5 border-be border-divider rounded-(--radius-card) hover:bg-accent',
+};
 
 interface ProjectMilestonesPageProps {
   detail: ProjectDetail;
@@ -217,13 +111,10 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
     return (
       <div className={styles.row} key={milestone.id}>
         <MilestoneIcon />
-        <span
-          className="text-sm truncate"
-          style={{ fontSize: 13, fontWeight: 450, flex: 1, minWidth: 0 }}
-        >
+        <span className="text-sm leading-5.5 truncate font-normal flex-1 min-w-0">
           {milestone.name}
         </span>
-        <span className={cx(styles.date, !milestone.date && styles.dateEmpty)}>
+        <span className={cn(styles.date, !milestone.date && styles.dateEmpty)}>
           {milestone.date ? formatProjectDate(milestone.date) : t('milestones.noTargetDate')}
         </span>
         {progress ? (
@@ -248,7 +139,7 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
         )}
         {canEdit && (
           <DropdownMenu items={milestoneMenu(milestone)}>
-            <Button aria-label={t('overview.milestoneMenu')} size="icon-sm" variant="ghost">
+            <Button aria-label={t('overview.milestoneMenu')} size="icon" variant="ghost">
               {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
             </Button>
           </DropdownMenu>
@@ -259,31 +150,21 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
 
   return (
     <div className={styles.body}>
-      <div className="flex flex-col" style={{ gap: 8 }}>
-        <div
-          className="flex flex-row"
-          style={{ alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <span
-            className="text-sm"
-            style={{
-              color: SECTION_LABEL_PROPS.color,
-              fontSize: SECTION_LABEL_PROPS.fontSize,
-              fontWeight: SECTION_LABEL_PROPS.weight,
-            }}
-          >
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-center justify-between">
+          <span className="text-(length:--text-dense) leading-5.5 font-medium text-muted-foreground">
             {t('sections.milestones')}
           </span>
         </div>
         {milestones.length === 0 ? (
-          <div className="flex flex-col items-center justify-center" style={{ padding: 40 }}>
+          <div className="flex flex-col items-center justify-center p-10">
             <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
               {createElement(DiamondIcon, { 'size': 40, 'aria-hidden': true })}
               <div>
                 {
-                  <div className="flex flex-col" style={{ gap: 4 }}>
+                  <div className="flex flex-col gap-1">
                     <span className="text-sm">{t('milestones.empty.title')}</span>
-                    <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                    <span className="text-xs leading-5 text-muted-foreground">
                       {t('milestones.empty.description')}
                     </span>
                   </div>
@@ -291,6 +172,7 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
               </div>
               {canEdit ? (
                 <Button
+                  size="lg"
                   variant="default"
                   onClick={() => openMilestoneFormModal({ projectId: project.id })}
                 >
@@ -304,14 +186,16 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
           <div className={styles.list}>{milestones.map(renderRow)}</div>
         )}
         {canEdit && milestones.length > 0 && (
-          <button
+          <Button
             className={styles.addRow}
+            size="normal"
             type="button"
+            variant="ghost"
             onClick={() => openMilestoneFormModal({ projectId: project.id })}
           >
-            <PlusIcon size={14} />
+            <PlusIcon className="size-4" size={16} />
             {t('create.addMilestone')}
-          </button>
+          </Button>
         )}
       </div>
     </div>

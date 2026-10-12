@@ -52,7 +52,7 @@ KindDot.displayName = 'GoalKindDot';
 
 export const MonoText = memo<{ children: React.ReactNode; title?: string }>(
   ({ children, title }) => (
-    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} title={title}>
+    <div className={cn('text-xs text-muted-foreground', styles.mono)} title={title}>
       {children}
     </div>
   ),

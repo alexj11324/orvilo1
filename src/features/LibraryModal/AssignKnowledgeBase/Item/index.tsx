@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { LockIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
@@ -8,23 +7,10 @@ import { type KnowledgeItem } from '@/types/knowledgeBase';
 
 import Actions from './Action';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  desc: css`
-    margin: 0 !important;
-    font-size: 12px;
-    line-height: 1;
-    color: ${cssVar.colorTextDescription};
-  `,
-  link: css`
-    overflow: hidden;
-    color: ${cssVar.colorText};
-  `,
-  title: css`
-    margin: 0 !important;
-    font-size: 14px;
-    line-height: 1;
-  `,
-}));
+const styles = {
+  desc: 'm-0 text-xs leading-5 text-foreground-description',
+  title: 'm-0 text-sm leading-5.5',
+};
 
 interface PluginItemProps extends KnowledgeItem {
   action?: ReactNode;
@@ -56,11 +42,11 @@ const PluginItem = memo<PluginItemProps>(
               {visibility === 'private' && (
                 <span className="anticon" role="img">
                   <LockIcon
-                    color={cssVar.colorTextDescription}
+                    className="size-4 text-foreground-description"
                     fill={'transparent'}
-                    height={12}
-                    size={12}
-                    width={12}
+                    height={16}
+                    size={16}
+                    width={16}
                   />
                 </span>
               )}

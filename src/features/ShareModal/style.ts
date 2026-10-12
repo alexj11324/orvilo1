@@ -1,35 +1,9 @@
-import { createStaticStyles, responsive } from 'antd-style';
-
-// Dynamic styles with widthMode prop - converted to CSS variables
 export { styles as containerStyles } from './useContainerStyles';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  body: css`
-    height: 100%;
-    ${responsive.sm} {
-      padding-block-end: 68px;
-    }
-  `,
-  footer: css`
-    ${responsive.sm} {
-      position: absolute;
-      inset-block-end: 0;
-      inset-inline: 0;
-
-      width: 100%;
-      margin: 0;
-      padding: 16px;
-
-      background: ${cssVar.colorBgContainer};
-    }
-  `,
-  sidebar: css`
-    flex: none;
-    width: max(240px, 25%);
-    ${responsive.sm} {
-      flex: 1;
-      width: unset;
-      margin-inline: -16px;
-    }
-  `,
-}));
+export const styles = {
+  body: 'h-full [@media(max-width:575.98px)]:pbe-17',
+  footer:
+    '[@media(max-width:575.98px)]:absolute [@media(max-width:575.98px)]:[inset-block-end:0] [@media(max-width:575.98px)]:[inset-inline:0] [@media(max-width:575.98px)]:w-full [@media(max-width:575.98px)]:m-0 [@media(max-width:575.98px)]:p-4 [@media(max-width:575.98px)]:bg-card',
+  sidebar:
+    'flex-none w-[max(240px,25%)] [@media(max-width:575.98px)]:flex-1 [@media(max-width:575.98px)]:[width:unset] [@media(max-width:575.98px)]:-mx-4',
+};

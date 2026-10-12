@@ -1,7 +1,6 @@
 'use client';
 import type { WorkQueryField } from '@orvilo/types';
 import { workQueryFieldSpec } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { ParseKeys } from 'i18next';
 import {
@@ -68,83 +67,6 @@ import {
   toggleMyWorkDirectoryValue,
 } from './myWorkFilters';
 
-const styles = createStaticStyles(({ css }) => ({
-  backButton: css`
-    flex: none;
-  `,
-  directoryPane: css`
-    width: min(280px, calc(100vw - 32px));
-    padding: 8px;
-  `,
-  builderPane: css`
-    width: min(460px, calc(100vw - 32px));
-    padding: 12px;
-  `,
-  menuRow: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 28px;
-    padding-block: 4px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  menuRowLabel: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-size: 13px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  menuRowIcon: css`
-    flex: none;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  checkIcon: css`
-    flex: none;
-    color: ${cssVar.colorPrimary};
-  `,
-  paneHeader: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    min-height: 28px;
-    padding-inline: 4px;
-  `,
-  labelDot: css`
-    flex: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-  `,
-  searchInput: css`
-    margin-block-end: 4px;
-  `,
-  sectionDivider: css`
-    margin-block: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
-
 /** Field glyphs for the directory rows — mirrors Linear's per-field icons. */
 const DIRECTORY_FIELD_ICONS: Partial<Record<WorkQueryField, StatusVisual['icon']>> = {
   assigneeUserId: CircleUserRoundIcon,
@@ -178,10 +100,16 @@ const MenuRow = memo<{
   onClick: () => void;
   trailing?: ReactNode;
 }>(({ checked, icon, label, onClick, trailing }) => (
-  <button className={styles.menuRow} type="button" onClick={onClick}>
-    {icon ? <span className={styles.menuRowIcon}>{icon}</span> : null}
-    <span className={styles.menuRowLabel}>{label}</span>
-    {checked ? <CheckIcon className={styles.checkIcon} size={14} /> : null}
+  <button
+    className="cursor-pointer select-none flex w-full min-h-8 items-center gap-2 py-1 px-2 border-0 rounded-(--radius-button) text-foreground text-start bg-transparent hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:outline-offset-2"
+    type="button"
+    onClick={onClick}
+  >
+    {icon ? <span className="flex-none text-muted-foreground">{icon}</span> : null}
+    <span className="overflow-hidden flex-1 min-w-0 text-sm leading-5.5 text-ellipsis whitespace-nowrap">
+      {label}
+    </span>
+    {checked ? <CheckIcon className="flex-none text-primary-text" size={16} /> : null}
     {trailing}
   </button>
 ));
@@ -192,12 +120,11 @@ const PaneHeader = memo<{ onBack: () => void; title: string }>(({ onBack, title 
   const { t } = useTranslation('common');
   return (
     <div
-      className={cn('flex flex-row', styles.paneHeader)}
-      style={{ alignItems: 'center', gap: 8 }}
+      className={cn('flex flex-row', 'flex min-h-7 items-center gap-2 px-1', 'items-center gap-2')}
     >
       <Button
         aria-label={t('back')}
-        className={styles.backButton}
+        className="flex-none"
         size="icon"
         title={t('back')}
         variant="ghost"
@@ -430,7 +357,7 @@ const DirectoryFieldPane = memo<{
             icon: (
               <span
                 aria-hidden
-                className={styles.labelDot}
+                className="flex-none size-2.5 rounded-full"
                 style={{ background: resolveLabelColor(label.name, label.color) }}
               />
             ),
@@ -472,9 +399,10 @@ const DirectoryFieldPane = memo<{
     <div className="flex flex-col">
       {spec.valueKind === 'text' ? (
         <Input
-          className="mx-2 my-1 rounded border border-border bg-transparent px-2 py-1 text-sm"
+          className="mx-2 my-1 rounded-(--radius-input) border border-border bg-transparent px-2 py-0.5 text-sm leading-5.5"
           defaultValue={typeof textValue === 'string' ? textValue : ''}
           placeholder={t('savedViews.filters.textPlaceholder')}
+          visualSize="small"
           onBlur={(event) =>
             onBuilderChange(setMyWorkDirectoryText(builder, field, event.target.value))
           }
@@ -494,7 +422,7 @@ const DirectoryFieldPane = memo<{
       ))}
       {nullaryRows.length > 0 ? (
         <>
-          <div className={styles.sectionDivider} />
+          <div className="my-1 border-bs border-solid border-divider" />
           {nullaryRows.map((row) => (
             <MenuRow checked={row.checked} key={row.key} label={row.label} onClick={row.onClick} />
           ))}
@@ -502,7 +430,7 @@ const DirectoryFieldPane = memo<{
       ) : null}
       {myWorkDirectoryFieldActive(builder, field) ? (
         <>
-          <div className={styles.sectionDivider} />
+          <div className="my-1 border-bs border-solid border-divider" />
           <MenuRow
             label={t('myWork.filterClearField')}
             onClick={() => onBuilderChange(clearMyWorkDirectoryField(builder, field))}
@@ -579,12 +507,24 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
 
     const content =
       pane.kind === 'builder' ? (
-        <div className={cn('flex flex-col', styles.builderPane)} style={{ gap: 8 }}>
+        <div
+          className={cn(
+            'flex flex-col',
+            'w-115 [max-width:calc(100vw_-_var(--spacing)*8)] p-3',
+            'gap-2',
+          )}
+        >
           <PaneHeader title={t('myWork.filterAdvanced')} onBack={() => setPane({ kind: 'menu' })} />
           <WorkQueryFilterBuilder entityType={'task'} value={builder} onChange={onBuilderChange} />
         </div>
       ) : pane.kind === 'field' ? (
-        <div className={cn('flex flex-col', styles.directoryPane)} style={{ gap: 2 }}>
+        <div
+          className={cn(
+            'flex flex-col',
+            'w-70 [max-width:calc(100vw_-_var(--spacing)*8)] p-2',
+            'gap-0.5',
+          )}
+        >
           <PaneHeader
             title={t(`savedViews.fields.${pane.field}` as never, { defaultValue: pane.field })}
             onBack={() => setPane({ kind: 'menu' })}
@@ -598,20 +538,29 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
           />
         </div>
       ) : (
-        <div className={cn('flex flex-col', styles.directoryPane)} style={{ gap: 2 }}>
+        <div
+          className={cn(
+            'flex flex-col',
+            'w-70 [max-width:calc(100vw_-_var(--spacing)*8)] p-2',
+            'gap-0.5',
+          )}
+        >
           {filterSupported ? (
             <>
               <Input
                 autoFocus
-                className={styles.searchInput}
+                className="mbe-1"
                 placeholder={t('myWork.filterSearchPlaceholder')}
                 value={keyword}
+                visualSize="compact"
                 onChange={(event) => setKeyword(event.target.value)}
               />
               <MenuRow
                 icon={createElement(SlidersHorizontalIcon, { className: 'size-4 shrink-0' })}
                 label={t('myWork.filterAdvanced')}
-                trailing={<ChevronRightIcon className={styles.menuRowIcon} size={14} />}
+                trailing={
+                  <ChevronRightIcon className="flex-none text-muted-foreground" size={16} />
+                }
                 onClick={() => setPane({ kind: 'builder' })}
               />
               {directoryFields.map((entry) => (
@@ -619,21 +568,23 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
                   checked={entry.active}
                   key={entry.field}
                   label={entry.label}
-                  trailing={<ChevronRightIcon className={styles.menuRowIcon} size={14} />}
                   icon={
                     entry.icon
                       ? createElement(entry.icon, { className: 'size-4 shrink-0' })
                       : undefined
                   }
+                  trailing={
+                    <ChevronRightIcon className="flex-none text-muted-foreground" size={16} />
+                  }
                   onClick={() => setPane({ field: entry.field, kind: 'field' })}
                 />
               ))}
-              <div className={styles.sectionDivider} />
+              <div className="my-1 border-bs border-solid border-divider" />
             </>
           ) : (
             <span className="text-sm text-muted-foreground">{t('myWork.filterUnsupported')}</span>
           )}
-          <div className="flex flex-col" style={{ gap: 2, paddingInline: 8 }}>
+          <div className="flex flex-col gap-0.5 px-2">
             <label className="flex items-center gap-3 px-3 py-2 text-sm">
               <Checkbox checked={noProject} onCheckedChange={onNoProjectChange} />
               <span>{t('myWork.noProject')}</span>
@@ -645,12 +596,9 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
           </div>
           {activeFilterCount > 0 ? (
             <>
-              <div className={styles.sectionDivider} />
-              <div
-                className="flex flex-row"
-                style={{ justifyContent: 'flex-end', paddingInlineEnd: 4 }}
-              >
-                <Button variant="ghost" onClick={onResetFilters}>
+              <div className="my-1 border-bs border-solid border-divider" />
+              <div className="flex flex-row justify-end pe-1">
+                <Button size="compact" variant="ghost" onClick={onResetFilters}>
                   {t('myWork.filtersReset')}
                 </Button>
               </div>

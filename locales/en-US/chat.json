@@ -34,6 +34,7 @@
   "agentDocument.emptyTitle": "No document open",
   "agentDocument.linkCopied": "Link copied",
   "agentDocument.openAsPage": "Open as full page",
+  "agentGatewayRequired": "This deployment has no Agent Gateway configured, so the Agent cannot run. Ask an administrator to set AGENT_GATEWAY_URL",
   "agentHandoffMarker": "── Agent changed to {{name}} ──",
   "agentNotFound.desc": "This agent does not exist or is no longer accessible — it may have been deleted or set to private by its owner.",
   "agentNotFound.title": "Agent Unavailable",

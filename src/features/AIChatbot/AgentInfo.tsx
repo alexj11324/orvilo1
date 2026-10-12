@@ -13,16 +13,18 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
+import { hasAgentInfo } from './agentInfo';
+
 /**
- * The selected Agent's description and instructions. The Agent picker beside the
- * settings button already names the Agent, so nothing renders without either.
+ * The selected Agent's description and instructions; nothing renders without either.
  */
 export function AgentInfo() {
   const { t } = useTranslation('chat');
   const agentId = useAgentId();
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId));
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
-  if (!config || !(meta.description || config.systemRole)) return null;
+  if (!config || !hasAgentInfo({ description: meta.description, systemRole: config.systemRole }))
+    return null;
   const runtime = resolveAgentRuntimeType(config);
 
   return (

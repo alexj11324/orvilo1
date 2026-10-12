@@ -1,5 +1,5 @@
 import type { TaskStatus } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { MessageSquareTextIcon } from 'lucide-react';
 import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,89 +38,15 @@ import { taskDetailPath } from '../shared/taskDetailPath';
 import { useTaskWorkflowGlyph } from '../shared/TaskWorkflowBadge';
 import type { TaskStatusChoice } from './kanbanBoardModel';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  /* Cordy keeps the empty-assign affordance hidden until the card is hovered —
-     an always-on dashed circle on every unassigned card reads as noise. */
-  assignReveal: css`
-    opacity: 0;
-    transition: opacity 0.2s;
-
-    [data-task-board-card]:hover &,
-    [data-task-board-card]:focus-within &,
-    [data-task-board-card]:has([data-open]) & {
-      opacity: 1;
-    }
-
-    @media (hover: none) {
-      opacity: 1;
-    }
-  `,
-  card: css`
-    cursor: pointer;
-
-    position: relative;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: 8px;
-
-    /* Shared surface roles work in either theme, without a heavy black shadow. */
-    background: ${cssVar.colorBgContainer};
-    box-shadow: 0 0 0 1px ${cssVar.colorBorderSecondary};
-
-    transition:
-      background 150ms,
-      box-shadow 150ms;
-
-    &:hover {
-      background: ${cssVar.colorBgElevated};
-      box-shadow: 0 0 0 1px ${cssVar.colorBorder};
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  cardOverlay: css`
-    /* DragOverlay twin: no hover affordance, shadow reads as "lifted". */
-    background: ${cssVar.colorBgElevated};
-
-    &:hover {
-      background: ${cssVar.colorBgElevated};
-    }
-  `,
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    margin-block-start: 4px;
-
-    font-size: 12px;
-    line-height: 18px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-    text-decoration: none;
-    word-break: break-word;
-
-    &:focus-visible {
-      border-radius: 2px;
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: 3px;
-    }
-  `,
-}));
+const styles = {
+  assignReveal:
+    'opacity-0 transition-opacity duration-(--orvilo-motion-mid) [[data-task-board-card]:hover_&]:opacity-100 [[data-task-board-card]:focus-within_&]:opacity-100 [[data-task-board-card]:has([data-open])_&]:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none',
+  card: 'cursor-pointer relative p-4 rounded-(--radius-card) bg-card ring-1 ring-divider transition-[background-color,box-shadow] duration-(--orvilo-motion-fast) hover:bg-popover hover:ring-border motion-reduce:transition-none',
+  cardOverlay: 'bg-popover hover:bg-popover',
+  description: 'line-clamp-1 m-0 text-sm leading-5.5 text-muted-foreground',
+  title:
+    'line-clamp-2 text-sm leading-5.5 font-medium text-foreground no-underline [word-break:break-word] focus-visible:rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-3',
+};
 
 const TASK_STATUS_SET = new Set<TaskStatus>([
   'backlog',
@@ -248,7 +174,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
         {task.assigneeAgentId ? (
           <AssigneeAvatar agentId={task.assigneeAgentId} tooltip={status !== 'running'} />
         ) : status === 'running' ? (
-          <span className={styles.assignReveal} style={{ display: 'inline-flex' }}>
+          <span className={cn(styles.assignReveal, 'inline-flex')}>
             <UnassignedAssigneeIcon kind={'agent'} />
           </span>
         ) : (
@@ -347,7 +273,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
                 <ActionIcon
                   aria-label={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}
                   icon={MessageSquareTextIcon}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   onClick={(event) => {
                     event.stopPropagation();
                     openTopicDrawer(task.currentTopicId!, {
@@ -371,7 +297,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
     const card = (
       <div
         data-task-board-card
-        className={cx(styles.card, overlay && styles.cardOverlay)}
+        className={cn(styles.card, overlay && styles.cardOverlay)}
         data-collab-id={`task:${task.id}`}
         data-collab-id-alt={`task:${task.identifier}`}
         data-collab-private={isPrivate || undefined}
@@ -379,23 +305,20 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       >
         {/* Row 1 — identifier + executor (Cordy: issue identifier top-left,
           assigned executor top-right). */}
-        <div className="flex items-center gap-2" style={{ minHeight: 24 }}>
-          <div
-            className="truncate block font-mono text-xs text-muted-foreground"
-            style={{ flex: 1, minWidth: 0 }}
-          >
+        <div className="flex items-center gap-2 min-h-6">
+          <div className="truncate block font-mono text-xs leading-5 text-muted-foreground flex-1 min-w-0">
             {task.identifier}
           </div>
           <div className="flex shrink-0 items-center gap-1">{executorNode}</div>
         </div>
 
         {/* Row 2 — status glyph + title, two lines max. */}
-        <div className="flex items-start gap-1.5" style={{ marginTop: 4, minWidth: 0 }}>
+        <div className="flex items-start gap-1.5 mt-1 min-w-0">
           {shows('status') ? (
             <span
+              className="flex-none mt-0.5"
               data-collab-id={`task:${task.id}:status`}
               data-collab-id-alt={`task:${task.identifier}:status`}
-              style={{ flex: 'none', marginTop: 2 }}
             >
               {workflowGlyph ? (
                 <TooltipProvider>
@@ -405,7 +328,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
                         <span className="inline-flex">
                           {createElement(workflowGlyph.icon, {
                             color: workflowGlyph.color,
-                            size: 14,
+                            size: 16,
                           })}
                         </span>
                       }
@@ -419,7 +342,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
                 // status icon.
                 createElement(WORKFLOW_CATEGORY_VISUALS[task.workflowCategory ?? 'backlog'].icon, {
                   color: WORKFLOW_CATEGORY_VISUALS[task.workflowCategory ?? 'backlog'].color,
-                  size: 14,
+                  size: 16,
                 })
               )}
             </span>
@@ -441,23 +364,18 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
 
         {/* Optional description preview (Cordy shows one muted line). */}
         {task.description?.trim() ? (
-          <p className={styles.description} style={{ margin: 0 }}>
-            {markdownToTxt(task.description).trim()}
-          </p>
+          <p className={styles.description}>{markdownToTxt(task.description).trim()}</p>
         ) : null}
 
         {/* Chip row — priority, schedule, subtask progress. */}
-        <div
-          className="flex flex-wrap items-center gap-1.5"
-          style={{ marginTop: 6, minHeight: 20, minWidth: 0 }}
-        >
+        <div className="flex flex-wrap items-center gap-1.5 mt-1.5 min-h-5 min-w-0">
           {shows('priority') ? (
             <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           ) : null}
           <LinearTaskSyncStatus taskId={task.id} />
           {shows('project') && projectName ? (
-            <Tag size="sm" variant="primary-outline">
-              {<PROJECT_ENTITY_ICON size={12} />}
+            <Tag className="py-0 text-xs leading-5 text-foreground" size="xl" variant="outline">
+              {<PROJECT_ENTITY_ICON size={16} />}
               {projectName}
             </Tag>
           ) : null}
@@ -473,10 +391,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
 
         {/* Meta row — human owner + date on the left, subtask progress and the
           live-run entry on the right. */}
-        <div
-          className="flex items-center gap-2"
-          style={{ marginTop: 6, minHeight: 24, minWidth: 0 }}
-        >
+        <div className="flex items-center gap-2 mt-1.5 min-h-6 min-w-0">
           <div
             className="flex shrink-0 items-center gap-1"
             data-collab-id={`task:${task.id}:assignee`}
@@ -485,15 +400,12 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             {shows('assignee') ? ownerNode : null}
           </div>
           {shows('updated') && time ? (
-            <div
-              className="truncate block font-mono text-xs text-muted-foreground"
-              style={{ minWidth: 0 }}
-            >
+            <div className="truncate block font-mono text-xs leading-5 text-muted-foreground min-w-0">
               {/* Linear cards stamp the creation date, not the last touch. */}
               {tChat('taskList.createdAt', { date: time, defaultValue: 'Created {{date}}' })}
             </div>
           ) : null}
-          <div className="flex shrink-0 items-center gap-1" style={{ marginLeft: 'auto' }}>
+          <div className="flex shrink-0 items-center gap-1 ms-auto">
             <TaskSubtaskProgressTag
               currentIdentifier={task.identifier}
               progress={task.subtaskProgress}

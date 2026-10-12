@@ -22,6 +22,7 @@ export const getLibraryIconVariant = ({
 };
 
 interface LibraryStatusIconProps {
+  color?: string;
   memberRestricted?: boolean;
   size?: number;
   visibility?: 'private' | 'public' | null;
@@ -33,18 +34,18 @@ interface LibraryStatusIconProps {
  * ordinary workspace library → folder.
  */
 const LibraryStatusIcon = memo<LibraryStatusIconProps>(
-  ({ memberRestricted, size = 20, visibility }) => {
+  ({ color, memberRestricted, size = 20, visibility }) => {
     const variant = getLibraryIconVariant({ memberRestricted, visibility });
 
     if (variant === 'private') {
       return createElement(LockIcon, {
         size: 16,
-        style: { color: 'var(--ant-color-text-description)' },
+        style: { color: color ?? 'var(--ant-color-text-description)' },
       });
     }
-    if (variant === 'restricted') return <LockedLibIcon size={size} />;
+    if (variant === 'restricted') return <LockedLibIcon color={color} size={size} />;
 
-    return <LibIcon size={size} />;
+    return <LibIcon color={color} size={size} />;
   },
 );
 

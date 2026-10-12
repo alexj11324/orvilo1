@@ -206,7 +206,7 @@ const IssueFilterPopover = memo<IssueFilterPopoverProps>(
                     type: 'status',
                     values: toggleListValue(selected, status) as TaskStatus[],
                   }),
-                { icon: <TaskStatusIcon size={14} status={status} /> },
+                { icon: <TaskStatusIcon size={16} status={status} /> },
               ),
             ),
           };
@@ -223,7 +223,7 @@ const IssueFilterPopover = memo<IssueFilterPopoverProps>(
                 selected.includes(priority),
                 () =>
                   applyFilter({ type: 'priority', values: toggleListValue(selected, priority) }),
-                { icon: <PriorityIcon priority={priority} size={14} /> },
+                { icon: <PriorityIcon priority={priority} size={16} /> },
               ),
             ),
           };
@@ -290,7 +290,7 @@ const IssueFilterPopover = memo<IssueFilterPopoverProps>(
                   // Re-clicking the active milestone clears it (the
                   // reference's submenu checkmarks toggle).
                   () => onMilestoneChange(milestoneId === milestone.id ? undefined : milestone.id),
-                  { icon: <MilestoneIcon size={14} /> },
+                  { icon: <MilestoneIcon size={16} /> },
                 ),
               ),
             ],

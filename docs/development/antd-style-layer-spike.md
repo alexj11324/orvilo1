@@ -1,5 +1,12 @@
 # Spike: put all antd-style output in `@layer antd-style`
 
+Current source update: the disabled renderer `antdStyleLayer` initializer has
+been retired. `ANTD_STYLE_LAYER_ENABLED` stays false, so runtime and precompiled
+CSS keep their existing unlayered precedence. Explicit helper experiments and
+their real tests remain; enabling a future global layer requires new runtime
+and build integration/acceptance. The mechanism and receipts below describe
+the historical experiment, not an active renderer startup contract.
+
 Status: opt-in infrastructure. The shared switch remains **off** for runtime and
 production precompilation. The [batch-1 ledger](antd-style-rollout-batch-1.md) tracks
 the local ChatInput conversion with that unlayered default; its earlier global-ON

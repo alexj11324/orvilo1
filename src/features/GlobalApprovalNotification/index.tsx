@@ -1,20 +1,64 @@
 'use client';
 
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
+import { clsx } from 'cn';
 import { ChevronUp } from 'lucide-react';
-import { AnimatePresence } from 'motion/react';
-import * as m from 'motion/react-m';
-import { memo, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, usePresence } from 'motion/react';
+import {
+  type CSSProperties,
+  type HTMLAttributes,
+  memo,
+  type Ref,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { isDesktop } from '@/const/version';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import ApprovalCard from './ApprovalCard';
+import motionStyles from './ApprovalMotion.module.css';
 import { styles } from './styles';
+import { useApprovalMotion } from './useApprovalMotion';
 import { useGlobalPendingApprovals } from './useGlobalPendingApprovals';
 
-const SPRING = { damping: 30, stiffness: 320, type: 'spring' } as const;
+// Presence retains an exiting approval only for the actual resolved duration.
+// Native CSS owns paint; live preference changes cancel transitions without
+// remounting the currently actionable card or its child state.
+const ApprovalSurface = ({
+  ref,
+  className,
+  style,
+  pill,
+  ...props
+}: HTMLAttributes<HTMLDivElement> & { pill?: boolean; ref?: Ref<HTMLDivElement> }) => {
+  const [isPresent, safeToRemove] = usePresence();
+  const { enabled, durationMs } = useApprovalMotion();
+
+  useEffect(() => {
+    if (isPresent || !safeToRemove) return;
+    if (!enabled) {
+      safeToRemove();
+      return;
+    }
+    const timer = window.setTimeout(safeToRemove, durationMs);
+    return () => window.clearTimeout(timer);
+  }, [durationMs, enabled, isPresent, safeToRemove]);
+
+  return (
+    <div
+      {...props}
+      className={clsx('orvilo-motion-scope', motionStyles.surface, className)}
+      data-approval-exit={!isPresent || undefined}
+      data-approval-motion-disabled={!enabled || undefined}
+      ref={ref}
+      style={{ '--approval-exit-scale': pill ? 0.9 : 0.96, ...style } as CSSProperties}
+    />
+  );
+};
 
 // Push below the desktop title bar; the web build has no title bar.
 const TOP_OFFSET = isDesktop ? TITLE_BAR_HEIGHT + 8 : 16;
@@ -48,54 +92,42 @@ const GlobalApprovalNotification = memo(() => {
   const extraCount = groups.length - 1;
 
   return (
-    <div className={styles.wrapper} style={{ '--global-approval-top': `${TOP_OFFSET}px` } as any}>
+    <div
+      className={styles.wrapper}
+      style={{ '--global-approval-top': `${TOP_OFFSET}px` } as CSSProperties}
+    >
       <AnimatePresence mode="popLayout">
         {hasApprovals &&
           (collapsed ? (
-            <m.div
-              layout
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className={styles.pill}
-              exit={{ opacity: 0, scale: 0.9, y: -16 }}
-              initial={{ opacity: 0, scale: 0.9, y: -16 }}
+            <ApprovalSurface
+              {...clickableProps()}
+              pill
+              className={clsx(
+                styles.pill,
+                CLICKABLE_FOCUS_RING,
+                '[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
+              )}
               key="pill"
-              transition={SPRING}
               onClick={() => setCollapsed(false)}
             >
               <span className={styles.pillDot} />
               {t('globalApproval.pendingCount', { count: groups.length })}
-            </m.div>
+            </ApprovalSurface>
           ) : (
-            <m.div
-              layout
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              className={styles.stack}
-              exit={{ opacity: 0, scale: 0.96, y: -16 }}
-              initial={{ opacity: 0, scale: 0.96, y: -16 }}
-              key="stack"
-              transition={SPRING}
-            >
-              <m.div layout style={{ alignSelf: 'flex-end', pointerEvents: 'auto' }}>
+            <ApprovalSurface className={styles.stack} key="stack">
+              <div className="pointer-events-auto self-end">
                 <ActionIcon
                   icon={ChevronUp}
-                  size="small"
+                  size={{ blockSize: 32, size: 16 }}
                   title={t('globalApproval.collapse')}
                   onClick={() => setCollapsed(true)}
                 />
-              </m.div>
+              </div>
               <AnimatePresence mode="popLayout">
                 {top && (
-                  <m.div
-                    layout
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96, y: -16 }}
-                    initial={{ opacity: 0, scale: 0.96, y: -16 }}
-                    key={top.key}
-                    style={{ pointerEvents: 'auto', width: '100%' }}
-                    transition={SPRING}
-                  >
+                  <ApprovalSurface key={top.key} style={{ pointerEvents: 'auto', width: '100%' }}>
                     <ApprovalCard group={top} />
-                  </m.div>
+                  </ApprovalSurface>
                 )}
               </AnimatePresence>
               {extraCount > 0 && (
@@ -103,7 +135,7 @@ const GlobalApprovalNotification = memo(() => {
                   {t('globalApproval.moreCount', { count: extraCount })}
                 </div>
               )}
-            </m.div>
+            </ApprovalSurface>
           ))}
       </AnimatePresence>
     </div>

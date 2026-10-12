@@ -1,9 +1,11 @@
-import { Flexbox, Icon, SearchBar, stopPropagation, Tooltip } from '@lobehub/ui';
+import { Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
 import { Tabs } from '@lobehub/ui/base-ui';
 import { ProviderIcon } from '@lobehub/ui/icons';
 import { Brain } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import SearchBar from '@/components/SearchBar';
 
 import { styles } from '../styles';
 import { type GroupMode } from '../types';
@@ -33,13 +35,11 @@ export const Toolbar = memo<ToolbarProps>(
       >
         <Flexbox flex={1} width="100%">
           <SearchBar
-            allowClear
+            className={styles.toolbarSearch}
+            clearOnEscape={false}
             placeholder={t('ModelSwitchPanel.searchPlaceholder')}
-            size="small"
-            style={{ width: '100%' }}
-            styles={{ input: { width: '100%' } }}
             value={searchKeyword}
-            variant="borderless"
+            visualSize="compact"
             onChange={(e) => onSearchKeywordChange(e.target.value)}
             onKeyDown={stopPropagation}
           />
@@ -47,14 +47,19 @@ export const Toolbar = memo<ToolbarProps>(
         {showGroupModeSwitch && (
           <Tabs
             activeKey={groupMode}
+            className={styles.toolbarTabs}
             size="small"
-            style={{ minWidth: 0, width: 'fit-content' }}
+            classNames={{
+              list: styles.toolbarTabList,
+              tab: styles.toolbarTab,
+              indicator: styles.toolbarIndicator,
+            }}
             items={[
               {
                 key: 'byModel',
                 label: (
                   <Tooltip title={t('ModelSwitchPanel.byModel')}>
-                    <Icon icon={Brain} />
+                    <Icon icon={Brain} size={16} />
                   </Tooltip>
                 ),
               },
@@ -62,7 +67,7 @@ export const Toolbar = memo<ToolbarProps>(
                 key: 'byProvider',
                 label: (
                   <Tooltip title={t('ModelSwitchPanel.byProvider')}>
-                    <Icon icon={ProviderIcon} />
+                    <Icon icon={ProviderIcon} size={16} />
                   </Tooltip>
                 ),
               },

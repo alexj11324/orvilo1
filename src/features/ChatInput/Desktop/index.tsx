@@ -1,8 +1,7 @@
 'use client';
 
 import { type ChatInputProps } from '@lobehub/editor/react';
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { type ReactNode, use } from 'react';
 import { memo, useEffect } from 'react';
 import { createPortal } from 'react-dom';

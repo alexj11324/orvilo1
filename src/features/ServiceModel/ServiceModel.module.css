@@ -1,0 +1,11 @@
+@reference "../../app/globals.css";
+
+/* Only the three label-alignment declarations are owned here. The repeated
+   local class (specificity 0,4,1) beats the actual Form root/item/label rule
+   (0,3,1) regardless of asynchronous registered-style insertion order.
+   The existing public FormItem.className and label DOM remain unchanged. */
+.centeredLabel.centeredLabel.centeredLabel :global(.ant-form-item-label) > label {
+  @apply items-center;
+  block-size: 100%;
+  min-block-size: calc(var(--spacing) * 9);
+}

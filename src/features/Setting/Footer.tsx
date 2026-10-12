@@ -1,7 +1,6 @@
 'use client';
 
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { createStaticStyles } from 'antd-style';
 import { MessageSquareHeart } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
 import { memo } from 'react';
@@ -13,12 +12,7 @@ import { GITHUB, GITHUB_ISSUES } from '@/const/url';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { isOnServerSide } from '@/utils/env';
 
-const styles = createStaticStyles(
-  ({ css, cssVar }) => css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-);
+const styles = 'text-xs text-muted-foreground';
 
 export const LayoutSettingsFooterClassName = 'settings-layout-footer';
 
@@ -77,12 +71,10 @@ const Footer = memo<PropsWithChildren>(() => {
 
   return hideGitHubEngagementFooter ? null : (
     <div className={`flex flex-col justify-end ${LayoutSettingsFooterClassName}`}>
-      <footer
-        className={`flex items-center justify-center flex-none w-full ${styles}`}
-        style={{ padding: 16 }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <MessageSquareHeart /> {`${t('footer.title')} `}
+      <footer className={`flex items-center justify-center flex-none w-full p-4 ${styles}`}>
+        <div className="text-center">
+          <MessageSquareHeart className="inline-block size-4 align-middle" />{' '}
+          {`${t('footer.title')} `}
           <a
             href={GITHUB}
             onClick={(e) => {

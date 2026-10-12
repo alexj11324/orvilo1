@@ -27,10 +27,11 @@ export const useIsMobile = (): boolean => {
 };
 
 // Existing document menus default lg=true during server/first rendering.
+// Pass false when the original surface starts with an unset lg breakpoint.
 // "Large" names the actual screenLG viewport role, not a platform or mobile inverse.
-export const useIsLargeViewport = (): boolean => {
+export const useIsLargeViewport = (serverSnapshot = true): boolean => {
   const largeMinWidth = useResolvedLargeMinWidth();
-  return useViewportMediaQuery(`(min-width: ${largeMinWidth}px)`, true);
+  return useViewportMediaQuery(`(min-width: ${largeMinWidth}px)`, serverSnapshot);
 };
 
 // Acceptance flow tabs retain the former md=false server/first-render contract.

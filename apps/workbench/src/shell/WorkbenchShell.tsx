@@ -1,7 +1,6 @@
 'use client';
 
 import { ModalHost as BaseModalHost, ToastHost as BaseToastHost } from '@lobehub/ui/base-ui';
-import { StyleProvider } from 'antd-style';
 import { memo, type PropsWithChildren } from 'react';
 
 import { ModalHost } from '@/components/Modal';
@@ -24,9 +23,7 @@ const WorkbenchShell = memo<WorkbenchShellProps>(({ children, resources, locale:
   return (
     <WorkbenchLocale defaultLang={locale} resources={resources}>
       <WorkbenchTheme>
-        <TooltipProvider>
-          <StyleProvider speedy={import.meta.env.PROD}>{children}</StyleProvider>
-        </TooltipProvider>
+        <TooltipProvider>{children}</TooltipProvider>
         <BaseModalHost />
         <BaseToastHost />
         <ModalHost />

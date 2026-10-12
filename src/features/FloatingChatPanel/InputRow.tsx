@@ -1,11 +1,23 @@
 'use client';
 
-import { createGlobalStyle } from 'antd-style';
-import { type FocusEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
+import './FloatingChatPanel.module.css';
+
+import {
+  type FocusEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { flushSync } from 'react-dom';
 
 import { ChatInput } from '@/features/Conversation';
 import { inputSelectors, useConversationStore } from '@/features/Conversation/store';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import HoverExpandBar from './HoverExpandBar';
 
@@ -14,17 +26,25 @@ const styles = {
   surface: '[view-transition-name:floating-chat-panel-input]',
 };
 
-const InputRowViewTransitionStyle = createGlobalStyle`
-  ::view-transition-old(floating-chat-panel-input),
-  ::view-transition-new(floating-chat-panel-input) {
-    animation-duration: 240ms;
-    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
-  }
-`;
-
 interface ViewTransitionLike {
   finished: Promise<void>;
+  skipTransition: () => void;
 }
+
+interface ActiveViewTransition {
+  restore: () => void;
+  transition: ViewTransitionLike;
+}
+
+type ActiveViewTransitionRef = { current: ActiveViewTransition | null };
+
+const cancelActiveViewTransition = (activeRef: ActiveViewTransitionRef) => {
+  const active = activeRef.current;
+  if (!active) return;
+  // Public platform cancellation skips the visual capture, not its DOM update.
+  active.transition.skipTransition();
+  active.restore();
+};
 
 type DocumentWithVT = Document & {
   startViewTransition?: (cb: () => void) => ViewTransitionLike;
@@ -42,8 +62,18 @@ const supportsViewTransition =
 // suppresses the default root snapshot, so only the named `floating-chat-panel-input`
 // element participates. Elements outside the panel keep their native CSS animations
 // instead of being frozen under the root crossfade.
-const commitWithViewTransition = (commit: () => void) => {
-  if (!supportsViewTransition) {
+const commitWithViewTransition = (
+  commit: () => void,
+  disableMotion: boolean,
+  activeRef: ActiveViewTransitionRef,
+) => {
+  cancelActiveViewTransition(activeRef);
+  if (
+    !supportsViewTransition ||
+    disableMotion ||
+    userGeneralSettingsSelectors.animationMode(useUserStore.getState()) === 'disabled' ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
     commit();
     return;
   }
@@ -54,10 +84,17 @@ const commitWithViewTransition = (commit: () => void) => {
     // eslint-disable-next-line @eslint-react/dom/no-flush-sync
     flushSync(commit);
   });
-  const restore = () => {
-    root.style.viewTransitionName = previousViewTransitionName;
+  const active: ActiveViewTransition = {
+    restore: () => {
+      // An earlier finished promise must not restore over a newer transition.
+      if (activeRef.current !== active) return;
+      root.style.viewTransitionName = previousViewTransitionName;
+      activeRef.current = null;
+    },
+    transition,
   };
-  transition.finished.then(restore, restore);
+  activeRef.current = active;
+  transition.finished.then(active.restore, active.restore);
 };
 
 const EMPTY_ACTIONS: never[] = [];
@@ -72,15 +109,43 @@ export interface InputRowProps {
 
 const InputRow = memo<InputRowProps>(({ isCollapsed, onExpand, showExpandBar = true }) => {
   const s = styles;
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const reducedMotion = useSyncExternalStore(
+    useCallback((onChange: () => void) => {
+      const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+      query.addEventListener('change', onChange);
+      return () => query.removeEventListener('change', onChange);
+    }, []),
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    () => false,
+  );
+  const disableMotion = animationMode === 'disabled' || reducedMotion;
+  const activeTransitionRef = useRef<ActiveViewTransition | null>(null);
+
+  useLayoutEffect(() => {
+    if (disableMotion) cancelActiveViewTransition(activeTransitionRef);
+  }, [disableMotion]);
+
+  useLayoutEffect(() => () => cancelActiveViewTransition(activeTransitionRef), []);
+
   const [renderedCollapsed, setRenderedCollapsed] = useState(isCollapsed);
+  const collapsedRef = useRef(isCollapsed);
   const [focused, setFocused] = useState(false);
   const focusedRef = useRef(false);
   const overlayHeight = useConversationStore(inputSelectors.chatInputOverlayHeight);
 
+  useLayoutEffect(() => {
+    collapsedRef.current = isCollapsed;
+  }, [isCollapsed]);
+
   useEffect(() => {
     if (renderedCollapsed === isCollapsed) return;
-    commitWithViewTransition(() => setRenderedCollapsed(isCollapsed));
-  }, [isCollapsed, renderedCollapsed]);
+    commitWithViewTransition(
+      () => setRenderedCollapsed(collapsedRef.current),
+      disableMotion,
+      activeTransitionRef,
+    );
+  }, [disableMotion, isCollapsed, renderedCollapsed]);
 
   // Focus inside the collapsed strip releases the compact rendering so the action bar
   // (Send + actions) shows while the panel itself stays collapsed. Blurring back outside
@@ -88,22 +153,32 @@ const InputRow = memo<InputRowProps>(({ isCollapsed, onExpand, showExpandBar = t
   const handleFocus = useCallback(() => {
     if (focusedRef.current) return;
     focusedRef.current = true;
-    commitWithViewTransition(() => setFocused(true));
-  }, []);
+    commitWithViewTransition(
+      () => setFocused(focusedRef.current),
+      disableMotion,
+      activeTransitionRef,
+    );
+  }, [disableMotion]);
 
-  const handleBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
-    const next = event.relatedTarget as Node | null;
-    if (next && event.currentTarget.contains(next)) return;
-    if (!focusedRef.current) return;
-    focusedRef.current = false;
-    commitWithViewTransition(() => setFocused(false));
-  }, []);
+  const handleBlur = useCallback(
+    (event: FocusEvent<HTMLDivElement>) => {
+      const next = event.relatedTarget as Node | null;
+      if (next && event.currentTarget.contains(next)) return;
+      if (!focusedRef.current) return;
+      focusedRef.current = false;
+      commitWithViewTransition(
+        () => setFocused(focusedRef.current),
+        disableMotion,
+        activeTransitionRef,
+      );
+    },
+    [disableMotion],
+  );
 
   const effectiveCompact = renderedCollapsed && !focused;
 
   return (
     <>
-      <InputRowViewTransitionStyle />
       <div
         className={s.row}
         data-collapsed={isCollapsed}

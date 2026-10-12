@@ -11,9 +11,9 @@ import {
 } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'clsx';
 import { ChevronDown, Plus } from 'lucide-react';
-import { useMotionValue, useSpring } from 'motion/react';
+import { useMotionValue } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +33,7 @@ import { electronStylish } from '@/styles/electron';
 
 import { useResolvedTabs } from './hooks/useResolvedTabs';
 import { useStripWidth } from './hooks/useStripWidth';
-import { TAB_SPRING } from './motion';
+import { useTabMotionDisabled, useTabSpring } from './motion';
 import { resolveTabScope } from './scope';
 import { useStyles } from './styles';
 import TabItem from './TabItem';
@@ -55,6 +55,7 @@ const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y
 
 const TabBar = () => {
   const styles = useStyles;
+  const disableMotion = useTabMotionDisabled();
   const location = useActiveLocation();
   useRegisterDesktopTabHotkeys();
   const { t } = useTranslation('electron');
@@ -109,10 +110,10 @@ const TabBar = () => {
 
   const tabsById = useMemo(() => new Map(tabs.map((tab) => [tab.tab.id, tab])), [tabs]);
 
-  const targetTotal = useMotionValue(0);
-  const springTotal = useSpring(targetTotal, TAB_SPRING);
+  const targetTotal = useMotionValue(disableMotion ? total : 0);
+  const springTotal = useTabSpring(targetTotal, disableMotion);
   const targetDividerX = useMotionValue(dividerX);
-  const springDividerX = useSpring(targetDividerX, TAB_SPRING);
+  const springDividerX = useTabSpring(targetDividerX, disableMotion);
 
   // Read during render, so it still holds the width the strip had on the previous commit
   // — which is exactly where a tab appended this commit should enter from.
@@ -258,6 +259,7 @@ const TabBar = () => {
   return (
     <div
       className={cx(styles.container, 'flex items-center gap-0.5')}
+      data-disable-motion={disableMotion || undefined}
       ref={stripRef}
       onPointerEnter={captureVisibleTabPreviews}
     >

@@ -1,8 +1,7 @@
 import { type UIChatMessage } from '@orvilo/types';
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { DownloadIcon, FileText } from 'lucide-react';
-import { cloneElement, memo, type ReactElement, type ReactNode, useState } from 'react';
+import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toast } from '@/components/toast';
@@ -21,21 +20,10 @@ import { containerStyles, styles } from '../style';
 import PdfPreview from './PdfPreview';
 import { usePdfGeneration } from './usePdfGeneration';
 
-interface FieldSwitchProps {
-  checked?: boolean;
-  onChange?: (checked: boolean) => void;
-}
-
-const FieldSwitch = ({ checked, onChange }: FieldSwitchProps) => (
-  <Switch checked={checked} onCheckedChange={onChange} />
-);
-
 interface ShareFormItem {
-  children: ReactElement<Record<string, unknown>>;
   label: ReactNode;
   layout?: 'horizontal' | 'vertical';
   name: keyof FieldType;
-  valuePropName?: 'checked' | 'activeKey';
 }
 
 const DEFAULT_FIELD_VALUE: FieldType = {
@@ -54,32 +42,24 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
 
   const settings: ShareFormItem[] = [
     {
-      children: <FieldSwitch />,
       label: t('shareModal.withSystemRole'),
       layout: 'horizontal',
       name: 'withSystemRole',
-      valuePropName: 'checked',
     },
     {
-      children: <FieldSwitch />,
       label: t('shareModal.withRole'),
       layout: 'horizontal',
       name: 'withRole',
-      valuePropName: 'checked',
     },
     {
-      children: <FieldSwitch />,
       label: t('shareModal.includeUser'),
       layout: 'horizontal',
       name: 'includeUser',
-      valuePropName: 'checked',
     },
     {
-      children: <FieldSwitch />,
       label: t('shareModal.includeTool'),
       layout: 'horizontal',
       name: 'includeTool',
-      valuePropName: 'checked',
     },
   ];
 
@@ -162,7 +142,7 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
           className={cx(containerStyles.preview, containerStyles.previewWide)}
           style={{ padding: 12 }}
         >
-          <div style={{ color: 'red', textAlign: 'center' }}>
+          <div className="text-center text-destructive-text">
             {t('shareModal.pdfGenerationError')}: {error}
           </div>
         </div>
@@ -175,16 +155,12 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
                 orientation={item.layout === 'vertical' ? 'vertical' : 'horizontal'}
               >
                 <FieldLabel>{item.label}</FieldLabel>
-                {item.valuePropName
-                  ? cloneElement(item.children, {
-                      [item.valuePropName]: fieldValue[item.name],
-                      onChange: (v: unknown) => {
-                        setFieldValue((prev) => ({ ...prev, [item.name]: v }) as typeof prev);
-                        const onChange = item.children.props['onChange'];
-                        if (typeof onChange === 'function') onChange(v);
-                      },
-                    })
-                  : item.children}
+                <Switch
+                  checked={fieldValue[item.name]}
+                  onCheckedChange={(checked) =>
+                    setFieldValue((previous) => ({ ...previous, [item.name]: checked }))
+                  }
+                />
               </Field>
             ))}
           </FieldGroup>
@@ -208,16 +184,12 @@ const SharePdf = memo((props: { message?: UIChatMessage }) => {
               orientation={item.layout === 'vertical' ? 'vertical' : 'horizontal'}
             >
               <FieldLabel>{item.label}</FieldLabel>
-              {item.valuePropName
-                ? cloneElement(item.children, {
-                    [item.valuePropName]: fieldValue[item.name],
-                    onChange: (v: unknown) => {
-                      setFieldValue((prev) => ({ ...prev, [item.name]: v }) as typeof prev);
-                      const onChange = item.children.props['onChange'];
-                      if (typeof onChange === 'function') onChange(v);
-                    },
-                  })
-                : item.children}
+              <Switch
+                checked={fieldValue[item.name]}
+                onCheckedChange={(checked) =>
+                  setFieldValue((previous) => ({ ...previous, [item.name]: checked }))
+                }
+              />
             </Field>
           ))}
         </FieldGroup>

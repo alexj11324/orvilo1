@@ -1,0 +1,11 @@
+@reference "../../app/globals.css";
+
+.compactLabel {
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker :global(.orvilo-model-info-tags) { display: none; }

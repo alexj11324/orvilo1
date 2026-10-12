@@ -1,0 +1,6 @@
+@reference "../../app/globals.css";
+
+.icon {
+  @apply flex-none;
+  box-shadow: 0 0 0 1px var(--selected);
+}

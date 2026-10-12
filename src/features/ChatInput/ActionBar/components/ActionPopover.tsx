@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import type { CSSProperties, ReactNode } from 'react';
 import { createContext, memo, Suspense, use, useCallback, useMemo, useState } from 'react';
 

@@ -1,0 +1,72 @@
+/* Registration remains global: without <angle> interpolation the sweep jumps. */
+@property --orvilo-generating-border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.shell {
+  position: relative;
+  /* Outer task/composer card. Wrapped fields keep their independent input role. */
+  border-radius: var(--radius-card);
+}
+
+/* Clip only while generating; a resting input's focus glow must escape. */
+.shellGenerating {
+  overflow: hidden;
+}
+
+.shellGenerating::after {
+  pointer-events: none;
+  content: '';
+
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+
+  /* Mask geometry, not control spacing: keep the exact 2px edge at every root size. */
+  padding: 2px;
+  border-radius: inherit;
+
+  /* Ongoing work uses primary. No success/error/warning meanings or fixed palette. */
+  background: conic-gradient(
+    from var(--orvilo-generating-border-angle),
+    var(--divider) 0deg 210deg,
+    var(--primary) 238deg,
+    var(--primary) 258deg,
+    var(--primary) 278deg,
+    var(--primary) 298deg,
+    var(--primary) 318deg,
+    var(--primary) 338deg,
+    var(--divider) 360deg
+  );
+
+  /* White here encodes opaque mask alpha; it does not paint a white surface. */
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+
+  /* Continuous status cycle, not a state/popover transition. */
+  animation: generatingBorderFlow 1.8s linear infinite;
+}
+
+@keyframes generatingBorderFlow {
+  from {
+    --orvilo-generating-border-angle: 0deg;
+  }
+  to {
+    --orvilo-generating-border-angle: 360deg;
+  }
+}
+
+.shellMotionStopped::after {
+  animation: none;
+}
+
+/* Also protects the initial render before the live system subscription settles. */
+@media (prefers-reduced-motion: reduce) {
+  .shellGenerating::after {
+    animation: none;
+  }
+}

@@ -12,6 +12,7 @@ const styles = {
 };
 
 interface LockedLibIconProps {
+  color?: string;
   size?: number;
 }
 
@@ -21,10 +22,12 @@ interface LockedLibIconProps {
  * cannot open it. Use this everywhere a member-restricted KB renders an icon,
  * so the state reads the same across sidebar, cards, and pickers.
  */
-const LockedLibIcon = memo<LockedLibIconProps>(({ size = 20 }) => (
+const LockedLibIcon = memo<LockedLibIconProps>(({ color, size = 20 }) => (
   <span className={styles.root}>
-    <LibIcon size={size} />
-    <span className={styles.badge}>{createElement(LockIcon, { size: 14 })}</span>
+    <LibIcon color={color} size={size} />
+    <span className={styles.badge} style={color === undefined ? undefined : { color }}>
+      {createElement(LockIcon, { size: 14 })}
+    </span>
   </span>
 ));
 

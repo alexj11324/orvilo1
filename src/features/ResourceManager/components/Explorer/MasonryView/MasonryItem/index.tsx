@@ -3,8 +3,7 @@ import {
   CUSTOM_FOLDER_FILE_TYPE,
   MARKDOWN_MIME_TYPES,
 } from '@orvilo/const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { LockIcon } from 'lucide-react';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +29,7 @@ import AudioFileItem from './AudioFileItem';
 import DefaultFileItem from './DefaultFileItem';
 import ImageFileItem from './ImageFileItem';
 import MarkdownFileItem from './MarkdownFileItem';
+import nativeStyles from './MasonryItem.module.css';
 import NoteFileItem from './NoteFileItem';
 import VideoFileItem from './VideoFileItem';
 import WebpageFileItem from './WebpageFileItem';
@@ -75,83 +75,20 @@ const isCustomPage = (fileType?: string, name?: string) => {
   return !isPDF && !isOfficeFile && fileType === CUSTOM_NOTE_TYPE;
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    cursor: pointer;
-
-    position: relative;
-
-    overflow: hidden;
-
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: var(--radius-card);
-
-    background: ${cssVar.colorBgContainer};
-
-    transition:
-      border-color ${cssVar.motionDurationFast},
-      box-shadow ${cssVar.motionDurationFast},
-      background-color ${cssVar.motionDurationFast};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimary};
-      box-shadow: ${cssVar.boxShadowTertiary};
-
-      .actions {
-        opacity: 1;
-      }
-
-      .checkbox {
-        opacity: 1;
-      }
-
-      .dropdown {
-        opacity: 1;
-      }
-
-      .floatingChunkBadge {
-        opacity: 1;
-      }
-    }
-  `,
-  privateBadge: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-end: 8px;
-    inset-inline-start: 8px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 4px;
-    border-radius: var(--radius-chip);
-
-    color: var(--overlay-mask-foreground);
-
-    background: var(--overlay-mask);
-  `,
-  dragOver: css`
-    border-color: ${cssVar.colorText} !important;
-    color: ${cssVar.colorBgElevated} !important;
-    background-color: ${cssVar.colorText} !important;
-
-    * {
-      color: ${cssVar.colorBgElevated} !important;
-    }
-  `,
-  selected: css`
-    border-color: ${cssVar.colorPrimary};
-    background: var(--selected);
-
-    .checkbox {
-      opacity: 1;
-    }
-  `,
-}));
+const styles = {
+  card: cn(
+    'relative cursor-pointer overflow-hidden rounded-(--radius-card) border border-divider bg-card transition-[border-color,box-shadow,background-color] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-out) hover:border-primary hover:shadow-(--shadow-raised)',
+    nativeStyles.card,
+  ),
+  privateBadge:
+    'absolute z-2 inset-be-2 start-2 flex items-center justify-center rounded-(--radius-chip) bg-overlay-mask p-1 text-overlay-mask-foreground',
+  dragOver: nativeStyles.dragOver,
+  selected: cn('border-primary bg-selected', nativeStyles.selected),
+};
 
 const twStyles = {
-  actions: 'opacity-0 transition-opacity duration-(--orvilo-motion-mid)',
+  actions:
+    'opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-out)',
   checkbox:
     'absolute z-2 inset-bs-2 start-2 opacity-0 transition-opacity duration-(--orvilo-motion-mid)',
   content: 'relative',
@@ -341,6 +278,7 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
         draggable={!!knowledgeBaseId}
         ref={cardRef}
         className={cx(
+          'orvilo-motion-scope',
           styles.card,
           selected && styles.selected,
           isDragging && twStyles.dragging,

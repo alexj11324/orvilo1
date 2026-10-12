@@ -48,7 +48,7 @@ const Notification = memo<NotificationProps>(
         <div
           style={{ height, width: mobile ? 'calc(100% - 16px)' : width }}
           className={cx(
-            'absolute z-[1100] end-5 inset-be-4 flex flex-col overflow-hidden rounded-(--radius-overlay) border border-divider bg-card text-sm leading-5.5 text-foreground shadow-(--shadow-popover)',
+            'absolute z-1100 end-5 inset-be-4 flex flex-col overflow-hidden rounded-(--radius-overlay) border border-divider bg-card text-sm leading-5.5 text-foreground shadow-(--shadow-popover)',
             mobile && 'start-2 inset-be-2',
             className,
           )}

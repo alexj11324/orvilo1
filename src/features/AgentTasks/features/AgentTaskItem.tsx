@@ -1,5 +1,4 @@
 import type { TaskStatus } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { MessageSquareTextIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
@@ -23,7 +22,6 @@ import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
 import type { TaskStatusChoice } from '../AgentTaskList/kanbanBoardModel';
-import { ISSUE_ID_WIDTH_VAR } from '../shared/issueIdColumn';
 import LinearTaskSyncStatus from '../shared/LinearTaskSyncStatus';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
@@ -48,61 +46,17 @@ import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 // width the list actually has (a peek pane narrows it) — lowest priority
 // first: labels, then milestone, then project — instead of overlapping the
 // identifier and title. The assignee and date always stay.
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chipLabels: css`
-    @container issue-row (max-width: 760px) {
-      display: none;
-    }
-  `,
-  chipMilestone: css`
-    display: flex;
-
-    @container issue-row (max-width: 640px) {
-      display: none;
-    }
-  `,
-  chipProject: css`
-    display: flex;
-
-    @container issue-row (max-width: 540px) {
-      display: none;
-    }
-  `,
-  identifier: css`
-    flex: none;
-
-    min-width: var(${ISSUE_ID_WIDTH_VAR}, auto);
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  `,
-  parent: css`
-    min-width: 68px;
-    max-width: 240px;
-    font-size: 12px;
-  `,
-  parentSeparator: css`
-    flex: none;
-    width: 17px;
-    font-size: 12px;
-    text-align: center;
-  `,
-  row: css`
-    cursor: pointer;
-    container: issue-row / inline-size;
-    min-height: 44px;
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  title: css`
-    min-width: 0;
-    font-size: 14px;
-  `,
-}));
+const styles = {
+  chipLabels: '[@container_issue-row_(width<=760px)]:hidden',
+  chipMilestone: 'flex [@container_issue-row_(width<=640px)]:hidden',
+  chipProject: 'flex [@container_issue-row_(width<=540px)]:hidden',
+  identifier:
+    'flex-none min-w-[var(--issue-id-width,auto)] font-mono text-xs leading-5 tabular-nums',
+  parent: 'min-w-17 max-w-60 text-xs leading-5',
+  parentSeparator: 'flex-none w-4.25 text-xs leading-5 text-center',
+  row: 'cursor-pointer [container:issue-row/inline-size] min-h-11 rounded-(--radius-button) hover:bg-accent flex flex-col gap-1 justify-center py-1 pe-3',
+  title: 'min-w-0 text-sm leading-5.5',
+};
 
 export type TaskItemRouteScope = 'agent' | 'global';
 
@@ -242,19 +196,19 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   // status mark is the workflow state when the task has one. A nameless task
   // has no separate title, so its identifier renders as the row text instead.
   const titleRow = (
-    <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+    <div className="flex items-center gap-2 min-w-0">
       <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
       {hasName ? (
         <div className={cn('text-muted-foreground', styles.identifier)}>{task.identifier}</div>
       ) : null}
       <span
+        className="inline-flex flex-none"
         data-collab-id={`task:${task.id}:status`}
         data-collab-id-alt={`task:${task.identifier}:status`}
-        style={{ display: 'inline-flex', flex: 'none' }}
       >
         <IssueStatusPicker
           glyph={workflowGlyph}
-          size={14}
+          size={16}
           taskIdentifier={task.identifier}
           teamId={task.teamId}
           workflowCategory={task.workflowCategory}
@@ -368,7 +322,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         <ActionIcon
           aria-label={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}
           icon={MessageSquareTextIcon}
-          size={'small'}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
           onClick={(event) => {
             event.stopPropagation();
             openTopicDrawer(task.currentTopicId!, {
@@ -392,11 +346,10 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
 
   const timeNode = time ? (
     <div
-      className="text-right font-mono text-xs text-muted-foreground"
+      className="text-right font-mono text-xs leading-5 text-muted-foreground min-w-12 whitespace-nowrap"
       // A fixed 48px box let a longer date ("12月 31日", "Dec 31, 2025") run past
       // the row's right edge; a minimum keeps the column and lets the box grow
       // toward the title instead.
-      style={{ minWidth: 48, whiteSpace: 'nowrap' }}
     >
       {time}
     </div>
@@ -410,19 +363,12 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         data-collab-private={isPrivate || undefined}
         data-issue-row={task.identifier}
         role="button"
+        style={{ paddingInlineStart: insetStart }}
         tabIndex={0}
         className={cn(
           styles.row,
           'outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset',
         )}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          justifyContent: 'center',
-          paddingBlock: 4,
-          paddingInline: `${insetStart}px 12px`,
-        }}
         onClick={handleClick}
         onKeyDown={(event) => inboxRowSelectKeyDown(event, handleClick)}
       >
@@ -434,11 +380,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
                 hook (`rowHideLabels`). */}
             <div className="flex flex-none items-center gap-1">
               {task.labels?.length ? (
-                <div
-                  data-task-labels
-                  className={styles.chipLabels}
-                  style={{ flex: 'none', minWidth: 0 }}
-                >
+                <div data-task-labels className={cn(styles.chipLabels, 'flex-none min-w-0')}>
                   <LabelChips labels={task.labels} max={2} />
                 </div>
               ) : null}

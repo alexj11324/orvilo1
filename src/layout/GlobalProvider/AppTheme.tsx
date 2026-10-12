@@ -2,10 +2,13 @@
 
 import '@/styles/fonts.css';
 
-import { type NeutralColors, type PrimaryColors } from '@lobehub/ui';
-import ConfigProvider from '@lobehub/ui/es/ConfigProvider/index';
-import FontLoader from '@lobehub/ui/es/FontLoader/index';
-import ThemeProvider from '@lobehub/ui/es/ThemeProvider/ThemeProvider';
+import {
+  ConfigProvider,
+  FontLoader,
+  type NeutralColors,
+  type PrimaryColors,
+  ThemeProvider,
+} from '@lobehub/ui';
 import * as m from 'motion/react-m';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -134,6 +137,9 @@ const AppTheme = memo<AppThemeProps>(
               primaryColor: primaryColor ?? defaultPrimaryColor,
             }}
             theme={{
+              components: {
+                Popover: { zIndexPopup: 1300 },
+              },
               cssVar: { key: 'orvilo-vars' },
               token: {
                 fontFamily,

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Fragment, memo } from 'react';
 
 import Cell from '@/components/Cell';
@@ -8,18 +7,10 @@ import Divider from '@/components/Cell/Divider';
 
 import { useCategory } from './useCategory';
 
-const styles = createStaticStyles(({ css }) => ({
-  groupTitle: css`
-    padding-block: 16px 4px;
-    padding-inline: 16px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  `,
-}));
+const styles = {
+  groupTitle:
+    'pbs-4 pbe-1 px-4 text-xs font-medium leading-5 text-muted-foreground uppercase tracking-[calc(var(--spacing)*0.125)]',
+};
 
 const Category = memo(() => {
   const groups = useCategory();

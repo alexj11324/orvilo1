@@ -1,6 +1,5 @@
 import { type IconAvatarProps } from '@lobehub/icons';
 import { type ChatModelCard } from '@orvilo/types';
-import { useResponsive } from 'antd-style';
 import { cn } from 'cn';
 import {
   AudioLines,
@@ -17,6 +16,7 @@ import numeral from 'numeral';
 import { createElement, type CSSProperties, type FC, type HTMLAttributes } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding';
@@ -26,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { type AiProviderSourceType } from '@/types/aiProvider';
 import { formatTokenNumber } from '@/utils/format';
 
+import nativeStyles from './ModelSelect.module.css';
 import NewModelBadgeI18n, { NewModelBadge as NewModelBadgeCore } from './NewModelBadge';
 
 export const TAG_CLASSNAME = 'orvilo-model-info-tags';
@@ -188,7 +189,7 @@ const Context = memo(
 
     const tag = (
       <Badge className={styles.token} size="sm" variant="secondary">
-        {contextWindowTokens === 0 ? <InfinityIcon size={17} strokeWidth={1.6} /> : tokensText}
+        {contextWindowTokens === 0 ? <InfinityIcon size={16} strokeWidth={1.6} /> : tokensText}
       </Badge>
     );
 
@@ -269,13 +270,13 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
     className,
     style,
   }) => {
-    const { mobile } = useResponsive();
+    const mobile = useMediaQuery({ query: '(max-width: 575px)' });
     const displayNameOrId = displayName || id;
 
     return (
       <div
-        className={cn('flex gap-8 items-center justify-between', className)}
-        style={{ overflow: 'hidden', position: 'relative', width: '100%', ...style }}
+        className={cn(nativeStyles.modelRoot, 'flex gap-8 items-center justify-between', className)}
+        style={style}
       >
         <div className={'flex min-w-0 shrink items-center gap-2 overflow-hidden'}>
           <ModelIcon model={id} size={20} />
@@ -283,8 +284,7 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
             <TooltipTrigger
               render={
                 <div
-                  className="min-w-0 truncate text-sm leading-5.5"
-                  style={mobile ? { maxWidth: '60vw' } : undefined}
+                  className={cn('min-w-0 truncate text-sm leading-5.5', mobile && 'max-w-[60vw]')}
                 >
                   {displayNameOrId}
                 </div>

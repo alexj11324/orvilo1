@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import { memo, useState } from 'react';

@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import type { ReactNode } from 'react';
 
 /**
@@ -9,47 +8,11 @@ import type { ReactNode } from 'react';
 const INDENT_STEP = 24;
 const CONNECTOR_SPAN = 16;
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    // Elbow drawn from the row's top edge down to its vertical centre, so a
-    // child reads as hanging off the row above it rather than off the group.
-    connector: css`
-      position: relative;
-
-      flex: none;
-      align-self: stretch;
-
-      inline-size: 12px;
-      margin-inline-end: 4px;
-
-      &::before {
-        content: '';
-
-        position: absolute;
-        inset-block: 0 50%;
-        inset-inline-start: 0;
-
-        inline-size: 8px;
-        border-block-end: 1px solid ${cssVar.colorBorder};
-        border-inline-start: 1px solid ${cssVar.colorBorder};
-        border-end-start-radius: 4px;
-      }
-    `,
-    // Context-only rows are dimmed without fading the text: a row-level opacity
-    // took the secondary text to ~2.1:1 on light. The title steps down to the
-    // secondary text role (the identifier/date are already there, ~5.7:1) and only
-    // the glyphs and avatars, which carry no text, are faded.
-    muted: css`
-      color: ${cssVar.colorTextSecondary};
-
-      & svg,
-      & [data-slot='avatar'],
-      & .orvilo-avatar {
-        opacity: 0.5;
-      }
-    `,
-  };
-});
+const styles = {
+  connector:
+    "relative flex-none self-stretch [inline-size:--spacing(3)] me-1 before:content-[''] before:absolute before:[inset-block:0_50%] before:start-0 before:[inline-size:--spacing(2)] before:border-be before:border-s before:border-border before:[border-end-start-radius:--spacing(1)]",
+  muted: 'text-muted-foreground',
+};
 
 interface TaskRowIndentProps {
   children: ReactNode;
@@ -71,9 +34,7 @@ const TaskRowIndent = ({ children, depth, muted }: TaskRowIndentProps) => {
       style={depth > 0 ? { paddingInlineStart: depth * INDENT_STEP - CONNECTOR_SPAN } : undefined}
     >
       {depth > 0 && <div className={styles.connector} />}
-      <div className="flex-1" style={{ minWidth: 0 }}>
-        {children}
-      </div>
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
   );
 };

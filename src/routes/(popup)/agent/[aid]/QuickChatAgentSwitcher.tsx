@@ -2,7 +2,6 @@
 
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontalIcon } from 'lucide-react';
@@ -25,7 +24,8 @@ import { homeAgentListSelectors } from '@/store/home/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const VISIBLE_LIMIT = 5;
-const AVATAR_SIZE = 30;
+// Runtime branding is an identity image; use its public24 frame inside compact32.
+const AVATAR_SIZE = 24;
 
 interface SwitchItem {
   avatar?: string;
@@ -36,85 +36,18 @@ interface SwitchItem {
   title: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  active: css`
-    border-color: ${cssVar.colorPrimary};
-    box-shadow: 0 0 0 2px ${cssVar.colorPrimaryBgHover};
-  `,
-  itemBtn: css`
-    cursor: pointer;
-
-    box-sizing: content-box;
-    padding: 0;
-    border: 1.5px solid transparent;
-    border-radius: 8px;
-
-    opacity: 0.65;
-    background: transparent;
-
-    transition:
-      opacity 0.15s,
-      border-color 0.15s,
-      box-shadow 0.15s;
-
-    &:hover {
-      opacity: 1;
-    }
-  `,
-  more: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: ${AVATAR_SIZE}px;
-    height: ${AVATAR_SIZE}px;
-    border: 1.5px solid transparent;
-    border-radius: 8px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  popover: css`
-    padding: 0;
-  `,
-  popoverContent: css`
-    width: 240px;
-    padding: 8px;
-  `,
-  popoverEmpty: css`
-    padding-block: 16px;
-    padding-inline: 8px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  popoverList: css`
-    overflow: auto;
-    max-height: 240px;
-  `,
-  popoverRow: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-radius: 6px;
-
-    color: ${cssVar.colorText};
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
+const styles = {
+  active: 'border-primary bg-selected hover:bg-selected ring-2 ring-(color:--highlight-primary)',
+  itemBtn:
+    'cursor-pointer box-border inline-flex items-center justify-center size-8 p-0 border border-transparent rounded-(--radius-button) opacity-65 bg-transparent transition-[opacity,border-color,box-shadow] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-out) hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
+  more: 'flex items-center justify-center size-8 border border-transparent rounded-(--radius-button) text-muted-foreground bg-muted hover:text-foreground hover:bg-selected focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+  popover: 'p-0',
+  popoverContent: 'w-60 p-2',
+  popoverEmpty: 'py-4 px-2 text-sm text-foreground-tertiary text-center',
+  popoverList: 'overflow-auto max-h-60',
+  popoverRow:
+    'cursor-pointer flex gap-2 items-center min-h-8 py-1 px-2 rounded-(--radius-button) text-sm text-foreground hover:bg-selected',
+};
 
 const useSwitchItems = (): SwitchItem[] => {
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
@@ -204,10 +137,10 @@ const QuickChatAgentSwitcher = memo(() => {
           <Tooltip>
             <TooltipTrigger
               render={
-                <span style={{ display: 'inline-flex' }}>
+                <span className="inline-flex">
                   <button
                     aria-label={item.title}
-                    className={cx(styles.itemBtn, isActive(item) && styles.active)}
+                    className={cn(styles.itemBtn, isActive(item) && styles.active)}
                     type={'button'}
                     onClick={() => handleSelect(item)}
                   >
@@ -241,7 +174,7 @@ const QuickChatAgentSwitcher = memo(() => {
                 visualSize="compact"
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <div className={styles.popoverList} style={{ marginTop: 8 }}>
+              <div className={cn(styles.popoverList, 'mbs-2')}>
                 {filteredRemaining.length === 0 ? (
                   <div className={styles.popoverEmpty}>No agents found</div>
                 ) : (
@@ -252,16 +185,8 @@ const QuickChatAgentSwitcher = memo(() => {
                       key={item.id}
                       onClick={() => handleSelect(item)}
                     >
-                      <AssigneeAvatar agentId={item.id} size={22} />
-                      <span
-                        style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {item.title}
-                      </span>
+                      <AssigneeAvatar agentId={item.id} size={24} />
+                      <span className="truncate">{item.title}</span>
                     </div>
                   ))
                 )}

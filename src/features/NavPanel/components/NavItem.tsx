@@ -1,7 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import {
   type ComponentType,
@@ -28,9 +27,9 @@ import { type LazyActions, useLazyActions } from './useLazyActions';
 const ACTION_CLASS_NAME = 'nav-item-actions';
 const CONTENT_CLASS_NAME = 'nav-item-content';
 
-// Preserve149's public Emotion cx boundary for the open caller className.
-// Only the closed native defaults use cn; opaque registered caller classes never
-// enter Tailwind merging. Container, caller, defaults retain the public order.
+// Keep the open caller className as opaque tokens, in the same public order.
+// Only closed native defaults and owned slots enter Tailwind merging.
+// The native join preserves container, caller and defaults without deleting tokens.
 const twStyles = {
   container: 'group/nav-item relative min-w-8 overflow-hidden select-none',
   interactive:

@@ -22,7 +22,7 @@ const styles = {
   iconButton:
     'cursor-pointer inline-flex shrink-0 items-center justify-center size-8 border-0 rounded-(--radius-button) text-foreground-tertiary bg-transparent hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
   // Shares DOCK_Z_INDEX1100 with the memory popup stack.
-  pill: 'cursor-pointer fixed z-[1100] inset-be-0 start-4 inline-flex gap-1 items-center h-8 px-2 border-0 rounded-ss-(--radius-button) rounded-se-(--radius-button) text-sm leading-5.5 text-card bg-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  pill: 'cursor-pointer fixed z-1100 inset-be-0 start-4 inline-flex gap-1 items-center h-8 px-2 border-0 rounded-ss-(--radius-button) rounded-se-(--radius-button) text-sm leading-5.5 text-card bg-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
   tab: 'cursor-pointer inline-flex shrink-0 gap-1 items-center h-8 px-1.5 border-0 rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground whitespace-nowrap bg-transparent hover:text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
   tabActive: 'text-foreground bg-selected',
 };

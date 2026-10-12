@@ -1,7 +1,6 @@
 'use client';
 
 import { ModalHost as BaseModalHost, ToastHost as BaseToastHost } from '@lobehub/ui/base-ui';
-import { StyleProvider } from 'antd-style';
 import { memo, type PropsWithChildren } from 'react';
 
 import { ModalHost } from '@/components/Modal';
@@ -41,9 +40,7 @@ const ShareAppShell = memo<ShareAppShellProps>((props) => {
           featureFlags={serverConfig?.featureFlags}
           serverConfig={serverConfig?.config}
         >
-          <TooltipProvider>
-            <StyleProvider speedy={import.meta.env.PROD}>{children}</StyleProvider>
-          </TooltipProvider>
+          <TooltipProvider>{children}</TooltipProvider>
           <BaseModalHost />
           <BaseToastHost />
           <ModalHost />

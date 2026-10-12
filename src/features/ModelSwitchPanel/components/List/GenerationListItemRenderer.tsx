@@ -10,8 +10,7 @@ import {
   Icon,
   menuSharedStyles,
 } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { memo, useState } from 'react';
@@ -19,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
 import { ProviderItemRender } from '@/components/ModelSelect';
 import type { PricingMode } from '@/features/ModelSwitchPanel/components/ModelDetailPanel';
 import ModelDetailPanel from '@/features/ModelSwitchPanel/components/ModelDetailPanel';
@@ -53,16 +53,15 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
         return (
           <Flexbox
             horizontal
-            className={modelSwitchPanelStyles.menuItem}
+            className={cn(modelSwitchPanelStyles.menuItem, modelSwitchPanelStyles.tertiaryText)}
             gap={8}
-            style={{ color: cssVar.colorTextTertiary }}
             onClick={() => {
               onClose();
               navigate('/settings/provider/all');
             }}
           >
             {t('ModelSwitchPanel.emptyProvider')}
-            <Icon icon={LucideArrowRight} />
+            <Icon icon={LucideArrowRight} size={16} />
           </Flexbox>
         );
       }
@@ -83,9 +82,9 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
               source={item.provider.source}
             />
             <ActionIcon
-              className="settings-icon"
+              className={cn('settings-icon', modelSwitchPanelStyles.settingsAction)}
               icon={LucideBolt}
-              size="small"
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('ModelSwitchPanel.goToSettings')}
               onClick={(e) => {
                 e.preventDefault();
@@ -107,16 +106,15 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
         return (
           <Flexbox
             horizontal
-            className={modelSwitchPanelStyles.menuItem}
+            className={cn(modelSwitchPanelStyles.menuItem, modelSwitchPanelStyles.tertiaryText)}
             gap={8}
-            style={{ color: cssVar.colorTextTertiary }}
             onClick={() => {
               navigate(`/settings/provider/${item.provider.id}`);
               onClose();
             }}
           >
             {t('ModelSwitchPanel.emptyModel')}
-            <Icon icon={LucideArrowRight} />
+            <Icon icon={LucideArrowRight} size={16} />
           </Flexbox>
         );
       }
@@ -125,12 +123,12 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
         const key = menuKey(item.provider.id, item.model.id);
         const isActive = key === activeKey;
         return (
-          <Flexbox style={{ marginBlock: 1, marginInline: 4 }}>
+          <Flexbox className="my-px mx-1">
             <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
               <DropdownMenuSubmenuTrigger
-                style={{ paddingBlock: 8, paddingInline: 8 }}
-                className={cx(
+                className={cn(
                   menuSharedStyles.item,
+                  modelSwitchPanelStyles.menuRow,
                   isActive && modelSwitchPanelStyles.menuItemActive,
                 )}
                 onClick={() => {
@@ -167,12 +165,12 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
         const key = menuKey(singleProvider.id, item.data.model.id);
         const isActive = key === activeKey;
         return (
-          <Flexbox style={{ marginBlock: 1, marginInline: 4 }}>
+          <Flexbox className="my-px mx-1">
             <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
               <DropdownMenuSubmenuTrigger
-                style={{ paddingBlock: 8, paddingInline: 8 }}
-                className={cx(
+                className={cn(
                   menuSharedStyles.item,
+                  modelSwitchPanelStyles.menuRow,
                   isActive && modelSwitchPanelStyles.menuItemActive,
                 )}
                 onClick={() => {

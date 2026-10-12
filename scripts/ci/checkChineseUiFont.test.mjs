@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
+
+import ts from 'typescript';
 
 const guard = path.resolve(import.meta.dirname, 'checkChineseUiFont.mjs');
 
@@ -167,4 +170,87 @@ test('rejects local canonical-role redefinition in CSS, arbitrary properties and
   assert.match(result, /local native font role override: Inter_Variable/);
   assert.match(result, /local native font role override: 'SimSun'/);
   assert.match(result, /local native font role override: 'Inter Variable'/);
+});
+
+// Exercise the actual unchanged owner declarations, with only their file-read
+// boundary supplied in memory. No parser logic is copied into this test.
+function checkActualNativeProducer(
+  providerImport,
+  { mono = 'theme.fontFamilyCode', badGenerator = false } = {},
+) {
+  const source = readFileSync(guard, 'utf8');
+  const owner = ts.createSourceFile(guard, source, ts.ScriptTarget.Latest, true);
+  const names = ['importedNames', 'verifyNativeFontProducer'];
+  const declarations = names.map((name) => {
+    const node = owner.statements.find(
+      (statement) =>
+        (ts.isFunctionDeclaration(statement) && statement.name?.text === name) ||
+        (ts.isVariableStatement(statement) &&
+          statement.declarationList.declarations.some(
+            (declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === name,
+          )),
+    );
+    assert(node, `Actual guard function ${name} must exist`);
+    return node.getText(owner);
+  });
+  const roleSource = `const createThemeRoleStyles = (theme) => { return \`--font-sans: \${theme.fontFamily}; --font-mono: \${${mono}};\`; };`;
+  const appSource = `
+    ${providerImport}
+    import { useMemo } from 'react';
+    import { genFontFamily, genFontFamilyCode } from '${badGenerator ? './unowned-font' : '@/const/font'}';
+    function AppTheme({ customFontFamily, language, userFontFamily, userFontFamilyCode }) {
+      const fontFamily = useMemo(() => genFontFamily({
+        customFontFamily, locale: resolveUILocale(language).normalizedLocale, userFontFamily,
+      }), [customFontFamily, language, userFontFamily]);
+      const fontFamilyCode = useMemo(() => genFontFamilyCode({
+        locale: resolveUILocale(language).normalizedLocale, userFontFamily: userFontFamilyCode,
+      }), [language, userFontFamilyCode]);
+      return <RootTheme theme={{ token: { fontFamily, fontFamilyCode } }}><span /></RootTheme>;
+    }
+  `;
+  const root = path.resolve(import.meta.dirname, '../..');
+  return runInNewContext(declarations.join('\n') + '\nverifyNativeFontProducer()', {
+    ts,
+    path,
+    root,
+    readFileSync: (file) => {
+      if (file === path.join(root, 'src/styles/themeRoles.ts')) return roleSource;
+      if (file === path.join(root, 'src/layout/GlobalProvider/AppTheme.tsx')) return appSource;
+      throw new Error(`Unexpected producer read ${file}`);
+    },
+  });
+}
+
+test('native publisher recognizes the official public named ThemeProvider and alias', () => {
+  assert.equal(
+    checkActualNativeProducer("import { ThemeProvider as RootTheme } from '@lobehub/ui';"),
+    true,
+  );
+  assert.equal(
+    checkActualNativeProducer(
+      "import { ThemeProvider as RootTheme, ConfigProvider } from '@lobehub/ui';",
+    ),
+    true,
+  );
+});
+
+test('native publisher keeps its original deep-default provider identity', () => {
+  assert.equal(
+    checkActualNativeProducer(
+      "import RootTheme from '@lobehub/ui/es/ThemeProvider/ThemeProvider';",
+    ),
+    true,
+  );
+});
+
+test('native publisher rejects unrelated providers and altered generator or code-font mapping', () => {
+  for (const imported of [
+    "import { ThemeProvider as RootTheme } from './local-provider';",
+    "import { ConfigProvider as RootTheme } from '@lobehub/ui';",
+    "import RootTheme from '@lobehub/ui';",
+  ])
+    assert.equal(checkActualNativeProducer(imported), false);
+  const actual = "import { ThemeProvider as RootTheme } from '@lobehub/ui';";
+  assert.equal(checkActualNativeProducer(actual, { badGenerator: true }), false);
+  assert.equal(checkActualNativeProducer(actual, { mono: 'theme.fontFamily' }), false);
 });

@@ -17,10 +17,20 @@ import {
   ReactFlowProvider,
   useReactFlow,
 } from '@xyflow/react';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { ChevronRight, Maximize2, X } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Button } from '@/components/ui/button';
@@ -30,6 +40,8 @@ import { usePortalPanelWidth } from '@/features/Portal/usePortalPanelWidth';
 import RightPanel from '@/features/RightPanel';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { type GoalGraphNodeKind, graphNodeKind, graphNodeLabel } from '../../Experiments/model';
 import { type GoalGraphView, type GoalNodeView, isRunningNode } from '../goalGraphViewModel';
@@ -38,12 +50,6 @@ import { edgeDirection } from './edgeRouting';
 import ExperimentGroup, { type ExperimentGroupData } from './ExperimentGroup';
 import ExplorationEdge from './ExplorationEdge';
 import { explorationMap } from './explorationMap';
-import GraphNodeView, { GhostNodeView, type GraphNodeData } from './GraphNode';
-import { hideKinds, layoutGraph, NODE_WIDTH } from './layout';
-import { revealCenter } from './revealNode';
-import { useExplorationNavigation } from './useExplorationNavigation';
-import { useFitViewOnResize } from './useFitViewOnResize';
-
 /**
  * The exploration map. Two views: 当前阶段 (what got the goal here plus what the
  * next advance unlocks) and 全图. Edges carry their relation as a label so the
@@ -52,132 +58,25 @@ import { useFitViewOnResize } from './useFitViewOnResize';
  * overlay, not a taller box, and carries its own right-hand portal panel so
  * node drill-down keeps working.
  */
+import nativeStyles from './Graph.module.css';
+import GraphNodeView, { GhostNodeView, type GraphNodeData } from './GraphNode';
+import { hideKinds, layoutGraph, NODE_WIDTH } from './layout';
+import { revealCenter } from './revealNode';
+import { useExplorationNavigation } from './useExplorationNavigation';
+import { useFitViewOnResize } from './useFitViewOnResize';
 
-const styles = createStaticStyles(({ css }) => ({
-  canvas: css`
-    position: relative;
-    width: 100%;
-    height: 560px;
-
-    .react-flow__attribution {
-      display: none;
-    }
-
-    .react-flow__edge-path {
-      stroke: ${cssVar.colorBorder};
-      stroke-width: 1.25;
-    }
-
-    /* Provenance links can cross cards, but must not intercept their actions. */
-    .react-flow__edge,
-    .react-flow__edge * {
-      pointer-events: none;
-    }
-
-    .react-flow__edge.goal-dep .react-flow__edge-path {
-      stroke-dasharray: 5 4;
-    }
-
-    .react-flow__edge.goal-hot .react-flow__edge-path {
-      stroke: ${cssVar.colorPrimary};
-      stroke-width: 1.75;
-    }
-
-    .react-flow__edge-textbg {
-      fill: ${cssVar.colorBgLayout};
-    }
-
-    .react-flow__edge-text {
-      font-size: 10px;
-      fill: ${cssVar.colorTextTertiary};
-    }
-
-    .react-flow__controls-button {
-      border-color: ${cssVar.colorBorderSecondary};
-      background: ${cssVar.colorBgContainer};
-      fill: ${cssVar.colorTextSecondary};
-
-      &:hover {
-        background: ${cssVar.colorFillTertiary};
-      }
-    }
-  `,
-  full: css`
-    height: 100%;
-  `,
-  legend: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  legendItem: css`
-    cursor: pointer;
-    user-select: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  /* A hidden kind stays in the legend as a dimmed toggle — the way back must
-     be exactly where the way in was. */
-  legendOff: css`
-    opacity: 0.35;
-
-    &:hover {
-      opacity: 0.65;
-    }
-  `,
-  /* Fullscreen chrome floats over the canvas in two corner cards instead of a
-     full-width bar, so a node panned to the top edge is never hidden behind an
-     opaque header strip. */
-  float: css`
-    position: absolute;
-    z-index: 1;
-    inset-block-start: 16px;
-
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 14px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowTertiary};
-  `,
-  navigation: css`
-    max-width: calc(100% - 32px);
-    padding-block: 8px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowTertiary};
-  `,
-  floatRight: css`
-    inset-inline-end: 16px;
-  `,
-  overlay: css`
-    position: fixed;
-    z-index: 1000;
-    inset: 0;
-
-    display: flex;
-    flex-direction: row;
-
-    background: ${cssVar.colorBgLayout};
-  `,
-  /* The corner cards anchor to the canvas area, not the whole overlay, so the
-     portal panel opening on the right never slides under them. */
-  overlayMain: css`
-    position: relative;
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-  `,
-}));
+const styles = {
+  canvas: nativeStyles.canvas,
+  full: nativeStyles.full,
+  legend: nativeStyles.legend,
+  legendItem: nativeStyles.legendItem,
+  legendOff: nativeStyles.legendOff,
+  float: nativeStyles.float,
+  navigation: nativeStyles.navigation,
+  floatRight: nativeStyles.floatRight,
+  overlay: nativeStyles.overlay,
+  overlayMain: nativeStyles.overlayMain,
+};
 
 type GraphViewMode = 'stage' | 'all';
 
@@ -325,7 +224,26 @@ const Canvas = memo<
     navigation,
     view,
   }) => {
-    const { fitView, getInternalNode, getViewport, setCenter } = useReactFlow();
+    const {
+      fitView: rawFitView,
+      getInternalNode,
+      getViewport,
+      setCenter,
+      setViewport,
+    } = useReactFlow();
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const disableMotion = animationMode === 'disabled' || prefersReducedMotion;
+    const disableMotionRef = useRef(disableMotion);
+    useLayoutEffect(() => {
+      disableMotionRef.current = disableMotion;
+      if (disableMotion) void setViewport(getViewport(), { duration: 0 });
+    }, [disableMotion, getViewport, setViewport]);
+    const fitView = useCallback(
+      (options?: Parameters<typeof rawFitView>[0]) =>
+        rawFitView({ ...options, duration: disableMotionRef.current ? 0 : options?.duration }),
+      [rawFitView],
+    );
     const hasNavigation = !!navigation;
     const fitOptions = useMemo(
       () => ({
@@ -491,7 +409,7 @@ const Canvas = memo<
 
     const flowEdges: FlowEdge[] = useMemo(() => {
       const marker = {
-        color: cssVar.colorBorder,
+        color: 'var(--border)',
         height: 12,
         type: MarkerType.ArrowClosed,
         width: 12,
@@ -549,13 +467,13 @@ const Canvas = memo<
         ghosts
           .filter((ghost) => ghost.sourceId)
           .map((ghost) => ({
-            animated: true,
+            animated: !disableMotion,
             id: `${ghost.id}-edge`,
             source: ghost.sourceId!,
             target: ghost.id,
             type: 'default',
           })),
-      [ghosts],
+      [disableMotion, ghosts],
     );
 
     const allNodes = useMemo(() => [...flowNodes, ...ghostFlowNodes], [flowNodes, ghostFlowNodes]);
@@ -591,14 +509,18 @@ const Canvas = memo<
           viewport,
           { height, width },
         );
-        if (center) void setCenter(center.x, center.y, { duration: 200, zoom: viewport.zoom });
+        if (center)
+          void setCenter(center.x, center.y, {
+            duration: disableMotionRef.current ? 0 : 200,
+            zoom: viewport.zoom,
+          });
       }, 280);
       return () => clearTimeout(timer);
     }, [refitKey, selectedId, getInternalNode, getViewport, setCenter]);
 
     return (
       <div
-        className={className}
+        className={cx(className, disableMotion && nativeStyles.motionDisabled)}
         ref={containerRef}
         style={fullscreen ? undefined : { height: inlineHeight }}
       >
@@ -606,16 +528,7 @@ const Canvas = memo<
             Both views support drag, pinch, double-click and zoom controls;
             fullscreen also uses two-finger scrolling to pan. */}
         {graph.nodes.length === 0 && !planning && (
-          <div
-            className="flex flex-col items-center justify-center"
-            style={{
-              padding: 24,
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              zIndex: 1,
-            }}
-          >
+          <div className="pointer-events-none absolute inset-0 z-1 flex flex-col items-center justify-center p-6">
             <div className="text-muted-foreground">{t('goalExperiment.emptyGraph')}</div>
           </div>
         )}
@@ -626,7 +539,7 @@ const Canvas = memo<
           zoomOnPinch
           edgeTypes={edgeTypes}
           edges={allEdges}
-          fitViewOptions={fitOptions}
+          fitViewOptions={{ ...fitOptions, duration: disableMotion ? 0 : fitOptions.duration }}
           maxZoom={1.5}
           minZoom={0.03}
           nodeTypes={nodeTypes}
@@ -646,28 +559,25 @@ const Canvas = memo<
               {navigation}
             </Panel>
           )}
-          <Background
-            color={cssVar.colorBorderSecondary}
-            gap={18}
-            size={1}
-            variant={BackgroundVariant.Dots}
-          />
+          <Background color={'var(--divider)'} gap={18} size={1} variant={BackgroundVariant.Dots} />
           {fullscreen && (
             <MiniMap
               pannable
               zoomable
-              maskColor={cssVar.colorFillSecondary}
-              nodeStrokeColor={cssVar.colorBorder}
+              bgColor={'var(--card)'}
+              maskColor={'var(--selected)'}
+              nodeStrokeColor={'var(--border)'}
               position={'bottom-left'}
-              style={{ background: cssVar.colorBgContainer }}
               nodeColor={(node) =>
-                node.type === 'goalExperimentGroup'
-                  ? cssVar.colorFillTertiary
-                  : cssVar.colorTextSecondary
+                node.type === 'goalExperimentGroup' ? 'var(--accent)' : 'var(--muted-foreground)'
               }
             />
           )}
-          <Controls fitViewOptions={fitOptions} position={'bottom-right'} showInteractive={false} />
+          <Controls
+            fitViewOptions={{ ...fitOptions, duration: disableMotion ? 0 : fitOptions.duration }}
+            position={'bottom-right'}
+            showInteractive={false}
+          />
         </ReactFlow>
       </div>
     );
@@ -726,10 +636,18 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
           nodes: props.graph.nodes.length,
         })}
       </div>
-      <Button size="sm" onClick={() => navigation.expandAll(true)}>
+      <Button
+        className={nativeStyles.compactAction}
+        size="compact"
+        onClick={() => navigation.expandAll(true)}
+      >
         {t(scopeId ? 'goalExperiment.expandScope' : 'goalExperiment.expandAll')}
       </Button>
-      <Button size="sm" onClick={() => navigation.expandAll(false)}>
+      <Button
+        className={nativeStyles.compactAction}
+        size="compact"
+        onClick={() => navigation.expandAll(false)}
+      >
         {t(scopeId ? 'goalExperiment.collapseScope' : 'goalExperiment.collapseAll')}
       </Button>
     </div>
@@ -740,18 +658,26 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
       className="flex items-center gap-1 flex-wrap"
       role={'navigation'}
     >
-      <Button size="sm" onClick={() => navigation.backTo(0)}>
+      <Button
+        className={nativeStyles.compactAction}
+        size="compact"
+        onClick={() => navigation.backTo(0)}
+      >
         {t('goalExperiment.root')}
       </Button>
       {navigation.path.map((id, index) => (
         <div className="flex items-center gap-1" key={id}>
-          <ChevronRight size={14} />
+          <ChevronRight size={16} />
           {index === navigation.path.length - 1 ? (
-            <div aria-current={'page'} className="text-xs">
+            <div aria-current={'page'} className="text-sm leading-5.5">
               {props.graph.byId[id]?.node.title}
             </div>
           ) : (
-            <Button size="sm" onClick={() => navigation.backTo(index + 1)}>
+            <Button
+              className={nativeStyles.compactAction}
+              size="compact"
+              onClick={() => navigation.backTo(index + 1)}
+            >
               {props.graph.byId[id]?.node.title}
             </Button>
           )}
@@ -764,14 +690,31 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
       <div className="text-base font-semibold">{t('goalProcess.graph.title')}</div>
       {experiments.length === 0 && (
         <ToggleGroup
-          size="sm"
+          className="rounded-(--radius-button)"
+          size="default"
           value={[view]}
           onValueChange={(value) => {
             if (value.length > 0) setView(value[0] as GraphViewMode);
           }}
         >
-          <ToggleGroupItem value="stage">{t('goalProcess.graph.view.stage')}</ToggleGroupItem>
-          <ToggleGroupItem value="all">{t('goalProcess.graph.view.all')}</ToggleGroupItem>
+          <ToggleGroupItem
+            value="stage"
+            className={cx(
+              nativeStyles.compactAction,
+              'rounded-(--radius-button) text-sm leading-5.5 transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)',
+            )}
+          >
+            {t('goalProcess.graph.view.stage')}
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="all"
+            className={cx(
+              nativeStyles.compactAction,
+              'rounded-(--radius-button) text-sm leading-5.5 transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)',
+            )}
+          >
+            {t('goalProcess.graph.view.all')}
+          </ToggleGroupItem>
         </ToggleGroup>
       )}
     </>
@@ -791,32 +734,30 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
       ).map((kind) => {
         const off = hiddenKinds.has(kind);
         return (
-          <div
+          <Button
             aria-pressed={!off}
-            className={`flex items-center gap-1 ${cx(styles.legendItem, off && styles.legendOff)}`}
+            className={`flex items-center justify-start gap-1 text-sm leading-5.5 ${cx(nativeStyles.compactAction, styles.legendItem, off && styles.legendOff)}`}
             key={kind}
             role={'button'}
+            size="compact"
             tabIndex={0}
             title={t(off ? 'goalProcess.graph.legend.show' : 'goalProcess.graph.legend.hide')}
+            type="button"
+            variant="ghost"
             onClick={() => toggleKind(kind)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                toggleKind(kind);
-              }
-            }}
           >
             <KindDot kind={kind} />
             <span>{t(`goalProcess.kind.${kind}` as const)}</span>
-          </div>
+          </Button>
         );
       })}
     </div>
   );
   const toggle = (
     <ActionIcon
+      className={nativeStyles.compactAction}
       icon={fullscreen ? X : Maximize2}
-      size={'small'}
+      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
       title={fullscreen ? t('goalProcess.graph.exitFullscreen') : t('goalProcess.graph.fullscreen')}
       aria-label={
         fullscreen ? t('goalProcess.graph.exitFullscreen') : t('goalProcess.graph.fullscreen')
@@ -882,7 +823,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
   return (
     <div className="flex flex-col gap-1">
       {overview}
-      <div className="flex items-center justify-between" style={{ paddingBlock: 4 }}>
+      <div className="flex items-center justify-between py-1">
         <div className="flex items-center gap-3">{titleAndViews}</div>
         <div className="flex items-center gap-3">
           {legend}

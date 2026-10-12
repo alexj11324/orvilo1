@@ -1,0 +1,31 @@
+@layer components {
+  .surface {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity var(--orvilo-motion-mid) var(--orvilo-motion-ease-out),
+      transform var(--orvilo-motion-mid) var(--orvilo-motion-ease-out);
+  }
+
+  .surface[data-approval-exit] {
+    opacity: 0;
+    transform: translateY(calc(var(--spacing) * -4)) scale(var(--approval-exit-scale));
+  }
+
+  .surface[data-approval-motion-disabled] {
+    transition: none;
+  }
+
+  @starting-style {
+    .surface {
+      opacity: 0;
+      transform: translateY(calc(var(--spacing) * -4)) scale(var(--approval-exit-scale));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .surface {
+      transition: none;
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 import { ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
-import { memo, type PropsWithChildren, useEffect, useState } from 'react';
+import { memo, type PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { isRtlLang } from 'rtl-detect';
 
 import type { DayjsLocaleGlobEntry } from '@/utils/dayjsLocale';
@@ -32,12 +32,12 @@ const dayjsLocaleLoaders: Record<string, DayjsLocaleGlobEntry> = {
   'zh-tw': () => import('dayjs/locale/zh-tw'),
 };
 
-const updateDayjs = async (lang: string) => {
+const updateDayjs = async (lang: string, isCurrent: () => boolean) => {
   const locale = normalizeDayjsLocale(lang);
   const loader = dayjsLocaleLoaders[locale] ?? dayjsLocaleLoaders.en;
   const mod = await loadDayjsLocaleModule(loader!);
 
-  dayjs.locale(mod.default);
+  if (isCurrent()) dayjs.locale(mod.default);
 };
 
 interface WorkbenchLocaleProps extends PropsWithChildren {
@@ -49,20 +49,28 @@ const WorkbenchLocale = memo<WorkbenchLocaleProps>(({ children, defaultLang, res
   const [i18n] = useState(() => createWorkbenchI18n(defaultLang, resources));
   const [lang, setLang] = useState(defaultLang ?? 'en-US');
   const [antdLocale, setAntdLocale] = useState<any>();
+  const localeRequest = useRef(0);
 
   if (!i18n.instance.isInitialized) void i18n.init({ initAsync: !resources });
 
   useEffect(() => {
+    let active = true;
     const applyLocale = async (nextLang: string) => {
+      const request = ++localeRequest.current;
+      const isCurrent = () => active && localeRequest.current === request;
       setLang(nextLang);
-      const [nextAntdLocale] = await Promise.all([getAntdLocale(nextLang), updateDayjs(nextLang)]);
-      setAntdLocale(nextAntdLocale);
+      const [nextAntdLocale] = await Promise.all([
+        getAntdLocale(nextLang),
+        updateDayjs(nextLang, isCurrent),
+      ]);
+      if (isCurrent()) setAntdLocale(nextAntdLocale);
     };
 
     void applyLocale(i18n.instance.language || defaultLang || 'en-US');
     i18n.instance.on('languageChanged', applyLocale);
 
     return () => {
+      active = false;
       i18n.instance.off('languageChanged', applyLocale);
     };
   }, [defaultLang, i18n]);

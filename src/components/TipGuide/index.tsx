@@ -5,12 +5,13 @@ import { type CSSProperties, type FC, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 
 const styles = {
   close: 'text-popover-foreground',
   container: 'relative',
   overlay:
-    'z-[1000] select-none rounded-(--radius-overlay) bg-popover text-sm leading-5.5 text-popover-foreground',
+    'select-none rounded-(--radius-overlay) bg-popover text-sm leading-5.5 text-popover-foreground',
 };
 
 export interface TipGuideProps {
@@ -83,8 +84,8 @@ const TipGuide: FC<TipGuideProps> = ({
         <PreviewCard.Root defaultOpen={open} open={open} onOpenChange={setOpen}>
           <PreviewCard.Trigger render={<span />}>{children}</PreviewCard.Trigger>
           <PreviewCard.Portal>
-            <PreviewCard.Positioner side={placement} sideOffset={4}>
-              <PreviewCard.Popup className={styles.overlay} style={{ maxWidth }}>
+            <PreviewCard.Positioner className={POPUP_Z_CLASS} side={placement} sideOffset={4}>
+              <PreviewCard.Popup className={cx(POPUP_Z_CLASS, styles.overlay)} style={{ maxWidth }}>
                 <div className={'flex gap-6'}>
                   <div>{title}</div>
                   <ActionIcon

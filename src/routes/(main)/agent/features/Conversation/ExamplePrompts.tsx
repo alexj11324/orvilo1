@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, keyframes } from 'antd-style';
 import { cn } from 'cn';
 import { FileText, FolderPlus, Search, X } from 'lucide-react';
 import { createElement, memo, useEffect, useState } from 'react';
@@ -10,34 +9,14 @@ import ActionIcon from '@/components/ActionIcon';
 import { useConversationStore } from '@/features/Conversation/store';
 import { useGlobalStore } from '@/store/global';
 
-const reveal = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
-const registeredStyles = createStaticStyles(({ css }) => ({
-  root: css`
-    animation: ${reveal} var(--orvilo-motion-mid, 200ms) ease;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  `,
-}));
-
 const styles = {
-  card: 'flex min-h-33.75 min-w-0 flex-1 cursor-pointer flex-col items-start gap-1.5 rounded-(--radius-card) border border-divider bg-card p-4 text-start transition-[background-color,border-color] duration-150 ease-[ease] hover:border-border hover:bg-fill-quaternary focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 focus-visible:outline-offset-[-1px] motion-reduce:transition-none',
-  cardDesc: 'text-xs leading-5 font-normal text-foreground-description',
+  card: 'flex min-h-33.75 min-w-0 flex-1 cursor-pointer flex-col items-start gap-1.5 rounded-(--radius-card) border border-divider bg-card p-4 text-start transition-[background-color,border-color] duration-(--orvilo-motion-fast) ease-[ease] hover:border-border hover:bg-fill-quaternary focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 focus-visible:outline-offset-[-1px] motion-reduce:transition-none',
+  cardDesc: 'text-sm leading-5.5 font-normal text-foreground-description',
   cardTitle: 'text-sm leading-5.5 font-medium text-foreground',
-  header: 'text-xs leading-5 font-normal text-foreground-description',
+  header: 'text-sm leading-5.5 font-normal text-foreground-description',
   icon: 'text-muted-foreground',
-  root: registeredStyles.root,
+  // Nonessential appearance follows DESIGN's 100–200ms state-change window.
+  root: 'animate-[orvilo-agent-example-reveal_var(--orvilo-motion-mid,200ms)_ease] motion-reduce:animate-none',
 } as const;
 
 const EXAMPLES = [

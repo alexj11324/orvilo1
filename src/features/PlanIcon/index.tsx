@@ -1,5 +1,4 @@
 import { Plans } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Atom, Box, CircleSlash, Sparkle, Zap } from 'lucide-react';
 import { type CSSProperties, type MouseEvent } from 'react';
@@ -8,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+
+import nativeStyles from './PlanIcon.module.css';
 
 export const themes = {
   [Plans.Free]: {
@@ -47,12 +48,7 @@ export const themes = {
   },
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  icon: css`
-    flex: none;
-    box-shadow: 0 0 0 1px ${cssVar.colorFillSecondary};
-  `,
-}));
+const styles = { icon: nativeStyles.icon };
 
 const getPlanIconMetrics = (size: number) => ({
   glyphSize: Math.max(12, Math.round(size / 2)),
@@ -81,15 +77,13 @@ const PlanIcon = memo<PlanIconProps>(
     if (isTag) {
       return (
         <Badge
-          className={className}
           variant="secondary"
+          className={cn(
+            'm-0 flex-none cursor-pointer rounded-(--radius-chip) border-0 text-xs leading-5',
+            className,
+          )}
           style={{
-            ...(theme || { background: cssVar.colorFillSecondary, color: cssVar.colorText }),
-            border: 'none',
-            borderRadius: 12,
-            cursor: 'pointer',
-            flex: 'none',
-            margin: 0,
+            ...(theme || { background: 'var(--selected)', color: 'var(--foreground)' }),
             ...style,
           }}
           onClick={onClick}
@@ -106,11 +100,7 @@ const PlanIcon = memo<PlanIconProps>(
             ...theme,
             border: isFree ? undefined : `2px solid ${theme.color}`,
           }),
-      alignItems: 'center',
       borderRadius: radius,
-      display: 'flex',
-      justifyContent: 'center',
-      lineHeight: 0,
       ...style,
     } satisfies CSSProperties;
 
@@ -119,7 +109,7 @@ const PlanIcon = memo<PlanIconProps>(
         {...clickableProps()}
         style={{ height: size, width: size, ...iconStyle }}
         className={cn(
-          cx(styles.icon, 'flex flex-col items-center justify-center'),
+          cn(styles.icon, 'flex flex-col items-center justify-center leading-none'),
           CLICKABLE_FOCUS_RING,
         )}
         onClick={onClick}

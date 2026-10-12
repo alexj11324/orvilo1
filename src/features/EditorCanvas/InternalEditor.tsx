@@ -105,6 +105,7 @@ const InternalEditor = memo<InternalEditorProps>(
     blockImageCaretGuard = false,
     className,
     contentChangeLockRef,
+    contentClassName,
     contentStyle,
     disabled,
     editable = true,
@@ -117,6 +118,7 @@ const InternalEditor = memo<InternalEditorProps>(
     onInit,
     onPressEnter,
     placeholder,
+    reserveDocumentFooter = true,
     plugins: customPlugins,
     slashItems,
     style,
@@ -340,6 +342,7 @@ const InternalEditor = memo<InternalEditorProps>(
         }}
       >
         <Editor
+          className={contentClassName}
           content={''}
           editable={editable && !disabled}
           editor={editor}
@@ -350,7 +353,7 @@ const InternalEditor = memo<InternalEditorProps>(
           slashOption={slashItems ? { items: slashItems } : undefined}
           type={'text'}
           style={{
-            paddingBottom: 32,
+            paddingBottom: reserveDocumentFooter ? 32 : 0,
             ...style,
             ...contentStyle,
           }}

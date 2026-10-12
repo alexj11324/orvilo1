@@ -1,0 +1,161 @@
+@reference '../../app/globals.css';
+
+/* Own module specificity preserves zero pane padding against the unlayered
+   public Popup base. No vendor variable or important declaration is changed. */
+.container.container {
+  @apply pointer-events-auto select-none overflow-hidden p-0;
+
+  border-radius: var(--radius-overlay);
+}
+
+/* The inherited public duration is zero for nested/sideways menus. Its minimum
+   with our approved fast role keeps those instant paths and both user settings. */
+.container.container.container,
+.detailPopup.detailPopup.detailPopup {
+  transition-property: opacity, transform;
+  transition-duration: min(var(--orvilo-motion-fast), var(--lobe-dropdown-animation-duration));
+  transition-timing-function: var(--orvilo-motion-ease-out);
+}
+
+.container.container.container[data-closed],
+.detailPopup.detailPopup.detailPopup[data-closed] {
+  transition-timing-function: var(--lobe-dropdown-animation-ease-in);
+}
+
+.dropdownMenu {
+  @apply select-none;
+}
+
+.dropdownMenu [role='menuitem'] {
+  @apply my-px mx-1;
+}
+
+.groupHeader.groupHeader {
+  @apply w-full text-sm text-muted-foreground;
+}
+
+.menuItem.menuItem {
+  @apply relative cursor-pointer items-center gap-2 my-px mx-1;
+}
+
+/* Model chooser rows are compact work controls. Minimum block size permits
+   wrapped model/custom content to grow; the public item/slot protocol remains. */
+.menuItem.menuItem,
+.menuRow.menuRow,
+.container.container [role^='menuitem'],
+.detailPopup.detailPopup [role^='menuitem'] {
+  @apply text-sm py-1 px-2;
+
+  min-block-size: calc(var(--spacing) * 8);
+  border-radius: var(--radius-input);
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: var(--orvilo-motion-fast);
+  transition-timing-function: var(--orvilo-motion-ease-out);
+}
+
+/* Keep base selection weaker than native hover/highlight/disabled/open states. */
+.menuItemActive {
+  background: var(--selected);
+}
+
+.tertiaryText.tertiaryText.tertiaryText {
+  color: var(--foreground-tertiary);
+}
+
+.caption.caption {
+  @apply text-xs text-muted-foreground;
+}
+
+.groupCaption.groupCaption {
+  @apply text-xs font-normal normal-case tracking-normal text-foreground-tertiary;
+}
+
+.menuGlyph.menuGlyph {
+  @apply size-4;
+}
+
+.footer.footer {
+  border-block-start: 1px solid var(--divider);
+}
+
+.toolbar.toolbar {
+  border-block-end: 1px solid var(--divider);
+}
+
+.detailPopup.detailPopup {
+  border-radius: var(--radius-overlay);
+}
+
+.toolbarSearch.toolbarSearch {
+  @apply w-full;
+}
+
+.toolbarSearch.toolbarSearch [data-slot='input'] {
+  border-color: transparent;
+  background: transparent;
+}
+
+.toolbarTabs.toolbarTabs {
+  min-inline-size: 0;
+  inline-size: fit-content;
+}
+
+.toolbarTabList.toolbarTabList {
+  border-radius: var(--radius-input);
+}
+
+.toolbarTab.toolbarTab {
+  @apply relative py-1 px-2 text-sm;
+
+  min-block-size: calc(var(--spacing) * 8);
+  min-inline-size: calc(var(--spacing) * 8);
+  border-radius: var(--radius-input);
+  transition-property: color, transform;
+  transition-duration: var(--orvilo-motion-fast);
+  transition-timing-function: var(--orvilo-motion-ease-out);
+}
+
+.toolbarIndicator.toolbarIndicator {
+  border-radius: var(--radius-input);
+  transition-property: inset-inline-start, inset-block-start, width, height, transform;
+  transition-duration: var(--orvilo-motion-fast);
+  transition-timing-function: var(--orvilo-motion-ease-out);
+}
+
+.settingsAction {
+  position: relative;
+}
+
+/* Separate visible32 controls from accessible44 coarse targets. Tab gaps reserve
+   both expansions; the search clear target is contained by its public wrapper. */
+@media (pointer: coarse) {
+  /* The provider header has 12/4 block padding. Six at the lower edge reserves
+     the expanded settings target before the following model row. */
+  .groupHeader.groupHeader {
+    @apply pbe-1.5;
+  }
+
+  .settingsAction::after,
+  .toolbarTab::after {
+    content: '';
+    position: absolute;
+    inset: calc(var(--spacing) * -1.5);
+  }
+
+  .toolbarTabs [role='tablist'] {
+    column-gap: calc(var(--spacing) * 3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .container.container.container,
+  .detailPopup.detailPopup.detailPopup,
+  .menuItem.menuItem,
+  .menuRow.menuRow,
+  .container.container [role^='menuitem'],
+  .detailPopup.detailPopup [role^='menuitem'],
+  .toolbarTab.toolbarTab,
+  .toolbarIndicator.toolbarIndicator {
+    transition: none;
+  }
+}

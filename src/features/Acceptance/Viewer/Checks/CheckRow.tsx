@@ -2,8 +2,7 @@
 
 import type { AcceptanceCommentThread } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import {
   AudioLines,
   BadgeCheck,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Badge } from '@/components/reui/badge';
@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
+import { userGeneralSettingsSelectors, userProfileSelectors } from '@/store/user/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { hasRenderableEvidence, readVisualizationManifest } from '../../Report/visualization';
@@ -64,6 +64,15 @@ import { STATE_META } from './checkStatus';
 import { checkRowDisclosure } from './rowDisclosure';
 import { styles } from './styles';
 import type { AcceptanceCheck, CheckReviewInput, ProposalDismissInput } from './types';
+
+const CHECK_STATE_TONE = {
+  failed: 'text-destructive-text',
+  not_executed: 'text-muted-foreground',
+  passed: 'text-success-text',
+  uncertain: 'text-warning-text',
+};
+
+const CHECK_ROW_ACTION_SIZE = { blockSize: 32, size: 16 } as const;
 
 const EVIDENCE_BADGES = [
   { icon: Images, key: 'image', labelKey: 'acceptance.evidence.image' },
@@ -107,6 +116,9 @@ export const AcceptanceCheckRow = memo<{
   }) => {
     const { t } = useTranslation('verify');
     const desktop = !useIsMobile();
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const shouldAnimate = animationMode !== 'disabled' && !prefersReducedMotion;
     // The judging narrative stays collapsed: level one is title + evidence.
     const [historyOpen, setHistoryOpen] = useState(false);
     const [seqCopied, setSeqCopied] = useState(false);
@@ -362,16 +374,17 @@ export const AcceptanceCheckRow = memo<{
           : check.state === 'passed' && reviewState === 'accepted'
             ? CheckCheck
             : meta.icon;
-    const headColor =
+    const headTone =
       reviewState === 'rejected'
-        ? cssVar.colorError
+        ? 'text-destructive-text'
         : reviewState === 'ignored'
-          ? cssVar.colorTextQuaternary
-          : meta.color;
+          ? 'text-muted-foreground'
+          : CHECK_STATE_TONE[check.state];
 
     const headIconNode = createElement(headIcon, {
-      color: headColor,
+      className: headTone,
       size: 16,
+      // Center the 16px glyph in the body's 22px line box: (22 - 16) / 2.
       style: { alignSelf: 'flex-start', flex: 'none', marginBlockStart: 3 },
     });
 
@@ -434,8 +447,11 @@ export const AcceptanceCheckRow = memo<{
               style={{ flexWrap: open ? 'wrap' : 'nowrap', minWidth: 0 }}
             >
               <div
-                className={cn(open || !desktop ? undefined : styles.titleEllipsis)}
-                style={{ fontSize: desktop ? 13 : 14, minWidth: 0 }}
+                style={{ minWidth: 0 }}
+                className={cn(
+                  'text-sm leading-5.5',
+                  open || !desktop ? undefined : styles.titleEllipsis,
+                )}
               >
                 {title}
               </div>
@@ -470,7 +486,7 @@ export const AcceptanceCheckRow = memo<{
                     disabled={reviewPending && !accepting}
                     icon={Check}
                     loading={accepting}
-                    size="small"
+                    size={CHECK_ROW_ACTION_SIZE}
                     title={t('acceptance.review.accept')}
                     onClick={handleAccept}
                   />
@@ -478,14 +494,14 @@ export const AcceptanceCheckRow = memo<{
                     disabled={reviewPending && !ignoring}
                     icon={Ban}
                     loading={ignoring}
-                    size="small"
+                    size={CHECK_ROW_ACTION_SIZE}
                     title={t('acceptance.review.ignore')}
                     onClick={handleIgnore}
                   />
                   <ActionIcon
                     disabled={reviewPending}
                     icon={MessageSquareX}
-                    size="small"
+                    size={CHECK_ROW_ACTION_SIZE}
                     title={t('acceptance.review.reject')}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -505,7 +521,7 @@ export const AcceptanceCheckRow = memo<{
                   <TooltipTrigger
                     render={
                       <span>
-                        <BadgeCheck color={cssVar.colorTextQuaternary} size={14} />
+                        <BadgeCheck className="text-muted-foreground" size={16} />
                       </span>
                     }
                   />
@@ -523,11 +539,8 @@ export const AcceptanceCheckRow = memo<{
                     <TooltipTrigger
                       render={
                         <span>
-                          <div
-                            className="flex items-center gap-0.75"
-                            style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}
-                          >
-                            {createElement(icon, { size: 13 })}
+                          <div className="flex items-center gap-1 text-xs leading-5 text-foreground-tertiary">
+                            {createElement(icon, { size: 16 })}
                             {counts[key] > 1 ? counts[key] : null}
                           </div>
                         </span>
@@ -542,11 +555,8 @@ export const AcceptanceCheckRow = memo<{
                   <TooltipTrigger
                     render={
                       <span>
-                        <div
-                          className="flex items-center gap-0.75"
-                          style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}
-                        >
-                          <MessageSquare size={13} />
+                        <div className="flex items-center gap-1 text-xs leading-5 text-foreground-tertiary">
+                          <MessageSquare size={16} />
                           {checkThreads.length}
                         </div>
                       </span>
@@ -573,7 +583,7 @@ export const AcceptanceCheckRow = memo<{
                             onRound(check.introducedAtRound);
                           }}
                         >
-                          <Repeat size={10} /> {check.revisions}
+                          <Repeat size={16} /> {check.revisions}
                         </span>
                       </span>
                     }
@@ -618,11 +628,14 @@ export const AcceptanceCheckRow = memo<{
             </div>
             <div className={`flex flex-col items-center h-5.5 ${styles.rowChevron}`}>
               <ChevronRight
-                color={cssVar.colorTextQuaternary}
-                size={14}
+                size={16}
+                className={cn(
+                  'text-muted-foreground',
+                  shouldAnimate &&
+                    'transition-transform duration-(--orvilo-motion-mid) motion-reduce:transition-none',
+                )}
                 style={{
                   transform: open ? 'rotate(90deg)' : 'none',
-                  transition: 'transform 0.2s',
                 }}
               />
             </div>
@@ -667,7 +680,7 @@ export const AcceptanceCheckRow = memo<{
               onOpenTrace && (
                 <div className="flex">
                   <Button
-                    size="sm"
+                    size="compact"
                     variant="ghost"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -722,19 +735,10 @@ export const AcceptanceCheckRow = memo<{
               </div>
             )}
             {check.state === 'not_executed' && (
-              <div
-                className="flex items-center gap-2"
-                style={{
-                  paddingBlock: 8,
-                  paddingInline: 10,
-                  background: cssVar.colorFillQuaternary,
-                  borderRadius: cssVar.borderRadius,
-                  width: '100%',
-                }}
-              >
+              <div className="flex w-full items-center gap-2 rounded-(--radius-card) bg-fill-quaternary px-2.5 py-2">
                 <CircleDashed
-                  color={cssVar.colorTextQuaternary}
-                  size={15}
+                  className="text-muted-foreground"
+                  size={16}
                   style={{ flex: 'none' }}
                 />
                 <div className="text-xs text-muted-foreground">
@@ -752,16 +756,7 @@ export const AcceptanceCheckRow = memo<{
             {check.state !== 'not_executed' &&
               check.result &&
               (check.result.toulmin?.reasoning ? (
-                <div
-                  className="flex flex-col gap-1"
-                  style={{
-                    paddingBlock: 8,
-                    paddingInline: 10,
-                    background: cssVar.colorFillQuaternary,
-                    borderRadius: cssVar.borderRadius,
-                    width: '100%',
-                  }}
-                >
+                <div className="flex w-full flex-col gap-1 rounded-(--radius-card) bg-fill-quaternary px-2.5 py-2">
                   <div className="text-xs text-muted-foreground">
                     {t('acceptance.checks.judgeReason')}
                   </div>
@@ -770,16 +765,7 @@ export const AcceptanceCheckRow = memo<{
                   </div>
                 </div>
               ) : !hasRenderableEvidence(check.evidence.length, visualization) ? (
-                <div
-                  className="flex flex-col"
-                  style={{
-                    paddingBlock: 6,
-                    paddingInline: 10,
-                    background: cssVar.colorFillQuaternary,
-                    borderRadius: cssVar.borderRadius,
-                    width: '100%',
-                  }}
-                >
+                <div className="flex w-full flex-col rounded-(--radius-card) bg-fill-quaternary px-2.5 py-1.5">
                   <div className="text-xs text-muted-foreground">
                     {t('acceptance.evidence.empty')}
                   </div>
@@ -797,7 +783,7 @@ export const AcceptanceCheckRow = memo<{
                   {reviewable && (
                     <Button
                       disabled={reviewPending}
-                      size="sm"
+                      size="compact"
                       variant="ghost"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -815,7 +801,7 @@ export const AcceptanceCheckRow = memo<{
                     <>
                       <Button
                         disabled={reviewPending}
-                        size="sm"
+                        size="compact"
                         variant="ghost"
                         onClick={(event) => {
                           event.stopPropagation();
@@ -827,7 +813,7 @@ export const AcceptanceCheckRow = memo<{
                       <Button
                         disabled={reviewPending && !accepting}
                         loading={accepting}
-                        size="sm"
+                        size="compact"
                         variant="ghost"
                         onClick={handleAccept}
                       >
@@ -847,7 +833,7 @@ export const AcceptanceCheckRow = memo<{
                       <Button
                         disabled={reviewPending && !accepting}
                         loading={accepting}
-                        size="sm"
+                        size="compact"
                         variant="ghost"
                         onClick={handleAccept}
                       >
@@ -885,10 +871,14 @@ export const AcceptanceCheckRow = memo<{
                 onClick={() => setHistoryOpen((open) => !open)}
               >
                 <ChevronRight
-                  size={12}
+                  size={16}
+                  className={
+                    shouldAnimate
+                      ? 'transition-transform duration-(--orvilo-motion-mid) motion-reduce:transition-none'
+                      : undefined
+                  }
                   style={{
                     transform: historyOpen ? 'rotate(90deg)' : 'none',
-                    transition: 'transform 0.2s',
                   }}
                 />
                 {t('acceptance.checks.iterationHistory', { count: check.revisions })}
@@ -930,7 +920,7 @@ export const AcceptanceCheckRow = memo<{
                     <Button
                       disabled={reviewPending && !ignoring}
                       loading={ignoring}
-                      size="sm"
+                      size="compact"
                       variant="ghost"
                       onClick={handleIgnore}
                     >
@@ -938,7 +928,7 @@ export const AcceptanceCheckRow = memo<{
                     </Button>
                     <Button
                       disabled={reviewPending}
-                      size="sm"
+                      size="compact"
                       variant="ghost"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -950,7 +940,7 @@ export const AcceptanceCheckRow = memo<{
                     <Button
                       disabled={reviewPending && !accepting}
                       loading={accepting}
-                      size="sm"
+                      size="compact"
                       variant="secondary"
                       onClick={handleAccept}
                     >

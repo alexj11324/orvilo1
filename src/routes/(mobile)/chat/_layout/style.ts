@@ -1,8 +1,3 @@
-import { createStaticStyles } from 'antd-style';
-
-export const styles = createStaticStyles(({ css }) => ({
-  // Main container
-  mainContainer: css`
-    overflow-y: hidden;
-  `,
-}));
+export const styles = {
+  mainContainer: 'overflow-y-hidden',
+};

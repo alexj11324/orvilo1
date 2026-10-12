@@ -166,7 +166,10 @@ function verifyNativeFontProducer() {
     true,
     ts.ScriptKind.TSX,
   );
-  const providers = importedNames(app, '@lobehub/ui/es/ThemeProvider/ThemeProvider', 'default');
+  const providers = new Set([
+    ...importedNames(app, '@lobehub/ui/es/ThemeProvider/ThemeProvider', 'default'),
+    ...importedNames(app, '@lobehub/ui', 'ThemeProvider'),
+  ]);
   const memoizers = importedNames(app, 'react', 'useMemo');
   const generators = new Map([
     ['fontFamily', importedNames(app, '@/const/font', 'genFontFamily')],

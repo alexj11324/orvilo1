@@ -8,8 +8,7 @@ import {
   type WorkQuery,
 } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   FilterIcon,
@@ -69,118 +68,26 @@ import { buildSavedViewCsv, fetchAllSavedViewRows, SAVED_VIEW_CSV_MAX_ROWS } fro
 import SavedViewDetailsPanel from './SavedViewDetailsPanel';
 import { savedViewGroupByForLayout, savedViewProjectsPageByGroup } from './savedViewDisplay';
 import { savedViewProjectPath } from './savedViewProjectPath';
+import nativeStyles from './SavedViews.module.css';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
 import { savedViewTitle } from './savedViewTitle';
 import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEditor';
 import { builderToFilter, comparableQuery, filterToBuilder } from './workQueryBuilder';
 
-const styles = createStaticStyles(({ css }) => ({
-  boardColumn: css`
-    flex: none;
-
-    width: 300px;
-    padding-block-end: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  boardColumnBody: css`
-    gap: 4px;
-    padding-inline: 8px;
-  `,
-  boardColumnHeader: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-
-    font-size: ${cssVar.fontSizeSM};
-    color: ${cssVar.colorTextSecondary};
-  `,
-  controlPopover: css`
-    width: min(420px, calc(100vw - 32px));
-    padding: 12px;
-  `,
-  detailLayout: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-
-    height: 0;
-    min-height: 0;
-  `,
-  detailPane: css`
-    overflow-y: auto;
-    flex: none;
-
-    width: 400px;
-    padding: 12px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgLayout};
-
-    @container work-surface (max-width: 900px) {
-      position: absolute;
-      z-index: 10;
-      inset-block: 0;
-      inset-inline-end: 0;
-
-      width: min(400px, calc(100% - 40px));
-
-      box-shadow: ${cssVar.boxShadowSecondary};
-    }
-  `,
-  resultsBody: css`
-    box-sizing: border-box;
-    min-height: 100%;
-    padding-block: 8px;
-    padding-inline: 16px;
-  `,
-  resultsScroll: css`
-    overflow: auto;
-    overscroll-behavior: contain;
-    flex: 1;
-    min-width: 0;
-  `,
-  identifier: css`
-    flex: none;
-    min-width: 72px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  link: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-
-    color: inherit;
-  `,
-  row: css`
-    padding-block: 7px;
-    padding-inline: 4px 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    color: inherit;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  updatedAt: css`
-    flex: none;
-
-    min-width: 88px;
-
-    color: ${cssVar.colorTextQuaternary};
-    text-align: end;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  boardColumn: nativeStyles.boardColumn,
+  boardColumnBody: nativeStyles.boardColumnBody,
+  boardColumnHeader: nativeStyles.boardColumnHeader,
+  controlPopover: nativeStyles.controlPopover,
+  detailLayout: nativeStyles.detailLayout,
+  detailPane: nativeStyles.detailPane,
+  resultsBody: nativeStyles.resultsBody,
+  resultsScroll: nativeStyles.resultsScroll,
+  identifier: nativeStyles.identifier,
+  link: nativeStyles.link,
+  row: nativeStyles.row,
+  updatedAt: nativeStyles.updatedAt,
+};
 
 interface SavedViewProjectRowData {
   id: string;
@@ -201,7 +108,7 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
         <SimpleTooltip title={t(`status.${status}`)}>
           <ProjectStatusIcon size={16} status={status} />
         </SimpleTooltip>
-        <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="truncate block font-medium">{project.name}</div>
         </div>
         {project.identifier ? (
@@ -236,14 +143,14 @@ export const SavedViewProjectBoard = memo<{
 }>(({ groups, loadMoreGroupErrors, loadMoreLabel, onLoadMoreGroup, onRetryLoadMoreGroup }) => {
   const { t } = useTranslation('project');
   return (
-    <div className="flex flex-row items-start gap-3" style={{ overflowX: 'auto' }}>
+    <div className="flex flex-row items-start gap-3 overflow-x-auto">
       {groups.map((group) => {
         const status = resolveProjectStatus(group.key);
         return (
           <div className={cx('flex flex-col', styles.boardColumn)} key={group.key}>
             <div className={cx('flex flex-row', styles.boardColumnHeader)}>
-              <ProjectStatusIcon size={14} status={status} />
-              <div className="text-(length:--text-dense) font-medium">{t(`status.${status}`)}</div>
+              <ProjectStatusIcon size={16} status={status} />
+              <div className="text-sm leading-5.5 font-medium">{t(`status.${status}`)}</div>
               <div className="text-xs text-muted-foreground">{group.total}</div>
             </div>
             <div className={cx('flex flex-col', styles.boardColumnBody)}>
@@ -257,7 +164,7 @@ export const SavedViewProjectBoard = memo<{
                   onRetry={onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined}
                 />
               ) : group.hasMore && onLoadMoreGroup ? (
-                <Button size="sm" onClick={() => onLoadMoreGroup(group.key)}>
+                <Button size="normal" onClick={() => onLoadMoreGroup(group.key)}>
                   {loadMoreLabel}
                 </Button>
               ) : null}
@@ -288,8 +195,8 @@ export const SavedViewProjectGroupList = memo<{
         return (
           <div className="flex flex-col gap-0.5" key={group.key}>
             <div className="flex flex-row items-center gap-2 px-2">
-              <ProjectStatusIcon size={14} status={status} />
-              <div className="text-(length:--text-dense) font-medium">{t(`status.${status}`)}</div>
+              <ProjectStatusIcon size={16} status={status} />
+              <div className="text-sm leading-5.5 font-medium">{t(`status.${status}`)}</div>
               <div className="text-xs text-muted-foreground">{group.total}</div>
             </div>
             {group.tasks.map((project) => (
@@ -303,7 +210,7 @@ export const SavedViewProjectGroupList = memo<{
               />
             ) : group.hasMore && onLoadMoreGroup ? (
               <div className="flex flex-row justify-center">
-                <Button size="sm" onClick={() => onLoadMoreGroup(group.key)}>
+                <Button size="normal" onClick={() => onLoadMoreGroup(group.key)}>
                   {loadMoreLabel}
                 </Button>
               </div>
@@ -753,11 +660,7 @@ const SavedViewPage = memo(() => {
   return (
     <WorkSurface>
       <NavHeader
-        left={
-          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
-            {viewTitle}
-          </div>
-        }
+        left={<div className="ps-1 text-sm leading-5.5 font-medium">{viewTitle}</div>}
         right={
           <div className="flex flex-row gap-2">
             <WorkFavoriteButton targetId={viewId} targetType="savedView" />
@@ -788,10 +691,7 @@ const SavedViewPage = memo(() => {
         <div className="text-xs text-muted-foreground">
           {t('savedViews.resultCount', { count: evaluation?.total ?? 0 })}
         </div>
-        <div
-          className="flex flex-row items-center gap-1.5"
-          style={{ flex: 'none', marginInlineStart: 'auto' }}
-        >
+        <div className="ms-auto flex flex-none flex-row items-center gap-1.5">
           {isOwner && draft ? (
             <>
               <Popover
@@ -802,12 +702,12 @@ const SavedViewPage = memo(() => {
                   <div className={cx('flex flex-col gap-3', styles.controlPopover)}>
                     <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
                     <div className="flex flex-row gap-2 justify-end">
-                      <Button size="sm" onClick={cancelDraft}>
+                      <Button size="normal" onClick={cancelDraft}>
                         {t('cancel')}
                       </Button>
                       <Button
                         disabled={!dirty || !shareReady || !draft.name.trim()}
-                        size="sm"
+                        size="normal"
                         variant="default"
                         onClick={() => void commitDraft()}
                       >
@@ -821,8 +721,9 @@ const SavedViewPage = memo(() => {
                     <ActionIcon
                       aria-expanded={openControl === 'filters'}
                       aria-label={t('savedViews.filters.add')}
+                      className={nativeStyles.compactAction}
                       icon={FilterIcon}
-                      size="small"
+                      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                       title={t('savedViews.filters.add')}
                     />
                   }
@@ -836,12 +737,12 @@ const SavedViewPage = memo(() => {
                   <div className={cx('flex flex-col gap-3', styles.controlPopover)}>
                     <ViewDefinitionEditor showFilters={false} value={draft} onChange={setDraft} />
                     <div className="flex flex-row gap-2 justify-end">
-                      <Button size="sm" onClick={cancelDraft}>
+                      <Button size="normal" onClick={cancelDraft}>
                         {t('cancel')}
                       </Button>
                       <Button
                         disabled={!dirty || !shareReady || !draft.name.trim()}
-                        size="sm"
+                        size="normal"
                         variant="default"
                         onClick={() => void commitDraft()}
                       >
@@ -855,8 +756,9 @@ const SavedViewPage = memo(() => {
                     <ActionIcon
                       aria-expanded={openControl === 'display'}
                       aria-label={t('savedViews.displayOptions')}
+                      className={nativeStyles.compactAction}
                       icon={Settings2Icon}
-                      size="small"
+                      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                       title={t('savedViews.displayOptions')}
                     />
                   }
@@ -866,8 +768,9 @@ const SavedViewPage = memo(() => {
           ) : null}
           <ActionIcon
             aria-expanded={detailsOpen}
+            className={nativeStyles.compactAction}
             icon={detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon}
-            size="small"
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t(detailsOpen ? 'savedViews.closeViewDetails' : 'savedViews.openViewDetails')}
             aria-label={t(
               detailsOpen ? 'savedViews.closeViewDetails' : 'savedViews.openViewDetails',
@@ -878,16 +781,8 @@ const SavedViewPage = memo(() => {
       </WorkSurfaceToolbar>
       <div className={styles.detailLayout}>
         <div className={styles.resultsScroll}>
-          <div
-            className={styles.resultsBody}
-            style={
-              boardActive ? { display: 'flex', flexDirection: 'column', height: '100%' } : undefined
-            }
-          >
-            <div
-              className="flex flex-col gap-3"
-              style={boardActive ? { flex: 1, minHeight: 0 } : undefined}
-            >
+          <div className={cx(styles.resultsBody, boardActive && 'flex h-full flex-col')}>
+            <div className={cx('flex flex-col gap-3', boardActive && 'min-h-0 flex-1')}>
               {conflict ? (
                 <Alert variant="warning">
                   <TriangleAlert />
@@ -896,10 +791,10 @@ const SavedViewPage = memo(() => {
                   <AlertAction>
                     {
                       <div className="flex flex-row gap-2">
-                        <Button size="sm" onClick={reloadDraft}>
+                        <Button size="normal" onClick={reloadDraft}>
                           {t('savedViews.conflictReload')}
                         </Button>
-                        <Button size="sm" onClick={() => void saveCopy()}>
+                        <Button size="normal" onClick={() => void saveCopy()}>
                           {t('savedViews.saveAs')}
                         </Button>
                       </div>
@@ -983,7 +878,7 @@ const SavedViewPage = memo(() => {
                   ) : null}
                   {!projectGrouped && workQueryHasMore(projectRows.length, evaluation?.total) ? (
                     <div className="flex flex-row justify-center">
-                      <Button size="sm" onClick={() => pagedMore.runLoadMore(loadMore)}>
+                      <Button size="normal" onClick={() => pagedMore.runLoadMore(loadMore)}>
                         {t('savedViews.loadMore')}
                       </Button>
                     </div>

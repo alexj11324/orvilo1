@@ -1,14 +1,14 @@
 'use client';
 import { useSortable } from '@dnd-kit/sortable';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'clsx';
 import { X } from 'lucide-react';
-import { useMotionValue, useSpring, useTransform } from 'motion/react';
+import { useMotionValue, useTransform } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
@@ -22,18 +22,10 @@ import { type ResolvedTab } from './hooks/useResolvedTabs';
 import { useTabPreview } from './hooks/useTabPreview';
 import { useTabRunning } from './hooks/useTabRunning';
 import { useTabUnread } from './hooks/useTabUnread';
-import { TAB_SPRING } from './motion';
+import { useTabMotionDisabled, useTabSpring } from './motion';
 import { useStyles } from './styles';
 import { buildTabContextMenuItems } from './tabContextMenu';
 import { resolveTabInset, type TabTier } from './tabLayout';
-
-// 20px box on an 8px-round tab, inset a uniform 3px: 8 - 3 = 5 keeps the button's curve
-// concentric with the tab's own. ActionIcon writes blockSize and borderRadius straight
-// into its inline style, so a class cannot reach them — but it spreads `style` last.
-// `size` stays "small" for the glyph: passing the {blockSize, borderRadius} object form
-// sends the same object to Icon's own calcSize, which reads `size` off it, misses, and
-// falls back to a 24px glyph inside the 20px box.
-const CLOSE_BUTTON_STYLE = { borderRadius: 5, height: 20, width: 20 } as const;
 
 interface TabItemProps {
   /**
@@ -87,6 +79,7 @@ const TabItem = memo<TabItemProps>(
     onTogglePin,
   }) => {
     const styles = useStyles;
+    const disableMotion = useTabMotionDisabled();
     const { t } = useTranslation('electron');
     const id = item.tab.id;
     const { meta, tab } = item;
@@ -107,10 +100,10 @@ const TabItem = memo<TabItemProps>(
 
     // A newly opened tab springs out from zero rather than popping in at full width; the
     // motion value starts collapsed and is set to the real width on mount.
-    const targetWidth = useMotionValue(enterWidth);
-    const springWidth = useSpring(targetWidth, TAB_SPRING);
-    const targetX = useMotionValue(enterX);
-    const springX = useSpring(targetX, TAB_SPRING);
+    const targetWidth = useMotionValue(disableMotion ? width : enterWidth);
+    const springWidth = useTabSpring(targetWidth, disableMotion);
+    const targetX = useMotionValue(disableMotion ? x : enterX);
+    const springX = useTabSpring(targetX, disableMotion);
     // The avatar's inset is sprung here rather than switched in the stylesheet. `tier` is
     // resolved from the target width, so a rule keyed on it lands a whole spring before the
     // box reaches the width that rule suits: centring from CSS threw the avatar into the
@@ -118,7 +111,7 @@ const TabItem = memo<TabItemProps>(
     // left. Seeded at its resolved value rather than at zero, so a tab that mounts straight
     // into the icon tier is centred on its first frame instead of sliding into place.
     const targetInset = useMotionValue(resolveTabInset(width));
-    const springInset = useSpring(targetInset, TAB_SPRING);
+    const springInset = useTabSpring(targetInset, disableMotion);
     const inset = useTransform(springInset, (value) => `${value}px`);
     const wasSorting = useRef(false);
 
@@ -220,7 +213,7 @@ const TabItem = memo<TabItemProps>(
             size={16}
           />
         ) : (
-          meta.icon && <meta.icon className={styles.tabIcon} size={14} />
+          meta.icon && <meta.icon className={styles.tabIcon} size={16} />
         )}
         {isRunning && <span aria-label={t('tab.running')} className={styles.runningDot} />}
         {showUnreadDot && <span aria-label={t('tab.unread')} className={styles.unreadDot} />}
@@ -263,16 +256,18 @@ const TabItem = memo<TabItemProps>(
           {meta.title}
         </span>
         {closable && (
-          <ActionIcon
+          <Button
             data-tab-close
             aria-label={t('tab.closeCurrentTab')}
             className={styles.closeIcon}
-            icon={X}
             inert={closeInert}
-            size="small"
-            style={CLOSE_BUTTON_STYLE}
+            size="icon"
+            type="button"
+            variant="ghost"
             onClick={handleClose}
-          />
+          >
+            <X size={16} />
+          </Button>
         )}
       </m.div>
     );

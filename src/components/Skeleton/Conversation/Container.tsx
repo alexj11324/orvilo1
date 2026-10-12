@@ -1,7 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import type { CSSProperties, HTMLAttributes } from 'react';
 
 import { CONVERSATION_MIN_WIDTH } from '@/const/layoutTokens';

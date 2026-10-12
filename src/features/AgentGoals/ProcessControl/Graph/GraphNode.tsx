@@ -1,8 +1,8 @@
 'use client';
 
 import { Handle, type NodeProps, Position } from '@xyflow/react';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { FileBox, type LucideIcon, Repeat2, ShieldCheck } from 'lucide-react';
+import { clsx as cx } from 'cn';
+import { AtSign, FileBox, type LucideIcon, Repeat2, ShieldCheck } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +18,7 @@ import type { GoalNodeView } from '../goalGraphViewModel';
 import { KIND_COLOR, KIND_ICON } from '../shared';
 import { useElapsed } from '../useElapsed';
 import { experimentStatusVisual } from './experimentStatus';
+import nativeStyles from './Graph.module.css';
 
 /**
  * A graph card: leading kind icon on a tinted square, title plus a one-line
@@ -38,153 +39,25 @@ export interface GraphNodeData extends Record<string, unknown> {
   view: GoalNodeView;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    box-sizing: border-box;
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-
-    transition:
-      opacity 0.2s,
-      border-color 0.15s;
-  `,
-  chipText: css`
-    font-size: 11px;
-    line-height: 16px;
-    white-space: nowrap;
-  `,
-  dim: css`
-    opacity: 0.45;
-  `,
-  statusRow: css`
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    padding-block: 10px 0;
-    padding-inline: 12px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-variant-numeric: tabular-nums;
-
-    /* The row owns the card's top padding; keep the head snug beneath it. */
-    & + div {
-      padding-block-start: 6px;
-    }
-  `,
-  gate: css`
-    border-color: ${cssVar.colorWarningBorder};
-    background: ${cssVar.colorWarningBg};
-  `,
-  ghost: css`
-    border-style: dashed;
-  `,
-  ghostBar: css`
-    height: 8px;
-    border-radius: 4px;
-    background: ${cssVar.colorFillSecondary};
-    animation: goal-ghost-pulse 1.6s ease-in-out infinite;
-
-    @keyframes goal-ghost-pulse {
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0.4;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  `,
-  glyph: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 30px;
-    height: 30px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  handle: css`
-    width: 1px;
-    min-width: 0;
-    height: 1px;
-    min-height: 0;
-    border: none;
-
-    opacity: 0;
-  `,
-  head: css`
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-  `,
-  human: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-
-    font-size: 9px;
-    font-weight: 600;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  metric: css`
-    display: flex;
-    gap: 4px;
-    align-items: center;
-  `,
-  metrics: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-start: 1px dashed ${cssVar.colorBorderSecondary};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  selected: css`
-    border-color: ${cssVar.colorPrimaryBorder};
-  `,
-  stale: css`
-    border-color: ${cssVar.colorErrorBorder};
-  `,
-  subtitle: css`
-    overflow: hidden;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  title: css`
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.35;
-  `,
-}));
+const styles = {
+  card: `transition-orvilo-goal-card ${nativeStyles.card}`,
+  chipText: nativeStyles.chipText,
+  dim: nativeStyles.dim,
+  statusRow: nativeStyles.statusRow,
+  gate: nativeStyles.gate,
+  ghost: nativeStyles.ghost,
+  ghostBar: `animate-orvilo-goal-ghost ${nativeStyles.ghostBar}`,
+  glyph: nativeStyles.glyph,
+  handle: nativeStyles.handle,
+  head: nativeStyles.head,
+  human: nativeStyles.human,
+  metric: nativeStyles.metric,
+  metrics: nativeStyles.metrics,
+  selected: nativeStyles.selected,
+  stale: nativeStyles.stale,
+  subtitle: nativeStyles.subtitle,
+  title: nativeStyles.title,
+};
 
 interface StateChip {
   color: string;
@@ -232,7 +105,7 @@ const useStateChip = (data: GraphNodeData): StateChip | null => {
     };
   if (node.kind === 'decision' && node.status === 'resolved')
     return {
-      color: cssVar.colorTextTertiary,
+      color: 'var(--foreground-tertiary)',
       icon: TASK_STATUS_VISUALS.completed.icon,
       text: view.humanTouches.length
         ? t('goalProcess.node.decidedByYou')
@@ -256,7 +129,7 @@ const RunningClock = memo<{ startedAt?: Date }>(({ startedAt }) => {
   if (!elapsed) return null;
   // Sits right behind the state chip in the status row — no auto margin. The
   // clock is ambient context, so it reads in a light tint, not body color.
-  return <span style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}>{elapsed}</span>;
+  return <span className="text-xs leading-5 text-foreground-tertiary">{elapsed}</span>;
 });
 
 RunningClock.displayName = 'GoalGraphRunningClock';
@@ -275,7 +148,7 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
   const coordinatorTitleKey = coordinatorNodeTitleKey(view);
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="relative">
       <Handle
         className={styles.handle}
         isConnectable={false}
@@ -318,7 +191,9 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
                 <TooltipTrigger
                   render={
                     <span>
-                      <span className={styles.human}>@</span>
+                      <span className={styles.human}>
+                        <AtSign aria-hidden size={16} />
+                      </span>
                     </span>
                   }
                 />
@@ -332,8 +207,8 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
                 <TooltipTrigger
                   render={
                     <span>
-                      <span style={{ display: 'inline-flex', marginInlineStart: 'auto' }}>
-                        <ShieldCheck color={cssVar.colorTextTertiary} size={13} />
+                      <span className="ms-auto inline-flex">
+                        <ShieldCheck className="text-foreground-tertiary" size={16} />
                       </span>
                     </span>
                   }
@@ -347,7 +222,7 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
           <div className={styles.glyph} style={{ background: palette.soft, color: palette.line }}>
             {createElement(KIND_ICON[kind], { size: 16 })}
           </div>
-          <div className="flex flex-col gap-0.5" style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className={styles.title}>
               {coordinatorTitleKey ? t(coordinatorTitleKey as any) : node.title}
             </span>
@@ -367,7 +242,7 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
                 render={
                   <span>
                     <span className={styles.metric}>
-                      <Repeat2 size={13} />
+                      <Repeat2 size={16} />
                       {attempts}
                     </span>
                   </span>
@@ -383,7 +258,7 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
                   render={
                     <span>
                       <span className={styles.metric}>
-                        <FileBox size={13} />
+                        <FileBox size={16} />
                         {view.artifacts.length}
                       </span>
                     </span>
@@ -427,7 +302,7 @@ GraphNodeView.displayName = 'GoalGraphNodeView';
 export const GhostNodeView = memo(() => {
   const { t } = useTranslation('chat');
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="relative">
       <Handle
         className={styles.handle}
         isConnectable={false}
@@ -442,15 +317,12 @@ export const GhostNodeView = memo(() => {
           >
             <KIND_ICON.task size={16} />
           </div>
-          <div
-            className="flex flex-col gap-1.75"
-            style={{ flex: 1, minWidth: 0, paddingBlockStart: 1 }}
-          >
+          <div className="flex min-w-0 flex-1 flex-col gap-1.75 pbs-0.25">
             <span className={cx(styles.title, shinyTextStyles.shinyText)}>
               {t('goalProcess.node.generating')}
             </span>
-            <span className={styles.ghostBar} style={{ width: '84%' }} />
-            <span className={styles.ghostBar} style={{ width: '56%' }} />
+            <span className={cx(styles.ghostBar, 'w-[84%]')} />
+            <span className={cx(styles.ghostBar, 'w-[56%]')} />
           </div>
         </div>
       </div>

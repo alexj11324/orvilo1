@@ -1,5 +1,12 @@
 # antd-style rollout: ChatInput controls, batch 1
 
+Current source update: the disabled renderer `antdStyleLayer` initializer has
+been retired. `ANTD_STYLE_LAYER_ENABLED` stays false, so runtime and precompiled
+CSS keep their existing unlayered precedence. Explicit helper experiments and
+their real tests remain; enabling a future global layer requires new runtime
+and build integration/acceptance. The mechanism and receipts below describe
+the historical experiment, not an active renderer startup contract.
+
 Status: **draft, not ready to merge**. Base: canary `8af979848`.
 Tracks #577. This is a local migration batch, not completion of phase 1
 or the historical \~160-file cascade audit.

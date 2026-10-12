@@ -2,7 +2,6 @@
 
 import { ContextMenuHost } from '@lobehub/ui';
 import { ModalHost as BaseModalHost, ToastHost } from '@lobehub/ui/base-ui';
-import { StyleProvider } from 'antd-style';
 import { domMax, LazyMotion } from 'motion/react';
 import { Component, type CSSProperties, lazy, memo, type PropsWithChildren, Suspense } from 'react';
 
@@ -108,14 +107,12 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
             <DragUploadProvider>
               <LazyMotion features={domMax}>
                 <TooltipProvider>
-                  <StyleProvider speedy={import.meta.env.PROD}>
-                    <OrviloAnalyticsProviderWrapper>
-                      <CacheHydrationGate>
-                        <BuiltinAgentInitialization />
-                        <DevDockLayout>{children}</DevDockLayout>
-                      </CacheHydrationGate>
-                    </OrviloAnalyticsProviderWrapper>
-                  </StyleProvider>
+                  <OrviloAnalyticsProviderWrapper>
+                    <CacheHydrationGate>
+                      <BuiltinAgentInitialization />
+                      <DevDockLayout>{children}</DevDockLayout>
+                    </CacheHydrationGate>
+                  </OrviloAnalyticsProviderWrapper>
                 </TooltipProvider>
                 <BaseModalHost />
                 <ToastHost />

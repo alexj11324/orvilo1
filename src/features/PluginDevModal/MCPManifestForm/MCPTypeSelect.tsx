@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CheckIcon, RouterIcon, TerminalIcon } from 'lucide-react';
 import React, { createElement, memo } from 'react';
@@ -7,47 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { isDesktop } from '@/const/version';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-// Define styles using antd-style (moved from MCPManifestForm)
-const styles = createStaticStyles(({ css }) => ({
-  active: css`
-    border-color: ${cssVar.colorPrimary};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimary};
-    }
-  `,
-  container: css`
-    cursor: pointer;
-
-    position: relative;
-
-    width: 100%;
-    padding-block: 16px;
-    padding-inline: 16px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: var(--radius-card);
-
-    background-color: ${cssVar.colorBgContainer};
-
-    transition:
-      border-color ${cssVar.motionDurationFast} ${cssVar.motionEaseInOut},
-      box-shadow ${cssVar.motionDurationFast} ${cssVar.motionEaseInOut};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimaryHover};
-    }
-  `,
-  disabled: css`
-    cursor: not-allowed;
-    border-color: ${cssVar.colorBorder};
-    opacity: 0.5;
-    background-color: ${cssVar.colorBgContainerDisabled};
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-    }
-  `,
-}));
+const styles = {
+  active: 'border-primary hover:border-primary',
+  container:
+    'relative w-full cursor-pointer rounded-(--radius-card) border border-border bg-card p-4 transition-[border-color,box-shadow] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) hover:border-primary-hover',
+  disabled:
+    'cursor-not-allowed border-border bg-(--surface-disabled) opacity-50 hover:border-border',
+};
 
 const twStyles = {
   cardDescription: 'text-xs text-foreground-description',
@@ -108,20 +73,24 @@ const MCPTypeSelect = ({ value, onChange }: MCPTypeSelectProps) => {
         return (
           <div
             {...clickableProps(!disabled)}
+            aria-disabled={disabled || undefined}
+            aria-pressed={isActive}
             data-slot="mcp-type-option"
             key={itemValue}
-            style={{ flex: 1 }} // Make cards take equal width
-            className={cx(
+            className={cn(
               styles.container,
-              isActive && styles.active,
+              isActive && !disabled && styles.active,
               disabled && styles.disabled,
-              cn('flex flex-col gap-3', CLICKABLE_FOCUS_RING),
+              cn('flex min-w-0 flex-1 flex-col gap-3', CLICKABLE_FOCUS_RING),
             )}
             onClick={disabled ? undefined : () => handleSelect(itemValue)}
           >
             <div
-              className={cn('flex flex-col items-center justify-center', twStyles.checkIcon)}
-              style={{ opacity: isActive ? 1 : 0 }}
+              className={cn(
+                'flex flex-col items-center justify-center',
+                twStyles.checkIcon,
+                isActive ? 'opacity-100' : 'opacity-0',
+              )}
             >
               <CheckIcon size={16} />
             </div>

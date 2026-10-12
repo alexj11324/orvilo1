@@ -2,7 +2,7 @@
 
 import { ThemeContext } from '@emotion/react';
 import type { LobeCustomToken, ThemeProviderProps } from '@lobehub/ui';
-import { getContrast, mix, readableColor } from 'polished';
+import { darken, getContrast, lighten, mix, readableColor, rgba, saturate } from 'polished';
 import { createContext, createElement, type ReactNode, use, useMemo } from 'react';
 
 // This is the existing SDK's resolved styled-theme value, not another palette
@@ -40,6 +40,12 @@ const stopLocalMotion = `
   [class~='transition'],
   [class~='transition']::before,
   [class~='transition']::after,
+  .orvilo-motion-scope,
+  .orvilo-motion-scope *,
+  .orvilo-motion-scope::before,
+  .orvilo-motion-scope::after,
+  .orvilo-motion-scope *::before,
+  .orvilo-motion-scope *::after,
   .animate-spin,
   .text-shiny,
   .text-shiny::after,
@@ -74,6 +80,39 @@ const createThemeRoleStyles = (theme: ResolvedDocumentTheme) => {
       --${name}-text: ${stateText(text, wash, surface, theme.colorText, mix(0.2, fill, surface))};
     `;
   };
+
+  // Category identity is a domain role, independent of success/warning states.
+  // Keep its existing palette and JS color algebra on the composed theme host.
+  const colors = [
+    theme.volcano,
+    theme.orange,
+    theme.gold,
+    theme.green,
+    theme.cyan,
+    theme.blue,
+    theme.geekblue,
+    theme.purple,
+    theme.magenta,
+    theme.pink,
+  ];
+  const memoryCategories = colors
+    .map((_, index) => {
+      const color = saturate(
+        theme.isDarkMode ? 0.25 : 0.5,
+        mix(
+          theme.isDarkMode ? 0.06 : 0.05,
+          colors[index],
+          theme.isDarkMode ? theme.colorBgContainer : theme.colorBgLayout,
+        ),
+      );
+      return `
+      --memory-category-${index}-background: ${color};
+      --memory-category-${index}-background-text: ${stateText(theme.isDarkMode ? lighten(0.5, color) : darken(0.5, color), color, color, theme.colorText)};
+      --memory-category-${index}-text: ${stateText(theme.isDarkMode ? lighten(0.4, color) : darken(0.6, color), color, color, theme.colorText)};
+      --memory-category-${index}-shadow: ${rgba(darken(0.6, color), theme.isDarkMode ? 0.5 : 0.2)};
+    `;
+    })
+    .join('');
 
   return `
     ${
@@ -120,6 +159,10 @@ const createThemeRoleStyles = (theme: ResolvedDocumentTheme) => {
       --success-border: ${theme.colorSuccessBorder};
       --warning-wash: ${theme.colorWarningBg};
       --warning-border: ${theme.colorWarningBorder};
+      --surface-disabled: ${theme.colorBgContainerDisabled};
+      --server-version-warning-bg: ${theme.yellowBg};
+      --server-version-warning-text: ${stateText(theme.colorWarningText, theme.yellowBg, surface, theme.colorText)};
+      --topic-running-ring: ${theme.isDarkMode ? theme.colorWarningBorder : `color-mix(in srgb, ${theme.colorWarning} 45%, transparent)`};
       --info-wash: ${theme.colorInfoBg};
       --info-border: ${theme.colorInfoBorder};
       --highlight-gold: ${theme.gold4};
@@ -166,6 +209,7 @@ const createThemeRoleStyles = (theme: ResolvedDocumentTheme) => {
       --destructive-foreground: var(--destructive-text);
       --invert: ${theme.colorText};
       --invert-foreground: ${surface};
+      ${memoryCategories}
     }
 
     :root .ant-form-item .ant-form-item-explain-error,
@@ -208,6 +252,8 @@ interface ResolvedThemeRoleValues {
   largeMinWidth: number;
   mediumMinWidth: number;
   mobileMaxWidth: number;
+  motionDurationMid: string;
+  motionEnabled: boolean;
 }
 
 const ResolvedFillTertiaryContext = createContext<ResolvedThemeRoleValues | undefined>(undefined);
@@ -228,11 +274,20 @@ export function ThemeRoles({ children }: { children?: ReactNode }) {
   const values = useMemo(
     () => ({
       fillTertiary: theme.colorFillTertiary,
+      motionEnabled: theme.motion !== false,
+      motionDurationMid: theme.motionDurationMid,
       mobileMaxWidth: theme.screenXSMax,
       largeMinWidth: theme.screenLG,
       mediumMinWidth: theme.screenMD,
     }),
-    [theme.colorFillTertiary, theme.screenXSMax, theme.screenLG, theme.screenMD],
+    [
+      theme.colorFillTertiary,
+      theme.screenXSMax,
+      theme.screenLG,
+      theme.screenMD,
+      theme.motion,
+      theme.motionDurationMid,
+    ],
   );
   return createElement(
     ResolvedFillTertiaryContext.Provider,
@@ -263,4 +318,12 @@ export function useResolvedLargeMinWidth(): number {
 export function useResolvedMediumMinWidth(): number {
   const values = use(ResolvedFillTertiaryContext);
   return values?.mediumMinWidth ?? DEFAULT_MEDIUM_MIN_WIDTH;
+}
+
+export function useResolvedMotionValues(): { enabled: boolean; durationMid: string } {
+  const values = use(ResolvedFillTertiaryContext);
+  if (values === undefined) {
+    throw new Error('ThemeRoles must wrap resolved motion consumers');
+  }
+  return { enabled: values.motionEnabled, durationMid: values.motionDurationMid };
 }

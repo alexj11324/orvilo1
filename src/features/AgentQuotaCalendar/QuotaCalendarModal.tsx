@@ -3,7 +3,6 @@
 import type { QuotaLimitReading } from '@orvilo/heterogeneous-agents/quota';
 import { projectWindows } from '@orvilo/heterogeneous-agents/quota';
 import { ABSOLUTE_DATE_TIME_FORMAT, formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import type { TFunction } from 'i18next';
 import { t as i18nT } from 'i18next';
@@ -46,288 +45,45 @@ import {
   type WindowStat,
 } from './quotaCalendarModel';
 
-const styles = createStaticStyles(({ css }) => ({
-  calendarGrid: css`
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
-  `,
-  /**
-   * Windows on the left, the month calendar on the right. Both are 7-column
-   * grids, so they get an even split — narrower than this and the day cells
-   * clip their cost badge.
-   */
-  layout: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 16px;
-    align-items: start;
+const styles = {
+  calendarGrid: 'grid grid-cols-7 gap-1',
+  layout:
+    'grid grid-cols-2 gap-4 items-start data-[single=true]:grid-cols-1 @max-[900px]/quota-calendar:grid-cols-1',
+  root: '@container/quota-calendar',
+  chartFrame: 'p-1 rounded-(--radius-card) bg-fill-quaternary',
+  cost: 'overflow-hidden text-xs font-semibold tabular-nums text-ellipsis whitespace-nowrap',
+  dayCell:
+    'relative flex flex-col justify-between min-h-17 py-1 px-1.5 rounded-(--radius-card) text-xs bg-card data-[in-month=false]:opacity-[0.35] [&_[data-day-number]]:text-muted-foreground data-[rate-limited=true]:text-destructive-text data-[rate-limited=true]:bg-destructive-wash data-[rate-limited=true]:[&_[data-day-number]]:text-inherit data-[rate-limited=true]:[&_[data-day-secondary]]:text-inherit data-[today=true]:inset-ring-1 data-[today=true]:inset-ring-primary-border',
+  dayFooter: 'flex gap-1 items-end justify-between min-h-5',
+  heatDot:
+    'absolute inset-bs-1.5 inset-e-1.5 size-1 rounded-full opacity-[0.45] bg-success data-[heat=2]:size-1.5 data-[heat=2]:opacity-[0.65] data-[heat=3]:size-2 data-[heat=3]:opacity-[0.82] data-[heat=4]:size-2.5 data-[heat=4]:opacity-100 data-[legend=true]:relative data-[legend=true]:inset-auto data-[legend=true]:flex-none',
+  legendSwatch:
+    'size-2.5 rounded-(--radius-chip) bg-card data-[rate-limited=true]:bg-destructive-wash',
+  capacityRing:
+    'relative grid flex-none place-items-center size-13.5 text-success-text data-[status=warning]:text-warning-text data-[status=error]:text-destructive-text',
+  capacityRingLabel: 'absolute text-sm font-semibold tabular-nums text-current',
+  capacityRingSvg: '-rotate-90 block w-full h-full',
+  statusExhausted: 'text-xs text-destructive-text',
+  statusForecast: 'text-xs text-warning-text',
+  statusSafe: 'text-xs text-muted-foreground',
+  tokens: 'text-xs tabular-nums text-foreground-tertiary whitespace-nowrap',
+  capacityFill:
+    'h-full rounded-[inherit] bg-success data-[status=warning]:bg-warning data-[status=error]:bg-destructive',
+  capacityTrack: 'overflow-hidden w-full h-1.25 rounded-full bg-selected',
+  windowCell:
+    'flex flex-col gap-1 min-w-0 min-h-14.25 p-1 rounded-(--radius-card) text-xs tabular-nums text-muted-foreground whitespace-nowrap bg-card data-[rate-limited=true]:text-destructive-text data-[rate-limited=true]:bg-destructive-wash',
+  windowGrid: 'grid grid-cols-7 gap-1',
+  windowListRow:
+    'grid grid-cols-[minmax(0,1.1fr)_minmax(110px,1fr)_minmax(0,1fr)] gap-3 items-center min-h-8 py-1.5 px-0.5 [&:not(:last-child)]:border-be [&:not(:last-child)]:border-divider',
+  sectionPanel: 'p-2.5 rounded-(--radius-card) bg-fill-quaternary',
+  weekday: 'text-xs text-muted-foreground text-center',
+};
 
-    /* Nothing to pair the calendar with, so let it take the whole width. */
-    &[data-single='true'] {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    @container quota-calendar (width < 900px) {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  `,
-  root: css`
-    container-name: quota-calendar;
-    container-type: inline-size;
-  `,
-  chartFrame: css`
-    padding: 4px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  /** The lead number of a day cell: what the day cost. */
-  cost: css`
-    overflow: hidden;
-
-    font-size: 12px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    line-height: 16px;
-    text-overflow: ellipsis;
-
-    /* "at least $404" must stay one line — a wrap pushes it out of the cell. */
-    white-space: nowrap;
-  `,
-  /** Keep the content surface neutral; intensity is carried by the corner dot. */
-  dayCell: css`
-    position: relative;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-
-    height: 58px;
-    padding-block: 4px;
-    padding-inline: 6px;
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 12px;
-
-    background: ${cssVar.colorBgContainer};
-
-    &[data-in-month='false'] {
-      opacity: 0.35;
-    }
-
-    /* The date labels the cell; the number below it carries the information. */
-    & [data-day-number] {
-      color: ${cssVar.colorTextSecondary};
-    }
-
-    /* Rate limited: the provider refused work that day — an error state, not heat. */
-    &[data-rate-limited='true'] {
-      color: ${cssVar.colorErrorText};
-      background: ${cssVar.colorErrorBg};
-    }
-
-    /* A refused day states itself in one colour, date and volume included. */
-    &[data-rate-limited='true'] [data-day-number],
-    &[data-rate-limited='true'] [data-day-secondary] {
-      color: inherit;
-    }
-
-    /* Today is a marker, not an alarm — the lightest ring that still reads. */
-    &[data-today='true'] {
-      box-shadow: inset 0 0 0 1px ${cssVar.colorPrimaryBorder};
-    }
-  `,
-  dayFooter: css`
-    display: flex;
-    gap: 4px;
-    align-items: flex-end;
-    justify-content: space-between;
-
-    min-height: 14px;
-  `,
-  heatDot: css`
-    position: absolute;
-    inset-block-start: 6px;
-    inset-inline-end: 6px;
-
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-
-    opacity: 0.45;
-    background: ${cssVar.colorSuccess};
-
-    &[data-heat='2'] {
-      width: 6px;
-      height: 6px;
-      opacity: 0.65;
-    }
-
-    &[data-heat='3'] {
-      width: 8px;
-      height: 8px;
-      opacity: 0.82;
-    }
-
-    &[data-heat='4'] {
-      width: 10px;
-      height: 10px;
-      opacity: 1;
-    }
-
-    &[data-legend='true'] {
-      position: relative;
-      inset: auto;
-      flex: none;
-    }
-  `,
-  legendSwatch: css`
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    background: ${cssVar.colorBgContainer};
-
-    &[data-rate-limited='true'] {
-      background: ${cssVar.colorErrorBg};
-    }
-  `,
-  capacityRing: css`
-    position: relative;
-
-    display: grid;
-    flex: none;
-    place-items: center;
-
-    width: 54px;
-    height: 54px;
-
-    color: ${cssVar.colorSuccess};
-
-    &[data-status='warning'] {
-      color: ${cssVar.colorWarning};
-    }
-
-    &[data-status='error'] {
-      color: ${cssVar.colorError};
-    }
-  `,
-  capacityRingLabel: css`
-    position: absolute;
-
-    font-size: 13px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: currentcolor;
-  `,
-  capacityRingSvg: css`
-    transform: rotate(-90deg);
-    display: block;
-    width: 100%;
-    height: 100%;
-  `,
-  statusExhausted: css`
-    font-size: 12px;
-    color: ${cssVar.colorErrorText};
-  `,
-  /* A forecast is a warning, not a failure — the quota has not run out yet. */
-  statusForecast: css`
-    font-size: 12px;
-    color: ${cssVar.colorWarningText};
-  `,
-  statusSafe: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  /** Backs up the cost with the volume behind it. */
-  tokens: css`
-    font-size: 10px;
-    font-variant-numeric: tabular-nums;
-    line-height: 14px;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
-  `,
-  capacityFill: css`
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorSuccess};
-
-    &[data-status='warning'] {
-      background: ${cssVar.colorWarning};
-    }
-
-    &[data-status='error'] {
-      background: ${cssVar.colorError};
-    }
-  `,
-  capacityTrack: css`
-    overflow: hidden;
-
-    width: 100%;
-    height: 5px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  windowCell: css`
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-
-    min-width: 0;
-    height: 38px;
-    padding: 4px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-size: 10px;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.2;
-    color: ${cssVar.colorTextSecondary};
-
-    /* "09:42 100%" is one unit — wrapping it splits the percentage in half. */
-    white-space: nowrap;
-
-    background: ${cssVar.colorBgContainer};
-
-    &[data-rate-limited='true'] {
-      color: ${cssVar.colorErrorText};
-      background: ${cssVar.colorErrorBg};
-    }
-  `,
-  windowGrid: css`
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
-  `,
-  /**
-   * One line per window — the row is a scannable comparison, not a card. The
-   * panel around them is the only card; a fill per row would stack a second
-   * surface on it for six rows running, so they are separated by rules instead.
-   */
-  windowListRow: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(110px, 1fr) minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-
-    min-height: 30px;
-    padding-block: 5px;
-    padding-inline: 2px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  sectionPanel: css`
-    padding: 10px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  weekday: css`
-    font-size: 11px;
-    color: ${cssVar.colorTextQuaternary};
-    text-align: center;
-  `,
-}));
+const COMPACT_ACTION_SIZE = {
+  blockSize: 32,
+  borderRadius: 'var(--radius-button)',
+  size: 16,
+} as const;
 
 type WindowRow = Awaited<ReturnType<typeof agentQuotaService.getWindows>>[number];
 
@@ -444,10 +200,10 @@ const BurnChart = memo<{
         <div className="flex items-center gap-2.5">
           <CapacityRing utilization={last.utilization} />
           <div className="flex flex-col gap-0.5">
-            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
+            <div className="text-xs text-muted-foreground">
               {t('heteroAgent.claudeQuota.calendar.usedOfWindow')}
             </div>
-            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
+            <div className="text-xs text-muted-foreground">
               {spend.tokens > 0
                 ? t('heteroAgent.claudeQuota.calendar.windowSpend', {
                     // One convention for every amount on this surface; the
@@ -483,7 +239,7 @@ const BurnChart = memo<{
           {[25, 50, 75].map((u) => (
             <line
               key={u}
-              stroke={cssVar.colorBorderSecondary}
+              stroke={'var(--divider)'}
               strokeWidth={1}
               x1={0}
               x2={CHART_W}
@@ -493,7 +249,7 @@ const BurnChart = memo<{
           ))}
           {/* even pace: exactly exhausting the window at its reset */}
           <line
-            stroke={cssVar.colorTextQuaternary}
+            stroke={'var(--foreground-quaternary)'}
             strokeDasharray={'4 4'}
             strokeWidth={1}
             x1={0}
@@ -501,11 +257,16 @@ const BurnChart = memo<{
             y1={CHART_H}
             y2={0}
           />
-          <path d={area} fill={cssVar.colorSuccess} opacity={0.12} />
-          <polyline fill={'none'} points={polyline} stroke={cssVar.colorSuccess} strokeWidth={2} />
+          <path d={area} fill={'var(--success)'} opacity={0.12} />
+          <polyline
+            fill={'none'}
+            points={polyline}
+            stroke={'var(--success-text)'}
+            strokeWidth={2}
+          />
           {isLive && projectionEnd && (
             <line
-              stroke={willExhaust ? cssVar.colorWarning : cssVar.colorTextTertiary}
+              stroke={willExhaust ? 'var(--warning-text)' : 'var(--foreground-tertiary)'}
               strokeDasharray={'4 4'}
               strokeWidth={1.5}
               x1={xOf(last.time, window)}
@@ -518,27 +279,27 @@ const BurnChart = memo<{
             <circle
               cx={xOf(projection.exhaustAt, window)}
               cy={yOf(100)}
-              fill={cssVar.colorWarning}
+              fill={'var(--warning-text)'}
               r={3.5}
             />
           )}
           <circle
             cx={xOf(last.time, window)}
             cy={yOf(last.utilization)}
-            fill={cssVar.colorSuccess}
+            fill={'var(--success-text)'}
             r={3.5}
           />
         </svg>
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+        <div className="text-xs text-muted-foreground">
           {dayjs(window.windowStartAt).format(timeFormat)}
         </div>
-        <div style={{ color: cssVar.colorTextQuaternary, fontSize: 11 }}>
+        <div className="text-xs text-muted-foreground">
           {t('heteroAgent.claudeQuota.calendar.pace')}
         </div>
-        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+        <div className="text-xs text-muted-foreground">
           {dayjs(window.resetsAt).format(timeFormat)}
         </div>
       </div>
@@ -567,7 +328,7 @@ const CapacityRing = memo<{ utilization: number }>(({ utilization }) => {
           cy={27}
           fill={'none'}
           r={RING_RADIUS}
-          stroke={cssVar.colorFillSecondary}
+          stroke={'var(--selected)'}
           strokeWidth={5}
         />
         <circle
@@ -638,10 +399,10 @@ const WindowHistory = memo<{
     return (
       <div className={`flex flex-col gap-2 ${styles.sectionPanel}`}>
         <div className="flex items-baseline justify-between">
-          <div className="font-semibold" style={{ fontSize: 13 }}>
+          <div className="text-base font-semibold">
             {t('heteroAgent.claudeQuota.calendar.sessionHistory')}
           </div>
-          <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+          <div className="text-xs text-muted-foreground">
             {t('heteroAgent.claudeQuota.calendar.sessionHistoryHint')}
           </div>
         </div>
@@ -662,7 +423,7 @@ const WindowHistory = memo<{
                   data-rate-limited={stat.rateLimitedAt != null}
                   key={`${column.key}-${stat.resetsAt}`}
                 >
-                  <div className="flex justify-between" style={{ minWidth: 0, width: '100%' }}>
+                  <div className="flex flex-col" style={{ minWidth: 0, width: '100%' }}>
                     <span>{dayjs(stat.windowStartAt).format('HH:mm')}</span>
                     <strong>{Math.round(stat.peakUtilization)}%</strong>
                   </div>
@@ -686,10 +447,10 @@ const WindowHistory = memo<{
   return (
     <div className={`flex flex-col gap-1.5 ${styles.sectionPanel}`}>
       <div className="flex items-baseline justify-between">
-        <div className="font-semibold" style={{ fontSize: 13 }}>
+        <div className="text-base font-semibold">
           {t('heteroAgent.claudeQuota.calendar.weeklyHistory')}
         </div>
-        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+        <div className="text-xs text-muted-foreground">
           {t('heteroAgent.claudeQuota.calendar.weeklyHistoryHint')}
         </div>
       </div>
@@ -697,15 +458,12 @@ const WindowHistory = memo<{
         {stats.map((stat) => (
           <div className={styles.windowListRow} key={stat.resetsAt}>
             <div className="flex items-baseline gap-1.5">
-              <div style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+              <div className="text-xs whitespace-nowrap">
                 {dayjs(stat.windowStartAt).format('M/D')} – {dayjs(stat.resetsAt).format('M/D')}
               </div>
               {/* Only the live window needs naming; the rest are read as history. */}
               {stat.isLive && (
-                <div
-                  className="text-muted-foreground"
-                  style={{ fontSize: 10, whiteSpace: 'nowrap' }}
-                >
+                <div className="text-xs text-muted-foreground whitespace-nowrap">
                   {t('heteroAgent.claudeQuota.calendar.currentWindow')}
                 </div>
               )}
@@ -714,10 +472,7 @@ const WindowHistory = memo<{
               <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
                 <CapacityMeter utilization={stat.peakUtilization} />
               </div>
-              <div
-                className="font-semibold"
-                style={{ flex: 'none', fontSize: 12, textAlign: 'right', width: 34 }}
-              >
+              <div className="flex-none w-10 text-xs font-semibold tabular-nums text-right">
                 {Math.round(stat.peakUtilization)}%
               </div>
             </div>
@@ -728,10 +483,7 @@ const WindowHistory = memo<{
                 <TooltipTrigger
                   render={
                     <span>
-                      <div
-                        className="text-muted-foreground"
-                        style={{ fontSize: 11, textAlign: 'right' }}
-                      >
+                      <div className="text-xs text-muted-foreground text-right">
                         {formatTokens(stat.tokens)} · {formatTrackedCost(stat, t, true)}
                       </div>
                     </span>
@@ -745,8 +497,8 @@ const WindowHistory = memo<{
                   render={
                     <span>
                       <div className="flex items-center gap-1 justify-end">
-                        <InfoIcon color={cssVar.colorTextTertiary} size={11} />
-                        <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+                        <InfoIcon color={'var(--foreground-tertiary)'} size={14} />
+                        <div className="text-xs text-muted-foreground">
                           {t('heteroAgent.claudeQuota.calendar.noLedgerSpendShort')}
                         </div>
                       </div>
@@ -912,7 +664,7 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
 
   if (readings.length === 0 && windows.length === 0)
     return (
-      <div className="text-muted-foreground" style={{ paddingBlock: 24, textAlign: 'center' }}>
+      <div className="py-6 text-sm text-muted-foreground text-center">
         {t(
           accountUnavailable
             ? 'heteroAgent.claudeQuota.calendar.accountUnavailable'
@@ -944,7 +696,8 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
           {/* The series switcher heads the window column, so the calendar beside
               it starts at the body top instead of below a full-width control. */}
           <ToggleGroup
-            size="sm"
+            className="rounded-(--radius-button)"
+            size="default"
             style={{ alignSelf: 'flex-start' }}
             value={[seriesId(series)]}
             onValueChange={(value) => {
@@ -954,7 +707,11 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
             }}
           >
             {seriesOptions.map((o) => (
-              <ToggleGroupItem key={o.value} value={o.value}>
+              <ToggleGroupItem
+                className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow,opacity] aria-pressed:hover:bg-selected data-[state=on]:hover:bg-selected"
+                key={o.value}
+                value={o.value}
+              >
                 {o.label}
               </ToggleGroupItem>
             ))}
@@ -976,26 +733,24 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
         <div className={`flex flex-col gap-2 ${styles.sectionPanel}`}>
           <div className="flex items-center gap-1 justify-between">
             <div className="flex items-baseline gap-2">
-              <div className="font-semibold" style={{ fontSize: 13 }}>
+              <div className="text-base font-semibold">
                 {t('heteroAgent.claudeQuota.calendar.monthSpend')}
               </div>
-              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
-                {month.format('YYYY/MM')}
-              </div>
+              <div className="text-xs text-muted-foreground">{month.format('YYYY/MM')}</div>
             </div>
             <div className="flex gap-0.5">
               <ActionIcon
                 aria-label={t('previous', { ns: 'common' })}
                 disabled={!isCalendarMonthAvailable(previousMonth, now)}
                 icon={ChevronLeftIcon}
-                size={'small'}
+                size={COMPACT_ACTION_SIZE}
                 onClick={() => setMonth((m) => m.subtract(1, 'month'))}
               />
               <ActionIcon
                 aria-label={t('next', { ns: 'common' })}
                 disabled={!isCalendarMonthAvailable(nextMonth, now)}
                 icon={ChevronRightIcon}
-                size={'small'}
+                size={COMPACT_ACTION_SIZE}
                 onClick={() => setMonth((m) => m.add(1, 'month'))}
               />
             </div>
@@ -1045,8 +800,8 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
                   <span className={styles.dayFooter}>
                     <span className={styles.cost}>{primary}</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                      {rateLimited && <BanIcon color={cssVar.colorError} size={12} />}
-                      {resetsAt && <RotateCcwIcon color={cssVar.colorTextSecondary} size={11} />}
+                      {rateLimited && <BanIcon color={'var(--destructive-text)'} size={14} />}
+                      {resetsAt && <RotateCcwIcon color={'var(--muted-foreground)'} size={14} />}
                     </span>
                   </span>
                   {secondary && (
@@ -1068,9 +823,9 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
             })}
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap" style={{ fontSize: 11 }}>
+          <div className="flex items-center gap-3 flex-wrap text-xs">
             <div className="flex items-center gap-1">
-              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+              <div className="text-xs text-muted-foreground">
                 {t('heteroAgent.claudeQuota.calendar.legendLess')}
               </div>
               {[1, 2, 3, 4].map((level) => (
@@ -1081,21 +836,21 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
                   key={level}
                 />
               ))}
-              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+              <div className="text-xs text-muted-foreground">
                 {t('heteroAgent.claudeQuota.calendar.legendMore')}
               </div>
             </div>
             <div className="flex items-center gap-1">
               <span className={styles.legendSwatch} data-rate-limited={'true'} />
-              <BanIcon color={cssVar.colorError} size={11} />
-              <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+              <BanIcon color={'var(--destructive-text)'} size={14} />
+              <div className="text-xs text-muted-foreground">
                 {t('heteroAgent.claudeQuota.calendar.rateLimited')}
               </div>
             </div>
             {series.type !== 'session' && (
               <div className="flex items-center gap-1">
-                <RotateCcwIcon color={cssVar.colorTextSecondary} size={11} />
-                <div className="text-muted-foreground" style={{ fontSize: 11 }}>
+                <RotateCcwIcon color={'var(--muted-foreground)'} size={14} />
+                <div className="text-xs text-muted-foreground">
                   {t('heteroAgent.claudeQuota.calendar.legendReset')}
                 </div>
               </div>

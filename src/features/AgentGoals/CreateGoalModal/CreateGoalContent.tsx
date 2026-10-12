@@ -4,7 +4,6 @@ import { useEditor } from '@lobehub/editor/react';
 import { resolveGoalAttemptBudget, resolveGoalConcurrency } from '@orvilo/builtin-tool-goal';
 import type { CreateGoalParams, GoalCriterionDraft } from '@orvilo/builtin-tool-task';
 import { DEFAULT_GOAL_MAX_ROUNDS } from '@orvilo/const/verify';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   ArrowLeft,
@@ -32,6 +31,7 @@ import {
 } from '@/components/reui/number-field';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   CriterionList,
   CriterionRequiredChip,
@@ -42,159 +42,34 @@ import { EditorCanvas } from '@/features/EditorCanvas';
 import { pickAndInsertAttachments } from '@/features/EditorCanvas/editorAttachments';
 import { usePermission } from '@/hooks/usePermission';
 import { goalService } from '@/services/goal';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { shinyTextStyles } from '@/styles';
 
+import presentation from './CreateGoalContent.module.css';
 import { buildGoalCreateInput, buildReviewedGoalContent } from './goalConfig';
 import { createFallbackGoalCriterion, generateGoalCriteria } from './goalCriteria';
 import { deriveGoalTitle } from './goalTitle';
 
-const styles = createStaticStyles(({ css }) => ({
-  budgetField: css`
-    display: grid;
-    grid-template-columns: 96px 144px minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-
-    min-width: 0;
-
-    @media (width <= 640px) {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 6px;
-    }
-  `,
-  body: css`
-    overflow-y: auto;
-
-    min-height: 0;
-    max-height: min(70vh, 680px);
-    padding-block: 8px 24px;
-    padding-inline: 16px;
-  `,
-  close: css`
-    position: absolute;
-    inset-block-start: 14px;
-    inset-inline-end: 14px;
-  `,
-  criteriaList: css`
-    overflow-y: auto;
-    max-height: 320px;
-  `,
-  footer: css`
-    padding-block: 8px;
-    padding-inline: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  generatingStatus: css`
-    min-height: 36px;
-    padding-block: 6px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  generatingTextItem: css`
-    display: flex;
-    align-items: center;
-
-    height: 22px;
-
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 22px;
-    white-space: nowrap;
-  `,
-  generatingTextTrack: css`
-    animation: goal-generation-roll 16s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-
-    @keyframes goal-generation-roll {
-      0%,
-      20% {
-        transform: translateY(0);
-      }
-
-      25%,
-      45% {
-        transform: translateY(-22px);
-      }
-
-      50%,
-      70% {
-        transform: translateY(-44px);
-      }
-
-      75%,
-      95% {
-        transform: translateY(-66px);
-      }
-
-      100% {
-        transform: translateY(-88px);
-      }
-    }
-  `,
-  generatingTextViewport: css`
-    overflow: hidden;
-    height: 22px;
-  `,
-  head: css`
-    position: relative;
-    padding-block: 16px 8px;
-    padding-inline: 16px;
-  `,
-  inputShell: css`
-    overflow: hidden;
-    min-height: 208px;
-    background: ${cssVar.colorBgElevated};
-  `,
-  instructionEditor: css`
-    min-height: 36px;
-    padding-block: 0 4px;
-    padding-inline: 12px;
-
-    /* EditorCanvas reserves space for its document footer by default. The
-       compact review summary has no footer, so keeping that space turns a
-       one-line instruction into a conspicuous empty band. */
-    & > div > div > div {
-      padding-block-end: 0 !important;
-    }
-  `,
-  reviewSection: css`
-    padding-block: 16px;
-
-    &:first-child {
-      padding-block: 0 4px;
-    }
-  `,
-  sectionHint: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    box-sizing: border-box;
-    width: 100%;
-    padding-block: 4px 8px;
-    padding-inline-end: 40px;
-    border: none;
-
-    font-family: inherit;
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1.4;
-    color: inherit;
-
-    background: transparent;
-    outline: none;
-  `,
-  titleStatic: css`
-    padding-block: 4px 8px;
-    padding-inline-end: 40px;
-
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  budgetField: presentation.budgetField,
+  body: 'overflow-y-auto min-h-0 max-h-[min(70vh,calc(var(--spacing)*170))] pbs-2 pbe-6 px-4',
+  close:
+    'absolute inset-bs-3.5 inset-e-3.5 pointer-coarse:inset-bs-[calc(var(--spacing)*1.75)] pointer-coarse:inset-e-[calc(var(--spacing)*1.75)]',
+  criteriaList: 'overflow-y-auto max-h-80',
+  footer: 'py-2 px-4 border-bs border-divider',
+  generatingStatus: 'min-h-9 py-1.5 text-muted-foreground',
+  generatingTextItem: 'flex items-center h-5.5 text-sm leading-5.5 font-medium whitespace-nowrap',
+  generatingTextTrack: presentation.generatingTextTrack,
+  generatingTextViewport: 'overflow-hidden h-5.5',
+  head: 'relative pbs-4 pbe-2 px-4',
+  inputShell: 'overflow-hidden min-h-52 bg-popover',
+  instructionEditor: 'min-h-9 pbs-0 pbe-1 px-3',
+  reviewSection: 'py-4 first:pbs-0 first:pbe-1',
+  sectionHint: 'text-muted-foreground',
+  title: 'w-full py-1 pe-10 border-0 bg-transparent text-xl leading-7 font-semibold',
+  titleStatic: 'pbs-1 pbe-2 pe-10 text-xl leading-7 font-semibold text-foreground',
+};
 
 const GENERATION_ESTIMATE_SECONDS = 90;
 
@@ -228,6 +103,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
   const { agentId, initialRequirement, initialRoundBudget, initialTitle, onCreated, projectId } =
     props;
   const { t } = useTranslation('chat');
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
   const { close } = useModalContext();
   const { allowed: canCreate, reason } = usePermission('create_content');
 
@@ -434,26 +310,35 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
   }, []);
 
   return (
-    <div className="flex flex-col" onKeyDown={handleKeyDown}>
+    <div
+      className={cn('flex flex-col', presentation.content)}
+      data-motion-disabled={animationMode === 'disabled' || undefined}
+      onKeyDown={handleKeyDown}
+    >
       <div className={`flex ${styles.head}`}>
         <div className="flex flex-col flex-1 gap-1.5">
           {step === 'review' && (
             <div className="flex items-center gap-2">
-              <ActionIcon
-                icon={ArrowLeft}
-                size={'small'}
-                title={t('createGoal.back')}
-                onClick={() => setStep('describe')}
-              />
+              <span className="inline-flex flex-none pointer-coarse:p-[calc(var(--spacing)*1.75)]">
+                <ActionIcon
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                  icon={ArrowLeft}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  title={t('createGoal.back')}
+                  onClick={() => setStep('describe')}
+                />
+              </span>
               <div className="text-xs text-muted-foreground">{t('createGoal.reviewStep')}</div>
             </div>
           )}
           {step === 'review' ? (
-            <input
+            <Input
+              aria-label={t('createGoal.titlePlaceholder')}
               className={styles.title}
               disabled={!canCreate}
               placeholder={t('createGoal.titlePlaceholder')}
               value={plan.name}
+              visualSize="large"
               onChange={(e) => setPlan((current) => ({ ...current, name: e.target.value }))}
             />
           ) : (
@@ -463,13 +348,13 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
             <>
               <GeneratingBorder className={styles.inputShell} generating={step === 'preparing'}>
                 <EditorCanvas
+                  contentClassName={presentation.editorDescribe}
                   disabled={!canCreate || step === 'preparing'}
                   editor={editor}
                   editorData={{ content: plan.instruction }}
                   entityId={'create-goal-description'}
                   floatingToolbar={false}
                   placeholder={t('createGoal.instructionPlaceholder')}
-                  style={{ fontSize: 14, minHeight: 206, padding: 16 }}
                   onContentChange={handleContentChange}
                 />
               </GeneratingBorder>
@@ -478,7 +363,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                   className={`flex items-center gap-2.5 justify-between ${styles.generatingStatus}`}
                 >
                   <div className="flex items-center gap-2">
-                    <NeuralNetworkLoading size={18} />
+                    <NeuralNetworkLoading size={16} />
                     <div
                       aria-label={t('createGoal.generating')}
                       className={styles.generatingTextViewport}
@@ -510,12 +395,17 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
             </>
           )}
         </div>
-        <ActionIcon
-          className={styles.close}
-          icon={X}
-          title={t('close', { ns: 'common' })}
-          onClick={close}
-        />
+        <span
+          className={cn(styles.close, 'inline-flex pointer-coarse:p-[calc(var(--spacing)*1.75)]')}
+        >
+          <ActionIcon
+            className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+            icon={X}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+            title={t('close', { ns: 'common' })}
+            onClick={close}
+          />
+        </span>
       </div>
 
       {step === 'review' && (
@@ -523,13 +413,14 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
           <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
             <div className={`flex flex-col ${styles.instructionEditor}`}>
               <EditorCanvas
+                contentClassName={presentation.editorReview}
                 disabled={!canCreate}
                 editor={editor}
                 editorData={{ content: plan.instruction }}
                 entityId={'create-goal-instruction'}
                 floatingToolbar={false}
                 placeholder={t('createGoal.instructionPlaceholder')}
-                style={{ fontSize: 13, minHeight: 32 }}
+                reserveDocumentFooter={false}
                 onContentChange={handleContentChange}
               />
             </div>
@@ -538,18 +429,25 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
           <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
             <div className="flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2">
-                <ShieldCheck color={cssVar.colorTextTertiary} size={16} />
-                <div className="text-(length:--text-dense) font-semibold">
+                <ShieldCheck className="text-foreground-tertiary" size={16} />
+                <div className="text-sm leading-5.5 font-semibold">
                   {t('createGoal.criteriaTitle')}
                 </div>
                 <div className={cn('text-xs', styles.sectionHint)}>
                   {t('createGoal.criteriaHint')}
                 </div>
               </div>
-              <Button size="sm" variant="ghost" onClick={addCriterion}>
-                <Plus data-icon="inline-start" />
-                {t('createGoal.addCriterion')}
-              </Button>
+              <span className="inline-flex flex-none pointer-coarse:py-[calc(var(--spacing)*1.75)]">
+                <Button
+                  className="relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                  size="compact"
+                  variant="ghost"
+                  onClick={addCriterion}
+                >
+                  <Plus data-icon="inline-start" />
+                  {t('createGoal.addCriterion')}
+                </Button>
+              </span>
             </div>
             {/* Draft rows keep the C{seq} anchor but no status icon — the pending
                 circle belongs to the post-creation check list, not to authoring. */}
@@ -561,23 +459,30 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                   title={criterion.title || t('createGoal.criterionPlaceholder')}
                   actions={
                     <>
-                      <ActionIcon
-                        icon={Pencil}
-                        size={'small'}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          editCriterion(index);
-                        }}
-                      />
-                      <ActionIcon
-                        icon={Trash2}
-                        size={'small'}
-                        title={t('createGoal.removeCriterion')}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          removeCriterion(index);
-                        }}
-                      />
+                      <span className="inline-flex flex-none pointer-coarse:p-[calc(var(--spacing)*1.75)]">
+                        <ActionIcon
+                          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                          icon={Pencil}
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                          title={t('edit', { ns: 'common' })}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            editCriterion(index);
+                          }}
+                        />
+                      </span>
+                      <span className="inline-flex flex-none pointer-coarse:p-[calc(var(--spacing)*1.75)]">
+                        <ActionIcon
+                          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                          icon={Trash2}
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                          title={t('createGoal.removeCriterion')}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeCriterion(index);
+                          }}
+                        />
+                      </span>
                     </>
                   }
                   onOpen={() => editCriterion(index)}
@@ -597,9 +502,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
           </div>
 
           <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
-            <div className="text-(length:--text-dense) font-semibold">
-              {t('createGoal.budgetTitle')}
-            </div>
+            <div className="text-sm leading-5.5 font-semibold">{t('createGoal.budgetTitle')}</div>
             <div className="flex flex-col gap-3">
               <div className={styles.budgetField}>
                 <div className="text-xs text-muted-foreground">
@@ -608,8 +511,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 <NumberField
                   disabled={!canCreate}
                   min={2}
-                  size={'lg'}
-                  style={{ width: '100%' }}
+                  size="normal"
                   value={plan.maxIterations ?? undefined}
                   onValueChange={(value) =>
                     setPlan((current) => ({ ...current, maxIterations: value }))
@@ -617,7 +519,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 >
                   <NumberFieldGroup>
                     <NumberFieldDecrement />
-                    <NumberFieldInput />
+                    <NumberFieldInput aria-label={t('createGoal.roundBudgetLabel')} />
                     <NumberFieldIncrement />
                     <span className="text-muted-foreground pr-2 text-xs">
                       {t('createGoal.roundsUnit')}
@@ -636,8 +538,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 <NumberField
                   disabled={!canCreate}
                   min={0}
-                  size={'lg'}
-                  style={{ width: '100%' }}
+                  size="normal"
                   value={plan.maxTotalCost}
                   onValueChange={(value) =>
                     setPlan((current) => ({ ...current, maxTotalCost: value }))
@@ -645,7 +546,10 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 >
                   <NumberFieldGroup>
                     <span className="text-muted-foreground pl-2 text-xs">$</span>
-                    <NumberFieldInput placeholder={t('createGoal.costBudgetPlaceholder')} />
+                    <NumberFieldInput
+                      aria-label={t('createGoal.costBudgetLabel')}
+                      placeholder={t('createGoal.costBudgetPlaceholder')}
+                    />
                   </NumberFieldGroup>
                 </NumberField>
                 <div className={cn('text-xs', styles.sectionHint)}>
@@ -661,8 +565,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                   disabled={!canCreate}
                   max={10}
                   min={1}
-                  size={'lg'}
-                  style={{ width: '100%' }}
+                  size="normal"
                   value={plan.maxConcurrentTasks ?? undefined}
                   onValueChange={(value) =>
                     setPlan((current) => ({ ...current, maxConcurrentTasks: value }))
@@ -670,7 +573,10 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 >
                   <NumberFieldGroup>
                     <NumberFieldDecrement />
-                    <NumberFieldInput placeholder={t('createGoal.parallelismPlaceholder')} />
+                    <NumberFieldInput
+                      aria-label={t('createGoal.parallelismLabel')}
+                      placeholder={t('createGoal.parallelismPlaceholder')}
+                    />
                     <NumberFieldIncrement />
                     <span className="text-muted-foreground pr-2 text-xs">
                       {t('createGoal.parallelismUnit')}
@@ -686,53 +592,62 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
         </div>
       )}
 
-      <div className={`flex items-center justify-between ${styles.footer}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${styles.footer}`}>
         <div className="flex items-center gap-2 flex-wrap">
           {step === 'review' && (
-            <ActionIcon
-              icon={Paperclip}
-              title={t('upload.action.tooltip')}
-              onClick={handleAttach}
-            />
+            <span className="inline-flex flex-none pointer-coarse:p-[calc(var(--spacing)*1.75)]">
+              <ActionIcon
+                className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                icon={Paperclip}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                title={t('upload.action.tooltip')}
+                onClick={handleAttach}
+              />
+            </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
           {step === 'describe' && (
-            <Button
-              disabled={!canCreate || isCreating}
-              size="sm"
-              style={{ color: cssVar.colorTextTertiary }}
-              title={canCreate ? undefined : reason}
-              variant="ghost"
-              onClick={handleCreateBlank}
-            >
-              <PencilLine data-icon="inline-start" />
-              {t('createModal.createBlank')}
-            </Button>
+            <span className="inline-flex flex-none pointer-coarse:py-[calc(var(--spacing)*1.25)]">
+              <Button
+                className="text-foreground-tertiary relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.25)] pointer-coarse:after:content-['']"
+                disabled={!canCreate || isCreating}
+                size="normal"
+                title={canCreate ? undefined : reason}
+                variant="ghost"
+                onClick={handleCreateBlank}
+              >
+                <PencilLine data-icon="inline-start" />
+                {t('createModal.createBlank')}
+              </Button>
+            </span>
           )}
-          <Button
-            className="rounded-full"
-            loading={isCreating || step === 'preparing'}
-            size="sm"
-            title={canCreate ? undefined : reason}
-            variant="outline"
-            disabled={
-              !canCreate ||
-              isCreating ||
-              step === 'preparing' ||
-              (step === 'describe'
-                ? !plan.instruction.trim()
-                : !plan.name.trim() || plan.criteria.every((criterion) => !criterion.title.trim()))
-            }
-            onClick={step === 'describe' ? handleNext : handleSubmit}
-          >
-            {step === 'preparing'
-              ? t('createGoal.preparing')
-              : step === 'describe'
-                ? t('createGoal.next')
-                : t('createGoal.submit')}
-          </Button>
+          <span className="inline-flex flex-none pointer-coarse:py-[calc(var(--spacing)*1.25)]">
+            <Button
+              className="relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.25)] pointer-coarse:after:content-['']"
+              loading={isCreating || step === 'preparing'}
+              size="normal"
+              title={canCreate ? undefined : reason}
+              variant="outline"
+              disabled={
+                !canCreate ||
+                isCreating ||
+                step === 'preparing' ||
+                (step === 'describe'
+                  ? !plan.instruction.trim()
+                  : !plan.name.trim() ||
+                    plan.criteria.every((criterion) => !criterion.title.trim()))
+              }
+              onClick={step === 'describe' ? handleNext : handleSubmit}
+            >
+              {step === 'preparing'
+                ? t('createGoal.preparing')
+                : step === 'describe'
+                  ? t('createGoal.next')
+                  : t('createGoal.submit')}
+            </Button>
+          </span>
         </div>
       </div>
     </div>

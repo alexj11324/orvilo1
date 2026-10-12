@@ -66,7 +66,7 @@ const ColumnResizeHandle = memo<ColumnResizeHandleProps>(
     return (
       <div
         className={cn(
-          "cursor-col-resize select-none absolute z-1 inset-y-0 end-0 -translate-x-1 flex items-center justify-center w-4 after:content-[''] after:w-[1.5px] after:h-[calc(100%_-_16px)] after:rounded-full after:bg-border after:transition-[width,background-color] after:duration-200 after:ease-[ease] hover:after:w-0.75 hover:after:bg-primary",
+          "cursor-col-resize select-none absolute z-1 inset-y-0 end-0 -translate-x-1 flex items-center justify-center w-4 after:content-[''] after:w-[calc(var(--spacing)*3/8)] after:h-[calc(100%_-_16px)] after:rounded-full after:bg-border after:transition-[width,background-color] after:duration-200 after:ease-[ease] hover:after:w-0.75 hover:after:bg-primary",
           isDragging && 'after:w-0.75 after:bg-primary',
         )}
         onMouseDown={handleMouseDown}

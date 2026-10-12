@@ -30,6 +30,17 @@ describe('resolveRowMarker', () => {
     expect(resolveRowMarker(row({ payload: { to } }))).toEqual({ category, kind: 'workflow' });
   });
 
+  it('draws a workflow move with the mark of the category it landed in', () => {
+    expect(
+      resolveRowMarker(
+        row({ payload: { from: 'in_progress', to: 'done' }, type: 'workflow_state' }),
+      ),
+    ).toEqual({ category: 'done', kind: 'workflow' });
+    expect(resolveRowMarker(row({ payload: { to: 'elsewhere' }, type: 'workflow_state' }))).toEqual(
+      { glyph: 'statusProperty', kind: 'glyph' },
+    );
+  });
+
   it('falls back to the Status property mark for statuses without a category', () => {
     const fallback = { glyph: 'statusProperty', kind: 'glyph' };
     expect(resolveRowMarker(row({ payload: { to: 'failed' } }))).toEqual(fallback);

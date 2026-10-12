@@ -92,7 +92,9 @@ export class TaskRecoveryCoordinator {
     // A pause somebody made is theirs. The routing error survives a manual round trip
     // through another status, because the status update keeps the old error when none
     // is supplied, so the status alone cannot say whose pause this is.
-    if (statusAuthoredByActor(await taskModel.getActivities(task.id, 20), currentStatus)) {
+    if (
+      statusAuthoredByActor(await taskModel.getActivities(task.id, 1, ['status']), currentStatus)
+    ) {
       log('task %s was paused by an actor; leaving it alone', task.identifier);
       return { outcome: 'settled' };
     }

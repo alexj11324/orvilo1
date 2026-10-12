@@ -2,7 +2,7 @@ import type { TaskDetailData, TaskDetailWorkspaceNode } from './index';
 import {
   assignmentParticipantLabel,
   briefIcon,
-  formatPropertyValue,
+  formatPropertyChange,
   priorityLabel,
   statusIcon,
   timeAgo,
@@ -111,10 +111,8 @@ export const buildTaskDetailPrompt = (input: BuildTaskDetailPromptInput, now?: D
         lines.push(`  💭 ${ago} ${author} ${truncated}${idSuffix}`);
       } else if (act.type === 'property') {
         const actor = assignmentParticipantLabel(act.author, 'system');
-        const change = act.propertyChange;
-        lines.push(
-          `  🔁 ${ago} ${actor} changed ${change?.field}: ${formatPropertyValue(change?.field, change?.from)} → ${formatPropertyValue(change?.field, change?.to)}${idSuffix}`,
-        );
+        const change = formatPropertyChange(act.propertyChange);
+        if (change) lines.push(`  🔁 ${ago} ${actor} changed ${change}${idSuffix}`);
       } else if (act.type === 'assignment') {
         // Who owns this task has changed hands before; the agent reading the
         // detail should see that history, not just the current chip.

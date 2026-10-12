@@ -14,8 +14,10 @@ export interface ActivityFeedRow {
     actorKind?: 'agent' | 'system' | 'user';
     from?: unknown;
     fromId?: string | null;
+    fromLabel?: string | null;
     to?: unknown;
     toId?: string | null;
+    toLabel?: string | null;
   } | null;
   target?: { avatar?: string | null; name?: string | null } | null;
   taskIdentifier: string;

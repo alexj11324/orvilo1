@@ -46,7 +46,7 @@ import { projectLinks } from '../schemas/projectLink';
 import { projectMembers } from '../schemas/projectMember';
 import { projectUpdates } from '../schemas/projectUpdate';
 import { projectWorks } from '../schemas/projectWork';
-import { tasks } from '../schemas/task';
+import { taskActivities, tasks } from '../schemas/task';
 import { users } from '../schemas/user';
 import { works } from '../schemas/work';
 import type { OrviloDatabase } from '../type';
@@ -1118,10 +1118,13 @@ export class ProjectModel {
         .limit(1);
       if (!project) return null;
 
+      // Locked so the "from" side of the activity row is the milestone this
+      // write really replaces, not one a concurrent edit already moved on from.
       const [task] = await tx
-        .select({ id: tasks.id })
+        .select({ id: tasks.id, projectMilestoneId: tasks.projectMilestoneId })
         .from(tasks)
         .where(and(eq(tasks.id, taskId), this.projectTaskScope(projectId)))
+        .for('update')
         .limit(1);
       if (!task) throw new Error('Task not found');
 
@@ -1141,7 +1144,39 @@ export class ProjectModel {
         .set({ projectMilestoneId: milestoneId, updatedAt: new Date() })
         .where(and(eq(tasks.id, taskId), this.projectTaskScope(projectId)))
         .returning({ ...getTableColumns(tasks), visibility: taskVisibilitySql() });
-      return updated ?? null;
+      if (!updated) return null;
+
+      // The Issue's own feed records the change. This method is only reached
+      // by the signed-in person acting on their own request, so it is theirs.
+      // Milestone names are copied in so the row survives a rename or delete.
+      const previousId = task.projectMilestoneId ?? null;
+      if (previousId !== milestoneId) {
+        const ids = [previousId, milestoneId].filter((id): id is string => !!id);
+        const names = new Map(
+          (
+            await tx
+              .select({ id: projectMilestones.id, name: projectMilestones.name })
+              .from(projectMilestones)
+              .where(inArray(projectMilestones.id, ids))
+          ).map((row) => [row.id, row.name]),
+        );
+        await tx.insert(taskActivities).values({
+          actorUserId: this.userId,
+          payload: {
+            actorKind: 'user',
+            fromId: previousId,
+            fromLabel: (previousId && names.get(previousId)) || null,
+            toId: milestoneId,
+            toLabel: (milestoneId && names.get(milestoneId)) || null,
+          },
+          taskId: updated.id,
+          type: 'milestone',
+          userId: this.userId,
+          visibility: updated.visibility,
+          workspaceId: this.workspaceId ?? null,
+        });
+      }
+      return updated;
     });
   }
 

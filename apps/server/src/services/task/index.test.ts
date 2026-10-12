@@ -194,6 +194,9 @@ describe('TaskService', () => {
     findBlockedTaskIds: vi.fn().mockResolvedValue([]),
     addActivities: vi.fn(),
     addActivity: vi.fn(),
+    logWorkflowMove: vi.fn(),
+    logSubIssueAdded: vi.fn(),
+    workflowStateNames: vi.fn().mockResolvedValue(new Map()),
     findSubtasks: vi.fn(),
     lockForStatusChange: vi.fn<(...args: unknown[]) => unknown>(),
     updateStatusForIds: vi.fn<(...args: unknown[]) => unknown>(),
@@ -2328,6 +2331,75 @@ describe('TaskService', () => {
 
       expect(mockTaskModel.updateContext).toHaveBeenCalledTimes(1);
     });
+
+    it('logs a system move under no actor, from where the Issue was to where it landed', async () => {
+      const prev = baseTask({ status: 'backlog', workflowCategory: 'in_progress' });
+      const next = baseTask({ status: 'completed', workflowCategory: 'done' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateStatus.mockResolvedValue(next);
+
+      await new TaskService(db, userId).updateStatus({ id: 'T-1', status: 'completed' as any });
+
+      expect(mockTaskModel.logWorkflowMove).toHaveBeenCalledWith(next.id, prev, next, {});
+    });
+
+    it("leaves a person's move to the logged writer instead of logging it twice", async () => {
+      const prev = baseTask({ status: 'backlog', workflowCategory: 'in_progress' });
+      const next = baseTask({ status: 'completed', workflowCategory: 'done' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateWithLog.mockResolvedValue(next);
+
+      await new TaskService(db, userId).updateStatus(
+        { id: 'T-1', status: 'completed' as any },
+        { userId },
+      );
+
+      expect(mockTaskModel.updateWithLog).toHaveBeenCalledTimes(1);
+      expect(mockTaskModel.logWorkflowMove).not.toHaveBeenCalled();
+    });
+
+    it('credits a contract-fenced move to the person the caller named', async () => {
+      const prev = baseTask({ status: 'backlog', workflowCategory: 'todo' });
+      const next = baseTask({ status: 'canceled', workflowCategory: 'canceled' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateStatusForExecutionContract.mockResolvedValue(next);
+
+      await new TaskService(db, userId).updateStatus(
+        {
+          expectedContract: {
+            assigneeAgentId: null,
+            executionGeneration: 0,
+            policyRevision: 1,
+            requirementRevision: 1,
+          },
+          id: 'T-1',
+          status: 'canceled' as any,
+        },
+        { userId },
+      );
+
+      // That writer does not log, so the service does — once, as that person.
+      expect(mockTaskModel.updateWithLog).not.toHaveBeenCalled();
+      expect(mockTaskModel.logWorkflowMove).toHaveBeenCalledWith(next.id, prev, next, { userId });
+    });
+
+    it('still reports the transition when its feed line cannot be written', async () => {
+      const prev = baseTask({ status: 'backlog', workflowCategory: 'in_progress' });
+      const next = baseTask({ status: 'paused', workflowCategory: 'in_review' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateStatus.mockResolvedValue(next);
+      mockTaskModel.logWorkflowMove.mockRejectedValueOnce(new Error('insert failed'));
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await new TaskService(db, userId).updateStatus({
+        id: 'T-1',
+        status: 'paused' as any,
+      });
+
+      expect(result.task).toBe(next);
+      expect(logged).toHaveBeenCalled();
+      logged.mockRestore();
+    });
   });
 
   describe('task visibility independent of agent access', () => {
@@ -2447,6 +2519,37 @@ describe('TaskService', () => {
         service.createTask({ instruction: 'child', parentTaskId: 'T-1', visibility: 'private' }),
       ).resolves.toMatchObject({ visibility: 'public', parentTaskId: 'parent_id' });
     });
+
+    it("records a created sub-issue on its parent, credited to the new Issue's creator", async () => {
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'parent_id',
+        visibility: 'public',
+        workspaceId: 'ws-1',
+      });
+      mockTaskModel.create.mockImplementation(async (data: any) => ({
+        ...data,
+        createdByAgentId: 'agt_creator',
+        createdByUserId: userId,
+        id: 'task_child',
+        identifier: 'T-2',
+      }));
+
+      await new TaskService(db, userId, 'ws-1').createTask({
+        instruction: 'child',
+        parentTaskId: 'T-1',
+      });
+
+      expect(mockTaskModel.logSubIssueAdded).toHaveBeenCalledWith('parent_id', 'task_child', {
+        agentId: 'agt_creator',
+        userId,
+      });
+    });
+
+    it('says nothing on any parent for a top-level Issue', async () => {
+      await new TaskService(db, userId, 'ws-1').createTask({ instruction: 'top level' });
+
+      expect(mockTaskModel.logSubIssueAdded).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateStatusCascade activity log', () => {
@@ -2455,7 +2558,7 @@ describe('TaskService', () => {
       parentTaskId: null,
       ...overrides,
     });
-    it('writes one status row per family member a person cascaded', async () => {
+    it('writes one workflow row per family member a person cascaded', async () => {
       const parent = baseTask({
         id: 'task-p',
         identifier: 'P-1',
@@ -2485,23 +2588,42 @@ describe('TaskService', () => {
       mockTaskModel.resolve.mockResolvedValue(parent);
       mockTaskModel.findAllDescendants.mockResolvedValue([openChild, doneChild, openGrandchild]);
       mockTaskModel.updateStatusForIds.mockResolvedValue([
-        { ...parent, status: 'canceled' },
-        { ...openChild, status: 'canceled' },
-        { ...openGrandchild, status: 'canceled' },
+        { ...parent, status: 'canceled', workflowCategory: 'canceled', workflowStateRefId: 'st-x' },
+        { ...openChild, status: 'canceled', workflowCategory: 'canceled' },
+        { ...openGrandchild, status: 'canceled', workflowCategory: 'canceled' },
       ]);
       // What each task is *leaving* comes from the locked read inside the
       // transaction, not the dialog-time snapshot: the child moved backlog →
-      // paused in between, and the log must say so.
+      // in review in between, and the log must say so.
       mockTaskModel.lockForStatusChange.mockResolvedValue([
-        { id: 'task-p', status: 'running', visibility: 'public' },
-        { id: 'task-c1', status: 'paused', visibility: 'private' },
-        { id: 'task-g1', status: 'running', visibility: 'public' },
+        {
+          id: 'task-p',
+          status: 'running',
+          visibility: 'public',
+          workflowCategory: 'in_progress',
+          workflowStateRefId: 'st-doing',
+        },
+        {
+          id: 'task-c1',
+          status: 'paused',
+          visibility: 'private',
+          workflowCategory: 'in_review',
+          workflowStateRefId: null,
+        },
+        {
+          id: 'task-g1',
+          status: 'running',
+          visibility: 'public',
+          workflowCategory: 'in_progress',
+          workflowStateRefId: null,
+        },
       ]);
-      mockTaskModel.derivedStatusByIds.mockResolvedValue({
-        'task-c1': 'paused',
-        'task-g1': 'running',
-        'task-p': 'running',
-      });
+      mockTaskModel.workflowStateNames.mockResolvedValue(
+        new Map([
+          ['st-doing', 'Doing'],
+          ['st-x', "Won't do"],
+        ]),
+      );
       mockTaskTopicModel.cancelRunningByTaskIds.mockResolvedValue([]);
       (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
 
@@ -2518,25 +2640,50 @@ describe('TaskService', () => {
         {
           actorAgentId: null,
           actorUserId: userId,
-          payload: { actorKind: 'user', from: 'running', to: 'canceled' },
+          // Named by the team state on each side where the Issue has one.
+          payload: {
+            actorKind: 'user',
+            from: 'in_progress',
+            fromId: 'st-doing',
+            fromLabel: 'Doing',
+            to: 'canceled',
+            toId: 'st-x',
+            toLabel: "Won't do",
+          },
           taskId: 'task-p',
-          type: 'status',
+          type: 'workflow_state',
           visibility: 'public',
         },
         {
           actorAgentId: null,
           actorUserId: userId,
-          payload: { actorKind: 'user', from: 'paused', to: 'canceled' },
+          payload: {
+            actorKind: 'user',
+            from: 'in_review',
+            fromId: null,
+            fromLabel: null,
+            to: 'canceled',
+            toId: null,
+            toLabel: null,
+          },
           taskId: 'task-c1',
-          type: 'status',
+          type: 'workflow_state',
           visibility: 'private',
         },
         {
           actorAgentId: null,
           actorUserId: userId,
-          payload: { actorKind: 'user', from: 'running', to: 'canceled' },
+          payload: {
+            actorKind: 'user',
+            from: 'in_progress',
+            fromId: null,
+            fromLabel: null,
+            to: 'canceled',
+            toId: null,
+            toLabel: null,
+          },
           taskId: 'task-g1',
-          type: 'status',
+          type: 'workflow_state',
           visibility: 'public',
         },
       ]);

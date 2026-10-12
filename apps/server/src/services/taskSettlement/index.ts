@@ -233,29 +233,39 @@ const applyPlan = async (
     return result?.task ?? null;
   }
 
-  if (context?.expectedContract) {
-    return taskModel.updateStatusForExecutionContract(
-      task.id,
-      status,
-      {
-        ...context.expectedContract,
-        ...(context.reservationId ? { runReservationId: context.reservationId } : {}),
-        ...(context.expectedStatus ? { status: context.expectedStatus } : {}),
-      },
-      extra,
-    );
+  const settled = context?.expectedContract
+    ? await taskModel.updateStatusForExecutionContract(
+        task.id,
+        status,
+        {
+          ...context.expectedContract,
+          ...(context.reservationId ? { runReservationId: context.reservationId } : {}),
+          ...(context.expectedStatus ? { status: context.expectedStatus } : {}),
+        },
+        extra,
+      )
+    : context?.reservationId
+      ? await taskModel.updateStatusIfReservation(
+          task.id,
+          context.reservationId,
+          context.expectedStatus ?? task.status,
+          status,
+          extra,
+        )
+      : context?.expectedStatus
+        ? await taskModel.updateStatusIfCurrent(task.id, context.expectedStatus, status, extra)
+        : await taskModel.updateStatus(task.id, status, extra);
+
+  // The run moved the Issue (to In Review, to Done, back to In Progress): say
+  // so in its feed, under the system's name — nobody clicked anything. The
+  // TaskService path above logs the same thing itself. Best-effort: the
+  // settlement is committed and must not fail over its feed line.
+  if (settled) {
+    try {
+      await taskModel.logWorkflowMove(task.id, task, settled, {});
+    } catch (error) {
+      console.error('[taskSettlement] failed to log workflow move', error);
+    }
   }
-  if (context?.reservationId) {
-    return taskModel.updateStatusIfReservation(
-      task.id,
-      context.reservationId,
-      context.expectedStatus ?? task.status,
-      status,
-      extra,
-    );
-  }
-  if (context?.expectedStatus) {
-    return taskModel.updateStatusIfCurrent(task.id, context.expectedStatus, status, extra);
-  }
-  return taskModel.updateStatus(task.id, status, extra);
+  return settled;
 };

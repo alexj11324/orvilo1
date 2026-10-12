@@ -184,8 +184,13 @@ export class TaskLifecycleSliceActionImpl {
     const detail = this.#get().taskDetailMap[id];
     const userState = useUserStore.getState();
     const actorId = actorAgentId ? undefined : userProfileSelectors.userId(userState);
+    // A status that moves the Issue itself (done, canceled, back to backlog)
+    // is logged by the server as a workflow move, named by the team state
+    // the Issue lands in — which only the server resolves. Those rows arrive
+    // with the refetch below rather than as a guess in the retired vocabulary.
+    const movesIssue = status === 'backlog' || status === 'canceled' || status === 'completed';
     const statusRow =
-      detail && previousStatus !== status
+      detail && previousStatus !== status && !movesIssue
         ? buildOptimisticPropertyActivity({
             actor: actorId
               ? {

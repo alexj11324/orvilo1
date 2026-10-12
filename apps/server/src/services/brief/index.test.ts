@@ -54,6 +54,7 @@ describe('BriefService', () => {
     findByIds: vi.fn(),
     getTreeAgentIdsForTaskIds: vi.fn(),
     getUnlockedTasks: vi.fn(),
+    logWorkflowMove: vi.fn(),
     updateStatus: vi.fn(),
   };
 
@@ -461,6 +462,21 @@ describe('BriefService', () => {
       // Brief approval must trigger downstream kickoff via the runner so
       // dependents don't sit in `backlog` waiting for a manual nudge.
       expect(cascadeOnCompletion).toHaveBeenCalledWith('task-1');
+    });
+
+    it('credits the approver for the move to Done in the Issue feed', async () => {
+      const service = new BriefService(db, userId);
+      const before = { id: 'task-1', status: 'paused', workflowCategory: 'in_review' };
+      const after = { id: 'task-1', status: 'completed', workflowCategory: 'done' };
+      mockBriefModel.resolve.mockResolvedValue({ id: 'b1', taskId: 'task-1', type: 'result' });
+      mockTaskModel.findById.mockResolvedValue(before);
+      mockTaskModel.updateStatus.mockResolvedValue(after);
+
+      await service.resolve('b1', { action: 'approve' });
+
+      expect(mockTaskModel.logWorkflowMove).toHaveBeenCalledWith('task-1', before, after, {
+        userId,
+      });
     });
 
     it('should NOT complete the task when approving a decision brief (mid-execution checkpoint)', async () => {

@@ -3,7 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { taskResources } from '../schemas/taskResource';
 import type { OrviloDatabase } from '../type';
-import { TaskModel } from './task';
+import { taskActivityActor, TaskModel } from './task';
 
 export class TaskResourceModel {
   constructor(
@@ -47,29 +47,86 @@ export class TaskResourceModel {
       throw new Error('Use a GitHub pull request URL');
     }
     const normalizedUrl = url.href;
-    const [row] = await this.db
-      .insert(taskResources)
-      .values({
-        addedByUserId: this.userId,
-        kind: input.kind,
-        taskId: task.id,
-        title: input.title?.trim() || normalizedUrl,
-        url: normalizedUrl,
-      })
-      .onConflictDoUpdate({
-        target: [taskResources.taskId, taskResources.kind, taskResources.url],
-        set: { title: input.title?.trim() || normalizedUrl, updatedAt: new Date() },
-      })
-      .returning();
-    return row;
+    const title = input.title?.trim() || normalizedUrl;
+    // The resource and its feed row land together or not at all. Whether it
+    // is new comes from the insert itself, so two racing adds log once.
+    return this.db.transaction(async (tx) => {
+      const [added] = await tx
+        .insert(taskResources)
+        .values({
+          addedByUserId: this.userId,
+          kind: input.kind,
+          taskId: task.id,
+          title,
+          url: normalizedUrl,
+        })
+        .onConflictDoNothing({
+          target: [taskResources.taskId, taskResources.kind, taskResources.url],
+        })
+        .returning();
+      if (added) {
+        await this.logResourceChange(tx as OrviloDatabase, 'resource_added', task.id, added);
+        return added;
+      }
+      // Adding the same URL again only refreshes its title — nothing new was attached.
+      const [refreshed] = await tx
+        .update(taskResources)
+        .set({ title, updatedAt: new Date() })
+        .where(
+          and(
+            eq(taskResources.taskId, task.id),
+            eq(taskResources.kind, input.kind),
+            eq(taskResources.url, normalizedUrl),
+          ),
+        )
+        .returning();
+      // The row this add collided with was removed before the title refresh.
+      if (!refreshed) throw new Error('Task resource changed while it was being added');
+      return refreshed;
+    });
+  }
+
+  /**
+   * Every caller of this model is the signed-in person acting on their own
+   * request, so the row is theirs. Title and URL are copied in: once the
+   * resource is removed there is nothing left to look them up from.
+   */
+  private async logResourceChange(
+    /** The transaction the resource change runs in. */
+    runner: OrviloDatabase,
+    type: 'resource_added' | 'resource_removed',
+    taskId: string,
+    resource: { kind: string; title: string | null; url: string },
+  ) {
+    const { actorKind, ...actorColumns } = taskActivityActor({ userId: this.userId });
+    await new TaskModel(runner, this.userId, this.workspaceId).addActivity({
+      ...actorColumns,
+      payload: {
+        actorKind,
+        resourceKind: resource.kind === 'pull_request' ? 'pull_request' : 'link',
+        toLabel: resource.title,
+        url: resource.url,
+      },
+      taskId,
+      type,
+    });
   }
 
   async remove(taskId: string, resourceId: string) {
     const task = await this.resolve(taskId, true);
-    const rows = await this.db
-      .delete(taskResources)
-      .where(and(eq(taskResources.taskId, task.id), eq(taskResources.id, resourceId)))
-      .returning({ id: taskResources.id });
-    return rows.length > 0;
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .delete(taskResources)
+        .where(and(eq(taskResources.taskId, task.id), eq(taskResources.id, resourceId)))
+        .returning({
+          id: taskResources.id,
+          kind: taskResources.kind,
+          title: taskResources.title,
+          url: taskResources.url,
+        });
+      for (const row of rows)
+        await this.logResourceChange(tx as OrviloDatabase, 'resource_removed', task.id, row);
+      return rows.length > 0;
+    });
   }
 }

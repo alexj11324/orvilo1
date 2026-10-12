@@ -15,3 +15,7 @@ Verify these connected behaviors in the same fixed Electron candidate before rel
 ## Agent settings: create entry and active Agent on desktop
 
 `/settings/agents` carries a "New Agent" button that opens the shared create dialog and lands on the new Agent's settings. On desktop, the conversation bridge treats `/settings/agents/:id` as that Agent's route, so the page keeps its active Agent instead of waiting on a config that was cleared.
+
+## Composer settings popover
+
+The settings button beside the Agent picker opens the per-conversation controls (working directory, permission mode). The Agent picker is the one place that names the selected Agent. The popover adds an Agent block (`src/features/AIChatbot/AgentInfo.tsx`) only when that Agent has a description or instructions to show; an Agent with neither gets no block, so its name is not repeated.

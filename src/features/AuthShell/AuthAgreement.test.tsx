@@ -55,10 +55,41 @@ describe('AuthAgreement', () => {
 });
 
 describe('AuthFooterLinks', () => {
-  it('should open its links in new tabs', () => {
-    render(<AuthFooterLinks />);
+  const renderWithBranding = async (urls: { privacy?: string; terms?: string }) => {
+    vi.resetModules();
+    vi.doMock('@orvilo/business-const', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      BRANDING_URL: urls,
+    }));
+    const { default: Links } = await import('./AuthFooterLinks');
+    return render(<Links />);
+  };
+
+  afterEach(() => {
+    vi.doUnmock('@orvilo/business-const');
+  });
+
+  it('renders nothing when the deployment publishes no legal pages', () => {
+    const { container } = render(<AuthFooterLinks />);
+
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('should open its links in new tabs when both pages are configured', async () => {
+    await renderWithBranding({
+      privacy: 'https://example.com/privacy',
+      terms: 'https://example.com/terms',
+    });
 
     expectLinksToOpenInNewTabs();
+  });
+
+  it('links only the page that exists', async () => {
+    await renderWithBranding({ terms: 'https://example.com/terms' });
+
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute('href')).toBe('https://example.com/terms');
   });
 });
 

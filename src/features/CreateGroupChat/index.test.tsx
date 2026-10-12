@@ -17,6 +17,9 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
   getActiveWorkspaceSlug: () => 'team',
 }));
 vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('@/features/HomeSidebar/Body/Agent/List/useAgentList', () => ({
+  useKeepSidebarListed: () => (items: unknown[]) => items,
+}));
 vi.mock('@/components/Modal', () => ({
   createModal: vi.fn(),
   ModalFooter: ({ children }: { children: ReactNode }) => children,

@@ -76,6 +76,11 @@ vi.mock('@/server/modules/ModelRuntime', () => ({
 // These tests exercise the orchestrated-dispatch path (cascade, batch run):
 // keep the CAID admission gate open here — the flag-off hold is covered in
 // `services/taskDispatch`'s unit tests.
+// These cases cover the inbox fallback, which exists only while the built-in
+// harness is offered; the refusal without it is covered in the runner's tests.
+vi.mock('@/server/featureFlags/builtinHarness', () => ({
+  isBuiltinHarnessOffered: async () => true,
+}));
 vi.mock('@/server/featureFlags/caidAdmission', () => ({
   isCaidDispatchAllowed: vi.fn(async () => true),
 }));

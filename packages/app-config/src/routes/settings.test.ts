@@ -17,6 +17,7 @@ const BASE_CONTEXT: SettingsCapabilityContext = {
   isDevMode: true,
   mobile: false,
   showApiKeyManage: true,
+  showProvider: true,
 };
 
 const context = (
@@ -35,6 +36,7 @@ const contextMatrix = (): SettingsCapabilityContext[] => {
     'isDevMode',
     'mobile',
     'showApiKeyManage',
+    'showProvider',
   ] as const;
 
   return Array.from({ length: 2 ** flags.length }, (_, index) =>
@@ -135,6 +137,19 @@ describe('resolveSettingsCapability', () => {
 
     expect(isSettingsTabAvailable('hotkey', mobile)).toBe(false);
     expect(isSettingsTabAvailable('hotkey', BASE_CONTEXT)).toBe(true);
+  });
+
+  // The provider surface serves the built-in harness. While the product runs
+  // agents through ACP only, neither it nor the model assignments that depend
+  // on it may be offered or reached by URL.
+  it('withholds provider and service-model settings without the provider surface', () => {
+    const off = context({ showProvider: false });
+
+    for (const tab of ['provider', 'service-model']) {
+      expect(isSettingsTabOffered(tab, off)).toBe(false);
+      expect(resolveSettingsCapability(tab, off)).toEqual({ status: 'unavailable' });
+      expect(isSettingsTabOffered(tab, context())).toBe(true);
+    }
   });
 
   it('keeps a page reachable while withholding its navigation row', () => {

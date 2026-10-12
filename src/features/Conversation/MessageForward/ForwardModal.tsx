@@ -13,6 +13,7 @@ import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { getForwardedMessageText } from '@/store/chat/slices/forward/helpers';
 import { useHomeStore } from '@/store/home';
@@ -51,7 +52,9 @@ const ForwardModalContent = memo(() => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const currentAgentId = useConversationStore(contextSelectors.agentId);
-  const agents = useHomeStore(homeAgentListSelectors.allAgents);
+  const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
+  const keep = useKeepSidebarListed();
+  const agents = useMemo(() => keep(allAgents), [allAgents, keep]);
   const forwardMessages = useForwardMessages();
 
   // What's being forwarded — count + a few role-labelled snippets for the panel.

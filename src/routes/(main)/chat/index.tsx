@@ -2,6 +2,7 @@
 
 import { CHAT_NEW_URL, CHAT_TOPIC_URL } from '@orvilo/const';
 
+import { TopicRuntimeWithheldGuard } from '@/features/AgentNotFound';
 import AgentSidebar from '@/features/AgentSidebar';
 import TopicOwnerSync from '@/features/Conversation/TopicOwnerSync';
 import { TopicNotFoundGuard } from '@/features/TopicNotFound';
@@ -29,19 +30,21 @@ const ChatPage = () => {
       <TopicOwnerSync />
       <ChatHydration getConversationPath={getConversationPath} getTopicPath={getTopicPath} />
       <TopicNotFoundGuard>
-        <div
-          className="flex flex-col"
-          style={{
-            height: '100%',
-            width: '100%',
-            minHeight: 0,
-            overflow: 'hidden',
-            position: 'relative',
-          }}
-        >
-          <Conversation />
-        </div>
-        <TelemetryNotification mobile={false} />
+        <TopicRuntimeWithheldGuard>
+          <div
+            className="flex flex-col"
+            style={{
+              height: '100%',
+              width: '100%',
+              minHeight: 0,
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            <Conversation />
+          </div>
+          <TelemetryNotification mobile={false} />
+        </TopicRuntimeWithheldGuard>
       </TopicNotFoundGuard>
       <RegisterHotkeys />
     </>

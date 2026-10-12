@@ -18,12 +18,15 @@ const SettingsContent = () => {
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>();
+  // Preselected only while no default Agent is saved, so saving never silently replaces one.
+  const [alsoDefaultChoice, setAlsoDefault] = useState<boolean>();
+  const alsoDefault = alsoDefaultChoice ?? (!preference.loading && !preference.defaultAgentId);
   const save = async () => {
     if (!selection || !ready || pending) return;
     setPending(true);
     setError(undefined);
     try {
-      await preference.save(selection);
+      await preference.save(selection, { alsoDefault });
       toast.success(t('orchestrator.saved'));
     } catch (cause) {
       setError(cause);
@@ -38,8 +41,10 @@ const SettingsContent = () => {
         {t(preference.workspaceId ? 'orchestrator.workspaceScope' : 'orchestrator.personalScope')}
       </p>
       <ConfiguredOrchestratorSelector
+        alsoDefault={alsoDefault}
         disabled={pending || preference.loading}
         value={selection ?? preference.agentId}
+        onAlsoDefaultChange={setAlsoDefault}
         onUnavailable={() => setReady(false)}
         onSelect={(id) => {
           setSelection(id);

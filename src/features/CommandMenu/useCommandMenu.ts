@@ -6,6 +6,8 @@ import useSWR from 'swr';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { isDesktop } from '@/const/version';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
+import { useDefaultAgent } from '@/features/DefaultAgent/useDefaultAgent';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -55,6 +57,11 @@ export const useCommandMenu = () => {
   const { allowed: canCreate } = usePermission('create_content');
   const { setTheme } = useNextThemesTheme();
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
+  const builtinOffered = useBuiltinHarnessOffered();
+  const defaultAgent = useDefaultAgent();
+  // Asking without naming an Agent goes to the inbox Agent while the built-in
+  // harness is offered, and to the user's default Agent otherwise.
+  const askAgentId = builtinOffered ? inboxAgentId : defaultAgent?.agentId;
   const { open: openCreateLibraryModal } = useCreateNewModal();
 
   // Debounce search input to reduce API calls
@@ -160,12 +167,12 @@ export const useCommandMenu = () => {
 
   const handleAskOrviloAI = useCallback(() => {
     // Navigate to inbox agent with the message query parameter
-    if (inboxAgentId && search.trim()) {
+    if (askAgentId && search.trim()) {
       const message = encodeURIComponent(search.trim());
-      navigate(`/agent/${inboxAgentId}?message=${message}`);
+      navigate(`/agent/${askAgentId}?message=${message}`);
       onClose();
     }
-  }, [inboxAgentId, search, navigate, onClose]);
+  }, [askAgentId, search, navigate, onClose]);
 
   const handleBack = useCallback(() => {
     popPage();

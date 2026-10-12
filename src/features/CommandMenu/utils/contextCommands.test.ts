@@ -13,6 +13,7 @@ const capabilityContext = (
   isDevMode: false,
   mobile: false,
   showApiKeyManage: true,
+  showProvider: true,
   ...overrides,
 });
 

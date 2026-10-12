@@ -59,13 +59,16 @@ export interface AgentAvailability {
 
 export const resolveAgentAvailability = ({
   bindings,
+  builtinOffered = true,
   connectedTypes,
 }: {
   bindings: readonly ProviderBinding[];
+  /** False while the product runs agents through ACP only: a built-in agent then counts for nothing. */
+  builtinOffered?: boolean;
   connectedTypes: ReadonlySet<string>;
 }): AgentAvailability => {
   const runnableCliTypes = collectRunnableCliHarnessTypes(connectedTypes);
-  const builtinUsable = isBuiltinAgentUsable(bindings);
+  const builtinUsable = builtinOffered && isBuiltinAgentUsable(bindings);
 
   return {
     builtinUsable,

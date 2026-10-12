@@ -89,7 +89,9 @@ export const evaluateFeatureFlag = (
 };
 
 export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
-  provider_settings: true,
+  // Off while the product runs agents through ACP only: user-managed providers
+  // serve the built-in harness, which is withheld until it is ready.
+  provider_settings: false,
 
   openai_api_key: true,
   openai_proxy_url: true,
@@ -123,10 +125,13 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   storage_overage: true,
   workspace: isDev,
 
-  market: true,
+  // Off in the open-source build: the marketplace, the Composio catalogue and
+  // the changelog entry all lead out of the product. A deployment that runs
+  // those services turns the flag back on (FEATURE_FLAGS or runtime config).
+  market: false,
   speech_to_text: true,
   voice_dictation: false,
-  changelog: true,
+  changelog: false,
 
   commercial_hide_github: false,
   commercial_hide_docs: false,

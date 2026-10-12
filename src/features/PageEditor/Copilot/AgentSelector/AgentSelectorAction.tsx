@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
@@ -45,7 +46,9 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
   const [open, setOpen] = useState(false);
   const agentId = useConversationStore(conversationSelectors.agentId);
 
-  const agents = useHomeStore(homeAgentListSelectors.allAgents);
+  const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
+  const keep = useKeepSidebarListed();
+  const agents = useMemo(() => keep(allAgents), [allAgents, keep]);
   const isAgentListInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
   const pageAgentId = useAgentStore((s) => s.builtinAgentIdMap['page-agent']);
   const pageAgentData = useAgentStore((s) => s.agentMap[pageAgentId || '']);

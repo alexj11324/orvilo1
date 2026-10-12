@@ -11,6 +11,9 @@ const boundary = vi.hoisted(() => ({
   navigate: vi.fn(),
   mutate: vi.fn(),
 }));
+vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
+  useFallbackAgentId: () => undefined,
+}));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/features/AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction', () => ({
   shouldPersistFallbackAssignee: () => false,

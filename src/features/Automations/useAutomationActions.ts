@@ -3,12 +3,11 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { shouldPersistFallbackAssignee } from '@/features/AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction';
+import { useFallbackAgentId } from '@/features/DefaultAgent/useFallbackAgentId';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { mutate } from '@/libs/swr';
 import { mcpEventsKeys } from '@/libs/swr/keys';
 import { mcpEventsService } from '@/services/mcpEvents';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useTaskStore } from '@/store/task';
 
 import { automationDetailPath } from './shared';
@@ -31,7 +30,7 @@ export const useAutomationActions = () => {
   const updateTask = useTaskStore((s) => s.updateTask);
   const runTask = useTaskStore((s) => s.runTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
+  const fallbackAgentId = useFallbackAgentId();
 
   const pause = useCallback(
     async (task: AutomationTarget) => {
@@ -64,13 +63,15 @@ export const useAutomationActions = () => {
       assigneeUserId?: string | null;
       identifier: string;
     }) => {
-      if (shouldPersistFallbackAssignee(task.assigneeAgentId, task.assigneeUserId, inboxAgentId)) {
-        await updateTask(task.identifier, { assigneeAgentId: inboxAgentId });
+      if (
+        shouldPersistFallbackAssignee(task.assigneeAgentId, task.assigneeUserId, fallbackAgentId)
+      ) {
+        await updateTask(task.identifier, { assigneeAgentId: fallbackAgentId });
       }
       const result = await runTask(task.identifier, undefined, { throwOnError: true });
       if (!result) throw new Error(t('detail.toast_trigger_failed'));
     },
-    [inboxAgentId, runTask, t, updateTask],
+    [fallbackAgentId, runTask, t, updateTask],
   );
 
   const remove = useCallback(async (identifier: string) => deleteTask(identifier), [deleteTask]);

@@ -205,7 +205,7 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
           <div className="truncate block font-medium">{project.name}</div>
         </div>
         {project.identifier ? (
-          <div className={cn('text-xs', styles.identifier)}>{project.identifier}</div>
+          <div className={cn('font-mono text-xs', styles.identifier)}>{project.identifier}</div>
         ) : null}
         {project.updatedAt ? (
           <div
@@ -417,13 +417,14 @@ const SavedViewPage = memo(() => {
     WorkQueryGroupPage<SavedViewProjectRowData>[]
   >([]);
   const pagedMore = usePagedLoadMore();
+  const { resetLoadMoreError } = pagedMore;
   useEffect(() => {
     setTail([]);
     setProjectTail([]);
     setGroupTail([]);
     setProjectGroupTail([]);
-    pagedMore.resetLoadMoreError();
-  }, [pagedMore.resetLoadMoreError, queryHash, viewId, workspaceId]);
+    resetLoadMoreError();
+  }, [resetLoadMoreError, queryHash, viewId, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
   const projectRows = mergeWorkQueryPage(firstProjects, projectTail);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);

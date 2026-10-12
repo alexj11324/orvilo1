@@ -2,10 +2,10 @@ import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
-import { Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
+import { CornerDownRight, Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
@@ -36,7 +36,8 @@ import { userProfileSelectors } from '@/store/user/selectors';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { styles } from '../shared/style';
-import { commentAnchorId, getCommentActions, isCommentAnchorHash } from './commentActions';
+import { commentAnchorId, getCommentActions, isCommentEdited, runAnchorId } from './commentActions';
+import { useAnchorHighlight } from './useAnchorHighlight';
 import { useCommentCopyLink } from './useCommentCopyLink';
 
 // Keep saved comments visually consistent with the editor: render FileNodes
@@ -75,16 +76,26 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   const copyCommentLink = useCommentCopyLink();
 
   // `#comment-<id>` deep link: scroll the card into view and ring it briefly.
-  const { hash } = useLocation();
-  const isLinkTarget = !!commentId && isCommentAnchorHash(hash, commentId);
-  const [highlighted, setHighlighted] = useState(false);
-  useEffect(() => {
-    if (!isLinkTarget) return;
-    document.getElementById(commentAnchorId(commentId!))?.scrollIntoView({ block: 'center' });
-    setHighlighted(true);
-    const timer = window.setTimeout(() => setHighlighted(false), 2000);
-    return () => window.clearTimeout(timer);
-  }, [isLinkTarget, commentId]);
+  const highlighted = useAnchorHighlight(commentId ? commentAnchorId(commentId) : undefined);
+
+  // A comment left on one run names it and links to that run's card.
+  const { replyToRun } = activity;
+  const navigate = useNavigate();
+  const { search } = useLocation();
+  const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
+  const handleOpenRun = useCallback(() => {
+    if (!replyToRun) return;
+    const anchor = runAnchorId(replyToRun.topicId);
+    const card = document.getElementById(anchor);
+    // The card is not on screen (filtered out, or in the other panel): open
+    // the run itself instead of doing nothing.
+    if (!card) return openTopicDrawer(replyToRun.topicId);
+    card.scrollIntoView({ block: 'center' });
+    void navigate({ hash: `#${anchor}`, search }, { replace: true });
+  }, [navigate, openTopicDrawer, replyToRun, search]);
+
+  const edited = isCommentEdited(activity);
+  const { title: editedTitle } = useActivityTime(edited ? activity.updatedAt : undefined);
 
   const editorData = useMemo(
     () => ({
@@ -188,7 +199,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
 
   return (
     <div
-      className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-shadow ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
+      className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
       id={commentId ? commentAnchorId(commentId) : undefined}
       style={{
         borderColor: 'var(--ant-color-border-secondary)',
@@ -213,7 +224,31 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
             {relTime}
           </div>
         )}
+        {edited && (
+          <div
+            className="text-xs text-muted-foreground"
+            title={t('taskDetail.comment.editedAt', { time: editedTitle })}
+          >
+            {t('taskDetail.comment.edited')}
+          </div>
+        )}
       </div>
+      {replyToRun &&
+        (replyToRun.seq == null ? (
+          <div className="text-xs text-muted-foreground">
+            {t('taskDetail.comment.replyToRunUnnumbered')}
+          </div>
+        ) : (
+          <Button
+            className="self-start text-muted-foreground"
+            size="compact"
+            variant="ghost"
+            onClick={handleOpenRun}
+          >
+            <CornerDownRight className="size-4" data-icon="inline-start" size={16} />
+            {t('taskDetail.comment.replyToRun', { seq: replyToRun.seq })}
+          </Button>
+        ))}
 
       {isEditing && (
         <>
@@ -230,10 +265,10 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
           <div className="flex items-center justify-between gap-2">
             <AttachmentUploadButton onFiles={handleAttach} />
             <div className="flex gap-2">
-              <Button disabled={submitting} size="sm" onClick={handleCancel}>
+              <Button disabled={submitting} size="normal" onClick={handleCancel}>
                 {t('taskDetail.comment.cancel')}
               </Button>
-              <Button loading={submitting} size="sm" variant="default" onClick={handleSave}>
+              <Button loading={submitting} size="normal" variant="default" onClick={handleSave}>
                 {t('taskDetail.comment.save')}
               </Button>
             </div>
@@ -262,7 +297,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
                 <ActionIcon
                   aria-label={t('more', { ns: 'common' })}
                   icon={MoreHorizontal}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 />
               }
             />

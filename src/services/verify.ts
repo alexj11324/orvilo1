@@ -352,6 +352,8 @@ export class VerifyService {
 
   /** Draft the standing acceptance criteria used by the create-goal review step. */
   generateGoalCriteria = (input: {
+    /** The agent chosen for the goal; ACP users get no draft without it. */
+    agentId?: string;
     context?: string;
     goal: string;
     maxCriteria?: number;
@@ -360,6 +362,8 @@ export class VerifyService {
 
   /** Draft the title, instruction, and criteria used by the create-goal review step. */
   generateGoalPlan = (input: {
+    /** The agent chosen for the goal; ACP users get no draft without it. */
+    agentId?: string;
     context?: string;
     goal: string;
     maxCriteria?: number;

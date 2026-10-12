@@ -1,11 +1,16 @@
 'use client';
 
+import type { AuthorizationErrorCode } from '@orvilo/electron-client-ipc';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
 import { useElectronStore } from '@/store/electron';
+import {
+  AUTHORIZATION_ERROR_I18N_KEY,
+  readAuthorizationErrorCode,
+} from '@/utils/electron/authorizationError';
 
 import { refreshDeviceList } from './const';
 import { useDeviceList } from './useDeviceList';
@@ -20,6 +25,7 @@ const RETRY_PHASES = new Set(['registerFailed', 'gatewayUnreachable']);
  */
 const LocalDeviceStatus = memo(() => {
   const { t } = useTranslation('setting');
+  const { t: tAuthorization } = useTranslation('desktop-onboarding');
   const localState = useElectronStore((s) => s.gatewayLocalState);
   const deviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
   const dataSyncConfig = useElectronStore((s) => s.dataSyncConfig);
@@ -28,6 +34,7 @@ const LocalDeviceStatus = memo(() => {
   const useFetchGatewayDeviceInfo = useElectronStore((s) => s.useFetchGatewayDeviceInfo);
   const { data: devices } = useDeviceList();
   const [busy, setBusy] = useState(false);
+  const [signInFailure, setSignInFailure] = useState<AuthorizationErrorCode>();
 
   useFetchGatewayStatus();
   useFetchGatewayDeviceInfo();
@@ -55,10 +62,17 @@ const LocalDeviceStatus = memo(() => {
   const retry = () => run(() => gatewayConnectionService.connect());
   const signIn = () =>
     run(async () => {
-      await connectRemoteServer({
-        remoteServerUrl: dataSyncConfig?.remoteServerUrl,
-        storageMode: dataSyncConfig?.storageMode || 'cloud',
-      });
+      setSignInFailure(undefined);
+      try {
+        await connectRemoteServer({
+          remoteServerUrl: dataSyncConfig?.remoteServerUrl,
+          storageMode: dataSyncConfig?.storageMode || 'cloud',
+        });
+      } catch (error) {
+        // Say why sign-in failed; the Sign in button stays available to retry.
+        setSignInFailure(readAuthorizationErrorCode(error) ?? 'server_error');
+        throw error;
+      }
       await gatewayConnectionService.connect();
     });
 
@@ -87,6 +101,11 @@ const LocalDeviceStatus = memo(() => {
         {localState.reason && (
           <span className={'text-muted-foreground break-words text-xs'}>
             {t('devices.local.reason', { reason: localState.reason })}
+          </span>
+        )}
+        {signInFailure && localState.phase === 'signInRequired' && (
+          <span className={'text-destructive-text break-words text-xs'} role="alert">
+            {tAuthorization(AUTHORIZATION_ERROR_I18N_KEY[signInFailure])}
           </span>
         )}
       </div>

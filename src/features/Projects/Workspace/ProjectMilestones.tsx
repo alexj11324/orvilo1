@@ -556,9 +556,11 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                     'items-center gap-2',
                   )}
                 >
-                  <span className="text-muted-foreground text-xs leading-5">{task.identifier}</span>
+                  <span className="font-mono text-muted-foreground text-xs leading-5">
+                    {task.identifier}
+                  </span>
                   <span className="truncate text-sm leading-5.5 flex-1 min-w-0">
-                    {task.name ?? task.identifier}
+                    {task.name ?? <span className="font-mono">{task.identifier}</span>}
                   </span>
                   {canEdit && (
                     <DropdownMenu

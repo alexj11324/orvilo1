@@ -104,6 +104,8 @@ class WorkAttentionService {
   ) => lambdaClient.workAttention.savedViewUpdate.mutate(input);
 
   search = (input: {
+    /** Only Issues that can take this link to `taskId` — see the server procedure. */
+    eligibleFor?: { relation: 'child' | 'dependency' | 'parent'; taskId: string };
     limitPerType?: number;
     query: string;
     type?: 'project' | 'savedView' | 'task' | 'team';

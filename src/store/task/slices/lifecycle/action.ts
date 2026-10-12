@@ -1,12 +1,15 @@
 import type { TaskDetailData, TaskStatus } from '@orvilo/types';
 import debug from 'debug';
+import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { taskService } from '@/services/task';
 import type { StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { runMutation } from '@/store/utils/runMutation';
 import { saveToast } from '@/store/utils/saveToast';
+import { isForbiddenError } from '@/utils/forbiddenError';
 
 import type { TaskStore } from '../../store';
 import {
@@ -47,7 +50,25 @@ export class TaskLifecycleSliceActionImpl {
   }
 
   cancelTopic = async (topicId: string): Promise<void> => {
-    await taskService.cancelTopic(topicId);
+    try {
+      await taskService.cancelTopic(topicId);
+    } catch (error) {
+      // The runtime did not acknowledge, but the stop is recorded and the
+      // server ends the run itself: this is a stop in progress, not a failure.
+      if (error instanceof Error && error.message.startsWith('STOP_UNCONFIRMED')) {
+        toast.info({
+          description: t('taskDetail.topicMenu.stopPendingDesc', { ns: 'chat' }),
+          title: t('taskDetail.topicMenu.stopPending', { ns: 'chat' }),
+        });
+      } else {
+        toast.error(
+          isForbiddenError(error)
+            ? t('taskDetail.topicMenu.stopForbidden', { ns: 'chat' })
+            : t('operationFailed', { ns: 'common' }),
+        );
+        throw error;
+      }
+    }
     const { activeTaskId, internal_refreshTaskDetail } = this.#get();
     if (activeTaskId) await internal_refreshTaskDetail(activeTaskId);
   };
@@ -163,8 +184,13 @@ export class TaskLifecycleSliceActionImpl {
     const detail = this.#get().taskDetailMap[id];
     const userState = useUserStore.getState();
     const actorId = actorAgentId ? undefined : userProfileSelectors.userId(userState);
+    // A status that moves the Issue itself (done, canceled, back to backlog)
+    // is logged by the server as a workflow move, named by the team state
+    // the Issue lands in — which only the server resolves. Those rows arrive
+    // with the refetch below rather than as a guess in the retired vocabulary.
+    const movesIssue = status === 'backlog' || status === 'canceled' || status === 'completed';
     const statusRow =
-      detail && previousStatus !== status
+      detail && previousStatus !== status && !movesIssue
         ? buildOptimisticPropertyActivity({
             actor: actorId
               ? {

@@ -1,6 +1,6 @@
 'use client';
 
-import { BRANDING_NAME } from '@orvilo/business-const';
+import { BRANDING_NAME, BRANDING_URL } from '@orvilo/business-const';
 import { cn } from 'cn';
 import { LucideArrowUpRightFromSquare, TelescopeIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import Notification from '@/components/Notification';
 import { Button } from '@/components/ui/button';
-import { PRIVACY_URL } from '@/const/url';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
 
@@ -50,15 +49,17 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
           </div>
           <div className={styles.desc}>
             {t('telemetry.desc', { appName: BRANDING_NAME })}
-            <span>
-              <a href={PRIVACY_URL} rel="noreferrer" target="_blank">
-                {t('telemetry.learnMore')}
-                <LucideArrowUpRightFromSquare
-                  className="ms-1 inline-block size-4 align-middle"
-                  size={16}
-                />
-              </a>
-            </span>
+            {BRANDING_URL.privacy && (
+              <span>
+                <a href={BRANDING_URL.privacy} rel="noreferrer" target="_blank">
+                  {t('telemetry.learnMore')}
+                  <LucideArrowUpRightFromSquare
+                    className="ms-1 inline-block size-4 align-middle"
+                    size={16}
+                  />
+                </a>
+              </span>
+            )}
           </div>
         </div>
         <div className="flex gap-2">

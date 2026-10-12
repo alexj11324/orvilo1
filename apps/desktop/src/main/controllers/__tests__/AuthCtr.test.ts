@@ -1,6 +1,6 @@
 import type { DataSyncConfig } from '@orvilo/electron-client-ipc';
 import debug from 'debug';
-import { BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,9 +9,13 @@ import type { App } from '@/core/App';
 import AuthCtr from '../AuthCtr';
 import RemoteServerConfigCtr from '../RemoteServerConfigCtr';
 
-const { ipcMainHandleMock } = vi.hoisted(() => ({
+const { envMock, ipcMainHandleMock, writeFileMock } = vi.hoisted(() => ({
+  envMock: { isDev: false },
   ipcMainHandleMock: vi.fn(),
+  writeFileMock: vi.fn(),
 }));
+
+vi.mock('node:fs/promises', () => ({ writeFile: writeFileMock }));
 
 vi.unmock('@/utils/logger');
 
@@ -54,7 +58,9 @@ vi.mock('@/const/env', () => ({
   isMac: false,
   isWindows: false,
   isLinux: false,
-  isDev: false,
+  get isDev() {
+    return envMock.isDev;
+  },
 }));
 
 // Mock crypto
@@ -95,6 +101,7 @@ const mockRemoteServerConfigCtr = {
 } as unknown as RemoteServerConfigCtr;
 
 const mockApp = {
+  browserManager: { showMainWindow: vi.fn() },
   getController: vi.fn((ControllerClass) => {
     if (ControllerClass === RemoteServerConfigCtr) {
       return mockRemoteServerConfigCtr;
@@ -161,6 +168,7 @@ describe('AuthCtr', () => {
       ).searchParams.get('state')!;
       await vi.advanceTimersByTimeAsync(3_000);
       expect(mockWindow.webContents.send).toHaveBeenCalledWith('authorizationFailed', {
+        code: 'denied',
         error: 'Invalid state parameter',
       });
       const output = JSON.stringify([...debugOutput.mock.calls, ...errorOutput.mock.calls]);
@@ -175,6 +183,81 @@ describe('AuthCtr', () => {
       debug.enable(previousDebug);
       vi.useRealTimers();
     }
+  });
+
+  describe('stable authorization failure codes', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('brings the main window forward after successful authorization', () => {
+      (authCtr as any).broadcastAuthorizationSuccessful();
+      expect(mockApp.browserManager.showMainWindow).toHaveBeenCalledOnce();
+    });
+
+    it('returns invalid_url without opening the browser for an invalid server URL', async () => {
+      const result = await authCtr.requestAuthorization({
+        active: false,
+        remoteServerUrl: 'not a URL',
+        storageMode: 'selfHost',
+      });
+      expect(result).toMatchObject({ code: 'invalid_url', success: false });
+      expect(shell.openExternal).not.toHaveBeenCalled();
+    });
+
+    describe('authorization URL handed to local automation', () => {
+      const config: DataSyncConfig = { active: false, storageMode: 'cloud' };
+
+      beforeEach(() => {
+        writeFileMock.mockReset().mockResolvedValue(undefined);
+        vi.stubEnv('ORVILO_DESKTOP_AUTH_URL_FILE', '/tmp/orvilo-auth-url');
+      });
+      afterEach(() => {
+        envMock.isDev = false;
+        (app as { isPackaged?: boolean }).isPackaged = false;
+        vi.unstubAllEnvs();
+        authCtr.cancelAuthorization();
+      });
+
+      it('writes the URL and leaves the browser alone in development', async () => {
+        envMock.isDev = true;
+        const result = await authCtr.requestAuthorization(config);
+        expect(result).toEqual({ success: true });
+        expect(shell.openExternal).not.toHaveBeenCalled();
+        const [path, url, options] = writeFileMock.mock.calls[0];
+        expect(path).toBe('/tmp/orvilo-auth-url');
+        expect(new URL(url).pathname).toBe('/oidc/auth');
+        expect(options).toEqual({ mode: 0o600 });
+      });
+
+      it.each([
+        ['outside development', false, false],
+        ['in a packaged build forced into development mode', true, true],
+      ])('ignores the setting %s', async (_, isDev, isPackaged) => {
+        envMock.isDev = isDev;
+        (app as { isPackaged?: boolean }).isPackaged = isPackaged;
+        await authCtr.requestAuthorization(config);
+        expect(writeFileMock).not.toHaveBeenCalled();
+        expect(shell.openExternal).toHaveBeenCalledOnce();
+      });
+    });
+
+    it.each([
+      ['timeout', () => Promise.resolve({ ok: false, status: 404 })],
+      ['network', () => Promise.reject(new TypeError('fetch failed'))],
+      ['denied', () => Promise.resolve({ ok: false, status: 403, statusText: 'Forbidden' })],
+      [
+        'server_error',
+        () => Promise.resolve({ ok: false, status: 503, statusText: 'Unavailable' }),
+      ],
+    ])('broadcasts %s independently of English error text', async (code, response) => {
+      vi.useFakeTimers();
+      mockFetch.mockImplementation(response);
+      await authCtr.requestAuthorization({ active: false, storageMode: 'cloud' });
+      await vi.advanceTimersByTimeAsync(123_000);
+      expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+        'authorizationFailed',
+        expect.objectContaining({ code }),
+      );
+    });
   });
 
   describe('Basic functionality', () => {
@@ -475,6 +558,7 @@ describe('AuthCtr', () => {
 
         // Verify authorizationFailed was broadcast with state error
         expect(mockWindow.webContents.send).toHaveBeenCalledWith('authorizationFailed', {
+          code: 'denied',
           error: 'Invalid state parameter',
         });
       }, 6000);

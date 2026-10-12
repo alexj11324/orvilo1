@@ -78,6 +78,29 @@ cd apps/cli && ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts login --server http:
   `ORVILO_CLI_API_KEY` when present, otherwise checks the stored server URL).
 - `UNAUTHORIZED` on API calls means the token expired — re-run login.
 
+## Seeded sessions need the Clerk stub
+
+The server rechecks every session against the Clerk Backend API, stores only a
+digest of a 64-character token, and requires the user's Clerk account binding.
+A seeded session is therefore accepted only when both of these hold:
+
+1. The dev server runs with `CLERK_API_URL` pointing at `clerk-stub.mjs`, which
+   vouches for seed sessions and forwards every other call to the real Clerk
+   API (a normal sign-in keeps working). Start it with
+   `ORVILO_CLERK_STUB=1 .agents/acceptance/scripts/dev-up.sh restart`.
+2. The session is created by `seed-session.mjs`, which writes the account
+   binding and the `auth_sessions` row in the form the server expects.
+
+```bash
+# Electron: point a running instance at the dev server and sign it in
+DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cdpPort>
+
+# Web: print a token, then inject it with the cookie path below
+DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs | sed 's/^/orvilo_auth=/' | $SCRIPT web
+```
+
+`setup-auth.sh web-seed` below runs the web command for you.
+
 ## Web — seeded session
 
 The Web test surface is `agent-browser --session orvilo-dev`. The user's
@@ -178,13 +201,16 @@ reachable.
 
 ### When the instance comes up signed out
 
-**NEVER trigger the OAuth sign-in flow (`requestAuthorization` / opening
-`/oidc/auth` in any form).** `AuthCtr` runs it through `shell.openExternal`, so
-it **hijacks the user's default browser with a login/authorize page** — visibly,
-on their machine, possibly repeatedly. Worse, dev instances sit on per-instance
-ports (`localhost:3024`, …), so the authorize URL targets a localhost origin
-whose session/callback state is broken or already dead — the opened page can
-never complete. This recipe used to live here; it was a mistake.
+**NEVER let the OAuth sign-in flow reach a browser.** A plain
+`requestAuthorization` runs through `shell.openExternal`, so it **hijacks the
+user's default browser with a login/authorize page** — visibly, on their machine,
+possibly repeatedly. Worse, dev instances sit on per-instance ports
+(`localhost:3024`, …), so the authorize URL targets a localhost origin whose
+session/callback state is broken or already dead — the opened page can never
+complete. The only permitted way to start it is step 2 below, on an instance
+launched with `ORVILO_DESKTOP_AUTH_URL_FILE`: a development build then writes the
+authorize URL to that file and opens nothing. Check the variable is set on the
+instance before calling it.
 
 Login state must be **injected directly**, never acquired through a login page:
 
@@ -193,10 +219,16 @@ Login state must be **injected directly**, never acquired through a login page:
    from it. A signed-out boot usually means the snapshot is stale because a
    previous instance was killed instead of stopped (see the traps below) — a
    `save-login <id>` from any still-live signed-in instance repairs it.
-2. **Mint the state via CLI/API** — the same philosophy as `web-seed`: create
-   the session server-side (seeded `auth_sessions` row / dev token issuance)
-   and inject it into the app's storage, with zero UI login. Prefer building on
-   `setup-auth.sh` seeding over anything that renders a sign-in page.
+2. **Mint the state via CLI** — `seed-session.mjs --electron <cdpPort>` creates
+   the session server-side and injects it into the running instance, with zero
+   UI login (see "Seeded sessions need the Clerk stub"). That signs in the
+   renderer only. To also authorize the main process — it is what connects this
+   machine as a device — start the instance with
+   `ORVILO_DESKTOP_AUTH_URL_FILE=<file>` and add `--desktop-auth <file>`: the
+   script has Electron start its normal authorization, answers the consent with
+   the seeded session over HTTP, and waits until the main process has an access
+   token. Gateway reachability and a connected execution device require a separate check.
+   Follow either with `$EDEV save-login <id>` so the next instance starts signed in.
 3. **Neither works → report auth as ❌ Blocked and stop.** Tell the user the
    Electron surface needs one manual sign-in (once — the snapshot then covers
    future runs). Do not open any login page on their behalf.

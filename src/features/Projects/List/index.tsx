@@ -88,7 +88,7 @@ const styles = {
     'flex items-center gap-2 border-be border-divider px-3 py-2 text-xs leading-5 text-muted-foreground',
   headerRow: 'px-3 py-1 text-xs leading-5 font-normal text-muted-foreground',
   identifier: 'flex-none font-mono text-xs leading-5 text-foreground-quaternary',
-  link: 'absolute inset-0 rounded-[inherit] text-inherit',
+  link: 'absolute inset-0 rounded-none text-inherit',
   leadEmpty: 'opacity-0 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
   leadOpen: 'opacity-100',
   leadOption:

@@ -37,7 +37,7 @@ export const FILE_URL = {
 };
 
 export const BRANDING_EMAIL = {
-  business: 'github@aspectlylabs.com',
+  business: undefined as string | undefined,
   replyTo: undefined,
   support: undefined,
 };

@@ -2,6 +2,7 @@
 
 import { memo, useMemo } from 'react';
 
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -29,49 +30,53 @@ interface AgentListContentProps {
 // or by a standalone caller (e.g. SwitchPanel). Subscribing here too would
 // re-fetch the list every time the accordion is expanded, animating the
 // spinner on both Public and Private headers for no good reason.
-const AgentListContent = memo<AgentListContentProps>(({ hideInbox, onMoreClick }) => {
-  const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
-  const authLoaded = useUserStore(authSelectors.isLoaded);
-  const isLogin = useUserStore(authSelectors.isLogin);
-  const contentState = resolveAgentListContentState({
-    authLoaded: !!authLoaded,
-    isInit,
-    isLogin: !!isLogin,
-  });
-  const { customList, pinnedList, defaultList } = useAgentList();
+const AgentListContent = memo<AgentListContentProps>(
+  ({ hideInbox: hideInboxProp, onMoreClick }) => {
+    // The inbox agent runs on the built-in harness.
+    const hideInbox = !useBuiltinHarnessOffered() || hideInboxProp;
+    const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
+    const authLoaded = useUserStore(authSelectors.isLoaded);
+    const isLogin = useUserStore(authSelectors.isLogin);
+    const contentState = resolveAgentListContentState({
+      authLoaded: !!authLoaded,
+      isInit,
+      isLogin: !!isLogin,
+    });
+    const { customList, pinnedList, defaultList } = useAgentList();
 
-  // Memoize computed visibility flags to prevent unnecessary recalculations
-  const { showPinned, showCustom } = useMemo(() => {
-    const hasPinned = Boolean(pinnedList?.length);
-    const hasCustom = Boolean(customList?.length);
+    // Memoize computed visibility flags to prevent unnecessary recalculations
+    const { showPinned, showCustom } = useMemo(() => {
+      const hasPinned = Boolean(pinnedList?.length);
+      const hasCustom = Boolean(customList?.length);
 
-    return {
-      showCustom: hasCustom,
-      showPinned: hasPinned,
-    };
-  }, [pinnedList?.length, customList?.length]);
+      return {
+        showCustom: hasCustom,
+        showPinned: hasPinned,
+      };
+    }, [pinnedList?.length, customList?.length]);
 
-  if (contentState !== 'ready')
+    if (contentState !== 'ready')
+      return (
+        <>
+          {!hideInbox && <InboxItem style={{ minHeight: 36 }} />}
+          {contentState === 'loading' && <SkeletonList rows={3} />}
+        </>
+      );
+
     return (
       <>
         {!hideInbox && <InboxItem style={{ minHeight: 36 }} />}
-        {contentState === 'loading' && <SkeletonList rows={3} />}
+        {showPinned && <SessionList dataSource={pinnedList!} />}
+        {showCustom && <Group dataSource={customList!} />}
+        <SessionList
+          dataSource={defaultList ?? []}
+          groupId={SessionDefaultGroup.Default}
+          onMoreClick={onMoreClick}
+        />
       </>
     );
-
-  return (
-    <>
-      {!hideInbox && <InboxItem style={{ minHeight: 36 }} />}
-      {showPinned && <SessionList dataSource={pinnedList!} />}
-      {showCustom && <Group dataSource={customList!} />}
-      <SessionList
-        dataSource={defaultList ?? []}
-        groupId={SessionDefaultGroup.Default}
-        onMoreClick={onMoreClick}
-      />
-    </>
-  );
-});
+  },
+);
 
 AgentListContent.displayName = 'AgentListContent';
 

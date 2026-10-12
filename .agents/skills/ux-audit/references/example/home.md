@@ -113,5 +113,5 @@ quantify. What the other layers would add on this surface:
   - Drive the send journey to **confirm gap ④** (is an in-progress/locked state shown; does
     success lead forward).
   - **Measure home CLS** across the loading→content swap (inject the layout-shift observer
-    from [layer-3-dynamic.md](layer-3-dynamic.md)) and report the number + verdict — the
+    from [layer-3-dynamic.md](../layer-3-dynamic.md)) and report the number + verdict — the
     skeleton coverage looks good in code, but only the metric proves it.

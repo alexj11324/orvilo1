@@ -1,7 +1,5 @@
 'use client';
-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
 
-// Highlighter is intentionally avoided: it pulls every shiki grammar (~10 MB) into the auth bundle
 import { cn } from 'cn';
 import { FrownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -17,42 +15,24 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 
+import { resolveOAuthFailureReason } from './failureReason';
+
 const FailedPage = () => {
   const { t } = useTranslation('oauth');
   const [searchParams] = useSearchParams();
 
-  const reason = searchParams.get('reason');
-  const errorMessage = searchParams.get('errorMessage');
+  // Only a known reason code selects copy; no text from the URL is rendered.
+  const reason = resolveOAuthFailureReason(searchParams.get('reason'));
 
   return (
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="default">{<FrownIcon size={96} />}</EmptyMedia>
-        <EmptyTitle>{<div className="text-[32px] font-bold">{t('error.title')}</div>}</EmptyTitle>
+        <EmptyTitle>{<div className="text-3xl font-semibold">{t('error.title')}</div>}</EmptyTitle>
         <EmptyDescription>
           {
-            <div className="flex flex-col gap-2">
-              <div className="text-base text-muted-foreground">
-                {t('error.desc', {
-                  reason: t(`error.reason.${reason}` as any, { defaultValue: reason ?? '' }),
-                })}
-              </div>
-              {!!errorMessage && (
-                <div className="flex flex-col p-3" style={{ maxHeight: 240, overflowY: 'auto' }}>
-                  <pre
-                    style={{
-                      fontFamily: 'monospace',
-                      margin: 0,
-                      overflowX: 'auto',
-                      textAlign: 'start',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    {errorMessage}
-                  </pre>
-                </div>
-              )}
+            <div className="text-sm leading-5.5 text-muted-foreground">
+              {t(`error.explanation.${reason}`)}
             </div>
           }
         </EmptyDescription>
@@ -60,9 +40,11 @@ const FailedPage = () => {
       <EmptyContent>
         {
           <a
-            className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
             href="/"
-            style={{ minWidth: 240 }}
+            className={cn(
+              buttonVariants({ size: 'normal' }),
+              'min-h-9 h-auto w-full min-w-60 whitespace-normal text-center',
+            )}
           >
             {t('error.backToHome')}
           </a>

@@ -158,13 +158,20 @@ describe('TaskPrerequisites', () => {
     fireEvent.click(fieldFor('relates').getByRole('button', { name: relation('add') }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ship' } });
     await waitFor(() => expect(screen.getByText('Ship it')).toBeTruthy());
+    // Picking only selects; nothing is written until the selection is submitted.
     fireEvent.click(screen.getByText('Ship it'));
+    expect(mocks.addDependency).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.picker.add' }));
     await waitFor(() => expect(mocks.addDependency).toHaveBeenCalledWith('T-4', 'T-9', 'relates'));
+    expect(mocks.search).toHaveBeenCalledWith(
+      expect.objectContaining({ eligibleFor: { relation: 'dependency', taskId: 'T-4' } }),
+    );
 
     fireEvent.click(fieldFor('blocking').getByRole('button', { name: relation('add') }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ship' } });
     await waitFor(() => expect(screen.getByText('Ship it')).toBeTruthy());
     fireEvent.click(screen.getByText('Ship it'));
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.picker.add' }));
     await waitFor(() => {
       expect(mocks.addDependency).toHaveBeenCalledWith('T-9', 'T-4', 'blocks');
       expect(mocks.refreshTaskDetail).toHaveBeenCalledWith('T-4');
@@ -247,12 +254,63 @@ describe('TaskPrerequisites', () => {
     ]);
   });
 
+  it('adds several picked issues in one submit and names why one was refused', async () => {
+    mocks.search.mockResolvedValue({
+      data: [
+        { description: 'T-8', id: 'tsk_8', title: 'Loop back', type: 'task' },
+        { description: 'T-9', id: 'tsk_9', title: 'Ship it', type: 'task' },
+      ],
+    });
+    // The server's prose says nothing useful; only its stable code may decide the copy.
+    mocks.addDependency.mockImplementation(async (_taskId: string, dependsOn: string) => {
+      if (dependsOn === 'T-8')
+        throw Object.assign(new Error('nope'), {
+          data: { code: 'BAD_REQUEST', errorData: { code: 'CYCLE' } },
+        });
+    });
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
+    fireEvent.click(fieldFor('blockedBy').getByRole('button', { name: relation('add') }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'i' } });
+    await waitFor(() => expect(screen.getByText('Ship it')).toBeTruthy());
+    fireEvent.click(screen.getByText('Loop back'));
+    fireEvent.click(screen.getByText('Ship it'));
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.picker.add' }));
+
+    await waitFor(() => expect(mocks.addDependency).toHaveBeenCalledTimes(2));
+    expect(mocks.addDependency).toHaveBeenCalledWith('T-4', 'T-8', 'blocks');
+    expect(mocks.addDependency).toHaveBeenCalledWith('T-4', 'T-9', 'blocks');
+    // The refused issue stays picked and is named with the specific reason.
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe('taskDetail.picker.notAdded:T-8'),
+    );
+    expect(screen.getByText('Loop back').closest('button')?.getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+  });
+
   it('renders localized removal errors', async () => {
     setTask([{ dependsOn: 'T-1', id: 'task_1', status: 'backlog', type: 'blocks' }]);
-    mocks.removeDependency.mockRejectedValue(new Error('Dependency not found'));
+    // Classified by the server's stable reason code, not by the message text.
+    mocks.removeDependency.mockRejectedValue(
+      Object.assign(new Error('gone'), {
+        data: { code: 'BAD_REQUEST', errorData: { code: 'UNAVAILABLE' } },
+      }),
+    );
     render(<TaskPrerequisites revealedKinds={allKinds} />);
     fireEvent.click(screen.getByRole('button', { name: `${key('removeBlocker')}:T-1` }));
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(key('unavailable')));
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe(
+        'taskDetail.relationError.unavailable:T-4',
+      ),
+    );
+  });
+
+  it('does not guess a removal reason from the wording of an uncoded failure', async () => {
+    setTask([{ dependsOn: 'T-1', id: 'task_1', status: 'backlog', type: 'blocks' }]);
+    mocks.removeDependency.mockRejectedValue({ data: { code: 'INTERNAL_SERVER_ERROR' } });
+    render(<TaskPrerequisites revealedKinds={allKinds} />);
+    fireEvent.click(screen.getByRole('button', { name: `${key('removeBlocker')}:T-1` }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(key('error')));
   });
 
   it('does not offer mutations to read-only users', () => {

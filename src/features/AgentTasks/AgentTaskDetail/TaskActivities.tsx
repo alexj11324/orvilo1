@@ -3,17 +3,30 @@ import type {
   TaskAutomationSnapshot,
   TaskDetailActivity,
   TaskDetailActivityAuthor,
+  TaskDetailPropertyChange,
 } from '@orvilo/types';
 import type { TFunction } from 'i18next';
 import {
   ArrowLeftRight,
   BotMessageSquare,
+  CalendarDays,
   // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- topic activity kind, not a status mark
   CircleDot,
   CirclePlus,
+  Copy,
+  FolderKanban,
+  GitPullRequest,
+  Link2,
+  ListChecks,
+  ListTree,
   MessageCircle,
+  Milestone,
+  Pencil,
+  Tag,
   Timer,
   UserRoundCog,
+  Users,
+  Waypoints,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -51,6 +64,7 @@ import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
 import { commentComposerKey } from './commentComposerKey';
 import CommentInput from './CommentInput';
+import PropertyChangeSentence from './PropertyChangeSentence';
 import TaskBriefCard from './TaskBriefCard';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskDetailSectionHeader from './TaskDetailSectionHeader';
@@ -271,9 +285,54 @@ interface TaskActivitiesProps {
   variant?: 'activity' | 'result';
 }
 
-const PROPERTY_ICON: Record<'automation' | 'status', StatusVisual['icon']> = {
-  automation: Timer,
-  status: STATUS_PROPERTY_ICON,
+/** The rail mark of a property row: an icon for the kind of thing that changed. */
+const propertyIcon = (change: TaskDetailPropertyChange): StatusVisual['icon'] => {
+  switch (change.field) {
+    case 'automation': {
+      return Timer;
+    }
+    case 'status':
+    case 'workflow': {
+      return STATUS_PROPERTY_ICON;
+    }
+    case 'description':
+    case 'title': {
+      return Pencil;
+    }
+    case 'verify': {
+      return ListChecks;
+    }
+    case 'dueDate': {
+      return CalendarDays;
+    }
+    case 'parent': {
+      return ListTree;
+    }
+    case 'relation': {
+      return change.relation === 'sub_issue' ? ListTree : Waypoints;
+    }
+    case 'duplicate': {
+      return Copy;
+    }
+    case 'label': {
+      return Tag;
+    }
+    case 'project': {
+      return FolderKanban;
+    }
+    case 'milestone': {
+      return Milestone;
+    }
+    case 'team': {
+      return Users;
+    }
+    case 'resource': {
+      return change.kind === 'pull_request' ? GitPullRequest : Link2;
+    }
+    default: {
+      return ArrowLeftRight;
+    }
+  }
 };
 
 const PriorityMark = ({ level }: { level: number | null }) => {
@@ -283,13 +342,18 @@ const PriorityMark = ({ level }: { level: number | null }) => {
 };
 
 /**
- * "<actor> changed the status from <from> to <to>" and its priority /
- * automation siblings. A collapsed entry can span several hops, so the
- * starting value is what tells the reader how far the property moved. Only a
- * change a person (or their agent) made reaches the feed — the runner's own
- * start / finish transitions are already told by the run row.
+ * "<actor> changed the status from <from> to <to>" and its siblings: one line
+ * per thing that changed on the Issue. A collapsed entry can span several
+ * hops, so the starting value is what tells the reader how far the property
+ * moved. A row with no actor was the system's doing — for example the move
+ * made when a run settles.
  */
-const PropertyRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
+const PropertyRow = memo<{
+  activity: TaskDetailActivity;
+  onChanged: () => Promise<void>;
+  taskIdentifier?: string;
+  taskUuid?: string;
+}>(({ activity, onChanged, taskIdentifier, taskUuid }) => {
   const { t } = useTranslation('chat');
   const change = activity.propertyChange;
   if (!change) return null;
@@ -382,6 +446,17 @@ const PropertyRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
         );
       break;
     }
+    default: {
+      sentence = (
+        <PropertyChangeSentence
+          actor={actor}
+          change={change}
+          taskIdentifier={taskIdentifier}
+          taskUuid={taskUuid}
+          onChanged={onChanged}
+        />
+      );
+    }
   }
 
   return (
@@ -394,7 +469,7 @@ const PropertyRow = memo<{ activity: TaskDetailActivity }>(({ activity }) => {
         change.field === 'priority' ? (
           <PriorityMark level={change.to} />
         ) : (
-          <RowMark icon={PROPERTY_ICON[change.field]} />
+          <RowMark icon={propertyIcon(change)} />
         )
       }
     >
@@ -518,7 +593,15 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
           // reader and the report.
           if (variant === 'result') return null;
           if (activity.type === 'property') {
-            return <PropertyRow activity={activity} key={key} />;
+            return (
+              <PropertyRow
+                activity={activity}
+                key={key}
+                taskIdentifier={activeTaskId}
+                taskUuid={activeTaskDatabaseId}
+                onChanged={refreshActiveTask}
+              />
+            );
           }
           if (activity.type === 'assignment') {
             return <AssignmentRow activity={activity} key={key} />;

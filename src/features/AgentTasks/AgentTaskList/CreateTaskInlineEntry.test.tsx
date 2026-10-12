@@ -599,6 +599,34 @@ describe('CreateTaskInlineEntry', () => {
       expect(createTaskMock.mock.calls[0][0].name).toBe('Write the Q3 project plan');
     });
 
+    it('sends the selected assignee with the first reading so an ACP agent can run it', async () => {
+      analyzeIntentMock.mockResolvedValue(clearReading);
+
+      render(<CreateTaskInlineEntry lockAssignee agentId="agent-locked" />);
+      fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
+
+      await waitFor(() => expect(createTaskMock).toHaveBeenCalledTimes(1));
+      expect(analyzeIntentMock.mock.calls[0][0].agentId).toBe('agent-locked');
+    });
+
+    it('sends the selected assignee with the rewrite so an ACP agent can run it', async () => {
+      analyzeIntentMock.mockResolvedValue({
+        ...clearReading,
+        clarifications: [{ options: ['orvilo'], question: 'Which repo?' }],
+        confidence: 'medium',
+      });
+
+      render(<CreateTaskInlineEntry lockAssignee agentId="agent-locked" />);
+      fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });
+
+      await screen.findByText('taskIntent.reviewStep');
+      fireEvent.click(screen.getByText('orvilo'));
+      fireEvent.click(await screen.findByText('taskIntent.create'));
+
+      await waitFor(() => expect(synthesizeInstructionMock).toHaveBeenCalledTimes(1));
+      expect(synthesizeInstructionMock.mock.calls[0][0].agentId).toBe('agent-locked');
+    });
+
     it('runs the second reading only once the answers are all in', async () => {
       analyzeIntentMock.mockResolvedValue({
         ...clearReading,

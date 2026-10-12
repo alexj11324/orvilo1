@@ -171,6 +171,12 @@ export function registerDeviceCommand(program: Command) {
       }
 
       console.log(pc.bold('Device Status'));
+      // Not the same as offline: no gateway exists on this deployment, so no
+      // device can come online until an operator configures one.
+      if (status.errorCode === 'GATEWAY_NOT_CONFIGURED')
+        console.log(
+          `  Gateway  : ${pc.yellow('not configured')} — this deployment has no device gateway, so devices cannot connect`,
+        );
       console.log(`  Online   : ${status.online ? pc.green('yes') : pc.dim('no')}`);
       console.log(`  Devices  : ${status.deviceCount}`);
     });

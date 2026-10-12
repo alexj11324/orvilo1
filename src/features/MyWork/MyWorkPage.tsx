@@ -99,7 +99,7 @@ import WorkQueryResults from './WorkQueryResults';
 const styles = {
   detailLayout: 'relative flex flex-1 h-0 min-h-0 overflow-hidden',
   detailPane:
-    'flex-none w-100 overflow-y-auto pbe-3 border-s border-divider bg-card [@container_work-surface_(width<=900px)]:absolute [@container_work-surface_(width<=900px)]:z-10 [@container_work-surface_(width<=900px)]:inset-y-0 [@container_work-surface_(width<=900px)]:end-0 [@container_work-surface_(width<=900px)]:w-[min(400px,calc(100%_-_40px))] [@container_work-surface_(width<=900px)]:shadow-(--shadow-popover)',
+    'flex-none w-100 overflow-y-auto pbe-3 border-s border-divider bg-card [@container_work-surface_(width<=900px)]:absolute [@container_work-surface_(width<=900px)]:z-10 [@container_work-surface_(width<=900px)]:inset-y-0 [@container_work-surface_(width<=900px)]:end-0 [@container_work-surface_(width<=900px)]:[max-width:calc(100%_-_var(--spacing)*10)] [@container_work-surface_(width<=900px)]:shadow-(--shadow-popover)',
   filterChips: 'items-center gap-2 p-1',
   resultsBody: 'box-border min-h-full py-2',
   resultsScroll: 'flex-1 min-w-0 overflow-auto overscroll-contain',

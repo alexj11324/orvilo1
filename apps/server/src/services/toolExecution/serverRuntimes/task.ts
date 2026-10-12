@@ -480,6 +480,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
             args.addDependencies,
             (depId) =>
               taskModel().addDependency(task.id, depId, 'blocks', {
+                ...(agentId ? { actorAgentId: agentId } : {}),
                 source: agentId ? 'agent' : 'user',
               }),
             (depIdentifier) => changes.push(formatDependencyAdded(task.identifier, depIdentifier)),
@@ -492,6 +493,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
             args.removeDependencies,
             (depId) =>
               taskModel().removeDependency(task.id, depId, {
+                ...(agentId ? { actorAgentId: agentId } : {}),
                 source: agentId ? 'agent' : 'user',
               }),
             (depIdentifier) =>

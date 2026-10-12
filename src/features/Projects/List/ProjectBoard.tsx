@@ -24,7 +24,7 @@ const styles = {
   column: 'w-66 flex-none rounded-(--radius-card) bg-fill-quaternary',
   columnBody: 'flex flex-col gap-1.5 p-1.5',
   columnHeader: 'flex items-center gap-1.5 px-2.5 py-2',
-  link: 'absolute inset-0 rounded-[inherit]',
+  link: 'absolute inset-0 rounded-(--radius-card)',
 };
 
 interface ProjectBoardProps {

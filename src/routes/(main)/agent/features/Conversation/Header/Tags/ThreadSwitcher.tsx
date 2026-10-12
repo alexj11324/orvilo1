@@ -32,7 +32,7 @@ const ThreadSwitcher = memo<ThreadSwitcherProps>(({ title }) => {
   };
 
   const content = (
-    <div className="flex flex-col gap-0.5 p-1 max-h-[50vh] max-w-90 min-w-60 overflow-y-auto">
+    <div className="flex flex-col gap-0.5 p-1 [max-height:50vh] max-w-90 min-w-60 overflow-y-auto">
       {threads.map((thread) => (
         <div
           {...clickableProps()}

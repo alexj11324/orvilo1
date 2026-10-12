@@ -819,6 +819,39 @@ describe('TaskIntegrationService', () => {
     expect(mockAfter).toHaveBeenCalledTimes(1);
   });
 
+  it('retries a local corrective conflict in its owned worktree without remote review', async () => {
+    const record = seedRecord({
+      attempts: 1,
+      expectedHeadSha: 'task123',
+      integrationWorktreePath: '/repos/orvilo-integration-main-topic_1',
+      role: 'integrate',
+      state: 'merging',
+      worktreePath: '/repos/orvilo-integration-main-topic_1',
+    });
+    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+    vi.mocked(deviceGateway.finalizeGitMerge).mockResolvedValue({
+      conflicts: ['src/a.ts'],
+      state: 'conflict',
+      success: false,
+    });
+    expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
+      'hold',
+    );
+    expect(mockRunner.runTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        integrationSeed: expect.objectContaining({ attempts: 2, role: 'integrate' }),
+        workspaceOverride: expect.objectContaining({
+          workingDirectory: record.integrationWorktreePath,
+        }),
+      }),
+    );
+    expect(mockTaskTopicModel.updateIntegration).not.toHaveBeenCalledWith(
+      'task_1',
+      'topic_1',
+      expect.objectContaining({ state: 'verification_pending' }),
+    );
+  });
+
   it('blocks when corrective attempts are exhausted', async () => {
     const record = seedRecord({
       attempts: 3,
@@ -1018,42 +1051,62 @@ describe('TaskIntegrationService', () => {
       expect(mockRunner.runTask).not.toHaveBeenCalled();
     });
 
-    it('dispatches a sandbox integrator run when the branch is not yet merged', async () => {
-      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(remoteRecord()));
-
+    it('hands a repository-bound ACP device delivery to deterministic review without a merge agent', async () => {
+      const record = remoteRecord({
+        deviceId: 'dev-1',
+        repoPath: '/repos/widgets',
+        worktreePath: '/repos/widgets-task',
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
       const outcome = await service.integrateOnComplete({
         task: baseTask(),
         taskTopicId: 'topic_1',
       });
-
       expect(outcome).toBe('hold');
-      const call = mockRunner.runTask.mock.calls[0][0];
-      expect(call.taskId).toBe('task_1');
-      expect(call.workspaceOverride).toEqual({
-        repos: ['acme/widgets'],
-        workingDirectory: '/workspace/widgets',
-        workingDirectoryConfig: {
-          git: { branch: 'main', upstream: { branch: 'main', remote: 'origin' } },
-          path: '/workspace/widgets',
-          repoType: 'git',
-        },
-      });
-      expect(call.extraPrompt).toContain('git merge --no-ff origin/task/T-1');
-      expect(call.extraPrompt).toContain('git push origin main');
-      expect(call.integrationSeed).toMatchObject({
-        attempts: 1,
-        expectedBaseSha: 'base123',
-        expectedHeadSha: 'head123',
-        repo: 'acme/widgets',
-        role: 'integrate',
-        runTopicId: 'topic_1',
-        state: 'merging',
-      });
-      // The task run's row reports the in-flight merge, not a conflict.
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
       expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
         'task_1',
         'topic_1',
-        expect.objectContaining({ attempts: 1, state: 'merging' }),
+        expect.objectContaining({
+          state: 'verification_pending',
+          expectedHeadSha: 'head123',
+          expectedBaseSha: 'base123',
+        }),
+      );
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+    });
+
+    it('queues an unmerged sandbox delivery for deterministic review', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(remoteRecord()));
+      const outcome = await service.integrateOnComplete({
+        task: baseTask(),
+        taskTopicId: 'topic_1',
+      });
+      expect(outcome).toBe('hold');
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({
+          expectedBaseSha: 'base123',
+          expectedHeadSha: 'head123',
+          state: 'verification_pending',
+        }),
+      );
+    });
+
+    it('adopts a replayed remote merging record without another merge agent', async () => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(remoteRecord({ state: 'merging' })),
+      );
+      expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
+        'hold',
+      );
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ state: 'verification_pending' }),
       );
     });
 
@@ -1170,7 +1223,7 @@ describe('TaskIntegrationService', () => {
       );
     });
 
-    it('re-dispatches while the remote merge is still pending', async () => {
+    it('adopts a legacy integrator into deterministic review while its merge is pending', async () => {
       const record = remoteRecord({
         attempts: 1,
         role: 'integrate',
@@ -1186,10 +1239,11 @@ describe('TaskIntegrationService', () => {
       });
 
       expect(outcome).toBe('hold');
-      expect(mockRunner.runTask).toHaveBeenCalledWith(
-        expect.objectContaining({
-          integrationSeed: expect.objectContaining({ attempts: 2, state: 'merging' }),
-        }),
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ state: 'verification_pending' }),
       );
     });
 

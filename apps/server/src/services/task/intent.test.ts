@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { normalizeIntent, normalizeSynthesis, TaskIntentService } from './intent';
 
-const { generateObject, resolveGoalModelConfig } = vi.hoisted(() => ({
+const { generateObject, resolveLightweightJudgment } = vi.hoisted(() => ({
   generateObject: vi.fn(),
-  resolveGoalModelConfig: vi.fn(),
+  resolveLightweightJudgment: vi.fn(),
 }));
 
 vi.mock('@/server/services/aiGeneration', () => ({
@@ -13,7 +13,9 @@ vi.mock('@/server/services/aiGeneration', () => ({
   }),
 }));
 
-vi.mock('@/server/services/goal/modelConfig', () => ({ resolveGoalModelConfig }));
+vi.mock('@/server/services/systemAgent/lightweightJudgment', () => ({
+  resolveLightweightJudgment,
+}));
 
 const wellFormed = {
   clarifications: [],
@@ -28,7 +30,7 @@ const wellFormed = {
 describe('TaskIntentService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resolveGoalModelConfig.mockResolvedValue({ model: 'mini', provider: 'openai' });
+    resolveLightweightJudgment.mockResolvedValue({ model: 'mini', provider: 'openai' });
     generateObject.mockResolvedValue(wellFormed);
   });
 

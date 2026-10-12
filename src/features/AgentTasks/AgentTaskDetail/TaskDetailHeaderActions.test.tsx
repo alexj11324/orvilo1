@@ -61,6 +61,14 @@ const mocks = vi.hoisted(() => ({
   updateTask: vi.fn(),
 }));
 
+// The menu's "Run again" resolves who would run an Issue with no Agent.
+vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
+  useFallbackAgentId: () => undefined,
+}));
+vi.mock('@/features/HeterogeneousAgent/builtinHarness', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
   default: ({
     children,
@@ -424,6 +432,42 @@ describe('TaskDetailHeaderActions', () => {
 
       await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Links unavailable'));
     });
+  });
+
+  // Re-running moved here from the header button; starting, retrying and
+  // resuming are not menu commands (they sit in the Execution area).
+  it('offers "Run again" only after a run succeeded', () => {
+    setDetail({
+      agentId: 'agent-1',
+      dispatchPhase: 'succeeded',
+      status: 'completed',
+      workflowCategory: 'done',
+    });
+    const { unmount } = render(<TaskDetailHeaderActions />);
+    expect(item('rerun')?.label).toBe('taskDetail.menu.rerun');
+    unmount();
+
+    for (const detail of [
+      {
+        agentId: 'agent-1',
+        dispatchPhase: 'failed',
+        status: 'failed',
+        workflowCategory: 'in_progress',
+      },
+      { agentId: 'agent-1', status: 'backlog', workflowCategory: 'in_progress' },
+      {
+        agentId: 'agent-1',
+        dispatchPhase: 'running',
+        status: 'running',
+        workflowCategory: 'in_progress',
+      },
+      { dispatchPhase: 'succeeded', status: 'completed', workflowCategory: 'done' },
+    ]) {
+      setDetail(detail);
+      const view = render(<TaskDetailHeaderActions />);
+      expect(item('rerun')).toBeUndefined();
+      view.unmount();
+    }
   });
 
   it('opens the task route in a new tab through the host navigation adapter', () => {
@@ -809,6 +853,30 @@ describe('TaskDetailHeaderActions', () => {
     await mocks.confirmModal.mock.calls[0][0].onOk();
     expect(mocks.deleteTask).toHaveBeenCalledWith('T-1');
     expect(mocks.navigate).toHaveBeenCalledWith('/tasks');
+  });
+
+  it('states in the delete confirmation that sub-issues become top-level issues', () => {
+    setDetail({
+      subtasks: [
+        { identifier: 'T-2', status: 'backlog' },
+        { identifier: 'T-3', status: 'backlog' },
+      ],
+    });
+    render(<TaskDetailHeaderActions />);
+
+    item('delete')?.onClick?.();
+
+    expect(mocks.confirmModal.mock.calls[0][0].content).toContain(
+      'taskDetail.deleteConfirm.contentWithSubIssues',
+    );
+  });
+
+  it('keeps the plain delete warning for an issue without sub-issues', () => {
+    render(<TaskDetailHeaderActions />);
+
+    item('delete')?.onClick?.();
+
+    expect(mocks.confirmModal.mock.calls[0][0].content).toBe('taskDetail.deleteConfirm.content');
   });
 
   describe('cancel / reopen', () => {

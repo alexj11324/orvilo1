@@ -62,13 +62,13 @@ import { ProjectIssueProgress } from './ProjectIssueProgress';
 const styles = {
   activityLink: 'flex-none text-xs leading-5 text-muted-foreground hover:text-foreground',
   panel:
-    '[scrollbar-width:thin] [scrollbar-gutter:stable] overflow-y-auto flex-none w-[399px] h-full py-3 ps-1 pe-0',
+    '[scrollbar-width:thin] [scrollbar-gutter:stable] overflow-y-auto flex-none w-99.75 h-full py-3 ps-1 pe-0',
   railCard:
     'py-3 [padding-inline:11px] border border-divider rounded-(--radius-card) bg-[color-mix(in_srgb,var(--card)_78%,transparent)]',
   milestoneRow:
     'cursor-default relative flex gap-2 items-center h-10.5 -mx-2.5 px-2.5 rounded-(--radius-card) hover:bg-accent hover:[&>a]:flex focus-within:[&>a]:flex',
   seeIssues:
-    'absolute inset-e-2.5 hidden items-center min-h-8 px-2 rounded-(--radius-button) text-xs leading-5 font-[450] text-foreground bg-card wash-muted',
+    'absolute inset-e-2.5 hidden items-center min-h-8 px-2 rounded-(--radius-button) text-xs leading-5 font-normal text-foreground bg-card wash-muted',
   sectionTrigger:
     'flex flex-1 gap-1.5 justify-start min-w-0 p-0 text-muted-foreground text-start bg-transparent hover:bg-accent',
 };
@@ -157,7 +157,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                 // card's always-visible progress link.
                 <div className={styles.milestoneRow} key={milestone.id}>
                   <MilestoneIcon />
-                  <span className="text-xs leading-5 truncate font-[450] flex-1 min-w-0">
+                  <span className="text-xs leading-5 truncate font-normal flex-1 min-w-0">
                     {milestone.name}
                   </span>
                   {milestone.date && (

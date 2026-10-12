@@ -48,6 +48,8 @@ export type AgentStreamEventType =
    * no content is carried in the event itself (DB is the source of truth).
    */
   | 'notify_update'
+  /** Sanitized ACP session title; data: { title: string }. */
+  | 'session_title'
   | 'error';
 
 export interface AgentStreamEvent {

@@ -293,6 +293,17 @@ export const taskMenuRouter = router({
         return failure(error, 'removeLink');
       }
     }),
+  updateLink: writeProcedure
+    .input(idInput.extend({ linkId: z.uuid(), title: z.string().trim().min(1).max(255) }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const row = await ctx.taskResources.updateTitle(input.id, input.linkId, input.title);
+        if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Link not found' });
+        return { data: row, success: true };
+      } catch (error) {
+        return failure(error, 'updateLink');
+      }
+    }),
   removeRecurrence: writeProcedure.input(idInput).mutation(async ({ input, ctx }) => {
     try {
       await assertRecurrenceManageable(ctx, input.id);

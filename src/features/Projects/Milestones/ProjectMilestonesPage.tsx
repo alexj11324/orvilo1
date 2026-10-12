@@ -111,7 +111,7 @@ const ProjectMilestonesPage = memo<ProjectMilestonesPageProps>(({ detail }) => {
     return (
       <div className={styles.row} key={milestone.id}>
         <MilestoneIcon />
-        <span className="text-sm leading-5.5 truncate font-[450] flex-1 min-w-0">
+        <span className="text-sm leading-5.5 truncate font-normal flex-1 min-w-0">
           {milestone.name}
         </span>
         <span className={cn(styles.date, !milestone.date && styles.dateEmpty)}>

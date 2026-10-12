@@ -507,12 +507,24 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
 
     const content =
       pane.kind === 'builder' ? (
-        <div className={cn('flex flex-col', 'w-[min(460px,calc(100vw-32px))] p-3', 'gap-2')}>
+        <div
+          className={cn(
+            'flex flex-col',
+            'w-115 [max-width:calc(100vw_-_var(--spacing)*8)] p-3',
+            'gap-2',
+          )}
+        >
           <PaneHeader title={t('myWork.filterAdvanced')} onBack={() => setPane({ kind: 'menu' })} />
           <WorkQueryFilterBuilder entityType={'task'} value={builder} onChange={onBuilderChange} />
         </div>
       ) : pane.kind === 'field' ? (
-        <div className={cn('flex flex-col', 'w-[min(280px,calc(100vw-32px))] p-2', 'gap-0.5')}>
+        <div
+          className={cn(
+            'flex flex-col',
+            'w-70 [max-width:calc(100vw_-_var(--spacing)*8)] p-2',
+            'gap-0.5',
+          )}
+        >
           <PaneHeader
             title={t(`savedViews.fields.${pane.field}` as never, { defaultValue: pane.field })}
             onBack={() => setPane({ kind: 'menu' })}
@@ -526,7 +538,13 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
           />
         </div>
       ) : (
-        <div className={cn('flex flex-col', 'w-[min(280px,calc(100vw-32px))] p-2', 'gap-0.5')}>
+        <div
+          className={cn(
+            'flex flex-col',
+            'w-70 [max-width:calc(100vw_-_var(--spacing)*8)] p-2',
+            'gap-0.5',
+          )}
+        >
           {filterSupported ? (
             <>
               <Input

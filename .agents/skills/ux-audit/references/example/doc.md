@@ -167,8 +167,8 @@ path (not only during lock degradation), or document that the draft is lock-wind
   component and reads the real SWR `error`**, yet it sits below `if (isLoading) return <Skeleton/>`
   where `isLoading = !map[id]`, so a first-load failure (and a resolved-`null` not-found) can
   never reach it — it paints only on revalidation. Landed as a new paragraph + ❌ example (Agent
-  document view) + checklist item in [feedback.md §4.2](../../ux/references/feedback.md), mirrored
-  into the [Quick review](../../ux/SKILL.md) Feedback line. **→ landed as ux feedback §4.2 ❌.**
+  document view) + checklist item in [feedback.md §4.2](../../../ux/references/feedback.md), mirrored
+  into the [Quick review](../../../ux/SKILL.md) Feedback line. **→ landed as ux feedback §4.2 ❌.**
 
 **Validated instances of existing rules (no new rule needed):**
 

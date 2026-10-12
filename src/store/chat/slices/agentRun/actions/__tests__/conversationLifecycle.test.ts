@@ -5,6 +5,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { TRPCClientError } from '@trpc/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toast } from '@/components/toast';
 import { createStore as createChatInputStore } from '@/features/ChatInput/store';
 import { agentService } from '@/services/agent';
 import { aiAgentService } from '@/services/aiAgent';
@@ -618,6 +619,27 @@ describe('ConversationLifecycle actions', () => {
 
         expect(setJSONState).toHaveBeenCalledWith(inputEditorState);
         expect(sendMessageOperation?.metadata.inputSendErrorMsg).toBeTruthy();
+      });
+
+      it('tells the user why a gateway send failed in a new topic', async () => {
+        // The composer alert is keyed to the optimistic topic, which the
+        // failure rolls back, so it never renders for a first message.
+        const { result } = renderHook(() => useChatStore());
+        const toastError = vi.spyOn(toast, 'error').mockImplementation(() => '' as any);
+
+        act(() => {
+          useChatStore.setState({
+            executeGatewayAgent: vi.fn().mockRejectedValue(new Error('no Agent Gateway')),
+            isGatewayModeEnabled: () => true,
+          });
+        });
+
+        await act(async () => {
+          await result.current.sendMessage({ context: createTestContext(), message: 'Hello' });
+        });
+
+        expect(toastError).toHaveBeenCalledWith(expect.stringContaining('no Agent Gateway'));
+        toastError.mockRestore();
       });
 
       it('recovers attachments through the owning composer callback without clobbering input typed during a failed gateway preflight', async () => {

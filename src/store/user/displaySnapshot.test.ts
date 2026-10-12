@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LocalStorageQueryProjectionStorage } from '@/libs/queryProjectionStorage';
+
 import {
   clearUserDisplaySnapshot,
   readUserDisplaySnapshot,
@@ -18,12 +20,12 @@ describe('user display snapshot', () => {
   it('keeps the avatar and preference isolated by exact user id', () => {
     writeUserDisplaySnapshot('user-a', {
       avatar: '',
-      preference: { lab: { enableProjects: true } },
+      preference: { showInCollaboration: false },
     });
 
     expect(readUserDisplaySnapshot('user-a')).toEqual({
       avatar: '',
-      preference: { lab: { enableProjects: true } },
+      preference: { showInCollaboration: false },
     });
     expect(readUserDisplaySnapshot('user-b')).toBeUndefined();
   });
@@ -33,12 +35,12 @@ describe('user display snapshot', () => {
       avatar: 'avatar-a',
     });
     writeUserDisplaySnapshot('user-a', {
-      preference: { lab: { enableProjects: true } },
+      preference: { showInCollaboration: false },
     });
 
     expect(readUserDisplaySnapshot('user-a')).toEqual({
       avatar: 'avatar-a',
-      preference: { lab: { enableProjects: true } },
+      preference: { showInCollaboration: false },
     });
   });
 
@@ -50,6 +52,28 @@ describe('user display snapshot', () => {
 
     expect(readUserDisplaySnapshot('user-a')).toBeUndefined();
     expect(readUserDisplaySnapshot('user-b')).toEqual({ avatar: 'avatar-b' });
+  });
+
+  it('reads legacy Labs data without restoring retired preference fields', async () => {
+    const legacyStorage = new LocalStorageQueryProjectionStorage<unknown>({
+      namespace: 'orvilo:user-display-snapshot:v1',
+    });
+    await legacyStorage.set(
+      { queryKey: 'display', scope: 'user-a' },
+      {
+        data: {
+          avatar: 'legacy-avatar',
+          preference: { lab: { enableProjects: true }, showInCollaboration: false },
+        },
+        updatedAt: 1,
+      },
+    );
+
+    expect(readUserDisplaySnapshot('user-a')).toEqual({
+      avatar: 'legacy-avatar',
+      preference: { showInCollaboration: false },
+    });
+    expect(readUserDisplaySnapshot('user-b')).toBeUndefined();
   });
 
   it('ignores malformed persisted data', () => {

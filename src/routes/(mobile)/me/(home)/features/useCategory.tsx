@@ -1,4 +1,4 @@
-import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
+import { BRANDING_URL, ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { DOWNLOAD_URL, OFFICIAL_URL } from '@orvilo/const';
 import {
   Book,
@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router';
 import useBusinessMeCells from '@/business/client/features/User/useBusinessMeCells';
 import { type CellProps } from '@/components/Cell';
 import { openChangelogModal } from '@/components/ChangelogModal';
-import { DOCUMENTS, FEEDBACK } from '@/const/index';
+import { FEEDBACK } from '@/const/index';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
@@ -23,7 +23,8 @@ import { authSelectors } from '@/store/user/selectors';
 export const useCategory = () => {
   const navigate = useNavigate();
   const { t } = useTranslation(['common', 'setting', 'auth']);
-  const { showCloudPromotion, hideDocs } = useServerConfigStore(featureFlagsSelectors);
+  const { showCloudPromotion, hideDocs, showChangelog } =
+    useServerConfigStore(featureFlagsSelectors);
   const [isLoginWithAuth] = useUserStore((s) => [authSelectors.isLoginWithAuth(s)]);
   const businessMeCells = useBusinessMeCells();
 
@@ -68,11 +69,11 @@ export const useCategory = () => {
       onClick: () =>
         window.open(`${OFFICIAL_URL}?utm_source=${UTM_SOURCE}`, '_blank', 'noopener,noreferrer'),
     },
-    {
+    BRANDING_URL.help && {
       icon: Book,
       key: 'docs',
       label: t('document'),
-      onClick: () => window.open(DOCUMENTS, '_blank', 'noopener,noreferrer'),
+      onClick: () => window.open(BRANDING_URL.help, '_blank', 'noopener,noreferrer'),
     },
     {
       icon: Feather,
@@ -80,7 +81,7 @@ export const useCategory = () => {
       label: t('feedback'),
       onClick: () => window.open(FEEDBACK, '_blank', 'noopener,noreferrer'),
     },
-    {
+    showChangelog && {
       icon: FileClockIcon,
       key: 'changelog',
       label: t('changelog'),

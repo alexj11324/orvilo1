@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { usePermission } from '@/hooks/usePermission';
 import { agentService, type AvailableAgentItem } from '@/services/agent';
 import { useHomeStore } from '@/store/home';
@@ -42,7 +43,9 @@ export const CreateGroupChatContent = ({ groupId, visibility }: CreateGroupChatO
   );
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [agents, setAgents] = useState<AvailableAgentItem[]>([]);
+  const [loadedAgents, setAgents] = useState<AvailableAgentItem[]>([]);
+  // Members are picked from the same Agents every other list offers.
+  const agents = useKeepSidebarListed()(loadedAgents);
   const [selected, setSelected] = useState<string[]>([]);
   const [coordinatorAgentId, setCoordinatorAgentId] = useState<string>();
   const [loading, setLoading] = useState(true);

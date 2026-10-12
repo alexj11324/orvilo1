@@ -73,7 +73,10 @@ export const taskLabelRouter = router({
     .use(withScopedPermission('agent:update'))
     .input(z.object({ labelId: z.string(), taskId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const labels = await ctx.taskLabelModel.assign(input.taskId, input.labelId);
+      // The actor is the authenticated caller, so the Issue's feed can say who.
+      const labels = await ctx.taskLabelModel.assign(input.taskId, input.labelId, {
+        userId: ctx.userId,
+      });
       return labels.map(toTaskLabelSummary);
     }),
 
@@ -97,7 +100,9 @@ export const taskLabelRouter = router({
     .use(withScopedPermission('agent:update'))
     .input(z.object({ labelId: z.string(), taskId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const labels = await ctx.taskLabelModel.unassign(input.taskId, input.labelId);
+      const labels = await ctx.taskLabelModel.unassign(input.taskId, input.labelId, {
+        userId: ctx.userId,
+      });
       return labels.map(toTaskLabelSummary);
     }),
 });

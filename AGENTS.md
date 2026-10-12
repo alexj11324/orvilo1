@@ -57,7 +57,13 @@ bun run dev
 
 # Standalone Hono backend service
 pnpm --filter @orvilo/server dev
+
+# Desktop app already signed in as the local seed user (no login page, no browser)
+bun run dev:desktop:skip-login
 ```
+
+`dev:desktop:skip-login` needs the seed user and `DATABASE_URL` in `.env`; see the
+Sign in section of the local setup guide.
 
 After `dev:spa` starts, the terminal prints a **Debug Proxy** URL:
 

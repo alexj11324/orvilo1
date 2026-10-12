@@ -123,12 +123,16 @@ export default {
   'permission.configAccess.groupRoleRestricted':
     'Your workspace role cannot configure Agent Groups. You were returned to chat.',
   'agentNotFound.title': 'Agent Unavailable',
+  'agentRuntimeWithheld.desc':
+    'This Agent runs on a runtime that is not available right now. Its conversations are kept.',
   'topicNotFound.desc':
     'This conversation does not exist or is no longer accessible — it may have been deleted or the link is out of date.',
   'topicNotFound.title': 'Conversation Unavailable',
   'groupNotFound.desc':
     'This group does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'groupNotFound.title': 'Group Unavailable',
+  'agentGatewayRequired':
+    'This deployment has no Agent Gateway configured, so the Agent cannot run. Ask an administrator to set AGENT_GATEWAY_URL',
   'groupSupervisorRequiresGateway':
     'Group orchestration requires Agent Gateway. Enable gateway mode for this agent, then try again.',
   'inaccessibleFile.desc': 'No access — it may have been set to private or deleted by its owner',
@@ -1630,6 +1634,7 @@ export default {
   'taskDetail.relations.noMatches': 'No matching issues',
   'taskDetail.relations.remove': 'Remove relation',
   'taskDetail.relations.actions': 'Relation actions',
+  'taskDetail.relations.title': 'Relations',
   'taskDetail.autoRunFailed': 'Could not start the run for this status.',
   'taskDetail.activities.filter.all': 'All',
   'taskDetail.activities.filter.comments': 'Comments',
@@ -1717,6 +1722,53 @@ export default {
   'taskDetail.activities.fallback.comment': 'left a comment',
   'taskDetail.activities.fallback.created': 'created the issue',
   'taskDetail.activities.fallback.topic': 'started a topic',
+  'taskDetail.activities.workflow.set': '<actor/> set the status to <to/>',
+  'taskDetail.activities.description.edited': '<actor/> edited the description',
+  'taskDetail.activities.description.viewHistory': 'View history',
+  'taskDetail.activities.verify.changed': '<actor/> changed the acceptance criteria',
+  'taskDetail.activities.title.changed': '<actor/> changed the title from <from/> to <to/>',
+  'taskDetail.activities.dueDate.set': '<actor/> set the due date to <to/>',
+  'taskDetail.activities.dueDate.changed': '<actor/> changed the due date from <from/> to <to/>',
+  'taskDetail.activities.dueDate.removed': '<actor/> removed the due date',
+  'taskDetail.activities.relation.blockedBy.added':
+    '<actor/> marked this issue as blocked by <target/>',
+  'taskDetail.activities.relation.blockedBy.removed': '<actor/> removed the blocker <target/>',
+  'taskDetail.activities.relation.blocking.added':
+    '<actor/> marked this issue as blocking <target/>',
+  'taskDetail.activities.relation.blocking.removed':
+    '<actor/> stopped this issue from blocking <target/>',
+  'taskDetail.activities.relation.related.added': '<actor/> linked <target/> as related',
+  'taskDetail.activities.relation.related.removed': '<actor/> removed the relation to <target/>',
+  'taskDetail.activities.duplicate.set': '<actor/> marked this issue as a duplicate of <target/>',
+  'taskDetail.activities.duplicate.cleared': '<actor/> removed the duplicate mark',
+  'taskDetail.activities.parent.set': '<actor/> set the parent to <to/>',
+  'taskDetail.activities.parent.changed': '<actor/> changed the parent from <from/> to <to/>',
+  'taskDetail.activities.parent.removed': '<actor/> removed the parent <from/>',
+  'taskDetail.activities.subIssue.added': '<actor/> added the sub-issue <target/>',
+  'taskDetail.activities.subIssue.removed': '<actor/> removed the sub-issue <target/>',
+  'taskDetail.activities.label.added': '<actor/> added the label <label/>',
+  'taskDetail.activities.label.removed': '<actor/> removed the label <label/>',
+  'taskDetail.activities.project.set': '<actor/> added this issue to the project <to/>',
+  'taskDetail.activities.project.changed':
+    '<actor/> moved this issue from the project <from/> to <to/>',
+  'taskDetail.activities.project.removed': '<actor/> removed this issue from the project <from/>',
+  'taskDetail.activities.milestone.set': '<actor/> set the milestone to <to/>',
+  'taskDetail.activities.milestone.changed': '<actor/> changed the milestone from <from/> to <to/>',
+  'taskDetail.activities.milestone.removed': '<actor/> removed the milestone <from/>',
+  'taskDetail.activities.team.set': '<actor/> added this issue to the team <to/>',
+  'taskDetail.activities.team.changed': '<actor/> moved this issue from the team <from/> to <to/>',
+  'taskDetail.activities.team.removed': '<actor/> removed this issue from the team <from/>',
+  'taskDetail.activities.resource.link.added': '<actor/> added the link <link/>',
+  'taskDetail.activities.resource.link.removed': '<actor/> removed the link <link/>',
+  'taskDetail.activities.resource.pullRequest.added': '<actor/> linked the pull request <link/>',
+  'taskDetail.activities.resource.pullRequest.removed': '<actor/> removed the pull request <link/>',
+  'taskDetail.activities.unavailable.issue': 'an issue that is no longer available',
+  'taskDetail.activities.unavailable.label': 'a deleted label',
+  'taskDetail.activities.unavailable.link': 'an untitled link',
+  'taskDetail.activities.unavailable.milestone': 'a deleted milestone',
+  'taskDetail.activities.unavailable.project': 'a deleted project',
+  'taskDetail.activities.unavailable.team': 'a deleted team',
+  'taskDetail.activities.unavailable.title': 'Untitled',
   'taskDetail.blockedBy': 'Blocked by {{id}}',
   'taskDetail.comment.cancel': 'Cancel',
   'taskDetail.comment.copyLink': 'Copy link',
@@ -1726,7 +1778,11 @@ export default {
   'taskDetail.comment.deleteConfirm.ok': 'Delete',
   'taskDetail.comment.deleteConfirm.title': 'Delete this comment?',
   'taskDetail.comment.edit': 'Edit',
+  'taskDetail.comment.edited': 'edited',
+  'taskDetail.comment.editedAt': 'Edited {{time}}',
   'taskDetail.comment.save': 'Save',
+  'taskDetail.comment.replyToRun': 'Reply to run #{{seq}}',
+  'taskDetail.comment.replyToRunUnnumbered': 'Reply to an earlier run',
   'taskDetail.commentDraftSaveFailed': 'Could not save comment draft',
   'taskDetail.commentSendFailed': 'Could not post the comment. Your draft is kept.',
   'taskDetail.commentPlaceholder':
@@ -1794,6 +1850,9 @@ export default {
     "This issue may have been deleted, or you don't have permission to view it.",
   'taskDetail.notFound.title': 'Issue not found',
   'taskDetail.subIssueOf': 'Sub-issue of',
+  'taskDetail.subscription.off': 'Not subscribed. Click to get notifications about this Issue.',
+  'taskDetail.subscription.on':
+    'Subscribed. You get notifications about this Issue. Click to unsubscribe.',
   'taskDetail.changePriorityPlaceholder': 'Change priority…',
   'taskDetail.changeStatusPlaceholder': 'Change status…',
   'taskDetail.showingAllItems': 'Showing all items',
@@ -1822,7 +1881,57 @@ export default {
   'taskDetail.execution.running': 'Running',
   'taskDetail.execution.succeeded': 'Succeeded',
   'taskDetail.execution.waiting': 'Waiting',
+  'taskDetail.execution.action.resume': 'Resume',
+  'taskDetail.execution.action.retry': 'Retry',
+  'taskDetail.execution.action.start': 'Start',
+  'taskDetail.execution.hint.assignAgentToRun': 'Assign an agent to run this Issue again.',
+  'taskDetail.execution.hint.reopenToRun':
+    'This Issue is closed. Reopen it to run the agent again.',
+  'taskDetail.execution.hint.awaitingAcceptance':
+    'The agent finished its run. Review the result to accept it or send it back.',
+  'taskDetail.execution.hint.inProgressNoRun': 'This Issue is In Progress, but no run has started.',
+  'taskDetail.execution.hint.moveToStart':
+    'The agent starts when you move this Issue to In Progress.',
+  'taskDetail.execution.hint.needsAgent':
+    'This Issue is In Progress but no agent is assigned. Assign an agent to run it.',
+  'taskDetail.execution.hint.outcomeUnknown':
+    'The run ended without a confirmed result. Check the latest run before you retry.',
+  'taskDetail.execution.hint.scheduled': 'The schedule starts the next run.',
+  'taskDetail.execution.hint.stopped':
+    'The run was stopped before it finished. Resume to start a new run.',
+  'taskDetail.execution.hint.timedOut':
+    'The agent stopped reporting progress, so the run was ended.',
+  'taskDetail.execution.noAgentAccess': 'You do not have permission to run this agent.',
+  'taskDetail.execution.runtimeWithheld':
+    "This Issue's agent runs on a runtime that is not available right now. Assign another agent to run it.",
+  'taskDetail.execution.startFailed':
+    'The run could not be started. Check the Execution state and try again.',
+  'taskDetail.execution.view.awaitingAcceptance': 'Finished, awaiting acceptance',
+  'taskDetail.execution.view.needsAgent': 'Needs an agent',
+  'taskDetail.execution.view.notStarted': 'Not started',
+  'taskDetail.execution.view.scheduled': 'Scheduled',
+  'taskDetail.execution.view.stopped': 'Stopped',
+  'taskDetail.execution.view.stopping': 'Stopping',
+  'taskDetail.execution.view.timedOut': 'Timed out',
   'taskDetail.executionStatus': 'Execution',
+  'taskDetail.runEnded.canceled': 'This run was stopped before it finished.',
+  'taskDetail.runEnded.failedNoReason':
+    'This run failed. No reason was recorded; open the run to see its last messages.',
+  'taskDetail.runEnded.label.canceled': 'Stopped',
+  'taskDetail.runEnded.label.failed': 'Failed',
+  'taskDetail.runEnded.label.timeout': 'Timed out',
+  'taskDetail.runEnded.showFull': 'Show full reason',
+  'taskDetail.runEnded.showLess': 'Show less',
+  'taskDetail.runEnded.timeout': 'This run timed out: the agent stopped reporting progress.',
+  'taskDetail.dispatchNotice.admissionDisabled':
+    'This workspace is not starting queued runs automatically right now. Runs already in progress are not affected.',
+  'taskDetail.dispatchNotice.heldByAdmission':
+    'Waiting to start. This run was held while the workspace was not starting queued runs automatically.',
+  'taskDetail.dispatchNotice.reason.goalPaused':
+    'Waiting because the goal this Issue belongs to is paused. Resume the goal to continue.',
+  'taskDetail.dispatchNotice.reason.noAgent':
+    'Waiting for an agent. Assign an agent to this Issue to start it.',
+  'taskDetail.dispatchNotice.reason.other': 'Waiting to start: {{reason}}',
   'taskDetail.project': 'Project',
   'taskDetail.noProject': 'No project',
   'taskDetail.openProject': 'Open project',
@@ -1832,6 +1941,7 @@ export default {
   'taskDetail.menu.makeCopy': 'Make a copy…',
   'taskDetail.menu.cancel': 'Cancel issue',
   'taskDetail.menu.reopen': 'Reopen issue',
+  'taskDetail.menu.rerun': 'Run again',
   'taskDetail.menu.remove': 'Remove',
   'taskDetail.menu.removeParent': 'Parent issue',
   'taskDetail.menu.removeSubIssue': 'Sub-issue',
@@ -1944,12 +2054,19 @@ export default {
   'taskDetail.resources.createdUnattached':
     'Document created, but attachment failed. Retry attaching or open the document.',
   'taskDetail.resources.documentTitle': 'Document title',
+  'taskDetail.resources.edit': 'Edit title',
+  'taskDetail.resources.editTitle': 'Edit title',
   'taskDetail.resources.failed': 'Could not update attachments',
   'taskDetail.resources.forMe': 'For me',
+  'taskDetail.resources.linkTitle': 'Title',
   'taskDetail.resources.loadMore': 'Next page',
   'taskDetail.resources.noPullRequests': 'No matching pull requests in this page',
   'taskDetail.resources.openDocument': 'Open document',
   'taskDetail.resources.remove': 'Remove attachment',
+  'taskDetail.resources.removeConfirm.content':
+    '"{{title}}" will be removed from this Issue. The page it links to is not affected.',
+  'taskDetail.resources.removeConfirm.ok': 'Remove',
+  'taskDetail.resources.removeConfirm.title': 'Remove this attachment?',
   'taskDetail.resources.retryAttach': 'Retry attaching',
   'taskDetail.resources.searchPullRequests': 'Search pull requests',
   'taskDetail.resources.title': 'Attachments',
@@ -1976,6 +2093,51 @@ export default {
   'taskDetail.statusCascade.parentOnly': 'Update parent only',
   'taskDetail.statusCascade.title': 'Update open sub-issues too?',
   'taskDetail.statusCascade.updateAll': 'Update all',
+  'taskDetail.deleteConfirm.contentUnknownSubIssues':
+    'If this issue has sub-issues, they are not deleted: they become top-level issues. Deleting this issue cannot be undone.',
+  'taskDetail.deleteConfirm.contentWithSubIssues_one':
+    'This issue has {{count}} sub-issue. It is not deleted: it becomes a top-level issue. Deleting this issue cannot be undone.',
+  'taskDetail.deleteConfirm.contentWithSubIssues_other':
+    'This issue has {{count}} sub-issues. They are not deleted: they become top-level issues. Deleting this issue cannot be undone.',
+  'taskDetail.parentBar.actions': 'Parent issue actions',
+  'taskDetail.parentBar.change': 'Change parent…',
+  'taskDetail.parentBar.changeTitle': 'Change parent issue',
+  'taskDetail.parentBar.remove': 'Remove parent',
+  'taskDetail.picker.add_one': 'Add {{count}} issue',
+  'taskDetail.picker.add_other': 'Add {{count}} issues',
+  'taskDetail.picker.addNone': 'Select issues to add',
+  'taskDetail.picker.movesFrom': 'Moves from {{identifier}}',
+  'taskDetail.picker.notAdded': '{{identifier}} was not added. {{reason}}',
+  'taskDetail.picker.scope.child':
+    'Search issues in this project. Issues above or below this one in the sub-issue tree are not listed.',
+  'taskDetail.picker.scope.dependency':
+    'Search issues in this project. Relations cannot cross projects.',
+  'taskDetail.picker.scope.parent':
+    'Search issues in this project. This issue’s own sub-issues and its current parent are not listed.',
+  'taskDetail.picker.selected_one': '{{count}} selected',
+  'taskDetail.picker.selected_other': '{{count}} selected',
+  'taskDetail.relationError.alreadyBlocking':
+    'These two issues already have a blocking relation. Remove it before marking them as related.',
+  'taskDetail.relationError.brokenParentChain':
+    'The parent issue sits in a chain of parents that is too deep or loops back on itself, so nothing can be put under it. Pick a different parent.',
+  'taskDetail.relationError.crossProject':
+    'That issue is in another project. Move it into this project first, then link it.',
+  'taskDetail.relationError.crossScope':
+    'That issue is filed in a different workspace from this one, so one cannot be the other’s sub-issue. Pick an issue from the same workspace.',
+  'taskDetail.relationError.dependencyCycle':
+    'That would make these issues wait on each other in a loop. Remove one of the existing blocking relations first.',
+  'taskDetail.relationError.parentCycle':
+    'That issue is already above this one in the sub-issue tree, so it cannot go under it. Remove it from that chain first.',
+  'taskDetail.relationError.self': 'An issue cannot be linked to itself.',
+  'taskDetail.relationError.unavailable':
+    'That issue was deleted or you can no longer open it. Refresh and pick another.',
+  'taskDetail.relationError.unfinishedPrerequisite':
+    '{{identifier}} is running or already done. Pause or reopen it before giving it an unfinished prerequisite.',
+  'taskDetail.subIssue.addExisting': 'Add existing issues…',
+  'taskDetail.subIssue.addExistingTitle': 'Add existing issues as sub-issues',
+  'taskDetail.subIssue.createNew': 'Create new sub-issue',
+  'taskDetail.subIssue.removeFromParent': 'Remove from parent {{identifier}}',
+  'taskDetail.subIssue.rowActions': 'Actions for {{identifier}}',
   'taskDetail.subtasks': 'Sub-issues',
   'taskDetail.addSubtask': 'Add sub-issue',
   'taskDetail.add.document': 'Add document',
@@ -2016,6 +2178,12 @@ export default {
   'taskDetail.runAll.partialFailure_one': 'Started {{ok}} of {{total}} subtask; {{failed}} failed.',
   'taskDetail.runAll.loading': 'Loading sub-issue plan...',
   'taskDetail.reassignDisabled': 'Cannot reassign agent while issue is running',
+  'taskDetail.handoff.required': 'This issue is being worked on',
+  'taskDetail.handoff.requiredDesc':
+    'Changing the agent stops the current run. Transfer it to hand the issue over.',
+  'taskDetail.handoff.unsettled': 'The last run has not finished',
+  'taskDetail.handoff.unsettledDesc':
+    'How the last run ended is still being confirmed. The agent can be changed once that is done. Try again in a little while.',
   'taskDetail.handoff.title': 'Transfer execution?',
   'taskDetail.handoff.confirm': 'Stop the current run and transfer this issue to {{agent}}?',
   'taskDetail.handoff.transfer': 'Transfer',
@@ -2032,6 +2200,11 @@ export default {
   'taskDetail.topicMenu.deleteConfirm.title': 'Delete Run?',
   'taskDetail.topicMenu.openAgentTopic': 'Go to Agent conversation',
   'taskDetail.topicMenu.open': 'Open Run',
+  'taskDetail.topicMenu.stopPending': 'Stopping the run',
+  'taskDetail.topicMenu.stopPendingDesc':
+    'The agent has not confirmed the stop. The run ends on its own within about 10 minutes, and the issue can run again after that.',
+  'taskDetail.topicMenu.stopForbidden':
+    'Only the creator of this issue, a workspace admin, or a member who can use its agent can stop this run.',
   'taskDetail.topicMenu.stop': 'Stop Run',
   'taskDetail.topicMenu.stopConfirm.content':
     'The current run will be canceled. Generated messages are kept and you can re-run the issue later.',
@@ -2331,6 +2504,8 @@ export default {
   'goalProcess.frontier.emptyTitle': 'Nothing to advance right now',
   'goalProcess.frontier.emptyDescription':
     'Every task is either waiting on a dependency or already finished.',
+  'goalProcess.frontier.dispatchHeld':
+    'This workspace is not starting new tasks automatically right now, so ready tasks will wait. Tasks already running are not affected.',
   'goalProcess.frontier.achievedTitle': 'Nothing left to advance — this goal is achieved',
   'goalProcess.frontier.achievedDescription': 'The findings are in the map below.',
   'goalProcess.addTask.failed': 'Failed to add the task — please try again',

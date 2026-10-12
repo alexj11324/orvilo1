@@ -24,6 +24,16 @@ describe('resolveOnboardingErrorCopy', () => {
     expect(resolveOnboardingErrorCopy('agent', { data: { code: 'FORBIDDEN' } })).toBeUndefined();
   });
 
+  it('tells the user to pick another URL when the workspace URL is taken', () => {
+    const taken = Object.assign(new Error('WORKSPACE_SLUG_TAKEN'), {
+      data: { code: 'CONFLICT', httpStatus: 409 },
+    });
+    expect(resolveOnboardingErrorCopy('workspace', taken)).toEqual({
+      descriptionKey: 'setup.error.workspaceSlugTaken.description',
+      titleKey: 'setup.error.workspaceSlugTaken.title',
+    });
+  });
+
   it('treats a server error on a write as an action failure', () => {
     expect(resolveOnboardingErrorCopy('finish', { status: 500 })?.titleKey).toBe(
       'setup.error.finish.title',

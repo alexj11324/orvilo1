@@ -4,11 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { toast } from '@/components/toast';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
+import { useFallbackAgentId } from '@/features/DefaultAgent/useFallbackAgentId';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { taskTemplateService } from '@/services/taskTemplate';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useTaskStore } from '@/store/task';
 
 import {
@@ -57,7 +56,7 @@ export const useTaskTemplateCreate = ({
   const { allowed: canCreateTask } = usePermission('create_content');
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(false);
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
+  const fallbackAgentId = useFallbackAgentId();
   const createTask = useTaskStore((s) => s.createTask);
   const navigate = useWorkspaceAwareNavigate();
   const requiredConnectors = useMemo(
@@ -68,11 +67,11 @@ export const useTaskTemplateCreate = ({
 
   const handleCreate = useCallback(async () => {
     if (!canCreateTask) return;
-    if (!inboxAgentId) return;
+    if (!fallbackAgentId) return;
     setLoading(true);
     try {
       const createdTask = await createTask({
-        assigneeAgentId: inboxAgentId,
+        assigneeAgentId: fallbackAgentId,
         automationMode: 'schedule',
         description,
         instruction: template.instruction,
@@ -89,7 +88,7 @@ export const useTaskTemplateCreate = ({
         navigate(
           taskDetailPath(
             createdTask.identifier,
-            createdTask.assigneeAgentId ?? inboxAgentId,
+            createdTask.assigneeAgentId ?? fallbackAgentId,
             createdTask.name,
           ),
         );
@@ -103,7 +102,7 @@ export const useTaskTemplateCreate = ({
   }, [
     createTask,
     description,
-    inboxAgentId,
+    fallbackAgentId,
     navigate,
     onCreated,
     t,
@@ -150,13 +149,13 @@ export const useTaskTemplateCreate = ({
 
   const handleAddTask = useCallback(() => {
     if (!canCreateTask) return;
-    if (created || !inboxAgentId) return;
+    if (created || !fallbackAgentId) return;
     if (requiredConnection.needsConnect) {
       setPendingCreate(true);
       return;
     }
     void handleCreate();
-  }, [canCreateTask, created, inboxAgentId, requiredConnection.needsConnect, handleCreate]);
+  }, [canCreateTask, created, fallbackAgentId, requiredConnection.needsConnect, handleCreate]);
 
   const primaryButtonLabel = loading
     ? t('taskTemplate.action.creating')
@@ -166,7 +165,7 @@ export const useTaskTemplateCreate = ({
 
   return {
     created,
-    disabled: !canCreateTask || created || !inboxAgentId,
+    disabled: !canCreateTask || created || !fallbackAgentId,
     handleAddTask,
     handleConnectError,
     loading,

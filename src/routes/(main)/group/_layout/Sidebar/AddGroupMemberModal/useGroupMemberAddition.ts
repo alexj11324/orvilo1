@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { groupKeys } from '@/libs/swr/keys';
 import { agentService } from '@/services/agent';
 
@@ -9,11 +10,13 @@ export const useGroupMemberAddition = (
   onConfirm: (ids: string[]) => void | Promise<void>,
 ) => {
   const {
-    data: agents = [],
+    data: loadedAgents = [],
     error: loadError,
     isLoading,
     mutate,
   } = useSWR(open ? groupKeys.queryAgents() : null, () => agentService.queryAgents());
+  // Members are picked from the same Agents every other list offers.
+  const agents = useKeepSidebarListed()(loadedAgents);
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState<unknown>();
   useEffect(() => {

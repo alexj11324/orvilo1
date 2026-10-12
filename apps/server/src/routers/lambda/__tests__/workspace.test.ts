@@ -150,11 +150,12 @@ describe('workspaceRouter', () => {
     expect(created.primaryOwnerId).toBe('u-owner');
   });
 
-  it('reports a taken slug as CONFLICT on create', async () => {
+  it('reports a taken slug with the stable field error code on create', async () => {
     workspaceModel.create.mockRejectedValue(Object.assign(new Error('dup'), { code: '23505' }));
 
     await expect(createCaller().create({ name: 'Team', slug: 'taken' })).rejects.toMatchObject({
       code: 'CONFLICT',
+      message: 'WORKSPACE_SLUG_TAKEN',
     });
   });
 

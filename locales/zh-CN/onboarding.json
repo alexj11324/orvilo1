@@ -291,6 +291,8 @@
   "setup.error.selection.title": "无法保存你的选择",
   "setup.error.workspace.description": "请检查名称和地址后重试。如果地址已被占用，请换一个。",
   "setup.error.workspace.title": "无法创建工作区",
+  "setup.error.workspaceSlugTaken.description": "已有其他工作区使用这个 URL。请换一个 URL 再继续，已填写的工作区名称会保留。",
+  "setup.error.workspaceSlugTaken.title": "这个工作区 URL 已被占用",
   "setup.orchestrator.description": "协调 Agent 负责你的项目协作。使用刚创建的 Agent，或选择其他已配置的 Agent。",
   "setup.orchestrator.finish": "完成设置",
   "setup.orchestrator.title": "选择协调 Agent",

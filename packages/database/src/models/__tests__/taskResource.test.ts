@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { users, workspaceMembers, workspaces } from '../../schemas';
@@ -84,6 +84,84 @@ describe('TaskResourceModel', () => {
     expect(await model.remove(other.id, link.id)).toBe(false);
     expect(await model.remove(task.id, link.id)).toBe(true);
     expect(await reload.list(task.id)).toHaveLength(1);
+  });
+  it('records links and pull requests added and removed in the Issue feed', async () => {
+    const task = await create();
+    const link = await model.add(task.id, { kind: 'link', title: 'Spec', url: 'https://x.test/a' });
+    // The same URL again only retitles the resource: nothing new was attached.
+    await model.add(task.id, { kind: 'link', title: 'Spec v2', url: 'https://x.test/a' });
+    const pr = await model.add(task.id, {
+      kind: 'pull_request',
+      url: 'https://github.com/acme/app/pull/7',
+    });
+    await model.remove(task.id, link.id);
+    await model.remove(task.id, link.id);
+
+    const activities = await new TaskModel(db, userId, workspaceId).getActivities(task.id);
+    expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
+      [
+        'resource_added',
+        userId,
+        { actorKind: 'user', resourceKind: 'link', toLabel: 'Spec', url: 'https://x.test/a' },
+      ],
+      [
+        'resource_added',
+        userId,
+        { actorKind: 'user', resourceKind: 'pull_request', toLabel: pr.title, url: pr.url },
+      ],
+      [
+        'resource_removed',
+        userId,
+        { actorKind: 'user', resourceKind: 'link', toLabel: 'Spec v2', url: 'https://x.test/a' },
+      ],
+    ]);
+  });
+
+  it('rolls a link change back when its feed row cannot be written', async () => {
+    const task = await create();
+    const kept = await model.add(task.id, { kind: 'link', title: 'Kept', url: 'https://x.test/k' });
+    const addActivity = vi
+      .spyOn(TaskModel.prototype, 'addActivity')
+      .mockRejectedValue(new Error('feed write failed'));
+
+    try {
+      await expect(model.add(task.id, { kind: 'link', url: 'https://x.test/new' })).rejects.toThrow(
+        'feed write failed',
+      );
+      await expect(model.remove(task.id, kept.id)).rejects.toThrow('feed write failed');
+    } finally {
+      addActivity.mockRestore();
+    }
+
+    // Neither half-applied: the new link is not attached, the old one still is.
+    expect((await model.list(task.id)).map((row) => row.url)).toEqual(['https://x.test/k']);
+  });
+
+  it('renames a link on its own Issue only, for writers only, and keeps its URL', async () => {
+    const task = await create();
+    const link = await model.add(task.id, {
+      kind: 'link',
+      title: 'Desing',
+      url: 'https://example.com/design',
+    });
+
+    expect(await model.updateTitle(task.id, link.id, '  Design  ')).toMatchObject({
+      id: link.id,
+      title: 'Design',
+      url: 'https://example.com/design',
+    });
+    await expect(model.updateTitle(task.id, link.id, '   ')).rejects.toThrow('Title is required');
+    await db
+      .update(workspaceMembers)
+      .set({ role: 'viewer' })
+      .where(eq(workspaceMembers.userId, readerId));
+    await expect(reader.updateTitle(task.id, link.id, 'Viewer title')).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    // A link is addressed through the Issue it belongs to.
+    const other = await create();
+    expect(await model.updateTitle(other.id, link.id, 'Elsewhere')).toBeUndefined();
+    expect(await model.list(task.id)).toMatchObject([{ title: 'Design' }]);
   });
   it('shares legacy-private workspace Issue resources with active members', async () => {
     const task = await create('private');

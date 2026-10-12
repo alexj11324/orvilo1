@@ -21,7 +21,7 @@ import { type ChatTopic } from '@/types/topic';
 const styles = {
   empty: 'px-3 py-6 text-center text-xs leading-5 text-foreground-description',
   item: 'w-full flex-none cursor-pointer justify-between overflow-hidden border-0 bg-transparent px-2 py-1 text-start text-sm leading-5.5 font-normal text-foreground whitespace-nowrap hover:bg-accent aria-[current=true]:bg-selected aria-[current=true]:font-semibold aria-[current=true]:hover:bg-selected',
-  root: 'min-h-0 max-h-[min(400px,var(--available-height,400px))] w-full',
+  root: 'min-h-0 [max-height:min(calc(var(--spacing)*100),var(--available-height,calc(var(--spacing)*100)))] w-full',
 } as const;
 
 interface ChatHistoryContentProps {

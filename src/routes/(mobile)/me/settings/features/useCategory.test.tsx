@@ -104,12 +104,11 @@ describe('mobile settings useCategory', () => {
   it('never lists OAuth Apps, even while the retired Labs preference is still set', () => {
     // The self-built console is retired (hidden-surface-retirement HS-50); a
     // stored `enableOAuthApps: true` must not put the row back in the tools group.
-    useUserStore.setState({
-      preference: {
-        ...initialUserStoreState.preference,
-        lab: { ...initialUserStoreState.preference.lab, enableOAuthApps: true },
-      },
-    });
+    const legacyPreference = {
+      ...initialUserStoreState.preference,
+      lab: { enableOAuthApps: true },
+    };
+    useUserStore.setState({ preference: legacyPreference });
 
     const { result } = renderHook(() => useCategory(), {
       wrapper: createWrapper(true),
@@ -204,4 +203,11 @@ describe('mobile settings useCategory', () => {
     // The real workspace-aware helper adds the prefix.
     expect(navigate).toHaveBeenCalledWith('/acme/settings/general');
   });
+});
+
+it('does not offer builtin memory while the harness is hidden', () => {
+  const { result } = renderHook(() => useCategory(), { wrapper: createWrapper(true) });
+  expect(result.current.flatMap((group) => group.items.map((item) => item.key))).not.toContain(
+    SettingsTabs.Memory,
+  );
 });

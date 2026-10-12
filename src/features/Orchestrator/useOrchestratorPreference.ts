@@ -9,18 +9,24 @@ export const useOrchestratorPreference = () => {
   const fetch = useUserStore((s) => s.useFetchWorkspaceUserPreference);
   const scoped = fetch();
   const personalId = useUserStore((s) => s.preference.orchestratorAgentId);
+  const personalDefaultId = useUserStore((s) => s.preference.defaultAgentId);
   return {
     agentId: workspaceId
       ? (scoped.data?.orchestratorAgentId ?? undefined)
       : (personalId ?? undefined),
+    defaultAgentId: (workspaceId ? scoped.data?.defaultAgentId : personalDefaultId) ?? undefined,
     error: workspaceId ? scoped.error : undefined,
     loading: !!workspaceId && scoped.data === undefined && !scoped.error,
     retry: () => scoped.mutate(),
-    save: async (agentId: string) => {
+    save: async (agentId: string, options?: { alsoDefault?: boolean }) => {
       if (getActiveWorkspaceId() !== workspaceId) throw new Error('ORCHESTRATOR_SCOPE_CHANGED');
       const state = useUserStore.getState();
-      if (workspaceId) await state.updateWorkspaceUserPreference({ orchestratorAgentId: agentId });
-      else await state.updatePreference({ orchestratorAgentId: agentId });
+      const patch = {
+        orchestratorAgentId: agentId,
+        ...(options?.alsoDefault && { defaultAgentId: agentId }),
+      };
+      if (workspaceId) await state.updateWorkspaceUserPreference(patch);
+      else await state.updatePreference(patch);
     },
     workspaceId,
   };

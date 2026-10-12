@@ -1,3 +1,4 @@
+import { formatPropertyChange } from '@orvilo/types';
 import { taskTitleSlug } from '@orvilo/utils/taskSlug';
 import type { Command } from 'commander';
 import pc from 'picocolors';
@@ -483,12 +484,14 @@ export function registerTaskCommand(program: Command) {
               console.log(`  💭 ${pc.dim(ago.padStart(7))} ${pc.cyan(author)} ${act.content}`);
             } else if (act.type === 'property') {
               const actor = act.author ? act.author.name || act.author.id : 'system';
-              const change = act.propertyChange;
-              const show = (v: unknown) =>
-                v && typeof v === 'object' ? JSON.stringify(v) : String(v ?? 'none');
-              console.log(
-                `  🔁 ${pc.dim(ago.padStart(7))} ${pc.cyan(actor)} changed ${change?.field}: ${show(change?.from)} → ${show(change?.to)}${idSuffix}`,
-              );
+              // Agents read this output. The shared rule decides what a row
+              // may say; rows that carry typed text (titles, labels, links,
+              // other Issues) print nothing.
+              const change = formatPropertyChange(act.propertyChange);
+              if (change)
+                console.log(
+                  `  🔁 ${pc.dim(ago.padStart(7))} ${pc.cyan(actor)} changed ${change}${idSuffix}`,
+                );
             } else if (act.type === 'assignment') {
               // Same three-state naming as `assignmentParticipantLabel` in
               // @orvilo/prompts; inlined rather than adding a package

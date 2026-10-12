@@ -49,13 +49,13 @@ steps aside because a root `.env` exists.
 
 ## Run modes
 
-| Command                            | Starts                                                                                                                                 | Port                          |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| `bun run dev`                      | Next.js + Vite SPA + Clerk accounts portal concurrently (full stack)                                                                   | app 3010, SPA 9876, auth 3018 |
-| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend        | 9876                          |
-| `bun run dev:desktop:skip-login`   | Next.js + Electron with an isolated temporary desktop profile; signs in the existing local seed user and verifies renderer/server auth | app 3010, CDP 9263            |
-| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                        | —                             |
-| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                         | 3010 (`-p` to override)       |
+| Command                            | Starts                                                                                                                                            | Port                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `bun run dev`                      | Next.js + Vite SPA + Clerk accounts portal concurrently (full stack)                                                                              | app 3010, SPA 9876, auth 3018 |
+| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend                   | 9876                          |
+| `bun run dev:desktop:skip-login`   | Next.js behind the Clerk stub + Electron with an isolated temporary profile; signs the local seed user in (renderer and main process), no browser | app 3010, CDP 9263            |
+| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                                   | —                             |
+| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                                    | 3010 (`-p` to override)       |
 
 **`bun run dev` derives local auth URLs from its selected ports.** It sets
 `APP_URL` and `INTERNAL_APP_URL` to the selected Next origin, then starts the
@@ -109,22 +109,66 @@ parent instance's static public key. Reload should retain the session, and `/api
 should report the signed-in user. Normal Electron sign-in uses this same local
 server and the existing browser/PKCE callback flow.
 
-The seed user and Better Auth helper commands below are legacy test workflows;
-they do not validate the normal Clerk/Google sign-in path.
+To sign a local Electron instance in as the seed user without the portal, run
+the dev server behind the local Clerk stub and seed a session:
 
-For Electron development, run `bun run dev:desktop:skip-login` after the local
-database already has the seed user. The command starts Next.js and Electron,
-signs in through Better Auth, and prints the user ID only after both the
-renderer and backend accept the session. It does not create a user or seed a
-database. `SEED_EMAIL` and `SEED_PASSWORD` can select another existing local
-test account. `Ctrl-C` stops both processes and removes the temporary desktop
-profile. For an Electron instance already running with CDP on port 9263, use
-`bun run dev:desktop:login-local`; set `ORVILO_DESKTOP_CDP_PORT` if it uses a
-different port. Both commands require an HTTP server on literal `localhost`.
+```bash
+ORVILO_CLERK_STUB=1 .agents/acceptance/scripts/dev-up.sh restart
+DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cdpPort>
+```
 
-These renderer-session helpers do **not** authorize the Electron main process or
-connect an execution device. For real local-agent requests, follow
+The stub (`clerk-stub.mjs`) listens on loopback only, vouches for seed sessions
+and forwards every other Clerk Backend call unchanged, so a normal sign-in on
+the same server still works. It refuses to start with `NODE_ENV=production`.
+
+This path needs no Clerk keys, so a fork without access to a Clerk instance can
+still develop: when the publishable key is unset, `dev-up.sh` fills in a
+placeholder with its matching `CLERK_ISSUER`, and an unset secret key gets one too. Only seed sessions can sign in then; the
+sign-in page needs a real development instance.
+
+`bun run dev:desktop:skip-login` does all of this in one command: it starts the
+stub, the Next.js server and Electron on a temporary profile, then signs the
+seed user in, main process included. It preserves `CLERK_SECRET_KEY` from the
+shell or `.env`; when absent, a local stub-only placeholder lets the server
+check seeded sessions. Normal Clerk sign-in still requires a real key.
+When `JWKS_KEY` is absent, it reuses `.records/env/agent-testing-jwks.json` or generates and privately saves a local signing key there without changing `.env`.
+`bun run dev:desktop:login-local` signs an
+Electron instance that is already running in (CDP port from
+`ORVILO_DESKTOP_CDP_PORT`, default 9263). Both read `DATABASE_URL` from `.env`
+when the shell does not set it, and need the seed user to exist.
+
+A seeded renderer session does **not** authorize the Electron main process or
+connect an execution device. To do that as well without signing in by hand,
+start Electron with `ORVILO_DESKTOP_AUTH_URL_FILE=<file>` and pass the same path:
+
+```bash
+DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cdpPort> --desktop-auth <file>
+```
+
+A development build then writes its authorization request to the file and opens
+no browser; the script completes it with the seeded session and waits until the
+main process has an access token. It does not verify gateway reachability or a
+connected execution device. A packaged build ignores the variable. For real local-agent requests, follow
 [Electron real-model integration](./electron-real-model.md).
+
+## Running Issues on this machine (device gateway)
+
+An Issue run reaches your computer through the device gateway. The desktop app connects to the hosted one (`device-gateway.aspectlylabs.com`) by default, which trusts only tokens signed by production. A local dev server signs with its own `JWKS_KEY`, so against it no device can connect and every run ends in "No bound device" until a gateway that trusts the local key is running.
+
+The gateway is a separate Go service kept in the public repository [`alexj11324/orvilo-gateway`](https://github.com/alexj11324/orvilo-gateway) (the same commit production builds from). One script builds and runs it locally at a pinned commit:
+
+```bash
+# 1. Gateway, in its own terminal. JWKS_KEY is the value the dev server runs with.
+JWKS_KEY=... .agents/acceptance/scripts/agent-gateway/local-device-gateway-setup.sh start
+
+# 2. Point the dev server at it before starting it.
+eval "$(.agents/acceptance/scripts/agent-gateway/local-device-gateway-setup.sh env)"
+
+# 3. Start Electron with the same gateway address.
+DEVICE_GATEWAY_URL=http://localhost:8787 .agents/acceptance/scripts/electron-dev.sh start <id>
+```
+
+It needs `go` and `git`. The service token is generated once into `.records/env/device-gateway.token` and is never printed. The desktop app still has to be signed in through its own sign-in before the device connects; a seeded web session is not enough.
 
 ## Ports
 

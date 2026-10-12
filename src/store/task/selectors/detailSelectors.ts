@@ -37,6 +37,10 @@ const taskName = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.
 const taskStatus = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.status;
 const taskDispatchPhase = (s: TaskStoreState, taskId?: string) =>
   taskDetail(s, taskId)?.dispatchPhase;
+const taskDispatchWaitingReason = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.dispatchWaitingReason;
+const taskOrchestrationAdmission = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.orchestrationAdmission;
 
 const taskWorkflowCategory = (s: TaskStoreState, taskId?: string) =>
   taskDetail(s, taskId)?.workflowCategory;
@@ -252,6 +256,7 @@ export const taskDetailSelectors = {
   taskLabels,
   taskModel,
   taskName,
+  taskOrchestrationAdmission,
   taskParent,
   taskPeriodicInterval,
   taskPriority,
@@ -264,6 +269,7 @@ export const taskDetailSelectors = {
   taskScheduleTimezone,
   taskStatus,
   taskDispatchPhase,
+  taskDispatchWaitingReason,
   taskSubtasks,
   taskTeamId,
   taskTopicCount,

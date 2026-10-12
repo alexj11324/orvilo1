@@ -87,6 +87,7 @@ function setup(
     liveTopic?: boolean;
     missingPr?: boolean;
     missingRemote?: boolean;
+    remoteHead?: string;
     /** Seed the legacy scalar shape under the old key (mixed-version read). */
     legacyPollFailures?: number;
     /**
@@ -290,7 +291,8 @@ function setup(
         return { number: 9, url: 'https://github.com/acme/widgets/pull/9' };
       },
       findBranchPr: async () => undefined,
-      getRemoteBranchSha: async () => (options.missingRemote ? undefined : HEAD),
+      getRemoteBranchSha: async () =>
+        options.missingRemote ? undefined : (options.remoteHead ?? HEAD),
       isRemotePrMergeReady,
       mergePullRequest: async (args: {
         expectedHeadSha: string;
@@ -595,6 +597,15 @@ add('missing remote delivery does not enter review without a PR', async (load) =
   assert.deepEqual(result.waiting, ['T-1']);
   assert.equal(f.state.events.includes('enter-review'), false);
   assert.equal(f.state.events.includes('create-pr'), false);
+});
+
+add('keeps the accepted delivery head when establishing a missing PR', async (load) => {
+  const f = setup({ missingPr: true, remoteHead: NEW_HEAD, first: { headSha: NEW_HEAD } });
+  const result = await (await load(f.mocks))(f.db);
+  assert.deepEqual(result.waiting, ['T-1']);
+  assert.equal(f.state.rows[0].integration.expectedHeadSha, HEAD);
+  assert.equal(f.state.events.includes('create-pr'), false);
+  assert.equal(f.state.merges.length, 0);
 });
 
 add('persists the canonical PR before entering review', async (load) => {

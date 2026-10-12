@@ -28,7 +28,6 @@ import type { SettingsNavKey } from '@/features/Settings/hooks/useCategory';
 import { useSettingsCapabilityContext } from '@/features/Settings/hooks/useSettingsCapability';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { SettingsTabs } from '@/store/global/initialState';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { WorkspaceSettingsTabs } from '@/types/workspaceSettings';
 
 export enum SettingsGroupKey {
@@ -61,7 +60,6 @@ export const useCategory = (): CategoryGroup[] => {
   const navigate = useWorkspaceAwareNavigate();
   const { t } = useTranslation(['setting', 'auth', 'subscription', 'common']);
   const capabilityContext = useSettingsCapabilityContext();
-  const { showProvider } = useServerConfigStore(featureFlagsSelectors);
   const slug = useActiveWorkspaceSlug();
 
   return useMemo(() => {
@@ -144,14 +142,16 @@ export const useCategory = (): CategoryGroup[] => {
     const agent: CategoryItem[] = [
       // Provider settings should not depend on Advanced tools: new users may need
       // non-Orvilo providers, and desktop users often bring their own API keys.
-      showProvider &&
+      offered(SettingsTabs.Provider) &&
         makeItem({ icon: Brain, key: SettingsTabs.Provider, label: t('setting:tab.provider') }),
-      makeItem({
-        icon: Sparkles,
-        key: SettingsTabs.ServiceModel,
-        label: t('setting:tab.serviceModel'),
-      }),
-      makeItem({ icon: BrainCircuit, key: SettingsTabs.Memory, label: t('setting:tab.memory') }),
+      offered(SettingsTabs.ServiceModel) &&
+        makeItem({
+          icon: Sparkles,
+          key: SettingsTabs.ServiceModel,
+          label: t('setting:tab.serviceModel'),
+        }),
+      offered(SettingsTabs.Memory) &&
+        makeItem({ icon: BrainCircuit, key: SettingsTabs.Memory, label: t('setting:tab.memory') }),
       // Agent profile/model/tools configuration lives here in settings, never
       // on the 会话 tab — `/agents` is the management surface.
       makeItem({
@@ -212,5 +212,5 @@ export const useCategory = (): CategoryGroup[] => {
         title: t('setting:group.developer'),
       },
     ].filter((group) => group.items.length > 0);
-  }, [t, capabilityContext, navigate, showProvider, slug]);
+  }, [t, capabilityContext, navigate, slug]);
 };

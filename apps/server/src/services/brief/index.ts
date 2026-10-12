@@ -250,7 +250,7 @@ export class BriefService {
               )
             : [],
         });
-        await this.taskModel.updateStatus(brief.taskId, 'completed', {
+        const completed = await this.taskModel.updateStatus(brief.taskId, 'completed', {
           error: null,
           workflowCategory: 'done',
           ...(move.type === 'exact'
@@ -260,6 +260,18 @@ export class BriefService {
               }
             : {}),
         });
+        // Approving the result is what moved the Issue to Done, and the
+        // approver is this service's authenticated user: the feed says so.
+        // Best-effort — the approval itself is already committed.
+        if (completed) {
+          try {
+            await this.taskModel.logWorkflowMove(brief.taskId, task, completed, {
+              userId: this.userId,
+            });
+          } catch (error) {
+            console.error('[BriefService:resolve] failed to log workflow move', error);
+          }
+        }
         // Cascade to downstream tasks whose dependencies are now satisfied.
         // Without this, dependents stay in `backlog` until the user manually
         // triggers them — defeating the point of the dependency edge.

@@ -1,4 +1,3 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
 import {
@@ -10,12 +9,13 @@ import {
   TASK_INTENT_PROMPT_VERSION,
 } from '@orvilo/prompts';
 import type { TaskInstructionSynthesis, TaskIntentAnalysis } from '@orvilo/types';
+import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { z } from 'zod';
 
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
-import { resolveGoalModelConfig } from '@/server/services/goal/modelConfig';
+import { resolveLightweightJudgment } from '@/server/services/systemAgent/lightweightJudgment';
 
 const log = debug('orvilo-server:task-intent');
 
@@ -65,16 +65,23 @@ export class TaskIntentService {
     private readonly workspaceId?: string,
   ) {}
 
-  async analyze(params: { context?: string; instruction: string }): Promise<TaskIntentAnalysis> {
+  async analyze(params: {
+    agentId?: string;
+    context?: string;
+    instruction: string;
+  }): Promise<TaskIntentAnalysis> {
     // Intent reading is the same "structure the user's request" model role as
     // goal criteria drafting, so it rides that assignment rather than adding a
     // configurable model slot for a feature still behind a lab toggle.
-    const modelConfig = await resolveGoalModelConfig(
+    const modelConfig = await resolveLightweightJudgment(
       this.db,
       this.userId,
-      BUILTIN_AGENT_SLUGS.taskAgent,
+      'goal',
+      params.agentId,
       this.workspaceId,
     );
+    if (!modelConfig)
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'TASK_INTENT_UNAVAILABLE' });
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
 
     const raw = await ai.generateObject(
@@ -88,7 +95,7 @@ export class TaskIntentService {
         judgment: {
           // Pre-creation intent reading binds to the builtin task agent; a
           // missing binding surfaces as an explicit block to the caller.
-          binding: { slug: BUILTIN_AGENT_SLUGS.taskAgent },
+          binding: modelConfig.binding,
           purpose: 'task.intent',
         },
         kind: 'judgment',
@@ -119,16 +126,20 @@ export class TaskIntentService {
    * the appendix states it. This pass folds them in instead.
    */
   async synthesize(params: {
+    agentId?: string;
     answers: { answer: string; question: string }[];
     context?: string;
     instruction: string;
   }): Promise<TaskInstructionSynthesis> {
-    const modelConfig = await resolveGoalModelConfig(
+    const modelConfig = await resolveLightweightJudgment(
       this.db,
       this.userId,
-      BUILTIN_AGENT_SLUGS.taskAgent,
+      'goal',
+      params.agentId,
       this.workspaceId,
     );
+    if (!modelConfig)
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'TASK_INTENT_UNAVAILABLE' });
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
 
     const raw = await ai.generateObject(
@@ -140,7 +151,7 @@ export class TaskIntentService {
       },
       {
         judgment: {
-          binding: { slug: BUILTIN_AGENT_SLUGS.taskAgent },
+          binding: modelConfig.binding,
           purpose: 'task.instruction',
         },
         kind: 'judgment',

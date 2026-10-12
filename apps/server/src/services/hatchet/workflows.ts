@@ -41,8 +41,6 @@ export const HATCHET_WORKFLOW_PATHS = [
   '/api/workflows/linear-sync/execute',
   '/api/workflows/task/on-creator-complete',
   '/api/workflows/task/on-topic-complete',
-  '/api/workflows/topic-auto-summary/dispatch',
-  '/api/workflows/topic-auto-summary/execute',
   '/api/workflows/verify/on-evidence-complete',
   '/api/workflows/verify/on-verifier-complete',
 ] as const;

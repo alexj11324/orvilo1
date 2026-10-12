@@ -188,9 +188,15 @@ const MyWorkControls = memo<MyWorkControlsProps>(
               </Button>
             }
           />
-          <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+          <PopoverContent align="end" className="w-auto [max-width:calc(100vw_-_var(--spacing)*8)]">
             {
-              <div className={cn('flex flex-col', 'w-[min(420px,calc(100vw-32px))] p-3', 'gap-3')}>
+              <div
+                className={cn(
+                  'flex flex-col',
+                  'w-105 [max-width:calc(100vw_-_var(--spacing)*8)] p-3',
+                  'gap-3',
+                )}
+              >
                 {canBoard ? (
                   <OptionRow label={t('myWork.displayLayout')}>
                     <Select

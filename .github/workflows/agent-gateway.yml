@@ -1,0 +1,132 @@
+name: Build and deploy agent gateway
+
+on:
+  push:
+    paths:
+      - 'docker-compose/deploy/agent-gateway/**'
+      - '.github/workflows/agent-gateway.yml'
+  pull_request:
+    branches: [canary]
+    paths:
+      - 'docker-compose/deploy/agent-gateway/**'
+      - '.github/workflows/agent-gateway.yml'
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Replace the running gateway with the CI image (canary only)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  checks: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    outputs:
+      artifact_name: ${{ steps.receipt.outputs.artifact_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check deployment scripts
+        run: |
+          set -euo pipefail
+          shellcheck docker-compose/deploy/agent-gateway/{build,upgrade,test-upgrade,activate,start}.sh
+          sudo bash docker-compose/deploy/agent-gateway/test-upgrade.sh
+      - name: Build and verify the pinned gateway image
+        run: bash docker-compose/deploy/agent-gateway/build.sh "$RUNNER_TEMP/gateway-bundle"
+      - name: Record artifact identity
+        id: receipt
+        run: echo "artifact_name=agent-gateway-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.receipt.outputs.artifact_name }}
+          path: ${{ runner.temp }}/gateway-bundle/
+          if-no-files-found: error
+          retention-days: 30
+
+  deploy:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/canary'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    concurrency:
+      group: orvilo1-production-deploy
+      cancel-in-progress: false
+    env:
+      SSH_HOST: ${{ secrets.ORACLE_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require the quality gate on this commit
+        uses: ./.github/actions/require-quality-gate
+        with:
+          sha: ${{ github.sha }}
+          wait_seconds: '1800'
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: ${{ runner.temp }}/gateway-bundle/
+      - name: Verify the same-run artifact
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/gateway-bundle"
+          sha256sum -c SHA256SUMS
+          jq -e --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" \
+            '.commit_sha == $sha and .run_id == $run and .run_attempt == $attempt' build-receipt.json > /dev/null
+      - name: Configure pinned SSH host checking
+        env:
+          SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.ORACLE_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${SSH_HOST:?}" "${SSH_KEY:?}" "${SSH_KNOWN_HOSTS:?}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" true
+      - name: Activate the verified image on the origin
+        id: activate
+        run: |
+          set -euo pipefail
+          release="/var/lib/orvilo1/agent-gateway/releases/${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          tar -C "$RUNNER_TEMP/gateway-bundle" -czf - . |
+            ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
+              "sudo install -d -m 700 '$release' && sudo tar -xzf - -C '$release'"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
+            "sudo bash '$release/upgrade.sh' activate '$GITHUB_SHA' '$GITHUB_RUN_ID' '$GITHUB_RUN_ATTEMPT'"
+      - name: Verify the public endpoint
+        id: public
+        run: |
+          set -euo pipefail
+          health=$(curl -fsS --max-time 20 --retry 5 --retry-delay 3 https://agent-gateway.aspectlylabs.com/health)
+          test "$health" = OK
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' -X POST https://agent-gateway.aspectlylabs.com/api/operations/upgrade-check/events)" = 401
+      - name: Fetch the verified activation receipt
+        if: success()
+        run: |
+          snapshot="/var/lib/orvilo1/agent-gateway/upgrades/${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
+            "sudo cat '$snapshot/activation-receipt.json'" > "$RUNNER_TEMP/gateway-activation.json"
+          cat "$RUNNER_TEMP/gateway-activation.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: agent-gateway-activation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gateway-activation.json
+          if-no-files-found: error
+          retention-days: 30
+      # Only a failed public check undoes a verified upgrade; a failed receipt upload does not.
+      - name: Restore the previous image after a failed public check
+        if: failure() && steps.public.outcome == 'failure'
+        run: |
+          release="/var/lib/orvilo1/agent-gateway/releases/${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
+            "sudo bash '$release/upgrade.sh' rollback '$GITHUB_SHA' '$GITHUB_RUN_ID' '$GITHUB_RUN_ATTEMPT'"

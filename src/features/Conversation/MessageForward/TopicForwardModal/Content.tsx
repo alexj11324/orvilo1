@@ -10,6 +10,7 @@ import { useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -45,7 +46,9 @@ export const TopicForwardContent = ({
   const [keyword, setKeyword] = useState('');
   const [note, setNote] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const agents = useHomeStore(homeAgentListSelectors.allAgents);
+  const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
+  const keep = useKeepSidebarListed();
+  const agents = useMemo(() => keep(allAgents), [allAgents, keep]);
   const forwardTopic = useForwardTopic({ agentId: sourceAgentId, topicId });
 
   useFetchAgentList();

@@ -11,6 +11,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { resolveGoalDispatchNotice } from '@/features/AgentTasks/shared/dispatchNotice';
 import { usePermission } from '@/hooks/usePermission';
 import { goalService } from '@/services/goal';
 import { useChatStore } from '@/store/chat';
@@ -150,6 +151,10 @@ const ProcessControl = memo<ProcessControlProps>(
             canEdit={canAct}
             graph={graph}
             planning={planning}
+            notice={resolveGoalDispatchNotice({
+              goalStatus: graph.goal.status,
+              orchestrationAdmission: snapshot?.orchestrationAdmission,
+            })}
             onSelect={select}
           />
         </div>

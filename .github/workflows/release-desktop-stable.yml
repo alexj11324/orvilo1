@@ -31,16 +31,6 @@ on:
         required: false
         type: boolean
         default: true
-      build_windows:
-        description: 'Build Windows'
-        required: false
-        type: boolean
-        default: true
-      build_linux:
-        description: 'Build Linux'
-        required: false
-        type: boolean
-        default: true
       skip_github_release:
         description: 'Skip GitHub release upload (for testing)'
         required: false
@@ -123,15 +113,9 @@ jobs:
           # 基础矩阵
           static_matrix='[]'
 
-          # Windows
-          if [[ "${{ github.event_name }}" != "workflow_dispatch" ]] || [[ "${{ inputs.build_windows }}" == "true" ]]; then
-            static_matrix=$(echo "$static_matrix" | jq -c '. + [{"os": "windows-2025", "name": "windows-2025"}]')
-          fi
-
-          # Linux
-          if [[ "${{ github.event_name }}" != "workflow_dispatch" ]] || [[ "${{ inputs.build_linux }}" == "true" ]]; then
-            static_matrix=$(echo "$static_matrix" | jq -c '. + [{"os": "ubuntu-latest", "name": "ubuntu-latest"}]')
-          fi
+          # First stable release supports macOS only (#709).
+          # Linux requires clean-machine install/update acceptance and a preview channel.
+          # Windows must pass signing and acceptance before joining stable downloads.
 
           # macOS (ARM64)
           # 使用 GitHub Hosted Runner (macos-15 修复 hdiutil 问题)
@@ -229,36 +213,6 @@ jobs:
             xcrun stapler validate "$app"
             spctl --assess --type execute --verbose=4 "$app"
           done
-
-      # Windows 构建
-      - name: Build artifact on Windows
-        id: build_windows
-        if: runner.os == 'Windows'
-        run: npm run desktop:package:app
-        env:
-          UPDATE_CHANNEL: stable
-          RELEASE_NOTES: ${{ needs.check-stable.outputs.release_notes }}
-          APP_URL: http://localhost:3015
-          DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
-          KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='
-          NEXT_PUBLIC_DESKTOP_PROJECT_ID: ${{ secrets.UMAMI_STABLE_DESKTOP_PROJECT_ID }}
-          NEXT_PUBLIC_DESKTOP_UMAMI_BASE_URL: ${{ secrets.UMAMI_STABLE_DESKTOP_BASE_URL }}
-          TEMP: C:\temp
-          TMP: C:\temp
-
-      # Linux 构建
-      - name: Build artifact on Linux
-        id: build_linux
-        if: runner.os == 'Linux'
-        run: npm run desktop:package:app
-        env:
-          UPDATE_CHANNEL: stable
-          RELEASE_NOTES: ${{ needs.check-stable.outputs.release_notes }}
-          APP_URL: http://localhost:3015
-          DATABASE_URL: 'postgresql://postgres@localhost:5432/postgres'
-          KEY_VAULTS_SECRET: 'oLXWIiR/AKF+rWaqy9lHkrYgzpATbW3CtJp3UfkVgpE='
-          NEXT_PUBLIC_DESKTOP_PROJECT_ID: ${{ secrets.UMAMI_STABLE_DESKTOP_PROJECT_ID }}
-          NEXT_PUBLIC_DESKTOP_UMAMI_BASE_URL: ${{ secrets.UMAMI_STABLE_DESKTOP_BASE_URL }}
 
       - name: Upload artifacts
         id: upload

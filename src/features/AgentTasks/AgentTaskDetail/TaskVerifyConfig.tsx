@@ -619,7 +619,7 @@ const TaskVerifyConfig = memo(() => {
             </div>
           )}
           <Textarea
-            className="max-h-[4lh] rounded-(--radius-input) text-sm leading-5.5 md:text-sm"
+            className="[max-height:4lh] rounded-(--radius-input) text-sm leading-5.5 md:text-sm"
             placeholder={t('verifyConfig.requirementPlaceholder')}
             rows={2}
             value={requirement}

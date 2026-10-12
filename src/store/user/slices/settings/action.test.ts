@@ -283,7 +283,7 @@ describe('SettingsAction', () => {
       const { result } = renderHook(() => useUserStore());
       const systemAgentSettings: PartialDeep<UserSettings> = {
         systemAgent: {
-          translation: {
+          goal: {
             model: 'testmodel',
             provider: 'provider',
           },
@@ -292,7 +292,7 @@ describe('SettingsAction', () => {
 
       // Perform the action
       await act(async () => {
-        await result.current.updateSystemAgent('translation', {
+        await result.current.updateSystemAgent('goal', {
           provider: 'provider',
           model: 'testmodel',
         });
@@ -308,16 +308,16 @@ describe('SettingsAction', () => {
     it('should persist system agent model and provider together when provider matches default', async () => {
       const { result } = renderHook(() => useUserStore());
       const model = 'ag/gemini-3.1-pro-high';
-      const provider = DEFAULT_SETTINGS.systemAgent.translation.provider;
+      const provider = DEFAULT_SETTINGS.systemAgent.goal.provider;
 
       await act(async () => {
-        await result.current.updateSystemAgent('translation', { model, provider });
+        await result.current.updateSystemAgent('goal', { model, provider });
       });
 
       expect(userService.updateUserSettings).toHaveBeenLastCalledWith(
         {
           systemAgent: {
-            translation: {
+            goal: {
               model,
               provider,
             },

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { SidebarAgentItem } from '@/database/repositories/home';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
@@ -27,6 +28,8 @@ type MenuOptionWithMetadata = { key: string; metadata?: Record<string, unknown> 
 export const useMentionCategories = (): MentionCategory[] => {
   const { t } = useTranslation('chat');
   const currentAgentId = useAgentId();
+  // A mention becomes a call to that agent, so withheld agents are not offered.
+  const keepListed = useKeepSidebarListed();
   const pinnedAgents = useHomeStore(homeAgentListSelectors.pinnedAgents, isEqual);
   const workspaceGroups = useHomeStore(homeAgentListSelectors.agentGroups, isEqual);
   const workspaceUngrouped = useHomeStore(homeAgentListSelectors.ungroupedAgents, isEqual);
@@ -123,16 +126,20 @@ export const useMentionCategories = (): MentionCategory[] => {
       for (const a of privatePinned) privateAgentIds.add(a.id);
       for (const a of privateUngrouped) privateAgentIds.add(a.id);
 
-      const workspaceCandidates = dedupeAgents([
-        ...pinnedAgents,
-        ...workspaceGroups.flatMap((g) => g.items),
-        ...workspaceUngrouped,
-      ]);
-      const privateCandidates = dedupeAgents([
-        ...privatePinned,
-        ...privateGroups.flatMap((g) => g.items),
-        ...privateUngrouped,
-      ]);
+      const workspaceCandidates = dedupeAgents(
+        keepListed([
+          ...pinnedAgents,
+          ...workspaceGroups.flatMap((g) => g.items),
+          ...workspaceUngrouped,
+        ]),
+      );
+      const privateCandidates = dedupeAgents(
+        keepListed([
+          ...privatePinned,
+          ...privateGroups.flatMap((g) => g.items),
+          ...privateUngrouped,
+        ]),
+      );
 
       // Ownership-and-visibility gate for the private bucket. Once a mention
       // fires it becomes a `callAgent` tool-call in the current topic, and
@@ -303,6 +310,7 @@ export const useMentionCategories = (): MentionCategory[] => {
 
     return categories;
   }, [
+    keepListed,
     pinnedAgents,
     workspaceGroups,
     workspaceUngrouped,

@@ -5,6 +5,7 @@ import {
   buildOptimisticAssignmentActivities,
   buildOptimisticCommentActivity,
   buildOptimisticPropertyActivity,
+  buildOptimisticPropertyChanges,
   isOptimisticActivityId,
   OPTIMISTIC_ACTIVITY_ID_PREFIX,
 } from './optimisticActivity';
@@ -184,5 +185,70 @@ describe('appendOptimisticPropertyActivity', () => {
     const existing = [hop(1, 2)];
 
     expect(appendOptimisticPropertyActivity(existing, undefined)).toBe(existing);
+  });
+
+  it('keeps description autosaves by one person as a single entry dated by the last save', () => {
+    const save = (time: string, id = `optimistic-property-description-${time}`) => ({
+      author: actor,
+      id,
+      propertyChange: { field: 'description' as const },
+      time,
+      type: 'property' as const,
+    });
+    const first = save(now);
+    const second = save('2024-01-01T00:05:00.000Z');
+
+    expect(appendOptimisticPropertyActivity([first], second)).toEqual([second]);
+    // The entry the server already returned is the same sitting, not a new one.
+    const persisted = save(now, 'tac_real');
+    expect(appendOptimisticPropertyActivity([persisted], second)).toEqual([second]);
+    // A new sitting once the window has lapsed.
+    const later = save('2024-01-01T01:00:00.000Z');
+    expect(appendOptimisticPropertyActivity([first], later)).toEqual([first, later]);
+  });
+
+  it('never folds one-off events such as a label being added twice', () => {
+    const label = (name: string) => ({
+      author: actor,
+      id: `optimistic-property-label-${name}`,
+      propertyChange: { action: 'added' as const, field: 'label' as const, name },
+      time: now,
+      type: 'property' as const,
+    });
+
+    expect(appendOptimisticPropertyActivity([label('bug')], label('bug'))).toHaveLength(2);
+  });
+});
+
+describe('buildOptimisticPropertyChanges', () => {
+  const current = {
+    dueDate: null,
+    editorData: { root: 1 },
+    instruction: 'Body',
+    name: 'Old',
+    priority: 0,
+  };
+
+  it('produces a row only for a field whose value actually changes', () => {
+    expect(buildOptimisticPropertyChanges(current, { name: 'Old', priority: 0 })).toEqual([]);
+    expect(
+      buildOptimisticPropertyChanges(current, { dueDate: '2026-08-15', name: 'New', priority: 2 }),
+    ).toEqual([
+      { field: 'priority', from: 0, to: 2 },
+      { field: 'title', from: 'Old', to: 'New' },
+      { field: 'dueDate', from: null, to: '2026-08-15' },
+    ]);
+  });
+
+  it('treats the description as edited when its text or its rich content changed', () => {
+    expect(
+      buildOptimisticPropertyChanges(current, { editorData: { root: 1 }, instruction: 'Body' }),
+    ).toEqual([]);
+    expect(buildOptimisticPropertyChanges(current, { instruction: 'Body v2' })).toEqual([
+      { field: 'description' },
+    ]);
+    expect(
+      buildOptimisticPropertyChanges(current, { editorData: { root: 2 }, instruction: 'Body' }),
+    ).toEqual([{ field: 'description' }]);
   });
 });

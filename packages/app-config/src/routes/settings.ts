@@ -1,5 +1,8 @@
 import { SettingsTabs } from '@/store/global/initialState';
 
+/** Temporary product gate for Orvilo-owned memory during the ACP-only launch. */
+export const BUILTIN_MEMORY_UI_ENABLED = false;
+
 /**
  * Settings-surface capability registry — the single answer to "is this settings
  * tab part of the product, and where does a direct visit land?".
@@ -55,6 +58,11 @@ export interface SettingsCapabilityContext {
   mobile: boolean;
   /** This deployment serves the hosted API-key manager. */
   showApiKeyManage: boolean;
+  /**
+   * This deployment offers user-managed model providers, and with them the
+   * server-side model assignments that only a configured provider can serve.
+   */
+  showProvider: boolean;
 }
 
 export type SettingsCapabilityGate = (context: SettingsCapabilityContext) => boolean;
@@ -129,11 +137,21 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // sidebar entry. (The sidebar *group* of that name holds Credentials and
   // API keys and is unrelated.)
   [SettingsTabs.Security]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
-  [SettingsTabs.ServiceModel]: { scope: 'user', status: 'enabled' },
+  // Model assignments pick from the user's own providers, so the page follows
+  // the provider surface: without one there is nothing to assign.
+  [SettingsTabs.ServiceModel]: {
+    gate: ({ showProvider }) => showProvider,
+    scope: 'user',
+    status: 'enabled',
+  },
   [SettingsTabs.TTS]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
 
   // Personal configuration uses the broker; it does not revive legacy execution.
-  [SettingsTabs.Provider]: { gate: ({ mobile }) => !mobile, scope: 'user', status: 'enabled' },
+  [SettingsTabs.Provider]: {
+    gate: ({ mobile, showProvider }) => showProvider && !mobile,
+    scope: 'user',
+    status: 'enabled',
+  },
 
   // ── Live surfaces ────────────────────────────────────────────────────────
   // Settings that follow the user everywhere.
@@ -150,7 +168,13 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Electron adds local sound controls to the same settings surface.
   [SettingsTabs.Notification]: { scope: 'user', status: 'enabled' },
 
-  [SettingsTabs.Memory]: { scope: 'user', status: 'enabled' },
+  // Withheld for the ACP-only launch: Orvilo memory belongs to the builtin harness.
+  // Keep the page and data for reopening the harness; CLI-native memory is independent.
+  [SettingsTabs.Memory]: {
+    gate: () => BUILTIN_MEMORY_UI_ENABLED,
+    scope: 'user',
+    status: 'enabled',
+  },
   // Electron-only: both pages configure the desktop runtime, and neither has
   // anything to configure in a browser.
   // Host scope: configures THIS install's network egress — the remote

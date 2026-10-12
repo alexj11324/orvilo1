@@ -10,6 +10,8 @@ export const taskMenuService = {
   links: (id: string) => lambdaClient.taskMenu.links.query({ id }),
   removeLink: (id: string, linkId: string) =>
     lambdaClient.taskMenu.removeLink.mutate({ id, linkId }),
+  updateLink: (id: string, linkId: string, title: string) =>
+    lambdaClient.taskMenu.updateLink.mutate({ id, linkId, title }),
   restoreDescription: (input: { id: string; historyId: string; expectedDomainRevision: number }) =>
     lambdaClient.taskMenu.restoreDescription.mutate(input),
   convertToProject: (input: {

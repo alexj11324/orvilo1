@@ -341,17 +341,13 @@ export class HomeRepository {
           { slug: a.slug },
         );
         const visibility = this.normalizeVisibility(a.visibility);
-        const runtimeType = resolveAgentRuntimeType(a);
 
         return {
           avatar: meta.avatar,
           backgroundColor: a.backgroundColor,
           description: a.description,
           groupId: a.sessionGroupId,
-          heterogeneousType:
-            runtimeType === 'orvilo' && a.agencyConfig?.heterogeneousProvider?.type !== 'orvilo'
-              ? null
-              : runtimeType,
+          heterogeneousType: this.resolveListedRuntimeType(a),
           id: a.id,
           isPrivate: visibility === 'private',
           labels: agentLabelsMap.get(a.id),
@@ -489,10 +485,12 @@ export class HomeRepository {
       // 1. Search agents by title or description (BM25)
       this.db
         .select({
+          agencyConfig: agents.agencyConfig,
           avatar: agents.avatar,
           backgroundColor: agents.backgroundColor,
           description: agents.description,
           id: agents.id,
+          model: agents.model,
           name: agents.name,
           pinned: agents.pinned,
           slug: agents.slug,
@@ -555,6 +553,8 @@ export class HomeRepository {
           avatar: meta.avatar,
           backgroundColor: a.backgroundColor,
           description: a.description,
+          // Callers withhold Agents by runtime, the same as for the list.
+          heterogeneousType: this.resolveListedRuntimeType(a),
           id: a.id,
           name: a.name,
           pinned: a.pinned ?? false,
@@ -587,6 +587,19 @@ export class HomeRepository {
     results.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
     return results;
+  }
+
+  /**
+   * The runtime an Agent row is listed under. An Agent with no runtime stamp
+   * runs on the built-in one and is reported as `null`, not as `orvilo`.
+   */
+  private resolveListedRuntimeType(
+    agent: Parameters<typeof resolveAgentRuntimeType>[0],
+  ): string | null {
+    const runtimeType = resolveAgentRuntimeType(agent);
+    return runtimeType === 'orvilo' && agent?.agencyConfig?.heterogeneousProvider?.type !== 'orvilo'
+      ? null
+      : runtimeType;
   }
 
   /**

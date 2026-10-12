@@ -29,8 +29,8 @@ Electron desktop client, and a CLI.
 | `packages/`                                    | Shared workspace packages                |
 | `e2e/`                                         | End-to-end tests (Cucumber + Playwright) |
 
-Agents can be connected to chat platforms (Slack, Discord, Telegram, WeChat and
-others), to Git hosts, and to model providers you configure yourself.
+Agents can be connected to Slack, to Git hosts, and to model providers you configure
+yourself.
 
 ## Local Development
 
@@ -61,7 +61,7 @@ with `npm install --global cf` and authenticate with `cf auth login`. See
 ### Quality checks
 
 ```bash
-pnpm run type-check # tsgo --noEmit
+pnpm run type-check # tsgo --noEmit (CI only; exits early on a local machine)
 pnpm run test-app   # vitest run
 pnpm run lint       # eslint + stylelint + type-check + circular deps
 

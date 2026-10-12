@@ -71,7 +71,9 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
             }}
           />
         )}
-        <AgentRuntimeIcon size={32} type={agent.heterogeneousType} />
+        <span className="flex size-8 flex-none items-center justify-center">
+          <AgentRuntimeIcon size={16} type={agent.heterogeneousType} />
+        </span>
         <div className={cn('truncate', styles.title)}>{title}</div>
         {showRemove && (
           <Button

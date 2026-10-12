@@ -2,6 +2,7 @@ import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
 import type { TaskAttentionReason } from './stateModel';
 
+export * from './activityLine';
 export * from './result';
 export * from './stateModel';
 
@@ -368,12 +369,88 @@ export type TaskActivityType =
  * change with no migration.
  */
 export type TaskActivityLogType =
-  'assignee_agent' | 'assignee_user' | 'automation' | 'priority' | 'reviewer' | 'status';
+  | 'assignee_agent'
+  | 'assignee_user'
+  | 'automation'
+  | 'description'
+  | 'due_date'
+  | 'duplicate'
+  | 'label_added'
+  | 'label_removed'
+  | 'milestone'
+  | 'parent'
+  | 'priority'
+  | 'project'
+  | 'relation_added'
+  | 'relation_removed'
+  | 'resource_added'
+  | 'resource_removed'
+  | 'reviewer'
+  | 'status'
+  | 'sub_issue_added'
+  | 'sub_issue_removed'
+  | 'team'
+  | 'title'
+  | 'verify_config'
+  | 'workflow_state';
+
+/**
+ * How an activity kind behaves when a reader is shown the log:
+ *
+ * - `value` — a property that moved between two values. A burst of edits by
+ *   one actor folds into "from the first to the last", and a value that ended
+ *   up where it started is not shown.
+ * - `session` — an edit with no before/after worth naming (the description
+ *   body). Consecutive saves by one actor fold into one entry; never a no-op.
+ * - `event` — something that happened once (a relation, a label, a link).
+ *   Never folded, never dropped.
+ */
+export type TaskActivityLogBehavior = 'event' | 'session' | 'value';
+
+export const TASK_ACTIVITY_LOG_BEHAVIOR: Record<TaskActivityLogType, TaskActivityLogBehavior> = {
+  assignee_agent: 'value',
+  assignee_user: 'value',
+  automation: 'value',
+  description: 'session',
+  due_date: 'value',
+  duplicate: 'value',
+  label_added: 'event',
+  label_removed: 'event',
+  milestone: 'value',
+  parent: 'value',
+  priority: 'value',
+  project: 'value',
+  relation_added: 'event',
+  relation_removed: 'event',
+  resource_added: 'event',
+  resource_removed: 'event',
+  reviewer: 'value',
+  status: 'value',
+  sub_issue_added: 'event',
+  sub_issue_removed: 'event',
+  team: 'value',
+  title: 'value',
+  verify_config: 'session',
+  workflow_state: 'value',
+};
+
+/**
+ * How long a run of edits to one property by one actor stays a single feed
+ * entry. A product knob, not a correctness one: shorter shows more
+ * intermediate states, longer hides more fiddling. Shared by the read-time
+ * fold and by the writer that keeps a `session` kind to one row per sitting.
+ */
+export const TASK_ACTIVITY_COLLAPSE_WINDOW_MS = 30 * 60_000;
+
+/** How the other Issue relates to the one whose feed the row sits in. */
+export type TaskActivityRelationKind = 'blocked_by' | 'blocking' | 'related';
 
 /**
  * Payload of a `task_activities` row: what the slot moved between.
  * Assignee events carry ids (`fromId` / `toId`); a status event carries the
- * status strings themselves (`from` / `to`).
+ * status strings themselves (`from` / `to`). A workflow-state event carries
+ * the category in `from` / `to`, the team state row in `fromId` / `toId` and
+ * the state's name at write time in `fromLabel` / `toLabel`.
  */
 export interface TaskActivityLogPayload {
   /**
@@ -385,8 +462,22 @@ export interface TaskActivityLogPayload {
   actorKind?: 'agent' | 'system' | 'user';
   from?: TaskActivityValue;
   fromId?: string | null;
+  /**
+   * Display name of the `from` side as it read when the row was written — a
+   * team state, project, milestone or team can be renamed or deleted later,
+   * and history should keep saying what the person saw.
+   */
+  fromLabel?: string | null;
+  /** Relation events: how the Issue in `toId` relates to this one. */
+  relation?: TaskActivityRelationKind;
+  /** Resource events: which kind of attachment was added or removed. */
+  resourceKind?: 'link' | 'pull_request';
   to?: TaskActivityValue;
   toId?: string | null;
+  /** Display name of the `to` side at write time; see `fromLabel`. */
+  toLabel?: string | null;
+  /** Resource events: where the link pointed. */
+  url?: string | null;
 }
 
 /**
@@ -799,6 +890,12 @@ export interface TaskTopicHandoff {
    * surfaces the actual run output, not only the summary.
    */
   content?: string;
+  /**
+   * Why the run failed, as the runtime reported it. Written when a run settles
+   * as failed so the reason stays with that run after `tasks.error` is cleared
+   * by the next attempt. Untrusted agent/CLI output: render as plain text.
+   */
+  error?: { code?: string; message: string };
   keyFindings?: string[];
   nextAction?: string;
   summary?: string;
@@ -1207,6 +1304,55 @@ export interface TaskDetailActivityAgent {
   title: string | null;
 }
 
+/**
+ * Another Issue named in a feed row. `unavailable` stands for one the reader
+ * cannot be shown — deleted, or outside what they may read — so the row still
+ * says something happened without leaking its identifier or title.
+ */
+export type TaskActivityIssueRef =
+  { identifier: string; name?: string | null } | { unavailable: true };
+
+/** One side of a workflow move: the category, plus the team state's name when the Issue had one. */
+export interface TaskActivityWorkflowValue {
+  category: TaskWorkflowCategory;
+  name?: string | null;
+}
+
+export type TaskDetailPropertyChange =
+  | {
+      field: 'automation';
+      from: TaskAutomationSnapshot | null;
+      to: TaskAutomationSnapshot | null;
+    }
+  | { field: 'description' }
+  | { field: 'dueDate'; from: string | null; to: string | null }
+  | { field: 'duplicate'; from: TaskActivityIssueRef | null; to: TaskActivityIssueRef | null }
+  | { action: 'added' | 'removed'; field: 'label'; name: string | null }
+  | { field: 'milestone' | 'project' | 'team'; from: string | null; to: string | null }
+  | { field: 'parent'; from: TaskActivityIssueRef | null; to: TaskActivityIssueRef | null }
+  | { field: 'priority'; from: number | null; to: number | null }
+  | {
+      action: 'added' | 'removed';
+      field: 'relation';
+      relation: TaskActivityRelationKind | 'sub_issue';
+      target: TaskActivityIssueRef;
+    }
+  | {
+      action: 'added' | 'removed';
+      field: 'resource';
+      kind: 'link' | 'pull_request';
+      title: string | null;
+      url: string | null;
+    }
+  | { field: 'status'; from: TaskStatus | null; to: TaskStatus }
+  | { field: 'title'; from: string | null; to: string | null }
+  | { field: 'verify' }
+  | {
+      field: 'workflow';
+      from: TaskActivityWorkflowValue | null;
+      to: TaskActivityWorkflowValue;
+    };
+
 export interface TaskDetailActivity {
   actions?: unknown;
   /** Brief-only: avatar of the agent that produced this brief; `null` when the agent is unknown or has been deleted. */
@@ -1240,6 +1386,12 @@ export interface TaskDetailActivity {
   cronJobId?: string | null;
   /** Comment-only: rich Lexical JSON state. When present, supersedes `content` for rendering. */
   editorData?: unknown;
+  /**
+   * Topic-only: why a failed, timed-out or stopped run ended, when the server
+   * recorded a reason. Untrusted agent/CLI output: render as plain text, never
+   * as markup.
+   */
+  error?: string | null;
   /** Comment-only: files attached to this comment for rendering in the UI. */
   files?: ChatFileItem[];
   id?: string;
@@ -1258,19 +1410,18 @@ export interface TaskDetailActivity {
   operationId?: string | null;
   priority?: string | null;
   /**
-   * Property-only: a field a person (or an agent acting for them) changed.
-   * System transitions — the runner starting or finishing a run — are not
-   * logged; the run row already carries them.
+   * Property-only: something that changed on the Issue — a field, a relation,
+   * a label, a link. An absent `author` means the system did it (for example
+   * the workflow move made when a run settles).
    */
-  propertyChange?:
-    | {
-        field: 'automation';
-        from: TaskAutomationSnapshot | null;
-        to: TaskAutomationSnapshot | null;
-      }
-    | { field: 'priority'; from: number | null; to: number | null }
-    | { field: 'status'; from: TaskStatus | null; to: TaskStatus };
+  propertyChange?: TaskDetailPropertyChange;
   readAt?: string | null;
+  /**
+   * Comment-only: the run this comment was left on. `seq` is that run's
+   * number in the Issue (`#3`), or null when the run is outside the loaded
+   * window of runs and cannot be numbered or linked.
+   */
+  replyToRun?: { seq: number | null; topicId: string } | null;
   resolvedAction?: string | null;
   resolvedAt?: string | null;
   resolvedComment?: string | null;
@@ -1370,6 +1521,8 @@ export interface TaskDetailData {
   description?: string | null;
   /** Latest durable dispatch phase; execution display truth, separate from reservation ownership. */
   dispatchPhase?: TaskDispatchPhase | null;
+  /** Durable reason on the active dispatch, including caid_dispatch_disabled. */
+  dispatchWaitingReason?: string | null;
   /** Observed version used as expectedDomainRevision for optimistic-concurrency edits. */
   domainRevision?: number;
   /** Issue deadline as a calendar date (`YYYY-MM-DD`); `null` when unset. */
@@ -1393,9 +1546,19 @@ export interface TaskDetailData {
   id?: string;
   identifier: string;
   instruction: string;
+  /**
+   * Whether the requesting user has an active subscription to this Issue
+   * (manual, or added when they commented / were mentioned / assigned / made
+   * reviewer). False after an explicit unsubscribe.
+   */
+  isSubscribed?: boolean;
   /** Labels assigned to the task (Linear-style issue labels). */
   labels?: TaskLabelSummary[];
   name?: string | null;
+  /** Final admission for the requesting user and active workspace; does not gate manual runs. */
+  orchestrationAdmission?: 'enabled' | 'disabled';
+  /** Current admission gate reason, not the execution state of an existing run. */
+  orchestrationAdmissionReason?: 'caid_dispatch_disabled' | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
   priority?: number | null;
   /** Owning project; drives the automation detail's project picker. */

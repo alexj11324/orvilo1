@@ -43,8 +43,9 @@ interface CollaboratorListProps {
 
 /**
  * The collaborator grants of one resource: who is lifted above the workspace
- * access level, at which grade, with per-row revoke. Static management list —
- * rows are not links and carry no hover chrome.
+ * access level, at which grade, with per-row revoke. An Agent's creator is
+ * listed without a revoke control: they can use it without a grant. Static
+ * management list — rows are not links and carry no hover chrome.
  */
 const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType }) => {
   const { t } = useTranslation('setting');
@@ -102,37 +103,42 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
             {resourceType !== 'agent' && levelLabel ? (
               <Badge variant="secondary">{levelLabel}</Badge>
             ) : null}
-            <AlertDialog>
-              <AlertDialogTrigger
-                render={
-                  <ActionIcon
-                    disabled={mutating}
-                    icon={XIcon}
-                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                    title={t('permission.collaborators.remove')}
-                  />
-                }
-              />
-              <AlertDialogContent className="rounded-(--radius-overlay)">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {t('permission.collaborators.removeConfirmTitle', { name })}
-                  </AlertDialogTitle>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="rounded-b-(--radius-overlay)">
-                  <AlertDialogCancel size="normal">
-                    {t('cancel', { ns: 'common' })}
-                  </AlertDialogCancel>
-                  <AlertDialogConfirm
-                    size="normal"
-                    variant="destructive"
-                    onClick={() => void removeCollaborator(collaborator.userId)}
-                  >
-                    {t('permission.collaborators.remove')}
-                  </AlertDialogConfirm>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {collaborator.isCreator ? (
+              <Badge variant="secondary">{t('settingAgent.useMembers.creator')}</Badge>
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger
+                  render={
+                    <ActionIcon
+                      className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                      disabled={mutating}
+                      icon={XIcon}
+                      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                      title={t('permission.collaborators.remove')}
+                    />
+                  }
+                />
+                <AlertDialogContent className="rounded-(--radius-overlay)">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {t('permission.collaborators.removeConfirmTitle', { name })}
+                    </AlertDialogTitle>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="rounded-b-(--radius-overlay)">
+                    <AlertDialogCancel size="normal">
+                      {t('cancel', { ns: 'common' })}
+                    </AlertDialogCancel>
+                    <AlertDialogConfirm
+                      size="normal"
+                      variant="destructive"
+                      onClick={() => void removeCollaborator(collaborator.userId)}
+                    >
+                      {t('permission.collaborators.remove')}
+                    </AlertDialogConfirm>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         );
       })}

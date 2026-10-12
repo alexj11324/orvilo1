@@ -8,10 +8,11 @@ import type { ReactNode } from 'react';
 import { ProductLogo } from '@/components/Branding';
 
 const styles = {
-  composer: 'relative z-1 flex flex-none flex-col gap-4 w-[min(744px,calc(100%-16px))] my-auto',
+  composer:
+    'relative z-1 flex flex-none flex-col gap-4 w-186 [max-width:calc(100%_-_var(--spacing)*4)] my-auto',
   root: 'isolate relative w-full min-h-0 box-border overflow-x-hidden overflow-y-auto py-4',
   watermark:
-    'pointer-events-none absolute z-0 inset-bs-[calc(50%-92px)] start-1/2 aspect-square w-[min(336px,calc(100%-54px))] -translate-x-1/2 -translate-y-1/2 opacity-3.5 [[data-theme=dark]_&]:invert',
+    'pointer-events-none absolute z-0 [inset-block-start:calc(50%_-_var(--spacing)*23)] start-1/2 aspect-square w-84 [max-width:calc(100%_-_var(--spacing)*13.5)] -translate-x-1/2 -translate-y-1/2 opacity-3.5 [[data-theme=dark]_&]:invert',
 } as const;
 
 interface InboxAgentLandingProps {

@@ -54,6 +54,7 @@ import {
   trackOnboardingStepCompleted,
   trackOnboardingStepViewed,
 } from '@/services/onboardingMetrics';
+import { isWorkspaceSlugTakenError } from '@/utils/workspaceSlugError';
 
 import {
   createOnboardingData,
@@ -730,6 +731,7 @@ export function Onboarding({
   const [discoverySource, setDiscoverySource] = useState<DiscoverySourceValue>('linkedin');
   const [discoveryOther, setDiscoveryOther] = useState('');
   const {
+    markWorkspaceSlugTaken,
     onWorkspaceNameChange,
     onWorkspaceSlugChange,
     workspaceName,
@@ -870,6 +872,13 @@ export function Onboarding({
       });
       setIsComplete(true);
     } catch (error) {
+      // A taken URL belongs on its field: return to the workspace step with every answer kept.
+      if (isWorkspaceSlugTakenError(error)) {
+        markWorkspaceSlugTaken();
+        setTransitionDirection(-1);
+        setCurrentStep(onboardingSteps.findIndex((step) => step.id === 'workspace') + 1);
+        return;
+      }
       setCompletionError(
         error instanceof Error && error.message === ONBOARDING_INVITES_FAILED
           ? t('reui.error.invites')

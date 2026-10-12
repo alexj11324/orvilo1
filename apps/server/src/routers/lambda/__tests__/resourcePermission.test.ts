@@ -370,11 +370,31 @@ describe('resourcePermissionRouter collaborators', () => {
     });
   });
 
-  it('can restore a revoked creator Agent Use row', async () => {
-    const db = dbWithResults([{ userId: 'user_creator' }]);
+  it('writes no Use row for the Agent creator, who needs none', async () => {
+    const db = dbWithResults([{ userId: 'member_a' }]);
     await caller(db).addCollaborators({
       accessLevel: 'use',
       resourceId: 'agent-1',
+      resourceType: 'agent',
+      userIds: ['user_creator', 'member_a'],
+    });
+    expect(collaboratorModelMock.upsertCollaborators).toHaveBeenCalledWith(
+      expect.objectContaining({ userIds: ['member_a'], accessLevel: 'use' }),
+    );
+  });
+
+  it('still writes a Use row for the member who provisioned a shared builtin', async () => {
+    getResourceMetaMock.mockResolvedValue({
+      slug: 'inbox',
+      userId: 'user_creator',
+      virtual: true,
+      visibility: 'public',
+      workspaceId: 'ws_1',
+    } as any);
+    const db = dbWithResults([{ userId: 'user_creator' }]);
+    await caller(db).addCollaborators({
+      accessLevel: 'use',
+      resourceId: 'builtin-1',
       resourceType: 'agent',
       userIds: ['user_creator'],
     });
@@ -499,6 +519,70 @@ describe('resourcePermissionRouter collaborators', () => {
         accessLevel: 'use',
         user: expect.objectContaining({ fullName: 'Active member' }),
       }),
+    ]);
+  });
+
+  it('names the Agent creator on the roster even without a Use row', async () => {
+    getResourceMetaMock.mockResolvedValue({
+      userId: 'creator',
+      visibility: 'public',
+      workspaceId: 'ws_1',
+    } as any);
+    collaboratorModelMock.listCollaborators.mockResolvedValue([
+      { accessLevel: 'use', userId: 'active' },
+    ]);
+    const db = dbWithResults(
+      [{ userId: 'active' }, { userId: 'creator' }],
+      [
+        { id: 'active', fullName: 'Active member' },
+        { id: 'creator', fullName: 'The creator' },
+      ],
+    );
+
+    const result = await caller(db).listCollaborators({
+      resourceId: 'agent-1',
+      resourceType: 'agent',
+    });
+
+    expect(result.map((row) => [row.userId, row.isCreator])).toEqual([
+      ['creator', true],
+      ['active', false],
+    ]);
+  });
+
+  it('refuses to remove the Agent creator from the roster', async () => {
+    getResourceMetaMock.mockResolvedValue({
+      userId: 'creator',
+      visibility: 'public',
+      workspaceId: 'ws_1',
+    } as any);
+
+    await expect(
+      caller().removeCollaborator({
+        resourceId: 'agent-1',
+        resourceType: 'agent',
+        userId: 'creator',
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(collaboratorModelMock.removeCollaborators).not.toHaveBeenCalled();
+  });
+
+  it('removes the Use row of the member who provisioned a shared builtin', async () => {
+    getResourceMetaMock.mockResolvedValue({
+      slug: 'inbox',
+      userId: 'creator',
+      virtual: true,
+      visibility: 'public',
+      workspaceId: 'ws_1',
+    } as any);
+
+    await caller().removeCollaborator({
+      resourceId: 'builtin-1',
+      resourceType: 'agent',
+      userId: 'creator',
+    });
+    expect(collaboratorModelMock.removeCollaborators).toHaveBeenCalledWith('agent', 'builtin-1', [
+      'creator',
     ]);
   });
 

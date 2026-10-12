@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGroupMemberAddition } from './useGroupMemberAddition';
 
 const fetchState = vi.hoisted(() => ({ error: undefined as unknown, mutate: vi.fn() }));
+vi.mock('@/features/HomeSidebar/Body/Agent/List/useAgentList', () => ({
+  useKeepSidebarListed: () => (items: unknown[]) => items,
+}));
 vi.mock('swr', () => ({ default: () => ({ data: [], isLoading: false, ...fetchState }) }));
 vi.mock('@/services/agent', () => ({ agentService: { queryAgents: vi.fn() } }));
 

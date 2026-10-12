@@ -119,6 +119,26 @@ describe('resolveAgentAvailability', () => {
     ).toBe(true);
   });
 
+  // While the product runs agents through ACP only, a working built-in agent
+  // must not release the first-login gate: nothing the user is offered can run.
+  it('ignores a persisted Prime agent while the built-in harness is withheld', () => {
+    const connectedTypes = collectConnectedHarnessTypes([{ heterogeneousType: 'orvilo' }]);
+
+    expect(
+      resolveAgentAvailability({ bindings: [binding({})], builtinOffered: false, connectedTypes }),
+    ).toMatchObject({ builtinUsable: false, usable: false });
+    expect(
+      resolveAgentAvailability({
+        bindings: [binding({})],
+        builtinOffered: false,
+        connectedTypes: collectConnectedHarnessTypes([
+          { heterogeneousType: 'orvilo' },
+          { heterogeneousType: 'codex' },
+        ]),
+      }).usable,
+    ).toBe(true);
+  });
+
   it('does not treat an unstamped sidebar row as configured Prime when a route exists', () => {
     expect(
       resolveAgentAvailability({

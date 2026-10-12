@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { taskLabelBindings, taskLabels, users, workspaceMembers, workspaces } from '../../schemas';
@@ -132,6 +132,58 @@ describe('TaskLabelModel', () => {
       // Second unassign of the same pair must not fail or touch the survivor.
       const again = await workspaceModel.unassign(task.id, drop.id);
       expect(again.map((label) => label.id)).toEqual([keep.id]);
+    });
+
+    it('records a label being added and removed in the Issue feed, once per real change', async () => {
+      const task = await createTask(userId, workspaceId);
+      const label = await workspaceModel.create({ name: 'bug' });
+      const actor = { userId };
+
+      await workspaceModel.assign(task.id, label.id, actor);
+      await workspaceModel.assign(task.id, label.id, actor);
+      await workspaceModel.unassign(task.id, label.id, actor);
+      await workspaceModel.unassign(task.id, label.id, actor);
+
+      const activities = await new TaskModel(serverDB, userId, workspaceId).getActivities(task.id);
+      expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
+        ['label_added', userId, { actorKind: 'user', toId: label.id, toLabel: 'bug' }],
+        ['label_removed', userId, { actorKind: 'user', toId: label.id, toLabel: 'bug' }],
+      ]);
+    });
+
+    it('rolls the label change back when its feed row cannot be written', async () => {
+      const task = await createTask(userId, workspaceId);
+      const kept = await workspaceModel.create({ name: 'kept' });
+      const label = await workspaceModel.create({ name: 'bug' });
+      await workspaceModel.assign(task.id, kept.id, { userId });
+      const addActivity = vi
+        .spyOn(TaskModel.prototype, 'addActivity')
+        .mockRejectedValue(new Error('feed write failed'));
+
+      try {
+        await expect(workspaceModel.assign(task.id, label.id, { userId })).rejects.toThrow(
+          'feed write failed',
+        );
+        await expect(workspaceModel.unassign(task.id, kept.id, { userId })).rejects.toThrow(
+          'feed write failed',
+        );
+      } finally {
+        addActivity.mockRestore();
+      }
+
+      // Neither half-applied: the new label is not on the Issue, the old one still is.
+      expect((await workspaceModel.listForTask(task.id)).map((row) => row.id)).toEqual([kept.id]);
+    });
+
+    it('writes no feed row for a label set without an actor', async () => {
+      const task = await createTask(userId, workspaceId);
+      const label = await workspaceModel.create({ name: 'at-creation' });
+
+      await workspaceModel.assign(task.id, label.id);
+
+      expect(
+        await new TaskModel(serverDB, userId, workspaceId).getActivities(task.id),
+      ).toHaveLength(0);
     });
 
     it('rejects a label that belongs to another scope', async () => {

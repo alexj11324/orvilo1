@@ -32,7 +32,7 @@ export const SidebarHeaderSelectPopover = memo<SidebarHeaderSelectPopoverProps>(
         />
         <PopoverContent
           align="start"
-          className="max-h-[min(420px,70vh)] overflow-hidden p-0"
+          className="[max-height:min(calc(var(--spacing)*105),70vh)] overflow-hidden p-0"
           side="bottom"
           style={{ width }}
         >

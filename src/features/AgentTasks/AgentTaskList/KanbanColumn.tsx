@@ -257,7 +257,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             {onHide && (
               <span className="inline-flex flex-none pointer-coarse:p-1.5">
                 <ActionIcon
-                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
                   icon={ChevronLeft}
                   size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('taskList.kanban.hideColumn')}
@@ -268,7 +268,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             {onCreate && (
               <span className="inline-flex flex-none pointer-coarse:p-1.5">
                 <ActionIcon
-                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
                   icon={Plus}
                   size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('taskList.kanban.addTask')}

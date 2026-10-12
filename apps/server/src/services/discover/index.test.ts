@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AssistantStore } from '@/server/modules/AssistantStore';
 import { PluginStore } from '@/server/modules/PluginStore';
@@ -154,7 +154,12 @@ describe('DiscoverService', () => {
   let mockPluginStore: any;
   let mockMarket: any;
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
+    vi.stubEnv('MARKET_BASE_URL', 'https://market.test');
     vi.clearAllMocks();
 
     // Setup AssistantStore mock

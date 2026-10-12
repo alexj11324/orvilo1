@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { ClarificationAnswers } from './taskIntent';
 
 const styles = {
-  body: 'overflow-y-auto max-h-[min(420px,42dvh)] pbs-3 pbe-4 px-4 text-sm leading-5.5',
+  body: 'overflow-y-auto [max-height:min(calc(var(--spacing)*105),42dvh)] pbs-3 pbe-4 px-4 text-sm leading-5.5',
   footer: 'py-2 ps-2 pe-4 border-bs border-divider',
   head: 'pbs-3 pbe-0 px-4',
   customIndex:

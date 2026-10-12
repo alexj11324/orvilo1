@@ -41,14 +41,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 const styles = {
   collectionBody: 'w-full p-4',
   columnHeader: 'sticky inset-bs-0 z-1 bg-background',
-  documentBody: 'mx-auto w-[min(960px,100%)] p-4',
+  documentBody: 'mx-auto [width:min(calc(var(--spacing)*240),100%)] p-4',
   reviewFooter: 'flex-none border-bs border-divider px-4 py-2',
   reviewNav: 'w-70 flex-none overflow-y-auto border-e border-divider',
   root: '@container/work-surface flex h-full min-h-0 min-w-0 flex-1 flex-col',
   scrollHost: 'min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]',
   split: 'flex min-h-0 min-w-0 flex-1',
   splitDetail: 'min-w-0 flex-1 overflow-y-auto',
-  splitList: 'w-90 max-w-[45%] flex-none overflow-y-auto border-e border-divider',
+  splitList: 'w-90 max-w-9/20 flex-none overflow-y-auto border-e border-divider',
   splitListSolo: 'min-w-0 flex-1 overflow-y-auto',
   toolbar: 'flex min-w-0 flex-none items-center gap-2 px-4 py-2',
   toolbarAside:

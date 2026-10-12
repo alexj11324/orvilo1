@@ -104,7 +104,9 @@ describe('canPerformResourceAction', () => {
     },
   );
 
-  it('allows the creator to cancel and restore their own explicit Use grant', async () => {
+  // The creator owns the Agent: running it never depends on a roster row, so
+  // an Agent created before rosters existed, imported or seeded still runs.
+  it('lets the creator use their own Agent with or without a Use row', async () => {
     permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
     const params = {
       action: 'use' as const,
@@ -115,10 +117,67 @@ describe('canPerformResourceAction', () => {
       userId: 'creator',
       workspaceId: 'ws-1',
     };
-    await expect(canPerformResourceAction(params)).resolves.toBe(false);
+    await expect(canPerformResourceAction(params)).resolves.toBe(true);
     grantedLevelMock.mockResolvedValue('use');
     await expect(canPerformResourceAction(params)).resolves.toBe(true);
     grantedLevelMock.mockResolvedValue(null);
+    await expect(canPerformResourceAction(params)).resolves.toBe(true);
+  });
+
+  // A shared builtin's row is created by whoever reaches the feature first, so
+  // its `userId` is an accident of timing rather than authorship.
+  it('does not treat the member who provisioned a shared builtin as its creator', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+    const params = {
+      action: 'use' as const,
+      db,
+      meta: { ...meta, slug: 'inbox', virtual: true },
+      resourceId: 'builtin-1',
+      resourceType: 'agent' as const,
+      userId: 'creator',
+      workspaceId: 'ws-1',
+    };
+    await expect(canPerformResourceAction(params)).resolves.toBe(false);
+    grantedLevelMock.mockResolvedValue('use');
+    await expect(canPerformResourceAction(params)).resolves.toBe(true);
+  });
+
+  it('still needs a Use row from everyone but the creator', async () => {
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+    const params = {
+      action: 'use' as const,
+      db,
+      meta,
+      resourceId: 'agent-1',
+      resourceType: 'agent' as const,
+      userId: 'member',
+      workspaceId: 'ws-1',
+    };
+    await expect(canPerformResourceAction(params)).resolves.toBe(false);
+    grantedLevelMock.mockResolvedValue('use');
+    await expect(canPerformResourceAction(params)).resolves.toBe(true);
+  });
+
+  it('holds the creator to the workspace ceilings like anyone else', async () => {
+    const params = {
+      action: 'use' as const,
+      db,
+      meta,
+      resourceId: 'agent-1',
+      resourceType: 'agent' as const,
+      userId: 'creator',
+      workspaceId: 'ws-1',
+    };
+    // A creator demoted to Viewer.
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+    activeWorkspaceRoleMock.mockResolvedValue('viewer');
+    await expect(canPerformResourceAction(params)).resolves.toBe(false);
+    // A creator who was suspended or removed has no active role.
+    activeWorkspaceRoleMock.mockResolvedValue(null);
+    await expect(canPerformResourceAction(params)).resolves.toBe(false);
+    // A writable creator whose role lacks the invoke capability.
+    activeWorkspaceRoleMock.mockResolvedValue('member');
+    permissionMatchesMock.mockResolvedValue({ hasAllScope: false, hasOwnerScope: false });
     await expect(canPerformResourceAction(params)).resolves.toBe(false);
   });
 

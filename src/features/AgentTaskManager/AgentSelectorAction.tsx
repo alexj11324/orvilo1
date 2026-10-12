@@ -9,6 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { type SidebarAgentItem } from '@/database/repositories/home';
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import AgentItem from '@/features/PageEditor/Copilot/AgentSelector/AgentItem';
@@ -48,17 +50,21 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
   const taskAgentData = useAgentStore((s) => s.agentMap[taskAgentId || '']);
 
   useFetchAgentList();
+  const keepListed = useKeepSidebarListed();
+  const builtinOffered = useBuiltinHarnessOffered();
 
   // Workspace bucket: pinned + grouped + ungrouped. In personal mode this is the entire
   // list (private buckets are empty). The builtin task agent is shared content, so it
   // is injected at the top of this bucket when missing — keeping the prior behavior.
   const workspaceAgents = useMemo<SidebarAgentItem[]>(() => {
     const groupedItems = agentGroups.flatMap((group) => group.items);
-    const merged = [...pinnedAgents, ...groupedItems, ...ungroupedAgents].filter(
-      (agent) => agent.type === 'agent',
+    const merged = keepListed(
+      [...pinnedAgents, ...groupedItems, ...ungroupedAgents].filter(
+        (agent) => agent.type === 'agent',
+      ),
     );
 
-    if (taskAgentId && !merged.some((agent) => agent.id === taskAgentId)) {
+    if (builtinOffered && taskAgentId && !merged.some((agent) => agent.id === taskAgentId)) {
       return [
         {
           avatar: taskAgentData?.avatar || null,
@@ -74,14 +80,25 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
     }
 
     return merged;
-  }, [pinnedAgents, agentGroups, ungroupedAgents, taskAgentId, taskAgentData, t]);
+  }, [
+    pinnedAgents,
+    agentGroups,
+    ungroupedAgents,
+    taskAgentId,
+    taskAgentData,
+    t,
+    keepListed,
+    builtinOffered,
+  ]);
 
   const privateAgents = useMemo<SidebarAgentItem[]>(() => {
     const groupedItems = privateAgentGroups.flatMap((group) => group.items);
-    return [...privatePinnedAgents, ...groupedItems, ...privateUngroupedAgents].filter(
-      (agent) => agent.type === 'agent',
+    return keepListed(
+      [...privatePinnedAgents, ...groupedItems, ...privateUngroupedAgents].filter(
+        (agent) => agent.type === 'agent',
+      ),
     );
-  }, [privateAgentGroups, privatePinnedAgents, privateUngroupedAgents]);
+  }, [privateAgentGroups, privatePinnedAgents, privateUngroupedAgents, keepListed]);
 
   const activeAgent = useMemo(
     () => [...privateAgents, ...workspaceAgents].find((agent) => agent.id === agentId),

@@ -4,13 +4,13 @@ import {
   EXPERTISE_DOMAIN_DRAFT_JSON_SCHEMA,
   EXPERTISE_DOMAIN_DRAFT_PROMPT_VERSION,
 } from '@orvilo/prompts';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { ExpertiseModel } from '@/database/models/expertise';
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
-
-import { resolveExpertiseModelConfig } from './modelConfig';
+import { resolveLightweightJudgment } from '@/server/services/systemAgent/lightweightJudgment';
 
 const LayerSchema = z.object({
   description: z.string().nullable(),
@@ -86,12 +86,15 @@ export class ExpertiseDomainService {
 
   /** Turns one natural-language brief into an editable domain draft; nothing is persisted. */
   draftFromBrief = async (input: DraftFromBriefInput) => {
-    const modelConfig = await resolveExpertiseModelConfig(
+    const modelConfig = await resolveLightweightJudgment(
       this.db,
       this.userId,
+      'expertise',
       input.agentId,
       this.workspaceId,
     );
+    if (!modelConfig)
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'EXPERTISE_UNAVAILABLE' });
 
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     return DomainDraftSchema.parse(
@@ -104,7 +107,7 @@ export class ExpertiseDomainService {
         {
           judgment: {
             // The domain judgment binds to the agent the domain belongs to.
-            binding: { agentId: input.agentId },
+            binding: modelConfig.binding,
             purpose: 'expertise.domainDraft',
           },
           kind: 'judgment',

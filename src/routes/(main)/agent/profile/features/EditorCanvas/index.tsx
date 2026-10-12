@@ -443,7 +443,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
                   active={activeEditorMode === 'visual'}
                   aria-label={t('settingAgent.prompt.mode.visual')}
                   aria-pressed={activeEditorMode === 'visual'}
-                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
                   icon={LetterTextIcon}
                   size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('settingAgent.prompt.mode.visual')}
@@ -455,7 +455,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
                   active={activeEditorMode === 'source'}
                   aria-label={t('settingAgent.prompt.mode.source')}
                   aria-pressed={activeEditorMode === 'source'}
-                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
                   icon={CodeXmlIcon}
                   size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('settingAgent.prompt.mode.source')}

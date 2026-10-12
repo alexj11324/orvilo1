@@ -1,7 +1,7 @@
 'use client';
 
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
-import { SOCIAL_URL } from '@orvilo/business-const';
+import { BRANDING_URL, SOCIAL_URL } from '@orvilo/business-const';
 import {
   Book,
   CircleHelp,
@@ -18,7 +18,7 @@ import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorks
 import ActionIcon from '@/components/ActionIcon';
 import { openChangelogModal } from '@/components/ChangelogModal';
 import { openFeedbackModal } from '@/components/FeedbackModal';
-import { DOCUMENTS_REFER_URL, GITHUB } from '@/const/url';
+import { GITHUB } from '@/const/url';
 import Billboard from '@/features/Billboard';
 import { useBillboardMenuItems } from '@/features/Billboard/MenuItems';
 import SidebarDropdownMenu, {
@@ -127,15 +127,21 @@ const Footer = memo(() => {
             },
           ]
         : []),
-      {
-        icon: <Book size={14} />,
-        key: 'docs',
-        label: (
-          <a href={DOCUMENTS_REFER_URL} rel="noopener noreferrer" target="_blank">
-            {t('userPanel.docs')}
-          </a>
-        ),
-      },
+      // Same rule as the Discord row below: a deployment that publishes no
+      // documentation site has no docs entry to offer.
+      ...(BRANDING_URL.help
+        ? [
+            {
+              icon: <Book size={14} />,
+              key: 'docs',
+              label: (
+                <a href={BRANDING_URL.help} rel="noopener noreferrer" target="_blank">
+                  {t('userPanel.docs')}
+                </a>
+              ),
+            },
+          ]
+        : []),
       {
         icon: <Feather size={14} />,
         key: 'feedback',
@@ -163,12 +169,16 @@ const Footer = memo(() => {
       {
         type: 'divider',
       },
-      {
-        icon: <FileClockIcon size={14} />,
-        key: 'changelog',
-        label: t('changelog'),
-        onClick: handleOpenChangelogModal,
-      },
+      ...(footer.showChangelog
+        ? [
+            {
+              icon: <FileClockIcon size={14} />,
+              key: 'changelog',
+              label: t('changelog'),
+              onClick: handleOpenChangelogModal,
+            },
+          ]
+        : []),
       ...(footer.layout === 'compact'
         ? [
             {
@@ -207,6 +217,7 @@ const Footer = memo(() => {
     footer.showSettingsEntry,
     footer.layout,
     footer.hideGitHub,
+    footer.showChangelog,
     handleOpenChangelogModal,
     handleOpenFeedbackModal,
     isDevMode,

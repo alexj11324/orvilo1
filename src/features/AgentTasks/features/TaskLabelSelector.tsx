@@ -33,6 +33,8 @@ interface TaskLabelSelectorProps {
   children: ReactNode;
   /** Render the trigger as a real Button (the Issue rail's value cell). */
   control?: PickerControl;
+  /** Open the picker as soon as it mounts ("+ Add property" → Labels). */
+  defaultOpen?: boolean;
   disabled?: boolean;
   /** Identifier or id — the label model resolves either under the caller's scope. */
   taskIdentifier: string;
@@ -60,7 +62,7 @@ const isConflictError = (error: unknown): boolean =>
  * multi-select — the popover stays open so several labels can flip in one go.
  */
 const TaskLabelSelector = memo<TaskLabelSelectorProps>(
-  ({ assignedLabels, children, control, disabled, taskIdentifier }) => {
+  ({ assignedLabels, children, control, defaultOpen, disabled, taskIdentifier }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
     const [search, setSearch] = useState('');
@@ -214,7 +216,7 @@ const TaskLabelSelector = memo<TaskLabelSelectorProps>(
       );
 
     return (
-      <Popover>
+      <Popover defaultOpen={defaultOpen}>
         <PopoverTrigger
           {...pickerTriggerRender(children, control, undefined, t('taskDetail.labels.title'))}
         />

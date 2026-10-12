@@ -330,7 +330,8 @@ describe('account menu inside the workspace switcher', () => {
     expect(workspace.navigate).toHaveBeenCalledWith('/settings/profile', { escape: true });
     expect(screen.getByRole('radiogroup', { name: 'settingCommon.themeMode.title' })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: /auth:signout/ })).toBeTruthy();
-    expect(screen.getByText('userPanel.docs')).toBeTruthy();
+    // No documentation site is configured in this build, so no docs entry.
+    expect(screen.queryByText('userPanel.docs')).toBeNull();
   });
   it('offers sign-out in the footer only where the switcher header is hidden', () => {
     route.key = 'settings';

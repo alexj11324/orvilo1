@@ -73,6 +73,31 @@ describe('ProjectModel milestone progress', () => {
     ]);
   });
 
+  it('records a milestone being set and cleared in the Issue feed', async () => {
+    const { milestoneId, project } = await createProjectWithMilestone(model);
+    const tasks = new TaskModel(serverDB, userId);
+    const task = await tasks.create({ instruction: 'Ship the thing', projectId: project.id });
+
+    await model.setTaskMilestone({ milestoneId, projectId: project.id, taskId: task.id });
+    // Saving the same milestone again says nothing.
+    await model.setTaskMilestone({ milestoneId, projectId: project.id, taskId: task.id });
+    await model.setTaskMilestone({ milestoneId: null, projectId: project.id, taskId: task.id });
+
+    const activities = await tasks.getActivities(task.id);
+    expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
+      [
+        'milestone',
+        userId,
+        { actorKind: 'user', fromId: null, fromLabel: null, toId: milestoneId, toLabel: 'M1' },
+      ],
+      [
+        'milestone',
+        userId,
+        { actorKind: 'user', fromId: milestoneId, fromLabel: 'M1', toId: null, toLabel: null },
+      ],
+    ]);
+  });
+
   it('reads an honest zero, then the percentage the linked work actually earns', async () => {
     const { milestoneId, project } = await createProjectWithMilestone(model);
     const tasks = new TaskModel(serverDB, userId);

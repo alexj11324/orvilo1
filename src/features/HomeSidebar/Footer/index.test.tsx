@@ -28,8 +28,11 @@ interface RenderFooterOptions {
   desktop?: boolean;
   /** `undefined` models a deployment that runs no community server. */
   discordUrl?: string;
+  /** `undefined` models a deployment that publishes no documentation site. */
+  docsUrl?: string;
   hideGitHub?: boolean;
   homeSidebar?: boolean;
+  showChangelog?: boolean;
 }
 
 let mockUserState: Record<string, unknown>;
@@ -38,8 +41,10 @@ const renderFooter = async ({
   billboardItems = [],
   desktop = false,
   discordUrl,
+  docsUrl,
   homeSidebar = false,
   hideGitHub = true,
+  showChangelog = false,
 }: RenderFooterOptions = {}) => {
   vi.resetModules();
   analyticsTrack.mockReset();
@@ -66,10 +71,14 @@ const renderFooter = async ({
   // Discord entry's presence is decided by this test rather than by whichever
   // URL the current deployment happens to configure.
   vi.doMock('@orvilo/business-const', async (importOriginal) => {
-    const actual = (await importOriginal()) as { SOCIAL_URL: Record<string, string | undefined> };
+    const actual = (await importOriginal()) as {
+      BRANDING_URL: Record<string, string | undefined>;
+      SOCIAL_URL: Record<string, string | undefined>;
+    };
 
     return {
       ...actual,
+      BRANDING_URL: { ...actual.BRANDING_URL, help: docsUrl },
       SOCIAL_URL: { ...actual.SOCIAL_URL, discord: discordUrl },
     };
   });
@@ -121,6 +130,7 @@ const renderFooter = async ({
       footer: {
         hideGitHub,
         layout: 'compact',
+        showChangelog,
         showEvalEntry: false,
         showSettingsEntry: true,
       },
@@ -207,8 +217,8 @@ describe('Footer help menu tracking', () => {
       ([event]) => event?.name === 'home_footer_menu_opened',
     );
     expect(openedCall).toBeTruthy();
-    // `docs` is an unconditional own item, so it stands in for the set.
-    expect((openedCall![0].properties.keys as string).split(',')).toContain('docs');
+    // `feedback` is an unconditional own item, so it stands in for the set.
+    expect((openedCall![0].properties.keys as string).split(',')).toContain('feedback');
   }, 20000);
 
   it('tracks a unified click event when a footer entry is clicked', async () => {
@@ -244,7 +254,11 @@ describe('Footer help menu tracking', () => {
   // it (which separates the help links from the app entries) down with it.
   it('drops the community entry when no server is configured', async () => {
     const user = userEvent.setup();
-    await renderFooter({ discordUrl: undefined });
+    await renderFooter({
+      discordUrl: undefined,
+      docsUrl: 'https://docs.example.com',
+      showChangelog: true,
+    });
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
 
@@ -263,6 +277,31 @@ describe('Footer help menu tracking', () => {
     expect(await screen.findByRole('link', { name: 'Discord' })).toHaveAttribute(
       'href',
       'https://discord.gg/orvilo',
+    );
+  }, 20000);
+
+  // Regression: the docs row linked to a hosted documentation site whether or
+  // not the deployment had one, and the changelog row ignored its own flag.
+  it('drops the docs and changelog entries when the deployment offers neither', async () => {
+    const user = userEvent.setup();
+    await renderFooter();
+
+    await user.click(screen.getByRole('button', { name: 'Help' }));
+
+    expect(await screen.findByText('Feedback')).toBeInTheDocument();
+    expect(screen.queryByText('Docs')).not.toBeInTheDocument();
+    expect(screen.queryByText('Changelog')).not.toBeInTheDocument();
+  }, 20000);
+
+  it('links the docs entry to the configured documentation site', async () => {
+    const user = userEvent.setup();
+    await renderFooter({ docsUrl: 'https://docs.example.com' });
+
+    await user.click(screen.getByRole('button', { name: 'Help' }));
+
+    expect(await screen.findByRole('link', { name: 'Docs' })).toHaveAttribute(
+      'href',
+      'https://docs.example.com',
     );
   }, 20000);
 
@@ -291,7 +330,7 @@ describe('Footer help menu tracking', () => {
     );
     const keys = (openedCall![0].properties.keys as string).split(',');
     // own items are tracked and reported as exposure...
-    expect(keys).toContain('docs');
+    expect(keys).toContain('feedback');
     // ...but billboard items (which emit their own billboard_* events) are not,
     // so their CTR denominator never gets an orphaned exposure.
     expect(keys).not.toContain('billboard-promo');

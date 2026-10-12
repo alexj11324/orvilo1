@@ -13,10 +13,10 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 
 import Breadcrumb from '../shared/Breadcrumb';
 import IssueContent from './IssueContent';
+import IssueHeaderRunControl from './IssueHeaderRunControl';
 import IssueSaveStatus from './IssueSaveStatus';
 import { taskDetailFullPageStyles } from './taskDetailFullPageStyles';
 import TaskDetailHeaderActions from './TaskDetailHeaderActions';
-import TaskDetailRunPauseAction from './TaskDetailRunPauseAction';
 import { TaskDetailScope } from './TaskDetailScope';
 import TopicChatDrawer from './TopicChatDrawer';
 import { useActiveTaskDetail } from './useActiveTaskDetail';
@@ -92,7 +92,7 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
           }
           right={
             <>
-              <TaskDetailRunPauseAction />
+              <IssueHeaderRunControl />
               {showTaskAgentPanelToggle ? (
                 <ToggleRightPanelButton
                   hideWhenExpanded

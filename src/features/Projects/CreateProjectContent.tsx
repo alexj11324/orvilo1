@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -135,7 +136,8 @@ const parseDependencyValue = (
 };
 
 const styles = {
-  shell: 'h-[min(832px,calc(100dvh_-_112px))] min-h-95 text-sm leading-5.5',
+  shell:
+    '[height:min(calc(var(--spacing)*208),calc(100dvh_-_var(--spacing)*28))] min-h-95 text-sm leading-5.5',
   header: 'pbs-5 pbe-3 px-6',
   body: 'overflow-y-auto flex-1 min-h-0 pbs-0 pbe-4 px-6',
   footer: 'm-0 pbs-3 pbe-5 px-5 border-bs border-divider',
@@ -369,7 +371,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
         <div className={cn('flex flex-col gap-3', styles.body)}>
           <EmojiPicker
             allowDelete
-            size={36}
+            fallback={<Skeleton className="size-9" />}
             title={t('create.icon')}
             value={form.avatar || '📦'}
             customRender={(avatar) => (

@@ -27,6 +27,7 @@ import {
 import { buildConnectAgentConfig, getConnectableProvider } from '@/features/ConnectAgent/providers';
 import { useAgentScan } from '@/features/ConnectAgent/useAgentScan';
 import { getDeviceLabel } from '@/features/DeviceManager/getDeviceLabel';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import {
   type FirstAgentProviderCheckpoint,
@@ -66,8 +67,13 @@ export const useAgentRuntimeForm = ({
   const bindings = useProviderBindingStore((s) => s.bindings).filter((binding) =>
     isBuiltinAgentUsable([binding]),
   );
-  const [choice, setChoice] = useState<AgentChoice>(
-    builtinOnly ? BUILTIN_AGENT_KEY : (initialType ?? BUILTIN_AGENT_KEY),
+  const builtinOffered = useBuiltinHarnessOffered();
+  // With the built-in harness withheld there is no choice that is valid before
+  // the scan answers, so the form starts empty and adopts the first installed
+  // CLI below.
+  const defaultChoice = builtinOffered ? BUILTIN_AGENT_KEY : undefined;
+  const [choice, setChoice] = useState<AgentChoice | undefined>(
+    builtinOnly ? BUILTIN_AGENT_KEY : (initialType ?? defaultChoice),
   );
   const [model, setModel] = useState(HETEROGENEOUS_AGENT_DEFAULT_SELECTION as string);
   const [effort, setEffort] = useState<HeterogeneousReasoningEffort>(
@@ -79,8 +85,16 @@ export const useAgentRuntimeForm = ({
   const [apiModel, setApiModel] = useState('');
   const providerCheckpoint = useRef<FirstAgentProviderCheckpoint>({});
   const [scannedHostId, setScannedHostId] = useState<string>();
-  const provider = choice === BUILTIN_AGENT_KEY ? undefined : getConnectableProvider(choice);
+  const provider =
+    !choice || choice === BUILTIN_AGENT_KEY ? undefined : getConnectableProvider(choice);
   const installed = installedProviders(state.agents);
+  // Adopt only a result that belongs to the selected host: right after a host
+  // switch the previous host's scan is still on screen.
+  const firstInstalledType =
+    scannedHostId === host.deviceId && state.status === 'success' ? installed[0]?.type : undefined;
+  useEffect(() => {
+    if (!choice && firstInstalledType) setChoice(firstInstalledType);
+  }, [choice, firstInstalledType]);
   const selectedBindingId = bindingId ?? bindings[0]?.id ?? 'configure';
   const binding = bindings.find((item) => item.id === selectedBindingId);
   const modelOptions = useAgentModelOptions({
@@ -121,14 +135,17 @@ export const useAgentRuntimeForm = ({
     const valid = validEffortFor(provider?.type, model, effort);
     if (valid !== effort) setEffort(valid);
   }, [effort, model, provider?.type]);
-  const selectChoice = (value: AgentChoice) => {
+  const selectChoice = (value: AgentChoice | undefined) => {
     setChoice(value);
     setModel(HETEROGENEOUS_AGENT_DEFAULT_SELECTION);
     setEffort(HETEROGENEOUS_AGENT_DEFAULT_SELECTION);
   };
+  /** Back to the choice a fresh form starts with, e.g. after the host scope changes. */
+  const resetChoice = () => selectChoice(defaultChoice);
   const ready =
     !!host.deviceId &&
     !host.loading &&
+    !!choice &&
     (choice === BUILTIN_AGENT_KEY
       ? !providerFetch.isLoading &&
         !providerFetch.error &&
@@ -183,6 +200,7 @@ export const useAgentRuntimeForm = ({
     apiKey,
     apiModel,
     binding,
+    builtinOffered,
     builtinOnly,
     choice,
     efforts,
@@ -204,6 +222,7 @@ export const useAgentRuntimeForm = ({
     setEffort,
     setEndpoint,
     setModel,
+    resetChoice,
     selectChoice,
     state,
     effort,
@@ -231,7 +250,7 @@ export const RuntimeFields = ({
           <FieldLabel htmlFor={`${fieldId}-agent`}>{t('createAgent.step.agent')}</FieldLabel>
           <Select
             disabled={disabled}
-            value={choice}
+            value={choice ?? null}
             onValueChange={(value) => {
               if (value) form.selectChoice(value as AgentChoice);
             }}
@@ -240,12 +259,14 @@ export const RuntimeFields = ({
               <SelectValue>{() => agentLabel ?? t('createAgent.choose')}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={BUILTIN_AGENT_KEY}>Orvilo AI</SelectItem>
-              {!builtin && !form.installed.some((provider) => provider.type === choice) && (
-                <SelectItem disabled value={choice}>
-                  {form.provider?.title}
-                </SelectItem>
-              )}
+              {form.builtinOffered && <SelectItem value={BUILTIN_AGENT_KEY}>Orvilo AI</SelectItem>}
+              {choice &&
+                !builtin &&
+                !form.installed.some((provider) => provider.type === choice) && (
+                  <SelectItem disabled value={choice}>
+                    {form.provider?.title}
+                  </SelectItem>
+                )}
               {form.installed.map((provider) => (
                 <SelectItem key={provider.type} value={provider.type}>
                   {provider.title}

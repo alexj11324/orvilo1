@@ -43,7 +43,7 @@ const styles = {
   axisContent: 'relative min-w-full',
   axisScroll: 'min-w-0 flex-1 overflow-x-auto overscroll-contain',
   bar: 'absolute inset-bs-1/2 block h-2.5 -translate-y-1/2 overflow-hidden rounded-full',
-  barFill: 'block h-full rounded-[inherit]',
+  barFill: 'block h-full rounded-full',
   cellIcons: 'relative z-1 flex flex-none items-center gap-1.5 text-foreground-tertiary',
   controls: 'flex flex-none items-center gap-1.5',
   controlsOverlay:
@@ -63,7 +63,7 @@ const styles = {
   placeholderBar:
     'absolute inset-bs-1/2 flex min-h-6 -translate-y-1/2 items-center justify-center rounded-(--radius-chip) border border-dashed border-border text-xs leading-5 text-foreground-quaternary whitespace-nowrap',
   row: 'relative border-be border-divider hover:bg-fill-quaternary',
-  rowLink: 'absolute inset-0 rounded-[inherit] text-inherit',
+  rowLink: 'absolute inset-0 rounded-none text-inherit',
   timeline: 'relative flex min-w-0 items-start',
   todayColumn: 'pointer-events-none absolute inset-y-0 w-1 bg-primary opacity-8',
   todayLine: 'pointer-events-none absolute inset-y-0 w-px bg-primary',

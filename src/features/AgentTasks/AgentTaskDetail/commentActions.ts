@@ -34,3 +34,24 @@ export const commentAnchorId = (commentId: string) => `comment-${commentId}`;
 
 export const isCommentAnchorHash = (hash: string, commentId: string) =>
   hash === `#${commentAnchorId(commentId)}`;
+
+/** DOM id and URL fragment of a run card in the feed. */
+export const runAnchorId = (topicId: string) => `run-${topicId}`;
+
+/**
+ * A comment's two timestamps are written by separate clocks when it is posted
+ * and can differ by a few milliseconds, so only a later change counts as an
+ * edit. Nobody posts and finishes an edit inside this window.
+ */
+const COMMENT_EDIT_THRESHOLD_MS = 2000;
+
+/** Whether the comment was changed after it was posted. */
+export const isCommentEdited = (
+  comment: Pick<TaskDetailActivity, 'time' | 'updatedAt'>,
+): boolean => {
+  if (!comment.time || !comment.updatedAt) return false;
+  const created = Date.parse(comment.time);
+  const updated = Date.parse(comment.updatedAt);
+  if (Number.isNaN(created) || Number.isNaN(updated)) return false;
+  return updated - created > COMMENT_EDIT_THRESHOLD_MS;
+};

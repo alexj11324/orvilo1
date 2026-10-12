@@ -126,7 +126,7 @@ git checkout -b docs/update-api-guide
 ```bash
 pnpm lint:ts       # TypeScript/JavaScript
 pnpm lint:style    # CSS/样式
-bun run type-check # 类型检查
+cd apps/server && pnpm type-check # 类型检查，限定在单个包内（全仓检查仅在 CI 中运行）
 ```
 
 **4. 使用 gitmoji 提交**

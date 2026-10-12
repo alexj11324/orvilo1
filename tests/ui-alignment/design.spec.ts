@@ -230,7 +230,7 @@ for (const host of ['share', 'workbench']) {
       await expect(content).toHaveCSS('display', 'flex');
       await expect(content).toHaveCSS('gap', '16px');
       await expect(content).toHaveCSS('padding', '16px');
-      await expect(button).toHaveCSS('height', '32px');
+      await expect(button).toHaveCSS('height', '36px');
       await expect(button).toHaveCSS('border-radius', '8px');
       const colors = await button.evaluate((element) => {
         const sample = document.createElement('span');

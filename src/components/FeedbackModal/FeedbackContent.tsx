@@ -112,23 +112,25 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <p style={{ color: 'var(--colorTextSecondary)', fontSize: 14, margin: 0 }}>
-        <Trans
-          i18nKey="feedback.emailContact"
-          ns="common"
-          values={{ email: BRANDING_EMAIL.business }}
-          components={{
-            email: (
-              <a
-                href={`mailto:${BRANDING_EMAIL.business}`}
-                rel="noopener noreferrer"
-                style={{ color: 'inherit', textDecoration: 'underline' }}
-                target="_blank"
-              />
-            ),
-          }}
-        />
-      </p>
+      {BRANDING_EMAIL.business && (
+        <p style={{ color: 'var(--colorTextSecondary)', fontSize: 14, margin: 0 }}>
+          <Trans
+            i18nKey="feedback.emailContact"
+            ns="common"
+            values={{ email: BRANDING_EMAIL.business }}
+            components={{
+              email: (
+                <a
+                  href={`mailto:${BRANDING_EMAIL.business}`}
+                  rel="noopener noreferrer"
+                  style={{ color: 'inherit', textDecoration: 'underline' }}
+                  target="_blank"
+                />
+              ),
+            }}
+          />
+        </p>
+      )}
 
       <div className="flex flex-col gap-4">
         <Field data-invalid={!!errors.title || undefined}>

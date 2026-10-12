@@ -434,6 +434,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     setIsAnalyzing(true);
     try {
       const result = await taskService.analyzeIntent({
+        agentId: assigneeAgentId,
         context: assigneeMeta?.title ? `Assigned agent: ${assigneeMeta.title}` : undefined,
         instruction: draft.instruction,
       });
@@ -455,7 +456,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [assigneeMeta?.title, canCreateTask, readDraft, submitDraft]);
+  }, [assigneeAgentId, assigneeMeta?.title, canCreateTask, readDraft, submitDraft]);
 
   /**
    * The escape hatch, one click away in the submit dropdown: create the task
@@ -505,6 +506,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
       setIsSynthesizing(true);
       try {
         const written = await taskService.synthesizeInstruction({
+          agentId: assigneeAgentId,
           answers: pairs,
           context: assigneeMeta?.title ? `Assigned agent: ${assigneeMeta.title}` : undefined,
           instruction: draft.instruction,
@@ -539,7 +541,16 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
       instruction: confirmed.instruction,
       name: intentTitle.trim() || analysis.title,
     });
-  }, [analysis, assigneeMeta?.title, intentAnswers, intentTitle, readDraft, submitDraft, t]);
+  }, [
+    analysis,
+    assigneeAgentId,
+    assigneeMeta?.title,
+    intentAnswers,
+    intentTitle,
+    readDraft,
+    submitDraft,
+    t,
+  ]);
 
   const isReviewing = Boolean(analysis);
 

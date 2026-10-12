@@ -132,12 +132,11 @@ describe('settings useCategory', () => {
   it('never lists OAuth Apps, even while the retired Labs preference is still set', () => {
     // The console is retired, but `enableOAuthApps` survives in users'
     // persisted preferences. A stored `true` must not resurrect the row.
-    useUserStore.setState({
-      preference: {
-        ...initialUserStoreState.preference,
-        lab: { ...initialUserStoreState.preference.lab, enableOAuthApps: true },
-      },
-    });
+    const legacyPreference = {
+      ...initialUserStoreState.preference,
+      lab: { enableOAuthApps: true },
+    };
+    useUserStore.setState({ preference: legacyPreference });
 
     const { result } = renderHook(() => useCategory(), {
       wrapper: createWrapper(true),
@@ -277,4 +276,8 @@ describe('settings useCategory', () => {
     expect(result.current.some((group) => group.key === SettingsGroupKey.Workspace)).toBe(false);
     expect(result.current.flatMap((group) => group.items).every((item) => !item.href)).toBe(true);
   });
+});
+
+it('does not offer builtin memory settings while the harness is hidden', () => {
+  expect(getItemKeys()).not.toContain(SettingsTabs.Memory);
 });

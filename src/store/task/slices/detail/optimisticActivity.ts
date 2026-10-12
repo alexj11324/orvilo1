@@ -166,6 +166,42 @@ export const buildOptimisticPropertyActivity = ({
   };
 };
 
+/** The slice of a task the property rows are diffed against. */
+export interface OptimisticPropertySnapshot {
+  dueDate?: string | null;
+  editorData?: unknown;
+  instruction?: string | null;
+  name?: string | null;
+  priority?: number | null;
+}
+
+/**
+ * Which property rows an edit will produce, by the same rule the server
+ * applies: a field is logged only when its value actually changes, so a
+ * re-saved title or an autosave with nothing new stays silent here too.
+ * `undefined` in `next` means the field was not part of the edit.
+ */
+export const buildOptimisticPropertyChanges = (
+  current: OptimisticPropertySnapshot,
+  next: OptimisticPropertySnapshot,
+): NonNullable<TaskDetailActivity['propertyChange']>[] => {
+  const changes: NonNullable<TaskDetailActivity['propertyChange']>[] = [];
+  if (next.priority !== undefined && (next.priority ?? null) !== (current.priority ?? null)) {
+    changes.push({ field: 'priority', from: current.priority ?? null, to: next.priority ?? null });
+  }
+  if (next.name !== undefined && (next.name ?? null) !== (current.name ?? null)) {
+    changes.push({ field: 'title', from: current.name ?? null, to: next.name ?? null });
+  }
+  if (next.dueDate !== undefined && (next.dueDate ?? null) !== (current.dueDate ?? null)) {
+    changes.push({ field: 'dueDate', from: current.dueDate ?? null, to: next.dueDate ?? null });
+  }
+  const bodyChanged =
+    (next.instruction !== undefined && next.instruction !== current.instruction) ||
+    (next.editorData !== undefined && !sameValue(next.editorData, current.editorData));
+  if (bodyChanged) changes.push({ field: 'description' });
+  return changes;
+};
+
 /**
  * Mirror of the server's collapse window (`ACTIVITY_COLLAPSE_WINDOW_MS` in
  * the task service): how long a run of edits to one property by one person
@@ -178,14 +214,27 @@ const sameValue = (a: unknown, b: unknown): boolean =>
 
 const at = (time?: string): number => (time ? new Date(time).getTime() : 0);
 
+type PropertyChange = NonNullable<TaskDetailActivity['propertyChange']>;
+
+/** The before/after pair of a change that has one; an event or a session has none. */
+const ends = (change: PropertyChange): { from: unknown; to: unknown } | undefined =>
+  'from' in change && 'to' in change ? { from: change.from, to: change.to } : undefined;
+
+/** Mirrors the server's `session` kinds: saves in one sitting are one entry. */
+const isSessionChange = (change: PropertyChange): boolean =>
+  change.field === 'description' || change.field === 'verify';
+
 /**
  * Append a synthesized property row the way the server will show it once it
  * reads back: a second hop on the same field by the same person, straight
  * after the previous synthesized one and inside the collapse window, folds
  * into that row (start of the first, end of the latest) — and vanishes when
  * the value is back where it started. Without this, a path that never
- * refetches (automation toggles) would show every hop until an unrelated
- * refresh made the server's collapsed view replace them.
+ * refetches (automation toggles, description autosaves) would show every hop
+ * until an unrelated refresh made the server's collapsed view replace them.
+ *
+ * A session kind (the description) has no values to chain: a later save
+ * simply takes the earlier row's place. An event kind never folds.
  */
 export const appendOptimisticPropertyActivity = (
   activities: TaskDetailActivity[],
@@ -196,25 +245,26 @@ export const appendOptimisticPropertyActivity = (
   if (!row || !next) return activities;
   const last = activities.at(-1);
   const prev = last?.propertyChange;
-  const mergeable =
+  const sameRun =
     !!last &&
     !!prev &&
-    isOptimisticActivityId(last.id) &&
     prev.field === next.field &&
     last.author?.id === row.author?.id &&
-    at(row.time) - at(last.time) <= windowMs &&
-    sameValue(prev.to, next.from);
-  if (!mergeable) return [...activities, row];
+    at(row.time) - at(last.time) <= windowMs;
+  if (!sameRun || !prev) return [...activities, row];
 
   const head = activities.slice(0, -1);
-  if (sameValue(prev.from, next.to)) return head;
-  return [
-    ...head,
-    {
-      ...row,
-      propertyChange: { ...next, from: prev.from } as NonNullable<
-        TaskDetailActivity['propertyChange']
-      >,
-    },
-  ];
+  // A session row carries no values, so taking the place of the previous one
+  // loses nothing — even a persisted one: the server will fold this save into
+  // the same entry anyway.
+  if (isSessionChange(next)) return [...head, row];
+  if (!isOptimisticActivityId(last?.id)) return [...activities, row];
+
+  const prevEnds = ends(prev);
+  const nextEnds = ends(next);
+  if (!prevEnds || !nextEnds || !sameValue(prevEnds.to, nextEnds.from)) {
+    return [...activities, row];
+  }
+  if (sameValue(prevEnds.from, nextEnds.to)) return head;
+  return [...head, { ...row, propertyChange: { ...next, from: prevEnds.from } as PropertyChange }];
 };

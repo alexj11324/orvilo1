@@ -161,7 +161,7 @@ const CreateAgentPanel = ({
                     setSelectedVisibility(value);
                     setNameTouched(true);
                     form.host.select(undefined);
-                    form.selectChoice(BUILTIN_AGENT_KEY);
+                    form.resetChoice();
                   }}
                 >
                   <SelectTrigger

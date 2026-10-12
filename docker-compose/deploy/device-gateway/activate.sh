@@ -21,7 +21,7 @@ python3 - "$bundle_dir/build-receipt.json" "$commit" "$run_id" "$run_attempt" <<
 import json, sys
 receipt = json.load(open(sys.argv[1]))
 assert [receipt['commit_sha'], receipt['run_id'], receipt['run_attempt']] == sys.argv[2:]
-assert receipt['source_sha'] == 'fed50da75b8916566f87e32fafd852a8a34e336b'
+assert receipt['source_sha'] == '81f26f8af942484da644921eae08371f834bfd72'
 assert receipt['go_version'] == 'go1.26.8' and receipt['target'] == 'linux/arm64'
 PY
 

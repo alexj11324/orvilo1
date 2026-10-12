@@ -124,6 +124,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres \
   NEXT_PUBLIC_AUTH_EMAIL_VERIFICATION=0 \
   S3_ACCESS_KEY_ID=e2e-mock-access-key \
   S3_SECRET_ACCESS_KEY=e2e-mock-secret-key \
+  FEATURE_FLAGS=+provider_settings \
   S3_BUCKET=e2e-mock-bucket \
   S3_ENDPOINT=https://e2e-mock-s3.localhost \
   ENABLE_AGENT_GATEWAY=1 \
@@ -206,7 +207,7 @@ docker stop postgres-e2e && docker rm postgres-e2e
 lsof -ti:3006 | xargs kill -9
 ```
 
-### BeforeAll hook errored: net::ERR\_CONNECTION\_REFUSED
+### BeforeAll hook errored: net::ERR_CONNECTION_REFUSED
 
 **原因**: 服务器未启动或未就绪
 

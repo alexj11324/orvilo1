@@ -17,7 +17,7 @@ export const seedPrimeRuntime = async (
   { userId, workspaceId }: { userId: string; workspaceId?: string },
 ) => {
   const credentialId = `cred_${userId}_${workspaceId ?? 'personal'}`;
-  const deviceId = `creation-host-${workspaceId ?? userId}`;
+  const deviceId = `creation-host-${userId}`;
 
   await db
     .insert(credentials)

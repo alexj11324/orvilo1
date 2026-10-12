@@ -104,6 +104,12 @@ are not reported as passes. No repository timeout or application behavior was
 changed for this final test-only cleanup. The frontend build on `40b514d` passed
 in 25.90 seconds.
 
+The full CI Typecheck, both application shards and both server shards passed on
+`d5bd95c`. The remaining database-only cleanup updated private-visibility folder
+expectations, removed retired topic-model fields from expected rows, and gave
+each account's runtime seed its own device ID. Its 39 scoped tests passed. This
+changes test fixtures/assertions only, with no application behavior change.
+
 `runtime-evidence.json` contains only whitelisted fixture identifiers, saved
 runtime fields, operation outcomes and the named offline error. No login tokens,
 environment variables, gateway secrets or private signing keys are included.

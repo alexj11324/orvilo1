@@ -22,12 +22,28 @@ export interface AvatarProps {
   unoptimized?: boolean;
 }
 
+const DefaultBotAvatar = memo<{ loading?: boolean; size: number }>(({ loading, size }) => {
+  const dark = useIsDark();
+  // The canvas keeps its drawing layers on the DOM node; after a tab was
+  // hidden and shown again they come back empty and only the eyes are drawn.
+  const revealEpoch = useRevealEpoch();
+
+  return (
+    <BotAvatar
+      aria-hidden="true"
+      interactive={false}
+      key={revealEpoch}
+      shading="fabric"
+      size={size}
+      state={loading ? 'working' : 'default'}
+      theme={dark ? 'dark' : 'light'}
+      type="clover"
+    />
+  );
+});
+
 const Avatar = memo<AvatarProps>(
   ({ loading, avatar, unoptimized, onClick, size = 28, style, alt, assistantAvatar }) => {
-    const dark = useIsDark();
-    // The canvas keeps its drawing layers on the DOM node; after a tab was
-    // hidden and shown again they come back empty and only the eyes are drawn.
-    const revealEpoch = useRevealEpoch();
     const useBot = assistantAvatar && (!avatar.avatar || avatar.avatar === DEFAULT_INBOX_AVATAR);
     const displayName = agentDisplayName(avatar);
 
@@ -45,31 +61,16 @@ const Avatar = memo<AvatarProps>(
       <A
         alt={alt || displayName}
         animation={loading}
+        avatar={useBot ? <DefaultBotAvatar loading={loading} size={size} /> : avatar.avatar}
         background={useBot ? 'transparent' : avatar.backgroundColor}
         name={displayName}
         shape={'square'}
+        title={displayName}
+        unoptimized={unoptimized}
+        onClick={onClick}
         size={size}
         // The upstream canvas overscans its box for jumps and turns.
         style={useBot ? { ...style, overflow: 'visible' } : style}
-        title={displayName}
-        unoptimized={unoptimized}
-        avatar={
-          useBot ? (
-            <BotAvatar
-              aria-hidden="true"
-              interactive={false}
-              key={revealEpoch}
-              shading="fabric"
-              size={size}
-              state={loading ? 'working' : 'default'}
-              theme={dark ? 'dark' : 'light'}
-              type="clover"
-            />
-          ) : (
-            avatar.avatar
-          )
-        }
-        onClick={onClick}
       />
     );
   },

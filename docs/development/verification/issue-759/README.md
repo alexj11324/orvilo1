@@ -116,6 +116,15 @@ device-sharing controls. The affected settings/device/chat tests passed
 178 + 11 regressions, with clean lint. These mechanical styling integrations
 reuse the revision-labelled Electron behavior evidence above.
 
+CI's web E2E bootstrap was then updated for the same contract: drop the retired
+device-scope conflict clause, give parallel accounts distinct device IDs and
+owner-keyed mock presence, save models on directly seeded Agents, and select
+the configured private workspace Prime Agent as Orchestrator/default. The E2E
+unit suite passed 32 tests; real PostgreSQL smoke checks verified two accounts'
+device bindings and repeated seeding, and a live mock-gateway HTTP check
+verified per-owner presence isolation. This changes test setup only and reuses
+the real Electron acceptance evidence; the full web scenarios remain a CI gate.
+
 `runtime-evidence.json` contains only whitelisted fixture identifiers, saved
 runtime fields, operation outcomes and the named offline error. No login tokens,
 environment variables, gateway secrets or private signing keys are included.

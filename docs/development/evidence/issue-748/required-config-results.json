@@ -1,0 +1,35 @@
+{
+  "cases": [
+    {
+      "case": "creation missing boundDeviceId",
+      "status": 412,
+      "errorCode": "PRECONDITION_FAILED",
+      "message": "AGENT_HOST_REQUIRED"
+    },
+    {
+      "case": "save empty boundDeviceId",
+      "status": 412,
+      "errorCode": "PRECONDITION_FAILED",
+      "message": "AGENT_HOST_REQUIRED"
+    },
+    {
+      "case": "creation missing model",
+      "status": 412,
+      "errorCode": "PRECONDITION_FAILED",
+      "message": "AGENT_MODEL_REQUIRED"
+    },
+    {
+      "case": "save empty model",
+      "status": 412,
+      "errorCode": "PRECONDITION_FAILED",
+      "message": "AGENT_MODEL_REQUIRED"
+    }
+  ],
+  "duplicate": {
+    "status": 200,
+    "result": {
+      "agentId": "agt_QvYHszHCOOX3"
+    }
+  },
+  "sourceSha": "cb72d1326f3b8b93b13232cd20ffea5cb619d83d"
+}

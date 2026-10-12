@@ -119,6 +119,7 @@ export default {
   'gateway.workspaceStatusConnections_one': 'Workspace · {{count}} connection online',
   'gateway.workspaceStatusConnections_other': 'Workspace · {{count}} connections online',
   'gateway.workspaceStatusDisconnected': 'No workspace device connection is online',
+  'gateway.workspaceStatusLoading': 'Checking workspace devices…',
   'gateway.workspaceStatusUnavailable': 'Workspace device status is temporarily unavailable',
   'remoteServer.authError': 'Authorization failed: {{error}}',
   'remoteServer.authPending': 'Please complete the authorization in your browser',

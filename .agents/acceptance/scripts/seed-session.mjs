@@ -10,6 +10,9 @@
  * Usage:
  *   seed-session.mjs                       # print the session token on stdout
  *   seed-session.mjs --electron <cdpPort>  # also sign a running Electron instance in
+ *   seed-session.mjs --electron <cdpPort> --desktop-auth <file>
+ *       # and authorize its main process, which is what connects this machine as
+ *       # a device. Start Electron with ORVILO_DESKTOP_AUTH_URL_FILE=<file> first.
  *
  * Env:
  *   DATABASE_URL  (required)  Postgres the dev server uses
@@ -24,6 +27,7 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 import { seedClerkIdentity } from './clerk-stub.mjs';
+import { completeAuthorization, readAuthUrl } from './desktop-authorize.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -168,6 +172,39 @@ const signElectronIn = async ({ cdpPort, server, token, userId }) => {
   }
 };
 
+// The renderer's cookie does not sign the main process in: it holds its own
+// tokens, obtained by an authorization request only it can start.
+const authorizeMainProcess = async ({ cdpPort, server, token, urlFile }) => {
+  const page = await cdpPage(cdpPort);
+  try {
+    const config = { active: true, remoteServerUrl: server.origin, storageMode: 'selfHost' };
+    const started = await page.evaluate(
+      `window.electronAPI.invoke('auth.requestAuthorization', ${JSON.stringify(config)})`,
+    );
+    if (!started?.success)
+      throw new Error(`Electron could not start the authorization (${started?.error})`);
+    await completeAuthorization({ authUrl: await readAuthUrl(urlFile), server, token });
+
+    // Electron polls the handoff every few seconds, then exchanges the code.
+    const deadline = Date.now() + 60_000;
+    let error = 'timed out';
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const result = await page.evaluate(`window.electronAPI.invoke('gatewayConnection.connect')`);
+      if (result?.success) return;
+      error = result?.error ?? error;
+    }
+    throw new Error(`the Electron main process is not authorized (${error})`);
+  } finally {
+    page.close();
+  }
+};
+
+const flagValue = (name) => {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? undefined : (process.argv[index + 1] ?? '');
+};
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const electronFlag = process.argv.indexOf('--electron');
   const cdpPort = electronFlag === -1 ? undefined : Number(process.argv[electronFlag + 1]);
@@ -176,6 +213,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
     if (electronFlag !== -1 && !Number.isInteger(cdpPort))
       throw new Error('--electron needs a CDP port');
+    const urlFile = flagValue('--desktop-auth');
+    if (urlFile !== undefined && (!urlFile || cdpPort === undefined))
+      throw new Error('--desktop-auth needs a file path and --electron <cdpPort>');
     const server = localServer(process.env.SERVER_URL || 'http://localhost:3010');
     const { token, userId } = await createSeedSession({
       databaseUrl: process.env.DATABASE_URL,
@@ -186,6 +226,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     else {
       await signElectronIn({ cdpPort, server, token, userId });
       console.log(`signed in ${userId} on CDP ${cdpPort} against ${server.origin}`);
+      if (urlFile) {
+        await authorizeMainProcess({ cdpPort, server, token, urlFile });
+        console.log(`authorized the Electron main process on CDP ${cdpPort}`);
+      }
     }
   } catch (error) {
     console.error(`seed-session: ${error.message}`);

@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { writeFile } from 'node:fs/promises';
 import querystring from 'node:querystring';
 import { URL } from 'node:url';
 
@@ -10,6 +11,7 @@ import type {
 } from '@orvilo/electron-client-ipc';
 import { BrowserWindow, shell } from 'electron';
 
+import { isDev } from '@/const/env';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
 import { appendVercelCookie } from '@/utils/http-headers';
 import { createLogger } from '@/utils/logger';
@@ -140,9 +142,17 @@ export default class AuthCtr extends ControllerModule {
 
       logger.info('Authorization request prepared for orvilo-desktop');
 
-      // Open authorization URL in the default browser
-      await shell.openExternal(authUrl.toString());
-      logger.debug('Opening authorization URL in default browser');
+      // Development only: a local script finishes the request with a seeded session,
+      // so the authorization page never takes over the developer's browser.
+      const authUrlFile = isDev ? process.env.ORVILO_DESKTOP_AUTH_URL_FILE : undefined;
+      if (authUrlFile) {
+        await writeFile(authUrlFile, authUrl.toString(), { mode: 0o600 });
+        logger.debug('Wrote authorization URL for local automation');
+      } else {
+        // Open authorization URL in the default browser
+        await shell.openExternal(authUrl.toString());
+        logger.debug('Opening authorization URL in default browser');
+      }
 
       this.broadcastAuthorizationProgress({
         elapsed: 0,

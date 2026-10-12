@@ -9,9 +9,13 @@ import type { App } from '@/core/App';
 import AuthCtr from '../AuthCtr';
 import RemoteServerConfigCtr from '../RemoteServerConfigCtr';
 
-const { ipcMainHandleMock } = vi.hoisted(() => ({
+const { envMock, ipcMainHandleMock, writeFileMock } = vi.hoisted(() => ({
+  envMock: { isDev: false },
   ipcMainHandleMock: vi.fn(),
+  writeFileMock: vi.fn(),
 }));
+
+vi.mock('node:fs/promises', () => ({ writeFile: writeFileMock }));
 
 vi.unmock('@/utils/logger');
 
@@ -54,7 +58,9 @@ vi.mock('@/const/env', () => ({
   isMac: false,
   isWindows: false,
   isLinux: false,
-  isDev: false,
+  get isDev() {
+    return envMock.isDev;
+  },
 }));
 
 // Mock crypto
@@ -195,6 +201,37 @@ describe('AuthCtr', () => {
       });
       expect(result).toMatchObject({ code: 'invalid_url', success: false });
       expect(shell.openExternal).not.toHaveBeenCalled();
+    });
+
+    describe('authorization URL handed to local automation', () => {
+      const config: DataSyncConfig = { active: false, storageMode: 'cloud' };
+
+      beforeEach(() => {
+        writeFileMock.mockReset().mockResolvedValue(undefined);
+        vi.stubEnv('ORVILO_DESKTOP_AUTH_URL_FILE', '/tmp/orvilo-auth-url');
+      });
+      afterEach(() => {
+        envMock.isDev = false;
+        vi.unstubAllEnvs();
+        authCtr.cancelAuthorization();
+      });
+
+      it('writes the URL and leaves the browser alone in development', async () => {
+        envMock.isDev = true;
+        const result = await authCtr.requestAuthorization(config);
+        expect(result).toEqual({ success: true });
+        expect(shell.openExternal).not.toHaveBeenCalled();
+        const [path, url, options] = writeFileMock.mock.calls[0];
+        expect(path).toBe('/tmp/orvilo-auth-url');
+        expect(new URL(url).pathname).toBe('/oidc/auth');
+        expect(options).toEqual({ mode: 0o600 });
+      });
+
+      it('ignores the setting in a packaged build', async () => {
+        await authCtr.requestAuthorization(config);
+        expect(writeFileMock).not.toHaveBeenCalled();
+        expect(shell.openExternal).toHaveBeenCalledOnce();
+      });
     });
 
     it.each([

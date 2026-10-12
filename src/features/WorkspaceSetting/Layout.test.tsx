@@ -11,8 +11,8 @@ vi.mock('@/features/NavHeader', () => ({
 }));
 
 vi.mock('./Container', () => ({
-  default: ({ children }: { children?: React.ReactNode }) =>
-    React.createElement('main', undefined, children),
+  default: ({ children, width }: { children?: React.ReactNode; width?: string }) =>
+    React.createElement('main', { 'data-width': width }, children),
 }));
 
 vi.mock('@/features/Settings/Layout/SideBar', () => ({ default: () => null }));
@@ -51,6 +51,16 @@ const renderLayout = (tab: string) =>
 
 describe('WorkspaceSettingsContentLayout', () => {
   it.each([
+    ['general', 'form'],
+    ['budget', 'form'],
+    ['members', 'wide'],
+    ['statistics', 'wide'],
+    ['imports', 'wide'],
+  ])('selects the %s page content lane as %s', (tab, width) => {
+    expect(renderLayout(tab)).toContain(`data-width="${width}"`);
+  });
+
+  it.each([
     ['general', 'General'],
     ['members', 'Members'],
     ['devices', 'Devices'],
@@ -66,13 +76,13 @@ describe('WorkspaceSettingsContentLayout', () => {
     expect(html).toMatch(
       new RegExp(`<header>(?:(?!</header>).)*>${title}<(?:(?!<header>).)*</header>`),
     );
-    expect(html).toContain('<main><div>Page content</div></main>');
+    expect(html).toMatch(/<main[^>]*><div>Page content<\/div><\/main>/);
   });
 
   it.each(['imports'])('keeps the %s tab on the content-only layout', (tab) => {
     const html = renderLayout(tab);
 
     expect(html).not.toContain('<header>');
-    expect(html).toContain('<main><div>Page content</div></main>');
+    expect(html).toMatch(/<main[^>]*><div>Page content<\/div><\/main>/);
   });
 });

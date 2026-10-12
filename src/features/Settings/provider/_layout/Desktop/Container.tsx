@@ -23,10 +23,10 @@ const Container: FC<PropsWithChildren> = ({ children }) => {
     <div className="flex h-full w-full min-w-0 flex-col">
       <NavHeader />
       <SettingContainer
-        maxWidth={1024}
         paddingBlock={24}
         paddingInline={24}
         ref={scrollRef}
+        width="wide"
         style={{
           minHeight: '100%',
         }}

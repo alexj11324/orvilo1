@@ -65,7 +65,7 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('profile.title')} />}
-      <div className="mx-auto flex w-full max-w-160 flex-col rounded-xl border border-border bg-card px-4">
+      <div className="flex w-full flex-col rounded-xl border border-border bg-card px-4">
         <div className="flex flex-col" style={{ display: isLoading ? 'flex' : 'none' }}>
           <SettingsProfileRowSkeleton />
           <Separator />

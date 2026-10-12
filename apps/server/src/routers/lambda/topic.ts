@@ -1108,8 +1108,9 @@ export const topicRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Intentionally no creator/owner gate: shared topics are co-editable by
-      // members (title/status/metadata); only delete/transfer is creator-scoped.
+      // No creator/owner gate on the co-editable fields: members may edit a
+      // shared topic's title, status and metadata. Only delete and transfer are
+      // creator-scoped; an `agentId` here is the transfer and is gated below.
       // Co-editing still requires `use`-level General access on the agent —
       // view-only members are read-only.
       await assertCanUseTopicTargets(guardCtx(ctx), [input.id]);

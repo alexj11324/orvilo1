@@ -894,8 +894,34 @@ export const dispatchHeteroAgent = async (
       workspaceId: deps.workspaceId,
     });
   } catch (err) {
+    // Nothing has reached a runtime yet, so this is a known failure and is
+    // reported like every other pre-dispatch one. A throw would leave the
+    // caller unable to tell it from a dispatch whose outcome is unknown. The
+    // cause can name server configuration and stays in this log.
     log('execAgent: failed to sign operation JWT for hetero run: %O', err);
-    throw new Error('Failed to sign operation JWT for hetero agent', { cause: err });
+    const message = 'The run could not be started';
+    await finalizeHeteroDispatchError(deps, {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      detail: 'OPERATION_TOKEN_SIGNING_FAILED: the run could not be authorized to report back.',
+      message,
+      operationId,
+      topicId,
+    });
+    return {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      autoStarted: false,
+      createdAt: new Date().toISOString(),
+      error: 'OPERATION_TOKEN_SIGNING_FAILED',
+      message: `${message} — nothing was sent to the agent.`,
+      operationId,
+      status: 'error',
+      success: false,
+      timestamp: new Date().toISOString(),
+      topicId,
+      userMessageId: userMessageId ?? parentMessageId ?? '',
+    };
   }
 
   // Read repos from topic metadata for sandbox setup (web/cloud only).

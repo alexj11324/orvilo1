@@ -1555,6 +1555,106 @@ describe('Task Router Integration', () => {
     });
   });
 
+  describe('handoff from an agent the caller cannot use', () => {
+    // The incumbent belongs to the workspace owner; neither member holds Use on it.
+    const setup = async (phase: 'outcome_unknown' | 'running' = 'running') => {
+      const workspaceId = 'task-handoff-takeover-workspace';
+      const { agents, workspaces, workspaceMembers } = await import('@/database/schemas');
+      otherUserId = await createTestUser(serverDB);
+      const creatorId = otherUserId;
+      const memberId = await createTestUser(serverDB);
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Handoff Takeover Workspace',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: creatorId, workspaceId },
+        { role: 'member', userId: memberId, workspaceId },
+      ]);
+      const agent = async (id: string, ownerId: string) => {
+        await serverDB.insert(agents).values({ id, slug: id, userId: ownerId, workspaceId });
+        return id;
+      };
+      const incumbent = await agent('agt_takeover_incumbent', userId);
+      const creatorAgent = await agent('agt_takeover_creator', creatorId);
+      const memberAgent = await agent('agt_takeover_member', memberId);
+      const callerFor = (id: string) =>
+        taskRouter.createCaller({ ...createTestContext(id), workspaceId });
+      const created = await callerFor(creatorId).create({ instruction: 'Held by another agent' });
+      await serverDB
+        .update(tasks)
+        // A start whose outcome was lost parks the Issue while its dispatch
+        // stays live, so the Issue reads as paused and not as running.
+        .set({
+          assigneeAgentId: incumbent,
+          ...(phase === 'running'
+            ? {}
+            : { context: { execution: { parked: { reason: 'outcome_unknown' } } } }),
+        })
+        .where(eq(tasks.id, created.data.id));
+      // Execution truth is a live dispatch row, not the status column.
+      await serverDB.insert(taskDispatches).values({
+        agentId: incumbent,
+        generation: 1,
+        id: 'dispatch-handoff-takeover',
+        idempotencyKey: 'manual:handoff:takeover',
+        phase,
+        policyRevision: 1,
+        requestedBy: `user:${userId}`,
+        requirementRevision: 1,
+        taskId: created.data.id,
+        taskRevision: 1,
+        workspaceId,
+      });
+      const handoff = async (as: string, toAgentId: string) =>
+        callerFor(as).handoff({
+          expectedDomainRevision: (await revisionOf(created.data.id))!,
+          taskId: created.data.id,
+          toAgentId,
+        });
+      return { creatorAgent, creatorId, handoff, memberAgent, memberId, taskId: created.data.id };
+    };
+
+    it('refuses a member who neither created the Issue nor may use the incumbent', async () => {
+      const { handoff, memberAgent, memberId } = await setup();
+      try {
+        await expect(handoff(memberId, memberAgent)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      } finally {
+        await cleanupTestUser(serverDB, memberId);
+      }
+    });
+
+    it('lets the creator take the Issue over, to an agent the creator may use only', async () => {
+      const { creatorAgent, creatorId, handoff, memberAgent, memberId, taskId } = await setup();
+      try {
+        await expect(handoff(creatorId, memberAgent)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+        await handoff(creatorId, creatorAgent);
+        const [row] = await serverDB
+          .select({ assigneeAgentId: tasks.assigneeAgentId })
+          .from(tasks)
+          .where(eq(tasks.id, taskId));
+        expect(row.assigneeAgentId).toBe(creatorAgent);
+      } finally {
+        await cleanupTestUser(serverDB, memberId);
+      }
+    });
+
+    it('says the last run is unconfirmed when there is no running process to fence', async () => {
+      const { creatorAgent, creatorId, handoff, memberId } = await setup('outcome_unknown');
+      try {
+        await expect(handoff(creatorId, creatorAgent)).rejects.toMatchObject({
+          code: 'CONFLICT',
+          message: expect.stringMatching(/^EXECUTION_UNSETTLED/),
+        });
+      } finally {
+        await cleanupTestUser(serverDB, memberId);
+      }
+    });
+  });
+
   describe('status transitions', () => {
     it('should transition backlog → running → paused → completed', async () => {
       const task = await caller.create({ instruction: 'Test' });

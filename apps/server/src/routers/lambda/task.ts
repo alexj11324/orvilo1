@@ -68,6 +68,7 @@ import { automationResultWebhookConfigSchema } from '@/server/services/automatio
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
+import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
 import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
@@ -133,6 +134,8 @@ async function assertTaskExecutionUse(
   ctx: TaskExecutionUseContext,
   targetTasks: Pick<TaskItem, 'id' | 'assigneeAgentId' | 'status'>[],
   additionalAgentIds: Array<string | null | undefined> = [],
+  /** Waives Use on the incumbents only; their operations are still scope-checked. */
+  { waiveIncumbentUse = false }: { waiveIncumbentUse?: boolean } = {},
 ) {
   const taskIds = targetTasks.map((task) => task.id);
   const [runningTopics, activeDispatches] = await Promise.all([
@@ -187,7 +190,7 @@ async function assertTaskExecutionUse(
   const operationAgents = new Map(operations.map((operation) => [operation.id, operation.agentId]));
   const agentIds = new Set(
     [
-      ...targetTasks.flatMap((task, index) => {
+      ...(waiveIncumbentUse ? [] : targetTasks).flatMap((task, index) => {
         const dispatch = activeDispatches[index];
         const sealedExecutors = [
           ...runningTopics
@@ -1704,7 +1707,18 @@ export const taskRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const task = await resolveOrThrow(ctx.taskModel, input.taskId);
-        await assertTaskExecutionUse(ctx, [task], [input.toAgentId]);
+        const workspaceId = task.workspaceId ?? ctx.workspaceId;
+        const role = workspaceId
+          ? await getActiveWorkspaceMembershipRole(ctx.serverDB, {
+              userId: ctx.userId,
+              workspaceId,
+            })
+          : undefined;
+        // Taking over skips the check on the incumbent only; the successor is
+        // always checked.
+        await assertTaskExecutionUse(ctx, [task], [input.toAgentId], {
+          waiveIncumbentUse: mayTakeOverExecution({ issue: task, role, userId: ctx.userId }),
+        });
         const result = await ctx.taskService.handoffTask(input);
         return { data: result, message: 'Task handed off', success: true };
       } catch (error) {
@@ -1712,11 +1726,13 @@ export const taskRouter = router({
         if (error instanceof TaskRevisionConflictError) {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
+        // Reached when the Issue has a live dispatch that is not running —
+        // typically an outcome the recovery sweep has yet to confirm. There is
+        // no process to fence, and assigning past it could start a second one.
         if (error instanceof TaskHandoffRequiredError) {
           throw new TRPCError({
             code: 'CONFLICT',
-            message:
-              'Cannot change the agent assignee of a running task. Transfer execution with task.handoff instead.',
+            message: 'EXECUTION_UNSETTLED: the last run is still being confirmed.',
           });
         }
         console.error('[task:handoff]', error);
@@ -2566,10 +2582,11 @@ export const taskRouter = router({
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
         if (error instanceof TaskHandoffRequiredError) {
+          // The leading code is what the client matches to offer the transfer;
+          // the sentence after it is for API callers.
           throw new TRPCError({
             code: 'CONFLICT',
-            message:
-              'Cannot change the agent assignee of a running task. Transfer execution with task.handoff instead.',
+            message: `${error.code}: the agent of an executing Issue changes by task.handoff.`,
           });
         }
         console.error('[task:update]', error);

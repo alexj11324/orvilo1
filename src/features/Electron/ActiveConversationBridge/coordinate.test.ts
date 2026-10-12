@@ -146,6 +146,28 @@ describe('active conversation coordinate', () => {
     expect(coordinate.routeAgentId).toBeUndefined();
   });
 
+  it('keeps the Agent being configured as the route agent on its settings page', () => {
+    const coordinate = resolveActiveConversationCoordinate({
+      params: {},
+      url: '/team/settings/agents/agent-a',
+    });
+
+    expect(coordinate).toMatchObject({
+      agentId: 'agent-a',
+      isConversation: false,
+      routeAgentId: 'agent-a',
+    });
+  });
+
+  it('has no route agent on the Agent settings list', () => {
+    const coordinate = resolveActiveConversationCoordinate({
+      params: {},
+      url: '/team/settings/agents',
+    });
+
+    expect(coordinate.routeAgentId).toBeUndefined();
+  });
+
   it('ignores non-agent routes even when another segment is named agent', () => {
     const coordinate = resolveActiveConversationCoordinate({
       params: {},

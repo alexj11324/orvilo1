@@ -53,6 +53,12 @@ describe('the native agent settings page carries no profile chrome', () => {
     expect(index).not.toContain('<AgentProfile');
   });
 
+  it('offers creating an Agent from the list, landing on its settings', () => {
+    const index = read('src/features/Settings/agents/index.tsx');
+
+    expect(index).toContain("createAgent({ origin: 'settings' })");
+  });
+
   it('imports none of the retired profile chrome or management sections', () => {
     const page = read('src/features/Settings/agents/AgentSettingsDetailPage.tsx');
 

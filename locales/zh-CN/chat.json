@@ -2270,6 +2270,8 @@
   "taskDetail.topicMenu.stopConfirm.content": "当前运行将被取消。已生成的消息会保留,你可以稍后重新运行 Issue。",
   "taskDetail.topicMenu.stopConfirm.title": "停止运行?",
   "taskDetail.topicMenu.stopForbidden": "只有此 Issue 的创建者、工作区管理员，或可以使用该 Agent 的成员才能停止这次运行。",
+  "taskDetail.topicMenu.stopPending": "正在停止运行",
+  "taskDetail.topicMenu.stopPendingDesc": "Agent 还没有确认停止。这次运行会在约 10 分钟内自行结束，之后 Issue 可以重新运行。",
   "taskDetail.topicSource": "来自 {{identifier}}",
   "taskDetail.untitled": "无标题",
   "taskDetail.updateFailed": "Issue 更新失败",

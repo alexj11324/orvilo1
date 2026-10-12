@@ -53,12 +53,21 @@ export class TaskLifecycleSliceActionImpl {
     try {
       await taskService.cancelTopic(topicId);
     } catch (error) {
-      toast.error(
-        isForbiddenError(error)
-          ? t('taskDetail.topicMenu.stopForbidden', { ns: 'chat' })
-          : t('operationFailed', { ns: 'common' }),
-      );
-      throw error;
+      // The runtime did not acknowledge, but the stop is recorded and the
+      // server ends the run itself: this is a stop in progress, not a failure.
+      if (error instanceof Error && error.message.startsWith('STOP_UNCONFIRMED')) {
+        toast.info({
+          description: t('taskDetail.topicMenu.stopPendingDesc', { ns: 'chat' }),
+          title: t('taskDetail.topicMenu.stopPending', { ns: 'chat' }),
+        });
+      } else {
+        toast.error(
+          isForbiddenError(error)
+            ? t('taskDetail.topicMenu.stopForbidden', { ns: 'chat' })
+            : t('operationFailed', { ns: 'common' }),
+        );
+        throw error;
+      }
     }
     const { activeTaskId, internal_refreshTaskDetail } = this.#get();
     if (activeTaskId) await internal_refreshTaskDetail(activeTaskId);

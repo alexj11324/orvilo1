@@ -2271,6 +2271,8 @@
   "taskDetail.topicMenu.stopConfirm.content": "The current run will be canceled. Generated messages are kept and you can re-run the issue later.",
   "taskDetail.topicMenu.stopConfirm.title": "Stop Run?",
   "taskDetail.topicMenu.stopForbidden": "Only the creator of this issue, a workspace admin, or a member who can use its agent can stop this run.",
+  "taskDetail.topicMenu.stopPending": "Stopping the run",
+  "taskDetail.topicMenu.stopPendingDesc": "The agent has not confirmed the stop. The run ends on its own within about 10 minutes, and the issue can run again after that.",
   "taskDetail.topicSource": "From {{identifier}}",
   "taskDetail.untitled": "Untitled",
   "taskDetail.updateFailed": "Failed to update issue",

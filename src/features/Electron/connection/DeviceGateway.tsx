@@ -17,6 +17,8 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 
+import { type GatewayHint, resolveGatewayHints } from './gatewayHints';
+
 const styles = createStaticStyles(({ css, cssVar }) => ({
   greenDot: css`
     position: absolute;
@@ -108,22 +110,16 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
     isDeviceListLoading,
     deviceListError,
   );
-  // This device's own connection: what the dot shows, in or out of a workspace.
-  // An Agent can run on a private device that no workspace device list includes.
-  const deviceHint = isConnecting
-    ? t('gateway.statusConnecting')
-    : t(isConnected ? 'gateway.statusConnected' : 'gateway.statusDisconnected');
-  const connectionHint = workspaceScoped
-    ? workspaceConnectionState === 'unavailable'
-      ? t('gateway.workspaceStatusUnavailable')
-      : workspaceConnectionState === 'connecting'
-        ? undefined
-        : workspaceConnectionState === 'connected'
-          ? t('gateway.workspaceStatusConnections', { count: connectionCount })
-          : t('gateway.workspaceStatusDisconnected')
-    : isConnected && connectionCount
-      ? t('gateway.statusConnectedConnections', { count: connectionCount })
-      : undefined;
+  const hints = resolveGatewayHints({
+    connectionCount,
+    isConnected,
+    isConnecting,
+    workspaceConnectionState,
+    workspaceScoped,
+  });
+  const hintText = ({ count, key }: GatewayHint) => t(key, { count });
+  const deviceHint = hintText(hints.device);
+  const connectionHint = hints.connection && hintText(hints.connection);
 
   const popoverContent = (
     <div className={cx(styles.popoverContent, 'flex flex-col gap-1')}>
@@ -170,7 +166,7 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
             />
           }
         />
-        {isConnected && <div className={styles.greenDot} data-testid="device-gateway-connected" />}
+        {hints.showConnectedDot && <div className={styles.greenDot} />}
       </div>
       <PopoverContent align="end" className="w-auto" side="bottom" style={{ padding: 8 }}>
         {popoverContent}

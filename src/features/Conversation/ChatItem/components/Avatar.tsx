@@ -65,12 +65,12 @@ const Avatar = memo<AvatarProps>(
         background={useBot ? 'transparent' : avatar.backgroundColor}
         name={displayName}
         shape={'square'}
-        title={displayName}
-        unoptimized={unoptimized}
-        onClick={onClick}
         size={size}
         // The upstream canvas overscans its box for jumps and turns.
         style={useBot ? { ...style, overflow: 'visible' } : style}
+        title={displayName}
+        unoptimized={unoptimized}
+        onClick={onClick}
       />
     );
   },

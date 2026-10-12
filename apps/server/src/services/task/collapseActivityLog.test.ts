@@ -1,3 +1,4 @@
+import type { TaskActivityLogType } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import { collapseActivityLog } from './collapseActivityLog';
@@ -8,7 +9,7 @@ const row = (
   minutes: number,
   payload: Record<string, unknown>,
   actorUserId = 'user_a',
-  type: 'priority' | 'status' | 'assignee_agent' = 'priority',
+  type: TaskActivityLogType = 'priority',
 ) => ({ actorAgentId: null, actorUserId, createdAt: t(minutes), id, payload, type }) as any;
 
 describe('collapseActivityLog', () => {
@@ -129,5 +130,67 @@ describe('collapseActivityLog', () => {
       row('b', 1, { from: on, to: null }, 'user_a', 'status'),
     ]);
     expect(out).toEqual([]);
+  });
+
+  it('folds a run of workflow moves and keeps the name of each end', () => {
+    const out = collapseActivityLog([
+      row(
+        'a',
+        0,
+        { from: 'todo', fromId: 's1', fromLabel: 'Ready', to: 'in_progress', toId: 's2' },
+        'user_a',
+        'workflow_state',
+      ),
+      row(
+        'b',
+        1,
+        { from: 'in_progress', fromId: 's2', to: 'in_review', toId: 's3', toLabel: 'QA' },
+        'user_a',
+        'workflow_state',
+      ),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      id: 'b',
+      payload: {
+        from: 'todo',
+        fromId: 's1',
+        fromLabel: 'Ready',
+        to: 'in_review',
+        toId: 's3',
+        toLabel: 'QA',
+      },
+    });
+  });
+
+  it('folds description autosaves by one person into a single editing session', () => {
+    const out = collapseActivityLog([
+      row('a', 0, {}, 'user_a', 'description'),
+      row('b', 5, {}, 'user_a', 'description'),
+      row('c', 20, {}, 'user_a', 'description'),
+    ]);
+    // One entry, dated by the last save — and not mistaken for a no-op just
+    // because it carries no before/after values.
+    expect(out.map((r) => r.id)).toEqual(['c']);
+  });
+
+  it('starts a new description entry after the window or after someone else edited', () => {
+    const out = collapseActivityLog([
+      row('a', 0, {}, 'user_a', 'description'),
+      row('b', 45, {}, 'user_a', 'description'),
+      row('c', 46, {}, 'user_b', 'description'),
+      row('d', 47, {}, 'user_a', 'description'),
+    ]);
+    expect(out.map((r) => r.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('never folds or drops one-off events such as relations, labels and links', () => {
+    const out = collapseActivityLog([
+      row('a', 0, { relation: 'blocked_by', toId: 't1' }, 'user_a', 'relation_added'),
+      row('b', 1, { relation: 'blocked_by', toId: 't2' }, 'user_a', 'relation_added'),
+      row('c', 2, { toLabel: 'bug' }, 'user_a', 'label_added'),
+      row('d', 3, { toLabel: 'Spec', url: 'https://example.com' }, 'user_a', 'resource_added'),
+    ]);
+    expect(out.map((r) => r.id)).toEqual(['a', 'b', 'c', 'd']);
   });
 });

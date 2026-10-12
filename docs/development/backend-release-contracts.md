@@ -65,6 +65,38 @@ Deleting a parent Issue does not delete its sub-issues; they become top-level Is
 
 **Changing the agent of an executing Issue.** `task.update` refuses it with `CONFLICT` and a message that begins `HANDOFF_REQUIRED`; clients match that prefix, not the sentence after it. An Issue is executing while it has an active dispatch, which includes `outcome_unknown`, so the Issue's `status` alone does not predict the refusal. The client answers the refusal by offering the transfer (`task.handoff`) in place of Retry. `task.handoff` normally requires the caller's Use on the agent that is executing as well as on the successor. The Issue's creator and the workspace's owners and admins are exempt from the first: they may take the Issue away from an agent they cannot run, so a withheld or private agent cannot hold an Issue. The successor always needs the caller's Use. `task.handoff` fences a running execution; when the Issue's dispatch is live but not running (an `outcome_unknown` the recovery sweep has yet to confirm) there is no process to fence, so it answers `CONFLICT` with a message that begins `EXECUTION_UNSETTLED`, and the client says the last run is still being confirmed. The sweep frees the Issue when it settles or abandons that dispatch.
 
+## Issue activity
+
+`task.detail.data.activities` now carries a `type: 'property'` row for every kind of change to an Issue, not only status, priority and automation. A row is written when:
+
+- the Issue moves between workflow categories or team workflow states, by any path: the rail picker, a board drop, triage, a legacy status write, a parent cascade, run settlement or acceptance;
+- the title, the description or the acceptance criteria are edited;
+- the due date, the project, the milestone or the team changes;
+- the parent changes, or a sub-issue is added or removed (the parent gets its own row);
+- a relation is added or removed (both Issues get a row), or the Issue is marked or unmarked as a duplicate;
+- a label is added or removed, or a link or pull request is attached or removed.
+
+| `propertyChange.field`         | Other fields                                                                                       |
+| ------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `workflow`                     | `from`, `to`: `{ category, name }`; `name` is the team state name or `null`                        |
+| `title`, `dueDate`             | `from`, `to`: string or `null`                                                                     |
+| `description`, `verify`        | none; the text is not copied into the feed                                                         |
+| `project`, `milestone`, `team` | `from`, `to`: name, `''` when there was one but it cannot be named, `null` when there was none     |
+| `parent`, `duplicate`          | `from`, `to`: Issue reference or `null`                                                            |
+| `relation`                     | `action`, `relation` (`blocking`, `blocked_by`, `related`, `sub_issue`), `target`: Issue reference |
+| `label`                        | `action`, `name`                                                                                   |
+| `resource`                     | `action`, `kind` (`link` or `pull_request`), `title`, `url`                                        |
+
+`status`, `priority` and `automation` are unchanged. Clients must ignore a `field` they do not know.
+
+An Issue reference is `{ identifier, name }` when the reader can read that Issue. One that is deleted or outside the reader's access comes back as `{ unavailable: true }`, never `null`: `null` means there was none. Project, milestone, team and team workflow state names follow the same rule. They are shown only when the reader can read that container; otherwise the name is `''`, or `null` for a workflow state, which then reads by category. `project.activityFeed` applies the same check to workflow state names. A container that has since been deleted is treated as unreadable.
+
+Description and acceptance criteria edits by one actor are kept as one row per 30-minute sitting, whose time moves to the latest save. Agent prompts receive only status, priority, automation, workflow category and due date changes; rows that carry typed text are left out of prompts.
+
+`completedAt` is set once when an Issue enters `done` or `canceled`, kept while it stays there, and cleared when it is reopened, whoever made the move. Run settlement still supplies its own instant.
+
+The feed is not an audit log. Rows credited to the system and rows written after the main write (run settlement, cascades, acceptance criteria) are best effort: a failure to record one is logged and does not fail the change. Label and link changes are written together with their row.
+
 ## Inbox and external alerts
 
 Relevant Inbox work/action records are durable. Recipient selection, subscriptions, actor exclusion, authorization, and deduplication still apply. This follows the separation documented by [Linear](https://linear.app/docs/notifications) and [Plane](https://docs.plane.so/communication-and-collaboration/notifications).

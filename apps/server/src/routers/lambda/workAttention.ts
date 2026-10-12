@@ -1053,10 +1053,15 @@ export const workAttentionRouter = router({
       }
 
       try {
-        const updated = await ctx.taskModel.update(input.taskId, patch, {
-          expectedDomainRevision: input.expectedDomainRevision,
-          source: 'user',
-        });
+        // Logged like every other person-made move: the feed row is written in
+        // the same transaction as the write, from a locked read of where the
+        // Issue was. The actor is the authenticated caller, never an input.
+        const updated = await ctx.taskModel.updateWithLog(
+          input.taskId,
+          patch,
+          { userId: ctx.userId },
+          { expectedDomainRevision: input.expectedDomainRevision, source: 'user' },
+        );
         return { data: updated, message: 'Moved', success: true };
       } catch (error) {
         if (error instanceof TaskRevisionConflictError) {
@@ -1141,7 +1146,9 @@ export const workAttentionRouter = router({
               ? 'duplicate'
               : 'accepted';
       try {
-        const updated = await ctx.taskModel.update(
+        // Logged: a triage decision can reassign the Issue or mark it a
+        // duplicate, and both belong in its feed under the person who decided.
+        const updated = await ctx.taskModel.updateWithLog(
           input.taskId,
           {
             triageStatus,
@@ -1152,6 +1159,7 @@ export const workAttentionRouter = router({
               ? { assigneeUserId: input.assigneeUserId }
               : {}),
           },
+          { userId: ctx.userId },
           { expectedDomainRevision: input.expectedDomainRevision, source: 'user' },
         );
         return { data: updated, message: 'Triage updated', success: true };

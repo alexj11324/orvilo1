@@ -1,4 +1,9 @@
-import type { TaskStatus, TaskWorkflowCategory, TeamWorkflowStateItem } from '@orvilo/types';
+import type {
+  TaskActivityLogPayload,
+  TaskStatus,
+  TaskWorkflowCategory,
+  TeamWorkflowStateItem,
+} from '@orvilo/types';
 
 /**
  * The Issue-workflow category a legacy `status` vocabulary value implies on
@@ -109,4 +114,37 @@ export const resolveWorkflowCreatePreset = (params: {
   }
 
   return patch;
+};
+
+/** The part of a task row that says where the Issue sits in its workflow. */
+export interface TaskWorkflowPosition {
+  workflowCategory?: TaskWorkflowCategory | null;
+  workflowStateRefId?: string | null;
+}
+
+/**
+ * The payload of a `workflow_state` activity row, or `null` when the Issue
+ * did not move. A move is a change of category or of the team state inside
+ * one — two "started" states are different places to the person looking at
+ * the board. The state name is copied in so the row keeps reading the way it
+ * did when it was written, after a rename or a team change.
+ */
+export const workflowStatePayload = (
+  before: TaskWorkflowPosition,
+  after: TaskWorkflowPosition,
+  names: ReadonlyMap<string, string>,
+): TaskActivityLogPayload | null => {
+  const fromCategory = before.workflowCategory ?? null;
+  const toCategory = after.workflowCategory ?? null;
+  const fromId = before.workflowStateRefId ?? null;
+  const toId = after.workflowStateRefId ?? null;
+  if (fromCategory === toCategory && fromId === toId) return null;
+  return {
+    from: fromCategory,
+    fromId,
+    fromLabel: (fromId && names.get(fromId)) || null,
+    to: toCategory,
+    toId,
+    toLabel: (toId && names.get(toId)) || null,
+  };
 };

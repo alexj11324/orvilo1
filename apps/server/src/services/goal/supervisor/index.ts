@@ -174,7 +174,7 @@ export class GoalSupervisorService {
         graph,
         task,
         failedOperation,
-        statusAuthoredByActor(await taskModel.getActivities(task.id, 20), taskStatus),
+        statusAuthoredByActor(await taskModel.getActivities(task.id, 1, ['status']), taskStatus),
       );
       if (eligibility.eligible && (await this.budgetBlocked(graph))) {
         eligibility = {
@@ -374,7 +374,9 @@ export class GoalSupervisorService {
           currentTask,
           failedOperation,
           statusAuthoredByActor(
-            await new TaskModel(tx, this.userId, this.workspaceId).getActivities(task.id, 20),
+            await new TaskModel(tx, this.userId, this.workspaceId).getActivities(task.id, 1, [
+              'status',
+            ]),
             currentTask.status,
           ),
         ).eligible ||

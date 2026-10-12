@@ -1,4 +1,7 @@
 import type { TaskDetailData, TaskDetailWorkspaceNode, TaskStatus } from '@orvilo/types';
+import { formatPropertyChange } from '@orvilo/types';
+
+export { formatPropertyChange };
 
 // ── Formatting helpers for Task tool responses ──
 
@@ -82,32 +85,6 @@ export const assignmentParticipantLabel = (
   // A recorded participant whose row is gone keeps its id when one survived;
   // a deleted actor leaves no id at all and must still read as a person.
   return party.name || party.id || (party.unresolved ? 'a deleted participant' : 'unnamed');
-};
-
-/** Render one side of a property change for a text surface. */
-export const formatPropertyValue = (field: string | undefined, value: unknown): string => {
-  if (value === null || value === undefined) return field === 'automation' ? 'off' : 'none';
-  if (field === 'priority') return priorityLabel(value as number);
-  if (typeof value === 'object') {
-    const v = value as {
-      heartbeatInterval?: number | null;
-      maxExecutions?: number | null;
-      mode?: string | null;
-      schedulePattern?: string | null;
-      scheduleTimezone?: string | null;
-    };
-    if (v.mode === 'schedule') {
-      // Every part a user can edit shows, or a timezone-only or cap-only
-      // change reads as "from X to X".
-      const parts = [v.schedulePattern ?? '?'];
-      if (v.scheduleTimezone) parts.push(v.scheduleTimezone);
-      if (typeof v.maxExecutions === 'number') parts.push(`max ${v.maxExecutions}`);
-      return `schedule(${parts.join(', ')})`;
-    }
-    if (v.mode === 'heartbeat') return `heartbeat(${v.heartbeatInterval ?? '?'}s)`;
-    return JSON.stringify(value);
-  }
-  return String(value);
 };
 
 export const taskDetailHref = (identifier: string, baseUrl?: string): string => {
@@ -347,10 +324,8 @@ export const formatTaskDetail = (t: TaskDetailData): string => {
         lines.push(`  💭 ${act.time || ''} ${author} ${truncated}${idSuffix}`);
       } else if (act.type === 'property') {
         const actor = assignmentParticipantLabel(act.author, 'system');
-        const change = act.propertyChange;
-        lines.push(
-          `  🔁 ${act.time || ''} ${actor} changed ${change?.field}: ${formatPropertyValue(change?.field, change?.from)} → ${formatPropertyValue(change?.field, change?.to)}${idSuffix}`,
-        );
+        const change = formatPropertyChange(act.propertyChange);
+        if (change) lines.push(`  🔁 ${act.time || ''} ${actor} changed ${change}${idSuffix}`);
       } else if (act.type === 'assignment') {
         // Who owns the task changed hands; a formatter that drops the event
         // shows a reader an assignee they cannot account for.

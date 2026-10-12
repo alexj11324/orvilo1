@@ -11,6 +11,7 @@ import {
   isDeviceLockedPlan,
   isHeterogeneousSandboxExecutionAvailable,
   isLocalSandboxEnabled,
+  resolveBoundExecutionDeviceId,
   resolveExecutionPlan,
   resolveExecutionTarget,
   resolveRuntimeMode,
@@ -490,6 +491,42 @@ describe('resolveExecutionTarget', () => {
         ).toBe('local');
       }
     });
+  });
+});
+
+describe('resolveBoundExecutionDeviceId', () => {
+  const desktop = { clientExecutionAvailable: true, deviceRoutingAvailable: true, isHetero: true };
+
+  it('reads over the bound device when the run goes through a device', () => {
+    expect(
+      resolveBoundExecutionDeviceId(cfg({ boundDeviceId: 'dev-a', executionTarget: 'device' }), {
+        ...desktop,
+        workspaceScoped: false,
+      }),
+    ).toBe('dev-a');
+  });
+
+  it('reads this machine when the member picked it for a workspace agent', () => {
+    // The shared row alone coerces a workspace agent onto a device; the
+    // member's own `local` pick (workspaceScoped: false) must stay local, or
+    // the scan asks the gateway for a workspace device that does not exist.
+    const memberPick = cfg({ boundDeviceId: 'dev-a', executionTarget: 'local' });
+
+    expect(
+      resolveBoundExecutionDeviceId(memberPick, { ...desktop, workspaceScoped: false }),
+    ).toBeUndefined();
+    expect(resolveBoundExecutionDeviceId(memberPick, { ...desktop, workspaceScoped: true })).toBe(
+      'dev-a',
+    );
+  });
+
+  it('has no device to read when none is bound', () => {
+    expect(
+      resolveBoundExecutionDeviceId(cfg({ executionTarget: 'device' }), {
+        ...desktop,
+        workspaceScoped: false,
+      }),
+    ).toBeUndefined();
   });
 });
 

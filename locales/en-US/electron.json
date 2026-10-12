@@ -6,6 +6,8 @@
   "gateway.statusConnectedConnections_other": "Online · {{count}} connections",
   "gateway.statusConnecting": "This device is connecting to Gateway...",
   "gateway.statusDisconnected": "This device is not connected to Gateway",
+  "gateway.statusLoading": "Checking device connections…",
+  "gateway.statusUnavailable": "Cannot check device connections",
   "gateway.title": "Device Gateway",
   "navigation.agentShare": "Share",
   "navigation.agents": "Agents",
@@ -177,7 +179,5 @@
   "window.minimize": "Minimize window",
   "window.pinToTop": "Pin on top",
   "window.restore": "Restore window",
-  "window.unpinFromTop": "Unpin from top",
-  "gateway.statusLoading": "Checking device connections…",
-  "gateway.statusUnavailable": "Cannot check device connections"
+  "window.unpinFromTop": "Unpin from top"
 }

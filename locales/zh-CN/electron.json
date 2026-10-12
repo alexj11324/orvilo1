@@ -6,6 +6,8 @@
   "gateway.statusConnectedConnections_other": "在线 · {{count}} 个连接",
   "gateway.statusConnecting": "本机正在连接设备网关...",
   "gateway.statusDisconnected": "本机未连接设备网关",
+  "gateway.statusLoading": "正在检查设备连接…",
+  "gateway.statusUnavailable": "无法检查设备连接",
   "gateway.title": "设备网关",
   "navigation.agentShare": "分享",
   "navigation.agents": "智能体",
@@ -177,7 +179,5 @@
   "window.minimize": "最小化窗口",
   "window.pinToTop": "窗口置顶",
   "window.restore": "恢复窗口",
-  "window.unpinFromTop": "取消置顶",
-  "gateway.statusLoading": "正在检查设备连接…",
-  "gateway.statusUnavailable": "无法检查设备连接"
+  "window.unpinFromTop": "取消置顶"
 }

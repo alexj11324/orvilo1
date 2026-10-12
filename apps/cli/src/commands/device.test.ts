@@ -48,9 +48,9 @@ describe('device command', () => {
     // Default: the deletable ids exist as PERSONAL devices, so `delete` resolves
     // them to the personal `removeDevice` path. Tests override per-scope as needed.
     mockTrpcClient.device.listDevices.query.mockResolvedValue([
-      { deviceId: 'd1', scope: 'personal' },
-      { deviceId: 'd2', scope: 'personal' },
-      { deviceId: '8040798a77ae', scope: 'personal' },
+      { deviceId: 'd1' },
+      { deviceId: 'd2' },
+      { deviceId: '8040798a77ae' },
     ]);
   });
 
@@ -78,8 +78,8 @@ describe('device command', () => {
 
     it('should keep the personal+workspace union when the context is ambient (no flag)', async () => {
       mockTrpcClient.device.listDevices.query.mockResolvedValue([
-        { deviceId: 'p1', scope: 'personal' },
-        { deviceId: 'ws1', scope: 'workspace' },
+        { deviceId: 'p1' },
+        { deviceId: 'ws1' },
       ]);
 
       const program = createProgram();
@@ -181,9 +181,7 @@ describe('device command', () => {
     });
 
     it('should error + exit(1) without deleting when the device is not in the list', async () => {
-      mockTrpcClient.device.listDevices.query.mockResolvedValue([
-        { deviceId: 'other', scope: 'personal' },
-      ]);
+      mockTrpcClient.device.listDevices.query.mockResolvedValue([{ deviceId: 'other' }]);
 
       const program = createProgram();
       await program.parseAsync(['node', 'test', 'device', 'delete', 'missing', '--yes']);

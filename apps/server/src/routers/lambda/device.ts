@@ -267,7 +267,6 @@ export const deviceRouter = router({
       z.object({
         deviceId: z.string(),
         platform: remotePlatformEnum,
-        scope: z.enum(['personal', 'workspace']).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -275,7 +274,7 @@ export const deviceRouter = router({
         {
           deviceId: input.deviceId,
           userId: ctx.userId,
-          workspaceId: input.scope === 'personal' ? undefined : ctx.workspaceId,
+          workspaceId: ctx.workspaceId,
         },
         {
           apiName: 'checkPlatformCapability',

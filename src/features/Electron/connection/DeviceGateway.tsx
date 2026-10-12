@@ -95,21 +95,17 @@ const DeviceGateway = memo(() => {
   );
 
   const connectionCount = getDeviceConnectionCount(devices);
-  const connectionState = getDeviceConnectionState(
-    devices,
-    isDeviceListLoading,
-    deviceListError,
-  );
+  const connectionState = getDeviceConnectionState(devices, isDeviceListLoading, deviceListError);
   const hints = resolveGatewayHints({
     connectionCount: connectionCount ?? 0,
     connectionState,
     isConnected,
     isConnecting,
   });
-  const connectionHint = hints.connection.count === undefined
-    ? t(hints.connection.key)
-    : t(hints.connection.key, { count: hints.connection.count });
-
+  const connectionHint =
+    hints.connection.count === undefined
+      ? t(hints.connection.key)
+      : t(hints.connection.key, { count: hints.connection.count });
 
   const popoverContent = (
     <div className={cx(styles.popoverContent, 'flex flex-col gap-1')}>

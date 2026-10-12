@@ -556,6 +556,21 @@ describe('GatewayActionImpl', () => {
   });
 
   describe('executeGatewayAgent', () => {
+    it('refuses to start a run when the deployment has no Agent Gateway', async () => {
+      const action = new GatewayActionImpl(vi.fn() as any, vi.fn() as any, undefined);
+      (globalThis as any).window = {
+        global_serverConfigStore: { getState: () => ({ serverConfig: {} }) },
+      };
+
+      await expect(
+        action.executeGatewayAgent({
+          context: { agentId: 'agent-1', scope: 'main', threadId: null, topicId: 'topic-1' },
+          message: 'Hello',
+        }),
+      ).rejects.toThrow('no Agent Gateway configured');
+      expect(aiAgentService.execAgentTask).not.toHaveBeenCalled();
+    });
+
     function createExecuteTestAction() {
       const mockClient = createMockClient();
       const moveQueuedMessages = vi.fn();

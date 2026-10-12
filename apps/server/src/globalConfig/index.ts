@@ -120,8 +120,12 @@ export const getServerGlobalConfig = async () => {
         }
       : undefined),
 
-    // Expose Agent Gateway URL to client (used by hetero agents; also required for queue mode)
-    ...(appEnv.AGENT_GATEWAY_URL ? { agentGatewayUrl: appEnv.AGENT_GATEWAY_URL } : undefined),
+    // Expose Agent Gateway URL to client (used by hetero agents; also required for queue mode).
+    // Only when the server can also push to it: without the service token no run
+    // event reaches the gateway, and a client that trusted the URL would wait forever.
+    ...(appEnv.AGENT_GATEWAY_URL && appEnv.AGENT_GATEWAY_SERVICE_TOKEN
+      ? { agentGatewayUrl: appEnv.AGENT_GATEWAY_URL }
+      : undefined),
 
     memory: {
       userMemory: cleanObject(getPublicMemoryExtractionConfig()),

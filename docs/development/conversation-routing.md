@@ -55,3 +55,7 @@ thread/group contexts keep their existing key. `carryDraftToKey` was removed
 The regression suite pinning this contract — feed semantics, `lastUsedAgentId`
 write points, routing, handoff persistence, send-path and mobile bounds —
 is indexed in [conversation-first-contract.md](./conversation-first-contract.md).
+
+## Runs need the Agent Gateway
+
+A heterogeneous Agent run is started on the server and its events reach the client only through the Agent Gateway (`AGENT_GATEWAY_URL`, `AGENT_GATEWAY_SERVICE_TOKEN`, `ENABLE_AGENT_GATEWAY=1`). On a deployment without one, sending fails at once with a message naming the missing setting; the client does not start a run whose result it could never receive. For local development, `.agents/acceptance/scripts/agent-gateway/local-gateway-setup.sh` runs a gateway and prints the server settings.

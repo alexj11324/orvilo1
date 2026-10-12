@@ -34,6 +34,7 @@
   "agentDocument.emptyTitle": "未打开任何文档",
   "agentDocument.linkCopied": "链接已复制",
   "agentDocument.openAsPage": "打开整页",
+  "agentGatewayRequired": "当前部署没有配置 Agent 网关，Agent 无法运行。请联系管理员配置 AGENT_GATEWAY_URL。",
   "agentHandoffMarker": "── 智能体已切换为 {{name}} ──",
   "agentNotFound.desc": "该智能体不存在或你已无权访问，可能已被删除或被其所有者设为私人。",
   "agentNotFound.title": "智能体不可用",

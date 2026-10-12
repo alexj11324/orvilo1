@@ -175,9 +175,7 @@ const IMMUTABLE_AGENT_FIELDS = [
   'slug',
   'userId',
   'virtual',
-  // Workspace visibility is public for new Agents. Only the dedicated
-  // managed publication path may promote legacy private records, so config
-  // patches cannot change this boundary.
+  // Visibility changes use the dedicated managed publication path.
   'visibility',
   'workspaceId',
 ] as const;
@@ -1464,19 +1462,10 @@ export class AgentModel {
 
   /** Existing Group factories supply authoritative parent visibility after Group authorization. */
   batchCreateGroupAgents = (configs: Partial<AgentItem>[]): Promise<AgentItem[]> =>
-    this.createBatch(configs, true);
+    this.createBatch(configs);
 
-  private createBatch = async (
-    configs: Partial<AgentItem>[],
-    groupOwned = false,
-  ): Promise<AgentItem[]> => {
+  private createBatch = async (configs: Partial<AgentItem>[]): Promise<AgentItem[]> => {
     if (configs.length === 0) return [];
-    if (
-      this.workspaceId &&
-      !groupOwned &&
-      configs.some((config) => config.visibility === 'private')
-    )
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'New workspace Agents must be public' });
 
     const normalizedConfigs = await Promise.all(
       configs.map(async (config) => ({

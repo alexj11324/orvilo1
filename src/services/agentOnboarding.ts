@@ -1,5 +1,6 @@
 import type { AgentItem, ProviderBinding } from '@orvilo/types';
 import { PROVIDER_CONFIG_ANCHOR_MODEL, providerBindingConfigSchema } from '@orvilo/types';
+import { TRPCClientError } from '@trpc/client';
 
 import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 
@@ -53,8 +54,15 @@ export const createOnboardingAgentOnce = async (
     ...params.config,
     params: { ...params.config?.params, onboardingCreateId: checkpoint.requestId },
   } as CreateAgentParams['config'];
-  const result = await createAgent({ ...params, config });
-  return { ...result, config };
+  try {
+    const result = await createAgent({ ...params, config });
+    return { ...result, config };
+  } catch (cause) {
+    // Validation refused the mutation before insertion; the user can correct it.
+    if (cause instanceof TRPCClientError && cause.data?.code === 'BAD_REQUEST')
+      checkpoint.attempted = false;
+    throw cause;
+  }
 };
 
 export const getOnboardingWorkspaceAgent = async (agentId: string, workspaceId: string) => {

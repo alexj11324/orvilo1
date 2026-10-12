@@ -245,6 +245,43 @@ describe('agentRouter', () => {
     };
   });
 
+  describe('createAgent', () => {
+    it.each(['explicit', 'folder'] as const)(
+      'creates a private workspace Agent with a saved runtime via %s visibility',
+      async (source) => {
+        agentModelMock.create = vi
+          .fn()
+          .mockResolvedValue({ id: 'private-agent', visibility: 'private' });
+        agentModelMock.getAssignableSessionGroupVisibility = vi.fn().mockResolvedValue('private');
+        const config = {
+          model: 'model-1',
+          provider: 'openai',
+          agencyConfig: {
+            boundDeviceId: 'workspace-device',
+            executionTarget: 'device' as const,
+            heterogeneousProvider: { type: 'opencode' as const, model: 'model-1' },
+          },
+        };
+        const caller = agentRouter.createCaller({ ...mockCtx, workspaceId: 'ws-1' });
+        await expect(
+          caller.createAgent({
+            config,
+            ...(source === 'explicit'
+              ? { visibility: 'private' as const }
+              : { groupId: 'private-folder' }),
+          }),
+        ).resolves.toEqual({ agentId: 'private-agent' });
+        expect(agentModelMock.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            ...config,
+            visibility: 'private',
+          }),
+        );
+        expect(resourcePermissionModelMock.setAccessLevel).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   describe('getAgentConfig', () => {
     it('should return default config if user not found when getting inbox config', async () => {
       vi.mocked(UserModel.findById).mockResolvedValue(undefined);

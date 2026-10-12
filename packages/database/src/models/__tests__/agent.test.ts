@@ -2140,7 +2140,7 @@ describe('AgentModel', () => {
       });
     });
 
-    it('refuses new private workspace Agents and inactive/Viewer creation without inserting', async () => {
+    it('refuses inactive/Viewer creation and allows private creation for an active member', async () => {
       const [workspace] = await serverDB
         .insert(workspaces)
         .values({ name: 'Creator role floor', slug: 'creator-role-floor', primaryOwnerId: userId })
@@ -2160,12 +2160,8 @@ describe('AgentModel', () => {
         .update(workspaceMembers)
         .set({ suspendedAt: null })
         .where(eq(workspaceMembers.userId, userId));
-      await expect(model.create({ ...config, visibility: 'private' })).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-      });
-      expect(
-        await serverDB.select().from(agents).where(eq(agents.workspaceId, workspace.id)),
-      ).toEqual([]);
+      const privateAgent = await model.create({ ...config, visibility: 'private' });
+      expect(privateAgent.visibility).toBe('private');
       const created = await model.create(config);
       expect(created.visibility).toBe('public');
       expect(

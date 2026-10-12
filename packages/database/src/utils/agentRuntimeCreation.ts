@@ -10,7 +10,6 @@ import type { AgentItem } from '../schemas';
 import { devices, workspaceMembers } from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { normalizeAgentRuntimeIdentity } from './agentRuntimeIdentity';
-import { buildStrictWorkspaceWhere, buildWorkspaceWhere } from './workspace';
 
 export type AgentRuntimeCreationConfig = Partial<
   Pick<AgentItem, 'agencyConfig' | 'model' | 'provider' | 'visibility'>
@@ -52,7 +51,6 @@ export const assertAgentRuntimeCreation = async (
     agencyConfig.heterogeneousProvider = provider;
   }
   assertAgentRuntimeSelection({ ...config, agencyConfig });
-  const publicWorkspaceAgent = Boolean(actor.workspaceId && config.visibility !== 'private');
   if (
     !agencyConfig.boundDeviceId ||
     !['device', 'local'].includes(agencyConfig.executionTarget ?? '')
@@ -62,14 +60,7 @@ export const assertAgentRuntimeCreation = async (
   const [host] = await db
     .select({ deviceId: devices.deviceId })
     .from(devices)
-    .where(
-      and(
-        eq(devices.deviceId, agencyConfig.boundDeviceId),
-        publicWorkspaceAgent
-          ? buildStrictWorkspaceWhere({ ...actor, callerAgentVisibility: 'public' }, devices)
-          : buildWorkspaceWhere(actor, devices),
-      ),
-    )
+    .where(and(eq(devices.deviceId, agencyConfig.boundDeviceId), eq(devices.userId, actor.userId)))
     .limit(1);
   if (!host) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });

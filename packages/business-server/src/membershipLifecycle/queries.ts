@@ -7,7 +7,6 @@ import type {
   WorkspaceOwnershipTransferItem,
 } from '@orvilo/database/schemas';
 import {
-  devices,
   executionGrants,
   projectMembers,
   projects,
@@ -287,29 +286,6 @@ export const countActiveDelegations = async (
           eq(executionGrants.delegationSubjectId, userId),
         ),
         eq(executionGrants.status, 'active'),
-      ),
-    );
-  return Number(row?.total ?? 0);
-};
-
-/**
- * Devices `WorkspaceMemberModel.removeMember` would delete for this member —
- * the same predicate (private enrollments plus devices shared out of their
- * personal list) so the preview never over-promises what removal touches.
- */
-export const countMemberBoundDevices = async (
-  db: OrviloDatabase,
-  workspaceId: string,
-  userId: string,
-) => {
-  const [row] = await db
-    .select({ total: count() })
-    .from(devices)
-    .where(
-      and(
-        eq(devices.workspaceId, workspaceId),
-        eq(devices.userId, userId),
-        or(eq(devices.visibility, 'private'), isNotNull(devices.sharedFromDeviceId)),
       ),
     );
   return Number(row?.total ?? 0);

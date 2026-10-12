@@ -7,10 +7,7 @@ import { type ToolExecutionContext } from '../types';
 
 const log = debug('orvilo-server:device-scope');
 
-type DeviceScopeContext = Pick<
-  ToolExecutionContext,
-  'activeDeviceScope' | 'agentId' | 'serverDB' | 'workspaceId'
->;
+type RunWorkspaceContext = Pick<ToolExecutionContext, 'agentId' | 'serverDB' | 'workspaceId'>;
 
 /**
  * The workspace whose CONTENT this run reads and writes: the run-scoped
@@ -29,7 +26,7 @@ type DeviceScopeContext = Pick<
  * silently resolves to personal scope and the agent cannot even find itself.
  */
 export const resolveContentWorkspaceId = async (
-  context: Pick<DeviceScopeContext, 'agentId' | 'serverDB' | 'workspaceId'>,
+  context: Pick<RunWorkspaceContext, 'agentId' | 'serverDB' | 'workspaceId'>,
 ): Promise<string | undefined> => {
   if (context.workspaceId) return context.workspaceId;
 
@@ -65,9 +62,7 @@ export const resolveContentWorkspaceId = async (
  * so a workspace-addressed call would simply miss it.
  */
 export const resolveRunWorkspaceId = async (
-  context: DeviceScopeContext,
+  context: RunWorkspaceContext,
 ): Promise<string | undefined> => {
-  if (context.activeDeviceScope === 'personal') return undefined;
-
   return resolveContentWorkspaceId(context);
 };

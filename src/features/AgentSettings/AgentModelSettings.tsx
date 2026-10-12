@@ -28,7 +28,10 @@ import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/componen
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { resolveModelSwitchSelection } from '@/features/AgentSettings/modelSelection';
+import {
+  applySavedModelSelection,
+  resolveModelSwitchSelection,
+} from '@/features/AgentSettings/modelSelection';
 import {
   getEffortLabelKeys,
   getModeLabelKey,
@@ -255,7 +258,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
       isFastSpeed: speed === 'fast',
       value,
     });
-    void patchProvider(applyHeteroSelection(provider, selection));
+    void patchProvider(applySavedModelSelection(provider, selection));
   };
 
   const showModelRow = builtinEngine || capability?.model?.source === 'static' || isCatalogModel;

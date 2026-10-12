@@ -257,7 +257,6 @@ export const execAcpBuiltinTool = async (
   const assistantMessageId: string | undefined = metadata.assistantMessageId;
   const builtinToolContext = (metadata.builtinToolContext ?? {}) as {
     activeDeviceId?: string;
-    activeDeviceScope?: 'personal' | 'workspace';
     workingDirectory?: string;
   };
 
@@ -359,7 +358,6 @@ export const execAcpBuiltinTool = async (
 
   const context: ToolExecutionContext = {
     activeDeviceId: builtinToolContext.activeDeviceId,
-    activeDeviceScope: builtinToolContext.activeDeviceScope,
     agentId: operation.agentId ?? undefined,
     // The member runner needs the group + roster; the sub-agent runner needs
     // the tool payload anchor. Both no-op to `undefined` when the op lacks the

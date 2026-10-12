@@ -14,6 +14,8 @@ const DEVICE_ADMISSION_ERROR_CODES = new Set<string>([
   'DEVICE_BINDING_INVALID',
   'DEVICE_INVENTORY_INCOMPLETE',
   'DEVICE_NOT_FOUND',
+  'DEVICE_OFFLINE',
+  'DEVICE_NOT_CONNECTED',
   'DEVICE_REQUEST_UNAUTHORIZED',
   'DEVICE_REQUIRED',
   'DEVICE_SELECTION_REQUIRED',
@@ -60,6 +62,10 @@ export const resolveDeviceAdmissionAction = (
     case 'DEVICE_SELECTION_REQUIRED':
     case 'EXECUTION_TARGET_NONE': {
       return 'repair';
+    }
+    case 'DEVICE_OFFLINE':
+    case 'DEVICE_NOT_CONNECTED': {
+      return 'retry-inventory';
     }
     case 'DEVICE_NOT_FOUND': {
       // With named repair candidates the user repairs in place; without them

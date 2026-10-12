@@ -61,18 +61,6 @@ export type AdmissionRequiredOperation =
   | { kind: 'device-operation'; operation: string };
 
 /** Existing member-choice policy, evaluated only from trusted server context. */
-export const canSelectCallerPersonalDevice = ({
-  workspaceId,
-  visibility,
-}: {
-  agencyConfig?: OrviloAgentAgencyConfig | null;
-  agentOwnerId?: string;
-  canManageAgent: boolean;
-  userId: string;
-  visibility?: 'private' | 'public';
-  workspaceId?: string;
-}): boolean => !workspaceId || visibility === 'private';
-
 /**
  * The caller's grant context. `devicePermissions` is a caller-computed
  * execute/view map (e.g. from a device-grants table): a device granted only
@@ -324,8 +312,8 @@ const verifyCandidate = (params: {
  * so every surface returns the identical candidate id set — UI grouping may
  * change display order, never membership.
  *
- * Scope IS the authorization: a workspace run only sees that workspace's
- * registered devices, a personal run only the caller's own. Capability and
+ * Device ownership grants direct access; authorized workspace Agents also grant
+ * execution on their saved host while its enrolling owner remains a member. Capability and
  * version are no longer assumed — each row carries a real verdict
  * (`capabilityStatus` / `versionStatus` + `verification` evidence). For
  * `agent-run` the registry contract verifies, delegated to device-side
@@ -340,8 +328,6 @@ export const listAuthorizedDeviceCandidates = async (
   options?: {
     /** Agent metadata only; never authority to access its creator's machine. */
     agentOwnerId?: string;
-    /** Internal server policy only; never accepted from a browser request. */
-    includeCallerPersonalDevices?: boolean;
     localDeviceId?: string;
     /** The caller's grant context — see {@link AdmissionCandidatePolicy}. */
     policy?: AdmissionCandidatePolicy;
@@ -361,8 +347,6 @@ export const listAuthorizedDeviceCandidates = async (
      */
     referencedDevices?: ReadonlyArray<{
       deviceId?: string | null;
-      /** Legacy caller metadata; never expands the actual caller's registry. */
-      ownerRegistry?: boolean;
     }>;
     /** What the candidate set must be able to run — see {@link AdmissionRequiredOperation}. */
     requiredOperation?: AdmissionRequiredOperation;
@@ -372,7 +356,6 @@ export const listAuthorizedDeviceCandidates = async (
 ): Promise<DeviceCandidateInventory> => {
   const deviceModel = new DeviceModel(serverDB, userId, workspaceId);
   const localDeviceId = options?.localDeviceId;
-  const scope: 'personal' | 'workspace' = workspaceId ? 'workspace' : 'personal';
   const requiredOperation = options?.requiredOperation ?? { kind: 'agent-run' };
   const devicePermissions = options?.policy?.devicePermissions;
 
@@ -388,31 +371,13 @@ export const listAuthorizedDeviceCandidates = async (
   }
 
   let inventoryComplete = true;
-  const includeCallerPersonalDevices =
-    !!workspaceId && options?.includeCallerPersonalDevices === true;
-  const [rows, online, callerPersonalRows, callerPersonalOnline] = await Promise.all([
-    (workspaceId ? deviceModel.queryWorkspaceDevices() : deviceModel.queryPersonal()).catch(
-      (error) => {
-        // The registry is authoritative for candidacy. A failed read is an
-        // INCOMPLETE inventory — never "zero devices" — so resolution blocks
-        // instead of auto-binding from a partial set.
-        inventoryComplete = false;
-        log('device registry lookup failed (scope=%s); inventory incomplete: %O', scope, error);
-        return [] as Awaited<ReturnType<typeof deviceModel.queryPersonal>>;
-      },
-    ),
-    // The gateway only answers liveness; a failed/empty list marks devices
-    // offline but does not shrink candidacy (offline devices stay selectable —
-    // dispatch then fails honestly at the gateway).
-    deviceGateway.queryDeviceList(userId, workspaceId),
-    includeCallerPersonalDevices
-      ? deviceModel.queryPersonal().catch((error) => {
-          inventoryComplete = false;
-          console.error('[device:personalCandidateInventory]', error);
-          return [] as Awaited<ReturnType<typeof deviceModel.queryPersonal>>;
-        })
-      : Promise.resolve([]),
-    includeCallerPersonalDevices ? deviceGateway.queryDeviceList(userId) : Promise.resolve([]),
+  const [rows, online] = await Promise.all([
+    deviceModel.query().catch((error) => {
+      inventoryComplete = false;
+      log('device registry lookup failed; inventory incomplete: %O', error);
+      return [] as Awaited<ReturnType<typeof deviceModel.query>>;
+    }),
+    deviceGateway.queryDeviceList(userId),
   ]);
   if (!inventoryComplete)
     return { candidates: [], inventoryComplete, inventoryState: 'query-failed' };
@@ -434,7 +399,7 @@ export const listAuthorizedDeviceCandidates = async (
   const probedInfo = new Map<string, { supportedTools?: string[] } | undefined>();
 
   const registeredDeviceIds = new Set(executableRows.map((device) => device.deviceId));
-  const authorizedOnline = filterAuthorizedDevicePresence(registeredDeviceIds, online, scope);
+  const authorizedOnline = filterAuthorizedDevicePresence(registeredDeviceIds, online);
   const liveById = new Map(authorizedOnline.map((d) => [d.deviceId, d]));
   if (probeNeeded) {
     const toProbe = authorizedOnline.slice(0, PROBE_BUDGET).map((d) => d.deviceId);
@@ -464,7 +429,7 @@ export const listAuthorizedDeviceCandidates = async (
       deviceId: row.deviceId,
       isLocalMachine: row.deviceId === localDeviceId,
       online: !!live,
-      owner: { userId: row.userId, workspaceId: row.workspaceId ?? null },
+      owner: { userId: row.userId, workspaceId: null },
       registryEvidence: {
         adapterVersion: row.adapterVersion,
         capabilitySnapshot: row.capabilitySnapshot,
@@ -475,25 +440,7 @@ export const listAuthorizedDeviceCandidates = async (
       systemInfo: probedInfo.get(row.deviceId),
     });
   });
-  // Personal clients register immediately before opening their socket, but a
-  // short race can still expose the live connection first — keep the same
-  // gateway-transient compatibility window `getScopedOnlineDevices` allows
-  // (personal scope only; workspace rows ARE the authorization). A transient
-  // row under a 'view' grant stays excluded — presence is not a grant.
-  const transient = authorizedOnline
-    .filter((d) => !seen.has(d.deviceId) && devicePermissions?.[d.deviceId] !== 'view')
-    .map((d): AdmissionDeviceCandidate =>
-      verifyCandidate({
-        deviceId: d.deviceId,
-        isLocalMachine: d.deviceId === localDeviceId,
-        online: true,
-        owner: { userId, workspaceId: workspaceId ?? null },
-        requiredOperation,
-        scopeSource: 'transient',
-        systemInfo: probedInfo.get(d.deviceId),
-      }),
-    );
-  const candidates = [...fromDb, ...transient];
+  const candidates = fromDb;
   for (const device of candidates) seen.add(device.deviceId);
 
   // Referenced-device verification: a stored binding, session pin or caller
@@ -502,33 +449,25 @@ export const listAuthorizedDeviceCandidates = async (
   // `local` run. It joins the candidate set only when a registry lookup
   // confirms it exists (the same find-by-id calls dispatch itself trusts); an
   // unverifiable reference stays unauthorized.
-  const personalById = new Map(callerPersonalRows.map((row) => [row.deviceId, row]));
-  const references = [
-    ...(options?.referencedDevices ?? []),
-    ...callerPersonalRows.map((row) => ({ deviceId: row.deviceId, ownerRegistry: false })),
-  ];
+  const references = options?.referencedDevices ?? [];
   for (const ref of references) {
     if (!ref?.deviceId || seen.has(ref.deviceId)) continue;
     // A 'view'-granted reference never enters the execution set either.
     if (devicePermissions?.[ref.deviceId] === 'view') continue;
     try {
       const verifiedRow =
-        personalById.get(ref.deviceId) ??
         (await deviceModel.findByDeviceId(ref.deviceId)) ??
-        (workspaceId ? await deviceModel.findWorkspaceDeviceById(ref.deviceId) : undefined);
+        (workspaceId ? await deviceModel.findExecutionDeviceById(ref.deviceId) : undefined);
       if (!verifiedRow) continue;
       seen.add(ref.deviceId);
       runtimeSnapshots.set(ref.deviceId, verifiedRow.capabilitySnapshot);
       // A verified reference can belong to the caller's personal registry
       // during a workspace-private run. Presence must use that row's principal;
       // workspace presence cannot establish personal-device liveness.
-      const referenceWorkspaceId = verifiedRow.workspaceId ?? undefined;
       const referencePresence =
-        verifiedRow.userId === userId && referenceWorkspaceId === workspaceId
+        verifiedRow.userId === userId
           ? online
-          : includeCallerPersonalDevices && verifiedRow.userId === userId && !referenceWorkspaceId
-            ? callerPersonalOnline
-            : await deviceGateway.queryDeviceList(verifiedRow.userId, referenceWorkspaceId);
+          : await deviceGateway.queryDeviceList(verifiedRow.userId);
       const isOnline = referencePresence.some((device) => device.deviceId === ref.deviceId);
       // Probe a referenced device that needs live evidence and is online.
       if (probeNeeded && isOnline && !probedInfo.has(ref.deviceId)) {
@@ -545,7 +484,7 @@ export const listAuthorizedDeviceCandidates = async (
           deviceId: ref.deviceId,
           isLocalMachine: ref.deviceId === localDeviceId,
           online: isOnline,
-          owner: { userId: verifiedRow.userId, workspaceId: verifiedRow.workspaceId ?? null },
+          owner: { userId: verifiedRow.userId, workspaceId: null },
           registryEvidence: {
             adapterVersion: verifiedRow.adapterVersion,
             capabilitySnapshot: verifiedRow.capabilitySnapshot,
@@ -575,7 +514,7 @@ export const listAuthorizedDeviceCandidates = async (
             online: candidate.online,
             owner: {
               deviceId: candidate.deviceId,
-              userId,
+              userId: candidate.owner.userId,
               workspaceId: candidate.owner.workspaceId ?? undefined,
             },
             requirement,
@@ -659,17 +598,10 @@ export type HeteroExecutionPlan =
   | { kind: 'sandbox' };
 
 export interface ResolveHeteroExecutionPlanParams {
-  /**
-   * The merged agency config for THIS run — already carries the topic pin
-   * (executionConfig) and the caller's member override via
-   * `resolveAgentAgencyConfig`. Member-shadowing is applied below: when a
-   * member override resolved, the shared-row default is never consulted.
-   */
+  /** The Agent’s saved configuration; run-local and member overrides are excluded. */
   agencyConfig?: OrviloAgentAgencyConfig;
   /** Agent metadata only; Device authority always belongs to the actual caller. */
   agentOwnerId?: string;
-  /** Existing effective-policy verdict from trusted run setup, used only for unbound auto. */
-  canSelectPersonalDevice?: boolean;
   /**
    * External senders (bot/IM/task surfaces without device grants) pass false —
    * they degrade to the sandbox when available and are denied otherwise.
@@ -742,13 +674,8 @@ export const resolveHeteroExecutionPlan = async (
     workspaceScoped: params.workspaceScoped,
   });
 
-  // An explicit request counts toward device intent ONLY when the run allows
-  // member-initiated requests (mirroring the legacy fixed-policy strip): a
-  // disallowed request is ignored, never a silent override and never an error
-  // — the resolver gates it the same way below.
-  const effectiveExplicitDeviceId = undefined;
-  const wantsDevice =
-    !!effectiveExplicitDeviceId || target === 'device' || target === 'local' || target === 'auto';
+  // Runs honor only the saved binding, never a per-request device override.
+  const wantsDevice = target === 'device' || target === 'local' || target === 'auto';
 
   if (!wantsDevice || !params.canUseDevice) {
     if (target === 'sandbox') return { kind: 'sandbox' };
@@ -794,7 +721,6 @@ export const resolveHeteroExecutionPlan = async (
       // against the caller's + workspace registries — a member cannot
       // request the author's personal device by id.
       { deviceId: params.localDeviceId },
-      { deviceId: effectiveExplicitDeviceId },
     ],
   };
   const { candidates, inventoryComplete } = await listAuthorizedDeviceCandidates(

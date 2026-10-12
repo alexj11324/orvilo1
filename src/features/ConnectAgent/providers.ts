@@ -145,12 +145,20 @@ export const buildConnectAgentConfig = ({
   // selection sentinel, not a value the CLI flags understand.
   const selectorOverrides = {
     ...(effort && effort !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION ? { effort } : {}),
-    ...(model && model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION ? { model } : {}),
+    model: model || HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   };
 
   if (provider.kind === 'platform' && isRemoteHeterogeneousType(provider.type)) {
+    const agencyConfig = buildPlatformAgencyConfig(provider.type, target);
     return {
-      agencyConfig: buildPlatformAgencyConfig(provider.type, target),
+      agencyConfig: {
+        ...agencyConfig,
+        heterogeneousProvider: {
+          ...agencyConfig.heterogeneousProvider,
+          model: model || HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
+        },
+      },
+      model: model || HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
       avatar: profile?.avatar || undefined,
       description: (overrides?.description ?? profile?.description)?.trim() || undefined,
       name,
@@ -167,6 +175,7 @@ export const buildConnectAgentConfig = ({
     description: overrides?.description?.trim() || undefined,
     name,
     provider: provider.type,
+    model: model || HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
     systemRole: '',
     title: provider.title,
   };

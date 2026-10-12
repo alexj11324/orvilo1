@@ -22,8 +22,6 @@ import {
 } from '@/features/ExecutionTargetPicker';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useSelectAgentDevice } from '@/hooks/useSelectAgentDevice';
-import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useElectronStore } from '@/store/electron';
 
 import { resolveAgentDeviceSettingsState } from './agentDeviceSettingsState';
@@ -70,13 +68,10 @@ interface AgentDeviceSettingsProps {
  */
 const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat']);
-  const agent = useAgentStore(agentByIdSelectors.getAgentById(agentId));
-  const { agencyConfig, canSelectExecutionTarget, canSelectPersonalDevice, isPreferenceLoading } =
+  const { agencyConfig, canSelectExecutionTarget, isPreferenceLoading } =
     useEffectiveAgencyConfig(agentId);
   const selectAgentDevice = useSelectAgentDevice(agentId);
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
-
-  const isWorkspaceAgent = Boolean(agent?.workspaceId);
 
   // A workspace member's device pick is their own preference write — the
   // shared `edit_own_content` gate applies to personal agents only.
@@ -86,9 +81,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
     agentId,
     boundDeviceId: agencyConfig?.boundDeviceId,
     canSelectDevice,
-    canSelectPersonalDevice,
     permissionsLoaded: !isPreferenceLoading,
-    scope: isWorkspaceAgent ? 'workspace' : 'personal',
   });
   const {
     bindingState,

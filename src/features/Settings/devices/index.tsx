@@ -33,7 +33,7 @@ const Page = memo(() => {
     setOpen(true);
   };
 
-  const devices = (data ?? []).filter((device) => device.scope === 'personal');
+  const devices = data ?? [];
 
   return (
     <>
@@ -46,7 +46,7 @@ const Page = memo(() => {
             children: (
               <div className={'flex flex-col gap-3'}>
                 <LocalDeviceStatus />
-                <DeviceManager scope={'personal'} onConnect={handleConnect} />
+                <DeviceManager onConnect={handleConnect} />
               </div>
             ),
             extra: (
@@ -94,12 +94,7 @@ const Page = memo(() => {
         {...FORM_STYLE}
       />
 
-      <DeviceConnectModal
-        initialTab={initialTab}
-        open={open}
-        scope={'personal'}
-        onClose={() => setOpen(false)}
-      />
+      <DeviceConnectModal initialTab={initialTab} open={open} onClose={() => setOpen(false)} />
     </>
   );
 });

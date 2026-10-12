@@ -9,7 +9,6 @@ import { emitWorkspaceEvent, recordAudit } from './audit';
 import {
   bumpAuthzVersion,
   countActiveDelegations,
-  countMemberBoundDevices,
   countMemberWorkload,
   countOpenTasksAssignedTo,
   countOpenTasksReviewedBy,
@@ -42,7 +41,6 @@ export interface MemberRemovalPreview {
   assignedTasks: Array<{ id: string; title: string }>;
   reviewingTaskCount: number;
   runningDelegationCount: number;
-  sharedDeviceCount: number;
 }
 
 const activeMembership = (member: WorkspaceMemberItem | undefined) =>
@@ -234,26 +232,19 @@ export const previewMemberRemoval = async (
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Not an active member' });
   }
 
-  const [
-    assignedTaskCount,
-    reviewingTaskCount,
-    runningDelegationCount,
-    sharedDeviceCount,
-    assignedTasks,
-  ] = await Promise.all([
-    countOpenTasksAssignedTo(db, params.workspaceId, params.targetUserId),
-    countOpenTasksReviewedBy(db, params.workspaceId, params.targetUserId),
-    countActiveDelegations(db, params.workspaceId, params.targetUserId),
-    countMemberBoundDevices(db, params.workspaceId, params.targetUserId),
-    listOpenAssignedTaskTitles(db, params.workspaceId, params.targetUserId),
-  ]);
+  const [assignedTaskCount, reviewingTaskCount, runningDelegationCount, assignedTasks] =
+    await Promise.all([
+      countOpenTasksAssignedTo(db, params.workspaceId, params.targetUserId),
+      countOpenTasksReviewedBy(db, params.workspaceId, params.targetUserId),
+      countActiveDelegations(db, params.workspaceId, params.targetUserId),
+      listOpenAssignedTaskTitles(db, params.workspaceId, params.targetUserId),
+    ]);
 
   return {
     assignedTaskCount,
     assignedTasks,
     reviewingTaskCount,
     runningDelegationCount,
-    sharedDeviceCount,
   };
 };
 
@@ -330,10 +321,7 @@ export const removeMember = async (
         })
       : 0;
 
-    const { removedDeviceIds } = await memberModel.removeMember(
-      params.workspaceId,
-      params.targetUserId,
-    );
+    await memberModel.removeMember(params.workspaceId, params.targetUserId);
 
     await recordAudit(tx, {
       action: 'member.removed',
@@ -341,7 +329,6 @@ export const removeMember = async (
       metadata: {
         reassignedTaskCount,
         reassignToUserId: params.reassignToUserId ?? null,
-        removedDeviceIds,
       },
       resourceId: params.targetUserId,
       resourceType: 'workspace_member',
@@ -360,7 +347,7 @@ export const removeMember = async (
       workspaceId: params.workspaceId,
     });
 
-    return { reassignedTaskCount, removedDeviceIds };
+    return { reassignedTaskCount };
   });
 };
 
@@ -382,11 +369,11 @@ export const leaveWorkspace = async (
       });
     }
 
-    const { removedDeviceIds } = await memberModel.removeMember(params.workspaceId, params.userId);
+    await memberModel.removeMember(params.workspaceId, params.userId);
     await recordAudit(tx, {
       action: 'member.left',
       ipAddress: params.ipAddress,
-      metadata: { removedDeviceIds },
+      metadata: {},
       resourceId: params.userId,
       resourceType: 'workspace_member',
       userId: params.userId,

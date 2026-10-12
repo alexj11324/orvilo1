@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
   getMeta: vi.fn(),
   workspaceId: undefined as string | undefined,
   assertUse: vi.fn(),
-  queryPersonal: vi.fn(),
+  query: vi.fn(),
   queryWorkspace: vi.fn(),
   membershipRole: vi.fn(),
   queryDeviceList: vi.fn(),
@@ -34,7 +34,7 @@ const mocks = vi.hoisted(() => ({
   isAuthorOrAdmin: vi.fn(),
   preference: vi.fn(),
   findByDeviceId: vi.fn(),
-  findWorkspaceDeviceById: vi.fn(),
+  findExecutionDeviceById: vi.fn(),
 }));
 vi.mock('@/database/core/db-adaptor', () => ({ getServerDB: () => ({}) }));
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
@@ -48,13 +48,12 @@ vi.mock('@/database/models/agent', () => ({
   },
 }));
 vi.mock('@/database/models/device', () => ({
-  WorkspaceDevicePrivateConflictError: class extends Error {},
   DeviceModel: class {
-    queryPersonal = mocks.queryPersonal;
-    queryWorkspaceDevices = mocks.queryWorkspace;
+    query = mocks.query;
+    queryForExecution = mocks.queryWorkspace;
     updateRuntimeInstallationEvidence = mocks.persist;
     findByDeviceId = mocks.findByDeviceId;
-    findWorkspaceDeviceById = mocks.findWorkspaceDeviceById;
+    findExecutionDeviceById = mocks.findExecutionDeviceById;
   },
 }));
 vi.mock('@/database/models/workspaceUserSettings', () => ({
@@ -101,12 +100,12 @@ beforeEach(() => {
   mocks.canManage.mockResolvedValue(false);
   mocks.isAuthorOrAdmin.mockResolvedValue(false);
   mocks.preference.mockResolvedValue({});
-  mocks.queryPersonal.mockResolvedValue([row('host-a'), row('host-b')]);
+  mocks.query.mockResolvedValue([row('host-a'), row('host-b')]);
   mocks.queryWorkspace.mockResolvedValue([]);
   mocks.queryDeviceList.mockResolvedValue([{ deviceId: 'host-a', online: true }]);
   mocks.persist.mockResolvedValue(undefined);
   mocks.findByDeviceId.mockResolvedValue(undefined);
-  mocks.findWorkspaceDeviceById.mockResolvedValue(undefined);
+  mocks.findExecutionDeviceById.mockResolvedValue(undefined);
   mocks.membershipRole.mockResolvedValue('member');
 });
 
@@ -123,7 +122,7 @@ describe('Agent runtime candidate query', () => {
       });
       expect(mocks.getAgentConfig).not.toHaveBeenCalled();
       expect(mocks.getExecutionConfig).not.toHaveBeenCalled();
-      expect(mocks.queryPersonal).not.toHaveBeenCalled();
+      expect(mocks.query).not.toHaveBeenCalled();
     },
   );
 
@@ -132,7 +131,7 @@ describe('Agent runtime candidate query', () => {
     await expect(caller().listAgentCandidates({ agentId: 'missing' })).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
-    expect(mocks.queryPersonal).not.toHaveBeenCalled();
+    expect(mocks.query).not.toHaveBeenCalled();
     expect(mocks.executeToolCall).not.toHaveBeenCalled();
   });
 
@@ -144,7 +143,7 @@ describe('Agent runtime candidate query', () => {
     ).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
-    expect(mocks.queryPersonal).not.toHaveBeenCalled();
+    expect(mocks.query).not.toHaveBeenCalled();
     expect(mocks.executeToolCall).not.toHaveBeenCalled();
   });
 
@@ -213,9 +212,7 @@ describe('server-derived Agent candidate scope', () => {
     mocks.queryWorkspace.mockResolvedValue([
       { ...row('shared'), workspaceId: 'workspace-1', capabilitySnapshot: installation },
     ]);
-    mocks.queryPersonal.mockResolvedValue([
-      { ...row('personal'), capabilitySnapshot: installation },
-    ]);
+    mocks.query.mockResolvedValue([{ ...row('personal'), capabilitySnapshot: installation }]);
     mocks.queryDeviceList.mockResolvedValue([]);
   });
 
@@ -224,30 +221,9 @@ describe('server-derived Agent candidate scope', () => {
     expect(inventory.inventoryComplete).toBe(true);
     expect(
       inventory.candidates.filter(isSelectableDevice).map((candidate) => candidate.deviceId),
-    ).toEqual(['shared', 'personal']);
+    ).toEqual(['personal']);
   });
 
-  it('probes shared installed runtimes as the actual caller, not the enroller or Agent creator', async () => {
-    mocks.queryWorkspace.mockResolvedValue([
-      {
-        ...row('shared'),
-        userId: 'enroller',
-        workspaceId: 'workspace-1',
-        capabilitySnapshot: installation,
-      },
-    ]);
-    mocks.queryPersonal.mockResolvedValue([]);
-    mocks.queryDeviceList.mockResolvedValue([{ deviceId: 'shared', online: true }]);
-    mocks.executeToolCall.mockResolvedValue({
-      success: true,
-      content: JSON.stringify({ agents: { codex: { available: true } } }),
-    });
-    const inventory = await caller('workspace-1').listAgentCandidates({ agentId: 'agent-1' });
-    expect(inventory.candidates.filter(isSelectableDevice).map(({ deviceId }) => deviceId)).toEqual(
-      ['shared'],
-    );
-    expect(mocks.executeToolCall.mock.calls[0][0].userId).toBe('user-1');
-  });
   it.each([false, true])(
     'gives authorized public Agent callers the same own-personal pool regardless of Manage=%s',
     async (canManage) => {
@@ -255,39 +231,12 @@ describe('server-derived Agent candidate scope', () => {
       mocks.isAuthorOrAdmin.mockResolvedValue(canManage);
       const inventory = await caller('workspace-1').listAgentCandidates({
         agentId: 'agent-1',
-        canSelectPersonalDevice: true,
-        includeCallerPersonalDevices: true,
       } as never);
       expect(
         inventory.candidates.filter(isSelectableDevice).map((candidate) => candidate.deviceId),
-      ).toEqual(['shared', 'personal']);
+      ).toEqual(['personal']);
     },
   );
-
-  it('does not let a stale personal preference bypass a fixed member policy', async () => {
-    mocks.getAgentConfig.mockResolvedValue({
-      id: 'agent-1',
-      userId: 'another-author',
-      visibility: 'public',
-      workspaceId: 'workspace-1',
-      agencyConfig: {
-        executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
-        boundDeviceId: 'shared',
-        heterogeneousProvider: { type: 'codex', command: 'codex' },
-      },
-    });
-    mocks.preference.mockResolvedValue({
-      agentDeviceOverrides: {
-        'agent-1': { executionTarget: 'device', boundDeviceId: 'personal' },
-      },
-    });
-    const inventory = await caller('workspace-1').listAgentCandidates({ agentId: 'agent-1' });
-    expect(
-      inventory.candidates.filter(isSelectableDevice).map((candidate) => candidate.deviceId),
-    ).toEqual(['shared']);
-    expect(mocks.queryPersonal).not.toHaveBeenCalled();
-  });
 });
 
 describe('selected legacy private Agent visibility-aware model boundary', () => {
@@ -310,7 +259,7 @@ describe('selected legacy private Agent visibility-aware model boundary', () => 
     assertCanUseWorkspaceAgent = guardModule.assertCanUseWorkspaceAgent;
   });
 
-  it('resolves installed candidates for an authorized noncreator without making private config readable', async () => {
+  it('does not expose the author’s unrelated devices to an authorized private Agent user', async () => {
     const owner = 'device-private-inventory-owner';
     const workspaceId = 'device-private-inventory-workspace';
     await db
@@ -346,7 +295,7 @@ describe('selected legacy private Agent visibility-aware model boundary', () => 
       mocks.getExecutionConfig.mockImplementation(model.getAgentConfigForExecution);
       mocks.getMeta.mockImplementation((_db, type, id) => getResourceMeta(db, type, id));
       mocks.assertUse.mockImplementation((params) => assertCanUseWorkspaceAgent({ ...params, db }));
-      mocks.queryPersonal.mockResolvedValue([]);
+      mocks.query.mockResolvedValue([]);
       mocks.queryWorkspace.mockResolvedValue([
         {
           ...row('private-agent-host'),
@@ -366,7 +315,7 @@ describe('selected legacy private Agent visibility-aware model boundary', () => 
       const inventory = await caller(workspaceId).listAgentCandidates({ agentId: agent.id });
       expect(
         inventory.candidates.filter(isSelectableDevice).map(({ deviceId }) => deviceId),
-      ).toEqual(['private-agent-host']);
+      ).toEqual([]);
       expect(mocks.assertUse).toHaveBeenCalled();
       expect(await model.getAgentConfigById(agent.id)).toBeNull();
       expect(JSON.stringify(inventory)).not.toContain('Private instructions');

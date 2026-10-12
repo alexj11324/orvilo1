@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import type { DeviceCandidate, DeviceListItem, DeviceScope } from '@orvilo/types';
+import type { DeviceCandidate, DeviceListItem } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -25,6 +25,7 @@ const runtimeState = vi.hoisted(() => ({
     data: undefined as
       | {
           candidates: DeviceCandidate[];
+          devices?: DeviceListItem[];
           inventoryComplete: boolean;
           runtimeInventoryError?: string;
           runtimeInventoryOfflineOnly?: boolean;
@@ -58,14 +59,12 @@ const buildDevice = (overrides: Partial<DeviceListItem> & { deviceId: string }):
     online: true,
     platform: null,
     registered: true,
-    scope: 'personal',
-    visibility: null,
     workingDirs: [],
     ...overrides,
   }) as DeviceListItem;
 
 const workspaceDevice = (deviceId: string, online = true): DeviceListItem =>
-  buildDevice({ deviceId, online, scope: 'workspace', visibility: 'public' });
+  buildDevice({ deviceId, online });
 
 const setInventory = (data?: DeviceListItem[], error?: unknown, isLoading = false) => {
   listState.current.data = data;
@@ -77,21 +76,16 @@ const renderState = (overrides?: {
   agentId?: string;
   boundDeviceId?: string;
   canSelectDevice?: boolean;
-  canSelectPersonalDevice?: boolean;
-  memberSelectedDeviceId?: string;
+
   permissionsLoaded?: boolean;
-  scope?: DeviceScope | 'personal' | 'workspace';
 }) =>
   renderHook(() =>
     useDeviceSelectorState({
       agentId: overrides?.agentId,
       boundDeviceId: overrides?.boundDeviceId,
       canSelectDevice: overrides?.canSelectDevice ?? true,
-      canSelectPersonalDevice: overrides?.canSelectPersonalDevice,
-      memberSelectedDeviceId: overrides?.memberSelectedDeviceId,
+
       permissionsLoaded: overrides?.permissionsLoaded ?? true,
-      scope: (overrides?.scope === 'workspace' ? 'workspace' : 'personal') as
-        'personal' | 'workspace',
     }),
   );
 
@@ -133,7 +127,7 @@ describe('useDeviceSelectorState', () => {
       setInventory([buildDevice({ deviceId: 'a' })]);
       const { result } = renderState();
       expect(result.current.selectableDevices).toHaveLength(1);
-      expect(result.current.showDeviceSelector).toBe(false);
+      expect(result.current.showDeviceSelector).toBe(true);
     });
 
     it('shows the picker with more than one legal device', () => {
@@ -168,83 +162,6 @@ describe('useDeviceSelectorState', () => {
     });
   });
 
-  describe('legal pool by scope', () => {
-    it('offers owned personal candidates for an authorized workspace repair with no binding', () => {
-      setInventory([buildDevice({ deviceId: 'mine' }), workspaceDevice('workspace')]);
-      const { result } = renderState({ scope: 'workspace', canSelectPersonalDevice: true });
-      expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual([
-        'workspace',
-        'mine',
-      ]);
-      expect(result.current.bindingState).toBe('unset');
-      const denied = renderState({
-        scope: 'workspace',
-        canSelectPersonalDevice: true,
-        canSelectDevice: false,
-      });
-      expect(denied.result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['workspace']);
-    });
-    it('keeps only the exact personal member override valid in workspace settings', () => {
-      setInventory([buildDevice({ deviceId: 'selected' }), buildDevice({ deviceId: 'other' })]);
-      const { result } = renderState({
-        boundDeviceId: 'selected',
-        memberSelectedDeviceId: 'selected',
-        scope: 'workspace',
-      });
-      expect(result.current.bindingState).toBe('valid');
-      expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['selected']);
-      expect(result.current.runnableDevices.map((d) => d.deviceId)).toEqual(['selected']);
-      expect(result.current.showDeviceSelector).toBe(false);
-    });
-
-    it('reads the saved personal binding independently of obsolete member overrides', () => {
-      setInventory([buildDevice({ deviceId: 'shared' }), buildDevice({ deviceId: 'override' })]);
-      for (const memberSelectedDeviceId of [undefined, 'override']) {
-        const { result, unmount } = renderState({
-          boundDeviceId: 'shared',
-          memberSelectedDeviceId,
-          scope: 'workspace',
-        });
-        expect(result.current.bindingState).toBe('valid');
-        expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['shared']);
-        unmount();
-      }
-    });
-
-    it('personal scope selects only personal devices', () => {
-      setInventory([buildDevice({ deviceId: 'p' }), workspaceDevice('w')]);
-      const { result } = renderState({ scope: 'personal' });
-      expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['p']);
-    });
-
-    it('workspace scope selects private + shared workspace devices (F07)', () => {
-      // Private enrollments are legal for their enroller — the chat switcher
-      // already judged them candidates; settings must see the identical set.
-      setInventory([
-        buildDevice({ deviceId: 'p' }),
-        workspaceDevice('w'),
-        buildDevice({ deviceId: 'wp', scope: 'workspace', visibility: 'private' }),
-      ]);
-      const { result } = renderState({ scope: 'workspace' });
-      expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['wp', 'w']);
-      // private + shared = 2 candidates → the selector formula opens.
-      expect(result.current.showDeviceSelector).toBe(true);
-    });
-
-    it('a binding into a private workspace device is valid for its enroller', () => {
-      setInventory([buildDevice({ deviceId: 'wp', scope: 'workspace', visibility: 'private' })]);
-      const { result } = renderState({ boundDeviceId: 'wp', scope: 'workspace' });
-      expect(result.current.bindingState).toBe('valid');
-    });
-
-    it('a private workspace device alone still counts as one candidate', () => {
-      setInventory([buildDevice({ deviceId: 'wp', scope: 'workspace', visibility: 'private' })]);
-      const { result } = renderState({ scope: 'workspace' });
-      expect(result.current.selectableDevices).toHaveLength(1);
-      expect(result.current.showDeviceSelector).toBe(false);
-    });
-  });
-
   describe('bindingState', () => {
     it('reports unset without a binding', () => {
       setInventory([buildDevice({ deviceId: 'a' })]);
@@ -273,7 +190,7 @@ describe('useDeviceSelectorState', () => {
     it('invalid triggers even when the bound device is merely offline-present scope-wise', () => {
       // A binding into the wrong scope is invalid, not just "offline".
       setInventory([workspaceDevice('w1'), workspaceDevice('w2')]);
-      const { result } = renderState({ boundDeviceId: 'missing', scope: 'workspace' });
+      const { result } = renderState({ boundDeviceId: 'missing' });
       expect(result.current.bindingState).toBe('invalid');
     });
   });
@@ -303,7 +220,7 @@ describe('Agent settings installed-runtime candidates', () => {
       const { result } = renderState({ agentId: 'codex-agent' });
       expect(result.current.deviceInventoryComplete).toBe(true);
       expect(result.current.selectableDevices).toHaveLength(count);
-      expect(result.current.showDeviceSelector).toBe(count > 1);
+      expect(result.current.showDeviceSelector).toBe(count > 0);
       expect(result.current.runnableDevices.map((device) => device.deviceId)).toEqual(
         count ? ['a'] : [],
       );
@@ -354,8 +271,6 @@ describe('authoritative Agent-specific scope', () => {
     };
     const { result } = renderState({
       agentId: 'agent-1',
-      scope: 'workspace',
-      canSelectPersonalDevice: false,
     });
     expect(result.current.selectableDevices.map((device) => device.deviceId)).toEqual([
       'shared',
@@ -391,5 +306,35 @@ describe('offline-only runtime inventory metadata', () => {
     expect(result.current.deviceInventoryComplete).toBe(false);
     expect(result.current.runtimeInventoryOfflineOnly).toBe(true);
     expect(result.current.bindingState).toBe('pending');
+  });
+});
+
+describe('a workspace Agent’s saved host', () => {
+  it('displays the enrolling member’s saved host alongside the caller’s devices', () => {
+    setInventory([buildDevice({ deviceId: 'caller-laptop' })]);
+    runtimeState.current.data = {
+      candidates: [
+        {
+          deviceId: 'owner-laptop',
+          capabilityOk: true,
+          versionOk: true,
+          scopeOk: true,
+          online: true,
+          isLocalMachine: false,
+        },
+      ],
+      devices: [buildDevice({ deviceId: 'owner-laptop', friendlyName: 'Owner laptop' })],
+      inventoryComplete: true,
+    };
+    const { result } = renderState({
+      agentId: 'shared-agent',
+      boundDeviceId: 'owner-laptop',
+      canSelectDevice: false,
+    });
+    expect(result.current.bindingState).toBe('valid');
+    expect(result.current.selectableDevices.map((device) => device.friendlyName)).toEqual([
+      'Owner laptop',
+    ]);
+    expect(result.current.showDeviceSelector).toBe(false);
   });
 });

@@ -145,14 +145,12 @@ vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
       findByDeviceId: mockDeviceFindByDeviceId,
-      findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
+      findExecutionDeviceById: mockDeviceFindWorkspaceDeviceById,
       // Unified admission's authorized candidate set — the devices this suite
       // routes to are registered in both scopes (workspace runs query the
       // workspace list, personal runs the personal one).
-      queryPersonal: vi
-        .fn()
-        .mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
-      queryWorkspaceDevices: vi
+      query: vi.fn().mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
+      queryForExecution: vi
         .fn()
         .mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
     };
@@ -296,7 +294,10 @@ vi.mock('@/server/services/deviceGateway', () => ({
     dispatchAgentRun: mockDispatchAgentRun,
     executeToolCall: mockExecuteToolCall,
     isConfigured: false,
-    queryDeviceList: vi.fn().mockResolvedValue([]),
+    queryDeviceList: vi.fn().mockResolvedValue([
+      { deviceId: 'device-001', online: true },
+      { deviceId: 'device-002', online: true },
+    ]),
     resolveDeviceWorkspaceId: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -715,6 +716,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       // is offline/asleep/mid-reconnect — the honest surface code is
       // DEVICE_NOT_CONNECTED, not the registration-gone DEVICE_NOT_FOUND.
       await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDeviceFindWorkspaceDeviceById.mockResolvedValue({
+        friendlyName: 'Alice laptop',
+        deviceId: 'device-001',
+      });
       mockDispatchAgentRun.mockResolvedValue({
         error: 'DEVICE_CHANNEL_UNAVAILABLE',
         errorCode: DeviceTransportErrorCode.DeviceChannelUnavailable,
@@ -727,6 +732,16 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
 
       expect(result).toMatchObject({ error: 'DEVICE_NOT_CONNECTED', success: false });
+      expect(mockMessageUpdate).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          error: expect.objectContaining({
+            body: expect.objectContaining({
+              detail: expect.stringContaining('Device “Alice laptop” is offline'),
+            }),
+          }),
+        }),
+      );
       expect(result.errorData).toMatchObject({
         code: 'DEVICE_NOT_CONNECTED',
         deviceId: 'device-001',

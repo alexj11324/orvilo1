@@ -1,9 +1,10 @@
 import type {
+  HeterogeneousProviderConfig,
   HeterogeneousReasoningEffort,
   HeteroSelection,
   HeteroSelectorCapability,
 } from '@orvilo/types';
-import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
+import { applyHeteroSelection, HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 
 type ModelCapability = Required<Pick<HeteroSelectorCapability, 'model'>> & HeteroSelectorCapability;
 
@@ -31,3 +32,13 @@ export const resolveModelSwitchSelection = ({
     ...(resetSpeed ? { speed: HETEROGENEOUS_AGENT_DEFAULT_SELECTION } : {}),
   };
 };
+
+/** A saved Default selection must remain explicit under the required-model contract. */
+export const applySavedModelSelection = (
+  config: HeterogeneousProviderConfig,
+  selection: HeteroSelection,
+): HeterogeneousProviderConfig => ({
+  ...config,
+  ...applyHeteroSelection(config, selection),
+  model: selection.model ?? config.model ?? HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
+});

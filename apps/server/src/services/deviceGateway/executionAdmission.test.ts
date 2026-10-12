@@ -12,19 +12,19 @@ import { getScopedOnlineDevices } from './scopedDevices';
 
 const {
   queryDeviceList,
-  queryPersonal,
-  queryWorkspaceDevices,
+  query,
+  queryForExecution,
   findByDeviceId,
-  findWorkspaceDeviceById,
+  findExecutionDeviceById,
   updateCapabilityEvidence,
   updateRuntimeInstallationEvidence,
   executeToolCall,
 } = vi.hoisted(() => ({
   findByDeviceId: vi.fn(),
-  findWorkspaceDeviceById: vi.fn(),
+  findExecutionDeviceById: vi.fn(),
   queryDeviceList: vi.fn(),
-  queryPersonal: vi.fn(),
-  queryWorkspaceDevices: vi.fn(),
+  query: vi.fn(),
+  queryForExecution: vi.fn(),
   updateCapabilityEvidence: vi.fn(),
   updateRuntimeInstallationEvidence: vi.fn(),
   executeToolCall: vi.fn(),
@@ -40,9 +40,9 @@ vi.mock('@/database/models/device', () => ({
           : findByDeviceId
       ) as typeof findByDeviceId;
     }
-    findWorkspaceDeviceById = findWorkspaceDeviceById;
-    queryPersonal = queryPersonal;
-    queryWorkspaceDevices = queryWorkspaceDevices;
+    findExecutionDeviceById = findExecutionDeviceById;
+    query = query;
+    queryForExecution = queryForExecution;
     updateCapabilityEvidence = updateCapabilityEvidence;
     updateRuntimeInstallationEvidence = updateRuntimeInstallationEvidence;
   },
@@ -95,12 +95,12 @@ const baseParams = {
 
 beforeEach(() => {
   findByDeviceId.mockReset().mockResolvedValue(undefined);
-  findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
-  queryPersonal.mockReset().mockResolvedValue(deviceRows('dev-a', 'dev-b'));
-  queryWorkspaceDevices.mockReset().mockResolvedValue(deviceRows('dev-ws'));
+  findExecutionDeviceById.mockReset().mockResolvedValue(undefined);
+  query.mockReset().mockResolvedValue(deviceRows('dev-a', 'dev-b'));
+  queryForExecution.mockReset().mockImplementation(() => query());
   queryDeviceList.mockReset().mockResolvedValue([]);
   findByDeviceId.mockReset().mockResolvedValue(undefined);
-  findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
+  findExecutionDeviceById.mockReset().mockResolvedValue(undefined);
   updateCapabilityEvidence.mockReset().mockResolvedValue(undefined);
   updateRuntimeInstallationEvidence.mockReset().mockResolvedValue(undefined);
   executeToolCall.mockReset().mockResolvedValue({ success: false, error: 'Device disconnected' });
@@ -108,16 +108,18 @@ beforeEach(() => {
 
 describe('listAuthorizedDeviceCandidates', () => {
   it('never treats an Agent creator binding as authority over their personal machine', async () => {
-    queryWorkspaceDevices.mockResolvedValue([]);
+    query.mockResolvedValue([]);
+    queryForExecution.mockResolvedValue([]);
     const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', {
       agentOwnerId: 'agent-creator',
-      referencedDevices: [{ deviceId: 'creator-private', ownerRegistry: true }],
+      referencedDevices: [{ deviceId: 'creator-private' }],
     });
     expect(inventory.candidates).toEqual([]);
     expect(queryDeviceList.mock.calls.every(([actor]) => actor === 'user-1')).toBe(true);
   });
   it('uses personal gateway presence for an authorized personal binding in a workspace run', async () => {
-    queryWorkspaceDevices.mockResolvedValue([]);
+    query.mockResolvedValue([]);
+    queryForExecution.mockResolvedValue([]);
     findByDeviceId.mockResolvedValue({
       deviceId: 'dev-personal',
       userId: 'user-1',
@@ -137,8 +139,9 @@ describe('listAuthorizedDeviceCandidates', () => {
     });
   });
 
-  it('keeps workspace devices offline when only the personal pool has the same device id', async () => {
-    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws'));
+  it('uses the enrolled owner connection regardless of the run workspace', async () => {
+    query.mockResolvedValue(deviceRows('dev-ws'));
+    queryForExecution.mockResolvedValue(deviceRows('dev-ws'));
     queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
       workspaceId ? [] : [{ deviceId: 'dev-ws', authenticated: true }],
     );
@@ -147,11 +150,12 @@ describe('listAuthorizedDeviceCandidates', () => {
       referencedDevices: [{ deviceId: 'dev-ws' }],
     });
 
-    expect(inventory.candidates).toMatchObject([{ deviceId: 'dev-ws', online: false }]);
+    expect(inventory.candidates).toMatchObject([{ deviceId: 'dev-ws', online: true }]);
   });
 
   it('does not authorize an unregistered personal reference through gateway presence', async () => {
-    queryWorkspaceDevices.mockResolvedValue([]);
+    query.mockResolvedValue([]);
+    queryForExecution.mockResolvedValue([]);
     queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
       workspaceId ? [] : [{ deviceId: 'dev-personal', authenticated: true }],
     );
@@ -246,7 +250,7 @@ describe('bindTopicDeviceAtomically (conditional first-bind CAS)', () => {
 describe('listAuthorizedDeviceCandidates (F06 — capability/version never assumed)', () => {
   it('settings/picker and admission return the IDENTICAL candidate id set — personal + workspace', async () => {
     // Personal scope: registry rows + one gateway-transient device.
-    queryPersonal.mockResolvedValue(deviceRows('dev-a', 'dev-b'));
+    query.mockResolvedValue(deviceRows('dev-a', 'dev-b'));
     queryDeviceList.mockResolvedValue(onlineAttachments('dev-a', 'dev-transient'));
 
     const picker = await getScopedOnlineDevices(db, 'user-1', undefined);
@@ -257,7 +261,8 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
     );
 
     // Workspace scope: shared + caller-enrolled rows are one membership rule.
-    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws-shared', 'dev-ws-mine'));
+    query.mockResolvedValue(deviceRows('dev-ws-shared', 'dev-ws-mine'));
+    queryForExecution.mockResolvedValue(deviceRows('dev-ws-shared', 'dev-ws-mine'));
     queryDeviceList.mockResolvedValue(onlineAttachments('dev-ws-shared', 'dev-ws-ghost'));
 
     const wsPicker = await getScopedOnlineDevices(db, 'user-1', 'ws-1');
@@ -275,7 +280,7 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
   });
 
   it('a view-only grant never enters execution candidates — registry, transient or referenced', async () => {
-    queryPersonal.mockResolvedValue(deviceRows('dev-a', 'dev-view'));
+    query.mockResolvedValue(deviceRows('dev-a', 'dev-view'));
     queryDeviceList.mockResolvedValue(onlineAttachments('dev-a', 'dev-view-transient'));
     findByDeviceId.mockResolvedValue(deviceRows('dev-view-ref')[0]);
 
@@ -380,12 +385,12 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
       inventoryState: 'permissions-unready',
     });
 
-    queryPersonal.mockRejectedValue(new Error('db down'));
+    query.mockRejectedValue(new Error('db down'));
     const failed = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
     expect(failed.inventoryState).toBe('query-failed');
     expect(failed.inventoryComplete).toBe(false);
 
-    queryPersonal.mockResolvedValue([]);
+    query.mockResolvedValue([]);
     const empty = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
     expect(empty).toEqual({
       candidates: [],
@@ -393,7 +398,7 @@ describe('listAuthorizedDeviceCandidates (F06 — capability/version never assum
       inventoryState: 'empty',
     });
 
-    queryPersonal.mockResolvedValue(deviceRows('dev-a'));
+    query.mockResolvedValue(deviceRows('dev-a'));
     const complete = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
     expect(complete.inventoryState).toBe('complete');
   });
@@ -479,7 +484,7 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
       },
       { ...deviceRows('dev-blank')[0] },
     ];
-    queryPersonal.mockResolvedValue(evidenceRows);
+    query.mockResolvedValue(evidenceRows);
 
     const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
       requiredOperation: { adapter: 'claude-code', kind: 'agent-run', minAdapterVersion: '2.0.0' },
@@ -502,7 +507,7 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
   });
 
   it('a stored adapterVersion below the requirement stays pending — never coerced', async () => {
-    queryPersonal.mockResolvedValue([
+    query.mockResolvedValue([
       {
         ...deviceRows('dev-old')[0],
         adapterVersion: '1.5.0',
@@ -522,7 +527,7 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
   it('a fresh capabilitySnapshot answers a device-tool-call when the device cannot be probed', async () => {
     // dev-a is OFFLINE (no gateway presence) so the live probe never reaches it —
     // but its registry row carries a snapshot from a verified session.
-    queryPersonal.mockResolvedValue([
+    query.mockResolvedValue([
       {
         ...deviceRows('dev-a')[0],
         capabilitySnapshot: { supportedTools: ['mcp.call', 'files.read'] },
@@ -555,7 +560,7 @@ describe('registry capability evidence (F06 — snapshots feed the verdict, neve
   });
 
   it('a stale snapshot is treated as absent — pending, never verified', async () => {
-    queryPersonal.mockResolvedValue([
+    query.mockResolvedValue([
       {
         ...deviceRows('dev-a')[0],
         capabilitySnapshot: { supportedTools: ['mcp.call'] },

@@ -17,7 +17,7 @@ import {
   MODEL_LABELS,
   modelDisplayLabel,
 } from '@/features/ChatInput/ControlBar/HeteroModel/modelOptions';
-import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
+import { useDeviceSelectorState } from '@/features/DeviceManager/useDeviceSelectorState';
 import { type AgentRow, useHomeAgentRows } from '@/features/Home/AgentSelect/useHomeAgentRows';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
@@ -25,7 +25,7 @@ import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useClientDataSWRWithSync } from '@/libs/swr';
 import { agentConfigKeys } from '@/libs/swr/keys';
 import { getHostContext } from '@/platform';
-import { agentService, isFullAgentConfig } from '@/services/agent';
+import { agentService } from '@/services/agent';
 import { useAgentStore } from '@/store/agent';
 import { useElectronStore } from '@/store/electron';
 import { useHomeStore } from '@/store/home';
@@ -48,15 +48,20 @@ const AgentSettingsListRow = ({
     () => agentService.getAgentConfigById(row.id),
     {
       onData: (data) => {
-        if (isFullAgentConfig(data))
+        if (data)
           useAgentStore.setState((state) => ({ agentMap: { ...state.agentMap, [row.id]: data } }));
       },
     },
   );
   const profile = configFetch.data;
-  const config = profile === undefined ? undefined : isFullAgentConfig(profile) ? profile : null;
+  const config = profile;
   const { agencyConfig, workspaceScoped, isPreferenceLoading } = useEffectiveAgencyConfig(row.id);
-  const devices = useDeviceList();
+  const devices = useDeviceSelectorState({
+    agentId: row.id,
+    boundDeviceId: agencyConfig?.boundDeviceId,
+    canSelectDevice: false,
+    permissionsLoaded: !isPreferenceLoading,
+  });
   const bindings = useProviderBindingStore((s) => s.bindings);
   const bindingFetch = useFetchProviderBindings();
   const provider = profile?.agencyConfig?.heterogeneousProvider;
@@ -67,23 +72,23 @@ const AgentSettingsListRow = ({
   });
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
   const deviceId = resolveTargetDeviceId(agencyConfig, currentDeviceId, { workspaceScoped });
-  const device = devices.data?.find((item) => item.deviceId === deviceId);
+  const device = devices.selectableDevices.find((item) => item.deviceId === deviceId);
   const needsDevices = target === 'device';
   const waiting =
     configFetch.isLoading ||
     isPreferenceLoading ||
-    (needsDevices && devices.isLoading) ||
+    (needsDevices && !devices.deviceInventoryComplete) ||
     (provider?.type === 'orvilo' && bindingFetch.isLoading);
   const error =
     configFetch.error ||
-    (needsDevices && devices.error) ||
+    (needsDevices && devices.deviceInventoryError) ||
     (provider?.type === 'orvilo' && bindingFetch.error);
   const { state } = agentSettingsRowState({
     profile: config,
     loading: waiting,
     error,
     agencyConfig,
-    devices: devices.data ?? [],
+    devices: devices.selectableDevices,
     bindings,
     desktop,
     workspaceScoped,
@@ -116,7 +121,7 @@ const AgentSettingsListRow = ({
             variant="inline"
             onRetry={() => {
               void configFetch.mutate();
-              void devices.mutate();
+              void devices.refreshDevices();
               void bindingFetch.mutate();
             }}
           />

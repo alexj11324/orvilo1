@@ -66,7 +66,7 @@ export const agentQuotaRouter = router({
       const deviceModel = new DeviceModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
       const deviceRow = input.deviceId
         ? ((ctx.workspaceId
-            ? await deviceModel.findWorkspaceDeviceById(input.deviceId)
+            ? await deviceModel.findExecutionDeviceById(input.deviceId)
             : undefined) ?? (await deviceModel.findByDeviceId(input.deviceId)))
         : undefined;
 

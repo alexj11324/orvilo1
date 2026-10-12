@@ -51,8 +51,6 @@ beforeEach(async () => {
     deviceId: `creation-host-${wsId}`,
     identitySource: 'installation',
     userId: ownerId,
-    visibility: 'public',
-    workspaceId: wsId,
   });
 });
 
@@ -61,7 +59,7 @@ const withRuntime = (config: Parameters<typeof ownerModel.create>[0] = {}) => ({
   agencyConfig: {
     boundDeviceId: `creation-host-${wsId}`,
     executionTarget: 'device' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: { type: 'codex' as const, model: 'default' },
     ...config.agencyConfig,
   },
 });
@@ -71,7 +69,7 @@ afterEach(async () => {
 });
 
 describe('buildMemberTransferManifest', () => {
-  it('reports the owner’s cron, device binding, and detachable tasks for a private agent', async () => {
+  it('reports the owner’s cron and detachable tasks for a private agent', async () => {
     const agent = await ownerModel.create(withRuntime({ title: 'Agent', visibility: 'public' }));
     await serverDB
       .update(agents)
@@ -117,7 +115,6 @@ describe('buildMemberTransferManifest', () => {
       // dev-1 is not enrolled anywhere the recipient can reach → sanitation
       // would strip it, so the reset warning is real.
       connectorsAffected: 0,
-      deviceBindingAffected: true,
       expertiseAffected: 0,
       groupsToLeave: 0,
       hiddenReferencedMember: false,
@@ -135,8 +132,6 @@ describe('buildMemberTransferManifest', () => {
         deviceId: 'public-dev',
         identitySource: 'machine-id',
         userId: ownerId,
-        visibility: 'public',
-        workspaceId: wsId,
       },
     ]);
     await serverDB
@@ -152,7 +147,7 @@ describe('buildMemberTransferManifest', () => {
     });
 
     // The binding survives recipient-aware sanitation → no false reset warning.
-    expect(manifest?.deviceBindingAffected).toBe(false);
+    expect(manifest).not.toHaveProperty('deviceBindingAffected');
   });
 
   it('counts only knowledge mounts the recipient cannot access', async () => {

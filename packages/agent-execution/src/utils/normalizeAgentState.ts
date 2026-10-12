@@ -28,7 +28,6 @@ const LEGACY_KEY_PATHS: Record<string, readonly string[]> = {
   orchestrationRole: ['origin', 'lineage', 'orchestrationRole'],
   subAgentProgress: ['origin', 'lineage', 'progressAnchor'],
   // --- principal ---
-  activeDeviceScope: ['principal', 'actor', 'deviceScope'],
   agentShareVisitor: ['principal', 'actor', 'shareVisitor'],
   clientIp: ['principal', 'audit', 'clientIp'],
   deviceAccessPolicy: ['principal', 'policy', 'deviceAccess'],

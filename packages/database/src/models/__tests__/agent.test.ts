@@ -145,7 +145,7 @@ describe('agent runtime identity', () => {
     await agentModel.updateConfig(coordinator.id, { agencyConfig: nextAgency }, true);
     const updated = await serverDB.query.agents.findFirst({ where: eq(agents.id, coordinator.id) });
     expect(updated?.agencyConfig).toEqual(nextAgency);
-    expect(updated?.model).toBeNull();
+    expect(updated?.model).toBe('new-model');
     expect(updated?.provider).toBeNull();
     const builtinRuntime = await withRuntime();
     await agentModel.updateConfig(
@@ -2001,7 +2001,13 @@ describe('AgentModel', () => {
       expect(result?.editorData).toEqual({ memory: 'user prefers terse replies' });
       expect(result?.params).toEqual({ frequency_penalty: 0.2 });
       expect(result?.profile).toEqual({ artworkStyle: 'anime' });
-      expect(result?.agencyConfig).toEqual(seededAgencyConfig);
+      expect(result?.agencyConfig).toEqual({
+        ...seededAgencyConfig,
+        heterogeneousProvider: {
+          ...seededAgencyConfig.heterogeneousProvider,
+          model: 'claude-sonnet-4-5',
+        },
+      });
     });
 
     it.each(['updateConfig', 'create'] as const)(
@@ -2152,12 +2158,7 @@ describe('AgentModel', () => {
         .update(workspaceMembers)
         .set({ suspendedAt: null })
         .where(eq(workspaceMembers.userId, userId));
-      await expect(model.create({ ...config, visibility: 'private' })).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-      });
-      expect(
-        await serverDB.select().from(agents).where(eq(agents.workspaceId, workspace.id)),
-      ).toEqual([]);
+      expect((await model.create({ ...config, visibility: 'private' })).visibility).toBe('private');
       const created = await model.create(config);
       expect(created.visibility).toBe('public');
       expect(
@@ -3973,6 +3974,10 @@ describe('AgentModel', () => {
         )
         .returning();
 
+      await serverDB
+        .insert(devices)
+        .values({ deviceId: 'device-b', userId, identitySource: 'machine-id' })
+        .onConflictDoNothing();
       await agentModel.updateConfig(agent.id, {
         agencyConfig: { workingDirByDevice: { 'device-a': '/a', 'device-b': '/b' } } as any,
       });

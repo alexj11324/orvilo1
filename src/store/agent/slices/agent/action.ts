@@ -780,7 +780,9 @@ export class AgentSliceActionImpl {
         // data loss (the next refetch reverts the optimistic value) — tell the
         // user right away.
         if (options?.showErrorMessage !== false) {
-          toast.error(t('saveAgentConfigFail', { ns: 'common' }));
+          toast.error(
+            error instanceof Error ? error.message : t('saveAgentConfigFail', { ns: 'common' }),
+          );
         }
         // Roll back only agencyConfig patches: those are discrete picks the
         // server actively validates (e.g. a workspace agent binding a

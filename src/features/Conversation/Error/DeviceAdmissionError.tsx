@@ -57,7 +57,6 @@ const DeviceAdmissionError = memo<DeviceAdmissionErrorProps>(
     const { disabled, loading, retryParentMessage } = useRetryParentMessage(id ?? '');
 
     const { canManageAgent } = useAgentManagementAccess(agentId);
-    const scope = body.scope === 'workspace' ? 'workspace' : 'personal';
     const { mutate: refreshDevices } = useDeviceList();
     const [connectOpen, setConnectOpen] = useState(false);
     const dismiss = useCallback(() => {
@@ -143,7 +142,6 @@ const DeviceAdmissionError = memo<DeviceAdmissionErrorProps>(
         />
         <DeviceConnectModal
           open={connectOpen}
-          scope={scope}
           onClose={() => {
             setConnectOpen(false);
             void refreshDevices();

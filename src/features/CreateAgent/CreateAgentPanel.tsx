@@ -2,7 +2,7 @@
 
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { ChevronDownIcon } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -19,14 +19,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { CreateAgentParams } from '@/services/agent';
-import {
-  createOnboardingAgentOnce,
-  type FirstAgentCreationCheckpoint,
-} from '@/services/agentOnboarding';
+import type { FirstAgentCreationCheckpoint } from '@/services/agentOnboarding';
 import { useAgentStore } from '@/store/agent';
 
 import { BUILTIN_AGENT_KEY } from './agentOptions';
 import { RuntimeFields, useAgentRuntimeForm } from './RuntimeFields';
+import { useAgentCreation } from './useAgentCreation';
 
 export interface CreateAgentPanelProps {
   builtinOnly?: boolean;
@@ -59,52 +57,24 @@ const CreateAgentPanel = ({
   const createAgent = useAgentStore((s) => s.createAgent);
   const [name, setName] = useState('');
   const [nameTouched, setNameTouched] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<unknown>();
-  const checkpoint = useRef<FirstAgentCreationCheckpoint>(
-    creationCheckpoint ?? { requestId: crypto.randomUUID() },
-  );
-  const saved = useRef<Awaited<ReturnType<typeof createOnboardingAgentOnce>> | undefined>(
-    undefined,
-  );
-  const submitting = useRef(false);
-  const intent = useRef<CreateAgentParams | undefined>(undefined);
   useEffect(() => {
     if (!nameTouched)
       setName(form.choice === BUILTIN_AGENT_KEY ? 'Orvilo AI' : (form.provider?.title ?? ''));
   }, [form.choice, form.provider?.title, nameTouched]);
-  const submit = async () => {
-    if (submitting.current || !name.trim() || (!saved.current && !intent.current && !form.ready))
-      return;
-    submitting.current = true;
-    setCreating(true);
-    setError(undefined);
-    try {
-      if (!saved.current) {
-        if (!intent.current) {
-          const runtime = await form.prepare();
-          intent.current = {
-            config: { ...runtime, name: name.trim(), title: name.trim() },
-            groupId,
-            visibility: selectedVisibility,
-          };
-        }
-        saved.current = await createOnboardingAgentOnce(
-          checkpoint.current,
-          intent.current,
-          createAgent,
-        );
-      }
+  const { creating, error, locked, hasSavedAgent, submit } = useAgentCreation({
+    checkpoint: creationCheckpoint,
+    createAgent,
+    ready: !!name.trim() && form.ready,
+    prepare: async () => ({
+      config: { ...(await form.prepare()), name: name.trim(), title: name.trim() },
+      groupId,
+      visibility: selectedVisibility,
+    }),
+    onCreated: async (result) => {
       form.setApiKey('');
-      await onCreated?.(saved.current.agentId, saved.current.config);
-    } catch (cause) {
-      setError(cause);
-    } finally {
-      submitting.current = false;
-      setCreating(false);
-    }
-  };
-  const locked = creating || !!saved.current || !!checkpoint.current.attempted;
+      await onCreated?.(result.agentId, result.config);
+    },
+  });
   return (
     <form
       className="flex flex-col gap-4"
@@ -159,9 +129,6 @@ const CreateAgentPanel = ({
                   onValueChange={(value) => {
                     if (value !== 'private' && value !== 'public') return;
                     setSelectedVisibility(value);
-                    setNameTouched(true);
-                    form.host.select(undefined);
-                    form.resetChoice();
                   }}
                 >
                   <SelectTrigger
@@ -193,8 +160,8 @@ const CreateAgentPanel = ({
       </Collapsible>
       {error !== undefined && (
         <AsyncError
-          description={t('createAgent.failed')}
           error={error}
+          title={error instanceof Error ? error.message : t('createAgent.failed')}
           variant="inline"
           onRetry={() => void submit()}
         />
@@ -206,7 +173,7 @@ const CreateAgentPanel = ({
           </Button>
         )}
         <Button
-          disabled={creating || !name.trim() || (!saved.current && !intent.current && !form.ready)}
+          disabled={creating || !name.trim() || (!hasSavedAgent && !form.ready)}
           loading={creating}
           size="lg"
           type="submit"

@@ -9,7 +9,7 @@ export interface UseEffectiveAgencyConfigResult {
   agencyConfig: OrviloAgentAgencyConfig | undefined;
   canDisplayExecutionTarget: boolean;
   canSelectExecutionTarget: boolean;
-  canSelectPersonalDevice: boolean;
+
   isPreferenceLoading: boolean;
   workspaceScoped: boolean;
 }
@@ -28,7 +28,7 @@ export const useEffectiveAgencyConfig = (agentId?: string): UseEffectiveAgencyCo
     agencyConfig: resolveAgentAgencyConfig(agencyConfig),
     canDisplayExecutionTarget: !!agentId && !isAccessLoading,
     canSelectExecutionTarget: !!agentId && canManageAgent && !isAccessLoading,
-    canSelectPersonalDevice: !workspaceScoped && canManageAgent && !isAccessLoading,
+
     isPreferenceLoading: isAccessLoading,
     workspaceScoped,
   };

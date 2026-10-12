@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   executionTargetValue,
-  groupExecutionTargetDevices,
   isSharedExecutionTarget,
   parseExecutionTargetValue,
   resolveExecutionTargetSelection,
@@ -36,27 +35,6 @@ describe('ExecutionTargetPicker helpers', () => {
     expect(parseExecutionTargetValue(executionTargetValue('device', 'workspace-device'))).toEqual({
       deviceId: 'workspace-device',
       target: 'device',
-    });
-  });
-
-  it('separates personal, private workspace, and public workspace devices', () => {
-    const personal = device({ deviceId: 'personal' });
-    const privateWorkspace = device({
-      deviceId: 'private',
-      scope: 'workspace',
-      visibility: 'private',
-    });
-    const publicWorkspace = device({
-      deviceId: 'public',
-      scope: 'workspace',
-      visibility: 'public',
-    });
-
-    expect(groupExecutionTargetDevices([personal, privateWorkspace, publicWorkspace])).toEqual({
-      personal: [personal],
-      privateWorkspace: [privateWorkspace],
-      publicWorkspace: [publicWorkspace],
-      workspace: [publicWorkspace],
     });
   });
 

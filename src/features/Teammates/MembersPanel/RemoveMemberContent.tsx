@@ -72,8 +72,7 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
     preview &&
     (preview.assignedTaskCount > 0 ||
       preview.reviewingTaskCount > 0 ||
-      preview.runningDelegationCount > 0 ||
-      preview.sharedDeviceCount > 0);
+      preview.runningDelegationCount > 0);
 
   return (
     <div className={cx(styles.body, 'flex flex-col gap-4')}>
@@ -117,13 +116,6 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
             <div className="text-[13px] text-muted-foreground">
               {t('workspaceSetting.members.previewDelegations', {
                 count: preview.runningDelegationCount,
-              })}
-            </div>
-          </div>
-          <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
-              {t('workspaceSetting.members.previewDevices', {
-                count: preview.sharedDeviceCount,
               })}
             </div>
           </div>

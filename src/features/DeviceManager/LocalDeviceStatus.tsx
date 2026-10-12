@@ -41,9 +41,7 @@ const LocalDeviceStatus = memo(() => {
 
   if (!localState) return null;
 
-  const listed = !!devices?.some(
-    (d) => d.scope === 'personal' && d.deviceId === deviceInfo?.deviceId,
-  );
+  const listed = !!devices?.some((d) => d.deviceId === deviceInfo?.deviceId);
   // Healthy and already in the list below: that row is the status.
   if (localState.phase === 'connected' && listed) return null;
 

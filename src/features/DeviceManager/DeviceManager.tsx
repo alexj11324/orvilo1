@@ -1,21 +1,18 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   ChevronRightIcon,
   FolderCogIcon,
   type LucideIcon,
   MonitorDownIcon,
-  ServerIcon,
   TerminalIcon,
   ZapIcon,
 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import SharedListSkeleton from '@/components/ListSkeleton';
 import { useElectronStore } from '@/store/electron';
@@ -251,14 +248,6 @@ const ListSkeleton = memo<{ bordered?: boolean }>(({ bordered }) => (
 interface DeviceManagerProps {
   /** Open the enrollment wizard (the modal is owned by the route). */
   onConnect: (tab?: 'cli' | 'desktop') => void;
-  /** Which device pool this surface manages. */
-  scope: DeviceScope;
-  /**
-   * Workspace scope only: narrow the list to one visibility tab — 'public'
-   * (shared pool) or 'private' (the caller's own private enrollments). Omitted
-   * → no visibility filtering (personal page).
-   */
-  visibility?: DeviceVisibility;
 }
 
 /**
@@ -267,9 +256,8 @@ interface DeviceManagerProps {
  * empty state, filtered to the given `scope` (and, for workspace, the active
  * visibility tab).
  */
-const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }) => {
+const DeviceManager = memo<DeviceManagerProps>(({ onConnect }) => {
   const { t } = useTranslation('setting');
-  const isWorkspace = scope === 'workspace';
 
   // Workspace-keyed SWR fetch — the shared hook every device-listing surface
   // uses (see `useDeviceList` for why the raw TRPC React Query path is wrong).
@@ -279,23 +267,11 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
   // online but unregistered) belong to the shared pool: the server already
   // strips other members' private devices, so an unclaimed live connection can
   // only be a public-pool machine.
-  const devices = (data ?? []).filter(
-    (d) => d.scope === scope && (!visibility || (d.visibility ?? 'public') === visibility),
-  );
-
-  // Workspace enrollment has its own ID; resolve it through the personal share map.
-  const workspaceId = useActiveWorkspaceId();
+  const devices = data ?? [];
   const useFetchDeviceInfo = useElectronStore((s) => s.useFetchGatewayDeviceInfo);
   const gatewayDeviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
   useFetchDeviceInfo();
-  const personal = data?.find(
-    (d) => d.scope === 'personal' && d.deviceId === gatewayDeviceInfo?.deviceId,
-  );
-  const currentDeviceId = isDesktop
-    ? isWorkspace
-      ? personal?.sharedWorkspaces?.find((share) => share.workspaceId === workspaceId)?.deviceId
-      : gatewayDeviceInfo?.deviceId
-    : undefined;
+  const currentDeviceId = isDesktop ? gatewayDeviceInfo?.deviceId : undefined;
 
   const [selectedId, setSelectedId] = useState<string>();
 
@@ -303,23 +279,14 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
   // Now gated by AsyncBoundary so a *failed* device fetch renders a failure +
   // Retry instead of this "connect your first device" onboarding (which falsely
   // told the user they own no devices — ux Read §1.1 error-as-empty trap).
-  const isPrivatePool = isWorkspace && visibility === 'private';
   const emptyState = (
     <div className="flex flex-col gap-8">
-      <div className={`flex flex-col ${isWorkspace ? styles.emptyCard : styles.plainCol}`}>
+      <div className={`flex flex-col ${styles.plainCol}`}>
         <div className={`flex flex-col items-center gap-3 ${styles.emptyHero}`}>
-          <span className={styles.heroIcon}>
-            {isWorkspace && !isPrivatePool ? (
-              <ServerIcon size={28} />
-            ) : (
-              <MonitorDownIcon size={28} />
-            )}
-          </span>
-          <div className="text-[18px] font-semibold">
-            {t(isWorkspace ? 'workspaceSetting.devices.heroTitle' : 'devices.empty.title')}
-          </div>
+          <span className={styles.heroIcon}>{<MonitorDownIcon size={28} />}</span>
+          <div className="text-[18px] font-semibold">{t('devices.empty.title')}</div>
           <div className="text-muted-foreground" style={{ maxWidth: 440 }}>
-            {t(isWorkspace ? 'workspaceSetting.devices.heroDesc' : 'devices.empty.desc')}
+            {t('devices.empty.desc')}
           </div>
         </div>
 
@@ -340,7 +307,7 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
         </div>
       </div>
 
-      {!isWorkspace && <Capabilities />}
+      {<Capabilities />}
     </div>
   );
 
@@ -355,15 +322,12 @@ const DeviceManager = memo<DeviceManagerProps>(({ onConnect, scope, visibility }
       errorVariant={'block'}
       isEmpty={devices.length === 0}
       isLoading={isLoading}
-      loading={<ListSkeleton bordered={isWorkspace} />}
+      loading={<ListSkeleton bordered={false} />}
       onRetry={() => mutate()}
     >
       <div className="flex items-start gap-4">
-        <div className={`flex flex-col flex-1 ${isWorkspace ? styles.listCol : styles.plainCol}`}>
-          <div
-            className={`flex flex-col gap-0.5 ${styles.listScroll}`}
-            style={{ padding: isWorkspace ? 4 : 0 }}
-          >
+        <div className={`flex flex-col flex-1 ${styles.plainCol}`}>
+          <div className={`flex flex-col gap-0.5 ${styles.listScroll}`} style={{ padding: 0 }}>
             {devices.map((device) => (
               <DeviceItem
                 device={device}

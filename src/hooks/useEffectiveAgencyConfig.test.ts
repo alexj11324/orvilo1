@@ -45,13 +45,11 @@ describe('saved Agent device', () => {
     const { result } = renderHook(() => useEffectiveAgencyConfig('agent'));
     expect(result.current.agencyConfig?.boundDeviceId).toBe('saved');
     expect(result.current.canSelectExecutionTarget).toBe(true);
-    expect(result.current.canSelectPersonalDevice).toBe(false);
   });
   it('allows a private Agent manager to use their own device', () => {
     fixture.canManageAgent = true;
     fixture.agent.visibility = 'private';
     const { result } = renderHook(() => useEffectiveAgencyConfig('agent'));
-    expect(result.current.canSelectPersonalDevice).toBe(true);
     expect(result.current.workspaceScoped).toBe(false);
   });
 });

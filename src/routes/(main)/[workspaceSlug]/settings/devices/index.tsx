@@ -1,12 +1,10 @@
 'use client';
 
-import type { DeviceVisibility } from '@orvilo/types';
-import { LockIcon, MonitorDownIcon, RefreshCwIcon, UsersIcon } from 'lucide-react';
+import { MonitorDownIcon, RefreshCwIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DeviceConnectModal, DeviceManager, useDeviceList } from '@/features/DeviceManager';
 
 /**
@@ -24,7 +22,6 @@ const WorkspaceDevicesSetting = memo(() => {
     setConnectTab(tab);
     setOpen(true);
   };
-  const [visibility, setVisibility] = useState<DeviceVisibility>('public');
 
   // The connect + refresh actions sit beside the tabs (same header pattern as
   // the workspace credential page). Shares DeviceManager's SWR entry, so
@@ -35,18 +32,6 @@ const WorkspaceDevicesSetting = memo(() => {
     <>
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-4 justify-between">
-          <Tabs value={visibility} onValueChange={(key) => setVisibility(key as DeviceVisibility)}>
-            <TabsList>
-              <TabsTrigger value="public">
-                <UsersIcon />
-                {t('devices.visibilityTabs.workspace')}
-              </TabsTrigger>
-              <TabsTrigger value="private">
-                <LockIcon />
-                {t('devices.visibilityTabs.private')}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
           <div className="flex items-center gap-2">
             <Button
               loading={isValidating}
@@ -64,21 +49,10 @@ const WorkspaceDevicesSetting = memo(() => {
           </div>
         </div>
 
-        <DeviceManager
-          key={visibility}
-          scope={'workspace'}
-          visibility={visibility}
-          onConnect={openConnect}
-        />
+        <DeviceManager onConnect={openConnect} />
       </div>
 
-      <DeviceConnectModal
-        initialTab={connectTab}
-        open={open}
-        scope={'workspace'}
-        visibility={visibility}
-        onClose={() => setOpen(false)}
-      />
+      <DeviceConnectModal initialTab={connectTab} open={open} onClose={() => setOpen(false)} />
     </>
   );
 });

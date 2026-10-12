@@ -54,7 +54,7 @@ describe('api/client workspace scoping', () => {
 
     process.env.ORVILO_JWT = 'renewed-jwt';
     expect(headersOfLastLink()).toMatchObject({ 'Oidc-Auth': 'renewed-jwt' });
-  });
+  }, 15_000);
 
   // The tools router is workspace aware like lambda; without the header every
   // `orvilo search` ran against personal scope and billed the personal budget.

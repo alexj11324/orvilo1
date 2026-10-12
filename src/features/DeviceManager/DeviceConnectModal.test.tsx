@@ -87,13 +87,6 @@ describe('Device CLI installation guide', () => {
     expect(view.getByRole('button', { name: /close/i })).toBeTruthy();
   });
 
-  it('offers native enrollment inside an Electron popup', () => {
-    query.hostKind = 'popup';
-    const view = render(<DeviceConnectModal open scope="personal" onClose={vi.fn()} />);
-    expect(
-      view.getByRole('button', { name: 'devices.connectWizard.desktop.connectThisComputer' }),
-    ).toBeTruthy();
-  });
   it('keeps download instructions for browser popups without native capabilities', () => {
     query.hostKind = 'popup';
     query.native = false;
@@ -101,11 +94,6 @@ describe('Device CLI installation guide', () => {
     expect(
       view.queryByRole('button', { name: 'devices.connectWizard.desktop.connectThisComputer' }),
     ).toBeNull();
-  });
-  it('offers Desktop and CLI enrollment methods in the workspace wizard', () => {
-    const view = renderGuide();
-    expect(view.getByRole('tab', { name: 'devices.connectWizard.method.desktop' })).toBeTruthy();
-    expect(view.getByRole('tab', { name: 'devices.connectWizard.method.cli' })).toBeTruthy();
   });
 
   it('never offers the unavailable npm registry package when a release has no CLI asset', () => {

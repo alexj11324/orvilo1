@@ -12,13 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveToken } from '../auth/resolveToken';
 import { removeStatus, spawnDaemon, stopDaemon, writeStatus } from '../daemon/manager';
 import type * as DeviceRegister from '../device/register';
-import {
-  addWorkspaceEnrollment,
-  loadOrCreateConnectionId,
-  loadSettings,
-  loadWorkspaceEnrollments,
-  saveSettings,
-} from '../settings';
+import { loadOrCreateConnectionId, loadSettings, saveSettings } from '../settings';
 import { executeToolCall } from '../tools';
 import { cleanupAllProcesses } from '../tools/shell';
 import { log, setVerbose } from '../utils/logger';
@@ -38,12 +32,7 @@ vi.mock('../device/register', async (importOriginal) => {
   const actual = await importOriginal<typeof DeviceRegister>();
   return {
     ...actual,
-    mintWorkspaceConnectToken: vi.fn(async (_auth, workspaceId) => ({
-      token: 'workspace-token',
-      workspaceId,
-    })),
     registerDevice: registerDeviceMock,
-    registerWorkspaceDevice: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -75,13 +64,9 @@ vi.mock('../auth/resolveToken', () => ({
   }),
 }));
 vi.mock('../settings', () => ({
-  addWorkspaceEnrollment: vi.fn(),
   loadOrCreateConnectionId: vi.fn().mockReturnValue('test-connection-id'),
   loadSettings: vi.fn().mockReturnValue(null),
-  // Default: no persisted workspace shares, so runConnect skips the restore path.
-  loadWorkspaceEnrollments: vi.fn().mockReturnValue([]),
   normalizeUrl: vi.fn((url?: string) => (url ? url.replace(/\/$/, '') : undefined)),
-  removeWorkspaceEnrollment: vi.fn(),
   saveSettings: vi.fn(),
 }));
 
@@ -167,7 +152,6 @@ describe('connect command', () => {
     mockRunningPid = null;
     mockSpawnedPid = 0;
     mockStatus = null;
-    vi.mocked(loadWorkspaceEnrollments).mockReturnValue([]);
   });
 
   afterEach(() => {
@@ -207,48 +191,6 @@ describe('connect command', () => {
       connectionId: 'connection-two',
       deviceId: 'persistent:test-user',
     });
-  });
-
-  it('awaits workspace identity without consuming a connection ID for identity', async () => {
-    vi.mocked(loadOrCreateConnectionId).mockReturnValueOnce('workspace-connection');
-    await createProgram().parseAsync(['node', 'test', 'connect', '--workspace', 'workspace-1']);
-    expect(clientOptions).toMatchObject({
-      connectionId: 'workspace-connection',
-      deviceId: 'persistent:workspace:workspace-1',
-      workspaceId: 'workspace-1',
-    });
-  });
-
-  it('returns the same persistent identity from enrollment probe and real enrollment', async () => {
-    await createProgram().parseAsync(['node', 'test', 'connect']);
-    const handleRpc = clientEventHandlers.rpc_request;
-    await handleRpc({
-      method: 'enrollWorkspace',
-      params: { identityOnly: true, token: 'workspace-token', workspaceId: 'workspace-1' },
-      requestId: 'probe',
-    });
-    expect(lastSentRpcResponse.result.data).toEqual({
-      deviceId: 'persistent:workspace:workspace-1',
-      identitySource: 'fallback',
-    });
-    expect(addWorkspaceEnrollment).not.toHaveBeenCalled();
-
-    await handleRpc({
-      method: 'enrollWorkspace',
-      params: { token: 'workspace-token', workspaceId: 'workspace-1' },
-      requestId: 'enroll',
-    });
-    expect(clientOptions.deviceId).toBe('persistent:workspace:workspace-1');
-    expect(addWorkspaceEnrollment).toHaveBeenCalledWith('workspace-1');
-  });
-
-  it('restores a registered persistent workspace fallback after restart', async () => {
-    vi.mocked(loadWorkspaceEnrollments).mockReturnValue(['workspace-1']);
-    await createProgram().parseAsync(['node', 'test', 'connect']);
-    await vi.waitFor(() => {
-      expect(clientOptions.deviceId).toBe('persistent:workspace:workspace-1');
-    });
-    expect(clientOptions.workspaceId).toBe('workspace-1');
   });
 
   it('preserves the explicit device ID override', async () => {
@@ -363,7 +305,7 @@ describe('connect command', () => {
     const program = createProgram();
     await program.parseAsync(['node', 'test', 'connect']);
 
-    clientEventHandlers['system_info_request']?.({
+    await clientEventHandlers['system_info_request']?.({
       requestId: 'req-2',
       type: 'system_info_request',
     });
@@ -517,7 +459,7 @@ describe('connect command', () => {
     const program = createProgram();
     await program.parseAsync(['node', 'test', 'connect']);
 
-    clientEventHandlers['system_info_request']?.({
+    await clientEventHandlers['system_info_request']?.({
       requestId: 'req-3',
       type: 'system_info_request',
     });
@@ -646,6 +588,7 @@ describe('connect command', () => {
     await symlink(realWorktree, aliasCwd);
     try {
       vi.stubEnv('HOME', home);
+      vi.stubEnv('ORVILO_CLI_HOME', '.orvilo');
       // The claim-token path verifies against the repo's git-common-dir
       // claims registry — the fixture must be a real repo carrying this
       // host's registered claim for the canonical worktree path, otherwise

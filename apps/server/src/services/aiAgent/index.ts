@@ -227,7 +227,7 @@ export class AiAgentService {
       this.db,
       this.userId,
       this.workspaceId,
-    ).findWorkspaceDeviceById(deviceId);
+    ).findExecutionDeviceById(deviceId);
     return row ? this.workspaceId : undefined;
   }
 

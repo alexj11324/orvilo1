@@ -7,11 +7,6 @@
   "gateway.statusConnecting": "This device is connecting to Gateway...",
   "gateway.statusDisconnected": "This device is not connected to Gateway",
   "gateway.title": "Device Gateway",
-  "gateway.workspaceStatusConnections_one": "Workspace · {{count}} connection online",
-  "gateway.workspaceStatusConnections_other": "Workspace · {{count}} connections online",
-  "gateway.workspaceStatusDisconnected": "No workspace device connection is online",
-  "gateway.workspaceStatusLoading": "Checking workspace devices…",
-  "gateway.workspaceStatusUnavailable": "Workspace device status is temporarily unavailable",
   "navigation.agentShare": "Share",
   "navigation.agents": "Agents",
   "navigation.automations": "Automations",
@@ -182,5 +177,7 @@
   "window.minimize": "Minimize window",
   "window.pinToTop": "Pin on top",
   "window.restore": "Restore window",
-  "window.unpinFromTop": "Unpin from top"
+  "window.unpinFromTop": "Unpin from top",
+  "gateway.statusLoading": "Checking device connections…",
+  "gateway.statusUnavailable": "Cannot check device connections"
 }

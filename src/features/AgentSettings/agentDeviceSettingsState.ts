@@ -46,7 +46,7 @@ export const resolveAgentDeviceSettingsState = ({
   showDeviceGroup: !(
     !isPreferenceLoading &&
     selectableDeviceCount === 1 &&
-    bindingState !== 'invalid' &&
+    bindingState === 'valid' &&
     (deviceInventoryComplete || (runtimeInventoryOfflineOnly && explicitLocalDeviceIsEligible))
   ),
   showOfflineNotice: bindingState === 'valid' && !!boundDevice && !boundDevice.online,

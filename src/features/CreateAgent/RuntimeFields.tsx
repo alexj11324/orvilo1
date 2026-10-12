@@ -6,7 +6,6 @@ import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -57,11 +56,9 @@ export interface RuntimeRequest {
 
 export const useAgentRuntimeForm = ({
   builtinOnly,
-  visibility = 'private',
   initialType,
 }: RuntimeRequest & { initialType?: HeterogeneousAgentType }) => {
-  const workspaceId = useActiveWorkspaceId();
-  const host = useExecutionHost(visibility);
+  const host = useExecutionHost();
   const { scan, reset, state } = useAgentScan();
   const providerFetch = useFetchProviderBindings();
   const bindings = useProviderBindingStore((s) => s.bindings).filter((binding) =>
@@ -160,11 +157,7 @@ export const useAgentRuntimeForm = ({
     if (!ready || !host.deviceId) throw new Error('FIRST_AGENT_REQUIRED');
     if (!host.isLocal || choice === BUILTIN_AGENT_KEY) {
       const devices = await deviceService.listDevices();
-      if (
-        !eligibleExecutionDevices(devices, workspaceId ?? undefined, visibility).some(
-          (device) => device.deviceId === host.deviceId,
-        )
-      )
+      if (!eligibleExecutionDevices(devices).some((device) => device.deviceId === host.deviceId))
         throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
     }
     if (choice === BUILTIN_AGENT_KEY) {

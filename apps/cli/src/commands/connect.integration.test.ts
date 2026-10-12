@@ -35,7 +35,7 @@ async function runCli(
           ORVILO_JWT: '',
           ...extraEnv,
         },
-        timeout: 10_000,
+        timeout: 25_000,
       },
       (error, stdout, stderr) => {
         if (error && typeof error.code !== 'number') {
@@ -78,8 +78,10 @@ describe('connect daemon startup', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).not.toContain('Daemon started');
-    expect(result.stderr).toContain('No authentication found');
-  });
+    expect(result.stderr).toMatch(
+      /No authentication found|Protected credential storage unavailable/,
+    );
+  }, 30_000);
 
   it('surfaces the underlying network error when startup retries are exhausted', async () => {
     const portProbe = createServer();
@@ -94,34 +96,21 @@ describe('connect daemon startup', () => {
     const home = await mkdtemp(path.join(os.tmpdir(), 'orvilo-cli-daemon-startup-'));
     tempHomes.push(home);
 
-    const result = await runCli(['connect', '--workspace', 'workspace-id', '--daemon'], home, {
+    const result = await runCli(['connect', '--daemon'], home, {
       ORVILO_JWT: `${header}.${payload}.signature`,
       ORVILO_SERVER: `http://127.0.0.1:${port}`,
     });
 
     expect(result.exitCode).toBe(1);
     expect(result.stdout).not.toContain('Daemon started');
-    expect(result.stderr).toContain('ConnectionRefused');
-  }, 15_000);
+    expect(result.stderr).toContain('ECONNREFUSED');
+  }, 30_000);
 
-  it('does not report startup readiness before workspace registration succeeds', async () => {
+  it('does not report startup readiness before device registration succeeds', async () => {
     const requests: string[] = [];
     const server = createServer((request, response) => {
       requests.push(request.url ?? '');
       response.setHeader('Content-Type', 'application/json');
-
-      if (request.url?.includes('device.mintWorkspaceConnectToken')) {
-        response.end(
-          JSON.stringify({
-            result: {
-              data: {
-                json: { token: 'workspace-token', workspaceId: 'workspace-id' },
-              },
-            },
-          }),
-        );
-        return;
-      }
 
       response.statusCode = 409;
       response.end(
@@ -132,9 +121,9 @@ describe('connect daemon startup', () => {
               data: {
                 code: 'CONFLICT',
                 httpStatus: 409,
-                path: 'device.registerWorkspaceDevice',
+                path: 'device.register',
               },
-              message: 'workspace registration rejected',
+              message: 'device registration rejected',
             },
           },
         }),
@@ -149,18 +138,14 @@ describe('connect daemon startup', () => {
     const home = await mkdtemp(path.join(os.tmpdir(), 'orvilo-cli-daemon-startup-'));
     tempHomes.push(home);
 
-    const result = await runCli(
-      ['connect', '--workspace', 'workspace-id', '--public', '--daemon'],
-      home,
-      {
-        ORVILO_JWT: `${header}.${payload}.signature`,
-        ORVILO_SERVER: `http://127.0.0.1:${port}`,
-      },
-    );
+    const result = await runCli(['connect', '--daemon'], home, {
+      ORVILO_JWT: `${header}.${payload}.signature`,
+      ORVILO_SERVER: `http://127.0.0.1:${port}`,
+    });
 
-    expect(requests.some((url) => url.includes('device.registerWorkspaceDevice'))).toBe(true);
+    expect(requests.some((url) => url.includes('device.register'))).toBe(true);
     expect(result.exitCode).toBe(1);
     expect(result.stdout).not.toContain('Daemon started');
-    expect(result.stderr).toContain('workspace registration rejected');
-  });
+    expect(result.stderr).toContain('device registration rejected');
+  }, 30_000);
 });

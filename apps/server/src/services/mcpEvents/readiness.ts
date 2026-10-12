@@ -116,8 +116,8 @@ export async function checkMcpAutomationReadiness(input: {
 
   const deviceModel = new DeviceModel(db, trigger.userId, trigger.workspaceId);
   const [workspaceRows, personalRows, workspaceOnline, personalOnline] = await Promise.all([
-    deviceModel.queryWorkspaceDevices(),
-    deviceModel.queryPersonal(),
+    deviceModel.queryForExecution(),
+    deviceModel.query(),
     deviceGateway.queryDeviceList(trigger.userId, trigger.workspaceId),
     deviceGateway.queryDeviceList(trigger.userId),
   ]);

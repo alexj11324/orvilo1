@@ -134,7 +134,6 @@ describe('normalizeAgentState', () => {
       ...baseState(),
       metadata: {
         _hooks: [{ id: 'h1', type: 'webhook', webhook: { url: 'https://x' } }],
-        activeDeviceScope: 'workspace',
         agentShareVisitor: { shareId: 'share-1', visitorUserId: 'visitor-1' },
         clientIp: '10.0.0.1',
         deviceAccessPolicy: { canUseDevice: false, reason: 'external-bot' },
@@ -154,7 +153,6 @@ describe('normalizeAgentState', () => {
 
     expect(normalized.principal).toEqual({
       actor: {
-        deviceScope: 'workspace',
         shareVisitor: { shareId: 'share-1', visitorUserId: 'visitor-1' },
       },
       audit: { clientIp: '10.0.0.1', userAgent: 'orvilo-cli' },

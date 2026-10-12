@@ -1,3 +1,6 @@
+// Load the lazily used readiness module before fake timers begin.
+import '@orvilo/heterogeneous-agents/automationReadiness';
+
 import type * as ChildProcessModule from 'node:child_process';
 import type * as CryptoModule from 'node:crypto';
 import { EventEmitter } from 'node:events';
@@ -6,7 +9,6 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type * as DeviceIdentityModule from '@orvilo/device-identity';
-import { resolvePersistentDeviceIdentity } from '@orvilo/device-identity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '@/core/App';
@@ -448,27 +450,6 @@ describe('GatewayConnectionCtr', () => {
 
       expect(result).toBe(false);
       expect(mockStoreSet).not.toHaveBeenCalled();
-    });
-
-    it('should reconnect a persisted workspace identity for this machine', async () => {
-      const workspaceId = 'workspace-1';
-      const fallbackId = 'mock-device-uuid';
-      mockStoreGet.mockImplementation((key: string) => {
-        if (key === 'gatewayEnabled') return true;
-        if (key === 'gatewayDeviceId') return fallbackId;
-        if (key === 'gatewayWorkspaceEnrollments') return [workspaceId];
-        return undefined;
-      });
-      vi.mocked(mockRemoteServerConfigCtr.isRemoteServerConfigured).mockResolvedValueOnce(false);
-      ctr.afterFirstFrame();
-      await vi.advanceTimersByTimeAsync(0);
-      mockStoreSet.mockClear();
-
-      const workspaceDevice = await resolvePersistentDeviceIdentity(`workspace:${workspaceId}`);
-      const result = await ctr.reconnectFromProtocol({ deviceId: workspaceDevice.deviceId });
-
-      expect(result).toBe(true);
-      expect(mockStoreSet).toHaveBeenCalledWith('gatewayEnabled', true);
     });
 
     it('should no-op when already connected', async () => {

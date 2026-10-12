@@ -16,7 +16,7 @@ const dynamicComponentPropsMock = vi.hoisted(() => vi.fn());
 
 const serverConfigMock = vi.hoisted(() => ({ enableBusinessFeatures: false }));
 const shareContextMock = vi.hoisted(() => ({ topicShareId: '' }));
-const repairContextMock = vi.hoisted(() => ({ canSelectPersonalDevice: true }));
+const repairContextMock = vi.hoisted(() => ({}));
 vi.mock('@/hooks/useTopicAgencyConfig', () => ({ useTopicAgencyConfig: () => repairContextMock }));
 const delAndRegenerateMessageMock = vi.hoisted(() => vi.fn());
 const detectHeterogeneousAgentCommandMock = vi.hoisted(() => vi.fn());
@@ -196,7 +196,6 @@ describe('ErrorMessageExtra', () => {
     businessSlot.render = false;
     serverConfigMock.enableBusinessFeatures = false;
     shareContextMock.topicShareId = '';
-    repairContextMock.canSelectPersonalDevice = true;
     businessErrorContentMock.mockReturnValue({
       errorType: undefined,
       hideMessage: false,
@@ -224,10 +223,9 @@ describe('ErrorMessageExtra', () => {
     expect(screen.getByText('deviceAdmission.required')).toBeInTheDocument();
     expect(screen.queryByText('card-retry')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
-    expect(navigateMock).toHaveBeenCalledWith('/settings/devices', { escape: true });
+    expect(navigateMock).toHaveBeenCalledWith('/settings/devices');
   });
   it('keeps a fixed workspace device repair on workspace settings', () => {
-    repairContextMock.canSelectPersonalDevice = false;
     render(
       <ErrorMessageExtra
         error={{ message: 'DEVICE_REQUIRED' }}

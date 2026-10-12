@@ -692,22 +692,11 @@ export default {
   'devices.connectWizard.desktop.thisComputer': 'This computer',
   'devices.connectWizard.desktop.connectFailed':
     'Could not connect this computer. Try connecting again.',
-  'devices.connectWizard.desktop.enrollFailed':
-    'Could not enroll this computer in the workspace. Try again.',
   'devices.connectWizard.desktop.identityUnavailable':
     'Could not read this computer’s identity. Try again.',
   'devices.connectWizard.desktop.registrationPending':
     'This computer is connected, but registration has not completed. Try again once it appears in your personal devices.',
-  'devices.connectWizard.desktop.workspaceRequired':
-    'Select a workspace before connecting this computer.',
   'devices.connectWizard.desktop.personalDesc': 'Connect this computer to your personal devices.',
-  'devices.connectWizard.desktop.workspacePublic':
-    'Connect this computer and share it with workspace members. Members can run agents and tools on it.',
-  'devices.connectWizard.desktop.workspacePrivate':
-    'Connect this computer to this workspace for your use only.',
-  'devices.connectWizard.desktop.workspaceStep': 'Enroll your computer in this workspace',
-  'devices.connectWizard.desktop.workspaceStepDesc':
-    'In Orvilo Desktop, open this workspace’s Settings → Devices, choose Workspace or Private, then Connect Device → Via Desktop → Connect this computer.',
   'devices.connectWizard.desktop.status.connected': 'Connected',
   'devices.connectWizard.desktop.status.connecting': 'Connecting…',
   'devices.connectWizard.desktop.status.authenticating': 'Signing in…',
@@ -784,43 +773,12 @@ export default {
   'devices.remove.currentSessionWarning':
     "This includes the device you're using right now — removing it disconnects your current session.",
   'devices.selection.total': '{{count}} devices',
-  'devices.share.alreadyShared': 'Shared',
-  'devices.share.badge': 'Shared to {{count}} workspaces',
-  'devices.share.confirm': 'Share',
-  'devices.share.detailLabel': 'Shared to workspaces',
-  'devices.share.done': 'Done',
-  'devices.share.empty':
-    "You haven't joined a workspace yet — join or create one to share devices.",
-  'devices.share.goToTarget': 'Go to {{name}}',
-  'devices.share.menu': 'Share to Workspace…',
-  'devices.share.modalDesc':
-    'Pick a workspace to share this device into. Members can dispatch agent runs to it while it stays online.',
-  'devices.share.modalTitle': 'Share device with workspace',
-  'devices.share.offlineDesc': 'The device must be online to share',
-  'devices.share.overwriteConfirmDesc':
-    'This device is already shared with {{name}} as "{{current}}". Sharing again will change access to "{{next}}".',
-  'devices.share.overwriteConfirmOk': 'Overwrite',
-  'devices.share.overwriteConfirmTitle': '{{name}} already has this device — replace it?',
-  'devices.share.revoke': 'Unshare',
-  'devices.share.revokeConfirmDesc':
-    'This removes the device from that workspace. Members can no longer dispatch runs to it; you can share it again anytime.',
-  'devices.share.revokeConfirmTitle': 'Unshare from {{name}}?',
-  'devices.share.selectPlaceholder': 'Select a workspace',
-  'devices.share.sharedByTag': 'Shared by {{name}}',
-  'devices.share.success': 'Device shared to {{name}}',
-  'devices.share.targetLabel': 'Share to',
-  'devices.share.viewerHint': 'Viewers cannot share devices',
-  'devices.share.visibilityTag.private': 'Private',
-  'devices.share.visibilityTag.public': 'Workspace',
   'devices.status.offline': 'Offline',
   'devices.status.online': 'Online',
   'devices.status.onlineConnections_one': 'Online · {{count}} connection',
   'devices.status.onlineConnections_other': 'Online · {{count}} connections',
+  'devices.readonlyHint': 'Only the device owner can change these settings.',
   'devices.title': 'My Devices',
-  'devices.visibility.publish': 'Publish to Workspace',
-  'devices.visibility.publishConfirmTitle': 'Publish this device to the workspace?',
-  'devices.visibilityTabs.private': 'Private',
-  'devices.visibilityTabs.workspace': 'Workspace',
   'devices.workingDirectory': 'Working directory: {{path}}',
   'checkingPermissions': 'Checking permissions...',
   'danger.reset.action': 'Reset Now',
@@ -3381,21 +3339,6 @@ export default {
   'workspace.onboarding.step4.cta': 'Enter workspace',
   'workspaceSetting.breadcrumb.backToApp': 'Back to app',
   'workspaceSetting.breadcrumb.settings': 'Settings',
-  'workspaceSetting.devices.connectTitlePrivate': 'Add private device',
-  'workspaceSetting.devices.connectTitlePublic': 'Add public device',
-  'workspaceSetting.devices.empty': 'No workspace devices yet.',
-  'workspaceSetting.devices.enrollDesc':
-    'Run this on the machine you want to share with the workspace:',
-  'workspaceSetting.devices.enrolledBy': 'Enrolled by {{name}}',
-  'workspaceSetting.devices.enrolledByLabel': 'Enrolled by',
-  'workspaceSetting.devices.enrollTitle': 'Add a device',
-  'workspaceSetting.devices.heroDesc': 'Connect to a device which you can dispatch from anywhere.',
-  'workspaceSetting.devices.heroTitle': 'No device connected',
-  'workspaceSetting.devices.offline': 'Offline',
-  'workspaceSetting.devices.online': 'Online',
-  'workspaceSetting.devices.readonlyHint':
-    'Only the member who enrolled this device or a workspace owner can rename or remove it.',
-  'workspaceSetting.devices.unknownEnroller': 'an unknown member',
   'workspaceSetting.group.admin': 'Admin',
   'workspaceSetting.group.agent': 'Agent',
   'workspaceSetting.group.workspace': 'Workspace',

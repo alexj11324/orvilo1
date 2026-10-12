@@ -45,8 +45,8 @@ vi.mock('@/database/models/connector', () => ({
 }));
 vi.mock('@/database/models/device', () => ({
   DeviceModel: class {
-    queryWorkspaceDevices = mocks.devices;
-    queryPersonal = async () => [];
+    queryForExecution = mocks.devices;
+    query = mocks.devices;
   },
 }));
 vi.mock('@/database/utils/agent-access', () => ({ findUsableAgentExecutionBinding: mocks.usable }));

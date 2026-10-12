@@ -139,7 +139,6 @@ export interface ToolExecutionContext {
    * device has no connection. Absent on runs without a run-start device (a
    * mid-run activation always picks from the workspace pool).
    */
-  activeDeviceScope?: 'personal' | 'workspace';
   /** Agent ID executing the tool call */
   agentId?: string;
   /**

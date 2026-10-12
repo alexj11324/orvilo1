@@ -32,7 +32,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
-      canSelectPersonalDevice: false,
+
       isPreferenceLoading: false,
       workspaceScoped: false,
     });
@@ -55,7 +55,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
-      canSelectPersonalDevice: false,
+
       isPreferenceLoading: false,
       workspaceScoped: false,
     });
@@ -74,7 +74,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
-      canSelectPersonalDevice: false,
+
       isPreferenceLoading: false,
       workspaceScoped: true,
     });
@@ -95,13 +95,11 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
-      canSelectPersonalDevice: false,
+
       isPreferenceLoading: false,
       workspaceScoped: false,
     });
-    mockedListDevices.mockResolvedValue([
-      { deviceId: 'member-device', online: true, scope: 'personal' },
-    ] as never);
+    mockedListDevices.mockResolvedValue([{ deviceId: 'member-device', online: true }] as never);
     mockedCheckCapability.mockResolvedValue({ available: true });
 
     const { result } = renderHook(() => useRemoteAgentDeviceGuard({ agentId: 'agent-1' }));
@@ -110,7 +108,6 @@ describe('useRemoteAgentDeviceGuard', () => {
     expect(mockedCheckCapability).toHaveBeenCalledWith({
       deviceId: 'member-device',
       platform: 'hermes',
-      scope: 'personal',
     });
   });
 
@@ -123,7 +120,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
-      canSelectPersonalDevice: false,
+
       isPreferenceLoading: true,
       workspaceScoped: true,
     });
@@ -139,7 +136,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       agencyConfig: { heterogeneousProvider: { type: 'codex' } },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
-      canSelectPersonalDevice: false,
+
       isPreferenceLoading: false,
       workspaceScoped: false,
     });

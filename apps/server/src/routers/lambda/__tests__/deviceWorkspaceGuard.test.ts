@@ -5,7 +5,7 @@ import type { DeviceModel } from '@/database/models/device';
 import { deviceGateway } from '@/server/services/deviceGateway';
 
 import {
-  assertWorkspaceDeviceVisible,
+  assertExecutionDeviceAccessible,
   assertWorkspaceGitRootApproved,
   assertWorkspaceRootApproved,
 } from '../deviceWorkspaceGuard';
@@ -13,13 +13,13 @@ import {
 const mockModel = (row: { defaultCwd?: string | null; workingDirs?: { path: string }[] } | null) =>
   ({
     findByDeviceId: vi.fn().mockResolvedValue(row),
-    findWorkspaceDeviceById: vi.fn().mockResolvedValue(row),
+    findExecutionDeviceById: vi.fn().mockResolvedValue(row),
   }) as unknown as DeviceModel;
 
 describe('assertWorkspaceRootApproved', () => {
   it('uses the shared workspace enrollment roots instead of a same-ID personal row', async () => {
     const model = mockModel({ defaultCwd: '/personal' });
-    vi.mocked(model.findWorkspaceDeviceById).mockResolvedValue({ defaultCwd: '/shared' } as never);
+    vi.mocked(model.findExecutionDeviceById).mockResolvedValue({ defaultCwd: '/shared' } as never);
     await expect(
       assertWorkspaceRootApproved(model, 'dev', '/shared', 'ws'),
     ).resolves.toBeUndefined();
@@ -85,22 +85,22 @@ describe('assertWorkspaceRootApproved', () => {
   });
 });
 
-describe('assertWorkspaceDeviceVisible', () => {
+describe('assertExecutionDeviceAccessible', () => {
   const mockWorkspaceModel = (row: object | undefined) =>
     ({
-      findWorkspaceDeviceById: vi.fn().mockResolvedValue(row),
+      findExecutionDeviceById: vi.fn().mockResolvedValue(row),
     }) as unknown as DeviceModel;
 
   /** @example A visible registered device remains addressable by workspace RPCs. */
   it('allows a device the caller can see', async () => {
     const model = mockWorkspaceModel({ deviceId: 'public-dev' });
-    await expect(assertWorkspaceDeviceVisible(model, 'public-dev')).resolves.toBeUndefined();
+    await expect(assertExecutionDeviceAccessible(model, 'public-dev')).resolves.toBeUndefined();
   });
 
   /** @example A Gateway-only ghost is not authorized after its workspace row is removed. */
   it('rejects a transient device with no workspace registry row', async () => {
     const model = mockWorkspaceModel(undefined);
-    await expect(assertWorkspaceDeviceVisible(model, 'transient-dev')).rejects.toMatchObject({
+    await expect(assertExecutionDeviceAccessible(model, 'transient-dev')).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
   });
@@ -109,7 +109,7 @@ describe('assertWorkspaceDeviceVisible', () => {
   it("rejects another member's private device with NOT_FOUND", async () => {
     const model = mockWorkspaceModel(undefined);
     await expect(
-      assertWorkspaceDeviceVisible(model, 'someone-elses-private'),
+      assertExecutionDeviceAccessible(model, 'someone-elses-private'),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });

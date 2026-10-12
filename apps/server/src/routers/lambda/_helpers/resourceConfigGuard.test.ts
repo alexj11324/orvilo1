@@ -173,7 +173,7 @@ describe('config redaction', () => {
       agencyConfig: {
         boundDeviceId: 'private-device',
         executionTarget: 'device',
-        heterogeneousProvider: { env: { SECRET: 'value' }, type: 'codex' },
+        heterogeneousProvider: { env: { SECRET: 'value' }, type: 'codex', model: 'saved-model' },
         topicSharePolicy: 'restricted',
       },
       avatar: 'avatar.png',
@@ -193,8 +193,9 @@ describe('config redaction', () => {
 
     expect(result).toEqual({
       agencyConfig: {
+        boundDeviceId: 'private-device',
         executionTarget: 'device',
-        heterogeneousProvider: { type: 'codex' },
+        heterogeneousProvider: { type: 'codex', model: 'saved-model' },
         // Authorization metadata: without it a use-level member's share button
         // would offer a link the server then refuses.
         topicSharePolicy: 'restricted',

@@ -3,18 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   findByDeviceId: vi.fn(),
-  findWorkspaceDeviceById: vi.fn(),
-  queryPersonal: vi.fn(async () => [] as Array<{ deviceId: string }>),
-  queryWorkspaceDevices: vi.fn(async () => [] as Array<{ deviceId: string }>),
+  findExecutionDeviceById: vi.fn(),
+  query: vi.fn(async () => [] as Array<{ deviceId: string }>),
+  queryForExecution: vi.fn(async () => [] as Array<{ deviceId: string }>),
 }));
 
 vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
       findByDeviceId: mocks.findByDeviceId,
-      findWorkspaceDeviceById: mocks.findWorkspaceDeviceById,
-      queryPersonal: mocks.queryPersonal,
-      queryWorkspaceDevices: mocks.queryWorkspaceDevices,
+      findExecutionDeviceById: mocks.findExecutionDeviceById,
+      query: mocks.query,
+      queryForExecution: mocks.queryForExecution,
     };
   }),
 }));
@@ -33,7 +33,7 @@ describe('resolveDeviceDispatchAuthorizationFailure', () => {
       resolveDeviceDispatchAuthorizationFailure(serverDB, 'user-1', 'device-1'),
     ).resolves.toBeUndefined();
     expect(mocks.findByDeviceId).toHaveBeenCalledWith('device-1');
-    expect(mocks.findWorkspaceDeviceById).not.toHaveBeenCalled();
+    expect(mocks.findExecutionDeviceById).not.toHaveBeenCalled();
   });
 
   /** @example Conversation dispatch on a revoked personal device gets the repair contract. */
@@ -43,7 +43,7 @@ describe('resolveDeviceDispatchAuthorizationFailure', () => {
     // bare DEVICE_NOT_FOUND with no repair path — the conversation path must
     // carry the same contract as tool calls.
     mocks.findByDeviceId.mockResolvedValue(undefined);
-    mocks.queryPersonal.mockResolvedValue([{ deviceId: 'device-1' }, { deviceId: 'device-9' }]);
+    mocks.query.mockResolvedValue([{ deviceId: 'device-1' }, { deviceId: 'device-9' }]);
 
     await expect(
       resolveDeviceDispatchAuthorizationFailure(serverDB, 'user-1', 'device-1'),
@@ -58,12 +58,12 @@ describe('resolveDeviceDispatchAuthorizationFailure', () => {
 
   /** @example A visible workspace registration permits the selected device dispatch. */
   it('allows workspace dispatch while its registry row remains visible', async () => {
-    mocks.findWorkspaceDeviceById.mockResolvedValue({ deviceId: 'device-1' });
+    mocks.findExecutionDeviceById.mockResolvedValue({ deviceId: 'device-1' });
 
     await expect(
       resolveDeviceDispatchAuthorizationFailure(serverDB, 'user-1', 'device-1', 'workspace-1'),
     ).resolves.toBeUndefined();
-    expect(mocks.findWorkspaceDeviceById).toHaveBeenCalledWith('device-1');
+    expect(mocks.findExecutionDeviceById).toHaveBeenCalledWith('device-1');
   });
 
   /** @example Unshare revokes a previously selected target before its next tool call. */
@@ -73,14 +73,14 @@ describe('resolveDeviceDispatchAuthorizationFailure', () => {
     // Target discovery was checked once, but a later tool call reused activeDeviceId directly.
     // Unshare could delete the registry row while a stale socket remained, allowing new work.
     // The dispatch boundary now rechecks the visible workspace row before every new call.
-    mocks.findWorkspaceDeviceById.mockResolvedValue(undefined);
+    mocks.findExecutionDeviceById.mockResolvedValue(undefined);
 
     await expect(
       resolveDeviceDispatchAuthorizationFailure(serverDB, 'user-1', 'device-1', 'workspace-1'),
     ).resolves.toEqual({
       code: 'DEVICE_BINDING_INVALID',
       deviceId: 'device-1',
-      repairCandidates: [],
+      repairCandidates: ['device-9'],
       retryable: true,
       scope: 'workspace',
       workspaceId: 'workspace-1',
@@ -89,8 +89,8 @@ describe('resolveDeviceDispatchAuthorizationFailure', () => {
 
   /** @example The contract's explicit-repair path carries the other selectable devices. */
   it('surfaces repair candidates so callers can render the repair path', async () => {
-    mocks.findWorkspaceDeviceById.mockResolvedValue(undefined);
-    mocks.queryWorkspaceDevices.mockResolvedValue([
+    mocks.findExecutionDeviceById.mockResolvedValue(undefined);
+    mocks.queryForExecution.mockResolvedValue([
       { deviceId: 'device-1' },
       { deviceId: 'device-2' },
       { deviceId: 'device-3' },
@@ -105,6 +105,6 @@ describe('resolveDeviceDispatchAuthorizationFailure', () => {
 
     // The invalidated binding itself is not a repair option.
     expect(result?.code).toBe('DEVICE_BINDING_INVALID');
-    expect(result?.repairCandidates).toEqual(['device-2', 'device-3']);
+    expect(result?.repairCandidates).toEqual(['device-9']);
   });
 });

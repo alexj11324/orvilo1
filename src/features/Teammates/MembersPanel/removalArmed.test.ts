@@ -8,7 +8,6 @@ const preview: RemovalPreview = {
   assignedTasks: [],
   reviewingTaskCount: 0,
   runningDelegationCount: 0,
-  sharedDeviceCount: 0,
 };
 
 const base: Parameters<typeof removalArmed>[0] = {

@@ -68,7 +68,6 @@ import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 import {
   bindTopicDeviceAtomically,
-  canSelectCallerPersonalDevice,
   resolveHeteroExecutionPlan,
 } from '@/server/services/deviceGateway/executionAdmission';
 import { resolveGithubAccessToken } from '@/server/services/githubRepo';
@@ -156,13 +155,26 @@ const finalizeHeteroDispatchError = async (
   const {
     agentId,
     assistantMessageId,
-    detail,
+    detail: suppliedDetail,
     errorData,
     errorType = ChatErrorType.ServerAgentRuntimeError,
-    message,
+    message: suppliedMessage,
     operationId,
     topicId,
   } = params;
+
+  let detail = suppliedDetail;
+  let message = suppliedMessage;
+  if (errorData?.deviceId && ['DEVICE_OFFLINE', 'DEVICE_NOT_CONNECTED'].includes(errorData.code)) {
+    const host = await new DeviceModel(
+      deps.db,
+      deps.userId,
+      deps.workspaceId,
+    ).findExecutionDeviceById(errorData.deviceId);
+    const name = host?.friendlyName || host?.hostname || errorData.deviceId;
+    detail = `Device “${name}” is offline. Ask its owner to connect it, then retry.`;
+    message = detail;
+  }
 
   // 1. Error bubble — written first so a stream subscriber reacting to the
   //    end event below re-reads a message that already carries the error.
@@ -716,7 +728,6 @@ export const dispatchHeteroAgent = async (
   const {
     beforeOperationStart,
     builtinToolSpecs,
-    canManageAgent,
     externalToolMounts,
     toolSurfaceOutcomes,
     clientIp,
@@ -1040,8 +1051,7 @@ export const dispatchHeteroAgent = async (
   // ── Unified admission — the ONE device decision for this run ────────────
   //
   // `resolveHeteroExecutionPlan` consumes the stored execution target, the
-  // session binding (topic pin), the caller's explicit request, the member
-  // override and the authorized device inventory, and returns exactly one
+  // Agent’s saved host and the authorized device inventory, and returns exactly one
   // plan: a device, the sandbox, or a blocked answer with its contract code.
   // Everything downstream (platform notify dispatch, CLI device dispatch,
   // embedded/sandbox) consumes THIS plan — there is no second device pick.
@@ -1049,14 +1059,7 @@ export const dispatchHeteroAgent = async (
   const executionPlan = await resolveHeteroExecutionPlan(deps.db, {
     agencyConfig: agentConfig.agencyConfig,
     agentOwnerId: agentConfig.userId,
-    canSelectPersonalDevice: canSelectCallerPersonalDevice({
-      agencyConfig: agentConfig.agencyConfig,
-      agentOwnerId: agentConfig.userId,
-      canManageAgent,
-      userId: deps.userId,
-      visibility: agentConfig.visibility,
-      workspaceId: deps.workspaceId,
-    }),
+
     canUseDevice,
     explicitDeviceId: requestedDeviceId,
     isPlatformTask: isRemoteHetero,
@@ -1076,9 +1079,47 @@ export const dispatchHeteroAgent = async (
     workspaceScoped: resolveWorkspaceScoped(isPublicWorkspaceAgent),
   });
   const admittedDeviceId = executionPlan.kind === 'device' ? executionPlan.deviceId : undefined;
-  const admittedDeviceWorkspaceId = admittedDeviceId
-    ? await deps.resolveDeviceWorkspaceId(admittedDeviceId)
-    : undefined;
+  const admittedDeviceWorkspaceId: string | undefined = undefined;
+  if (executionPlan.kind === 'device' && executionPlan.candidate?.online === false) {
+    const host = await new DeviceModel(
+      deps.db,
+      deps.userId,
+      deps.workspaceId,
+    ).findExecutionDeviceById(executionPlan.deviceId);
+    const name = host?.friendlyName || host?.hostname || executionPlan.deviceId;
+    const detail = `Device “${name}” is offline. Ask its owner to connect it, then retry.`;
+    const errorData: DeviceUnavailableErrorData = {
+      code: 'DEVICE_OFFLINE',
+      deviceId: executionPlan.deviceId,
+      retryable: true,
+      scope: deps.workspaceId ? 'workspace' : 'personal',
+      ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
+    };
+    await finalizeHeteroDispatchError(deps, {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      detail,
+      errorData,
+      message: detail,
+      operationId,
+      topicId,
+    });
+    return {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      autoStarted: false,
+      createdAt: new Date().toISOString(),
+      error: 'DEVICE_OFFLINE',
+      errorData,
+      message: detail,
+      operationId,
+      status: 'error',
+      success: false,
+      timestamp: new Date().toISOString(),
+      topicId,
+      userMessageId: userMessageId ?? parentMessageId ?? '',
+    };
+  }
   // A single-candidate resolution is a conditional first-bind (plan §5.2):
   // the server claims that device for the conversation durably so every
   // surface resolves the same host. The write is a real CAS that returns the
@@ -1193,7 +1234,11 @@ export const dispatchHeteroAgent = async (
   const remoteDeviceWorkspaceId = isRemoteHetero ? admittedDeviceWorkspaceId : undefined;
   // Candidate authorization and dispatch use the actual caller for every
   // resolution reason; Agent authorship cannot select another Device pool.
-  const remoteDeviceUserId = deps.userId;
+  const admittedDeviceUserId =
+    executionPlan.kind === 'device'
+      ? (executionPlan.candidate.owner.userId ?? deps.userId)
+      : deps.userId;
+  const remoteDeviceUserId = admittedDeviceUserId;
 
   const cliDeviceId = isRemoteHetero ? undefined : admittedDeviceId;
   const cliDeviceWorkspaceId = isRemoteHetero ? undefined : admittedDeviceWorkspaceId;
@@ -1257,7 +1302,7 @@ export const dispatchHeteroAgent = async (
       : cliDeviceId
         ? {
             deviceId: cliDeviceId,
-            deviceUserId: deps.userId,
+            deviceUserId: admittedDeviceUserId,
             deviceWorkspaceId: cliDeviceWorkspaceId,
           }
         : {}),
@@ -1437,7 +1482,7 @@ export const dispatchHeteroAgent = async (
       deps.db,
       deps.userId,
       remoteDeviceId,
-      remoteDeviceWorkspaceId,
+      deps.workspaceId,
     );
 
     // Durable admission BEFORE the dispatch: the record survives a crash or a
@@ -1636,8 +1681,8 @@ export const dispatchHeteroAgent = async (
       const blockedCode = heteroPlan.kind === 'blocked' ? heteroPlan.code : 'DEVICE_REQUIRED';
       const denied = blockedCode === 'DEVICE_ACCESS_DENIED';
       const pickerHint = !supportsCloudHeterogeneousSandbox(heteroType)
-        ? 'Pick a local or connected device in the Execution Device switcher.'
-        : 'Pick a device in the Execution Device switcher, or switch to Cloud sandbox.';
+        ? 'Choose a device in Agent settings.'
+        : 'Choose a device in Agent settings.';
       log('execAgent: hetero admission blocked (code=%s)', blockedCode);
       // Structured admission refusal — the code lives in `errorData.code`
       // (the contract surface the repair UI branches on), never embedded in
@@ -1708,7 +1753,7 @@ export const dispatchHeteroAgent = async (
       const deviceModelForCwd = new DeviceModel(deps.db, deps.userId, deps.workspaceId);
       const boundDevice =
         (await deviceModelForCwd.findByDeviceId(dispatchDeviceId)) ??
-        (await deviceModelForCwd.findWorkspaceDeviceById(dispatchDeviceId));
+        (await deviceModelForCwd.findExecutionDeviceById(dispatchDeviceId));
       const dispatchWorkspaceId = cliDeviceWorkspaceId;
       // Resolve via the shared precedence helper so dispatch, workspace-init,
       // and the new-topic backfill below all agree on the cwd.
@@ -1746,7 +1791,6 @@ export const dispatchHeteroAgent = async (
               metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
                 builtinToolContext: {
                   activeDeviceId: dispatchDeviceId,
-                  activeDeviceScope: dispatchWorkspaceId ? 'workspace' : 'personal',
                   workingDirectory: deviceCwd,
                 },
               })}::jsonb`,
@@ -1776,7 +1820,7 @@ export const dispatchHeteroAgent = async (
         deps.db,
         deps.userId,
         dispatchDeviceId,
-        dispatchWorkspaceId,
+        deps.workspaceId,
       );
 
       // Durable admission BEFORE the gateway call — persisting the run's
@@ -1787,7 +1831,7 @@ export const dispatchHeteroAgent = async (
         {
           channel: 'agent_run_request',
           deviceId: dispatchDeviceId,
-          deviceUserId: deps.userId,
+          deviceUserId: admittedDeviceUserId,
           deviceWorkspaceId: dispatchWorkspaceId,
           executionPlan: {
             ...runIdentity,

@@ -59,8 +59,6 @@ beforeAll(async () => {
     [savedDevice, nextDevice].map((deviceId) => ({
       deviceId,
       userId: owner,
-      workspaceId,
-      visibility: 'public' as const,
       identitySource: 'machine-id' as const,
     })),
   );
@@ -219,5 +217,34 @@ describe('saved Agent runtime with real workspace member rows', () => {
     const model = new WorkspaceUserSettingsModel(db, member, workspaceId);
     await model.updatePreference({ agentModeOverrides: { [agentId]: false } });
     expect((await model.get())?.preference).toEqual({ agentModeOverrides: { [agentId]: false } });
+  });
+  it('creates both private and workspace Agents on the same enrolled device and preserves it across visibility changes', async () => {
+    const model = new AgentModel(db, owner, workspaceId);
+    for (const visibility of ['private', 'public'] as const) {
+      const created = await model.create({
+        title: `${visibility} host`,
+        model: 'gpt-5.2',
+        provider: 'codex',
+        visibility,
+        agencyConfig: config,
+      });
+      expect(created.agencyConfig?.boundDeviceId).toBe(savedDevice);
+      const changed = await model.setVisibility(
+        created.id,
+        visibility === 'private' ? 'public' : 'private',
+      );
+      expect(changed?.agencyConfig?.boundDeviceId).toBe(savedDevice);
+      expect(changed?.agencyConfig?.heterogeneousProvider?.type).toBe('codex');
+    }
+  });
+  it('updates the saved model for both members when Agent settings change the runtime model', async () => {
+    await new AgentModel(db, owner, workspaceId).updateConfig(agentId, {
+      agencyConfig: { heterogeneousProvider: { model: 'gpt-5.3' } },
+    });
+    for (const userId of [owner, member])
+      expect((await resolveFor(userId)).agentConfig).toMatchObject({
+        model: 'gpt-5.3',
+        agencyConfig: { heterogeneousProvider: { model: 'gpt-5.3' } },
+      });
   });
 });

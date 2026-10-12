@@ -16,7 +16,7 @@ describe('Button loading', () => {
       </Button>,
     );
 
-    const button = screen.getByRole('button', { name: 'Save', exact: true });
+    const button = screen.getByRole('button', { name: 'Save' });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
     const spinner = container.querySelector('[data-slot="spinner"]');

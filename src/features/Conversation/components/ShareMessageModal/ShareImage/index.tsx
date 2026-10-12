@@ -55,6 +55,7 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
     );
     const context = useConversationStore((s) => s.context);
     const [fieldValue, setFieldValue] = useState<FieldType>(DEFAULT_FIELD_VALUE);
+    const [form] = Form.useForm<FieldType>();
     const { t } = useTranslation(['chat', 'common']);
 
     const widthModeOptions = [
@@ -141,12 +142,13 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
           />
           <div className={cn('flex flex-col gap-3', styles.sidebar)}>
             <Form
+              form={form}
               initialValues={DEFAULT_FIELD_VALUE}
               itemMinWidth={FORM_STYLE.itemMinWidth}
               items={settings}
               itemsType={'flat'}
               style={FORM_STYLE.style}
-              onValuesChange={(_, v) => setFieldValue(v)}
+              onValuesChange={() => setFieldValue(form.getFieldsValue())}
             />
             {!isMobile && button}
           </div>

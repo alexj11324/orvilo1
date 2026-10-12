@@ -1256,7 +1256,7 @@ function FormBase(props: FormProps) {
                 form.resetFields();
               }
             },
-            onSubmit: (event: React.FormEvent<HTMLFormElement>) => {
+            onSubmit: (event: Parameters<NonNullable<FormProps['onSubmit']>>[0]) => {
               onSubmit?.(event);
               if (!event.defaultPrevented) {
                 event.preventDefault();

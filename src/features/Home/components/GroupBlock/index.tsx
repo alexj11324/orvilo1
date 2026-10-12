@@ -67,19 +67,19 @@ const GroupBlock = memo<GroupBlockProps>(
         <div className="flex items-center justify-between">
           {onCollapsedChange ? (
             <Button
-              aria-expanded={onCollapsedChange ? !collapsed : undefined}
+              aria-expanded={!collapsed}
               nativeButton={false}
               render={<div />}
-              role={onCollapsedChange ? 'button' : undefined}
+              role="button"
               size="lg"
-              tabIndex={onCollapsedChange ? 0 : undefined}
+              tabIndex={0}
               type="button"
               variant="ghost"
               className={cn(
                 styles.heading,
                 'flex items-center flex-1 gap-1.5 justify-start overflow-hidden',
               )}
-              onClick={onCollapsedChange ? () => onCollapsedChange(!collapsed) : undefined}
+              onClick={() => onCollapsedChange(!collapsed)}
             >
               {heading}
             </Button>

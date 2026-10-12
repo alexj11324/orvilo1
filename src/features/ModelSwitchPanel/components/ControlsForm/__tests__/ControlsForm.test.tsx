@@ -138,16 +138,10 @@ describe('ControlsForm', () => {
   it('merges a refreshed config while preserving omitted legacy fields without saving', async () => {
     testState.aiState.extendParams = ['reasoningEffort'];
     const { rerender } = render(<ControlsForm chatConfig={{ reasoningEffort: 'high' }} />);
-    expect(screen.getByRole('button', { name: 'high', exact: true })).toHaveAttribute(
-      'aria-current',
-      'true',
-    );
+    expect(screen.getByRole('button', { name: 'high' })).toHaveAttribute('aria-current', 'true');
     rerender(<ControlsForm chatConfig={{ urlContext: false }} />);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'high', exact: true })).toHaveAttribute(
-        'aria-current',
-        'true',
-      ),
+      expect(screen.getByRole('button', { name: 'high' })).toHaveAttribute('aria-current', 'true'),
     );
     expect(testState.updateAgentChatConfig).not.toHaveBeenCalled();
   });
@@ -164,7 +158,7 @@ describe('ControlsForm', () => {
     expect(switches).toHaveLength(2);
     expect(switches[0]).toHaveAccessibleName('extendParams.urlContext.title');
     expect(switches[1]).toHaveAccessibleName('extendParams.enableReasoning.title');
-    expect(screen.queryByRole('button', { name: 'high', exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'high' })).not.toBeInTheDocument();
     expect(testState.updateAgentChatConfig).not.toHaveBeenCalled();
   });
 
@@ -214,7 +208,7 @@ describe('ControlsForm', () => {
     for (const [name, label, value] of cases) {
       testState.aiState.extendParams = [name];
       const { unmount } = render(<ControlsForm />);
-      await user.click(screen.getByRole('button', { name: label, exact: true }));
+      await user.click(screen.getByRole('button', { name: label }));
       expect(testState.updateAgentChatConfig).toHaveBeenLastCalledWith({ [name]: value });
       unmount();
     }
@@ -224,9 +218,9 @@ describe('ControlsForm', () => {
     const user = userEvent.setup();
     testState.aiState.extendParams = ['thinkingBudget'];
     render(<ControlsForm chatConfig={{ thinkingBudget: 512 }} />);
-    await user.click(screen.getByRole('button', { name: 'OFF', exact: true }));
+    await user.click(screen.getByRole('button', { name: 'OFF' }));
     expect(testState.updateAgentChatConfig).toHaveBeenLastCalledWith({ thinkingBudget: 0 });
-    await user.click(screen.getByRole('button', { name: 'Auto', exact: true }));
+    await user.click(screen.getByRole('button', { name: 'Auto' }));
     expect(testState.updateAgentChatConfig).toHaveBeenLastCalledWith({ thinkingBudget: -1 });
   });
 
@@ -235,12 +229,12 @@ describe('ControlsForm', () => {
     testState.aiState.extendParams = ['gpt5_2ReasoningEffort'];
     render(<ControlsForm model="gpt-5.5" />);
     const group = screen.getByRole('group', { name: 'extendParams.reasoningEffort.title' });
-    expect(within(group).getByRole('button', { name: 'medium', exact: true })).toHaveAttribute(
+    expect(within(group).getByRole('button', { name: 'medium' })).toHaveAttribute(
       'aria-current',
       'true',
     );
     expect(testState.updateAgentChatConfig).not.toHaveBeenCalled();
-    await user.click(within(group).getByRole('button', { name: 'xhigh', exact: true }));
+    await user.click(within(group).getByRole('button', { name: 'xhigh' }));
     expect(testState.updateAgentChatConfig).toHaveBeenCalledExactlyOnceWith({
       gpt5_2ReasoningEffort: 'xhigh',
     });

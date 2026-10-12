@@ -582,15 +582,22 @@ describe('external-value error/manifest merge contract', () => {
   });
 
   it('deep-merges fetched manifest metadata but replaces its API array', () => {
-    const prior = {
-      api: [{ name: 'old' }],
-      meta: { title: 'Keep title', description: 'old' },
-    } as NonNullable<McpDevFormValues['manifest']>;
-    const fetched = { api: [], meta: { description: 'new' } } as NonNullable<
-      McpDevFormValues['manifest']
-    >;
+    const prior: NonNullable<McpDevFormValues['manifest']> = {
+      api: [{ name: 'old', description: 'Old API', parameters: {} }],
+      identifier: 'manifest-id',
+      meta: { title: 'Keep title', description: 'old', avatar: 'keep-avatar' },
+    };
+    const fetched: NonNullable<McpDevFormValues['manifest']> = {
+      api: [],
+      identifier: 'manifest-id',
+      meta: { title: 'Keep title', description: 'new' },
+    };
     const values = mergeMcpDevValues({ manifest: prior }, { manifest: fetched });
-    expect(values.manifest).toEqual({ api: [], meta: { title: 'Keep title', description: 'new' } });
-    expect(prior.api).toEqual([{ name: 'old' }]);
+    expect(values.manifest).toEqual({
+      api: [],
+      identifier: 'manifest-id',
+      meta: { title: 'Keep title', description: 'new', avatar: 'keep-avatar' },
+    });
+    expect(prior.api).toEqual([{ name: 'old', description: 'Old API', parameters: {} }]);
   });
 });

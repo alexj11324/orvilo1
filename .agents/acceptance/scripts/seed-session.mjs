@@ -172,6 +172,9 @@ const signElectronIn = async ({ cdpPort, server, token, userId }) => {
   }
 };
 
+// What `gatewayConnection.connect` answers while the main process holds no token.
+const NO_ACCESS_TOKEN = 'No access token available';
+
 // The renderer's cookie does not sign the main process in: it holds its own
 // tokens, obtained by an authorization request only it can start.
 const authorizeMainProcess = async ({ cdpPort, server, token, urlFile }) => {
@@ -185,19 +188,37 @@ const authorizeMainProcess = async ({ cdpPort, server, token, urlFile }) => {
       throw new Error(`Electron could not start the authorization (${started?.error})`);
     await completeAuthorization({ authUrl: await readAuthUrl(urlFile), server, token });
 
-    // Electron polls the handoff every few seconds, then exchanges the code.
+    // Electron polls the handoff every few seconds, then exchanges the code. Until
+    // then a connection attempt is refused for want of a token; whether the device
+    // gateway itself is reachable is a separate matter and not checked here.
     const deadline = Date.now() + 60_000;
     let error = 'timed out';
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       const result = await page.evaluate(`window.electronAPI.invoke('gatewayConnection.connect')`);
-      if (result?.success) return;
-      error = result?.error ?? error;
+      if (result?.success || result?.error !== NO_ACCESS_TOKEN) return;
+      error = result.error;
     }
     throw new Error(`the Electron main process is not authorized (${error})`);
   } finally {
     page.close();
   }
+};
+
+export const DEFAULT_SEED_EMAIL = 'agent-testing@orvilo.aspectlylabs.com';
+
+/**
+ * Sign a running Electron instance in as the seed user: the renderer always,
+ * and the main process too when `urlFile` names the file Electron was started
+ * with (ORVILO_DESKTOP_AUTH_URL_FILE).
+ */
+export const seedElectron = async ({ cdpPort, databaseUrl, email, serverUrl, urlFile }) => {
+  const server = localServer(serverUrl);
+  const { token, userId } = await createSeedSession({ databaseUrl, email });
+  await assertAccepted(server, token, userId);
+  await signElectronIn({ cdpPort, server, token, userId });
+  if (urlFile) await authorizeMainProcess({ cdpPort, server, token, urlFile });
+  return { mainProcess: Boolean(urlFile), server, userId };
 };
 
 const flagValue = (name) => {
@@ -216,20 +237,23 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const urlFile = flagValue('--desktop-auth');
     if (urlFile !== undefined && (!urlFile || cdpPort === undefined))
       throw new Error('--desktop-auth needs a file path and --electron <cdpPort>');
-    const server = localServer(process.env.SERVER_URL || 'http://localhost:3010');
-    const { token, userId } = await createSeedSession({
-      databaseUrl: process.env.DATABASE_URL,
-      email: process.env.SEED_EMAIL || 'agent-testing@orvilo.aspectlylabs.com',
-    });
-    await assertAccepted(server, token, userId);
-    if (cdpPort === undefined) process.stdout.write(token);
-    else {
-      await signElectronIn({ cdpPort, server, token, userId });
+    const databaseUrl = process.env.DATABASE_URL;
+    const email = process.env.SEED_EMAIL || DEFAULT_SEED_EMAIL;
+    const serverUrl = process.env.SERVER_URL || 'http://localhost:3010';
+    if (cdpPort === undefined) {
+      const { token, userId } = await createSeedSession({ databaseUrl, email });
+      await assertAccepted(localServer(serverUrl), token, userId);
+      process.stdout.write(token);
+    } else {
+      const { server, userId } = await seedElectron({
+        cdpPort,
+        databaseUrl,
+        email,
+        serverUrl,
+        urlFile,
+      });
       console.log(`signed in ${userId} on CDP ${cdpPort} against ${server.origin}`);
-      if (urlFile) {
-        await authorizeMainProcess({ cdpPort, server, token, urlFile });
-        console.log(`authorized the Electron main process on CDP ${cdpPort}`);
-      }
+      if (urlFile) console.log(`authorized the Electron main process on CDP ${cdpPort}`);
     }
   } catch (error) {
     console.error(`seed-session: ${error.message}`);

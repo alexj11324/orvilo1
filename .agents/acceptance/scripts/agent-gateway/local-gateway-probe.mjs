@@ -100,7 +100,7 @@ ws.onerror = (e) =>
   exit(
     '❌ WS error: ' +
       (e.message || e.type) +
-      ' (is the gateway running? `bun run dev` in agent-gateway/)',
+      ' (is the gateway running? local-gateway-setup.sh start)',
     1,
   );
 setTimeout(() => exit('❌ timeout (no auth reply)', 1), 8000);

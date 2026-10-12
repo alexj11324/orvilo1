@@ -49,13 +49,13 @@ steps aside because a root `.env` exists.
 
 ## Run modes
 
-| Command                            | Starts                                                                                                                                 | Port                          |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| `bun run dev`                      | Next.js + Vite SPA + Clerk accounts portal concurrently (full stack)                                                                   | app 3010, SPA 9876, auth 3018 |
-| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend        | 9876                          |
-| `bun run dev:desktop:skip-login`   | Next.js + Electron with an isolated temporary desktop profile; signs in the existing local seed user and verifies renderer/server auth | app 3010, CDP 9263            |
-| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                        | —                             |
-| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                         | 3010 (`-p` to override)       |
+| Command                            | Starts                                                                                                                                            | Port                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `bun run dev`                      | Next.js + Vite SPA + Clerk accounts portal concurrently (full stack)                                                                              | app 3010, SPA 9876, auth 3018 |
+| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend                   | 9876                          |
+| `bun run dev:desktop:skip-login`   | Next.js behind the Clerk stub + Electron with an isolated temporary profile; signs the local seed user in (renderer and main process), no browser | app 3010, CDP 9263            |
+| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                                   | —                             |
+| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                                    | 3010 (`-p` to override)       |
 
 **`bun run dev` derives local auth URLs from its selected ports.** It sets
 `APP_URL` and `INTERNAL_APP_URL` to the selected Next origin, then starts the
@@ -121,9 +121,16 @@ The stub (`clerk-stub.mjs`) listens on loopback only, vouches for seed sessions
 and forwards every other Clerk Backend call unchanged, so a normal sign-in on
 the same server still works. It refuses to start with `NODE_ENV=production`.
 
-`bun run dev:desktop:skip-login` and `bun run dev:desktop:login-local` do not
-work any more: they sign in through the removed Better Auth
-`/api/auth/sign-in/email` endpoint.
+`bun run dev:desktop:skip-login` does all of this in one command: it starts the
+stub, the Next.js server and Electron on a temporary profile, then signs the
+seed user in, main process included. It preserves `CLERK_SECRET_KEY` from the
+shell or `.env`; when absent, a local stub-only placeholder lets the server
+check seeded sessions. Normal Clerk sign-in still requires a real key.
+When `JWKS_KEY` is absent, it reuses `.records/env/agent-testing-jwks.json` or generates and privately saves a local signing key there without changing `.env`.
+`bun run dev:desktop:login-local` signs an
+Electron instance that is already running in (CDP port from
+`ORVILO_DESKTOP_CDP_PORT`, default 9263). Both read `DATABASE_URL` from `.env`
+when the shell does not set it, and need the seed user to exist.
 
 A seeded renderer session does **not** authorize the Electron main process or
 connect an execution device. To do that as well without signing in by hand,
@@ -135,7 +142,8 @@ DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cd
 
 A development build then writes its authorization request to the file and opens
 no browser; the script completes it with the seeded session and waits until the
-device gateway connection is up. A packaged build ignores the variable. For real local-agent requests, follow
+main process has an access token. It does not verify gateway reachability or a
+connected execution device. A packaged build ignores the variable. For real local-agent requests, follow
 [Electron real-model integration](./electron-real-model.md).
 
 ## Running Issues on this machine (device gateway)

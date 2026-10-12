@@ -99,8 +99,7 @@ DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cd
 DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs | sed 's/^/orvilo_auth=/' | $SCRIPT web
 ```
 
-`web-seed` below predates this and inserts a row the server rejects (401); use
-the commands above instead until it is rebuilt on `seed-session.mjs`.
+`setup-auth.sh web-seed` below runs the web command for you.
 
 ## Web — seeded session
 
@@ -227,7 +226,8 @@ Login state must be **injected directly**, never acquired through a login page:
    machine as a device — start the instance with
    `ORVILO_DESKTOP_AUTH_URL_FILE=<file>` and add `--desktop-auth <file>`: the
    script has Electron start its normal authorization, answers the consent with
-   the seeded session over HTTP, and waits for the device gateway connection.
+   the seeded session over HTTP, and waits until the main process has an access
+   token. Gateway reachability and a connected execution device require a separate check.
    Follow either with `$EDEV save-login <id>` so the next instance starts signed in.
 3. **Neither works → report auth as ❌ Blocked and stop.** Tell the user the
    Electron surface needs one manual sign-in (once — the snapshot then covers

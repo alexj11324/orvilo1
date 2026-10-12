@@ -65,29 +65,6 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"ok")
 
-    def do_POST(self):
-        length = int(self.headers.get("content-length") or "0")
-        if length:
-            self.rfile.read(length)
-
-        if self.path != "/api/auth/sign-in/email":
-            self.send_response(404)
-            self.end_headers()
-            return
-
-        self.send_response(200)
-        self.send_header(
-            "Set-Cookie",
-            "better-auth.session_token=seed.token; Path=/; HttpOnly; SameSite=Lax",
-        )
-        self.send_header(
-            "Set-Cookie",
-            "better-auth.session_data=seed.data; Path=/; HttpOnly; SameSite=Lax",
-        )
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(b'{"ok":true}')
-
     def log_message(self, format, *args):
         return
 
@@ -155,7 +132,19 @@ if names != expected:
     raise SystemExit(f"unexpected cookies: {sorted(names)}")
 PY
 
-"$SCRIPT" web-seed > "$tmp_dir/web-seed.out"
+if DATABASE_URL="" "$SCRIPT" web-seed > "$tmp_dir/web-seed-no-db.out"; then
+  fail "web-seed without DATABASE_URL unexpectedly passed"
+fi
+assert_contains "$tmp_dir/web-seed-no-db.out" "DATABASE_URL is required"
+
+# The real seeder needs Postgres and a dev server behind the Clerk stub; this one
+# stands in for it and reports what web-seed handed over.
+cat > "$tmp_dir/seed-session.mjs" << 'JS'
+if (!process.env.DATABASE_URL || !process.env.SEED_EMAIL || !process.env.SERVER_URL) process.exit(1);
+process.stdout.write('seed-token');
+JS
+DATABASE_URL="postgres://unused" SEED_SESSION_SCRIPT="$tmp_dir/seed-session.mjs" \
+  "$SCRIPT" web-seed > "$tmp_dir/web-seed.out"
 
 python3 - "$AUTH_DIR/web-state.json" << 'PY'
 import json, sys
@@ -164,10 +153,7 @@ with open(sys.argv[1]) as f:
     state = json.load(f)
 
 values = {cookie["name"]: cookie["value"] for cookie in state["cookies"]}
-expected = {
-    "better-auth.session_token": "seed.token",
-    "better-auth.session_data": "seed.data",
-}
+expected = {"orvilo_auth": "seed-token"}
 if values != expected:
     raise SystemExit(f"unexpected seeded cookies: {values}")
 PY
@@ -192,6 +178,6 @@ assert_contains "$tmp_dir/cli-status.out" "cli auth green"
 if printf 'foo=bar\n' | "$SCRIPT" web > "$tmp_dir/invalid.out" 2> "$tmp_dir/invalid.err"; then
   fail "invalid cookie unexpectedly passed"
 fi
-assert_contains "$tmp_dir/invalid.err" "no better-auth cookies found"
+assert_contains "$tmp_dir/invalid.err" "no session cookies found"
 
 echo "setup-auth tests passed"

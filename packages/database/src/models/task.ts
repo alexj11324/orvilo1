@@ -4987,7 +4987,7 @@ export class TaskModel {
     taskId: string,
     limit?: number,
     /** Only rows of these kinds — so a row a caller looks for cannot be pushed out of `limit` by other kinds. */
-    types?: string[],
+    types?: TaskActivityLogType[],
   ): Promise<TaskActivityItem[]> {
     if (!(await this.findById(taskId))) return [];
     const where = and(

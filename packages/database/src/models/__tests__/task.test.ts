@@ -2509,7 +2509,7 @@ describe('TaskModel', () => {
       for (let i = 0; i < 25; i++) {
         await model.addActivity({
           actorUserId: userId,
-          payload: { labelId: `lbl_${i}` },
+          payload: { toId: `lbl_${i}` },
           taskId: task.id,
           type: 'label_added',
         });

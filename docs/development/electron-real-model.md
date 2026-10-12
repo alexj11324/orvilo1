@@ -37,8 +37,7 @@ does not implement Orvilo's workspace pools. Use an artifact matching the host
 architecture, or user-mode emulation for an isolated local test. Do not run the
 production activation script or bypass the CI-only build guard.
 
-Point the device gateway's `ORVILO_API_BASE_URL` and the agent gateway's
-`LOBE_API_BASE_URL` at the local Next server. `APP_URL` must match that server's
+Point both gateways' `ORVILO_API_BASE_URL` at the local Next server. `APP_URL` must match that server's
 origin, including its port. Start the web authorization SPA as well as Electron:
 the `/oauth/consent/*` and `/oauth/callback/*` pages use the web SPA. The backend's
 `VITE_DEV_PORT` must match that SPA's port; Electron's renderer is a separate

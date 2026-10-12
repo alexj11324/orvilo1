@@ -8,5 +8,5 @@ umask 077
 service_token="$(runuser -u "$GSM_READER_USER" -- gcloud secrets versions access latest --secret="$GSM_SECRET_ID" --project="$GSM_PROJECT_ID")"
 [[ "$service_token" =~ ^[a-f0-9]{64}$ ]] || { echo 'Invalid Agent Gateway credential.' >&2; exit 1; }
 printf 'AGENT_GATEWAY_URL=https://agent-gateway.aspectlylabs.com\nAGENT_GATEWAY_SERVICE_TOKEN=%s\nENABLE_AGENT_GATEWAY=1\n' "$service_token" > /run/orvilo-agent-gateway/app.env
-printf 'SERVICE_TOKEN=%s\nJWKS_PUBLIC_KEY=%s\nLOBE_API_BASE_URL=https://orvilo.aspectlylabs.com\n' "$service_token" "$(cat /etc/orvilo-agent-gateway/jwks.public.json)" > /run/orvilo-agent-gateway/gateway.env
-exec docker run --rm --name orvilo-agent-gateway --publish 127.0.0.1:28787:8787 --env-file /run/orvilo-agent-gateway/gateway.env orvilo-agent-gateway:fed50da75b89-origin-v1
+printf 'SERVICE_TOKEN=%s\nJWKS_PUBLIC_KEY=%s\nORVILO_API_BASE_URL=https://orvilo.aspectlylabs.com\n' "$service_token" "$(cat /etc/orvilo-agent-gateway/jwks.public.json)" > /run/orvilo-agent-gateway/gateway.env
+exec docker run --rm --name orvilo-agent-gateway --publish 127.0.0.1:28787:8787 --env-file /run/orvilo-agent-gateway/gateway.env orvilo-agent-gateway:81f26f8af942

@@ -7,8 +7,8 @@
 # events of a run. A gateway that trusts the local key closes that loop locally.
 # The device gateway has its own script: local-device-gateway-setup.sh.
 #
-# What it does: checks out the Orvilo gateway (private repository, the same changes
-# production builds from) at a pinned commit, builds the agent gateway for this
+# What it does: checks out the Orvilo gateway (public repository, the same commit
+# production builds from), builds the agent gateway for this
 # machine, and runs it on localhost with the PUBLIC half of the local key.
 #
 # Usage (from the repository root):
@@ -21,7 +21,7 @@
 #   SERVER_URL         (default http://localhost:3010)  dev server the gateway calls back
 #   ORVILO_GATEWAY_DIR (default ~/.orvilo/agent-testing/gateway)  checkout and build cache
 #
-# Needs: go, git, and read access to github.com/alexj11324/orvilo-gateway.
+# Needs: go, git, and network access to github.com/alexj11324/orvilo-gateway.
 # The service token is generated once into .records/env/agent-gateway.token
 # (git-ignored, mode 600). It is never printed: pass it by variable.
 
@@ -29,8 +29,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 GATEWAY_REPO='https://github.com/alexj11324/orvilo-gateway.git'
-# Upstream fed50da plus the Orvilo patches production applies, under the Orvilo name.
-GATEWAY_REF='e7b28b5c89989bea344dde9e95a7724990cf6dae'
+# The commit production builds from.
+GATEWAY_REF='81f26f8af942484da644921eae08371f834bfd72'
 GATEWAY_DIR="${ORVILO_GATEWAY_DIR:-$HOME/.orvilo/agent-testing/gateway}"
 PORT="${GATEWAY_PORT:-8788}"
 SERVER_URL="${SERVER_URL:-http://localhost:3010}"
@@ -54,7 +54,7 @@ build() {
   if [ ! -d "$GATEWAY_DIR/src/.git" ]; then
     mkdir -p "$GATEWAY_DIR"
     git clone --quiet "$GATEWAY_REPO" "$GATEWAY_DIR/src" \
-      || die "cannot clone $GATEWAY_REPO — it is private; check your GitHub access"
+      || die "cannot clone $GATEWAY_REPO"
   fi
   git -C "$GATEWAY_DIR/src" fetch --quiet origin
   git -C "$GATEWAY_DIR/src" checkout --quiet --detach "$GATEWAY_REF" \
@@ -76,7 +76,7 @@ case "${1:-}" in
       process.stdout.write(JSON.stringify({ keys }));
     ')" || die 'JWKS_KEY is not a JWKS document'
     SERVICE_TOKEN="$(cat "$TOKEN_FILE")"
-    export JWKS_PUBLIC_KEY SERVICE_TOKEN PORT LOBE_API_BASE_URL="$SERVER_URL"
+    export JWKS_PUBLIC_KEY SERVICE_TOKEN PORT ORVILO_API_BASE_URL="$SERVER_URL"
     unset JWKS_KEY
     echo "agent gateway $GATEWAY_REF on http://localhost:$PORT" >&2
     exec "$BINARY"

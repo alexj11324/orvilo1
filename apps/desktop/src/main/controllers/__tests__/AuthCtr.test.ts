@@ -1,6 +1,6 @@
 import type { DataSyncConfig } from '@orvilo/electron-client-ipc';
 import debug from 'debug';
-import { BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -212,6 +212,7 @@ describe('AuthCtr', () => {
       });
       afterEach(() => {
         envMock.isDev = false;
+        (app as { isPackaged?: boolean }).isPackaged = false;
         vi.unstubAllEnvs();
         authCtr.cancelAuthorization();
       });
@@ -227,7 +228,12 @@ describe('AuthCtr', () => {
         expect(options).toEqual({ mode: 0o600 });
       });
 
-      it('ignores the setting in a packaged build', async () => {
+      it.each([
+        ['outside development', false, false],
+        ['in a packaged build forced into development mode', true, true],
+      ])('ignores the setting %s', async (_, isDev, isPackaged) => {
+        envMock.isDev = isDev;
+        (app as { isPackaged?: boolean }).isPackaged = isPackaged;
         await authCtr.requestAuthorization(config);
         expect(writeFileMock).not.toHaveBeenCalled();
         expect(shell.openExternal).toHaveBeenCalledOnce();

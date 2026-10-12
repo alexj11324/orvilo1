@@ -9,7 +9,7 @@ import type {
   DataSyncConfig,
   MarketAuthorizationParams,
 } from '@orvilo/electron-client-ipc';
-import { BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 
 import { isDev } from '@/const/env';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
@@ -144,7 +144,9 @@ export default class AuthCtr extends ControllerModule {
 
       // Development only: a local script finishes the request with a seeded session,
       // so the authorization page never takes over the developer's browser.
-      const authUrlFile = isDev ? process.env.ORVILO_DESKTOP_AUTH_URL_FILE : undefined;
+      // `isDev` can be forced by ELECTRON_IS_DEV, so a packaged build is ruled out by itself.
+      const authUrlFile =
+        isDev && !app.isPackaged ? process.env.ORVILO_DESKTOP_AUTH_URL_FILE : undefined;
       if (authUrlFile) {
         await writeFile(authUrlFile, authUrl.toString(), { mode: 0o600 });
         logger.debug('Wrote authorization URL for local automation');

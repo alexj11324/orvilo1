@@ -3,6 +3,7 @@
 import { type ConversationContext } from '@orvilo/types';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { useOfferedAgentId } from '@/features/DefaultAgent/useDefaultAgent';
 import { useChatStore } from '@/store/chat';
 import { useDocumentStore } from '@/store/document';
 import { useGlobalStore } from '@/store/global';
@@ -27,8 +28,9 @@ export function useAgentContext(): ConversationContext {
     useChatStore((s) => s.composerAgentId),
     useGlobalStore(systemStatusSelectors.lastUsedAgentId),
   ];
-  const agentId =
-    topicId || threadId ? routeAgentId : composerAgentId || lastUsedAgentId || routeAgentId;
+  // A remembered Agent may since have been withheld with its runtime.
+  const rememberedAgentId = useOfferedAgentId(composerAgentId || lastUsedAgentId);
+  const agentId = topicId || threadId ? routeAgentId : rememberedAgentId || routeAgentId;
 
   const activeTopicDocumentId = useDocumentStore((s) => {
     if (!topicId || threadId) return undefined;

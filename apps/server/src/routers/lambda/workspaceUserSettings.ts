@@ -10,7 +10,11 @@ import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSetti
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { EditLockService } from '@/server/services/editLock';
-import { assertCanEditResource } from '@/server/services/resourcePermission';
+import {
+  assertCanEditResource,
+  canPerformResourceAction,
+  getResourceMeta,
+} from '@/server/services/resourcePermission';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
 
 import { getResourceConfigAccess } from './_helpers/resourceConfigGuard';
@@ -48,7 +52,10 @@ const workspaceUserSettingsProcedure = wsCompatProcedure.use(serverDatabase).use
 // `WorkspaceUserPreference` doesn't need a coupled zod-schema bump — the
 // type layer already constrains the write paths.
 const preferencePatchSchema = z
-  .object({ orchestratorAgentId: z.string().min(1).max(128).nullish() })
+  .object({
+    defaultAgentId: z.string().min(1).max(128).nullish(),
+    orchestratorAgentId: z.string().min(1).max(128).nullish(),
+  })
   .passthrough()
   .partial();
 
@@ -80,7 +87,11 @@ export const workspaceUserSettingsRouter = router({
   updatePreference: workspaceUserSettingsProcedure
     .input(preferencePatchSchema)
     .mutation(async ({ ctx, input }) => {
-      if (input.orchestratorAgentId) {
+      // An Orchestrator's runtime is copied into new projects, so the member must
+      // be able to read its full configuration. A default Agent is only opened,
+      // so being allowed to use it is enough.
+      for (const agentId of new Set([input.defaultAgentId, input.orchestratorAgentId])) {
+        if (!agentId) continue;
         const access = await getResourceConfigAccess(
           {
             db: ctx.serverDB,
@@ -90,13 +101,36 @@ export const workspaceUserSettingsRouter = router({
               .workspacePermissionCodes,
           },
           'agent',
-          input.orchestratorAgentId,
+          agentId,
         );
-        if (access !== 'full')
+        if (agentId === input.orchestratorAgentId ? access !== 'full' : access === 'none')
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Agent runtime configuration is unavailable',
           });
+        // Neither seeing nor configuring a workspace Agent is being allowed to run
+        // it, and a default Agent the member cannot use would open onto a
+        // conversation they cannot send in.
+        if (agentId === input.defaultAgentId && ctx.workspaceId) {
+          const meta = await getResourceMeta(ctx.serverDB, 'agent', agentId);
+          const usable =
+            !!meta &&
+            (await canPerformResourceAction({
+              action: 'use',
+              db: ctx.serverDB,
+              grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
+                .workspacePermissionCodes,
+              meta,
+              resourceId: agentId,
+              resourceType: 'agent',
+              userId: ctx.userId,
+              workspaceId: ctx.workspaceId,
+            }));
+          if (!usable)
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Agent is not available to use' });
+        }
+      }
+      if (input.orchestratorAgentId) {
         await ctx.preferenceAgentModel.inheritRuntimeForCreation(input.orchestratorAgentId, {
           purpose: 'orchestrator',
           visibility: 'private',

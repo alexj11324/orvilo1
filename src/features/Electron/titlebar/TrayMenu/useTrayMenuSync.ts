@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { getHostPort } from '@/platform';
 import { useElectronStore } from '@/store/electron';
@@ -13,7 +14,9 @@ import { resolveTrayNavigationSnapshot } from './resolveSnapshot';
 
 export const useTrayMenuSync = () => {
   useFetchAgentList();
-  const agents = useHomeStore(homeAgentListSelectors.allAgents);
+  const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
+  const keep = useKeepSidebarListed();
+  const agents = useMemo(() => keep(allAgents), [allAgents, keep]);
   const scope = useElectronStore((state) => state.activeRecentScope);
   const { pinnedPages, recentPages } = useResolvedPages();
   const lastSnapshotRef = useRef<string | undefined>(undefined);

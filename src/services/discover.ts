@@ -2,6 +2,7 @@ import { type PluginManifest } from '@lobehub/market-sdk';
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { globalHelpers } from '@/store/global/helpers';
+import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import {
   type AssistantListResponse,
   type AssistantMarketSource,
@@ -21,8 +22,9 @@ class DiscoverService {
   private isMarketTrustedClientEnabled = (): boolean => {
     if (typeof window === 'undefined' || !window.global_serverConfigStore) return false;
     try {
-      const state = window.global_serverConfigStore.getState();
-      return state.serverConfig.enableMarketTrustedClient || false;
+      return serverConfigSelectors.enableMarketTrustedClient(
+        window.global_serverConfigStore.getState(),
+      );
     } catch {
       return false;
     }

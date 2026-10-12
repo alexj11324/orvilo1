@@ -301,6 +301,9 @@ function getServerEnv(port: number): Record<string, string> {
     APP_URL: `http://localhost:${port}`,
     AUTH_EMAIL_VERIFICATION: '0',
     CLERK_API_URL: 'http://localhost:3406',
+    // The conversation journeys drive the built-in agent, which the product
+    // withholds by default while it runs agents through ACP only.
+    FEATURE_FLAGS: '+provider_settings',
     CLERK_SECRET_KEY: MOCK_CLERK_SECRET_KEY,
     DATABASE_DRIVER: CONFIG.databaseDriver,
     DATABASE_URL: CONFIG.databaseUrl,

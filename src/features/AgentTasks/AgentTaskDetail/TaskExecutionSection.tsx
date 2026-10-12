@@ -32,17 +32,25 @@ interface TaskExecutionActionProps {
 export const TaskExecutionAction = memo<TaskExecutionActionProps>(({ action, blocked }) => {
   const { t } = useTranslation('chat');
   const taskId = useTaskDetailTaskId();
-  const { accessResolved, canEditTask, canExecuteTask, permissionReason, runWithContractCheck } =
-    useRunWithContractCheck();
+  const {
+    accessResolved,
+    canEditTask,
+    canExecuteTask,
+    permissionReason,
+    runtimeWithheld,
+    runWithContractCheck,
+  } = useRunWithContractCheck();
   const [pending, setPending] = useState(false);
 
   // Unfinished prerequisites are already explained by the section's own hint.
   // While access is still loading the button waits without claiming a refusal.
   const deniedReason = !canEditTask
     ? permissionReason
-    : !canExecuteTask && accessResolved
-      ? t('taskDetail.execution.noAgentAccess')
-      : undefined;
+    : runtimeWithheld
+      ? t('taskDetail.execution.runtimeWithheld')
+      : !canExecuteTask && accessResolved
+        ? t('taskDetail.execution.noAgentAccess')
+        : undefined;
 
   const handleClick = async () => {
     if (!taskId || !canExecuteTask || blocked || pending) return;

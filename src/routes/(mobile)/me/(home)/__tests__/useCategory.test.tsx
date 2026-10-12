@@ -4,12 +4,30 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type * as ConstVersionModule from '@/const/version';
 import { ServerConfigStoreProvider } from '@/store/serverConfig/Provider';
+import { createServerConfigStore } from '@/store/serverConfig/store';
 import { useUserStore } from '@/store/user';
 
 import { useCategory } from '../features/useCategory';
 
+const branding = vi.hoisted(() => ({ help: 'https://docs.example.com' as string | undefined }));
+vi.mock('@orvilo/business-const', async (importOriginal) => {
+  const actual = await importOriginal<{ BRANDING_URL: Record<string, string | undefined> }>();
+  return {
+    ...actual,
+    BRANDING_URL: {
+      ...actual.BRANDING_URL,
+      get help() {
+        return branding.help;
+      },
+    },
+  };
+});
+
+// A deployment that publishes a documentation site and a changelog.
 const wrapper: React.JSXElementConstructor<{ children: React.ReactNode }> = ({ children }) => (
-  <ServerConfigStoreProvider>{children}</ServerConfigStoreProvider>
+  <ServerConfigStoreProvider featureFlags={{ changelog: true }}>
+    {children}
+  </ServerConfigStoreProvider>
 );
 
 vi.mock('@/hooks/usePlatform', () => ({ usePlatform: () => ({ isIOS: true, isAndroid: false }) }));
@@ -37,6 +55,7 @@ vi.mock('@/const/version', async (importOriginal) => {
 
 afterEach(() => {
   mockNavigate.mockReset();
+  branding.help = 'https://docs.example.com';
 });
 
 describe('useCategory', () => {
@@ -100,5 +119,26 @@ describe('useCategory', () => {
       expect(items.some((item) => item.key === 'feedback')).toBe(true);
       expect(items.some((item) => item.key === 'changelog')).toBe(true);
     });
+  });
+
+  // Regression: the docs row linked to a hosted documentation site whether or
+  // not the deployment had one, and the changelog row ignored its own flag.
+  it('drops the docs and changelog entries when the deployment offers neither', () => {
+    branding.help = undefined;
+    // The config store is one instance per module graph, so the flag is
+    // flipped on it and put back rather than supplied through a second provider.
+    const store = createServerConfigStore();
+    const featureFlags = store.getState().featureFlags;
+    store.setState({ featureFlags: { ...featureFlags, showChangelog: false } });
+
+    try {
+      const { result } = renderHook(() => useCategory(), { wrapper });
+
+      expect(result.current.some((item) => item.key === 'docs')).toBe(false);
+      expect(result.current.some((item) => item.key === 'changelog')).toBe(false);
+      expect(result.current.some((item) => item.key === 'feedback')).toBe(true);
+    } finally {
+      store.setState({ featureFlags });
+    }
   });
 });

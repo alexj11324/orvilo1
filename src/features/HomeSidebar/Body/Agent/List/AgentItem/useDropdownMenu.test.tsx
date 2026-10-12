@@ -33,6 +33,10 @@ const mocks = vi.hoisted(() => ({
   transferMenuItems: null as null | { key: string; label: string }[],
 }));
 
+vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('antd', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
 

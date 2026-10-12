@@ -61,6 +61,14 @@ const mocks = vi.hoisted(() => ({
   updateTask: vi.fn(),
 }));
 
+// The menu's "Run again" resolves who would run an Issue with no Agent.
+vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
+  useFallbackAgentId: () => undefined,
+}));
+vi.mock('@/features/HeterogeneousAgent/builtinHarness', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
   default: ({
     children,

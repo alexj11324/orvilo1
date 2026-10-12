@@ -36,3 +36,22 @@ shows what the installed CLI reports ("Opus 5.5", pinned versions, new models).
   an error instead of running an invented flag.
 - While the probe runs (about 2 to 6 seconds) the dropdown shows a
   "Loading models…" row, so a short list is not mistaken for the full one.
+
+## One flat form, no folds (2026/10/12)
+
+The Agent settings page had two collapsible boxes, "Execution" and "Access".
+Following how Multica lays out an agent (profile, execution, access as plain
+rows), the page is now a single form:
+
+- **Execution** is a normal section with the working directory and the
+  permission modes the CLI reports. It is omitted when it would have no rows.
+- **Connection** (command, sign-in, availability) follows it as its own section.
+- **Members who can use this Agent** is the only access control.
+
+Removed from this page:
+
+- "Member model switching" and "Member device switching". An Agent's device
+  and model are fixed in its settings (#748); the page no longer offers a
+  choice. Until #748 lands the server still honours a stored `member` policy.
+- "Topic sharing" and the "Manage permissions" link to the separate page.
+- The isolation switch. Isolation is still chosen in the composer's device menu.

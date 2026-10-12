@@ -15,9 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { fingerprintConfig } from '@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog';
-import { useLocalSandboxCapability } from '@/features/ChatInput/hooks/useLocalSandboxCapability';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
@@ -28,9 +26,8 @@ import { getHostContext } from '@/platform';
 import { heterogeneousAgentCatalogService } from '@/services/heterogeneousAgent';
 import { useAgentStore } from '@/store/agent';
 import { useElectronStore } from '@/store/electron';
-import { useUserStore } from '@/store/user';
 
-import { SettingsRow, settingsStyles } from './SettingsGroup';
+import { SettingsGroup, SettingsRow, settingsStyles } from './SettingsGroup';
 
 export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
   const desktop = getHostContext().kind === 'desktop';
@@ -41,10 +38,6 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
   const update = useAgentStore((s) => s.updateAgentConfigById);
   const updateRuntimeEnv = useAgentStore((s) => s.updateAgentRuntimeEnvConfigById);
   const workspaceId = useAgentStore((s) => s.agentMap[agentId]?.workspaceId);
-  const preferenceQuery = useUserStore((s) => s.useFetchWorkspaceUserPreference)();
-  const preferenceFallback = useUserStore((s) => s.workspaceUserPreference);
-  const preference = preferenceQuery.data === undefined ? preferenceFallback : preferenceQuery.data;
-  const updatePreference = useUserStore((s) => s.updateWorkspaceUserPreference);
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
   const target = resolveExecutionTarget(agencyConfig, {
     clientExecutionAvailable: desktop,
@@ -54,7 +47,6 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
   const targetDeviceId = resolveTargetDeviceId(agencyConfig, currentDeviceId, { workspaceScoped });
   const cwd = useEffectiveWorkingDirectory(agentId, { homeFallback: false, topicId: null });
   const { save, retry, status, lastSavedAt } = useSaveState();
-  const { data: sandboxCapability } = useLocalSandboxCapability();
   const patch = (agencyPatch: PartialDeep<OrviloAgentAgencyConfig>) =>
     save(() => update(agentId, { agencyConfig: agencyPatch }, { rethrow: true }));
   const local = target === 'local' && desktop;
@@ -83,10 +75,12 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
       }),
     { dedupingInterval: 300_000, revalidateOnFocus: false, shouldRetryOnError: false },
   );
-  const supportsIsolation =
-    provider?.type === 'orvilo' && local && sandboxCapability?.available === true;
+  const hasRows =
+    !!targetDeviceId || permissions.isLoading || !!permissions.error || !!permissions.data?.length;
+  if (!hasRows) return null;
+
   return (
-    <div className="pt-3">
+    <SettingsGroup title={t('settingAgent.executionSettings.title')}>
       {status !== 'idle' && (
         <AutoSaveHint
           lastUpdatedTime={lastSavedAt}
@@ -161,26 +155,7 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
           </Select>
         </SettingsRow>
       ))}
-      {supportsIsolation && (
-        <SettingsRow label={t('settingAgent.execution.isolation')}>
-          <Switch
-            checked={agencyConfig?.localSandbox === true}
-            disabled={!canEdit || status === 'saving'}
-            onCheckedChange={(localSandbox) =>
-              void save(() =>
-                workspaceId
-                  ? updatePreference({
-                      agentDeviceOverrides: {
-                        [agentId]: { ...preference?.agentDeviceOverrides?.[agentId], localSandbox },
-                      },
-                    })
-                  : update(agentId, { agencyConfig: { localSandbox } }, { rethrow: true }),
-              )
-            }
-          />
-        </SettingsRow>
-      )}
-    </div>
+    </SettingsGroup>
   );
 };
 

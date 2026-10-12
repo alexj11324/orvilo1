@@ -243,8 +243,8 @@ new write. This does not bulk-migrate existing records.
 ## Settings page
 
 Compact single-page groups: `AgentGeneralSettings` / `AgentModelSettings` /
-`AgentDeviceSettings` / `AgentAccessSettings` /
-`ExternalAgentConnectionSettings` (external only). No Harness/Engine/Embedded
+`AgentDeviceSettings` / `AgentRuntimeSettings` /
+`ExternalAgentConnectionSettings` (external only) / `AgentUseSettings`. No Harness/Engine/Embedded
 rows. Zero-device / invalid-binding / offline states render as blocking
 notices, not configuration items. The diagnostics page may show the actual
 device / Prime version / run identity. External agents share the same device

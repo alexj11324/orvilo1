@@ -1115,7 +1115,18 @@ export const topicRouter = router({
       await assertCanUseTopicTargets(guardCtx(ctx), [input.id]);
       await assertCreatorTopicTargets(guardCtx(ctx), [input.id]);
       const { agentId, ...restValue } = input.value;
-      if (agentId) await assertCanUseConversationTargets(guardCtx(ctx), [{ agentId }]);
+      if (agentId) {
+        await assertCanUseConversationTargets(guardCtx(ctx), [{ agentId }]);
+        // Moving the topic to another agent is a transfer, which stays with the
+        // creator or a workspace owner (as in `batchMoveTopics`).
+        const [owner] = await ctx.topicModel.findOwnersByIds([input.id]);
+        if (owner) assertWorkspaceRowManageable(ctx, owner.userId, 'topic');
+        // The `use` guard skips ids outside the caller's scope, so the target
+        // must be confirmed reachable before it is written to the row.
+        if (!(await ctx.agentModel.existsById(agentId))) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Target agent not found' });
+        }
+      }
 
       // An agentId moves the topic to that agent (the in-conversation handoff),
       // so the row's agent and its legacy session move together. An agent

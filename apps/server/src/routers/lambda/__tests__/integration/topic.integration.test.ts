@@ -591,6 +591,25 @@ describe('Topic Router Integration Tests', () => {
       // The previous agent's session must not stay on the row.
       expect(updatedTopic.sessionId).toBeNull();
     });
+
+    it('should refuse to move the topic to an agent the caller cannot reach', async () => {
+      const caller = topicRouter.createCaller(createTestContext(userId));
+      const topicId = await caller.createTopic({ title: 'Mine', sessionId: testSessionId });
+
+      otherUserId = await createTestUser(serverDB);
+      const { agents } = await import('@/database/schemas');
+      const [foreignAgent] = await serverDB
+        .insert(agents)
+        .values({ userId: otherUserId, title: 'Someone else' })
+        .returning();
+
+      await expect(
+        caller.updateTopic({ id: topicId, value: { agentId: foreignAgent.id } }),
+      ).rejects.toThrow();
+
+      const [topic] = await serverDB.select().from(topics).where(eq(topics.id, topicId));
+      expect(topic.agentId).not.toBe(foreignAgent.id);
+    });
   });
 
   describe('runtime migration - agentId backfill', () => {

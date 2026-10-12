@@ -86,6 +86,7 @@ export interface AppThemeProps {
   customFontURL?: string;
   defaultNeutralColor?: NeutralColors;
   defaultPrimaryColor?: PrimaryColors;
+  enableCustomFonts?: boolean;
   globalCDN?: boolean;
 }
 
@@ -95,6 +96,7 @@ const AppTheme = memo<AppThemeProps>(
     defaultPrimaryColor,
     defaultNeutralColor,
     globalCDN,
+    enableCustomFonts,
     customFontURL,
     customFontFamily,
   }) => {
@@ -176,6 +178,7 @@ const AppTheme = memo<AppThemeProps>(
             className={cx(styles.app, styles.scrollbar, styles.scrollbarPolyfill)}
             defaultAppearance={currentAppearence}
             defaultThemeMode={currentAppearence}
+            enableCustomFonts={enableCustomFonts}
             enableGlobalStyle={false}
             customTheme={{
               neutralColor: neutralColor ?? defaultNeutralColor,

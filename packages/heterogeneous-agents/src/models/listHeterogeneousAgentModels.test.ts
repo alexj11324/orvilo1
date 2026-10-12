@@ -102,6 +102,22 @@ describe('heterogeneous agent model discovery', () => {
     });
   });
 
+  it('treats a CLI that lists only its own default as a working, empty catalog', async () => {
+    resolveAcpSpawnTargetMock.mockResolvedValue({
+      commandArgs: [],
+      commandPath: 'bridge',
+      env: {},
+    });
+    listStandardAcpModelsMock.mockResolvedValue([
+      { id: 'default', label: 'Default', modelId: 'default' },
+    ]);
+    const { listHeterogeneousAgentModels } = await importModule();
+
+    await expect(
+      listHeterogeneousAgentModels({ command: '/custom/codex', type: 'codex' }),
+    ).resolves.toMatchObject({ models: [], status: 'success' });
+  });
+
   it('never lets a catalog probe fetch a missing bridge through a package runner', async () => {
     const { listHeterogeneousAgentModels } = await importModule();
 

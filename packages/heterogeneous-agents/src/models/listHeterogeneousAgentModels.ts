@@ -310,7 +310,11 @@ export const listHeterogeneousAgentModels = async (
         const selectable = models.filter(
           (model) => model.id !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
         );
-        if (selectable.length > 0) return { models: selectable, status: 'success', updatedAt };
+        // An ACP-only CLI that offers nothing but its own default is still a
+        // working catalog: "Default" needs no model override.
+        if (selectable.length > 0 || ACP_ONLY_CATALOG_TYPES.has(params.type)) {
+          return { models: selectable, status: 'success', updatedAt };
+        }
       } catch (error) {
         // Fall through to the legacy catalog probe below.
         acpError = error;
@@ -320,8 +324,7 @@ export const listHeterogeneousAgentModels = async (
     // These CLIs have no model-listing command of their own; an invented flag
     // would only fail slower.
     if (ACP_ONLY_CATALOG_TYPES.has(params.type)) {
-      // An ACP session that answered with no models carries no error to classify.
-      const code = acpError === undefined ? 'command_failed' : classifyCatalogError(acpError);
+      const code = classifyCatalogError(acpError);
       return {
         error: { code, message: getCatalogErrorMessage(code, params.type) },
         status: 'error',

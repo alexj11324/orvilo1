@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as acpRuntime from './acpRuntime';
+import type * as standardAcpAgents from './standardAcpAgents';
 
 const { detectAcpBridgeCommandMock, detectAcpBridgeRunnerMock } = vi.hoisted(() => ({
   detectAcpBridgeCommandMock: vi.fn(),
@@ -13,9 +14,15 @@ vi.mock('./acpRuntime', async (importOriginal) => ({
   detectAcpBridgeRunner: detectAcpBridgeRunnerMock,
 }));
 
-const importModule = () => import('./standardAcpAgents');
+const env = {} as NodeJS.ProcessEnv;
+let resolveAcpSpawnTarget: (typeof standardAcpAgents)['resolveAcpSpawnTarget'];
 
 describe('resolveAcpSpawnTarget with a missing bridge', () => {
+  // The module graph is large; load it once, outside the per-test timeout.
+  beforeAll(async () => {
+    ({ resolveAcpSpawnTarget } = await import('./standardAcpAgents'));
+  }, 30_000);
+
   beforeEach(() => {
     detectAcpBridgeCommandMock.mockReset().mockResolvedValue({ available: false });
     detectAcpBridgeRunnerMock
@@ -24,18 +31,14 @@ describe('resolveAcpSpawnTarget with a missing bridge', () => {
   });
 
   it('falls back to a package runner for a run', async () => {
-    const { resolveAcpSpawnTarget } = await importModule();
-
-    const target = await resolveAcpSpawnTarget('claude-code', '/bin/claude', {});
+    const target = await resolveAcpSpawnTarget('claude-code', '/bin/claude', env);
 
     expect(target.commandPath).toBe('/usr/bin/npx');
   });
 
   it('fails instead of fetching the bridge when the caller forbids the runner', async () => {
-    const { resolveAcpSpawnTarget } = await importModule();
-
     await expect(
-      resolveAcpSpawnTarget('claude-code', '/bin/claude', {}, { allowPackageRunner: false }),
+      resolveAcpSpawnTarget('claude-code', '/bin/claude', env, { allowPackageRunner: false }),
     ).rejects.toMatchObject({ name: 'AcpBridgeNotFoundError' });
     expect(detectAcpBridgeRunnerMock).not.toHaveBeenCalled();
   });

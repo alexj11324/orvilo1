@@ -2198,6 +2198,11 @@ export default {
   'taskDetail.topicMenu.deleteConfirm.title': 'Delete Run?',
   'taskDetail.topicMenu.openAgentTopic': 'Go to Agent conversation',
   'taskDetail.topicMenu.open': 'Open Run',
+  'taskDetail.topicMenu.stopPending': 'Stopping the run',
+  'taskDetail.topicMenu.stopPendingDesc':
+    'The agent has not confirmed the stop. The run ends on its own within about 10 minutes, and the issue can run again after that.',
+  'taskDetail.topicMenu.stopForbidden':
+    'Only the creator of this issue, a workspace admin, or a member who can use its agent can stop this run.',
   'taskDetail.topicMenu.stop': 'Stop Run',
   'taskDetail.topicMenu.stopConfirm.content':
     'The current run will be canceled. Generated messages are kept and you can re-run the issue later.',

@@ -228,6 +228,18 @@ async function assertTaskExecutionUse(
   );
 }
 
+/** Whether the caller may stop or replace this Issue's execution without Use on its agent. */
+async function callerMayTakeOver(
+  ctx: TaskExecutionUseContext,
+  task: Pick<TaskItem, 'createdByUserId' | 'workspaceId'>,
+) {
+  const workspaceId = task.workspaceId ?? ctx.workspaceId;
+  const role = workspaceId
+    ? await getActiveWorkspaceMembershipRole(ctx.serverDB, { userId: ctx.userId, workspaceId })
+    : undefined;
+  return mayTakeOverExecution({ issue: task, role, userId: ctx.userId });
+}
+
 // All procedures that take an id accept either raw id (task_xxx) or identifier (TASK-1)
 // Resolution happens in the model layer via model.resolve()
 const idInput = z.object({ id: z.string() });
@@ -1217,7 +1229,10 @@ export const taskRouter = router({
         const target = await ctx.taskTopicModel.findIssueTopicById(input.topicId);
         if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
         const task = await resolveOrThrow(ctx.taskModel, target.taskId);
-        await assertTaskExecutionUse(ctx, [task]);
+        // Stopping a run is the smaller half of taking the Issue over.
+        await assertTaskExecutionUse(ctx, [task], [], {
+          waiveIncumbentUse: await callerMayTakeOver(ctx, task),
+        });
         await ctx.taskService.cancelTopic(input.topicId, task.id);
         return { message: 'Topic canceled', success: true };
       } catch (error) {
@@ -1753,17 +1768,10 @@ export const taskRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const task = await resolveOrThrow(ctx.taskModel, input.taskId);
-        const workspaceId = task.workspaceId ?? ctx.workspaceId;
-        const role = workspaceId
-          ? await getActiveWorkspaceMembershipRole(ctx.serverDB, {
-              userId: ctx.userId,
-              workspaceId,
-            })
-          : undefined;
         // Taking over skips the check on the incumbent only; the successor is
         // always checked.
         await assertTaskExecutionUse(ctx, [task], [input.toAgentId], {
-          waiveIncumbentUse: mayTakeOverExecution({ issue: task, role, userId: ctx.userId }),
+          waiveIncumbentUse: await callerMayTakeOver(ctx, task),
         });
         const result = await ctx.taskService.handoffTask(input);
         return { data: result, message: 'Task handed off', success: true };

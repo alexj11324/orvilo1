@@ -42,7 +42,7 @@ export function useAgentContext(): ConversationContext {
   });
 
   return {
-    agentId,
+    agentId: agentId ?? '',
     documentId: activeTopicDocumentId,
     scope: threadId ? 'thread' : 'main',
     threadId,

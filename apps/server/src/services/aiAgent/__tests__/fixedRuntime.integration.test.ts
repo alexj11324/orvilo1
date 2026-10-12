@@ -88,7 +88,7 @@ it('resolves one saved Agent runtime for two members with conflicting persisted 
         resolveAgentConfigOrThrow: async (id) => {
           const config = await agentModel.getAgentConfigForExecution(id);
           if (!config) throw new Error('Agent missing');
-          return config as AgentConfigWithId;
+          return config as unknown as AgentConfigWithId;
         },
       },
       { identifier: agentId, throwIfExecutionAborted: async () => {} },

@@ -13,11 +13,13 @@ import { useGlobalStore } from '@/store/global';
 import { useAgentContext } from './useAgentContext';
 
 const activeWorkspaceSlugMock = vi.hoisted(() => ({ value: null as string | null }));
+const offeredAgentMock = vi.hoisted(() => ({ available: true }));
 
 // The hand-over to the default Agent has its own tests; here every Agent is offered.
 vi.mock('@/features/DefaultAgent/useDefaultAgent', () => ({
   useDefaultAgent: () => ({ agentId: 'agt_orchestrator', source: 'orchestrator' }),
-  useOfferedAgentId: (agentId?: string | null) => agentId ?? undefined,
+  useOfferedAgentId: (agentId?: string | null) =>
+    offeredAgentMock.available ? (agentId ?? undefined) : undefined,
 }));
 vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
   useActiveWorkspaceSlug: () => activeWorkspaceSlugMock.value,
@@ -26,6 +28,7 @@ vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
 describe('useAgentContext', () => {
   beforeEach(() => {
     activeWorkspaceSlugMock.value = null;
+    offeredAgentMock.available = true;
     useChatStore.setState(
       {
         ...initialChatState,
@@ -59,6 +62,20 @@ describe('useAgentContext', () => {
     });
     const { result } = renderHook(() => useAgentContext());
     expect(result.current.agentId).toBe('agt_picked');
+  });
+
+  it('keeps blank Chat empty while the Orchestrator is unavailable without using a personal Agent', () => {
+    offeredAgentMock.available = false;
+    useChatStore.setState({
+      activeAgentId: undefined,
+      activeTopicId: undefined,
+      composerAgentId: undefined,
+    });
+    useGlobalStore.setState({
+      status: { ...useGlobalStore.getState().status, lastUsedAgentId: 'agt_personal' },
+    });
+    const { result } = renderHook(() => useAgentContext());
+    expect(result.current.agentId).toBe('');
   });
 
   it('keeps a specific Agent deep link for a blank conversation', () => {

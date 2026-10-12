@@ -129,40 +129,32 @@ export const verifyDeviceRuntimeInstallation = async ({
       error: 'The configured runtime command has not been verified on this device',
     };
 
-  if (type !== 'prime') {
-    const scanned = await scanDeviceAgents(db, owner);
-    if (scanned.error) return { installed: known, error: scanned.error };
-    const installed = matchDeviceRuntimeInstallation(scanned.snapshot, requirement);
-    return {
-      installed,
-      ...(installed === 'unknown' ? { error: 'Device did not report this runtime' } : {}),
-    };
-  }
-
   const result = await deviceGateway.executeToolCall(
     owner,
     {
       apiName: 'checkAutomationReadiness',
-      arguments: JSON.stringify({ agentType: 'orvilo', engine: 'prime' }),
+      arguments: JSON.stringify(
+        type === 'prime' ? { agentType: 'orvilo', engine: 'prime' } : { agentType: type },
+      ),
       identifier: 'local',
     },
     10_000,
   );
   if (!result.success)
-    return { installed: known, error: result.error ?? 'Prime installation check failed' };
+    return { installed: known, error: result.error ?? `${type} installation check failed` };
   let parsed: z.infer<typeof automationReadinessResultSchema>;
   try {
     parsed = automationReadinessResultSchema.parse(JSON.parse(result.content));
   } catch (error) {
-    console.error('[device:verifyPrimeInstallation]', error);
-    return { installed: known, error: 'Invalid Prime installation response from device' };
+    console.error('[device:verifyRuntimeInstallation]', error);
+    return { installed: known, error: 'Invalid runtime installation response from device' };
   }
-  if (parsed.executor !== 'prime' || parsed.installed === 'unknown')
-    return { installed: known, error: 'Device did not verify the Prime installation' };
+  if (parsed.executor !== type || parsed.installed === 'unknown')
+    return { installed: known, error: 'Device did not verify the requested runtime installation' };
   await new DeviceModel(db, owner.userId, owner.workspaceId).updateRuntimeInstallationEvidence(
     owner.deviceId,
     {
-      prime: { available: parsed.installed, command: 'prime', observedAt: parsed.checkedAt },
+      [type]: { available: parsed.installed, command, observedAt: parsed.checkedAt },
     },
   );
   return { installed: parsed.installed };

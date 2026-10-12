@@ -22,4 +22,4 @@ The title-bar indicator (`src/features/Electron/connection/DeviceGateway.tsx`) s
 
 ## Composer settings popover
 
-The settings button beside the Agent picker opens the per-conversation controls (working directory, permission mode). The Agent picker is the one place that names the selected Agent. The popover adds an Agent block (`src/features/AIChatbot/AgentInfo.tsx`) only when that Agent has a description or instructions to show; an Agent with neither gets no block, so its name is not repeated.
+The settings button beside the Agent picker opens the per-conversation controls (working directory, permission mode). The Agent picker is the one place that names the selected Agent. The popover adds an Agent block (`src/features/AIChatbot/AgentInfo.tsx`) only when that Agent has a description or instructions to show (`hasAgentInfo.ts`; the file name must not differ from `AgentInfo.tsx` by letter case alone, or macOS and Windows resolve the import to the wrong file — `scripts/ci/checkCaseOnlyFilenames.mjs` enforces this for all of `src`, `apps` and `packages` on commit and in CI); an Agent with neither gets no block, so its name is not repeated.

@@ -13,7 +13,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
-import { hasAgentInfo } from './agentInfo';
+import { hasAgentInfo } from './hasAgentInfo';
 
 /**
  * The selected Agent's description and instructions; nothing renders without either.

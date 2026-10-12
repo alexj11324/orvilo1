@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasAgentInfo } from './agentInfo';
+import { hasAgentInfo } from './hasAgentInfo';
 
 describe('hasAgentInfo', () => {
   it('has nothing to show for an Agent with only a name', () => {

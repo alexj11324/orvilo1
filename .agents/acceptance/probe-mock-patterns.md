@@ -1207,7 +1207,7 @@ failed` in the browser console.
 `auth_success` before collecting any evidence:
 
 ```bash
-GATEWAY_PORT= < port > .agents/acceptance/scripts/agent-gateway/local-gateway-setup.sh
+JWKS_KEY=... GATEWAY_PORT= start < port > .agents/acceptance/scripts/agent-gateway/local-gateway-setup.sh
 GATEWAY_WS=ws://localhost: .agents/acceptance/scripts/agent-gateway/local-gateway-probe.mjs < port > node
 ```
 

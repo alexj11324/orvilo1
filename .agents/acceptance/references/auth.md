@@ -99,8 +99,7 @@ DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cd
 DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs | sed 's/^/orvilo_auth=/' | $SCRIPT web
 ```
 
-`web-seed` below predates this and inserts a row the server rejects (401); use
-the commands above instead until it is rebuilt on `seed-session.mjs`.
+`setup-auth.sh web-seed` below runs the web command for you.
 
 ## Web — seeded session
 

@@ -22,39 +22,32 @@ browser never receives them. That's why client / SSE / online-gateway are all
 **not** a real local closed loop. Confirm the failure shape by hooking
 `WebSocket` in the page and reading the first frame after the `auth` send.
 
-**Fix — run the gateway yourself.** The gateway worker lives in a **sibling
-repo: look for `agent-gateway/` next to `aspectlylabs/`** (same parent dir). It's a
-Cloudflare Worker (`wrangler dev`, Durable Objects in local mode) whose
+**Fix — run the gateway yourself.** The gateway is a Go service in the private
+repository `alexj11324/orvilo-gateway` (`agent-gateway-go`). Its
 `verifyToken` checks JWTs against a configurable `JWKS_PUBLIC_KEY` secret. Point
 that secret at **your local app's** public key and the local gateway trusts your
 local JWT → `auth_success` → full local loop.
 
 ```bash
-# 1. Generate agent-gateway/.dev.vars (public JWK extracted from JWKS_KEY +
-#    reuse of AGENT_GATEWAY_SERVICE_TOKEN). Source resolves to
-#    .records/env/gateway.env by default, else .env.local; override with
-#    JWKS_SOURCE=<env file>. (Managed agent-testing runs have NO .env.local.)
-.agents/acceptance/scripts/agent-gateway/local-gateway-setup.sh
+# 1. Build and run the gateway (separate terminal) → http://localhost:8788.
+#    It is the Go service in the private repository alexj11324/orvilo-gateway,
+#    built at a pinned commit; it only receives the PUBLIC half of JWKS_KEY.
+#    Pick another port with GATEWAY_PORT when 8788 is taken (the local device
+#    gateway defaults to 8787).
+JWKS_KEY=... .agents/acceptance/scripts/agent-gateway/local-gateway-setup.sh start
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8788/health # → 200
 
-# 2. Start the worker (separate terminal) → http://localhost:8787
-#    8787 is a shared default: the sibling `device-gateway/` repo's worker uses it
-#    too, and another session may already own it. Check first, and take your own
-#    port rather than restarting someone else's worker — `.dev.vars` is shared, so
-#    regenerating it against YOUR JWKS breaks whoever is running on it.
-#      lsof -nP -iTCP:8787 -sTCP:LISTEN   # inspect the owning process path
-#      GATEWAY_PORT=8788 .../local-gateway-setup.sh && bunx wrangler dev --port 8788
-#    Back `agent-gateway/.dev.vars` up before regenerating it, and restore at teardown.
-cd ../agent-gateway && bun run dev
-curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8787/health # → 200
+# 2. Print the settings the dev server needs (the token is passed by reference)
+.agents/acceptance/scripts/agent-gateway/local-gateway-setup.sh env
 
 # 3. Decisive check — does the local gateway accept the app's JWT?
-#    (add GATEWAY_WS=ws://localhost:<port> when not on 8787)
-node .agents/acceptance/scripts/agent-gateway/local-gateway-probe.mjs
+#    (the probe defaults to 8787; this gateway listens on 8788)
+GATEWAY_WS=ws://localhost:8788 node .agents/acceptance/scripts/agent-gateway/local-gateway-probe.mjs
 #    → RECV: {"type":"auth_success"}   ✅ feasible
 
 # 4. Point the APP at the local gateway and RESTART its dev server:
-#      AGENT_GATEWAY_URL=http://localhost:8787   (client → ws://localhost:8787/ws)
-#      AGENT_GATEWAY_SERVICE_TOKEN=<unchanged>   (matches gateway .dev.vars SERVICE_TOKEN)
+#      AGENT_GATEWAY_URL=http://localhost:8788   (client → ws://localhost:8788/ws)
+#      AGENT_GATEWAY_SERVICE_TOKEN=<from step 2>  (the gateway's SERVICE_TOKEN)
 #      ENABLE_AGENT_GATEWAY=1                     (→ serverConfig.enableGatewayMode)
 ```
 
@@ -75,14 +68,14 @@ exactly why the gateway must already trust the signing key
 
 `scripts/agent-gateway/`
 
-| File                      | Role                                                              |
-| ------------------------- | ----------------------------------------------------------------- |
-| `local-gateway-setup.sh`  | Writes `agent-gateway/.dev.vars` from the app's `.env.local`      |
-| `local-gateway-probe.mjs` | Signs an app JWT, asserts the local gateway returns auth\_success |
-| `probe.js`                | Injects a 200ms sampler + `__PROBE_EVENT` marker + `__switchTab`  |
-| `probe-dump.js`           | Stops the sampler and returns `{events, samples}` as JSON string  |
-| `tab-switch.js`           | Runs N round-trip switches between two tabs, marks each step      |
-| `analyze.mjs`             | Node post-processor: timeline + regression detection              |
+| File                      | Role                                                             |
+| ------------------------- | ---------------------------------------------------------------- |
+| `local-gateway-setup.sh`  | Builds and runs the agent gateway with the local public key      |
+| `local-gateway-probe.mjs` | Signs an app JWT, asserts the local gateway returns auth_success |
+| `probe.js`                | Injects a 200ms sampler + `__PROBE_EVENT` marker + `__switchTab` |
+| `probe-dump.js`           | Stops the sampler and returns `{events, samples}` as JSON string |
+| `tab-switch.js`           | Runs N round-trip switches between two tabs, marks each step     |
+| `analyze.mjs`             | Node post-processor: timeline + regression detection             |
 
 ## Standard workflow
 

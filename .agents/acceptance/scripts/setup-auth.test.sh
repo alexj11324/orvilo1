@@ -65,29 +65,6 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"ok")
 
-    def do_POST(self):
-        length = int(self.headers.get("content-length") or "0")
-        if length:
-            self.rfile.read(length)
-
-        if self.path != "/api/auth/sign-in/email":
-            self.send_response(404)
-            self.end_headers()
-            return
-
-        self.send_response(200)
-        self.send_header(
-            "Set-Cookie",
-            "better-auth.session_token=seed.token; Path=/; HttpOnly; SameSite=Lax",
-        )
-        self.send_header(
-            "Set-Cookie",
-            "better-auth.session_data=seed.data; Path=/; HttpOnly; SameSite=Lax",
-        )
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(b'{"ok":true}')
-
     def log_message(self, format, *args):
         return
 

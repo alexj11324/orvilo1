@@ -52,25 +52,42 @@ const lambdaCall = async <T>(
   return body.result?.data?.json;
 };
 
+const ensureTestUserWorkspaceId = async (request: APIRequestContext): Promise<string> => {
+  const workspace = await lambdaCall<{ id: string }>(request, 'workspace.ensureDefault', {});
+  if (!workspace?.id) throw new Error('E2E workspace resolution returned no id');
+  return workspace.id;
+};
+
 /** A completed account needs a real agent, not only its virtual inbox singleton. */
 export const ensureTestUserPrimeAgent = async (request: APIRequestContext): Promise<string> => {
   if (primeAgentId) return primeAgentId;
-  const created = await lambdaCall<{ agentId: string }>(request, 'agent.createAgent', {
-    config: {
-      agencyConfig: {
-        boundDeviceId: E2E_DEVICE_ID,
-        executionTarget: 'device',
-        heterogeneousProvider: { model: E2E_PRIME_MODEL, type: 'orvilo' },
+  const workspaceId = await ensureTestUserWorkspaceId(request);
+  const created = await lambdaCall<{ agentId: string }>(
+    request,
+    'agent.createAgent',
+    {
+      config: {
+        agencyConfig: {
+          boundDeviceId: E2E_DEVICE_ID,
+          executionTarget: 'device',
+          heterogeneousProvider: { model: E2E_PRIME_MODEL, type: 'orvilo' },
+        },
+        model: E2E_PRIME_MODEL,
+        provider: 'deepseek',
+        title: E2E_PRIME_AGENT_TITLE,
       },
-      model: E2E_PRIME_MODEL,
-      provider: 'deepseek',
-      title: E2E_PRIME_AGENT_TITLE,
+      visibility: 'private',
     },
-    visibility: 'private',
-  });
+    workspaceId,
+  );
   if (!created?.agentId) throw new Error('E2E Prime agent creation returned no agentId');
-  // Blank Chat uses the configured Orchestrator, including after command-menu creation.
-  await lambdaCall(request, 'user.updatePreference', { orchestratorAgentId: created.agentId });
+  // Slug-less Chat still activates the default workspace and reads its Orchestrator.
+  await lambdaCall(
+    request,
+    'workspaceUserSettings.updatePreference',
+    { orchestratorAgentId: created.agentId },
+    workspaceId,
+  );
   primeAgentId = created.agentId;
   return primeAgentId;
 };
@@ -91,8 +108,7 @@ export const bindTestUserExecutionDevice = async (request: APIRequestContext): P
   // Linear-model provisioning: every account lives inside a workspace. The
   // router is idempotent, and this call doubles as the trigger when the
   // scenario has not loaded any page yet.
-  const workspace = await lambdaCall<{ id?: string }>(request, 'workspace.ensureDefault', {});
-  const workspaceId = workspace?.id;
+  const workspaceId = await ensureTestUserWorkspaceId(request);
 
   // Force-mint the builtin inbox agent in both scopes (it materializes lazily
   // at first send otherwise — too late to bind for the first message).

@@ -201,7 +201,7 @@ Given('用户在 Agents 页面有一个 Agent', { timeout: 30_000 }, async funct
   this.testContext.createdAgentId = agentId;
 
   console.log('   📍 Step: 导航到 Agents 页面...');
-  await this.page.goto('/agents');
+  await this.page.goto('/agents?tab=private');
   await this.page.waitForLoadState('domcontentloaded', { timeout: 15_000 });
   await this.page.waitForTimeout(1000);
 

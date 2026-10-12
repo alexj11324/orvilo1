@@ -1,4 +1,4 @@
-import { getNativeHeteroSessionBindingKey } from '@orvilo/heterogeneous-agents';
+import { getNativeHeteroSessionBindingKey } from '@orvilo/heterogeneous-agents/config';
 import type { ChatTopicMetadata, HeterogeneousProviderConfig } from '@orvilo/types';
 import { resolveHeteroCliAgentType } from '@orvilo/types';
 

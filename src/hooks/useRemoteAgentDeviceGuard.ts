@@ -1,4 +1,4 @@
-import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents/config';
 import { useCallback, useEffect, useState } from 'react';
 
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';

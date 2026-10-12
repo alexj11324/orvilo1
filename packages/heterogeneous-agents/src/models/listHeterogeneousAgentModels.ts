@@ -8,6 +8,7 @@ import type {
   HeterogeneousAgentModelCatalogErrorCode,
   ListHeterogeneousAgentModelsParams,
 } from '@orvilo/types';
+import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 
 import { getHeterogeneousTypeLabel } from '../labels';
@@ -19,6 +20,7 @@ import { listStandardAcpModels, resolveAcpSpawnTarget } from '../spawn/standardA
 import { listTraeAcpModels } from '../spawn/traeAcpSession';
 
 const execFilePromise = promisify(execFile);
+const ACP_ONLY_CATALOG_TYPES = new Set<string>(['claude-code', 'codex']);
 const MODEL_CATALOG_MAX_BUFFER = 256 * 1024;
 const MODEL_CATALOG_TIMEOUT_MS = 15_000;
 const CODEBUDDY_MODEL_OPTION = '--model <model>';
@@ -294,10 +296,28 @@ export const listHeterogeneousAgentModels = async (
           env: target.env,
           timeoutMs: MODEL_CATALOG_TIMEOUT_MS,
         });
-        if (models.length > 0) return { models, status: 'success', updatedAt };
+        // Claude Code lists a `default` entry of its own; the selector already
+        // offers "Default" as the choice that leaves the CLI's setting alone.
+        const selectable = models.filter(
+          (model) => model.id !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
+        );
+        if (selectable.length > 0) return { models: selectable, status: 'success', updatedAt };
       } catch {
         // Fall through to the legacy catalog probe below.
       }
+    }
+
+    // These CLIs have no model-listing command of their own; an invented flag
+    // would only fail slower.
+    if (ACP_ONLY_CATALOG_TYPES.has(params.type)) {
+      return {
+        error: {
+          code: 'command_failed',
+          message: getCatalogErrorMessage('command_failed', params.type),
+        },
+        status: 'error',
+        updatedAt,
+      };
     }
 
     if (params.type === 'droid') {

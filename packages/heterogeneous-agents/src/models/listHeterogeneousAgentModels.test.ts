@@ -75,6 +75,45 @@ describe('heterogeneous agent model discovery', () => {
     vi.resetModules();
   });
 
+  it('lists the models Claude Code reports over ACP, without its own default entry', async () => {
+    resolveAcpSpawnTargetMock.mockResolvedValue({
+      commandArgs: [],
+      commandPath: 'bridge',
+      env: {},
+    });
+    listStandardAcpModelsMock.mockResolvedValue([
+      { id: 'default', label: 'Default (recommended)', modelId: 'default' },
+      { id: 'opus', label: 'Opus 5.5', modelId: 'opus' },
+      { id: 'claude-opus-4-8', label: 'Opus 4.8', modelId: 'claude-opus-4-8' },
+    ]);
+    const { listHeterogeneousAgentModels } = await importModule();
+
+    const result = await listHeterogeneousAgentModels({
+      command: '/custom/claude',
+      type: 'claude-code',
+    });
+
+    expect(result).toMatchObject({
+      models: [
+        { id: 'opus', label: 'Opus 5.5' },
+        { id: 'claude-opus-4-8', label: 'Opus 4.8' },
+      ],
+      status: 'success',
+    });
+  });
+
+  it.each(['claude-code', 'codex'] as const)(
+    'reports an error for %s when ACP discovery fails, without running a made-up CLI flag',
+    async (type) => {
+      const { listHeterogeneousAgentModels } = await importModule();
+
+      const result = await listHeterogeneousAgentModels({ command: `/custom/${type}`, type });
+
+      expect(result.status).toBe('error');
+      expect(execFileMock).not.toHaveBeenCalled();
+    },
+  );
+
   it('parses opaque model ids, splitting only at the first slash and preserving order', async () => {
     const { parseOpenCodeModelCatalog } = await importModule();
 

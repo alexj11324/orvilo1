@@ -2117,6 +2117,9 @@ export default {
   'taskDetail.handoff.required': 'This issue is being worked on',
   'taskDetail.handoff.requiredDesc':
     'Changing the agent stops the current run. Transfer it to hand the issue over.',
+  'taskDetail.handoff.unsettled': 'The last run has not finished',
+  'taskDetail.handoff.unsettledDesc':
+    'How the last run ended is still being confirmed. The agent can be changed once that is done. Try again in a little while.',
   'taskDetail.handoff.title': 'Transfer execution?',
   'taskDetail.handoff.confirm': 'Stop the current run and transfer this issue to {{agent}}?',
   'taskDetail.handoff.transfer': 'Transfer',

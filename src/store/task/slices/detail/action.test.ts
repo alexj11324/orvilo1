@@ -840,6 +840,25 @@ describe('TaskDetailSliceAction', () => {
       expect(taskService.handoff).not.toHaveBeenCalled();
     });
 
+    it('explains a transfer refused while the last run is unconfirmed, without the server sentence', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { domainRevision: 9, id: 'task-uuid-1' },
+      } as any);
+      vi.mocked(taskService.handoff).mockRejectedValue(
+        Object.assign(new Error('EXECUTION_UNSETTLED: the last run is still being confirmed.'), {
+          data: { code: 'CONFLICT' },
+        }),
+      );
+
+      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).rejects.toThrow();
+
+      const options = vi.mocked(toast.error).mock.calls.at(-1)?.[0];
+      if (!options || typeof options === 'string') throw new Error('Expected a toast');
+      expect(options.title).toBe('The last run has not finished');
+      expect(String(options.description ?? '')).not.toContain('EXECUTION_UNSETTLED');
+      expect(options.actions ?? []).toHaveLength(0);
+    });
+
     it('reports a missing task instead of silently resolving the transfer', async () => {
       vi.mocked(taskService.find).mockResolvedValue({ data: null } as any);
       await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).rejects.toThrow();

@@ -723,7 +723,16 @@ export class TaskDetailSliceActionImpl {
         toAgentId,
       });
     } catch (error) {
-      saveToast(error);
+      // Nothing the user can retry: the server is still confirming how the
+      // last run ended and frees the Issue itself.
+      if (error instanceof Error && error.message.startsWith('EXECUTION_UNSETTLED')) {
+        toast.error({
+          description: t('taskDetail.handoff.unsettledDesc', { ns: 'chat' }),
+          title: t('taskDetail.handoff.unsettled', { ns: 'chat' }),
+        });
+      } else {
+        saveToast(error);
+      }
       throw error;
     }
     await Promise.all([this.#get().refreshTaskList(), this.internal_refreshTaskDetail(id)]).catch(

@@ -624,3 +624,17 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
   // unrouted until the user binds/requests one (or switches to `auto`).
   return { kind: 'device-unrouted', reason: 'no-bound-device', target: effectiveTarget };
 };
+
+/**
+ * The device whose filesystem a run reads: the bound device when the run goes
+ * through one, `undefined` when it runs on this machine (Electron IPC). Pass
+ * the caller's EFFECTIVE config and its `workspaceScoped`, not the shared row —
+ * a member's own "this device" pick must not be read as a workspace device.
+ */
+export const resolveBoundExecutionDeviceId = (
+  agencyConfig: OrviloAgentAgencyConfig | undefined,
+  options: ResolveExecutionTargetOptions,
+): string | undefined =>
+  resolveExecutionTarget(agencyConfig, options) === 'device'
+    ? agencyConfig?.boundDeviceId || undefined
+    : undefined;

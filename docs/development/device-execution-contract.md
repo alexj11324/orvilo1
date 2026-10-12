@@ -122,6 +122,20 @@ workspace member's own choice → `agentDeviceOverrides`; admin default → shar
 config; policy-pinned → members cannot override. Automations bind their own
 execution principal — never "whichever member last opened the page".
 
+## Reading a device's filesystem skills
+
+The slash menu, the skill chips in a message and the Skills panel all list the
+skills found on the machine the Agent runs on. They must agree, so they resolve
+that machine the same way: `useProjectSkillsDeviceId` (menu and chips) and the
+working sidebar both start from the caller's effective config
+(`useTopicAgencyConfig`), not from the shared Agent row.
+
+`resolveBoundExecutionDeviceId` turns that config into the device to scan. A run
+that goes through a device scans it over `device.listProjectSkills`; a run on
+this machine returns `undefined` and reads over Electron IPC. Reading the shared
+row instead treats a member's own "this device" pick as a workspace device, and
+the scan fails with `Workspace device not found.`
+
 ## Unified execution chain
 
 Agent config + execution principal → unified config/permission resolution →

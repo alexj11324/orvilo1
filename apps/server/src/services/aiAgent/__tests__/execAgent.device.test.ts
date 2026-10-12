@@ -28,6 +28,7 @@ vi.mock('@/server/featureFlags', async (importOriginal) => ({
 }));
 
 const {
+  mockQueryOwnedDevices,
   mockComposeDevicePrimeRun,
   mockDeviceFindByDeviceId,
   mockDeviceFindWorkspaceDeviceById,
@@ -41,6 +42,7 @@ const {
   mockSpawnHeteroSandbox,
   realDispatchRef,
 } = vi.hoisted(() => ({
+  mockQueryOwnedDevices: vi.fn(),
   mockComposeDevicePrimeRun: vi.fn(),
   mockDeviceFindByDeviceId: vi.fn(),
   mockDeviceFindWorkspaceDeviceById: vi.fn(),
@@ -149,7 +151,7 @@ vi.mock('@/database/models/device', () => ({
       // Unified admission's authorized candidate set — the devices this suite
       // routes to are registered in both scopes (workspace runs query the
       // workspace list, personal runs the personal one).
-      query: vi.fn().mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
+      query: mockQueryOwnedDevices,
       queryForExecution: vi
         .fn()
         .mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
@@ -365,6 +367,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       ok: false,
     });
     mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
+    mockQueryOwnedDevices.mockResolvedValue([
+      { deviceId: 'device-001' },
+      { deviceId: 'device-002' },
+    ]);
     mockDeviceFindByDeviceId.mockResolvedValue(undefined);
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
     // `clearAllMocks` keeps the last-set implementation — re-establish the
@@ -683,6 +689,29 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         expect(result.errorData?.retryable).toBe(true);
       },
     );
+
+    it('dispatches a member’s CLI run to the saved host owner while retaining the run workspace', async () => {
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockQueryOwnedDevices.mockResolvedValue([]);
+      mockDeviceFindWorkspaceDeviceById.mockResolvedValue({
+        deviceId: 'device-001',
+        userId: 'saved-host-owner',
+      });
+      service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Run on the saved host',
+      });
+      expect(result.success).toBe(true);
+      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceId: 'device-001',
+          userId: 'saved-host-owner',
+          workspaceId: undefined,
+          ingestWorkspaceId: 'workspace-1',
+        }),
+      );
+    });
 
     it('surfaces the gateway DEVICE_NOT_FOUND when the trusted binding is unreachable', async () => {
       // The dispatch trusts the bound device; the gateway is where an offline

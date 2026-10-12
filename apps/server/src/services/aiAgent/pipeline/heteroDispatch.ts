@@ -1910,6 +1910,7 @@ export const dispatchHeteroAgent = async (
           }
         : await deviceGateway.dispatchAgentRun({
             ...heteroParams,
+            userId: admittedDeviceUserId,
             prime: primeDescriptor,
             args: heteroExecArgs,
             cwd: deviceCwd,

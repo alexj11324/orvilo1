@@ -130,7 +130,7 @@ connect an execution device. For real local-agent requests, follow
 
 An Issue run reaches your computer through the device gateway. The desktop app connects to the hosted one (`device-gateway.aspectlylabs.com`) by default, which trusts only tokens signed by production. A local dev server signs with its own `JWKS_KEY`, so against it no device can connect and every run ends in "No bound device" until a gateway that trusts the local key is running.
 
-The gateway is a separate Go service kept in the private repository `alexj11324/orvilo-gateway` (LobeHub's gateway plus the Orvilo workspace protocol; the same code production runs). One script builds and runs it locally at a pinned commit:
+The gateway is a separate Go service kept in the private repository `alexj11324/orvilo-gateway` (LobeHub's gateway plus the Orvilo workspace protocol; the same changes production builds from). One script builds and runs it locally at a pinned commit:
 
 ```bash
 # 1. Gateway, in its own terminal. JWKS_KEY is the value the dev server runs with.

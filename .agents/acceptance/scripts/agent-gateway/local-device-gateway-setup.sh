@@ -6,8 +6,8 @@
 # gateway that trusts the local key no device can connect, and every Issue run
 # ends in "No bound device".
 #
-# What it does: checks out the Orvilo gateway (private repository, the same code
-# production runs) at a pinned commit, builds the device gateway for this
+# What it does: checks out the Orvilo gateway (private repository, the same changes
+# production builds from) at a pinned commit, builds the device gateway for this
 # machine, and runs it on localhost with the PUBLIC half of the local key.
 #
 # Usage (from the repository root):
@@ -27,8 +27,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 GATEWAY_REPO='https://github.com/alexj11324/orvilo-gateway.git'
-# Upstream fed50da plus the Orvilo workspace protocol — the code production runs.
-GATEWAY_REF='8f95ef3be6129e6b3fd80d3d285ed2fa703dd8f7'
+# Upstream fed50da plus the Orvilo patches production applies, under the Orvilo name.
+GATEWAY_REF='e7b28b5c89989bea344dde9e95a7724990cf6dae'
 GATEWAY_DIR="${ORVILO_GATEWAY_DIR:-$HOME/.orvilo/agent-testing/gateway}"
 PORT="${GATEWAY_PORT:-8787}"
 TOKEN_FILE="$REPO_ROOT/.records/env/device-gateway.token"

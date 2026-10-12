@@ -117,7 +117,8 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
     workspaceConnectionState,
     workspaceScoped,
   });
-  const hintText = ({ count, key }: GatewayHint) => t(key, { count });
+  const hintText = ({ count, key }: GatewayHint) =>
+    count === undefined ? t(key) : t(key, { count });
   const deviceHint = hintText(hints.device);
   const connectionHint = hints.connection && hintText(hints.connection);
 

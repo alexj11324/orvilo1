@@ -28,13 +28,18 @@ wait_healthy() {
   echo 'Agent Gateway health failed.' >&2
   return 1
 }
+# Replace the launcher in one step, so the unit never reads a half-written file.
+install_launcher() {
+  install -m 755 "$1" "$service_dir/start.sh.new" && mv -f "$service_dir/start.sh.new" "$service_dir/start.sh"
+}
+# Each step is checked by hand: errexit is off wherever this runs as a condition.
 restore() {
   [[ -f "$snapshot/start.sh" && -s "$snapshot/image-id" && -s "$snapshot/image-tag" ]] || { echo 'No snapshot for this CI run.' >&2; return 1; }
   # A rebuild of the same source reuses its tag, so point the tag back at the recorded image.
-  docker tag "$(cat "$snapshot/image-id")" "$(cat "$snapshot/image-tag")"
-  install -m 755 "$snapshot/start.sh" "$service_dir/start.sh"
-  systemctl restart "$service"
-  wait_healthy
+  docker tag "$(cat "$snapshot/image-id")" "$(cat "$snapshot/image-tag")" || return 1
+  install_launcher "$snapshot/start.sh" || return 1
+  systemctl restart "$service" || return 1
+  wait_healthy || return 1
   printf 'Restored the Agent Gateway from %s\n' "$snapshot"
 }
 if [[ "$mode" == rollback ]]; then
@@ -61,10 +66,14 @@ grep -q -- " $image_tag\$" "$bundle_dir/start.sh" || { echo 'The bundled launche
 [[ "$(curl -fsS --max-time 5 "$origin/health")" == OK ]] || { echo 'The running Agent Gateway is unhealthy; not upgrading over it.' >&2; exit 1; }
 previous_tag="$(grep -o 'orvilo-agent-gateway:[A-Za-z0-9._-]*' "$service_dir/start.sh" | tail -n 1)"
 [[ -n "$previous_tag" ]] || { echo 'The installed launcher names no image.' >&2; exit 1; }
-install -d -m 700 "$snapshot"
-cp -a "$service_dir/start.sh" "$snapshot/start.sh"
-docker inspect --format '{{.Image}}' "$container" > "$snapshot/image-id"
-printf '%s\n' "$previous_tag" > "$snapshot/image-tag"
+# Assemble the snapshot aside, so a failure here cannot leave a partial one behind.
+rm -rf -- "$snapshot.partial"
+install -d -m 700 "$snapshot.partial"
+cp -a "$service_dir/start.sh" "$snapshot.partial/start.sh"
+docker inspect --format '{{.Image}}' "$container" > "$snapshot.partial/image-id"
+[[ "$(cat "$snapshot.partial/image-id")" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo 'Could not read the running image.' >&2; exit 1; }
+printf '%s\n' "$previous_tag" > "$snapshot.partial/image-tag"
+mv -- "$snapshot.partial" "$snapshot"
 
 # Nothing that is running has changed yet, so a bad image needs no restart.
 gunzip -c "$bundle_dir/image.tar.gz" | docker load
@@ -76,13 +85,15 @@ fi
 restore_on_exit() {
   local status=$?
   trap - EXIT
-  if [[ "$status" != 0 ]] && ! restore; then
-    echo 'Restore failed; inspect the recorded snapshot.' >&2
+  if [[ "$status" != 0 ]]; then
+    restore || echo 'Restore failed; the Agent Gateway may be down. Inspect the recorded snapshot.' >&2
   fi
   exit "$status"
 }
 trap restore_on_exit EXIT
-install -m 755 "$bundle_dir/start.sh" "$service_dir/start.sh"
+# A dropped connection or a cancelled job must still put the previous version back.
+trap 'exit 129' HUP INT TERM
+install_launcher "$bundle_dir/start.sh"
 systemctl restart "$service"
 wait_healthy
 [[ "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 -X POST "$origin/api/operations/upgrade-check/events")" == 401 ]] || { echo 'Unauthenticated publication was not rejected.' >&2; exit 1; }
@@ -100,5 +111,5 @@ receipt.update({
 (snapshot / 'activation-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
 PY
 install -m 644 "$bundle_dir/build-receipt.json" "$service_dir/build-receipt.json"
-trap - EXIT
+trap - EXIT HUP INT TERM
 printf 'Verified CI upgrade; rollback snapshot: %s\n' "$snapshot"

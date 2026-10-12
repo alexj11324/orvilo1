@@ -103,6 +103,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \
             "sudo bash '$release/upgrade.sh' activate '$GITHUB_SHA' '$GITHUB_RUN_ID' '$GITHUB_RUN_ATTEMPT'"
       - name: Verify the public endpoint
+        id: public
         run: |
           set -euo pipefail
           health=$(curl -fsS --max-time 20 --retry 5 --retry-delay 3 https://agent-gateway.aspectlylabs.com/health)
@@ -122,8 +123,9 @@ jobs:
           path: ${{ runner.temp }}/gateway-activation.json
           if-no-files-found: error
           retention-days: 30
-      - name: Restore the previous image after a later failure
-        if: failure() && steps.activate.outcome == 'success'
+      # Only a failed public check undoes a verified upgrade; a failed receipt upload does not.
+      - name: Restore the previous image after a failed public check
+        if: failure() && steps.public.outcome == 'failure'
         run: |
           release="/var/lib/orvilo1/agent-gateway/releases/${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes "ubuntu@$SSH_HOST" \

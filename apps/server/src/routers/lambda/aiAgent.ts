@@ -7,6 +7,7 @@ import { parse } from '@orvilo/conversation-flow';
 import type {
   AgentMarketplaceRuntimeConfig,
   ExecAgentResult,
+  HeterogeneousReasoningEffort,
   TaskCurrentActivity,
   TaskStatusResult,
 } from '@orvilo/types';
@@ -1021,7 +1022,9 @@ const ExecAgentSchema = z
         initialTopicMetadata: z
           .object({
             executionConfig: topicExecutionConfigSchema.optional(),
-            heteroEffort: z.custom<string>((value) => typeof value === 'string').optional(),
+            heteroEffort: z
+              .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
+              .optional(),
             repos: z.array(z.string()).optional(),
             workingDirectory: z.string().optional(),
             workingDirectoryConfig: workingDirConfigSchema.optional(),

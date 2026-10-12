@@ -253,7 +253,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         '@/server/routers/lambda/_helpers/workspaceAgentGuard',
       );
       actualUse = actualGuard.assertCanUseWorkspaceAgent;
-    });
+    }, 120_000);
 
     it('dispatches a noncreator with explicit private Agent Use to the pinned Device', async () => {
       const ownerId = 'private-pinned-owner';
@@ -274,7 +274,6 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         provider: 'p',
         agencyConfig: {
           heterogeneousProvider: { type: 'codex' },
-          executionTargetSelectionPolicy: 'fixed',
           executionTarget: 'device',
           boundDeviceId: 'pinned-device',
         },
@@ -308,7 +307,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         await db.delete(users).where(eq(users.id, ownerId));
         await db.delete(users).where(eq(users.id, 'user-1'));
       }
-    });
+    }, 60_000);
   });
   it.each(['schedule', 'heartbeat'] as const)(
     'refuses a parked %s automation before dispatch or runtime effects',

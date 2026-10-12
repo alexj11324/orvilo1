@@ -167,12 +167,15 @@ describe('resolveHeteroExecutionPlan', () => {
   it.each(['device', 'local'] as const)(
     'uses the Agent saved %s device regardless of conversation hints',
     async (executionTarget) => {
-      const plan = await resolveHeteroExecutionPlan(db, {
-        ...baseParams,
-        agencyConfig: { boundDeviceId: 'dev-a', executionTarget },
+      const staleConversationHints = {
         explicitDeviceId: 'dev-b',
         localDeviceId: 'dev-b',
         sessionBoundDeviceId: 'dev-b',
+      };
+      const plan = await resolveHeteroExecutionPlan(db, {
+        ...baseParams,
+        agencyConfig: { boundDeviceId: 'dev-a', executionTarget },
+        ...staleConversationHints,
       });
       expect(plan).toMatchObject({ kind: 'device', deviceId: 'dev-a' });
     },

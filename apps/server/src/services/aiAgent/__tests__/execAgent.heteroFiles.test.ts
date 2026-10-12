@@ -1835,7 +1835,6 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       heteroAgentConfig.agencyConfig = {
         boundDeviceId: 'author-desktop',
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
         heterogeneousProvider: { type: 'openclaw' },
       } as any;
       service = await createWorkspaceService('member-user', 'author-user');
@@ -1867,7 +1866,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       await workspaceDb!.insert(workspaceUserSettings).values({
         userId: 'member-user',
         workspaceId: 'workspace-a',
-        preference: { agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } } },
+        preference: { agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } } } as never,
       });
       mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'member-desktop' }]);
 

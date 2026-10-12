@@ -143,7 +143,13 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
 
   const handleChange = (value: string) => {
     const selection = parseExecutionTargetValue(value);
-    if (!selection) return;
+    if (
+      !selection ||
+      (selection.target !== 'device' &&
+        selection.target !== 'local' &&
+        selection.target !== 'sandbox')
+    )
+      return;
     void selectAgentDevice({
       boundDeviceId:
         selection.deviceId ?? (selection.target === 'local' ? currentDeviceId : undefined),

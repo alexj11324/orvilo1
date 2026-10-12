@@ -673,7 +673,6 @@ describe('resolveExecutionPlan', () => {
         clientExecutionAvailable: true,
         isHetero: true,
         localDeviceId: 'this-desktop',
-        requestedDeviceId: 'member-device',
         sandboxExecutionAvailable: false,
       }),
     ).toEqual({ deviceId: 'workspace-device', kind: 'device', target: 'device' });

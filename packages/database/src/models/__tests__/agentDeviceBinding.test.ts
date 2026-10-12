@@ -19,7 +19,7 @@ const withRuntime = (config: Partial<NewAgent>, boundDeviceId = workspaceDeviceI
   agencyConfig: {
     boundDeviceId,
     executionTarget: 'device' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: { type: 'codex' as const, model: 'default' },
     ...config.agencyConfig,
   },
 });
@@ -104,13 +104,12 @@ describe('AgentModel workspace device binding', () => {
           title: 'Fixed WS agent',
           agencyConfig: {
             boundDeviceId: workspaceDeviceId,
-            executionTargetSelectionPolicy: 'fixed',
             executionTarget: 'device',
           },
         }),
       );
 
-      expect(agent.agencyConfig?.executionTargetSelectionPolicy).toBe('fixed');
+      expect(agent.agencyConfig?.boundDeviceId).toBe(workspaceDeviceId);
     });
 
     it.each(['auto', 'none', 'sandbox'] as const)(
@@ -121,23 +120,23 @@ describe('AgentModel workspace device binding', () => {
           wsModel.create(
             withRuntime({
               title: 'Fixed WS agent',
-              agencyConfig: { executionTarget, executionTargetSelectionPolicy: 'fixed' },
+              agencyConfig: { executionTarget },
             }),
           ),
         ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
       },
     );
 
-    it('rejects fixing a client-local target for a workspace agent', async () => {
+    it('allows a saved local target bound to a public workspace device', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
-      await expect(
-        wsModel.create(
-          withRuntime({
-            title: 'Invalid fixed WS agent',
-            agencyConfig: { executionTarget: 'local', executionTargetSelectionPolicy: 'fixed' },
-          }),
-        ),
-      ).rejects.toThrow(/requires a shared execution target/);
+      const agent = await wsModel.create(
+        withRuntime({
+          title: 'Local WS agent',
+          agencyConfig: { executionTarget: 'local' },
+        }),
+      );
+      expect(agent.agencyConfig?.boundDeviceId).toBe(workspaceDeviceId);
+      expect(agent.agencyConfig?.executionTarget).toBe('local');
     });
 
     it('rejects fixed policy with a private workspace device', async () => {
@@ -157,7 +156,6 @@ describe('AgentModel workspace device binding', () => {
             title: 'Private fixed WS agent',
             agencyConfig: {
               boundDeviceId: privateDeviceId,
-              executionTargetSelectionPolicy: 'fixed',
               executionTarget: 'device',
             },
           }),
@@ -167,24 +165,15 @@ describe('AgentModel workspace device binding', () => {
   });
 
   describe('updateConfig', () => {
-    it('enables fixed policy through the normal config update path', async () => {
+    it('preserves the saved device through a metadata update', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
-      const agent = await wsModel.create(
-        withRuntime({
-          title: 'WS agent',
-          agencyConfig: { boundDeviceId: workspaceDeviceId, executionTarget: 'device' },
-        }),
-      );
-
-      await wsModel.updateConfig(agent.id, {
-        agencyConfig: { executionTargetSelectionPolicy: 'fixed' },
-      });
-
+      const agent = await wsModel.create(withRuntime({ title: 'WS agent' }));
+      await wsModel.updateConfig(agent.id, { description: 'Changed' });
       const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
-      expect(result?.agencyConfig?.executionTargetSelectionPolicy).toBe('fixed');
+      expect(result?.agencyConfig?.boundDeviceId).toBe(workspaceDeviceId);
     });
 
-    it('allows clearing boundDeviceId on a workspace agent', async () => {
+    it('rejects clearing the saved device on a workspace agent', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
       const agent = await wsModel.create(
         withRuntime({
@@ -193,8 +182,8 @@ describe('AgentModel workspace device binding', () => {
         }),
       );
       await expect(
-        wsModel.updateConfig(agent.id, { agencyConfig: { boundDeviceId: undefined } }),
-      ).resolves.toBeDefined();
+        wsModel.updateConfig(agent.id, { agencyConfig: { boundDeviceId: '' } }),
+      ).rejects.toMatchObject({ message: 'AGENT_HOST_REQUIRED' });
     });
 
     it('allows switching a workspace agent to another workspace device', async () => {
@@ -270,7 +259,6 @@ describe('AgentModel workspace device binding', () => {
           ...withRuntime({
             agencyConfig: {
               boundDeviceId: workspaceDeviceId,
-              executionTargetSelectionPolicy: 'fixed',
               executionTarget: 'device',
             },
             title: 'Private fixed agent',
@@ -299,9 +287,7 @@ describe('AgentModel workspace device binding', () => {
         .set({ visibility: 'private' })
         .where(eq(devices.deviceId, workspaceDeviceId));
 
-      await expect(wsModel.publishToWorkspace(agent.id)).rejects.toThrow(
-        /requires a public device/,
-      );
+      await expect(wsModel.publishToWorkspace(agent.id)).rejects.toThrow(/AGENT_HOST_UNAVAILABLE/);
 
       const stored = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
       expect(stored?.visibility).toBe('private');
@@ -315,7 +301,7 @@ describe('AgentModel workspace device binding', () => {
         .where(eq(devices.deviceId, workspaceDeviceId));
 
       await expect(wsModel.setVisibility(agent.id, 'public')).rejects.toThrow(
-        /requires a public device/,
+        /AGENT_HOST_UNAVAILABLE/,
       );
 
       const stored = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
@@ -337,9 +323,8 @@ describe('AgentModel workspace device binding', () => {
           title: 'Legacy WS agent',
           visibility: 'public',
           agencyConfig: {
-            heterogeneousProvider: { type: 'codex' },
+            heterogeneousProvider: { type: 'codex', model: 'default' },
             boundDeviceId: personalDeviceId,
-            executionTargetSelectionPolicy: 'fixed',
             executionTarget: 'device',
             workingDirByDevice: {
               [personalDeviceId]: '/tmp/legacy',
@@ -364,9 +349,8 @@ describe('AgentModel workspace device binding', () => {
           title: 'Fixed WS agent',
           visibility: 'public',
           agencyConfig: {
-            heterogeneousProvider: { type: 'codex' },
+            heterogeneousProvider: { type: 'codex', model: 'default' },
             boundDeviceId: workspaceDeviceId,
-            executionTargetSelectionPolicy: 'fixed',
             executionTarget: 'device',
             workingDirByDevice: { [workspaceDeviceId]: '/tmp/ws' },
           },
@@ -381,11 +365,8 @@ describe('AgentModel workspace device binding', () => {
       });
       expect(copy?.agencyConfig).toEqual({
         boundDeviceId: workspaceDeviceId,
-        heterogeneousProvider: { type: 'codex' },
-        executionTargetSelectionPolicy: 'fixed',
+        heterogeneousProvider: { type: 'codex', model: 'default' },
         executionTarget: 'device',
-        modelSelectionPolicy: 'member',
-        topicSharePolicy: 'member',
         workingDirByDevice: { [workspaceDeviceId]: '/tmp/ws' },
       });
     });
@@ -408,9 +389,8 @@ describe('AgentModel workspace device binding', () => {
           title: 'Legacy private-device agent',
           visibility: 'public',
           agencyConfig: {
-            heterogeneousProvider: { type: 'codex' },
+            heterogeneousProvider: { type: 'codex', model: 'default' },
             boundDeviceId: privateDeviceId,
-            executionTargetSelectionPolicy: 'fixed',
             executionTarget: 'device',
           },
         } as NewAgent)
@@ -466,7 +446,7 @@ describe('AgentModel workspace device binding', () => {
       expect(result?.agencyConfig?.workingDirByDevice?.[workspaceDeviceId]).toBe('/work');
     });
 
-    it('downgrades an invalid fixed local target when moving into a workspace', async () => {
+    it('removes an unavailable local device when moving into a workspace', async () => {
       const personalModel = new AgentModel(serverDB, userId);
       const agent = await personalModel.create(
         withRuntime({
@@ -474,7 +454,6 @@ describe('AgentModel workspace device binding', () => {
           agencyConfig: {
             boundDeviceId: personalDeviceId,
             executionTarget: 'local',
-            executionTargetSelectionPolicy: 'fixed',
           },
         }),
       );
@@ -484,17 +463,18 @@ describe('AgentModel workspace device binding', () => {
       const result = await serverDB.query.agents.findFirst({
         where: eq(agents.id, agent.id),
       });
-      expect(result?.agencyConfig?.executionTargetSelectionPolicy).toBe('member');
+      expect(result?.agencyConfig?.boundDeviceId).toBeUndefined();
+      expect(result?.agencyConfig?.executionTarget).toBe('local');
     });
 
-    it('preserves a fixed sandbox target when moving into a workspace', async () => {
+    it('preserves a legacy sandbox target when moving into a workspace', async () => {
       const personalModel = new AgentModel(serverDB, userId);
       const [agent] = await serverDB
         .insert(agents)
         .values({
           userId,
           title: 'Personal sandbox agent',
-          agencyConfig: { executionTarget: 'sandbox', executionTargetSelectionPolicy: 'fixed' },
+          agencyConfig: { executionTarget: 'sandbox' },
         })
         .returning();
 
@@ -503,7 +483,7 @@ describe('AgentModel workspace device binding', () => {
       const result = await serverDB.query.agents.findFirst({
         where: eq(agents.id, agent.id),
       });
-      expect(result?.agencyConfig?.executionTargetSelectionPolicy).toBe('fixed');
+      expect(result?.agencyConfig?.executionTarget).toBe('sandbox');
     });
 
     it('keeps the binding intact when moving back to personal scope', async () => {

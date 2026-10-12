@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
+import type { AgentConfigWithId } from '@/server/services/agent';
 
 import { resolveRunAgentConfig } from '../pipeline/resolveRunAgentConfig';
 
@@ -87,7 +88,7 @@ it('resolves one saved Agent runtime for two members with conflicting persisted 
         resolveAgentConfigOrThrow: async (id) => {
           const config = await agentModel.getAgentConfigForExecution(id);
           if (!config) throw new Error('Agent missing');
-          return config;
+          return config as AgentConfigWithId;
         },
       },
       { identifier: agentId, throwIfExecutionAborted: async () => {} },

@@ -59,3 +59,21 @@ The new row will name which one it is. Reproduce in Electron: sign out (expect `
 turn the gateway off (expect `disabled`), point the server URL at a host that rejects
 `device.register` (expect `registerFailed` with the status), block the gateway host (expect
 `gatewayUnreachable`).
+
+## Reconnecting on an expired token
+
+Backoff reconnects reuse the access token the client was created with. When
+that token has expired by the time the socket comes back (a gateway restart or
+a network drop after a long session), the gateway answers `auth_failed` with an
+`exp` claim error, not `auth_expired`.
+
+`GatewayClient` checks its own token at that point. If the token's `exp` has
+passed, it emits `auth_expired` and stays recoverable, so the desktop service
+refreshes the token and reconnects through `handleAuthExpired` /
+`handleWorkspaceAuthExpired`. An `auth_failed` on a token that has not expired
+still stops the client, because a fresh copy of the same credentials would be
+rejected again.
+
+Before this, the client stopped on every `auth_failed` and the desktop had no
+handler for it: the status stayed `disconnected` until the user reconnected by
+hand.

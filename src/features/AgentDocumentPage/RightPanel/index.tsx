@@ -12,10 +12,9 @@ import AgentDocumentsGroup from '@/features/Conversation/WorkingSidebar/Resource
 import { appNavigate } from '@/features/Electron/navigation/appNavigate';
 import SideBarLayout from '@/features/NavPanel/SideBarLayout';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
-import { resolveExecutionTarget } from '@/helpers/executionTarget';
-import { useIsGatewayModeEnabled } from '@/helpers/gatewayMode';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
+import { useProjectSkillsDeviceId } from '@/hooks/useProjectSkillsDeviceId';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 
@@ -62,23 +61,7 @@ const AgentDocumentSidebarContent = memo(() => {
   const agentPath = buildWorkspaceAwarePath(`/agent/${agentId}`, activeWorkspaceSlug);
   const isHetero = useAgentStore(agentByIdSelectors.isAgentHeterogeneousById(agentId));
   const workingDirectory = useEffectiveWorkingDirectory(agentId);
-  const agencyConfig = useAgentStore((s) =>
-    agentId ? agentByIdSelectors.getAgencyConfigById(agentId)(s) : undefined,
-  );
-  const deviceRoutingAvailable = useIsGatewayModeEnabled(agentId);
-  const isWorkspaceAgent = useAgentStore((s) =>
-    agentId ? agentByIdSelectors.isWorkspaceAgentById(agentId)(s) : false,
-  );
-  const effectiveTarget = resolveExecutionTarget(agencyConfig, {
-    clientExecutionAvailable: isDesktop,
-    deviceRoutingAvailable,
-    isHetero,
-    workspaceScoped: isWorkspaceAgent,
-  });
-  const remoteDeviceId =
-    effectiveTarget === 'device' && agencyConfig?.boundDeviceId
-      ? agencyConfig.boundDeviceId
-      : undefined;
+  const remoteDeviceId = useProjectSkillsDeviceId(agentId, isDesktop);
 
   const handleBack = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)

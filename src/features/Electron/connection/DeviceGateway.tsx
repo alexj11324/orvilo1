@@ -17,6 +17,8 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 
+import { type GatewayHint, resolveGatewayHints } from './gatewayHints';
+
 const styles = createStaticStyles(({ css, cssVar }) => ({
   greenDot: css`
     position: absolute;
@@ -108,20 +110,18 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
     isDeviceListLoading,
     deviceListError,
   );
-  const scopeConnected = workspaceScoped ? workspaceConnectionState === 'connected' : isConnected;
-  const connectionHint = workspaceScoped
-    ? workspaceConnectionState === 'unavailable'
-      ? t('gateway.workspaceStatusUnavailable')
-      : workspaceConnectionState === 'connecting'
-        ? t('gateway.statusConnecting')
-        : workspaceConnectionState === 'connected'
-          ? t('gateway.workspaceStatusConnections', { count: connectionCount })
-          : t('gateway.workspaceStatusDisconnected')
-    : isConnecting
-      ? t('gateway.statusConnecting')
-      : isConnected && connectionCount
-        ? t('gateway.statusConnectedConnections', { count: connectionCount })
-        : t(isConnected ? 'gateway.statusConnected' : 'gateway.statusDisconnected');
+  const hints = resolveGatewayHints({
+    // No device list yet counts as no connection.
+    connectionCount: connectionCount ?? 0,
+    isConnected,
+    isConnecting,
+    workspaceConnectionState,
+    workspaceScoped,
+  });
+  const hintText = ({ count, key }: GatewayHint) =>
+    count === undefined ? t(key) : t(key, { count });
+  const deviceHint = hintText(hints.device);
+  const connectionHint = hints.connection && hintText(hints.connection);
 
   const popoverContent = (
     <div className={cx(styles.popoverContent, 'flex flex-col gap-1')}>
@@ -149,7 +149,8 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
           )}
         </div>
       </div>
-      <span className={styles.scopeHint}>{connectionHint}</span>
+      <span className={styles.scopeHint}>{deviceHint}</span>
+      {connectionHint && <span className={styles.scopeHint}>{connectionHint}</span>}
     </div>
   );
 
@@ -167,7 +168,7 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
             />
           }
         />
-        {scopeConnected && <div className={styles.greenDot} />}
+        {hints.showConnectedDot && <div className={styles.greenDot} />}
       </div>
       <PopoverContent align="end" className="w-auto" side="bottom" style={{ padding: 8 }}>
         {popoverContent}

@@ -1,7 +1,9 @@
 'use client';
 
 import { type NeutralColors, type PrimaryColors } from '@lobehub/ui';
-import { ConfigProvider, FontLoader, ThemeProvider } from '@lobehub/ui';
+import ConfigProvider from '@lobehub/ui/es/ConfigProvider/index';
+import FontLoader from '@lobehub/ui/es/FontLoader/index';
+import ThemeProvider from '@lobehub/ui/es/ThemeProvider/ThemeProvider';
 import * as m from 'motion/react-m';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';

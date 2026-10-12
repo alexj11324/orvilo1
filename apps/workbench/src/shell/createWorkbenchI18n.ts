@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import i18next, { type ResourceLanguage } from 'i18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
 import { initReactI18next } from 'react-i18next';
 
@@ -28,10 +28,10 @@ export const loadWorkbenchResources = async (lang?: string) => {
     workbenchNamespaces.map(async (ns) => [ns, await loadWorkbenchNamespace(locale, ns)] as const),
   );
 
-  return Object.fromEntries(entries) as Record<string, unknown>;
+  return Object.fromEntries(entries) as ResourceLanguage;
 };
 
-export const createWorkbenchI18n = (lang?: string, bundledResources?: Record<string, unknown>) => {
+export const createWorkbenchI18n = (lang?: string, bundledResources?: ResourceLanguage) => {
   const locale = normalizeLocale(lang);
   const resources = bundledResources ? { [locale]: bundledResources } : undefined;
 

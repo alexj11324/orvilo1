@@ -191,7 +191,7 @@ const OsPermissionsPanel = memo(() => {
           }}
           onClick={() => !permission.granted && handlePermissionRequest(permission.id)}
         >
-          <div className="flex flex-col items-center h-10 justify-center rounded-md border border-border w-10">
+          <div className="flex flex-col items-center h-10 justify-center rounded-(--radius-card) border border-border w-10">
             {createElement(permission.icon, {
               color: 'var(--ant-color-text-description)',
               size: 20,
@@ -207,7 +207,8 @@ const OsPermissionsPanel = memo(() => {
             createElement(Check, { color: 'var(--ant-color-success)', size: 20 })
           ) : (
             <Button
-              size="sm"
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+              size="normal"
               variant="ghost"
               style={{
                 color: 'var(--ant-color-text-secondary)',

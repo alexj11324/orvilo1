@@ -11,7 +11,7 @@ import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
 const styles = {
   statusIcon: 'self-center ms-1',
-  tag: 'rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-[12px] text-foreground ms-1.5',
+  tag: 'rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-foreground ms-1.5',
 };
 
 interface GlobFilesArgs {
@@ -52,9 +52,9 @@ export const createGlobLocalFilesInspector = (translationKey: string) => {
           {pattern && <span className={styles.tag}>{pattern}</span>}
           {isLoading ? null : pluginState ? (
             hasFiles ? (
-              <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
+              <Check className={styles.statusIcon} color={'var(--success)'} size={16} />
             ) : (
-              <X className={styles.statusIcon} color={'var(--destructive)'} size={14} />
+              <X className={styles.statusIcon} color={'var(--destructive)'} size={16} />
             )
           ) : null}
         </div>

@@ -152,7 +152,7 @@ const ProxyForm = () => {
       data-invalid={!!errors[name]}
       orientation="horizontal"
     >
-      <FieldContent className="min-w-[max(34%,240px)]">
+      <FieldContent className="min-w-[max(34%,calc(var(--spacing)*60))]">
         <FieldLabel htmlFor={fieldId(name)}>{label}</FieldLabel>
         {description && errors[name]?.message !== description && (
           <FieldDescription className="text-xs" id={descriptionId(name)}>
@@ -169,7 +169,7 @@ const ProxyForm = () => {
   const section = (title: string, children: ReactNode) => (
     <FieldSet>
       <FieldLegend className="font-semibold">{title}</FieldLegend>
-      <FieldGroup className="gap-2 rounded-2xl bg-secondary p-4 [&>[data-slot=field]]:min-h-11 [&>[data-slot=field]]:py-2">
+      <FieldGroup className="gap-2 rounded-(--radius-card) bg-secondary p-4 [&>[data-slot=field]]:min-h-11 [&>[data-slot=field]]:py-2">
         {children}
       </FieldGroup>
     </FieldSet>
@@ -352,7 +352,7 @@ const ProxyForm = () => {
         {section(
           t('proxy.connectionTest'),
           <Field orientation="horizontal">
-            <FieldContent className="min-w-[max(34%,240px)]">
+            <FieldContent className="min-w-[max(34%,calc(var(--spacing)*60))]">
               <FieldLabel htmlFor={fieldId('testUrl')}>
                 <SettingsSearchAnchor id="proxy-test">{t('proxy.testUrl')}</SettingsSearchAnchor>
               </FieldLabel>

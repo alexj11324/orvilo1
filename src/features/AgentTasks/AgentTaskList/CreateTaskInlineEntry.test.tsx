@@ -323,13 +323,17 @@ describe('CreateTaskInlineEntry', () => {
     expect(editor).toHaveAttribute('data-padding-bottom', '12');
 
     const assigneeControl = screen.getByText('createTask.assignee').parentElement;
-    expect(assigneeControl).toHaveClass('h-6');
+    expect(assigneeControl).toHaveClass(
+      'h-7',
+      '[@media(pointer:coarse)]:min-h-11',
+      '[@media(pointer:coarse)]:min-w-11',
+    );
     expect(assigneeControl).toHaveClass('py-0.75');
 
     const attachmentAction = container
       .querySelector('svg.lucide-paperclip')
       ?.closest<HTMLElement>('button');
-    expect(attachmentAction).toHaveStyle({ height: '24px', width: '24px' });
+    expect(attachmentAction).toHaveStyle({ height: '32px', width: '32px' });
     expect(attachmentAction?.parentElement).toHaveClass('items-center');
 
     expect(screen.queryByTestId('visibility-trigger')).not.toBeInTheDocument();

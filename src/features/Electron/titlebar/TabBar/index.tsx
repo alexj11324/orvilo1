@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { clsx as cx } from 'clsx';
+import { clsx as cx } from 'cn';
 import { ChevronDown, Plus } from 'lucide-react';
 import { useMotionValue } from 'motion/react';
 import * as m from 'motion/react-m';

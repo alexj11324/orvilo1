@@ -1,6 +1,6 @@
 'use client';
 import { useSortable } from '@dnd-kit/sortable';
-import { clsx as cx } from 'clsx';
+import { clsx as cx } from 'cn';
 import { X } from 'lucide-react';
 import { useMotionValue, useTransform } from 'motion/react';
 import * as m from 'motion/react-m';

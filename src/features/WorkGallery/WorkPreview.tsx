@@ -13,19 +13,19 @@ import LinearIcon from '@/features/Work/icons/LinearIcon';
 
 const styles = {
   cover:
-    'relative overflow-hidden h-[clamp(160px,15vw,220px)] m-1.75 rounded-(--radius-card) bg-muted bg-[radial-gradient(140%_110%_at_50%_0%,color-mix(in_srgb,#fff_85%,transparent)_0%,color-mix(in_srgb,#fff_30%,transparent)_45%,transparent_75%)] shadow-[inset_0_1px_0_#fff] [[data-theme=dark]_&]:bg-fill-quaternary [[data-theme=dark]_&]:bg-[radial-gradient(140%_110%_at_50%_0%,color-mix(in_srgb,#fff_10%,transparent)_0%,transparent_65%)] [[data-theme=dark]_&]:shadow-[inset_0_1px_0_color-mix(in_srgb,#fff_12%,transparent)]',
+    'relative overflow-hidden h-[clamp(calc(var(--spacing)*40),15vw,calc(var(--spacing)*55))] m-2 rounded-(--radius-card) bg-muted bg-[radial-gradient(140%_110%_at_50%_0%,color-mix(in_srgb,var(--color-white)_85%,transparent)_0%,color-mix(in_srgb,var(--color-white)_30%,transparent)_45%,transparent_75%)] shadow-[inset_0_1px_0_var(--color-white)] [[data-theme=dark]_&]:bg-fill-quaternary [[data-theme=dark]_&]:bg-[radial-gradient(140%_110%_at_50%_0%,color-mix(in_srgb,var(--color-white)_10%,transparent)_0%,transparent_65%)] [[data-theme=dark]_&]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-white)_12%,transparent)]',
   coverBadge:
-    'absolute z-2 inset-bs-2.25 inset-s-2.25 grid size-8.5 place-items-center rounded-(--radius-chip) border border-divider bg-[color-mix(in_srgb,var(--popover)_88%,transparent)] text-foreground backdrop-blur-[12px]',
-  grid: 'absolute inset-0 opacity-[0.22] bg-[linear-gradient(var(--divider)_1px,transparent_1px),linear-gradient(90deg,var(--divider)_1px,transparent_1px)] bg-size-[20px_20px]',
+    'absolute z-2 inset-bs-2 inset-s-2 grid size-8 place-items-center rounded-(--radius-chip) border border-divider bg-[color-mix(in_srgb,var(--popover)_88%,transparent)] text-foreground backdrop-blur-[calc(var(--spacing)*3)]',
+  grid: 'absolute inset-0 opacity-[0.22] bg-[linear-gradient(var(--divider)_1px,transparent_1px),linear-gradient(90deg,var(--divider)_1px,transparent_1px)] bg-size-[calc(var(--spacing)*5)_calc(var(--spacing)*5)]',
   linearBody: 'p-5',
   linearId: 'text-xs leading-5 font-semibold text-foreground-tertiary tracking-[0.04em]',
-  linearTitle: 'mbs-1.75 line-clamp-2 text-sm leading-5.5 font-semibold',
+  linearTitle: 'mbs-2 line-clamp-2 text-sm leading-5.5 font-semibold',
   mockWindow:
-    'absolute inset-6.5 overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+    'absolute inset-6 overflow-hidden rounded-(--radius-card) border border-divider bg-card',
   previewDescription: 'mbs-2 line-clamp-2 text-sm leading-5.5 text-muted-foreground',
   previewBody: 'box-border h-full px-5 pbs-5 pbe-7',
   previewIdentifier: 'text-xs leading-5 font-semibold text-foreground-tertiary',
-  previewTitle: 'mbs-1.75 line-clamp-2 text-sm leading-5.5 font-semibold',
+  previewTitle: 'mbs-2 line-clamp-2 text-sm leading-5.5 font-semibold',
   status: 'absolute z-2 inset-bs-3 inset-e-3 py-0 text-xs leading-5',
   taskBody: 'p-5',
 };

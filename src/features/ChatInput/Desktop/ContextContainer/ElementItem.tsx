@@ -19,7 +19,7 @@ const styles = {
   selector:
     'overflow-hidden max-w-[min(420px,70vw)] font-mono text-xs text-muted-foreground text-ellipsis whitespace-nowrap',
   thumbnail:
-    'block max-w-[min(420px,70vw)] max-h-60 border border-sidebar-border rounded-[6px] object-contain bg-card',
+    'block max-w-[min(420px,70vw)] max-h-60 border border-sidebar-border rounded-(--radius-card) object-contain bg-card',
   tooltip: 'max-w-[min(460px,75vw)]',
   url: 'overflow-hidden text-xs text-foreground-quaternary text-ellipsis whitespace-nowrap',
 };
@@ -68,7 +68,7 @@ const ElementItem = memo<ChatContextContent>(({ element, id, preview }) => {
               if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
             }}
           >
-            <AttachmentPreview fallbackIcon={<SquareDashedMousePointer className="size-3" />} />
+            <AttachmentPreview fallbackIcon={<SquareDashedMousePointer className="size-4" />} />
             <AttachmentInfo className="max-w-64" />
             <AttachmentRemove label={t('close')} />
           </Attachment>

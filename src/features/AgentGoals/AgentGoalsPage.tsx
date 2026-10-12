@@ -21,7 +21,7 @@ import { GoalListItem } from './GoalListItem';
 
 const styles = {
   countBadge:
-    '[padding-block:1px] [padding-inline:7px] rounded-[99px] text-xs tabular-nums leading-4.5 text-muted-foreground bg-accent',
+    '[padding-block:1px] [padding-inline:7px] rounded-full text-xs tabular-nums leading-5 text-muted-foreground bg-accent',
   overview: '[padding-block:6px_18px]',
   list: 'grid grid-cols-2 gap-3 [@media(width<=900px)]:grid-cols-1',
   listRows: 'flex flex-col [border-block:1px_solid_var(--sidebar-border)]',
@@ -85,10 +85,14 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
           >
             <div className="flex flex-col items-center gap-3">
               <div className="font-semibold">{t('goalList.loadError')}</div>
-              <div className="text-(length:--text-dense) text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 {t('goalList.loadErrorDescription')}
               </div>
-              <Button size="sm" onClick={() => void refreshGoals(scopeId)}>
+              <Button
+                className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                size="normal"
+                onClick={() => void refreshGoals(scopeId)}
+              >
                 <RefreshCwIcon data-icon="inline-start" />
                 {t('goalList.retry')}
               </Button>
@@ -144,16 +148,18 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
                     <ToggleGroupItem value="all">{t('goalPage.filter.all')}</ToggleGroupItem>
                   </ToggleGroup>
                   <ActionIcon
+                    className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                     icon={ListIcon}
-                    size={'small'}
+                    size={{ blockSize: 32, size: 16 }}
                     style={{ alignSelf: 'center' }}
                     title={t('goalPage.view.list')}
                     variant={viewMode === 'list' ? 'filled' : 'borderless'}
                     onClick={() => setViewMode('list')}
                   />
                   <ActionIcon
+                    className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                     icon={LayoutGridIcon}
-                    size={'small'}
+                    size={{ blockSize: 32, size: 16 }}
                     style={{ alignSelf: 'center' }}
                     title={t('goalPage.view.card')}
                     variant={viewMode === 'card' ? 'filled' : 'borderless'}
@@ -186,7 +192,11 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
               </div>
               {visibleLimit < filteredGoals.length && (
                 <div className="flex flex-col items-center" style={{ paddingBlock: 8 }}>
-                  <Button size="sm" onClick={loadMoreGoals}>
+                  <Button
+                    className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                    size="normal"
+                    onClick={loadMoreGoals}
+                  >
                     {t('goalPage.loadMore')}
                   </Button>
                 </div>

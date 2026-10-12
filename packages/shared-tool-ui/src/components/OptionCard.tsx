@@ -9,14 +9,14 @@ const styles = {
   option:
     'cursor-pointer rounded-(--radius-card) px-3 py-2.5 transition-[background] duration-[120ms] ease-[ease] hover:bg-fill-quaternary',
   optionCheck: 'shrink-0 text-primary',
-  optionDescription: 'text-[12px] leading-[1.45] text-muted-foreground',
+  optionDescription: 'text-xs leading-5 text-muted-foreground',
   optionIndex:
-    'box-border size-5.5 shrink-0 rounded-[6px] bg-accent font-mono text-[12px] font-semibold leading-5.5 text-muted-foreground text-center',
+    'box-border size-5.5 shrink-0 rounded-(--radius-chip) bg-accent font-mono text-xs font-semibold leading-5.5 text-muted-foreground text-center',
   optionHighlighted: '[box-shadow:inset_0_0_0_1px_var(--border)]',
   optionLabel: 'font-medium',
   optionSelected: 'bg-accent hover:bg-accent',
   recommendedBadge:
-    'shrink-0 rounded-[999px] bg-selected px-2 py-px text-[11px] leading-4.5 text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-selected px-2 py-px text-xs leading-5 text-muted-foreground',
 };
 
 export interface OptionCardProps {

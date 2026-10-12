@@ -12,10 +12,11 @@ import type { RunTasksParams, RunTasksState } from '../../../types';
 
 const styles = {
   countBadge:
-    'shrink-0 rounded-[999px] bg-warning-wash px-2 py-px text-xs font-medium text-warning',
-  failedBadge: 'shrink-0 rounded-[999px] bg-destructive-wash px-2 py-px text-xs text-destructive',
+    'shrink-0 rounded-(--radius-chip) bg-warning-wash px-2 py-px text-xs font-medium text-warning-text',
+  failedBadge:
+    'shrink-0 rounded-(--radius-chip) bg-destructive-wash px-2 py-px text-xs text-destructive-text',
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-xs text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-2 py-px font-mono text-xs text-muted-foreground',
   moreBadge: 'shrink-0 text-xs text-foreground-tertiary',
   separator: 'shrink-0 text-foreground-quaternary',
 };
@@ -34,7 +35,7 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
     if (isArgumentsStreaming && count === 0) {
       return (
         <div className={inspectorTextStyles.root}>
-          <Play size={12} style={{ color: 'var(--warning)' }} />
+          <Play className="text-warning-text" size={12} />
           <span className={shinyTextStyles.shinyText}>
             {t('builtins.orvilo-task.apiName.runTasks')}
           </span>
@@ -43,8 +44,8 @@ export const RunTasksInspector = memo<BuiltinInspectorProps<RunTasksParams, RunT
     }
 
     return (
-      <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
-        <Play size={12} style={{ color: 'var(--warning)' }} />
+      <div className={cn(inspectorTextStyles.root, 'flex-wrap gap-1.5')}>
+        <Play className="text-warning-text" size={12} />
         <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.runTasks')}
         </span>

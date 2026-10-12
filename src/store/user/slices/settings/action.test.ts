@@ -330,17 +330,24 @@ describe('SettingsAction', () => {
 
   describe('pending settings retry transport', () => {
     const refreshUserState = useUserStore.getState().refreshUserState;
+    const settingsUpdateResult: Awaited<ReturnType<typeof userService.updateUserSettings>> = {
+      command: 'UPDATE',
+      fields: [],
+      oid: 0,
+      rowCount: 1,
+      rows: [],
+    };
     const deferred = () => {
       let resolve!: () => void;
       let reject!: (error: Error) => void;
-      const promise = new Promise<void>((yes, no) => {
-        resolve = yes;
+      const promise = new Promise<typeof settingsUpdateResult>((yes, no) => {
+        resolve = () => yes(settingsUpdateResult);
         reject = no;
       });
       return { promise, reject, resolve };
     };
     beforeEach(() => {
-      vi.mocked(userService.updateUserSettings).mockReset().mockResolvedValue(undefined);
+      vi.mocked(userService.updateUserSettings).mockReset().mockResolvedValue(settingsUpdateResult);
       useUserStore.setState({
         settings: {},
         refreshUserState: vi.fn().mockResolvedValue(undefined),
@@ -386,7 +393,7 @@ describe('SettingsAction', () => {
             config: {
               model: 'other-model',
               provider: 'other-provider',
-              temperature: 0.123,
+              params: { temperature: 0.123 },
             },
           },
         },
@@ -400,7 +407,10 @@ describe('SettingsAction', () => {
         'offline',
       );
       const failedPayload = vi.mocked(userService.updateUserSettings).mock.calls[0][0];
-      expect(failedPayload).toHaveProperty('defaultAgent.config', { ...pair, temperature: 0.123 });
+      expect(failedPayload).toHaveProperty('defaultAgent.config', {
+        ...pair,
+        params: { temperature: 0.123 },
+      });
       await useUserStore.getState().updateDefaultAgent({ config: pair });
       expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
       expect(vi.mocked(userService.updateUserSettings).mock.calls[1][0]).toEqual(failedPayload);

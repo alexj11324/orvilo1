@@ -2,6 +2,7 @@
 
 import { ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
+import type { ResourceLanguage } from 'i18next';
 import { memo, type PropsWithChildren, useEffect, useRef, useState } from 'react';
 import { isRtlLang } from 'rtl-detect';
 
@@ -42,7 +43,7 @@ const updateDayjs = async (lang: string, isCurrent: () => boolean) => {
 
 interface WorkbenchLocaleProps extends PropsWithChildren {
   defaultLang?: string;
-  resources?: Record<string, unknown>;
+  resources?: ResourceLanguage;
 }
 
 const WorkbenchLocale = memo<WorkbenchLocaleProps>(({ children, defaultLang, resources }) => {

@@ -124,7 +124,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
   return (
     <div className={`flex flex-row gap-4 items-center justify-between ${'py-3'}`}>
       <div className="flex flex-row gap-4 items-center" style={{ flex: 1, overflow: 'hidden' }}>
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-(--radius-card) bg-muted">
           {renderAvatar()}
         </div>
         <div className="flex min-w-0 flex-col gap-1">

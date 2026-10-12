@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next';
 import type { CreateTaskParams, CreateTasksParams, CreateTasksState } from '../../../types';
 
 const styles = {
-  failedBadge: 'shrink-0 rounded-[999px] bg-destructive-wash px-2 py-px text-xs text-destructive',
+  failedBadge:
+    'shrink-0 rounded-(--radius-chip) bg-destructive-wash px-2 py-px text-xs text-destructive',
   header: 'flex items-center gap-2 px-3 py-2 [border-block-end:1px_solid_var(--sidebar-border)]',
   headerCount: 'text-(length:--text-dense) font-medium text-foreground',
   identifier:

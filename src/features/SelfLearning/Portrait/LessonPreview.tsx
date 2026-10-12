@@ -14,9 +14,10 @@ import { previewSections } from '../helpers';
 import { useExpertiseLesson } from '../hooks';
 
 const styles = {
-  // Preserve the public Popup's available-height bound and exact380px preview cap.
-  root: 'overflow-y-auto w-[380px] max-w-[min(380px,calc(100vw-32px))] max-h-[calc(var(--available-height,100dvh)-16px)]',
-  section: 'grid grid-cols-[56px_minmax(0,1fr)] gap-3 items-baseline',
+  // Keep the public popup available-height bound; the preview and label column
+  // use scalable component dimensions on the current application spacing basis.
+  root: 'overflow-y-auto w-95 max-w-[min(calc(var(--spacing)*95),calc(100vw_-_var(--spacing)*8))] max-h-[calc(var(--available-height,100dvh)_-_var(--spacing)*4)]',
+  section: 'grid grid-cols-[calc(var(--spacing)*14)_minmax(0,1fr)] gap-3 items-baseline',
   separator: 'flex-none h-px bg-divider',
   retry: 'cursor-pointer self-start border-0 bg-transparent',
   open: 'flex-none text-xs leading-5 text-muted-foreground whitespace-nowrap hover:text-foreground',

@@ -28,7 +28,7 @@ import { highlightTextStyles } from '@/styles';
 import type { AddPreferenceMemoryParams } from '../../types';
 
 const styles = {
-  container: 'overflow-hidden w-full border border-sidebar-border rounded-[16px] bg-card',
+  container: 'overflow-hidden w-full border border-sidebar-border rounded-(--radius-card) bg-card',
   content: '[padding-block:12px] [padding-inline:16px]',
   detail: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
   directive: 'text-sm leading-[1.6] text-foreground',

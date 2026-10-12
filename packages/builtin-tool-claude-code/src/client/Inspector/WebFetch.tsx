@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { ClaudeCodeApiName, type WebFetchArgs } from '../../types';
 
 const styles = {
-  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-(--radius-chip) bg-accent',
   icon: 'shrink-0 text-foreground-description',
   url: 'overflow-hidden min-w-0 font-mono text-xs text-foreground text-ellipsis whitespace-nowrap',
 };

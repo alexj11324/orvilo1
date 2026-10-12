@@ -87,7 +87,7 @@ const PeriodGrid = ({
         variant="ghost"
         onClick={() => setYear((y) => y - (picker === 'year' ? 12 : 1))}
       >
-        <ChevronLeft size={14} />
+        <ChevronLeft size={16} />
       </Button>
       <span className="text-sm font-medium">
         {picker === 'year' ? `${year - 5} - ${year + 6}` : year}
@@ -99,7 +99,7 @@ const PeriodGrid = ({
         variant="ghost"
         onClick={() => setYear((y) => y + (picker === 'year' ? 12 : 1))}
       >
-        <ChevronRight size={14} />
+        <ChevronRight size={16} />
       </Button>
     </div>
   );
@@ -267,7 +267,7 @@ const DatePicker = memo<DatePickerProps>(
 
     const triggerContent = (
       <>
-        {prefix ?? <CalendarIcon className="text-muted-foreground" size={13} />}
+        {prefix ?? <CalendarIcon className="text-muted-foreground" size={16} />}
         <span
           className={cn(
             'truncate text-left',
@@ -282,7 +282,7 @@ const DatePicker = memo<DatePickerProps>(
             {...clickableProps()}
             aria-label={t('datePicker.clear')}
             className={cn(
-              'flex items-center rounded-sm text-muted-foreground hover:text-foreground',
+              'flex items-center rounded-(--radius-input) text-muted-foreground hover:text-foreground',
               CLICKABLE_FOCUS_RING,
             )}
             onClick={clearValue}
@@ -294,7 +294,7 @@ const DatePicker = memo<DatePickerProps>(
               clearValue(e);
             }}
           >
-            <X size={13} />
+            <X size={16} />
           </span>
         ) : suffixIcon === null ? null : (
           (suffixIcon ?? null)

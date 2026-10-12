@@ -1,6 +1,7 @@
 'use client';
 
 import { ModalHost as BaseModalHost, ToastHost as BaseToastHost } from '@lobehub/ui/base-ui';
+import type { ResourceLanguage } from 'i18next';
 import { memo, type PropsWithChildren } from 'react';
 
 import { ModalHost } from '@/components/Modal';
@@ -12,7 +13,7 @@ import WorkbenchTheme from './WorkbenchTheme';
 
 interface WorkbenchShellProps extends PropsWithChildren {
   locale?: string;
-  resources?: Record<string, unknown>;
+  resources?: ResourceLanguage;
 }
 
 const WorkbenchShell = memo<WorkbenchShellProps>(({ children, resources, locale: localeProp }) => {

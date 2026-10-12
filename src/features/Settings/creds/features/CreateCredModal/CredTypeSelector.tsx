@@ -46,9 +46,11 @@ const CredTypeSelector: FC<CredTypeSelectorProps> = ({ disabled, onSelect }) => 
     <div className="grid grid-cols-2 gap-4">
       {typeConfigs.map(({ type, icon, description }) => (
         <Button
-          className="h-auto flex-col whitespace-normal p-4"
+          multiline
+          className="flex-col p-4"
           disabled={disabled}
           key={type}
+          size="normal"
           type="button"
           variant="outline"
           onClick={() => {
@@ -57,7 +59,7 @@ const CredTypeSelector: FC<CredTypeSelectorProps> = ({ disabled, onSelect }) => 
           }}
         >
           <div className="flex flex-col items-center text-center">
-            <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-muted">
+            <div className="mb-3 flex size-12 items-center justify-center rounded-(--radius-card) bg-muted">
               {icon}
             </div>
             <div className="mb-1 font-medium">{t(`creds.types.${type}`)}</div>

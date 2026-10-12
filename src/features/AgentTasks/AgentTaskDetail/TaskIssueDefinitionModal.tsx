@@ -196,7 +196,7 @@ const TaskIssueDefinitionForm = ({
           </legend>
           {COPY_FIELDS.map((field) => (
             <label
-              className="flex cursor-pointer items-center gap-2 rounded-md p-2 hover:bg-accent"
+              className="flex cursor-pointer items-center gap-2 rounded-(--radius-button) p-2 hover:bg-accent"
               key={field}
             >
               <Checkbox
@@ -264,6 +264,7 @@ const TaskIssueDefinitionForm = ({
               {(['day', 'week', 'month', 'year'] as const).map((value) => (
                 <Button
                   aria-pressed={cadence === value}
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                   disabled={pending}
                   key={value}
                   size="sm"
@@ -311,16 +312,24 @@ const TaskIssueDefinitionForm = ({
         </p>
       ) : null}
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-destructive-text" role="alert">
           {error}
         </p>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button disabled={pending} size="lg" type="button" variant="outline" onClick={close}>
+        <Button
+          className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+          disabled={pending}
+          size="lg"
+          type="button"
+          variant="outline"
+          onClick={close}
+        >
           {t(templateId ? 'close' : 'cancel', { ns: 'common' })}
         </Button>
         {templateId ? (
           <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             loading={pending}
             size="lg"
             type="button"
@@ -330,6 +339,7 @@ const TaskIssueDefinitionForm = ({
           </Button>
         ) : (
           <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             disabled={kind !== 'recurring' && !name.trim()}
             loading={pending}
             size="lg"

@@ -465,7 +465,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
                     components={[
                       <span key="0" />,
                       <a
-                        className="mx-1 rounded-sm underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="mx-1 rounded-(--radius-button) underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                         href={AES_GCM_URL}
                         key="1"
                         rel="noreferrer"

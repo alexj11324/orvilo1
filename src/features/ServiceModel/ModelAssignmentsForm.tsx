@@ -49,7 +49,7 @@ type LoadingKey = 'defaultAgent' | UserServiceModelConfigKey;
 
 type SavingGroup = 'assignments' | 'memory';
 
-type ModelChoice = Pick<SystemAgentItem, 'model' | 'provider'>;
+type ModelChoice = Pick<SystemAgentItem, 'model'> & Partial<Pick<SystemAgentItem, 'provider'>>;
 type AssignmentValue = Omit<SystemAgentItem, 'contextLimit'> & { contextLimit: number | null };
 interface ModelAssignmentsValues {
   defaultAgent: { config: ModelChoice };

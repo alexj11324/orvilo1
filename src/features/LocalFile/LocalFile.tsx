@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { useLocalFileActions } from './useLocalFileActions';
@@ -12,8 +13,8 @@ const styles = {
   container:
     'cursor-pointer py-0.5 ps-1 pe-2 rounded-(--radius-chip) text-foreground [&:hover]:text-foreground [&:hover]:bg-accent focus-visible:[outline:2px_solid_var(--ant-color-primary-border)] focus-visible:outline-offset-1',
   segment:
-    "cursor-pointer relative inline-flex gap-1.5 items-center py-1.25 px-2.75 border-0 border-none [font-family:inherit] text-(length:--text-dense) leading-5 text-muted-foreground whitespace-nowrap [background:transparent] [&+&::before]:content-[''] [&+&::before]:absolute [&+&::before]:[inset-block:5px] [&+&::before]:[inset-inline-start:0] [&+&::before]:w-px [&+&::before]:[background:var(--ant-color-border-secondary)] [&:hover]:text-foreground [&:hover]:bg-accent [&:hover::before]:[background:transparent] [&:hover+&::before]:bg-transparent focus-visible:rounded-[6px] focus-visible:[outline:2px_solid_var(--ant-color-primary-border)] focus-visible:-outline-offset-2",
-  segmented: 'overflow-hidden inline-flex items-stretch rounded-(--ant-border-radius-lg)',
+    "cursor-pointer relative inline-flex gap-1.5 items-center py-1 px-3 border-0 border-none [font-family:inherit] text-sm leading-5.5 text-muted-foreground whitespace-nowrap bg-transparent [&+&::before]:content-[''] [&+&::before]:absolute [&+&::before]:inset-y-1.5 [&+&::before]:start-0 [&+&::before]:w-px [&+&::before]:bg-divider [&:hover]:text-foreground [&:hover]:bg-accent [&:hover::before]:bg-transparent [&:hover+&::before]:bg-transparent focus-visible:rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-(color:--primary-border) focus-visible:-outline-offset-2 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11",
+  segmented: 'overflow-hidden inline-flex items-stretch rounded-(--radius-overlay)',
   title: 'overflow-hidden block leading-5 text-inherit text-ellipsis whitespace-nowrap',
 };
 
@@ -40,10 +41,14 @@ export const LocalFile = ({
 
   const fileContent = (
     <div
-      className={cn('flex flex-row items-center gap-1', styles.container)}
       role={handleClick ? 'button' : undefined}
       style={{ display: 'inline-flex', verticalAlign: 'middle' }}
       tabIndex={handleClick ? 0 : undefined}
+      className={cn(
+        'flex flex-row items-center gap-1',
+        styles.container,
+        handleClick && 'min-h-8 [@media(pointer:coarse)]:min-h-11',
+      )}
       onClick={handleClick}
       onKeyDown={
         handleClick
@@ -56,10 +61,7 @@ export const LocalFile = ({
       }
     >
       <FileIcon fileName={name} isDirectory={isDirectory} size={22} variant={'raw'} />
-      <div
-        className="flex flex-row items-baseline gap-1"
-        style={{ overflow: 'hidden', width: '100%' }}
-      >
+      <div className="flex w-full flex-row items-baseline gap-1 overflow-hidden">
         <div className={styles.title}>{name}</div>
       </div>
     </div>
@@ -74,19 +76,37 @@ export const LocalFile = ({
   const popoverContent = (
     <div className={styles.segmented}>
       {canPreview && (
-        <button className={styles.segment} type={'button'} onClick={handlePreview}>
-          <EyeIcon size={15} />
+        <Button
+          className={styles.segment}
+          size="compact"
+          type={'button'}
+          variant="ghost"
+          onClick={handlePreview}
+        >
+          <EyeIcon size={16} />
           {t('LocalFile.action.preview')}
-        </button>
+        </Button>
       )}
-      <button className={styles.segment} type={'button'} onClick={handleOpenFile}>
-        <ExternalLink size={15} />
+      <Button
+        className={styles.segment}
+        size="compact"
+        type={'button'}
+        variant="ghost"
+        onClick={handleOpenFile}
+      >
+        <ExternalLink size={16} />
         {t('LocalFile.action.open')}
-      </button>
-      <button className={styles.segment} type={'button'} onClick={handleOpenFolder}>
-        <FolderOpen size={15} />
+      </Button>
+      <Button
+        className={styles.segment}
+        size="compact"
+        type={'button'}
+        variant="ghost"
+        onClick={handleOpenFolder}
+      >
+        <FolderOpen size={16} />
         {t('LocalFile.action.showInFolder')}
-      </button>
+      </Button>
     </div>
   );
 

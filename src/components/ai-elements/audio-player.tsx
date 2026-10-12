@@ -34,10 +34,10 @@ export const AudioPlayer = ({ children, style, ...props }: AudioPlayerProps) => 
         '--media-control-hover-background': 'var(--color-accent)',
         '--media-control-padding': '0px',
         '--media-font': 'var(--font-sans)',
-        '--media-font-size': '10px',
+        '--media-font-size': 'var(--text-xs)',
         '--media-icon-color': 'currentColor',
         '--media-preview-time-background': 'var(--color-background)',
-        '--media-preview-time-border-radius': 'var(--radius-md)',
+        '--media-preview-time-border-radius': 'var(--radius-overlay)',
         '--media-preview-time-text-shadow': 'none',
         '--media-primary-color': 'var(--color-primary)',
         '--media-range-bar-color': 'var(--color-primary)',
@@ -46,7 +46,7 @@ export const AudioPlayer = ({ children, style, ...props }: AudioPlayerProps) => 
         '--media-text-color': 'var(--color-foreground)',
         '--media-tooltip-arrow-display': 'none',
         '--media-tooltip-background': 'var(--color-background)',
-        '--media-tooltip-border-radius': 'var(--radius-md)',
+        '--media-tooltip-border-radius': 'var(--radius-overlay)',
         ...style,
       } as CSSProperties
     }
@@ -127,7 +127,7 @@ export const AudioPlayerSeekForwardButton = ({
 export type AudioPlayerTimeDisplayProps = ComponentProps<typeof MediaTimeDisplay>;
 
 export const AudioPlayerTimeDisplay = ({ className, ...props }: AudioPlayerTimeDisplayProps) => (
-  <div className="flex flex-none items-center rounded-lg border px-2">
+  <div className="flex flex-none items-center rounded-(--radius-input) border px-2">
     <MediaTimeDisplay
       className={cn('tabular-nums', className)}
       data-slot="audio-player-time-display"
@@ -139,7 +139,7 @@ export const AudioPlayerTimeDisplay = ({ className, ...props }: AudioPlayerTimeD
 export type AudioPlayerTimeRangeProps = ComponentProps<typeof MediaTimeRange>;
 
 export const AudioPlayerTimeRange = ({ className, ...props }: AudioPlayerTimeRangeProps) => (
-  <div className="flex min-w-0 flex-1 items-center rounded-lg border px-2">
+  <div className="flex min-w-0 flex-1 items-center rounded-(--radius-input) border px-2">
     <MediaTimeRange className={cn('', className)} data-slot="audio-player-time-range" {...props} />
   </div>
 );
@@ -150,7 +150,7 @@ export const AudioPlayerDurationDisplay = ({
   className,
   ...props
 }: AudioPlayerDurationDisplayProps) => (
-  <div className="flex flex-none items-center rounded-lg border px-2">
+  <div className="flex flex-none items-center rounded-(--radius-input) border px-2">
     <MediaDurationDisplay
       className={cn('tabular-nums', className)}
       data-slot="audio-player-duration-display"
@@ -162,7 +162,7 @@ export const AudioPlayerDurationDisplay = ({
 export type AudioPlayerMuteButtonProps = ComponentProps<typeof MediaMuteButton>;
 
 export const AudioPlayerMuteButton = ({ className, ...props }: AudioPlayerMuteButtonProps) => (
-  <div className="flex flex-none items-center rounded-lg border px-2">
+  <div className="flex flex-none items-center rounded-(--radius-input) border px-2">
     <MediaMuteButton
       className={cn('', className)}
       data-slot="audio-player-mute-button"
@@ -174,7 +174,7 @@ export const AudioPlayerMuteButton = ({ className, ...props }: AudioPlayerMuteBu
 export type AudioPlayerVolumeRangeProps = ComponentProps<typeof MediaVolumeRange>;
 
 export const AudioPlayerVolumeRange = ({ className, ...props }: AudioPlayerVolumeRangeProps) => (
-  <div className="flex flex-none items-center rounded-lg border px-2">
+  <div className="flex flex-none items-center rounded-(--radius-input) border px-2">
     <MediaVolumeRange
       className={cn('', className)}
       data-slot="audio-player-volume-range"

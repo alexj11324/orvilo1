@@ -4,10 +4,10 @@ import { memo, useLayoutEffect, useRef } from 'react';
 import type { CellModel, CellStyle, SheetModel } from './model';
 
 const styles = {
-  // File-content defaults remain white paper with the original fallback ink,
-  // type/line box and grid edges. Workbook-authored inline styles override them.
+  // Unformatted cells are document body on white paper. Authored workbook
+  // ink, fonts, fills and borders continue to override this readable fallback.
   container:
-    'flex-1 overflow-auto bg-white text-[#1a1a1a] [&_table]:table-fixed [&_table]:border-separate [&_table]:border-spacing-0 [&_td]:overflow-hidden [&_td]:border-e [&_td]:border-be [&_td]:border-[#e0e2e6] [&_td]:bg-white [&_td]:px-1 [&_td]:py-px [&_td]:text-[13px] [&_td]:leading-[1.35] [&_td]:align-bottom',
+    'flex-1 overflow-auto bg-white text-black [&_table]:table-fixed [&_table]:border-separate [&_table]:border-spacing-0 [&_td]:overflow-hidden [&_td]:border-e [&_td]:border-be [&_td]:border-neutral-200 [&_td]:bg-white [&_td]:px-1 [&_td]:py-px [&_td]:text-sm [&_td]:leading-5.5 [&_td]:align-bottom',
   corner: 'inset-bs-0 start-0 z-5',
   frozen: '[&_td]:sticky [&_td]:z-3 [&_th]:sticky [&_th]:z-3',
   frozenLast: '[&_td]:shadow-[0_1px_0_0_var(--border)] [&_th]:shadow-[0_1px_0_0_var(--border)]',
@@ -46,7 +46,12 @@ const toCssStyle = (style: CellStyle): Record<string, string> => {
   if (style.fc) css.color = style.fc;
   if (style.b) css.fontWeight = '600';
   if (style.i) css.fontStyle = 'italic';
-  if (style.fs) css.fontSize = `${pointToPixel(style.fs)}px`;
+  if (style.fs) {
+    css.fontSize = `${pointToPixel(style.fs)}px`;
+    // Document-authored sizes need a proportional line box: a 30pt font is
+    // 40px, so the UI's fixed 22px body line would clip automatic/multiline rows.
+    css.lineHeight = '1.35';
+  }
   if (style.ff) css.fontFamily = `"${style.ff}", var(--font-family, sans-serif)`;
   for (const [key, side] of Object.entries(style.bd ?? {})) {
     const edge = BORDER_EDGE[key as keyof typeof BORDER_EDGE];

@@ -1,5 +1,4 @@
 'use client';
-// #691: Preserve the existing 28px title geometry pending a design-scale choice; no matching role is approved.
 
 import {
   ReactCodeblockPlugin,
@@ -21,10 +20,8 @@ import { Textarea } from '@/components/ui/textarea';
 import type { CreatePlanParams } from '../../types';
 
 const styles = {
-  description:
-    'text-sm leading-(--text-base--line-height) text-muted-foreground md:text-sm md:leading-(--text-sm--line-height)',
-  title:
-    'text-[28px] leading-(--text-base--line-height) font-semibold md:text-[28px] md:leading-(--text-sm--line-height)',
+  description: 'text-sm leading-5.5 text-muted-foreground',
+  title: 'text-xl leading-7 font-semibold',
 };
 
 const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(

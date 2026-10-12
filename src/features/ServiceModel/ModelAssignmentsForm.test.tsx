@@ -38,11 +38,18 @@ const rowKeys = [
   'userMemoryPersonaWriter',
   'userMemoryEmbedding',
 ] as const;
+const settingsUpdateResult: Awaited<ReturnType<typeof userService.updateUserSettings>> = {
+  command: 'UPDATE',
+  fields: [],
+  oid: 0,
+  rowCount: 1,
+  rows: [],
+};
 const deferred = () => {
   let resolve!: () => void;
   let reject!: (error: Error) => void;
-  const promise = new Promise<void>((yes, no) => {
-    resolve = yes;
+  const promise = new Promise<typeof settingsUpdateResult>((yes, no) => {
+    resolve = () => yes(settingsUpdateResult);
     reject = no;
   });
   return { promise, reject, resolve };
@@ -73,7 +80,7 @@ describe('ModelAssignmentsForm owned autosave', () => {
   beforeEach(() => {
     access.allowed = true;
     access.reason = undefined;
-    vi.mocked(userService.updateUserSettings).mockReset().mockResolvedValue(undefined);
+    vi.mocked(userService.updateUserSettings).mockReset().mockResolvedValue(settingsUpdateResult);
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const defaultSettings = merge(DEFAULT_SETTINGS, {
       defaultAgent: { config: { model: 'fixture-current', provider: 'orvilo' } },

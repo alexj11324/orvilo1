@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import '../../../apps/auth/app/virtual-modules.d.ts';
+
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -49,7 +51,10 @@ function StyledMarker() {
       createElement(ColorSwatches, {
         colors: [{ color: renderState.primary, title: 'actual retained SDK color' }],
         enableColorPicker: true,
-        texts: { custom: 'actual retained SDK color picker' },
+        texts: {
+          custom: 'actual retained SDK color picker',
+          presets: 'actual retained SDK preset colors',
+        },
       }),
     ),
   );

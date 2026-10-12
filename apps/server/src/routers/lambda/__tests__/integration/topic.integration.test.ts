@@ -592,6 +592,27 @@ describe('Topic Router Integration Tests', () => {
       expect(updatedTopic.sessionId).toBeNull();
     });
 
+    it('should not keep a caller-supplied session next to the new agent', async () => {
+      const caller = topicRouter.createCaller(createTestContext(userId));
+      const topicId = await caller.createTopic({ title: 'Handoff', sessionId: testSessionId });
+
+      const { agents } = await import('@/database/schemas');
+      const [nextAgent] = await serverDB
+        .insert(agents)
+        .values({ userId, title: 'Next Agent' })
+        .returning();
+
+      await caller.updateTopic({
+        id: topicId,
+        value: { agentId: nextAgent.id, sessionId: testSessionId },
+      });
+
+      const [updatedTopic] = await serverDB.select().from(topics).where(eq(topics.id, topicId));
+
+      expect(updatedTopic.agentId).toBe(nextAgent.id);
+      expect(updatedTopic.sessionId).toBeNull();
+    });
+
     it('should refuse to move the topic to an agent the caller cannot reach', async () => {
       const caller = topicRouter.createCaller(createTestContext(userId));
       const topicId = await caller.createTopic({ title: 'Mine', sessionId: testSessionId });

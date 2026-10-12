@@ -55,7 +55,8 @@ Both Continue and Fork are explicit user agent picks, so each writes
 
 - The row's `agent_id` is set to that Agent. Its `session_id` follows: the
   Agent's legacy session when it has one, otherwise `null`, so the previous
-  Agent's session never stays on the row.
+  Agent's session never stays on the row. A `sessionId` sent together with the
+  `agentId` is ignored for the same reason.
 - The move counts as a transfer. In a workspace, only the topic's creator or a
   workspace owner may do it, the same rule as `batchMoveTopics`. Other members
   can still co-edit the title, status and metadata.

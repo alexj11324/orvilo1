@@ -1132,8 +1132,10 @@ export const topicRouter = router({
       // so the row's agent and its legacy session move together. An agent
       // without a session clears the previous agent's session instead of
       // leaving it on the row.
+      // A caller-supplied sessionId is ignored then: it could keep the previous
+      // agent's session next to the new agent.
       let resolvedSessionId: string | null | undefined = restValue.sessionId;
-      if (agentId && !resolvedSessionId) {
+      if (agentId) {
         const resolved = await resolveContext(
           { agentId },
           ctx.serverDB,

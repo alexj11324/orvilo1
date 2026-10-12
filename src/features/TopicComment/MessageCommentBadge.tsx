@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { MessageCircle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,30 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  button: css`
-    && {
-      gap: 4px;
-      padding-inline: 6px;
-      border-radius: ${cssVar.borderRadiusXS};
-      color: ${cssVar.colorTextTertiary};
-    }
-
-    &&:hover {
-      color: ${cssVar.colorTextSecondary};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &&:active {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  container: css`
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  button:
+    'gap-1 rounded-(--radius-button) px-1.5 text-xs leading-5 text-muted-foreground hover:bg-accent hover:text-foreground active:bg-accent active:text-foreground has-data-[icon=inline-start]:pl-1.5 has-data-[icon=inline-end]:pr-1.5',
+  container: 'flex flex-none items-center rounded-(--radius-button) bg-secondary',
+};
 
 interface MessageCommentBadgeProps {
   count: number;
@@ -43,16 +23,16 @@ const MessageCommentBadge = memo<MessageCommentBadgeProps>(({ count, messageId, 
   const label = t('topicComment.openMessageComments', { count });
 
   return (
-    <div className={cx(styles.container, 'flex items-center flex-none p-0.5')}>
+    <div className={styles.container}>
       <Button
         aria-label={label}
         className={styles.button}
-        size="sm"
+        size="compact"
         title={label}
         variant="ghost"
         onClick={() => openTopicComments(topicId, messageId)}
       >
-        <MessageCircle data-icon="inline-start" />
+        <MessageCircle className="size-4" data-icon="inline-start" size={16} />
         {count > 99 ? '99+' : count}
       </Button>
     </div>

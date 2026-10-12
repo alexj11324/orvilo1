@@ -1,38 +1,32 @@
-import { type ToolManifest } from '@orvilo/types';
 import { FileCode } from 'lucide-react';
 import { memo } from 'react';
+import { useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import AForm, { type FormProps } from '@/components/GroupForm';
 import ManifestPreviewer from '@/components/ManifestPreviewer';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import PluginTag from '@/components/Plugins/PluginTag';
 import { Button } from '@/components/ui/button';
 import { pluginHelpers } from '@/store/tool';
 
+import { type McpDevForm } from '../MCPManifestForm/utils';
 import ApiVisualizer from './ApiVisualizer';
 import PluginEmptyState from './EmptyState';
 
-const PluginPreview = memo<{ form: NonNullable<FormProps['form']> }>(({ form }) => {
+const PluginPreview = memo<{ form: McpDevForm }>(({ form }) => {
   const { t } = useTranslation('plugin');
-  const manifest: ToolManifest = AForm.useWatch(['manifest'], form);
+  const manifest = useWatch({ control: form.control, name: 'manifest' });
   const meta = manifest?.meta;
 
   if (!manifest)
     return (
-      <div
-        className="flex flex-col h-full"
-        style={{ background: 'var(--ant-color-bg-layout)', flex: 2 }}
-      >
+      <div className="flex flex-2 flex-col h-full bg-background">
         <PluginEmptyState />
       </div>
     );
 
   return (
-    <div
-      className="flex flex-col gap-6 p-3"
-      style={{ background: 'var(--ant-color-bg-layout)', overflowY: 'auto', flex: 2 }}
-    >
+    <div className="flex flex-2 flex-col gap-6 overflow-y-auto bg-background p-3 text-sm leading-5.5">
       <div className="rounded-(--radius-card) border bg-card flex flex-col">
         <div className="px-4 py-2 font-medium">{t('dev.preview.card')}</div>
         <div className="flex flex-row gap-4 justify-between p-4">
@@ -43,7 +37,7 @@ const PluginPreview = memo<{ form: NonNullable<FormProps['form']> }>(({ form }) 
                 {pluginHelpers.getPluginTitle(meta) || 'Plugin Title'}
                 <PluginTag type={'customPlugin'} />
               </div>
-              <div className="text-muted-foreground" style={{ fontSize: 12 }}>
+              <div className="text-xs leading-5 text-muted-foreground">
                 {pluginHelpers.getPluginDesc(meta) || 'Plugin Description'}
               </div>
             </div>
@@ -52,8 +46,8 @@ const PluginPreview = memo<{ form: NonNullable<FormProps['form']> }>(({ form }) 
           {manifest && (
             <ManifestPreviewer manifest={manifest}>
               <div className="flex flex-col">
-                <Button>
-                  <FileCode data-icon="inline-start" size={'1em'} />
+                <Button type="button">
+                  <FileCode data-icon="inline-start" size={16} />
                   {t('dev.mcp.previewManifest')}
                 </Button>
               </div>

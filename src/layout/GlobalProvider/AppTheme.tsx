@@ -144,8 +144,7 @@ const AppTheme = memo<AppThemeProps>(
             {!!customFontURL && <FontLoader url={customFontURL} />}
             <BaseGlobalStyle />
             <GlobalStyle />
-            <ThemeRoles />
-            {children}
+            <ThemeRoles>{children}</ThemeRoles>
           </ThemeProvider>
         </ConfigProvider>
       </AntdStyleLayer>

@@ -51,6 +51,7 @@ const ChatMinimap = memo(() => {
       >
         <div
           className={cn(styles.rail, 'flex flex-col', hovered && 'pointer-events-none opacity-0')}
+          inert={hovered}
           role={'group'}
         >
           {indicators.map(({ id, width, virtuosoIndex }, position) => (
@@ -67,6 +68,7 @@ const ChatMinimap = memo(() => {
         </div>
         <div
           aria-hidden={!hovered}
+          inert={!hovered}
           className={cn(
             styles.previewPanel,
             hovered

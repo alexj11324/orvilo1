@@ -2,7 +2,6 @@ import { CircleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { FormProps } from '@/components/GroupForm';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,10 +10,10 @@ import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
 import { electronStylish } from '@/styles/electron';
 
-import { parseMcpInput } from './utils';
+import { type McpDevForm, parseMcpInput, setMcpDevValues } from './utils';
 
 interface QuickImportSectionProps {
-  form: NonNullable<FormProps['form']>;
+  form: McpDevForm;
   isEditMode?: boolean;
   onClearConnectionError?: () => void;
 }
@@ -68,25 +67,25 @@ const QuickImportSection = ({
     // Check for duplicate identifier (only in create mode)
     if (!isEditMode && pluginIds.includes(identifier)) {
       // Update form fields even if duplicate, so user sees the pasted values
-      form.setFieldsValue({
+      setMcpDevValues(form, {
         customParams: { mcp: mcpConfig },
         identifier,
       });
       // Trigger validation to show Form.Item error
-      form.validateFields(['identifier']);
+      void form.trigger('identifier');
       setIsImportModalVisible(false); // Close modal even on duplicate error
       setJsonInput(''); // Clear modal input
       return;
     }
 
     // All checks passed, fill the form
-    form.setFieldsValue({
+    setMcpDevValues(form, {
       customParams: { mcp: mcpConfig },
       identifier,
     });
 
     // Clear potential old validation error on identifier field
-    form.setFields([{ errors: [], name: 'identifier' }]);
+    form.clearErrors('identifier');
 
     // Clear modal state and close (or rather, hide the import UI)
     setIsImportModalVisible(false);
@@ -98,9 +97,9 @@ const QuickImportSection = ({
     return (
       <div>
         <Button
-          className="w-full"
-          size="lg"
-          style={{ marginBottom: 16 }}
+          className="mbe-4 w-full"
+          size="normal"
+          type="button"
           variant="outline"
           onClick={() => {
             setImportError(null); // Clear previous errors when opening
@@ -116,7 +115,7 @@ const QuickImportSection = ({
   return (
     <div className="flex flex-col gap-2">
       {importError && (
-        <Alert style={{ marginBottom: 8 }} variant="destructive">
+        <Alert className="mbe-2" variant="destructive">
           <CircleAlert />
           <AlertTitle>{importError}</AlertTitle>
         </Alert>
@@ -146,7 +145,8 @@ const QuickImportSection = ({
       <div className="flex flex-row justify-between">
         <Button
           className={electronStylish.nodrag}
-          size="lg"
+          size="normal"
+          type="button"
           variant="outline"
           onClick={() => {
             setIsImportModalVisible(false);
@@ -154,7 +154,7 @@ const QuickImportSection = ({
         >
           {t('common:cancel')}
         </Button>
-        <Button size="lg" variant={'default'} onClick={handleImportConfirm}>
+        <Button size="normal" type="button" variant={'default'} onClick={handleImportConfirm}>
           {t('common:import')}
         </Button>
       </div>

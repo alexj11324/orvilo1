@@ -37,10 +37,11 @@ const WorkbenchTheme = memo<PropsWithChildren>(({ children }) => {
           },
         }}
       >
-        <ThemeRoles />
-        <App style={{ height: '100%' }}>
-          <LazyMotion features={domMax}>{children}</LazyMotion>
-        </App>
+        <ThemeRoles>
+          <App style={{ height: '100%' }}>
+            <LazyMotion features={domMax}>{children}</LazyMotion>
+          </App>
+        </ThemeRoles>
       </ThemeProvider>
     </ConfigProvider>
   );

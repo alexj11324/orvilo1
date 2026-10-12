@@ -1,7 +1,7 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -54,222 +54,35 @@ type ImportJob = {
 
 const categories: Category[] = ['backlog', 'todo', 'in_progress', 'done', 'canceled'];
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  page: css`
-    overflow: auto;
-
-    width: 100%;
-    height: 100%;
-    padding-block: 32px 80px;
-    padding-inline: 24px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  wrap: css`
-    width: 100%;
-    margin-block: 0;
-    margin-inline: auto;
-  `,
-  heading: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    margin-block-end: 24px;
-  `,
-  backLink: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    color: ${cssVar.colorTextSecondary};
-    text-decoration: none;
-  `,
-  card: css`
-    overflow: hidden;
-    display: grid;
-    grid-template-columns: 25% 75%;
-    gap: 0;
-
-    min-height: 529px;
-    padding: 0;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgContainer};
-
-    @media (width <= 700px) {
-      grid-template-columns: 48px minmax(0, 1fr);
-      min-height: 460px;
-    }
-  `,
-  rail: css`
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-
-    padding: 24px;
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    @media (width <= 700px) {
-      gap: 16px;
-      padding-block: 16px;
-      padding-inline: 10px;
-    }
-  `,
-  railStep: css`
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
-
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 19.5px;
-  `,
-  railTrigger: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    border-radius: 0;
-
-    text-align: start;
-  `,
-  dot: css`
-    display: grid;
-    flex: none;
-    place-items: center;
-
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-
-    color: white;
-
-    background: ${cssVar.colorFillSecondary};
-
-    &[data-state='active'],
-    &[data-state='completed'] {
-      background: ${cssVar.colorPrimary};
-    }
-  `,
-  line: css`
-    width: 1px;
-    height: 24px;
-    margin-block: 4px;
-    margin-inline-start: 5px;
-
-    background: ${cssVar.colorBorderSecondary};
-
-    &[data-state='completed'] {
-      background: ${cssVar.colorPrimary};
-    }
-  `,
-  railLabel: css`
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 19.5px;
-
-    @media (width <= 700px) {
-      display: none;
-    }
-  `,
-  content: css`
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  `,
-  contentHeader: css`
-    padding: 24px;
-  `,
-  title: css`
-    margin: 0;
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 24px;
-  `,
-  description: css`
-    margin-block: 8px 0;
-    margin-inline: 0;
-
-    font-size: 14px;
-    line-height: 21px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  body: css`
-    overflow: auto;
-    flex: 1;
-    padding-block: 0 24px;
-    padding-inline: 24px;
-  `,
-  field: css`
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: min(100%, 420px);
-  `,
-  label: css`
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 19.5px;
-  `,
-  mapping: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 9px;
-    padding-inline: 0;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 13px;
-
-    @media (width <= 580px) {
-      grid-template-columns: 1fr;
-    }
-  `,
-  table: css`
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 13px;
-
-    & th,
-    & td {
-      padding-block: 10px;
-      padding-inline: 0;
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-      text-align: start;
-    }
-
-    & th {
-      font-weight: 500;
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  error: css`
-    margin-block: 12px;
-    margin-inline: 0;
-    font-size: 13px;
-    color: ${cssVar.colorError};
-  `,
-  footer: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    min-height: 57px;
-    padding-block: 16px;
-    padding-inline: 24px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    & button {
-      min-height: 24px;
-      border-radius: 6px;
-      font-size: 13px;
-    }
-  `,
-}));
+const styles = {
+  page: 'h-full w-full overflow-auto px-6 pbs-8 pbe-20 bg-card',
+  wrap: 'w-full my-0 mx-auto',
+  heading: 'flex items-center gap-3 mbe-6',
+  backLink:
+    'inline-flex items-center gap-1.5 text-sm leading-5.5 text-muted-foreground no-underline',
+  card: 'grid grid-cols-[25%_75%] gap-0 min-h-132.25 overflow-hidden p-0 border border-divider rounded-(--radius-card) bg-card [@media(width<=700px)]:grid-cols-[4rem_minmax(0,1fr)] [@media(width<=700px)]:min-h-115',
+  rail: 'flex flex-col gap-6 p-6 border-e border-divider [@media(width<=700px)]:gap-4 [@media(width<=700px)]:py-4 [@media(width<=700px)]:px-2.5 [@media(width<=700px)_and_(pointer:coarse)]:px-2',
+  railStep: 'flex items-start justify-start text-sm leading-5.5 font-medium',
+  railTrigger:
+    'flex min-h-9 min-w-9 items-center gap-3 rounded-(--radius-button) text-start [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
+  dot: 'size-6',
+  line: 'm-0 my-1 ms-2.875 group-data-[orientation=vertical]/stepper-nav:h-6 group-data-[orientation=vertical]/stepper-nav:w-px bg-divider data-[state=completed]:bg-primary',
+  railLabel: 'text-sm leading-5.5 font-medium [@media(width<=700px)]:hidden',
+  content: 'flex flex-col min-w-0',
+  contentHeader: 'p-6',
+  title: 'm-0 text-xl leading-7 font-semibold',
+  description: 'mbs-2 mbe-0 mx-0 text-sm leading-5.5 text-muted-foreground',
+  body: 'flex-1 overflow-auto pbe-6 px-6',
+  field: 'flex flex-col gap-2 w-[min(100%,420px)]',
+  label: 'text-sm leading-5.5 font-medium',
+  mapping:
+    'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 py-2.25 px-0 border-be border-divider text-sm leading-5.5 [@media(width<=580px)]:grid-cols-1',
+  table:
+    'w-full border-collapse text-sm leading-5.5 [&_th]:py-2.5 [&_td]:py-2.5 [&_th]:px-0 [&_td]:px-0 [&_th]:border-be [&_td]:border-be [&_th]:border-divider [&_td]:border-divider [&_th]:text-start [&_td]:text-start [&_th]:font-medium [&_th]:text-muted-foreground',
+  error: 'my-3 mx-0 text-sm leading-5.5 text-destructive-text',
+  footer: 'flex min-h-14.25 items-center justify-between gap-2 py-4 px-6 border-bs border-divider',
+  pageTitle: 'm-0 text-2xl leading-8 font-semibold',
+};
 
 /** Searchable ReUI picker backed by stable IDs. */
 function SearchPicker({
@@ -348,13 +161,13 @@ export function LinearImportCatalog() {
   const { allowed, reason } = usePermission('manage_settings');
   return (
     <main className={styles.page}>
-      <div className={cx(styles.wrap, settingWidthClassNames.wide)}>
-        <h1 className={styles.title}>{t('workspaceSetting.import.title')}</h1>
+      <div className={cn(styles.wrap, settingWidthClassNames.wide)}>
+        <h1 className={styles.pageTitle}>{t('workspaceSetting.import.title')}</h1>
         <p className={styles.description}>{t('workspaceSetting.import.catalogDescription')}</p>
         {allowed ? (
-          <div style={{ marginTop: 24 }}>
+          <div className="mbs-6">
             <Link className={styles.backLink} to={`/${workspaceSlug}/settings/imports/linear`}>
-              <LinearIcon size={18} /> {t('workspaceSetting.import.linear.title')}{' '}
+              <LinearIcon size={16} /> {t('workspaceSetting.import.linear.title')}{' '}
               <ArrowRight size={16} />
             </Link>
           </div>
@@ -685,22 +498,19 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
 
   return (
     <main className={styles.page}>
-      <div className={cx(styles.wrap, settingWidthClassNames.wide)}>
+      <div className={cn(styles.wrap, settingWidthClassNames.wide)}>
         <div className={styles.heading}>
           <Link className={styles.backLink} to={`/${workspaceSlug}/settings/imports`}>
             <ArrowLeft size={16} /> {t('workspaceSetting.import.backToImports')}
           </Link>
           <span aria-hidden="true">/</span>
-          <LinearIcon size={18} />
-          <h1 className={styles.title}>{t('workspaceSetting.import.linear.title')}</h1>
+          <LinearIcon size={16} />
+          <h1 className={styles.pageTitle}>{t('workspaceSetting.import.linear.title')}</h1>
         </div>
         {!allowed ? (
           <p className={styles.error}>{reason || t('workspaceSetting.import.permissionDenied')}</p>
         ) : (
-          <Frame
-            className={styles.card}
-            style={{ display: 'grid', gap: 0, padding: 0, borderRadius: 8 }}
-          >
+          <Frame className={styles.card}>
             <aside aria-label={t('workspaceSetting.import.progress')} className={styles.rail}>
               <Stepper
                 orientation="vertical"
@@ -717,9 +527,9 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                       key={title}
                       step={index + 1}
                     >
-                      <StepperTrigger className={styles.railTrigger}>
+                      <StepperTrigger aria-label={title} className={styles.railTrigger}>
                         <StepperIndicator className={styles.dot}>
-                          {index < step && <Check size={9} />}
+                          {index < step && <Check size={16} />}
                         </StepperIndicator>
                         <StepperTitle className={styles.railLabel}>{title}</StepperTitle>
                       </StepperTrigger>

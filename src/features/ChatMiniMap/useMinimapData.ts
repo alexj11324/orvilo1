@@ -1,8 +1,11 @@
 import debug from 'debug';
 import isEqual from 'fast-deep-equal';
 import { useCallback, useMemo } from 'react';
+import { useMediaQuery } from 'react-responsive';
 
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { type MinimapIndicator } from './types';
 import { getIndicatorWidth, getPreviewText } from './utils';
@@ -10,6 +13,9 @@ import { getIndicatorWidth, getPreviewText } from './utils';
 const log = debug('orvilo-react:chat-minimap');
 
 export const useMinimapData = () => {
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const smooth = animationMode !== 'disabled' && !reducedMotion;
   const scrollMethods = useConversationStore(conversationSelectors.virtuaScrollMethods);
   const activeIndex = useConversationStore(conversationSelectors.activeIndex);
   const messages = useConversationStore(conversationSelectors.displayMessages, isEqual);
@@ -58,9 +64,9 @@ export const useMinimapData = () => {
 
   const handleJump = useCallback(
     (virtIndex: number) => {
-      scrollMethods?.scrollToIndex(virtIndex, { align: 'start', smooth: true });
+      scrollMethods?.scrollToIndex(virtIndex, { align: 'start', smooth });
     },
-    [scrollMethods],
+    [scrollMethods, smooth],
   );
 
   return {

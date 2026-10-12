@@ -53,11 +53,12 @@ const AuthThemeLite = memo<AuthThemeLiteProps>(({ children, globalCDN }) => {
           }}
         >
           <BaseGlobalStyle />
-          <ThemeRoles />
-          <App style={{ height: '100%' }}>
-            <LazyMotion features={domMax}>{children}</LazyMotion>
-            <ToastHost />
-          </App>
+          <ThemeRoles>
+            <App style={{ height: '100%' }}>
+              <LazyMotion features={domMax}>{children}</LazyMotion>
+              <ToastHost />
+            </App>
+          </ThemeRoles>
         </ThemeProvider>
       </ConfigProvider>
     </AntdStyleLayer>

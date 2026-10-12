@@ -2,8 +2,7 @@
 
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { CircleDollarSignIcon, CoinsIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';

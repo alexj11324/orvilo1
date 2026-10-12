@@ -1,31 +1,13 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { XIcon } from 'lucide-react';
-import { type HTMLAttributes, memo } from 'react';
+import { type CSSProperties, type HTMLAttributes, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { useIsDark } from '@/hooks/useIsDark';
-
-const styles = createStaticStyles(({ css }) => ({
-  wrapper: css`
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, ${cssVar.colorBgContainer} 0%, transparent),
-        ${cssVar.colorBgContainer} var(--gradient-stop, 140px)
-      ),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cg fill='${cssVar.colorFillTertiary}' %3E %3Cpolygon fill-rule='evenodd' points='8 4 12 6 8 8 6 12 4 8 0 6 4 4 6 0 8 4'/%3E%3C/g%3E%3C/svg%3E");
-  `,
-  wrapperDark: css`
-    --gradient-stop: 80px;
-  `,
-  wrapperLight: css`
-    --gradient-stop: 140px;
-  `,
-}));
+import { useResolvedFillTertiary } from '@/styles/themeRoles';
 
 interface NotificationProps extends HTMLAttributes<HTMLDivElement> {
   height?: number | string;
@@ -52,7 +34,15 @@ const Notification = memo<NotificationProps>(
   }) => {
     const { t: tCommon } = useTranslation('common');
     const isDarkMode = useIsDark();
-    const { className: wrapperClassName, ...restWrapper } = wrapper;
+    const fillTertiary = useResolvedFillTertiary();
+    const { className: wrapperClassName, style: wrapperStyle, ...restWrapper } = wrapper;
+    const patternFill = fillTertiary
+      .replaceAll('&', '&amp;')
+      .replaceAll('"', '&quot;')
+      .replaceAll('<', '&lt;');
+    const pattern = `url("data:image/svg+xml,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="${patternFill}"><polygon fill-rule="evenodd" points="8 4 12 6 8 8 6 12 4 8 0 6 4 4 6 0 8 4"/></g></svg>`,
+    )}")`;
     return (
       show && (
         <div
@@ -65,20 +55,24 @@ const Notification = memo<NotificationProps>(
           {...rest}
         >
           {showCloseIcon && (
-            <ActionIcon
-              aria-label={tCommon('close')}
-              className="absolute z-100 inset-bs-2 end-2"
-              icon={XIcon}
-              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-              onClick={() => onCancel?.()}
-            />
+            <div className="absolute z-100 inset-bs-2 end-2 flex pointer-coarse:p-1.5">
+              <ActionIcon
+                aria-label={tCommon('close')}
+                className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                icon={XIcon}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                onClick={() => onCancel?.()}
+              />
+            </div>
           )}
           <div
-            className={cn(
-              'flex gap-4 px-5 pbs-5 pbe-4',
-              cx(
-                styles.wrapper,
-                isDarkMode ? styles.wrapperDark : styles.wrapperLight,
+            style={{ '--notification-pattern': pattern, ...wrapperStyle } as CSSProperties}
+            className={cx(
+              cn(
+                'flex gap-4 px-5 pbs-5 pbe-4 [background:linear-gradient(180deg,color-mix(in_srgb,var(--card)_0%,transparent),var(--card)_var(--gradient-stop,calc(var(--spacing)*35))),var(--notification-pattern)]',
+                isDarkMode
+                  ? '[--gradient-stop:calc(var(--spacing)*20)]'
+                  : '[--gradient-stop:calc(var(--spacing)*35)]',
                 wrapperClassName,
               ),
             )}

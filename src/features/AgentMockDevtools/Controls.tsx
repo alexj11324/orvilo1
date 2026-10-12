@@ -72,13 +72,11 @@ const styles = createStaticStyles(({ css }) => ({
   progressTrackScrubbing: css`
     background: ${cssVar.colorFillTertiary} !important;
   `,
-  selection: css`
-    flex-shrink: 0;
-    height: 44px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
 }));
+
+// Coarse trigger allocates44px; one existing border needs45px outer space.
+const SELECTION_CLASS =
+  'flex h-11 shrink-0 items-center gap-2 border-be border-divider px-3 pointer-coarse:h-[calc(var(--spacing)*11.25)]';
 
 export const Controls = memo(() => {
   const selectedCaseId = useAgentMockStore((s) => s.selectedCaseId);
@@ -175,7 +173,7 @@ export const Controls = memo(() => {
 
   return (
     <div className={styles.controls}>
-      <div className={`flex items-center gap-2 ${styles.selection}`}>
+      <div className={SELECTION_CLASS}>
         <CaseTrigger placement={'topLeft'} />
         <span style={{ flex: 1 }} />
         <span className={styles.counter}>

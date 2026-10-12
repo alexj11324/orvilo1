@@ -1,5 +1,8 @@
-import { createGlobalStyle, css } from 'antd-style';
+'use client';
+
+import { createGlobalStyle, css, useTheme } from 'antd-style';
 import { getContrast, mix, readableColor } from 'polished';
+import { createContext, createElement, type ReactNode, use, useMemo } from 'react';
 
 // One text role must remain readable on both a status wash and an outline surface.
 export const stateText = (
@@ -52,7 +55,7 @@ const stopLocalMotion = css`
 
 // Mount only in a document's top-level App/Auth/Share/Workbench theme host.
 // Resolved values keep body portals independent of scoped .orvilo-vars tokens.
-export const ThemeRoles = createGlobalStyle(({ theme }) => {
+const ThemeRoleStyles = createGlobalStyle(({ theme }) => {
   const surface = theme.colorBgContainer;
   const status = (name: string, fill: string, text: string) => {
     const wash = mix(0.1, fill, surface);
@@ -187,3 +190,56 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
     }
   `;
 });
+
+// The same value already publishes the existing accent/fill semantic CSS roles.
+// Keep resolution at the single application theme authority, not in leaf UI.
+interface ResolvedThemeRoleValues {
+  fillTertiary: string;
+  largeMinWidth: number;
+  mobileMaxWidth: number;
+}
+
+const ResolvedFillTertiaryContext = createContext<ResolvedThemeRoleValues | undefined>(undefined);
+// Current App/Auth/Share/Workbench provider audit supplies no responsive overrides.
+// This is the installed public xs alias default (screenSM 576 - 1), also used
+// for a genuinely unconfigured/outside-theme consumer. Configured consumers
+// receive their actual resolved value from the existing theme authority above.
+const DEFAULT_MOBILE_MAX_WIDTH = 575;
+// Installed/public screenLG alias default; deliberately not Tailwind lg1024.
+const DEFAULT_LARGE_MIN_WIDTH = 992;
+
+export function ThemeRoles({ children }: { children?: ReactNode }) {
+  const theme = useTheme();
+  const values = useMemo(
+    () => ({
+      fillTertiary: theme.colorFillTertiary,
+      mobileMaxWidth: theme.screenXSMax,
+      largeMinWidth: theme.screenLG,
+    }),
+    [theme.colorFillTertiary, theme.screenXSMax, theme.screenLG],
+  );
+  return createElement(
+    ResolvedFillTertiaryContext.Provider,
+    { value: values },
+    createElement(ThemeRoleStyles),
+    children,
+  );
+}
+
+export function useResolvedFillTertiary(): string {
+  const fill = use(ResolvedFillTertiaryContext);
+  if (fill === undefined) {
+    throw new Error('ThemeRoles must wrap resolved semantic token consumers');
+  }
+  return fill.fillTertiary;
+}
+
+export function useResolvedMobileMaxWidth(): number {
+  const values = use(ResolvedFillTertiaryContext);
+  return values?.mobileMaxWidth ?? DEFAULT_MOBILE_MAX_WIDTH;
+}
+
+export function useResolvedLargeMinWidth(): number {
+  const values = use(ResolvedFillTertiaryContext);
+  return values?.largeMinWidth ?? DEFAULT_LARGE_MIN_WIDTH;
+}

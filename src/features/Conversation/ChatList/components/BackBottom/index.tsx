@@ -39,6 +39,7 @@ const BackBottom = memo<BackBottomProps>(
         )}
 
         <ActionIcon
+          disabled={!visible}
           icon={ArrowDownIcon}
           style={bottomOffset ? { insetBlockEnd: 16 + bottomOffset } : undefined}
           title={t('backToBottom')}
@@ -47,12 +48,12 @@ const BackBottom = memo<BackBottomProps>(
             styles.container,
             visible
               ? '[pointer-events:all] opacity-100 [transform:translateY(0)]'
-              : 'pointer-events-none opacity-0 [transform:translateY(16px)]',
+              : 'pointer-events-none opacity-0 disabled:opacity-0 [transform:translateY(calc(var(--spacing)*4))]',
           )}
           size={{
-            blockSize: 36,
-            borderRadius: 36,
-            size: 18,
+            blockSize: 32,
+            borderRadius: '50%',
+            size: 16,
           }}
           onClick={onScrollToBottom}
         />

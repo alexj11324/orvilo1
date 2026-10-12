@@ -1,10 +1,10 @@
 'use client';
 
-import { useResponsive } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Progress, ProgressIndicator, ProgressTrack } from '@/components/ui/progress';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { type SkillRatingDistribution } from '@/types/discover';
 import { formatShortenNumber } from '@/utils/format';
 
@@ -19,7 +19,7 @@ interface RatingOverviewProps {
 const RatingOverview = memo<RatingOverviewProps>(
   ({ average = 0, totalCount = 0, distribution }) => {
     const { t } = useTranslation('discover');
-    const { mobile } = useResponsive();
+    const mobile = useIsMobile();
 
     const displayAverage = Number(average.toFixed(1));
     const stars = [5, 4, 3, 2, 1] as const;

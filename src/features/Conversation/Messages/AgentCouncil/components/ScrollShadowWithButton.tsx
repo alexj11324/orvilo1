@@ -1,5 +1,5 @@
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   type ComponentProps,
@@ -19,7 +19,7 @@ import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 const styles = {
   button:
-    'absolute z-10 top-1/2 [transform:translateY(-50%)] text-muted-foreground opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) hover:border-border hover:shadow-(--shadow-raised)',
+    "absolute z-10 top-1/2 [transform:translateY(-50%)] text-muted-foreground opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) hover:border-border hover:shadow-(--shadow-raised) focus-visible:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']",
   container:
     'relative [&:hover_.scroll-button]:opacity-100 [&:focus-within_.scroll-button]:opacity-100 [@media(hover:none)]:[&_.scroll-button]:opacity-100',
   leftButton: 'start-4',
@@ -89,15 +89,16 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
 
     return (
       <div
-        className={cx('flex', styles.container)}
+        className={cn('flex', styles.container)}
         style={{ justifyContent: justify, width: '100%', ...style }}
         {...rest}
       >
         {canScrollLeft && (
           <Button
             aria-label={tCommon('previous')}
-            className={cx(styles.button, styles.leftButton, 'scroll-button', 'rounded-full')}
-            size="compact"
+            className={cn(styles.button, styles.leftButton, 'scroll-button', 'rounded-full')}
+            size="icon"
+            type="button"
             variant="outline"
             onClick={() => handleScroll('left')}
           >
@@ -117,8 +118,9 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
         {canScrollRight && (
           <Button
             aria-label={tCommon('next')}
-            className={cx(styles.button, styles.rightButton, 'scroll-button', 'rounded-full')}
-            size="compact"
+            className={cn(styles.button, styles.rightButton, 'scroll-button', 'rounded-full')}
+            size="icon"
+            type="button"
             variant="outline"
             onClick={() => handleScroll('right')}
           >

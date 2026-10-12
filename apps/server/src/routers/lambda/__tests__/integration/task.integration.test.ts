@@ -3522,21 +3522,21 @@ describe('Task Router Integration', () => {
       expect(task.data.config).toEqual({});
     });
 
-    it('preserves the snapshotted model when the agent default changes later', async () => {
+    it('dispatches the Agent without applying a stale task model snapshot', async () => {
       await setAgentModel('claude-sonnet-4-6', 'anthropic');
       const task = await caller.create({
         assigneeAgentId: testAgentId,
         instruction: 'Snapshot then drift',
       });
 
-      // User flips the agent to an expensive chat model.
+      // The next run resolves the Agent's current saved model.
       await setAgentModel('gpt-5.4-pro', 'openai');
 
       await caller.run({ id: task.data.id });
 
-      expect(mockExecAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ model: 'claude-sonnet-4-6', provider: 'anthropic' }),
-      );
+      expect(mockExecAgent).toHaveBeenCalledWith(expect.objectContaining({ agentId: testAgentId }));
+      expect(mockExecAgent.mock.calls[0][0]).not.toHaveProperty('model');
+      expect(mockExecAgent.mock.calls[0][0]).not.toHaveProperty('provider');
     });
 
     it('backfills the snapshot on first run for tasks without config.model', async () => {
@@ -3558,9 +3558,9 @@ describe('Task Router Integration', () => {
         model: 'claude-sonnet-4-6',
         provider: 'anthropic',
       });
-      expect(mockExecAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ model: 'claude-sonnet-4-6', provider: 'anthropic' }),
-      );
+      expect(mockExecAgent).toHaveBeenCalledWith(expect.objectContaining({ agentId: testAgentId }));
+      expect(mockExecAgent.mock.calls[0][0]).not.toHaveProperty('model');
+      expect(mockExecAgent.mock.calls[0][0]).not.toHaveProperty('provider');
     });
   });
 

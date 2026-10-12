@@ -1,5 +1,4 @@
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
-import type { WorkspaceUserPreference } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -60,7 +59,7 @@ const mockUserState = vi.hoisted(() => ({
   profile: { id: 'user-1' },
   workspaceUserPreference: {
     agentDeviceOverrides: {} as Record<string, any>,
-  } as unknown as WorkspaceUserPreference,
+  },
 }));
 
 vi.mock('@/store/user', () => ({

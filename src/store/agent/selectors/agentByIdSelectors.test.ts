@@ -126,10 +126,14 @@ describe('agentByIdSelectors', () => {
         localAgentWorkingDirectoryMap: localMap,
       });
 
-    it('reads the per-device choice for the current (local) device', () => {
+    it('reads the per-device choice for the saved device', () => {
       vi.spyOn(globalAgentContextManager, 'getContext').mockReturnValue({ homePath: '/home/me' });
       const state = stateWith({
-        agencyConfig: { workingDirByDevice: { 'device-A': '/repos/agent-gateway' } },
+        agencyConfig: {
+          executionTarget: 'device',
+          boundDeviceId: 'device-A',
+          workingDirByDevice: { 'device-A': '/repos/agent-gateway' },
+        },
       });
 
       expect(agentByIdSelectors.getAgentWorkingDirectoryById('agent-1', 'device-A')(state)).toBe(

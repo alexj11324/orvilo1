@@ -97,7 +97,7 @@ it('checks a workspace-private Agent on its personal device and saves the worksp
   api.devices.mockResolvedValue([{ deviceId: 'personal-device', online: true, scope: 'personal' }]);
   api.scan.mockResolvedValue({ agents: { codex: { available: true } } });
   await verifyOnboardingOrchestrator('workspace-private-agent', 'workspace-one');
-  expect(api.scan).toHaveBeenLastCalledWith({ deviceId: 'personal-device' }, null);
+  expect(api.scan).toHaveBeenLastCalledWith({ deviceId: 'personal-device' }, 'workspace-one');
   expect(api.preference).toHaveBeenLastCalledWith({
     orchestratorAgentId: 'workspace-private-agent',
   });

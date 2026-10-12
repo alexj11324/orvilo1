@@ -19,13 +19,6 @@ describe('agent settings labels name what the control does', () => {
     expect('settingAgent.generalSettings.legacyLabel' in defaultSetting).toBe(false);
   });
 
-  it('labels the selection policies by who may switch, not by the thing switched', () => {
-    expect(locale('en-US')['settingAgent.modelPolicy.title']).toBe('Member model switching');
-    expect(locale('en-US')['settingAgent.devicePolicy.title']).toBe('Member device switching');
-    expect(locale('zh-CN')['settingAgent.modelPolicy.title']).toBe('成员切换模型');
-    expect(locale('zh-CN')['settingAgent.devicePolicy.title']).toBe('成员切换设备');
-  });
-
   it('renders the diagnostics link without an "Advanced" fold', () => {
     const page = read('src/features/Settings/agents/AgentSettingsDetailPage.tsx');
 

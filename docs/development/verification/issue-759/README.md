@@ -95,6 +95,15 @@ These follow-up changes reuse the Electron evidence for the unchanged creation,
 chat and device surfaces; the event-readiness/dispatch changes have automated
 coverage and are not claimed as a live webhook end-to-end test.
 
+Final CI assertion cleanup passed 29 application regressions and 82 gateway
+regressions. Task and batch-execution integration passed all 134 tests against a
+fresh dedicated local PostgreSQL database with Redis, using serial workers and
+a 20-second local runner timeout. Earlier PGlite/default-Redis attempts hit local
+timeouts; concurrent initialization also raced migrations, so those attempts
+are not reported as passes. No repository timeout or application behavior was
+changed for this final test-only cleanup. The frontend build on `40b514d` passed
+in 25.90 seconds.
+
 `runtime-evidence.json` contains only whitelisted fixture identifiers, saved
 runtime fields, operation outcomes and the named offline error. No login tokens,
 environment variables, gateway secrets or private signing keys are included.

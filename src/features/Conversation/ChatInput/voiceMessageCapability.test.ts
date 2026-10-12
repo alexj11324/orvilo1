@@ -105,6 +105,13 @@ describe('canSendVoiceMessage', () => {
       },
     } as any);
 
+    // Obsolete topic model data cannot change the saved Agent's capability.
+    expect(canSendVoiceMessage(context)).toBe(true);
+    useAgentStore.setState({
+      agentMap: {
+        [agentId]: { chatConfig: {}, model: textModel.id, provider: ModelProvider.Google },
+      },
+    } as any);
     expect(canSendVoiceMessage(context)).toBe(false);
   });
 

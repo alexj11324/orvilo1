@@ -131,6 +131,9 @@ vi.mock('@/features/DeviceManager/useDeviceList', () => ({
   }),
   useDeviceList: () => ({ data: mocks.devices }),
 }));
+vi.mock('@/features/DeviceManager/useDeviceSelectorState', () => ({
+  useDeviceSelectorState: () => ({ selectableDevices: mocks.devices }),
+}));
 vi.mock('@/store/providerBinding', () => ({
   useFetchProviderBindings: () => ({ data: { data: [] } }),
 }));

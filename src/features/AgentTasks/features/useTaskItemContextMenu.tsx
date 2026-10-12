@@ -12,6 +12,7 @@ import {
   TagsIcon,
   Trash2Icon,
   TypeIcon,
+  UnlinkIcon,
   UserRoundIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -36,6 +37,7 @@ import { closeContextMenu } from '@/libs/contextMenu';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys } from '@/libs/swr/keys';
+import { taskService } from '@/services/task';
 import { taskLabelService } from '@/services/taskLabel';
 import { useCurrentProjectList } from '@/store/project';
 import { useTaskStore } from '@/store/task';
@@ -49,6 +51,7 @@ import {
   type TaskStatusChoice,
 } from '../AgentTaskList/kanbanBoardModel';
 import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
+import { taskDeleteConfirmCopy } from '../shared/taskDeleteConfirm';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useAssigneeMenuItems } from './assigneeMenuItems';
 import { renderMenuCheck, renderMenuExtra } from './menuExtra';
@@ -104,6 +107,11 @@ export interface TaskContextMenuTarget {
   labels?: readonly TaskLabelSummary[];
   /** Only feeds the copied link's readable slug tail. */
   name?: string | null;
+  /**
+   * The Issue this row hangs under. Set only by a sub-issue list, which is
+   * where "Remove from parent" belongs; boards and flat lists leave it out.
+   */
+  parentIdentifier?: string | null;
   priority?: number | null;
   /** Owning project — `null`/missing renders "No project" checked. */
   projectId?: string | null;
@@ -156,10 +164,19 @@ export const useTaskContextMenuActions = (
   useEffect(() => () => cleanupRef.current?.(), []);
 
   return useMemo<TaskContextMenuActions>(() => {
-    const triggerDelete = (identifier: string) => {
+    const triggerDelete = async (identifier: string) => {
       if (!canEditTask) return;
+      // A list row does not carry its sub-issues, so count them before asking.
+      // An unreadable count is worded as unknown, never as "no sub-issues".
+      let subIssueCount: number | undefined;
+      try {
+        subIssueCount = (await taskService.getSubtasks(identifier)).data.length;
+      } catch {
+        subIssueCount = undefined;
+      }
+      const { key, ...values } = taskDeleteConfirmCopy(subIssueCount);
       confirmModal({
-        content: t('taskDetail.deleteConfirm.content'),
+        content: t(key, values),
         okButtonProps: { danger: true },
         okText: t('taskDetail.deleteConfirm.ok'),
         onOk: async () => {
@@ -387,6 +404,28 @@ export const useTaskContextMenuActions = (
               } satisfies NativeContextMenuItem,
             ]
           : []),
+        // Its own group, above the clipboard block and two dividers away from
+        // Delete: detaching keeps the Issue, deleting does not.
+        ...(task.parentIdentifier
+          ? ([
+              { type: 'divider' },
+              {
+                disabled: !canEditTask,
+                icon: <UnlinkIcon size="1em" />,
+                key: 'removeFromParent',
+                label: t('taskDetail.subIssue.removeFromParent', {
+                  identifier: task.parentIdentifier,
+                }),
+                onClick: ({ domEvent }: MenuInfo) => {
+                  domEvent.stopPropagation();
+                  if (!canEditTask) return;
+                  // `updateTask` reports its own failure and refetches the
+                  // parent's sub-issue list, so nothing is left to handle here.
+                  void updateTask(task.identifier, { parentTaskId: null }).catch(() => {});
+                },
+              },
+            ] satisfies NativeContextMenuItem[])
+          : []),
         { type: 'divider' },
         // Linear nests the clipboard actions under one `Copy` submenu.
         {
@@ -478,7 +517,7 @@ export const useTaskContextMenuActions = (
           onClick: ({ domEvent }: MenuInfo) => {
             domEvent.stopPropagation();
             if (!canEditTask) return;
-            triggerDelete(task.identifier);
+            void triggerDelete(task.identifier);
           },
           sfSymbol: 'trash',
         },

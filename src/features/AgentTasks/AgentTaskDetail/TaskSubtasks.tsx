@@ -1,7 +1,7 @@
 import { type TreeDataNode } from '@lobehub/ui/base-ui';
 import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
-import { ListTodoIcon, PlayCircle, Plus } from 'lucide-react';
+import { ListTodoIcon, MoreHorizontal, PlayCircle, Plus } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +34,7 @@ import { useTaskContextMenuActions } from '../features/useTaskItemContextMenu';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { styles } from '../shared/style';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import AddSubIssueMenu from './AddSubIssueMenu';
 import RunSubtasksPreview from './RunSubtasksPreview';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskDetailSectionHeader from './TaskDetailSectionHeader';
@@ -63,7 +64,14 @@ const buildTree = (subtasks: TaskDetailSubtask[]): TaskTreeNode[] =>
     task,
   }));
 
-const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
+interface SubtaskTitleProps {
+  /** Opens the row's action menu from its "…" button; absent for read-only viewers. */
+  onOpenMenu?: (task: TaskDetailSubtask, anchor: HTMLElement) => void;
+  task: TaskDetailSubtask;
+}
+
+const SubtaskTitle = memo<SubtaskTitleProps>(({ onOpenMenu, task }) => {
+  const { t } = useTranslation('chat');
   const status = toTaskStatus(task.status);
   const isRunning = status === 'running';
   const handoffTask = useTaskStore((s) => s.handoffTask);
@@ -152,16 +160,34 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
             <AssigneeAvatar agentId={task.assignee?.id} size={18} />
           </span>
         </AssigneeAgentSelector>
+        {onOpenMenu && (
+          // The same menu a right-click opens, reachable without knowing to right-click.
+          <span className="inline-flex flex-none items-center" onClick={(e) => e.stopPropagation()}>
+            <ActionIcon
+              aria-label={t('taskDetail.subIssue.rowActions', { identifier: task.identifier })}
+              icon={MoreHorizontal}
+              size="small"
+              title={t('taskDetail.subIssue.rowActions', { identifier: task.identifier })}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenMenu(task, event.currentTarget);
+              }}
+            />
+          </span>
+        )}
       </div>
     </div>
   );
 });
 
-const toTreeData = (tree: TaskTreeNode[]): TreeDataNode[] => {
+const toTreeData = (
+  tree: TaskTreeNode[],
+  onOpenMenu?: SubtaskTitleProps['onOpenMenu'],
+): TreeDataNode[] => {
   return tree.map((node) => ({
-    children: toTreeData(node.children),
+    children: toTreeData(node.children, onOpenMenu),
     key: node.task.identifier,
-    title: <SubtaskTitle task={node.task} />,
+    title: <SubtaskTitle task={node.task} onOpenMenu={onOpenMenu} />,
   }));
 };
 
@@ -204,17 +230,20 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
     items: NativeContextMenuItem[];
   } | null>(null);
 
-  const subtaskMap = useMemo(() => {
+  const { parentByIdentifier, subtaskMap } = useMemo(() => {
     const map = new Map<string, TaskDetailSubtask>();
-    const walk = (items: TaskDetailSubtask[]) => {
+    // Every row here is somebody's child: the Issue on this page, or a row above it.
+    const parents = new Map<string, string>();
+    const walk = (items: TaskDetailSubtask[], parentIdentifier: string | undefined) => {
       for (const item of items) {
         map.set(item.identifier, item);
-        if (item.children?.length) walk(item.children);
+        if (parentIdentifier) parents.set(item.identifier, parentIdentifier);
+        if (item.children?.length) walk(item.children, item.identifier);
       }
     };
-    walk(subtasks);
-    return map;
-  }, [subtasks]);
+    walk(subtasks, taskId);
+    return { parentByIdentifier: parents, subtaskMap: map };
+  }, [subtasks, taskId]);
 
   const handleNavigate = useCallback(
     (identifier: string) => {
@@ -224,23 +253,20 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
     [navigate, subtaskMap],
   );
 
-  const treeData = useMemo(() => {
-    if (subtasks.length === 0) return [];
-    return toTreeData(buildTree(subtasks));
-  }, [subtasks]);
-
-  const handleRightClick = useCallback(
-    ({ event, node }: { event: MouseEvent; node: TreeDataNode }) => {
+  /**
+   * One menu for a sub-issue row, opened by right-click (at the pointer) or by
+   * the row's "…" button (under the button).
+   */
+  const openRowMenu = useCallback(
+    (subtask: TaskDetailSubtask, anchorRect: () => DOMRect) => {
       if (!canEditTask) return;
-      const subtask = subtaskMap.get(node.key);
-      if (!subtask) return;
-      event.preventDefault();
       const target = {
         assigneeAgentId: subtask.assignee?.id,
         assigneeUserId: subtask.assigneeUserId,
         createdByUserId: subtask.createdByUserId,
         identifier: subtask.identifier,
         name: subtask.name,
+        parentIdentifier: parentByIdentifier.get(subtask.identifier),
         priority: subtask.priority,
         status: subtask.status,
         visibility: subtask.visibility,
@@ -254,23 +280,34 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
       let openedWebMenu = false;
       showContextMenuWithFallback(items, undefined, () => {
         openedWebMenu = true;
-        setContextMenu({
-          anchor: {
-            getBoundingClientRect: () =>
-              DOMRect.fromRect({ height: 0, width: 0, x: event.clientX, y: event.clientY }),
-          },
-          items,
-        });
+        setContextMenu({ anchor: { getBoundingClientRect: anchorRect }, items });
       });
       installKeyboardHandlers(target, openedWebMenu ? () => setContextMenu(null) : undefined);
     },
-    [canEditTask, subtaskMap, buildItems, installKeyboardHandlers],
+    [canEditTask, parentByIdentifier, buildItems, installKeyboardHandlers],
   );
 
-  const toggleCreating = useCallback(() => {
-    if (!canEditTask) return;
-    setIsCreating((prev) => !prev);
-  }, [canEditTask, setIsCreating]);
+  const handleRightClick = useCallback(
+    ({ event, node }: { event: MouseEvent; node: TreeDataNode }) => {
+      if (!canEditTask) return;
+      const subtask = subtaskMap.get(node.key);
+      if (!subtask) return;
+      event.preventDefault();
+      const { clientX: x, clientY: y } = event;
+      openRowMenu(subtask, () => DOMRect.fromRect({ height: 0, width: 0, x, y }));
+    },
+    [canEditTask, subtaskMap, openRowMenu],
+  );
+
+  const treeData = useMemo(() => {
+    if (subtasks.length === 0) return [];
+    return toTreeData(
+      buildTree(subtasks),
+      canEditTask
+        ? (subtask, anchor) => openRowMenu(subtask, () => anchor.getBoundingClientRect())
+        : undefined,
+    );
+  }, [subtasks, canEditTask, openRowMenu]);
 
   const handleRunAll = useCallback(async () => {
     if (!canEditTask) return;
@@ -351,14 +388,28 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
                   title={canEditTask ? t('taskDetail.runAll') : reason}
                   onClick={handleRunAll}
                 />
-                <ActionIcon
-                  aria-label={t('taskDetail.addSubtask')}
-                  disabled={!canEditTask}
-                  icon={Plus}
-                  size="small"
-                  title={canEditTask ? t('taskDetail.addSubtask') : reason}
-                  onClick={toggleCreating}
-                />
+                {canEditTask ? (
+                  <AddSubIssueMenu
+                    align="end"
+                    trigger={
+                      // No `title`: its tooltip wrapper would take the menu trigger's props.
+                      <ActionIcon
+                        aria-label={t('taskDetail.addSubtask')}
+                        icon={Plus}
+                        size="small"
+                      />
+                    }
+                    onCreateNew={() => setIsCreating(true)}
+                  />
+                ) : (
+                  <ActionIcon
+                    disabled
+                    aria-label={t('taskDetail.addSubtask')}
+                    icon={Plus}
+                    size="small"
+                    title={reason}
+                  />
+                )}
               </>
             }
             trailing={

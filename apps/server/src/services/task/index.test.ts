@@ -2404,12 +2404,37 @@ describe('TaskService', () => {
     });
   });
 
+  describe('sub-issue scope', () => {
+    it('refuses a sub-issue whose parent is filed outside the creating workspace', async () => {
+      // The caller's own unfiled Issue, readable from the workspace.
+      mockTaskModel.resolve.mockResolvedValue({
+        createdByUserId: userId,
+        id: 'parent_id',
+        identifier: 'T-1',
+        visibility: 'private',
+        workspaceId: null,
+      });
+      const service = new TaskService(db, userId, 'ws-1');
+
+      await expect(
+        service.createTask({ instruction: 'child', parentTaskId: 'T-1' }),
+      ).rejects.toMatchObject({
+        cause: { data: { code: 'CROSS_SCOPE' } },
+        code: 'BAD_REQUEST',
+      });
+      expect(mockTaskModel.create).not.toHaveBeenCalled();
+    });
+  });
+
   describe('workspace subtask visibility', () => {
     it('normalizes old private requests under legacy private parents', async () => {
       mockTaskModel.resolve.mockResolvedValue({
         id: 'parent_id',
         identifier: 'T-1',
         visibility: 'private',
+        // Filed in the workspace the sub-issue is created in — a parent link
+        // may not cross workspaces.
+        workspaceId: 'ws-1',
       });
       mockTaskModel.create.mockImplementation(async (data: any) => ({
         ...data,

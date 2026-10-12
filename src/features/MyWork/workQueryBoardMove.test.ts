@@ -11,6 +11,7 @@ import {
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
   moveBoardMaybePickingState,
+  resolveStatusCascade,
   workQueryBoardMoveToastKey,
 } from './workQueryBoardMove';
 
@@ -269,6 +270,76 @@ describe('commitWorkQueryBoardMove', () => {
       targetKey: 'done',
       taskId: 'tsk_1',
     });
+  });
+});
+
+describe('resolveStatusCascade', () => {
+  const family = [
+    { id: 'tsk_1', identifier: 'T-1', status: 'backlog' },
+    { id: 'tsk_2', identifier: 'T-2', status: 'backlog' },
+    { id: 'tsk_3', identifier: 'T-3', status: 'completed' },
+  ];
+  const input = (parentOnly = vi.fn(async () => 3)) => ({
+    parentOnly,
+    status: 'completed' as const,
+    task: { id: 'tsk_1', identifier: 'T-1' },
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getTaskTree.mockResolvedValue({ data: family });
+  });
+
+  it('asks nothing and moves just the issue when it has no open sub-issues', async () => {
+    mocks.getTaskTree.mockResolvedValue({ data: [family[0], family[2]] });
+    const parentOnly = vi.fn(async () => 5);
+
+    await expect(resolveStatusCascade(input(parentOnly))).resolves.toEqual({
+      cascaded: false,
+      revision: 5,
+    });
+    expect(mocks.createCascadeModal).not.toHaveBeenCalled();
+    expect(mocks.updateStatusCascade).not.toHaveBeenCalled();
+  });
+
+  it('lists only the open sub-issues and cascades through the server on "update all"', async () => {
+    mocks.updateStatusCascade.mockResolvedValue({ data: { task: { domainRevision: 9 } } });
+    mocks.createCascadeModal.mockImplementation(
+      async (options: { onApply: (includeSubtasks: boolean) => Promise<void> }) => {
+        await options.onApply(true);
+        return true;
+      },
+    );
+    const parentOnly = vi.fn(async () => 5);
+
+    await expect(resolveStatusCascade(input(parentOnly))).resolves.toEqual({
+      cascaded: true,
+      revision: 9,
+    });
+    expect(mocks.createCascadeModal.mock.calls[0][0].subtasks).toEqual([family[1]]);
+    expect(mocks.updateStatusCascade).toHaveBeenCalledWith('T-1', 'completed');
+    expect(parentOnly).not.toHaveBeenCalled();
+  });
+
+  it('runs the caller\'s own write on "parent only"', async () => {
+    mocks.createCascadeModal.mockImplementation(
+      async (options: { onApply: (includeSubtasks: boolean) => Promise<void> }) => {
+        await options.onApply(false);
+        return true;
+      },
+    );
+
+    await expect(resolveStatusCascade(input())).resolves.toEqual({ cascaded: false, revision: 3 });
+    expect(mocks.updateStatusCascade).not.toHaveBeenCalled();
+  });
+
+  it('resolves with nothing when the question is dismissed', async () => {
+    mocks.createCascadeModal.mockResolvedValue(false);
+    const parentOnly = vi.fn(async () => 5);
+
+    await expect(resolveStatusCascade(input(parentOnly))).resolves.toBeUndefined();
+    expect(parentOnly).not.toHaveBeenCalled();
+    expect(mocks.updateStatusCascade).not.toHaveBeenCalled();
   });
 });
 

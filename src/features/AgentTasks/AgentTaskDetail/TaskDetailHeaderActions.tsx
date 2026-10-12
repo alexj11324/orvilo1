@@ -45,6 +45,7 @@ import { isTrpcErrorCode, trpcErrorMessage } from '@/utils/trpcError';
 
 import { renderMenuCheck } from '../features/menuExtra';
 import { useIssueStatusMove } from '../features/useIssueStatusMove';
+import { taskDeleteConfirmCopy } from '../shared/taskDeleteConfirm';
 import { openTaskIssueResourceModal } from './createTaskIssueResourceModal';
 import { issueResourceRef } from './issueResourceRef';
 import { relationKindOf } from './relationGroups';
@@ -284,6 +285,7 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
     if (!editable) return;
     openTaskIssueRelationModal({
       expectedDomainRevision: domainRevision!,
+      identifier: task?.identifier,
       kind,
       onChanged: refresh,
       taskId: taskUuid!,
@@ -570,8 +572,10 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
       label: t('delete', { ns: 'common' }),
       onClick: () => {
         if (!canDeleteTask) return;
+        // The detail already lists this Issue's direct sub-issues.
+        const { key, ...values } = taskDeleteConfirmCopy(task?.subtasks?.length ?? 0);
         confirmModal({
-          content: t('taskDetail.deleteConfirm.content'),
+          content: t(key, values),
           okButtonProps: { danger: true },
           okText: t('taskDetail.deleteConfirm.ok'),
           onOk: async () => {

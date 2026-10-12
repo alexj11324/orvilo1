@@ -336,6 +336,10 @@ class TaskService {
     type: 'blocks' | 'relates' = 'blocks',
   ) => lambdaClient.task.addDependency.mutate({ dependsOnId, taskId, type });
 
+  /** Put several existing Issues under one parent; all of them move or none do. */
+  setParentBatch = async (parentTaskId: string, taskIds: string[]) =>
+    lambdaClient.task.setParentBatch.mutate({ parentTaskId, taskIds });
+
   removeDependency = async (taskId: string, dependsOnId: string, type?: 'blocks' | 'relates') =>
     lambdaClient.task.removeDependency.mutate({ dependsOnId, taskId, type });
 

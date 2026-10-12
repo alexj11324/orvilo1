@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 
+import AddSubIssueMenu from './AddSubIssueMenu';
 import { ISSUE_RESOURCE_KINDS, useIssueDetailActions } from './useIssueDetailActions';
 
 interface TaskDetailAddActionsProps {
@@ -27,10 +28,17 @@ const TaskDetailAddActions = memo<TaskDetailAddActionsProps>(({ onAddSubIssue })
 
   return (
     <div aria-label={t('taskDetail.add.group')} className="flex flex-wrap gap-2" role="group">
-      <Button size="sm" type="button" variant="secondary" onClick={onAddSubIssue}>
-        <ListTodoIcon aria-hidden data-icon="inline-start" />
-        {t('taskDetail.addSubtask')}
-      </Button>
+      {capabilities.canAddSubIssue && (
+        <AddSubIssueMenu
+          trigger={
+            <Button size="sm" type="button" variant="secondary">
+              <ListTodoIcon aria-hidden data-icon="inline-start" />
+              {t('taskDetail.addSubtask')}
+            </Button>
+          }
+          onCreateNew={onAddSubIssue}
+        />
+      )}
       {ISSUE_RESOURCE_KINDS.map(([kind, Icon]) => (
         // A disabled button swallows pointer events, so the reason lives on the wrapper.
         <span className="inline-flex" key={kind} title={resourceHint}>

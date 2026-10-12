@@ -2,13 +2,17 @@
  * @vitest-environment happy-dom
  */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TaskParentBar from './TaskParentBar';
 
 const mocks = vi.hoisted(() => ({
+  allowed: true,
   getDetail: vi.fn(),
   navigate: vi.fn(),
+  openRelationModal: vi.fn(),
+  updateTask: vi.fn(),
   taskState: {} as any,
 }));
 
@@ -35,7 +39,35 @@ vi.mock('@/services/task', () => ({
 }));
 
 vi.mock('@/store/task', () => ({
-  useTaskStore: (selector: any) => selector(mocks.taskState),
+  useTaskStore: (selector: any) => selector({ ...mocks.taskState, updateTask: mocks.updateTask }),
+}));
+
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => ({ allowed: mocks.allowed }),
+}));
+
+vi.mock('./TaskIssueRelationModal', () => ({
+  openTaskIssueRelationModal: mocks.openRelationModal,
+}));
+
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuGroup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuItem: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children: ReactNode;
+    disabled?: boolean;
+    onClick?: () => void;
+  }) => (
+    <button disabled={disabled} type="button" onClick={() => onClick?.()}>
+      {children}
+    </button>
+  ),
+  DropdownMenuTrigger: ({ render }: { render?: ReactNode }) => <>{render}</>,
 }));
 
 vi.mock('../features/TaskStatusIcon', () => ({
@@ -67,6 +99,10 @@ vi.mock('../features/TaskSubtaskProgressTag', () => ({
 
 describe('TaskParentBar', () => {
   beforeEach(() => {
+    mocks.allowed = true;
+    mocks.openRelationModal.mockClear();
+    mocks.updateTask.mockReset();
+    mocks.updateTask.mockResolvedValue(undefined);
     mocks.navigate.mockClear();
     mocks.getDetail.mockReset();
     mocks.taskState = createState({
@@ -95,6 +131,44 @@ describe('TaskParentBar', () => {
     fireEvent.click(screen.getByText('Parent task').closest('button')!);
 
     expect(mocks.navigate).toHaveBeenCalledWith('/agent/agt_parent/task/T-parent/parent-task');
+    await waitFor(() => expect(mocks.getDetail).toHaveBeenCalledWith('T-parent'));
+  });
+
+  it('removes the parent from the bar itself', async () => {
+    render(<TaskParentBar />);
+
+    fireEvent.click(screen.getByText('taskDetail.parentBar.remove'));
+
+    expect(mocks.updateTask).toHaveBeenCalledWith('T-child', { parentTaskId: null });
+    await waitFor(() => expect(mocks.getDetail).toHaveBeenCalledWith('T-parent'));
+  });
+
+  it('changes the parent through the existing parent picker', async () => {
+    mocks.taskState.taskDetailMap['T-child'] = {
+      ...mocks.taskState.taskDetailMap['T-child'],
+      domainRevision: 4,
+      id: 'tsk_child',
+    };
+    render(<TaskParentBar />);
+
+    fireEvent.click(screen.getByText('taskDetail.parentBar.change'));
+
+    expect(mocks.openRelationModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedDomainRevision: 4,
+        kind: 'subIssueOf',
+        taskId: 'tsk_child',
+      }),
+    );
+    await waitFor(() => expect(mocks.getDetail).toHaveBeenCalledWith('T-parent'));
+  });
+
+  it('offers no parent actions to a viewer who cannot edit', async () => {
+    mocks.allowed = false;
+    render(<TaskParentBar />);
+
+    expect(screen.queryByText('taskDetail.parentBar.remove')).toBeNull();
+    expect(screen.queryByText('taskDetail.parentBar.change')).toBeNull();
     await waitFor(() => expect(mocks.getDetail).toHaveBeenCalledWith('T-parent'));
   });
 

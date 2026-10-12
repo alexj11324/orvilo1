@@ -226,6 +226,49 @@ describe('TaskSubtasks', () => {
     expect(mocks.showContextMenuWithFallback).toHaveBeenCalledTimes(1);
   });
 
+  it('tells the row menu which Issue each sub-issue hangs under', () => {
+    mocks.taskState.taskDetailMap['T-parent'].subtasks = [
+      {
+        children: [{ identifier: 'T-grandchild', name: 'Grandchild', status: 'backlog' }],
+        identifier: 'T-child',
+        name: 'Child task',
+        status: 'backlog',
+      },
+    ];
+    render(<TaskSubtasks />);
+
+    fireEvent.contextMenu(screen.getByTestId('subtask-tree-node'));
+
+    // A direct child hangs under the Issue on this page — that is what
+    // "Remove from parent" detaches it from.
+    expect(mocks.buildContextMenuItems).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'T-child', parentIdentifier: 'T-parent' }),
+    );
+  });
+
+  it('opens the same row menu from a visible button without navigating', () => {
+    render(<TaskSubtasks />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /taskDetail\.subIssue\.rowActions|Actions for/ }),
+    );
+
+    expect(mocks.showContextMenuWithFallback).toHaveBeenCalledTimes(1);
+    expect(mocks.buildContextMenuItems).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'T-child', parentIdentifier: 'T-parent' }),
+    );
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('gives a Viewer no row menu button', () => {
+    mocks.workspaceRole = 'viewer';
+    render(<TaskSubtasks />);
+
+    expect(
+      screen.queryByRole('button', { name: /taskDetail\.subIssue\.rowActions|Actions for/ }),
+    ).toBeNull();
+  });
+
   it('keeps Viewer subtask context-menu mutations denied while allowing navigation', () => {
     mocks.workspaceRole = 'viewer';
     render(<TaskSubtasks />);

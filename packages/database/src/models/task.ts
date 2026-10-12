@@ -2430,10 +2430,12 @@ export class TaskModel {
 
   /**
    * Fetch all descendants of a root task using Drizzle select() (returns camelCase fields).
-   * Uses breadth-first traversal with O(depth) queries.
+   * Uses breadth-first traversal with O(depth) queries. Each row is visited
+   * once, so a corrupt tree whose parent pointers loop still terminates.
    */
   async findAllDescendants(rootTaskId: string): Promise<TaskItem[]> {
     const all: TaskItem[] = [];
+    const seen = new Set<string>([rootTaskId]);
     let parentIds = [rootTaskId];
 
     while (parentIds.length > 0) {
@@ -2443,10 +2445,12 @@ export class TaskModel {
         .where(and(inArray(tasks.parentTaskId, parentIds), this.ownership()))
         .orderBy(tasks.sortOrder, tasks.seq);
 
-      if (children.length === 0) break;
+      const fresh = children.filter((child) => !seen.has(child.id));
+      if (fresh.length === 0) break;
 
-      all.push(...children);
-      parentIds = children.map((c) => c.id);
+      for (const child of fresh) seen.add(child.id);
+      all.push(...fresh);
+      parentIds = fresh.map((c) => c.id);
     }
 
     return all;
@@ -2459,7 +2463,9 @@ export class TaskModel {
     const result = await this.db.execute(sql`
       WITH RECURSIVE task_tree AS (
         SELECT * FROM tasks WHERE id = ${rootTaskId} AND ${ownership}
-        UNION ALL
+        -- UNION, not UNION ALL: a row already in the tree is not added again,
+        -- so a corrupt tree whose parent pointers loop still terminates.
+        UNION
         SELECT t.* FROM tasks t
         JOIN task_tree tt ON t.parent_task_id = tt.id
         WHERE ${childOwnership}
@@ -3303,7 +3309,8 @@ export class TaskModel {
         model.addDependency(taskId, dependsOnId, type, mutation),
       );
     }
-    if (taskId === dependsOnId) throw new TaskDependencyError('A task cannot depend on itself.');
+    if (taskId === dependsOnId)
+      throw new TaskDependencyError('A task cannot depend on itself.', 'BAD_REQUEST', 'SELF');
     if (type !== 'blocks' && type !== 'relates')
       throw new TaskDependencyError('Invalid dependency type.');
     const dependencyTasks = await this.findByIds([taskId, dependsOnId]);
@@ -3317,10 +3324,14 @@ export class TaskModel {
       dependsOn.deletedAt ||
       dependsOn.isDeleted
     ) {
-      throw new TaskDependencyError('Task not found or unavailable.');
+      throw new TaskDependencyError('Task not found or unavailable.', 'BAD_REQUEST', 'UNAVAILABLE');
     }
     if (task.projectId !== dependsOn.projectId && (task.projectId || dependsOn.projectId)) {
-      throw new TaskDependencyError('Task dependencies cannot cross project boundaries.');
+      throw new TaskDependencyError(
+        'Task dependencies cannot cross project boundaries.',
+        'BAD_REQUEST',
+        'CROSS_PROJECT',
+      );
     }
 
     const existing = (await this.getDependencies(taskId)).find(
@@ -3328,7 +3339,11 @@ export class TaskModel {
     );
     if (existing?.type === type) return;
     if (existing?.type === 'blocks' && type === 'relates') {
-      throw new TaskDependencyError('A blocking relationship already exists for this issue pair.');
+      throw new TaskDependencyError(
+        'A blocking relationship already exists for this issue pair.',
+        'BAD_REQUEST',
+        'ALREADY_BLOCKING',
+      );
     }
     if (type === 'relates') {
       // An ordinary relation is symmetric even though the legacy table stores
@@ -3364,7 +3379,11 @@ export class TaskModel {
         ) SELECT id FROM upstream WHERE id = ${taskId} LIMIT 1
       `);
       if (cycle.rows.length > 0)
-        throw new TaskDependencyError('This dependency would create a cycle.');
+        throw new TaskDependencyError(
+          'This dependency would create a cycle.',
+          'BAD_REQUEST',
+          'CYCLE',
+        );
       // A task mid-flight or already done cannot take a new open prerequisite.
       // `task.status` / `dependsOn.status` are the derived labels — live
       // execution and terminal workflow, never the retired column. A held run
@@ -3376,6 +3395,7 @@ export class TaskModel {
         throw new TaskDependencyError(
           'Pause or reopen this task before adding an unfinished prerequisite.',
           'PRECONDITION_FAILED',
+          'UNFINISHED_PREREQUISITE',
         );
       }
     }
@@ -3408,7 +3428,8 @@ export class TaskModel {
       })
       .where(and(eq(tasks.id, taskId), this.ownership()))
       .returning(taskRowColumns);
-    if (!updated) throw new TaskDependencyError('Task not found or unavailable.');
+    if (!updated)
+      throw new TaskDependencyError('Task not found or unavailable.', 'BAD_REQUEST', 'UNAVAILABLE');
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],
@@ -3449,7 +3470,8 @@ export class TaskModel {
       );
     }
     const currentTask = await this.findById(taskId);
-    if (!currentTask) throw new TaskDependencyError('Task not found.');
+    if (!currentTask)
+      throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     const deleted = await this.db
       .delete(taskDependencies)
       .where(
@@ -3534,7 +3556,7 @@ export class TaskModel {
       })
       .where(and(eq(tasks.id, eventTaskId), this.ownership()))
       .returning(taskRowColumns);
-    if (!updated) throw new TaskDependencyError('Task not found.');
+    if (!updated) throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     if (syncModel && !mutation.suppressDomainEvent) {
       await syncModel.recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],
@@ -3574,14 +3596,15 @@ export class TaskModel {
         model.removeDependencyByRelationId(taskId, relationId, mutation),
       );
     }
-    if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
+    if (!(await this.findById(taskId)))
+      throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     const [relation] = await this.db
       .select()
       .from(taskDependencies)
       .where(and(eq(taskDependencies.id, relationId), this.issueRelationOwnership()))
       .limit(1);
     if (!relation || (relation.taskId !== taskId && relation.dependsOnId !== taskId)) {
-      throw new TaskDependencyError('Relation not found.');
+      throw new TaskDependencyError('Relation not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     }
     const peerId = relation.taskId === taskId ? relation.dependsOnId : relation.taskId;
     // A "blocking" row is stored on the other issue. Remove it from that

@@ -1,6 +1,5 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Maximize2, Minimize2, NotebookText, PencilLine } from 'lucide-react';
 import { memo } from 'react';
@@ -16,48 +15,15 @@ import { chatPortalSelectors } from '@/store/chat/slices/portal/selectors';
 
 import type { NotebookDocument } from './types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    position: relative;
-
-    overflow: hidden;
-
-    width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  content: css`
-    padding-inline: 16px;
-    font-size: 14px;
-  `,
-  expandButton: css`
-    position: absolute;
-    inset-block-end: 16px;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
-
-    box-shadow: ${cssVar.boxShadow};
-  `,
-  header: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  icon: css`
-    color: ${cssVar.colorPrimary};
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  container:
+    'relative w-full overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  content: 'max-h-100 px-4 text-sm',
+  expandButton: 'absolute start-1/2 inset-be-4 -translate-x-1/2',
+  header: 'border-be border-divider p-4',
+  icon: 'text-muted-foreground',
+  title: 'line-clamp-1 text-sm font-medium text-foreground',
+};
 
 interface DocumentCardProps {
   document: NotebookDocument;
@@ -93,12 +59,12 @@ const DocumentCard = memo<DocumentCardProps>(({ document }) => {
           <div className="flex gap-1">
             <CopyButton
               content={document.content}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('builtins.orvilo-notebook.actions.copy')}
             />
             <ActionIcon
               icon={PencilLine}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('builtins.orvilo-notebook.actions.edit')}
               onClick={handleToggle}
             />
@@ -106,20 +72,27 @@ const DocumentCard = memo<DocumentCardProps>(({ document }) => {
         </TooltipProvider>
       </div>
       {/* Content */}
-      <ScrollArea className={styles.content} style={{ maxHeight: 400 }}>
-        <Markdown style={{ overflow: 'unset', paddingBottom: 40 }} variant={'chat'}>
+      <ScrollArea className={styles.content}>
+        {/* Public style preserves content overflow against Markdown’s unlayered root rule. */}
+        <Markdown
+          className="pbe-14"
+          fontSize={14}
+          lineHeight={22 / 14}
+          style={{ overflow: 'unset' }}
+          variant={'chat'}
+        >
           {document.content}
         </Markdown>
       </ScrollArea>
 
       {/* Floating expand/collapse button */}
       <Button
-        className={cn(styles.expandButton, 'rounded-full')}
+        className={styles.expandButton}
         size="compact"
         variant="outline"
         onClick={handleToggle}
       >
-        {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}{' '}
+        {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}{' '}
         {isExpanded
           ? t('builtins.orvilo-notebook.actions.collapse')
           : t('builtins.orvilo-notebook.actions.expand')}

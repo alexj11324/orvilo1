@@ -15,13 +15,13 @@ import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/slices/portal/selectors';
 
 const styles = {
-  container: 'relative w-full overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
-  content: 'px-4 text-sm',
-  expandButton:
-    'absolute start-1/2 [inset-block-end:16px] -translate-x-1/2 shadow-(--ant-box-shadow)',
-  header: 'border-b border-sidebar-border px-3 py-2.5',
-  icon: 'text-primary',
-  title: 'line-clamp-1 font-medium text-foreground',
+  container:
+    'relative w-full overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  content: 'max-h-100 px-4 text-sm',
+  expandButton: 'absolute start-1/2 inset-be-4 -translate-x-1/2',
+  header: 'border-be border-divider p-4',
+  icon: 'text-muted-foreground',
+  title: 'line-clamp-1 text-sm font-medium text-foreground',
 };
 
 interface DocumentCardProps {
@@ -60,13 +60,13 @@ const DocumentCard = memo<DocumentCardProps>(({ content, documentId, title }) =>
           <div className="flex gap-1">
             <CopyButton
               content={content}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('builtins.orvilo-notebook.actions.copy')}
             />
             {documentId && (
               <ActionIcon
                 icon={PencilLine}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('builtins.orvilo-notebook.actions.edit')}
                 onClick={handleToggle}
               />
@@ -74,20 +74,27 @@ const DocumentCard = memo<DocumentCardProps>(({ content, documentId, title }) =>
           </div>
         </TooltipProvider>
       </div>
-      <ScrollArea className={styles.content} style={{ maxHeight: 400 }}>
-        <Markdown style={{ overflow: 'unset', paddingBottom: 40 }} variant={'chat'}>
+      <ScrollArea className={styles.content}>
+        {/* Public style preserves content overflow against Markdown’s unlayered root rule. */}
+        <Markdown
+          className="pbe-14"
+          fontSize={14}
+          lineHeight={22 / 14}
+          style={{ overflow: 'unset' }}
+          variant={'chat'}
+        >
           {content}
         </Markdown>
       </ScrollArea>
 
       {documentId && (
         <Button
-          className={cn('rounded-full', styles.expandButton)}
+          className={styles.expandButton}
           size="compact"
           variant="outline"
           onClick={handleToggle}
         >
-          {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           {isExpanded
             ? t('builtins.orvilo-notebook.actions.collapse')
             : t('builtins.orvilo-notebook.actions.expand')}

@@ -104,6 +104,8 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --warning-border: ${theme.colorWarningBorder};
       --info-wash: ${theme.colorInfoBg};
       --info-border: ${theme.colorInfoBorder};
+      --highlight-gold: ${theme.gold4};
+      --highlight-primary: ${theme.colorPrimaryBgHover};
       --destructive-wash: ${theme.colorErrorBg};
       --destructive-border: ${theme.colorErrorBorder};
       --accent: ${theme.colorFillTertiary};

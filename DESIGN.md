@@ -136,15 +136,16 @@ Local primitives read these Tailwind roles. [themeRoles.ts](src/styles/themeRole
 
 Exact engine aliases also live on the document theme host, so body portals inherit resolved values:
 
-| Tailwind role                                         | Engine role                                                     | Use                                                                        |
-| ----------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `--foreground-tertiary` / `--foreground-quaternary`   | `colorTextTertiary` / `colorTextQuaternary`                     | Subdued supporting / disabled content                                      |
-| `--foreground-description`                            | `colorTextDescription`                                          | Preserve existing description text; this is not necessarily secondary text |
-| `--fill-quaternary`                                   | `colorFillQuaternary`                                           | Faintest neutral wash                                                      |
-| `--divider`                                           | `colorBorderSecondary`                                          | Everyday divider outside the sidebar                                       |
-| `--overlay-mask` / `--overlay-mask-foreground`        | `colorBgMask` / `colorTextLightSolid`                           | Scrims and icon overlays on photographs; preserve the engine mask pair     |
-| `--{primary,success,warning,info,destructive}-wash`   | Corresponding `color{Primary,Success,Warning,Info,Error}Bg`     | Exact existing status background                                           |
-| `--{primary,success,warning,info,destructive}-border` | Corresponding `color{Primary,Success,Warning,Info,Error}Border` | Exact existing status edge                                                 |
+| Tailwind role                                         | Engine role                                                     | Use                                                                            |
+| ----------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `--foreground-tertiary` / `--foreground-quaternary`   | `colorTextTertiary` / `colorTextQuaternary`                     | Subdued supporting / disabled content                                          |
+| `--foreground-description`                            | `colorTextDescription`                                          | Preserve existing description text; this is not necessarily secondary text     |
+| `--fill-quaternary`                                   | `colorFillQuaternary`                                           | Faintest neutral wash                                                          |
+| `--divider`                                           | `colorBorderSecondary`                                          | Everyday divider outside the sidebar                                           |
+| `--overlay-mask` / `--overlay-mask-foreground`        | `colorBgMask` / `colorTextLightSolid`                           | Scrims and icon overlays on photographs; preserve the engine mask pair         |
+| `--{primary,success,warning,info,destructive}-wash`   | Corresponding `color{Primary,Success,Warning,Info,Error}Bg`     | Exact existing status background                                               |
+| `--highlight-gold` / `--highlight-primary`            | `gold4` / `colorPrimaryBgHover`                                 | Existing shared tool text underline washes; preserve their exact engine colors |
+| `--{primary,success,warning,info,destructive}-border` | Corresponding `color{Primary,Success,Warning,Info,Error}Border` | Exact existing status edge                                                     |
 
 The `*-wash` aliases preserve engine backgrounds; existing `*-subtle` roles remain their computed 10% mixes. Do not substitute one for the other by appearance. Description text likewise keeps its exact alias: the current dark engine description is `#6f6f6f`, while secondary text is `#aaaaaa`. These aliases require the existing top-level theme host; they do not introduce a separate fallback palette.
 

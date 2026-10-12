@@ -1,12 +1,15 @@
 import type { TaskDetailData, TaskStatus } from '@orvilo/types';
 import debug from 'debug';
+import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { taskService } from '@/services/task';
 import type { StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { runMutation } from '@/store/utils/runMutation';
 import { saveToast } from '@/store/utils/saveToast';
+import { isForbiddenError } from '@/utils/forbiddenError';
 
 import type { TaskStore } from '../../store';
 import {
@@ -47,7 +50,25 @@ export class TaskLifecycleSliceActionImpl {
   }
 
   cancelTopic = async (topicId: string): Promise<void> => {
-    await taskService.cancelTopic(topicId);
+    try {
+      await taskService.cancelTopic(topicId);
+    } catch (error) {
+      // The runtime did not acknowledge, but the stop is recorded and the
+      // server ends the run itself: this is a stop in progress, not a failure.
+      if (error instanceof Error && error.message.startsWith('STOP_UNCONFIRMED')) {
+        toast.info({
+          description: t('taskDetail.topicMenu.stopPendingDesc', { ns: 'chat' }),
+          title: t('taskDetail.topicMenu.stopPending', { ns: 'chat' }),
+        });
+      } else {
+        toast.error(
+          isForbiddenError(error)
+            ? t('taskDetail.topicMenu.stopForbidden', { ns: 'chat' })
+            : t('operationFailed', { ns: 'common' }),
+        );
+        throw error;
+      }
+    }
     const { activeTaskId, internal_refreshTaskDetail } = this.#get();
     if (activeTaskId) await internal_refreshTaskDetail(activeTaskId);
   };

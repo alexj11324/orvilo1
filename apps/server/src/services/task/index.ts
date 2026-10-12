@@ -305,8 +305,10 @@ export class TaskService {
     if (unconfirmed) {
       throw new TRPCError({
         code: 'CONFLICT',
+        // The leading code is what the client matches; by now the stop is
+        // recorded on the dispatch and the cancellation sweep finishes it.
         message:
-          'Task interruption was not confirmed. The execution remains active; retry stopping it before starting another attempt.',
+          'STOP_UNCONFIRMED: Task interruption was not confirmed. The execution remains active; retry stopping it before starting another attempt.',
       });
     }
   };

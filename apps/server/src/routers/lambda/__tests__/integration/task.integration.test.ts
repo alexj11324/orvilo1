@@ -10,7 +10,7 @@ import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { projects, taskDispatches, tasks } from '@/database/schemas';
+import { projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
@@ -1823,6 +1823,33 @@ describe('Task Router Integration', () => {
           .from(tasks)
           .where(eq(tasks.id, taskId));
         expect(row.assigneeAgentId).toBe(creatorAgent);
+      } finally {
+        await cleanupTestUser(serverDB, memberId);
+      }
+    });
+
+    it('lets the creator, and not another member, stop a run of an agent neither may use', async () => {
+      const { creatorId, memberId, taskId } = await setup('outcome_unknown');
+      const workspaceId = 'task-handoff-takeover-workspace';
+      const topicId = await createTestTopic(serverDB, creatorId, 'tpc_takeover_stop');
+      const { topics } = await import('@/database/schemas');
+      await serverDB.update(topics).set({ workspaceId }).where(eq(topics.id, topicId));
+      await new TaskTopicModel(serverDB, creatorId, workspaceId).add(taskId, topicId, {
+        operationId: 'op_takeover_stop',
+        seq: 1,
+      });
+      const callerFor = (id: string) =>
+        taskRouter.createCaller({ ...createTestContext(id), workspaceId });
+      try {
+        await expect(callerFor(memberId).cancelTopic({ topicId })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        await callerFor(creatorId).cancelTopic({ topicId });
+        const [row] = await serverDB
+          .select({ status: taskTopics.status })
+          .from(taskTopics)
+          .where(eq(taskTopics.topicId, topicId));
+        expect(row.status).toBe('canceled');
       } finally {
         await cleanupTestUser(serverDB, memberId);
       }

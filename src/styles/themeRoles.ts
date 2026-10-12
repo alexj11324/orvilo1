@@ -104,8 +104,10 @@ const ThemeRoleStyles = createGlobalStyle(({ theme }) => {
       --info-hover-wash: ${theme.colorInfoBgHover};
       --fill-quaternary: ${theme.colorFillQuaternary};
       --divider: ${theme.colorBorderSecondary};
+      --split-divider: ${theme.colorSplit};
       --primary-wash: ${theme.colorPrimaryBg};
       --primary-border: ${theme.colorPrimaryBorder};
+      --primary-border-hover: ${theme.colorPrimaryBorderHover};
       --success-wash: ${theme.colorSuccessBg};
       --success-border: ${theme.colorSuccessBorder};
       --warning-wash: ${theme.colorWarningBg};

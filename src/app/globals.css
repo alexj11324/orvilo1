@@ -55,8 +55,10 @@
     --color-foreground-description: var(--foreground-description);
     --color-fill-quaternary: var(--fill-quaternary);
     --color-divider: var(--divider);
+    --color-split-divider: var(--split-divider);
     --color-primary-wash: var(--primary-wash);
     --color-primary-border: var(--primary-border);
+    --color-primary-border-hover: var(--primary-border-hover);
     --color-success-wash: var(--success-wash);
     --color-success-border: var(--success-border);
     --color-warning-wash: var(--warning-wash);
@@ -119,6 +121,7 @@
 }
 
 :root {
+    --split-divider: var(--ant-color-split);
     --background: var(--ant-color-bg-layout, #f8f8f8);
     --foreground: var(--ant-color-text, #080808);
     --card: var(--ant-color-bg-container, #ffffff);
@@ -130,6 +133,7 @@
     /* Exact link role; no approximation to primary in custom themes. */
     --link: var(--ant-color-link);
     --link-active: var(--ant-color-link-active);
+    --primary-border-hover: var(--ant-color-primary-border-hover);
     --primary-foreground: var(--primary-on-fill);
     --secondary: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
     --secondary-foreground: var(--foreground);
@@ -687,4 +691,19 @@
       56px 28px 0 0,
       84px 28px 0 0;
   }
+}
+
+/* Shared text dot status: one document-wide producer, preserving the original cycle. */
+:root {
+    --orvilo-dot-loading-animation: orvilo-dot-ellipsis 900ms steps(4, end) infinite;
+}
+
+@keyframes orvilo-dot-ellipsis {
+    from {
+        width: 0;
+    }
+
+    to {
+        width: 1.25em;
+    }
 }

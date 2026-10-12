@@ -10,6 +10,10 @@ import { ReferTopicNode } from '@/features/ChatInput/InputEditor/ReferTopic/Refe
 
 interface RichTextMessageProps {
   editorState: unknown;
+  /** Optional public body size in px; omitted retains the renderer variant default. */
+  fontSize?: number;
+  /** Optional unitless line-height ratio; omitted retains the existing 1.6. */
+  lineHeight?: number;
   variant?: 'chat' | 'default';
 }
 
@@ -17,25 +21,36 @@ const LINE_HEIGHT = 1.6;
 const style: CSSProperties = { '--common-line-height': LINE_HEIGHT } as CSSProperties;
 const EXTRA_NODES = [ActionTagNode, ReferTopicNode, LocalFileTagNode];
 
-const RichTextMessage = memo<RichTextMessageProps>(({ editorState, variant = 'chat' }) => {
-  const value = useMemo(() => {
-    if (!editorState || typeof editorState !== 'object') return null;
-    if (Object.keys(editorState as Record<string, unknown>).length === 0) return null;
-    return editorState as SerializedEditorState;
-  }, [editorState]);
+const RichTextMessage = memo<RichTextMessageProps>(
+  ({ editorState, fontSize, lineHeight, variant = 'chat' }) => {
+    const value = useMemo(() => {
+      if (!editorState || typeof editorState !== 'object') return null;
+      if (Object.keys(editorState as Record<string, unknown>).length === 0) return null;
+      return editorState as SerializedEditorState;
+    }, [editorState]);
 
-  if (!value) return null;
+    if (!value) return null;
 
-  return (
-    <LexicalRenderer
-      className={mentionFilledClassName}
-      extraNodes={EXTRA_NODES}
-      style={style}
-      value={value}
-      variant={variant}
-    />
-  );
-});
+    const renderedStyle =
+      fontSize === undefined && lineHeight === undefined
+        ? style
+        : ({
+            ...style,
+            ...(fontSize === undefined ? {} : { '--common-font-size': `${fontSize}px` }),
+            ...(lineHeight === undefined ? {} : { '--common-line-height': lineHeight }),
+          } as CSSProperties);
+
+    return (
+      <LexicalRenderer
+        className={mentionFilledClassName}
+        extraNodes={EXTRA_NODES}
+        style={renderedStyle}
+        value={value}
+        variant={variant}
+      />
+    );
+  },
+);
 
 RichTextMessage.displayName = 'RichTextMessage';
 

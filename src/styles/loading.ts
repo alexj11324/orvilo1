@@ -1,32 +1,9 @@
 import { shinyTextStyles as sharedShinyTextStyles } from '@orvilo/shared-tool-ui/styles';
-import { css } from 'antd-style';
 
-export const dotLoading = css`
-  &::after {
-    content: '\\2026'; /* ascii code for the ellipsis character */
+import nativeStyles from './textLoading.module.css';
 
-    overflow: hidden;
-    display: inline-block;
-
-    width: 0;
-
-    vertical-align: bottom;
-
-    animation: ellipsis steps(4, end) 900ms infinite;
-  }
-
-  @keyframes ellipsis {
-    to {
-      width: 1.25em;
-    }
-  }
-
-  @keyframes ellipsis {
-    to {
-      width: 1.25em;
-    }
-  }
-`;
+// This class is a motion-gate hook, not a second Tailwind animation producer.
+export const dotLoading = `animate-orvilo-dot-loading ${nativeStyles.dotLoading}`;
 
 export const elapsedTimeStyles = {
   elapsedTime: 'text-foreground-tertiary',

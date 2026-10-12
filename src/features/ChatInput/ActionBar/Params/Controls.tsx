@@ -1,5 +1,5 @@
 import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { debounce } from 'es-toolkit/compat';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -13,6 +13,7 @@ import AntdForm from '@/components/GroupForm';
 import InfoTooltip from '@/components/InfoTooltip';
 import InputNumber from '@/components/InputNumber';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -58,263 +59,33 @@ interface SliderConfig {
   unlimitedInput?: boolean;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  advancedContent: css`
-    display: flex;
-    flex-direction: column;
-
-    .control-row {
-      border-block-start: 1px solid ${cssVar.colorSplit};
-    }
-
-    .control-row:first-child {
-      border-block-start: none;
-    }
-  `,
-  sectionHeader: css`
-    cursor: pointer;
-
-    width: calc(100% + 16px);
-    margin-inline: -8px;
-    padding-block: 12px;
-    padding-inline: 8px;
-    border: none;
-    border-radius: 10px;
-
-    font: inherit;
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-
-    background: transparent;
-
-    transition: color 0.2s ease;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-
-    &:hover .section-header-label {
-      color: ${cssVar.colorText};
-    }
-
-    &:focus-visible {
-      outline: 1px solid ${cssVar.colorBorder};
-      outline-offset: 2px;
-    }
-  `,
-  body: css`
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-
-    min-height: 0;
-    padding-block-end: 4px;
-    padding-inline: 12px;
-  `,
-  commonSection: css`
-    display: flex;
-    flex-direction: column;
-    padding-block: 0;
-  `,
-  divider: css`
-    height: 1px;
-    background: ${cssVar.colorSplit};
-  `,
-  form: css`
-    margin: 0;
-  `,
-  formSidebar: css`
-    display: flex;
-    flex: 1;
-
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-  `,
-  header: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 16px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorSplit};
-
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-  `,
-  headerLoading: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 18px;
-    height: 18px;
-
-    color: ${cssVar.colorTextTertiary};
-  `,
-  headerTitle: css`
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  label: css`
-    user-select: none;
-
-    min-width: 0;
-
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 20px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  labelMain: css`
-    flex-wrap: wrap;
-    min-width: 0;
-  `,
-  muted: css`
-    .control-label {
-      color: ${cssVar.colorTextTertiary};
-    }
-  `,
-  panel: css`
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    width: min(384px, 100%);
-    max-height: 50vh;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-
-    .ant-switch {
-      min-width: 28px;
-      background: ${cssVar.colorFillSecondary};
-    }
-
-    .ant-switch .ant-switch-handle::before {
-      background: ${cssVar.colorBgElevated};
-    }
-
-    .ant-switch.ant-switch-checked {
-      background: ${cssVar.colorText};
-    }
-
-    .ant-form-item {
-      margin: 0;
-    }
-  `,
-  sidebarPanel: css`
-    width: 100%;
-    height: 100%;
-    max-height: none;
-    border: none;
-    border-radius: 0;
-
-    background: transparent;
-    box-shadow: none;
-  `,
-  rowControl: css`
-    width: 100%;
-  `,
-  rowRoot: css`
-    padding-block: 12px;
-  `,
-  tag: css`
-    user-select: none;
-
-    align-self: flex-start;
-
-    width: fit-content;
-    padding-block: 2px;
-    padding-inline: 7px;
-    border-radius: 999px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 10px;
-    font-weight: 500;
-    line-height: 1.2;
-    color: ${cssVar.colorTextQuaternary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  tooltipContent: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-width: 240px;
-  `,
-  slider: css`
-    width: 100%;
-
-    .ant-slider {
-      margin-block: 0;
-      margin-inline: 0;
-    }
-
-    .ant-slider-rail {
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    .ant-slider-track {
-      background: ${cssVar.colorTextSecondary};
-    }
-
-    .ant-slider-handle::after {
-      background: ${cssVar.colorBgElevated};
-      box-shadow: 0 0 0 2px ${cssVar.colorTextSecondary};
-    }
-
-    .ant-slider-handle:hover::after,
-    .ant-slider-handle:focus::after,
-    .ant-slider-handle:active::after {
-      box-shadow: 0 0 0 3px ${cssVar.colorTextSecondary};
-    }
-
-    .ant-input-number,
-    .ant-input-number-affix-wrapper {
-      overflow: hidden;
-
-      height: 28px;
-      border: none;
-      border-radius: 10px;
-
-      color: ${cssVar.colorTextSecondary};
-
-      background: ${cssVar.colorFillTertiary};
-      box-shadow: none;
-    }
-
-    .ant-input-number:hover,
-    .ant-input-number-focused,
-    .ant-input-number-affix-wrapper:hover,
-    .ant-input-number-affix-wrapper-focused {
-      background: ${cssVar.colorFillSecondary};
-      box-shadow: none;
-    }
-
-    .ant-input-number-input {
-      height: 28px;
-      padding-inline: 6px;
-
-      font-size: 13px;
-      color: ${cssVar.colorTextSecondary};
-      text-align: center;
-    }
-  `,
-}));
+const styles = {
+  advancedContent:
+    'flex flex-col [&>.control-row]:border-bs [&>.control-row]:border-split-divider [&>.control-row:first-child]:border-bs-0',
+  sectionHeader:
+    'w-[calc(100%+var(--spacing)*4)] -mx-2 py-1.5 px-2 whitespace-normal rounded-(--radius-button) text-sm leading-5.5 font-medium text-muted-foreground bg-transparent transition-[color] duration-(--orvilo-motion-mid) ease-[ease] motion-reduce:transition-none hover:text-foreground [&:hover_.section-header-label]:text-foreground pointer-coarse:py-2.5',
+  body: 'overflow-y-auto overscroll-contain flex flex-1 flex-col min-h-0 pbe-1 px-3',
+  commonSection: 'flex flex-col py-0',
+  divider: 'h-px bg-split-divider',
+  form: 'm-0',
+  formSidebar: 'flex flex-1 w-full h-full min-h-0',
+  header:
+    'flex gap-3 items-center justify-between py-4 px-3 border-be border-split-divider text-sm leading-5.5 font-semibold text-foreground',
+  headerLoading: 'flex flex-none items-center justify-center size-4 text-foreground-tertiary',
+  headerTitle: 'min-w-0 [overflow-wrap:anywhere]',
+  label:
+    'select-none min-w-0 text-sm leading-5.5 font-medium text-muted-foreground [overflow-wrap:anywhere]',
+  labelMain: 'flex-wrap min-w-0',
+  muted: '[&_.control-label]:text-foreground-tertiary',
+  panel:
+    'overflow-hidden flex flex-col w-[min(calc(var(--spacing)*96),100%)] max-h-[50vh] border border-divider rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)',
+  sidebarPanel: 'w-full h-full max-h-none border-0 rounded-none bg-transparent shadow-none',
+  rowControl: 'w-full',
+  rowRoot: 'py-3',
+  tag: 'select-none self-start w-fit py-0.5 px-1.75 rounded-(--radius-chip) font-mono text-xs leading-5 font-medium text-foreground-quaternary bg-fill-quaternary',
+  tooltipContent: 'flex flex-col gap-1.5 max-w-60',
+  slider: 'w-full gap-2.5 h-7 pointer-coarse:h-11 pointer-coarse:gap-6 pointer-coarse:ps-4',
+};
 
 const PARAM_NAME_MAP: Record<ParamKey, (string | number)[]> = {
   frequency_penalty: ['params', 'frequency_penalty'],
@@ -390,8 +161,8 @@ interface ControlLabelProps {
 }
 
 const ControlLabel = memo<ControlLabelProps>(({ title, tooltip, tag }) => (
-  <div className={cx('flex flex-col items-start gap-1.5', cx(styles.label, 'control-label'))}>
-    <div className={cx('flex flex-row items-center gap-1.5', styles.labelMain)}>
+  <div className={cn('flex flex-col items-start gap-1.5', cn(styles.label, 'control-label'))}>
+    <div className={cn('flex flex-row items-center gap-1.5', styles.labelMain)}>
       {title}
       {tooltip && (
         <InfoTooltip
@@ -418,9 +189,9 @@ interface ControlRowProps {
 
 const ControlRow = ({ action, children, muted, tag, title, tooltip }: ControlRowProps) => (
   <div
-    className={cx(
+    className={cn(
       'flex flex-col gap-2.5',
-      cx('control-row', styles.rowRoot, muted && styles.muted),
+      cn('control-row', styles.rowRoot, muted && styles.muted),
     )}
   >
     <div className="flex flex-row items-center gap-3 justify-between">
@@ -438,22 +209,32 @@ interface SectionHeaderProps {
 }
 
 const SectionHeader = memo<SectionHeaderProps>(({ onToggle, open, title }) => (
-  <button aria-expanded={open} className={styles.sectionHeader} type="button" onClick={onToggle}>
-    <div className="flex flex-row items-center gap-3 justify-between">
-      <span className={cx(styles.label, 'section-header-label')}>{title}</span>
+  <Button
+    multiline
+    aria-expanded={open}
+    className={styles.sectionHeader}
+    disabled={false}
+    size="normal"
+    type="button"
+    variant="ghost"
+    onClick={onToggle}
+  >
+    <div className="flex flex-row items-center gap-3 justify-between w-full min-w-0">
+      <span className={cn(styles.label, 'section-header-label')}>{title}</span>
       <span className="anticon" role="img">
         {createElement(open ? ChevronUp : ChevronDown, {
-          size: 18,
-          width: 18,
-          height: 18,
+          size: 16,
+          width: 16,
+          height: 16,
           fill: 'transparent',
         })}
       </span>
     </div>
-  </button>
+  </Button>
 ));
 
 interface SliderFieldProps extends SliderConfig {
+  ariaLabel?: string;
   disabled?: boolean;
   inputWidth?: number;
   onChange: (value: number) => void;
@@ -461,6 +242,7 @@ interface SliderFieldProps extends SliderConfig {
 }
 
 const SliderField = ({
+  ariaLabel,
   value,
   disabled,
   onChange,
@@ -488,13 +270,9 @@ const SliderField = ({
   }, [disabled, max, min, onChange, step, value]);
 
   return (
-    <div
-      className={cx('flex items-center', styles.slider)}
-      ref={wrapRef}
-      style={{ gap: 10, height: 28 }}
-    >
+    <div className={cn('flex items-center', styles.slider)} ref={wrapRef}>
       <Slider
-        className="flex-1"
+        className="flex-1 pointer-coarse:flex pointer-coarse:h-11 pointer-coarse:items-center pointer-coarse:[&_[data-slot=slider-control]]:h-11 pointer-coarse:[&_[data-slot=slider-thumb]]:after:-inset-[calc(var(--spacing)*4.25)]"
         disabled={disabled}
         max={max}
         min={min}
@@ -502,19 +280,22 @@ const SliderField = ({
         value={value}
         onValueChange={(v) => onChange(Array.isArray(v) ? v[0] : v)}
       />
-      <InputNumber
-        controls={false}
-        disabled={disabled}
-        max={unlimitedInput ? undefined : max}
-        min={min}
-        size="sm"
-        step={step}
-        style={{ maxWidth: inputWidth }}
-        value={value ?? null}
-        onChange={(v) => {
-          if (typeof v === 'number') onChange(v);
-        }}
-      />
+      <label className="shrink-0 pointer-coarse:py-2">
+        <InputNumber
+          aria-label={ariaLabel}
+          controls={false}
+          disabled={disabled}
+          max={unlimitedInput ? undefined : max}
+          min={min}
+          size="sm"
+          step={step}
+          style={{ maxWidth: inputWidth }}
+          value={value ?? null}
+          onChange={(v) => {
+            if (typeof v === 'number') onChange(v);
+          }}
+        />
+      </label>
     </div>
   );
 };
@@ -718,13 +499,13 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
   }, []);
 
   return (
-    <div className={cx(styles.form, variant === 'sidebar' && styles.formSidebar)}>
-      <div className={cx(styles.panel, variant === 'sidebar' && styles.sidebarPanel)}>
-        <div className={styles.header}>
+    <div className={cn(styles.form, variant === 'sidebar' && styles.formSidebar)}>
+      <div className={cn(styles.panel, variant === 'sidebar' && styles.sidebarPanel)}>
+        <div aria-busy={updating || undefined} className={styles.header}>
           <span className={styles.headerTitle}>{panelTitle}</span>
           {updating && (
             <div className={styles.headerLoading}>
-              <NeuralNetworkLoading size={18} />
+              <NeuralNetworkLoading size={16} />
             </div>
           )}
         </div>
@@ -763,6 +544,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
               {enableHistoryCount && (
                 <SliderField
                   unlimitedInput
+                  ariaLabel={t('settingModel.params.panel.historyLimit')}
                   disabled={!canCreate}
                   inputWidth={56}
                   max={20}
@@ -851,6 +633,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                       >
                         {enabled && (
                           <SliderField
+                            ariaLabel={t(meta.labelKey)}
                             disabled={!canCreate}
                             value={form.getFieldValue(PARAM_NAME_MAP[key])}
                             onChange={(value) => {
@@ -883,6 +666,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                     {enableMaxTokens && (
                       <SliderField
                         unlimitedInput
+                        ariaLabel={t('settingModel.params.panel.responseLength')}
                         disabled={!canCreate}
                         inputWidth={64}
                         max={32_000}

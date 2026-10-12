@@ -1,8 +1,7 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { ChevronLeft, Plus } from 'lucide-react';
 import { createElement, memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -84,29 +83,23 @@ const SortableTaskCard = memo<{
   );
 });
 
-const stylesRetained = createStaticStyles(({ css, cssVar }) => ({
-  columnDropActive: css`
-    border-color: ${cssVar.colorPrimaryBorderHover};
-    box-shadow: inset 0 0 0 1px ${cssVar.colorPrimaryBorderHover};
-  `,
-}));
-
 const styles = {
   collapsed:
-    'flex flex-col shrink-0 w-10 max-h-full border border-divider rounded-(--radius-card) bg-card',
+    'flex flex-col shrink-0 w-10 max-h-full border border-divider rounded-(--radius-card) bg-card pointer-coarse:w-11',
   collapsedButton:
-    'cursor-pointer flex flex-1 flex-col gap-2 items-center justify-start py-2.5 px-0 border-0 rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2 text-foreground bg-transparent transition-[background-color] duration-(--orvilo-motion-mid) hover:bg-accent motion-reduce:transition-none',
+    'cursor-pointer flex flex-1 flex-col gap-2 items-center justify-start min-h-8 pointer-coarse:min-h-11 py-2.5 px-0 border-0 rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2 text-foreground bg-transparent transition-[background-color] duration-(--orvilo-motion-mid) hover:bg-accent motion-reduce:transition-none',
   collapsedCount: 'text-xs leading-5 tabular-nums',
   collapsedDropOver: 'border-primary bg-primary-wash ring-1 ring-primary',
   collapsedLabel: '[writing-mode:vertical-rl] text-xs leading-5 font-medium',
   collapsedLabelRotated: 'rotate-180',
   addPill:
-    'cursor-pointer flex gap-1.5 items-center justify-center min-h-9 border border-dashed border-border rounded-(--radius-button) text-foreground-tertiary transition-[border-color,color,background-color] duration-(--orvilo-motion-mid) hover:border-primary-border hover:text-primary-text hover:bg-card motion-reduce:transition-none',
+    'cursor-pointer flex gap-1.5 items-center justify-center min-h-9 pointer-coarse:min-h-11 border border-dashed border-border rounded-(--radius-button) text-foreground-tertiary transition-[border-color,color,background-color] duration-(--orvilo-motion-mid) hover:border-primary-border hover:text-primary-text hover:bg-card motion-reduce:transition-none',
   body: 'overflow-y-auto flex flex-1 flex-col gap-2 min-h-30 pbs-1 pbe-3 px-2 rounded-es-(--radius-card) rounded-ee-(--radius-card) transition-[background-color] duration-(--orvilo-motion-mid) motion-reduce:transition-none',
   bodyDropActive: 'bg-selected',
   column:
-    'flex flex-col shrink-0 w-80 max-h-full border border-divider rounded-(--radius-card) bg-card transition-[box-shadow,border-color] duration-(--orvilo-motion-mid) [&_.kanban-col-action]:opacity-0 [&_.kanban-col-action]:transition-opacity [&_.kanban-col-action]:duration-(--orvilo-motion-mid) hover:[&_.kanban-col-action]:opacity-100 focus-within:[&_.kanban-col-action]:opacity-100 has-[[data-open]]:[&_.kanban-col-action]:opacity-100 coarse:[&_.kanban-col-action]:opacity-100 motion-reduce:transition-none motion-reduce:[&_.kanban-col-action]:transition-none',
-  columnDropActive: stylesRetained.columnDropActive,
+    'flex flex-col shrink-0 w-80 max-h-full border border-divider rounded-(--radius-card) bg-card transition-[box-shadow,border-color] duration-(--orvilo-motion-mid) [&_.kanban-col-action]:opacity-0 [&_.kanban-col-action]:transition-opacity [&_.kanban-col-action]:duration-(--orvilo-motion-mid) hover:[&_.kanban-col-action]:opacity-100 focus-within:[&_.kanban-col-action]:opacity-100 has-[[data-open]]:[&_.kanban-col-action]:opacity-100 pointer-coarse:[&_.kanban-col-action]:opacity-100 motion-reduce:transition-none motion-reduce:[&_.kanban-col-action]:transition-none',
+  columnDropActive:
+    'border-primary-border-hover shadow-[inset_0_0_0_1px_var(--primary-border-hover)]',
   count: 'flex-none text-xs leading-5 tabular-nums',
   header: 'flex gap-2 items-center justify-between min-h-10 py-2.5 ps-3 pe-2',
   headerActions: 'flex gap-0.5 items-center',
@@ -253,7 +246,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
               <>
                 {statusIcon &&
                   createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
-                <div className="text-sm font-medium">{label}</div>
+                <div className="text-sm leading-5.5 font-medium">{label}</div>
               </>
             )}
             {headerVariant !== 'loading' && (
@@ -262,9 +255,9 @@ const KanbanColumn = memo<KanbanColumnProps>(
           </div>
           <div className={cx(styles.headerActions, 'kanban-col-action')}>
             {onHide && (
-              <span className="inline-flex flex-none coarse:p-1.5">
+              <span className="inline-flex flex-none pointer-coarse:p-1.5">
                 <ActionIcon
-                  className="relative coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
                   icon={ChevronLeft}
                   size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('taskList.kanban.hideColumn')}
@@ -273,9 +266,9 @@ const KanbanColumn = memo<KanbanColumnProps>(
               </span>
             )}
             {onCreate && (
-              <span className="inline-flex flex-none coarse:p-1.5">
+              <span className="inline-flex flex-none pointer-coarse:p-1.5">
                 <ActionIcon
-                  className="relative coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
+                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
                   icon={Plus}
                   size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('taskList.kanban.addTask')}

@@ -57,9 +57,14 @@ const CommentContent = memo<Pick<DocumentCommentItem, 'content' | 'editorData'>>
   ({ content, editorData }) => (
     <div className={styles.commentContent}>
       {hasDocumentCommentEditorData(editorData) ? (
-        <RichTextMessage editorState={editorData} variant={'default'} />
+        <RichTextMessage
+          editorState={editorData}
+          fontSize={14}
+          lineHeight={22 / 14}
+          variant={'default'}
+        />
       ) : (
-        <Markdown fontSize={14} variant={'chat'}>
+        <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
           {content}
         </Markdown>
       )}

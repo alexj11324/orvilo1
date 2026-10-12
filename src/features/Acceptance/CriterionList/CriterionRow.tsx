@@ -9,8 +9,8 @@ import { Badge } from '@/components/reui/badge';
 const styles = {
   list: 'w-full overflow-hidden p-0',
   row: 'acceptance-criterion-row px-3 py-2.5 [&+.acceptance-criterion-row]:border-t [&+.acceptance-criterion-row]:border-sidebar-border',
-  rowClickable: 'cursor-pointer hover:bg-(--ant-color-fill-quaternary)',
-  seq: 'flex-none text-[12px] text-(--ant-color-text-tertiary)',
+  rowClickable: 'cursor-pointer hover:bg-fill-quaternary',
+  seq: 'flex-none text-xs text-foreground-tertiary',
 };
 
 interface CriterionRequiredChipProps {
@@ -109,7 +109,9 @@ interface CriterionListProps {
 
 /** Outlined container that gives `CriterionRow` children their between-row borders. */
 export const CriterionList = ({ children, className }: CriterionListProps) => (
-  <div className={`flex flex-col rounded-md border border-border ${cn(styles.list, className)}`}>
+  <div
+    className={`flex flex-col rounded-(--radius-card) border border-border ${cn(styles.list, className)}`}
+  >
     {children}
   </div>
 );

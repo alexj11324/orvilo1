@@ -2,7 +2,6 @@
 
 import type { LexicalDiffProps } from '@lobehub/editor/renderer';
 import { LexicalDiff } from '@lobehub/editor/renderer';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { SerializedEditorState } from 'lexical';
 import { GitCompareArrowsIcon } from 'lucide-react';
@@ -17,26 +16,11 @@ import { documentService } from '@/services/document';
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    min-height: 0;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  content: css`
-    overflow: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  empty: css`
-    padding: 24px;
-  `,
-}));
+const styles = {
+  container: 'flex min-h-0 flex-1 flex-col overflow-hidden bg-card',
+  content: 'min-h-0 flex-1 overflow-auto',
+  empty: 'p-6',
+};
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;

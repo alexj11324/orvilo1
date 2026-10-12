@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useRef } from 'react';
 
 import type { PresenceEntry } from '@/store/collaboration';
@@ -9,38 +8,13 @@ import { useCollaborationContext } from './context';
 import { cursorLabelForeground } from './cursorLabelColor';
 import { useCursorPlacement } from './useCursorPlacement';
 
-const styles = createStaticStyles(({ css }) => ({
-  cursor: css`
-    pointer-events: none;
-    will-change: transform;
-
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-
-    display: flex;
-    gap: 4px;
-    align-items: flex-start;
-  `,
-  label: css`
-    margin-block-start: 14px;
-    padding-block: 2px;
-    padding-inline: 6px;
-    border-radius: 4px;
-
-    font-size: 11px;
-    font-weight: 500;
-    line-height: 1;
-    color: #fff;
-    white-space: nowrap;
-
-    background: ${cssVar.colorPrimary};
-  `,
-  pointer: css`
-    display: block;
-    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 25%));
-  `,
-}));
+const styles = {
+  cursor:
+    'pointer-events-none will-change-transform absolute inset-bs-0 inset-s-0 flex gap-1 items-start',
+  label:
+    'mbs-3.5 py-0.5 px-1.5 rounded-(--radius-chip) text-xs leading-5 font-medium text-primary-foreground whitespace-nowrap bg-primary',
+  pointer: 'block drop-shadow-[0_1px_2px_rgb(0_0_0_/_25%)]',
+};
 
 /**
  * One remote human cursor. The incoming (u,v) is projected onto the live
@@ -77,7 +51,7 @@ export const HumanCursor = memo<{ entry: PresenceEntry }>(({ entry }) => {
       >
         <path
           d="M191.109 403.364L358.748 403.364C402.806 403.364 420.916 363.611 394.638 336.996L72.3808 14.7393C43.81-14.168 0 1.59367 0 43.3101L0 500.412C0 537.942 41.0241 553.112 72.4169 522.056Z"
-          fill={color || cssVar.colorPrimary}
+          fill={color || 'var(--primary)'}
           stroke="#fff"
           strokeWidth={28}
         />

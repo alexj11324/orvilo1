@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -10,14 +9,9 @@ import { phaseCardBackground, phaseFromStatus } from '@/features/Acceptance/util
 
 import { dataSelectors, useConversationStore } from '../../store';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    overflow: hidden;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 16px;
-    background: ${cssVar.colorBgElevated};
-  `,
-}));
+const styles = {
+  card: 'overflow-hidden border border-divider rounded-(--radius-card) bg-popover',
+};
 
 interface VerifyMessageProps {
   id: string;
@@ -44,7 +38,17 @@ const VerifyMessage = memo<VerifyMessageProps>(({ id }) => {
 
   return (
     <div className="flex flex-col py-2">
-      <div className={styles.card} style={{ background: phaseCardBackground(phase, cssVar) }}>
+      <div
+        className={styles.card}
+        style={{
+          background: phaseCardBackground(phase, {
+            colorBgElevated: 'var(--popover)',
+            colorError: 'var(--destructive)',
+            colorSuccess: 'var(--success)',
+            colorWarning: 'var(--warning)',
+          }),
+        }}
+      >
         <RunResult embedded operationId={operationId} round={ordinal} />
         <CheckerDock embedded operationId={operationId} />
       </div>

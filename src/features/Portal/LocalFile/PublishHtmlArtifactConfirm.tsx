@@ -58,7 +58,7 @@ const PublishHtmlArtifactConfirmContent = ({
           <Accordion>
             <AccordionItem className="border-b-0" value="details">
               <AccordionTrigger>
-                <div className="text-[12px] text-muted-foreground font-medium">
+                <div className="text-xs text-muted-foreground font-medium">
                   {t('workingPanel.localFile.publish.details')}
                 </div>
               </AccordionTrigger>

@@ -57,6 +57,7 @@ const RenameBranchContent = memo<RenameBranchContentProps>(({ currentName, onSub
           placeholder={tDevice('workingDirectory.newBranchPlaceholder')}
           ref={inputRef}
           value={value}
+          visualSize="normal"
           onChange={(e) => {
             setValue(e.target.value);
             setError(undefined);
@@ -65,15 +66,16 @@ const RenameBranchContent = memo<RenameBranchContentProps>(({ currentName, onSub
             if (e.key === 'Enter') handleSubmit();
           }}
         />
-        {error ? <div className="text-[12px] text-destructive">{error}</div> : null}
+        {error ? <div className="text-xs text-destructive">{error}</div> : null}
       </div>
       <div className="flex flex-row gap-2 justify-end">
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {tCommon('cancel')}
         </Button>
         <Button
           disabled={!trimmed || trimmed === currentName}
           loading={loading}
+          size="lg"
           variant="default"
           onClick={handleSubmit}
         >

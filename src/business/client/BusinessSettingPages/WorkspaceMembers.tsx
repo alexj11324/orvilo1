@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { LogOut, UserPlus } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,20 +23,10 @@ import { useTeammateActions } from '@/features/Teammates/api/hooks';
 import { runLeaveWorkspace } from './workspaceMemberLeave';
 import { type WorkspaceMemberTabKey, workspaceMemberTabKeys } from './workspaceMemberTabs';
 
-const styles = createStaticStyles(({ css }) => ({
-  header: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block-end: 12px;
-  `,
-  page: css`
-    padding-block: 8px 24px;
-    padding-inline: 24px;
-  `,
-}));
+const styles = {
+  header: 'flex items-center justify-between gap-3 pbe-3',
+  page: 'pbs-2 pbe-6 px-6',
+};
 
 type TabKey = WorkspaceMemberTabKey;
 
@@ -87,7 +76,7 @@ const WorkspaceMembers = memo(() => {
   if (!workspace) {
     return (
       <div className={`${styles.page} flex flex-col gap-4`}>
-        <div className="text-[14px] text-muted-foreground">
+        <div className="text-sm text-muted-foreground">
           {t('workspaceSetting.members.noWorkspace')}
         </div>
       </div>
@@ -97,7 +86,7 @@ const WorkspaceMembers = memo(() => {
   return (
     <div className={`${styles.page} flex flex-col gap-2`}>
       <div className={styles.header}>
-        <div className="text-[16px] font-semibold">{t('workspaceSetting.members.title')}</div>
+        <div className="text-base font-semibold">{t('workspaceSetting.members.title')}</div>
         <div className="flex items-center gap-2">
           {(capabilities.canLeave || capabilities.isOwner) && (
             <TooltipProvider>

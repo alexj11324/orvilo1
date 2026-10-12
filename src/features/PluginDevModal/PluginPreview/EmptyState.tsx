@@ -1,54 +1,14 @@
-import { createStaticStyles } from 'antd-style';
 import { Puzzle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-// Create styles using antd-style
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    align-items: center;
-    justify-content: center;
-
-    width: 100%;
-    height: 100%;
-    padding: ${cssVar.paddingLG};
-  `,
-  description: css`
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-  `,
-  iconWrapper: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-
-    background-color: ${cssVar.colorPrimaryBg};
-  `,
-  line: css`
-    height: 6px;
-    border-radius: 3px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  placeholderLine: css`
-    height: 6px;
-    margin-block: ${cssVar.marginXS};
-    margin-inline: 0;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background-color: ${cssVar.colorBorderSecondary};
-  `,
-  title: css`
-    margin-block-end: ${cssVar.marginXS};
-    font-size: ${cssVar.fontSizeLG};
-    font-weight: 500;
-  `,
-}));
+const styles = {
+  container: 'flex flex-col gap-3 items-center justify-center w-full h-full p-6',
+  description: 'text-sm leading-5.5 text-muted-foreground text-center',
+  iconWrapper: 'flex items-center justify-center size-16 rounded-full bg-primary-wash',
+  line: 'h-1.5 rounded-full bg-divider',
+  placeholderLine: 'h-1.5 my-2 mx-0 rounded-full bg-divider',
+  title: 'mbe-2 text-xl leading-7 font-semibold',
+};
 
 export default function PluginEmptyState() {
   const { t } = useTranslation('plugin');
@@ -63,9 +23,9 @@ export default function PluginEmptyState() {
       <h4 className={styles.title}>{t('dev.preview.empty.title')}</h4>
       <p className={styles.description}>{t('dev.preview.empty.desc')}</p>
       <div className="flex flex-col items-center gap-2">
-        <div className={styles.line} style={{ width: 128 }} />
-        <div className={styles.line} style={{ width: 96 }} />
-        <div className={styles.line} style={{ width: 48 }} />
+        <div className={`${styles.line} w-32`} />
+        <div className={`${styles.line} w-24`} />
+        <div className={`${styles.line} w-12`} />
       </div>
     </div>
   );

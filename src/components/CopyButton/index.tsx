@@ -3,7 +3,7 @@
 import { Check, Copy, type LucideIcon } from 'lucide-react';
 import { memo, type MouseEvent, useEffect, useState } from 'react';
 
-import ActionIcon from '@/components/ActionIcon';
+import ActionIcon, { type ActionIconProps } from '@/components/ActionIcon';
 import { copyToClipboard } from '@/utils/clipboard';
 
 const COPIED_RESET_MS = 2_000;
@@ -13,7 +13,7 @@ interface CopyButtonProps {
   content: string | (() => string);
   icon?: LucideIcon;
   onClick?: (e: MouseEvent) => void;
-  size?: 'small' | 'middle' | 'large' | number;
+  size?: ActionIconProps['size'];
   title?: string;
 }
 

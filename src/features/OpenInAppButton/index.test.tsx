@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -116,6 +117,67 @@ describe('<OpenInAppButton />', () => {
     fireEvent.click(leftButton);
 
     expect(launchMock).toHaveBeenCalledWith('vscode');
+  });
+
+  it('activates the native launch button once for Enter and once for Space', async () => {
+    const user = userEvent.setup();
+    render(<OpenInAppButton workingDirectory="/tmp/proj" />);
+
+    const leftButton = screen.getByLabelText(/tooltip/);
+    const rightButton = screen.getByLabelText('dropdownLabel');
+    await user.tab();
+    await user.keyboard('{Enter}');
+    expect(launchMock).toHaveBeenCalledTimes(1);
+    expect(leftButton).toHaveFocus();
+    await user.keyboard(' ');
+    expect(launchMock).toHaveBeenCalledTimes(2);
+    expect(launchMock.mock.calls).toEqual([['vscode'], ['vscode']]);
+    expect(leftButton).toBeInstanceOf(HTMLButtonElement);
+    expect(rightButton).toBeInstanceOf(HTMLButtonElement);
+    expect(leftButton).toHaveAttribute('type', 'button');
+    expect(rightButton).toHaveAttribute('type', 'button');
+
+    await user.tab();
+    expect(rightButton).toHaveFocus();
+    await user.keyboard('{Enter} ');
+    expect(launchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not submit an enclosing form or launch twice for a native click', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn((event: { preventDefault: () => void }) => event.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <OpenInAppButton workingDirectory="/tmp/proj" />
+      </form>,
+    );
+
+    await user.click(screen.getByLabelText(/tooltip/));
+    expect(launchMock.mock.calls).toEqual([['vscode']]);
+    await user.click(screen.getByLabelText('dropdownLabel'));
+    expect(launchMock).toHaveBeenCalledTimes(1);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('does not launch while the native button is disabled', async () => {
+    const user = userEvent.setup();
+    render(<OpenInAppButton workingDirectory="/tmp/proj" />);
+
+    const leftButton = screen.getByLabelText(/tooltip/) as HTMLButtonElement;
+    expect(leftButton).toBeInstanceOf(HTMLButtonElement);
+    await user.tab();
+    expect(leftButton).toHaveFocus();
+    // Exercise the platform's disabled state without adding a feature-level disabled API.
+    leftButton.disabled = true;
+    await user.click(leftButton);
+    await user.keyboard('{Enter} ');
+    expect(launchMock).not.toHaveBeenCalled();
+
+    leftButton.disabled = false;
+    await user.click(leftButton);
+    expect(launchMock.mock.calls).toEqual([['vscode']]);
+    await user.keyboard('{Enter} ');
+    expect(launchMock.mock.calls).toEqual([['vscode'], ['vscode'], ['vscode']]);
   });
 
   it('lists only installed apps in the dropdown', () => {

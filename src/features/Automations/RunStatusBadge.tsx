@@ -38,7 +38,7 @@ const RunStatusBadge = memo<RunStatusBadgeProps>(({ hint, status }) => {
         paddingInline: 8,
       }}
     >
-      <div className="truncate min-w-0 text-[12px]" style={{ color: 'inherit' }}>
+      <div className="truncate min-w-0 text-xs" style={{ color: 'inherit' }}>
         {t(`run_status.${normalized}`)}
         {hint ? ` · ${hint}` : ''}
       </div>

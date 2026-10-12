@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { ChevronRight, GlobeIcon } from 'lucide-react';
 import { memo, type ReactElement, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +52,7 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
         label: (
           <div className="flex flex-col gap-1" onMouseEnter={() => preloadLang('auto')}>
             <div style={{ lineHeight: 1.2 }}>{t('settingCommon.lang.autoMode')}</div>
-            <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.2 }}>
+            <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.2 }}>
               {t(`lang.auto` as any, { ns: 'common' })}
             </div>
           </div>
@@ -77,7 +76,7 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
             onMouseEnter={() => preloadLang(item.value)}
           >
             <div style={{ lineHeight: 1.2 }}>{item.label}</div>
-            <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.2 }}>
+            <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.2 }}>
               {t(`lang.${item.value}` as any, { ns: 'common' })}
             </div>
           </div>
@@ -122,15 +121,15 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
             paddingInline: 12,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = cssVar.colorFillTertiary as string;
+            e.currentTarget.style.background = 'var(--ant-color-fill-tertiary)' as string;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
           }}
         >
           <div className="flex flex-col flex-1">{currentLabel}</div>
-          <GlobeIcon size={'small'} style={{ color: cssVar.colorTextSecondary }} />
-          <ChevronRight size={'small'} style={{ color: cssVar.colorTextSecondary }} />
+          <GlobeIcon size={'small'} style={{ color: 'var(--ant-color-text-secondary)' }} />
+          <ChevronRight size={'small'} style={{ color: 'var(--ant-color-text-secondary)' }} />
         </div>
       );
     }

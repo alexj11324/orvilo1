@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- Linear's unassigned avatar
 import { Bot, CircleDashed, UserRound } from 'lucide-react';
 import { memo } from 'react';
@@ -15,7 +14,7 @@ export const UnassignedAssigneeIcon = memo<UnassignedAssigneeIconProps>(({ kind,
       aria-hidden
       className="flex flex-col items-center justify-center"
       style={{
-        color: cssVar.colorTextDescription,
+        color: 'var(--ant-color-text-description)',
         flexShrink: 0,
         height: size,
         position: 'relative',

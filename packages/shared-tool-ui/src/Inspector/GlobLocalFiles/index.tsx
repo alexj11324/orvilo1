@@ -11,7 +11,7 @@ import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
 const styles = {
   statusIcon: 'self-center ms-1',
-  tag: 'rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-foreground ms-1.5',
+  tag: 'rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-[12px] text-foreground ms-1.5',
 };
 
 interface GlobFilesArgs {

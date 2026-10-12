@@ -48,7 +48,7 @@ const PreferenceRightPanel = memo(() => {
   const content = preference && (
     <>
       <CateTag cate={preference.type} />
-      <h1 className="text-[20px] font-bold" style={{ lineHeight: 1.4, marginBottom: 0 }}>
+      <h1 className="mbe-0 text-xl leading-7 font-semibold">
         {preference.title || preference.type || t('preference.defaultType')}
       </h1>
       <div className="flex items-center gap-4 justify-between">

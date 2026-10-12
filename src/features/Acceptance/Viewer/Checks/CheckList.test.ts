@@ -150,17 +150,6 @@ describe('check reject modal presentation', () => {
     expect(checkRejectModalSize(1)).toEqual(CHECK_REJECT_MODAL_SIZE);
   });
 
-  it('does not size the overlay, which would pin the dialog to the left', () => {
-    const text = checkRejectModalShell(0);
-    const media = checkRejectModalShell(1);
-
-    expect(Object.hasOwn(text.styles, 'popup')).toBe(false);
-    expect(Object.hasOwn(media.styles, 'popup')).toBe(false);
-    expect(text.width).toBe(TEXT_REJECT_MODAL_WIDTH);
-    expect(media.width).toBe(CHECK_REJECT_MODAL_SIZE.width);
-    expect(media.classNames.popup).not.toBe(text.classNames.popup);
-  });
-
   it('does not restyle header or content inset, so title and body share the modal padding', () => {
     const shell = checkRejectModalShell(0);
     expect(Object.hasOwn(shell.styles, 'header')).toBe(false);

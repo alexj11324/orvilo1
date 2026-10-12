@@ -42,6 +42,7 @@ export const AgentGeneralSettings = ({ agentId }: { agentId: string }) => {
           aria-label={t('settingAgent.generalSettings.name')}
           disabled={!canEdit || status === 'saving'}
           value={name}
+          visualSize="normal"
           onChange={(event) => setName(event.target.value)}
           onBlur={() => {
             const next = name.trim();

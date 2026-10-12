@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { CircleAlertIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,20 +11,10 @@ import WideScreenContainer from '@/features/WideScreenContainer';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
-const styles = createStaticStyles(({ css }) => ({
-  // base-ui stacks title and description in a gapless column, and both use a
-  // 20px line height — without this they read as one run-on paragraph.
-  description: css`
-    margin-block-start: 2px;
-  `,
-  // The action column is top-aligned by default, which strands the button in
-  // the corner as soon as the diagnosis wraps. Centre it against the whole
-  // block, and keep a gutter so wrapped text never runs up against it.
-  retry: css`
-    align-self: center;
-    padding-inline-start: 12px;
-  `,
-}));
+const styles = {
+  description: 'mbs-0.5',
+  retry: 'self-center ps-3',
+} as const;
 
 /**
  * Surfaces an agent-config fetch failure above the chat input with a retry
@@ -50,13 +39,13 @@ const AgentConfigError = memo(() => {
 
   return (
     <WideScreenContainer>
-      <div className="flex flex-col" style={{ paddingBlock: '0 18px' }}>
+      <div className="flex flex-col pbs-0 pbe-4.5">
         <Alert variant="destructive">
           <CircleAlertIcon />
           <AlertTitle>{t('agentConfigError.title')}</AlertTitle>
           <AlertDescription className={styles.description}>{errorMessage}</AlertDescription>
           <AlertAction className={styles.retry}>
-            <Button size="sm" variant="outline" onClick={() => retryAgentConfigFetch(agentId)}>
+            <Button size="lg" variant="outline" onClick={() => retryAgentConfigFetch(agentId)}>
               {t('agentConfigError.retry')}
             </Button>
           </AlertAction>

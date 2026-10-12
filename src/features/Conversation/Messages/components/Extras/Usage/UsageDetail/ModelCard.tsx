@@ -1,5 +1,4 @@
 import { getCachedTextInputUnitRate, getWriteCacheInputUnitRate } from '@orvilo/utils';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowDownToDot, ArrowUpFromDot, BookUp2Icon, CircleFadingArrowUp } from 'lucide-react';
 import { type OrviloDefaultAiModelListItem } from 'model-bank';
@@ -14,21 +13,11 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 
 import { getPrice } from './pricing';
 
-export const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    container: css`
-      font-size: 12px;
-    `,
-    desc: css`
-      line-height: 12px;
-      color: ${cssVar.colorTextDescription};
-    `,
-    pricing: css`
-      font-size: 12px;
-      color: ${cssVar.colorTextSecondary};
-    `,
-  };
-});
+export const styles = {
+  container: 'text-sm leading-5.5',
+  desc: 'text-xs leading-5 text-foreground-description',
+  pricing: 'text-xs leading-5 text-muted-foreground',
+};
 
 interface ModelCardProps extends OrviloDefaultAiModelListItem {
   provider: string;
@@ -44,16 +33,11 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
 
   return (
     <div className="flex flex-col gap-2">
-      <div
-        className={cn('flex items-center flex-1 justify-between', styles.container)}
-        style={{ gap: 40 }}
-      >
+      <div className={cn('flex flex-1 items-center justify-between gap-10', styles.container)}>
         <div className="flex items-center gap-2">
           <ModelIcon model={id} size={22} />
-          <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-            <div className="flex items-center gap-2" style={{ lineHeight: '12px' }}>
-              {displayName || id}
-            </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex items-center gap-2 leading-5.5">{displayName || id}</div>
             <span className={styles.desc}>{provider}</span>
           </div>
         </div>
@@ -65,15 +49,17 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
                 updateSystemStatus({ isShowCredit: key === 'credit' });
               }}
             >
-              <TabsList>
-                <TabsTrigger value={'token'}>{'Token'}</TabsTrigger>
-                <TabsTrigger value={'credit'}>
+              <TabsList className="rounded-(--radius-button)">
+                <TabsTrigger className="rounded-(--radius-input)" value={'token'}>
+                  {'Token'}
+                </TabsTrigger>
+                <TabsTrigger className="rounded-(--radius-input)" value={'credit'}>
                   {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger
                           render={
-                            <span style={{ display: 'inline-flex' }}>
+                            <span className="inline-flex">
                               <span>{t('messages.modelCard.credit')}</span>
                             </span>
                           }
@@ -98,9 +84,9 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
+                      <span className="inline-flex">
                         <div className="flex gap-0.5">
-                          <CircleFadingArrowUp />
+                          <CircleFadingArrowUp size={14} />
                           {formatPrice.cachedInput}
                         </div>
                       </span>
@@ -119,9 +105,9 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
+                      <span className="inline-flex">
                         <div className="flex gap-0.5">
-                          <BookUp2Icon />
+                          <BookUp2Icon size={14} />
                           {formatPrice.writeCacheInput}
                         </div>
                       </span>
@@ -139,9 +125,9 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <span style={{ display: 'inline-flex' }}>
+                    <span className="inline-flex">
                       <div className="flex gap-0.5">
-                        <ArrowUpFromDot />
+                        <ArrowUpFromDot size={14} />
                         {formatPrice.input}
                       </div>
                     </span>
@@ -156,9 +142,9 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <span style={{ display: 'inline-flex' }}>
+                    <span className="inline-flex">
                       <div className="flex gap-0.5">
-                        <ArrowDownToDot />
+                        <ArrowDownToDot size={14} />
                         {formatPrice.output}
                       </div>
                     </span>
@@ -172,7 +158,7 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
           </div>
         </div>
       ) : (
-        <div style={{ height: 18 }} />
+        <div className="h-4.5" />
       )}
     </div>
   );

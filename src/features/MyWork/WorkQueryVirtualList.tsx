@@ -272,6 +272,7 @@ const WorkQueryVirtualList = ({
           aria-expanded={!item.collapsed}
           className="min-w-0 flex-1 justify-start"
           data-work-group-header={item.collapseKey}
+          size="compact"
           variant="ghost"
           onClick={() => toggleCollapsed(item.collapseKey)}
         >
@@ -330,7 +331,7 @@ const WorkQueryVirtualList = ({
       if (!onLoadMoreGroup || !loadMoreLabel) return null;
       return (
         <div className="flex justify-center py-1">
-          <Button variant="outline" onClick={() => onLoadMoreGroup(item.cursorKey)}>
+          <Button size="compact" variant="outline" onClick={() => onLoadMoreGroup(item.cursorKey)}>
             {loadMoreLabel}
           </Button>
         </div>

@@ -69,7 +69,7 @@ const Body = memo(() => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[100%]">
+      <div className="flex flex-col items-center justify-center h-full">
         <NeuralNetworkLoading size={40} />
       </div>
     );
@@ -77,7 +77,7 @@ const Body = memo(() => {
 
   if (error || !data || !check) {
     return (
-      <div className="flex flex-col items-center justify-center h-[100%]">
+      <div className="flex flex-col items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <SimpleEmpty description={t('taskDetail.acceptance.loadError')} />
           <Button variant="outline" onClick={() => void mutate()}>
@@ -106,7 +106,7 @@ const Body = memo(() => {
             width={18}
           />
         </span>
-        <div className="text-[16px] font-semibold">
+        <div className="text-base font-semibold">
           C{check.seq} · {check.title}
         </div>
       </div>
@@ -114,7 +114,7 @@ const Body = memo(() => {
         <div className="flex flex-row items-center gap-4 flex-wrap">
           {verifierType && (
             <div className="flex flex-row items-center gap-2">
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('taskDetail.acceptance.verifier')}
               </div>
               <Badge variant="secondary">
@@ -127,7 +127,7 @@ const Body = memo(() => {
           )}
           {requiredEvidence.length > 0 && (
             <div className="flex flex-row items-center gap-2 flex-wrap">
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('taskDetail.acceptance.requiredEvidence')}
               </div>
               {requiredEvidence.map((evidence) => (

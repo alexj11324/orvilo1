@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { ArrowLeftRight, XIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -47,7 +46,7 @@ const Header = memo(() => {
       style={{
         paddingBlock: 6,
         paddingInline: 8,
-        borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
+        borderBottom: `1px solid ${'var(--ant-color-border-secondary)'}`,
       }}
     />
   );

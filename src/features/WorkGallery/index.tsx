@@ -2,7 +2,7 @@
 
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { PackageOpenIcon, TriangleAlertIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,114 +20,24 @@ import WorkGallerySkeleton, { WorkGalleryCardsSkeleton } from './Skeleton';
 import { useOpenWork } from './useOpenWork';
 import WorkPreviewCard from './WorkPreviewCard';
 
-const styles = createStaticStyles(({ css }) => ({
-  agentFilter: css`
-    flex: none;
-
-    padding-inline: 5px 10px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-
-    color: ${cssVar.colorTextSecondary};
-  `,
-  agentFilterActive: css`
-    border-color: ${cssVar.colorBorder};
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  cardList: css`
-    display: grid;
-    grid-template-columns: repeat(3, minmax(280px, 1fr));
-    gap: 16px;
-    width: 100%;
-
-    @media (width >= 1600px) {
-      grid-template-columns: repeat(4, minmax(280px, 1fr));
-    }
-
-    @media (width <= 920px) {
-      grid-template-columns: repeat(2, minmax(280px, 1fr));
-    }
-
-    @media (width <= 620px) {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  `,
-  container: css`
-    height: 100%;
-  `,
-  emptyState: css`
-    height: 100%;
-    min-height: 320px;
-  `,
-  filterBar: css`
-    scrollbar-width: none;
-
-    overflow: auto hidden;
-    flex: none;
-
-    padding-block: 12px 10px;
-    padding-inline: 24px;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  `,
-  groupCount: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  groupHeader: css`
-    display: flex;
-    gap: 10px;
-    align-items: baseline;
-    margin-block-end: 12px;
-  `,
-  groupTitle: css`
-    font-size: 14px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  loadMoreError: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-
-    padding-block: 16px;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  retry: css`
-    cursor: pointer;
-
-    padding-block: 4px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 6px;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorBgContainer};
-
-    &:hover {
-      border-color: ${cssVar.colorTextTertiary};
-      color: ${cssVar.colorText};
-    }
-  `,
-  scroll: css`
-    overflow: hidden auto;
-    flex: 1;
-
-    min-height: 0;
-    padding-block: 8px 24px;
-    padding-inline: 24px;
-  `,
-}));
+const styles = {
+  agentFilter: 'flex-none border border-transparent text-muted-foreground',
+  agentFilterActive: 'border-border bg-selected text-foreground hover:bg-selected',
+  cardList:
+    'grid w-full grid-cols-[repeat(3,minmax(280px,1fr))] gap-4 [@media(width>=1600px)]:grid-cols-[repeat(4,minmax(280px,1fr))] [@media(width<=920px)]:grid-cols-[repeat(2,minmax(280px,1fr))] [@media(width<=620px)]:grid-cols-[minmax(0,1fr)]',
+  container: 'h-full',
+  emptyState: 'h-full min-h-80',
+  filterBar:
+    'flex-none overflow-x-auto overflow-y-hidden px-6 pbs-3 pbe-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+  groupCount: 'flex-none text-xs leading-5 text-foreground-tertiary',
+  groupHeader: 'mbe-3 flex items-baseline gap-2.5',
+  groupTitle: 'text-sm leading-5.5 font-semibold text-foreground',
+  loadMoreError:
+    'flex flex-wrap items-center justify-center gap-2 py-4 text-sm leading-5.5 text-muted-foreground',
+  retry:
+    'cursor-pointer border-border bg-card text-muted-foreground hover:border-foreground-tertiary hover:text-foreground',
+  scroll: 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-6 pbs-2 pbe-6',
+};
 
 interface AgentFilterProps {
   active: boolean;
@@ -141,8 +51,8 @@ const AgentFilter = memo<AgentFilterProps>(({ active, agentId, onSelect }) => {
 
   return (
     <Button
-      className={cx(styles.agentFilter, active && styles.agentFilterActive)}
-      size="sm"
+      className={cn(styles.agentFilter, active && styles.agentFilterActive)}
+      size="compact"
       variant="ghost"
       onClick={() => onSelect(agentId)}
     >
@@ -226,21 +136,27 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
   const renderBody = () => {
     if (error && items.length === 0)
       return (
-        <div className={cx('flex flex-col items-center justify-center gap-3', styles.emptyState)}>
+        <div className={cn('flex flex-col items-center justify-center gap-3', styles.emptyState)}>
           <SimpleEmpty
             description={t('work.loadError')}
             icon={TriangleAlertIcon}
             title={t('work.loadErrorTitle')}
           />
-          <button className={styles.retry} type={'button'} onClick={() => reload()}>
+          <Button
+            className={styles.retry}
+            size={'lg'}
+            type={'button'}
+            variant={'outline'}
+            onClick={() => reload()}
+          >
             {t('work.retry')}
-          </button>
+          </Button>
         </div>
       );
 
     if (items.length === 0)
       return (
-        <div className={cx('flex flex-col items-center justify-center', styles.emptyState)}>
+        <div className={cn('flex flex-col items-center justify-center', styles.emptyState)}>
           <SimpleEmpty
             description={t('work.empty.desc')}
             icon={PackageOpenIcon}
@@ -251,7 +167,7 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
 
     if (filteredItems.length === 0)
       return (
-        <div className={cx('flex flex-col items-center justify-center', styles.emptyState)}>
+        <div className={cn('flex flex-col items-center justify-center', styles.emptyState)}>
           <SimpleEmpty description={t('work.agentEmpty.desc')} title={t('work.agentEmpty.title')} />
         </div>
       );
@@ -285,17 +201,23 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
             </section>
           ))}
         </div>
-        <div aria-hidden ref={sentinelRef} style={{ height: 1 }} />
+        <div aria-hidden className="h-px" ref={sentinelRef} />
         {isLoadingMore ? (
-          <div className="flex flex-col" style={{ marginBlockStart: 12 }}>
+          <div className="mbs-3 flex flex-col">
             <WorkGalleryCardsSkeleton count={4} />
           </div>
         ) : error ? (
           <div className={styles.loadMoreError}>
             <span>{t('work.loadMoreError')}</span>
-            <button className={styles.retry} type={'button'} onClick={() => reload()}>
+            <Button
+              className={styles.retry}
+              size={'lg'}
+              type={'button'}
+              variant={'outline'}
+              onClick={() => reload()}
+            >
               {t('work.retry')}
-            </button>
+            </Button>
           </div>
         ) : null}
       </>
@@ -305,12 +227,12 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
   return isLoadingInitial && items.length === 0 ? (
     <WorkGallerySkeleton />
   ) : (
-    <div className={cx('flex flex-col', styles.container)}>
+    <div className={cn('flex flex-col', styles.container)}>
       {agentIds.length > 0 && (
-        <div className={cx('flex flex-row items-center gap-1', styles.filterBar)}>
+        <div className={cn('flex flex-row items-center gap-1', styles.filterBar)}>
           <Button
-            className={cx(styles.agentFilter, !activeAgentId && styles.agentFilterActive)}
-            size="sm"
+            className={cn(styles.agentFilter, !activeAgentId && styles.agentFilterActive)}
+            size="compact"
             variant="ghost"
             onClick={() => setActiveAgentId(null)}
           >
@@ -326,7 +248,7 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
           ))}
         </div>
       )}
-      <div className={cx('flex flex-col', styles.scroll)}>{renderBody()}</div>
+      <div className={cn('flex flex-col', styles.scroll)}>{renderBody()}</div>
     </div>
   );
 });

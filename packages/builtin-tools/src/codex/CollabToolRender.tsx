@@ -1,7 +1,6 @@
 'use client';
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,47 +13,16 @@ import {
   getCollabStatusTone,
 } from './collabToolUtils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  agentHeader: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  agentRow: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  promptBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  sectionLabel: css`
-    margin-block-end: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  statusDot: css`
-    flex: none;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorTextQuaternary};
-  `,
-  statusDotError: css`
-    background: ${cssVar.colorError};
-  `,
-  statusDotProcessing: css`
-    background: ${cssVar.colorInfo};
-  `,
-  statusDotSuccess: css`
-    background: ${cssVar.colorSuccess};
-  `,
-}));
+const styles = {
+  agentHeader: 'text-xs leading-5 text-muted-foreground',
+  agentRow: 'border-be border-divider px-3 py-2 text-sm leading-5.5 last:border-be-0',
+  promptBox: 'rounded-(--radius-card) bg-muted p-4',
+  sectionLabel: 'mbe-1 text-xs leading-5 text-muted-foreground',
+  statusDot: 'size-1.5 flex-none rounded-full bg-muted-foreground',
+  statusDotError: 'bg-destructive-text',
+  statusDotProcessing: 'bg-info-text',
+  statusDotSuccess: 'bg-success-text',
+};
 
 const STATUS_DOT_CLASS = {
   error: styles.statusDotError,
@@ -80,7 +48,7 @@ const CollabToolRender = memo<
             {t('builtins.codex.collabTool.instruction', { defaultValue: 'Instruction' })}
           </div>
           <div className={cn('flex', 'flex-col', styles.promptBox)}>
-            <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
+            <Markdown fontSize={14} style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
               {prompt}
             </Markdown>
           </div>
@@ -94,9 +62,9 @@ const CollabToolRender = memo<
           <div className="flex flex-col gap-2">
             {agents.map((agent, index) => (
               <div className={cn('flex', 'flex-col', 'gap-1', styles.agentRow)} key={agent.id}>
-                <div className={cn('flex', 'items-center', 'gap-[6px]', styles.agentHeader)}>
+                <div className={cn('flex', 'items-center', 'gap-1.5', styles.agentHeader)}>
                   <span
-                    className={cx(
+                    className={cn(
                       styles.statusDot,
                       STATUS_DOT_CLASS[getCollabStatusTone(agent.status)],
                     )}
@@ -110,7 +78,11 @@ const CollabToolRender = memo<
                   {agent.status && <span>· {formatCollabStatus(agent.status)}</span>}
                 </div>
                 {agent.message && (
-                  <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
+                  <Markdown
+                    fontSize={14}
+                    style={{ maxHeight: 320, overflow: 'auto' }}
+                    variant={'chat'}
+                  >
                     {agent.message}
                   </Markdown>
                 )}

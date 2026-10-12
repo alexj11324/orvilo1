@@ -42,7 +42,7 @@ export interface DatePickerProps {
   'prefix'?: ReactNode;
   'renderExtraFooter'?: () => ReactNode;
   'showNow'?: boolean;
-  'size'?: 'default' | 'small';
+  'size'?: 'default' | 'small' | 'compact' | 'normal' | 'large';
   'style'?: CSSProperties;
   'suffixIcon'?: ReactNode;
   /** Hover hint for the trigger; suppressed while the popover is open. */
@@ -55,7 +55,7 @@ export interface DatePickerProps {
   'variant'?: 'field' | 'ghost';
 }
 
-const cellButtonClass = 'w-full rounded-lg hover:bg-accent';
+const cellButtonClass = 'w-full rounded-(--radius-button) hover:bg-accent';
 const cellVariant = (selected: boolean) => (selected ? 'default' : 'ghost');
 
 const PeriodGrid = ({
@@ -302,6 +302,15 @@ const DatePicker = memo<DatePickerProps>(
       </>
     );
 
+    const triggerSize =
+      size === 'small'
+        ? 'sm'
+        : size === 'compact'
+          ? 'compact'
+          : size === 'large'
+            ? 'large'
+            : 'normal';
+
     const triggerProps = {
       'aria-label': ariaLabel,
       'disabled': disabled,
@@ -312,18 +321,20 @@ const DatePicker = memo<DatePickerProps>(
       variant === 'ghost' ? (
         <Button
           className={cn(!display && 'text-muted-foreground', className)}
+          size={triggerSize}
           type="button"
           variant="ghost"
           {...triggerProps}
         />
       ) : (
         <Button
+          size={triggerSize}
           type="button"
           variant="outline"
           {...triggerProps}
           className={cn(
-            'w-full justify-start gap-1.5 rounded-lg border-input bg-transparent font-normal hover:bg-accent',
-            size === 'small' && 'h-7 text-[13px]',
+            'w-full justify-start gap-1.5 rounded-(--radius-input) border-input bg-transparent font-normal hover:bg-accent',
+            triggerSize === 'large' ? 'text-base' : 'text-sm',
             className,
           )}
         />

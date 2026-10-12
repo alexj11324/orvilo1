@@ -32,7 +32,7 @@ const AgentBuilderWelcome = memo<AgentBuilderWelcomeProps>(
           }}
         >
           <AssigneeAvatar agentId={agentId} size={78} />
-          <div className="text-[24px] font-bold">{t('agentBuilder.title')}</div>
+          <div className="text-2xl font-bold">{t('agentBuilder.title')}</div>
           <Markdown fontSize={14} variant={'chat'}>
             {t('agentBuilder.welcome')}
           </Markdown>

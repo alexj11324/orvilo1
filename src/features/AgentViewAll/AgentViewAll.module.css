@@ -1,0 +1,29 @@
+/* Actual WorkspaceLink renders a native anchor. These owned selectors keep
+   row/card identity text stable over retained anchor resets, without importance. */
+.cardLink.cardLink {
+  display: block;
+  min-width: 0;
+  height: 100%;
+  color: inherit;
+}
+.cardLink.cardLink:hover { color: inherit; }
+.identity.identity {
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  min-height: calc(var(--spacing) * 8);
+  color: inherit;
+}
+.identity.identity:hover { color: inherit; }
+.identity.identity:hover .rowTitle { text-decoration: underline; }
+/* Native identity links retain their browser keyboard path with an explicit
+   semantic focus edge even when the surrounding application resets anchors. */
+.cardLink.cardLink:focus-visible,
+.identity.identity:focus-visible {
+  border-radius: var(--radius-card);
+  outline: 2px solid color-mix(in srgb, var(--ring) 50%, transparent);
+  outline-offset: 2px;
+}

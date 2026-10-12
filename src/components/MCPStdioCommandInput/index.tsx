@@ -19,7 +19,7 @@ import {
 
 import { parseCommandInput } from './parseCommandInput';
 
-// Define preset command options
+// Command icon colors identify the tool brands and stay independent of the app theme.
 const STDIO_COMMAND_OPTIONS: {
   // Assuming icon is a React function component
   color?: string;

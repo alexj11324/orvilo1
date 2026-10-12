@@ -1,22 +1,13 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useEffect, useState } from 'react';
 
-const styles = createStaticStyles(({ css }) => ({
-  low: css`
-    color: ${cssVar.colorError};
-  `,
-  mid: css`
-    color: ${cssVar.colorWarning};
-  `,
-  text: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    font-feature-settings: 'tnum';
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  low: 'text-destructive-text',
+  mid: 'text-warning-text',
+  text: 'font-mono text-xs leading-5 tabular-nums text-foreground-tertiary',
+};
 
 const FpsWidget = memo(() => {
   const [fps, setFps] = useState<number | null>(null);
@@ -45,7 +36,7 @@ const FpsWidget = memo(() => {
 
   return (
     <span
-      className={cx(styles.text, fps < 30 ? styles.low : fps < 50 ? styles.mid : undefined)}
+      className={cn(styles.text, fps < 30 ? styles.low : fps < 50 ? styles.mid : undefined)}
       title={'Frames per second'}
     >
       {fps} FPS

@@ -1,0 +1,10 @@
+/* Editor's public wrapper contains unlayered vendor typography, and the
+   installed Editor does not forward its typed theme prop. Keep the ordinary
+   confirmation field's body role on its root and rich-text descendants.
+   Repeating only this owned class outranks the vendor's class + element rules
+   without depending on vendor DOM classes, importance, or the layer switch. */
+.instructionEditor.instructionEditor,
+.instructionEditor.instructionEditor * {
+  font-size: var(--text-sm);
+  line-height: calc(1.375 / 0.875);
+}

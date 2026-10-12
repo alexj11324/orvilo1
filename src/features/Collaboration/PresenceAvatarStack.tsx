@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Bot } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,56 +14,14 @@ import {
 } from '@/store/collaboration';
 import { roomKey } from '@/store/collaboration';
 
-const styles = createStaticStyles(({ css }) => ({
-  agentBadge: css`
-    position: absolute;
-    inset-block-end: -2px;
-    inset-inline-end: -2px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 12px;
-    height: 12px;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 50%;
-
-    color: ${cssVar.colorBgContainer};
-
-    background: ${cssVar.colorPrimary};
-  `,
-  avatarCell: css`
-    position: relative;
-    flex-shrink: 0;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 50%;
-  `,
-  countChip: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    height: 22px;
-    padding-inline: 6px;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 999px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  stack: css`
-    display: flex;
-    flex-direction: row-reverse;
-    align-items: center;
-
-    > * {
-      margin-inline-start: -6px;
-    }
-  `,
-}));
+const styles = {
+  agentBadge:
+    'absolute -inset-be-0.5 -inset-e-0.5 flex items-center justify-center size-5 border-[1.5px] border-card rounded-full text-primary-foreground bg-primary',
+  avatarCell: 'relative shrink-0 border-[1.5px] border-card rounded-full',
+  countChip:
+    'flex items-center justify-center min-h-6 px-1.5 border-[1.5px] border-card rounded-full text-xs leading-5 text-muted-foreground bg-muted',
+  stack: 'flex flex-row-reverse items-center gap-0 [&>*]:-ms-1.5',
+};
 
 const MAX_AVATARS = 5;
 
@@ -89,7 +46,7 @@ export const PresenceAvatarStack = memo<{ room: CollaborationRoom | null }>(({ r
   const overflow = summaries.length - visible.length;
 
   return (
-    <div className={cx(styles.stack, 'flex flex-col items-center gap-[0px]')}>
+    <div className={styles.stack}>
       {visible.map((summary) => {
         const isAgent = summary.actor.kind === 'agent';
         return (
@@ -116,7 +73,7 @@ export const PresenceAvatarStack = memo<{ room: CollaborationRoom | null }>(({ r
                       )}
                       {isAgent && (
                         <span className={styles.agentBadge}>
-                          <Bot size={8} />
+                          <Bot size={16} />
                         </span>
                       )}
                     </span>

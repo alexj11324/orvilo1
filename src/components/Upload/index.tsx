@@ -152,7 +152,7 @@ const UploadDragger = memo<UploadDraggerProps>(
 
     return (
       <div
-        className={cn('rounded-lg border border-dashed p-4', className)}
+        className={cn('rounded-(--radius-card) border border-dashed p-4', className)}
         data-dragging={dragging || undefined}
         style={style}
         onDragLeave={() => setDragging(false)}

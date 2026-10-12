@@ -1,10 +1,12 @@
 'use client';
 
 import { Image } from '@lobehub/ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check, MessageSquare, X } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import type { EvidenceOverlay } from './overlay';
 import {
@@ -15,227 +17,34 @@ import {
   screenshotTileWidth,
 } from './screenshotSlices';
 
-const styles = createStaticStyles(({ css }) => ({
-  badge: css`
-    position: absolute;
-    inset-block-start: -9px;
-    inset-inline-start: -9px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    color: ${cssVar.colorTextLightSolid};
-  `,
-  frame: css`
-    position: relative;
-
-    overflow: hidden;
-    flex: none;
-
-    max-width: 100%;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  frameFlat: css`
-    border: none;
-    border-radius: 0;
-  `,
-  /**
-   * The clickable note slot, pinned to the region's OUTER right edge: the box
-   * marks where the concern is, this marker is how you read it. Kept on the
-   * right so it never covers the numbered badge on the opposite corner.
-   */
-  marker: css`
-    pointer-events: auto;
-    cursor: pointer;
-
-    position: absolute;
-    inset-block-start: -10px;
-    inset-inline-end: -10px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    /* A circle, not a pill: the face inside is round, and a rounded rectangle
-       hugging it reads as a squashed oval. Same 18px as the numbered badge on
-       the opposite corner, so the two corners of one box match. */
-    width: 18px;
-    height: 18px;
-    border: none;
-    border-radius: 50%;
-
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 1;
-    color: ${cssVar.colorTextLightSolid};
-
-    box-shadow: ${cssVar.boxShadowTertiary};
-
-    &:hover {
-      filter: brightness(1.12);
-    }
-  `,
-  markerActive: css`
-    outline: 2px solid ${cssVar.colorTextLightSolid};
-  `,
-  /**
-   * The opened note FLOATS rather than taking a column of its own: reserving
-   * layout for it shoved the evidence narrower the moment anyone opened a note,
-   * and closing it snapped the image back.
-   *
-   * Where it floats depends on the room beside the reading column. Given a wide
-   * enough window it sits in the margin, clear of the screenshot — the note is
-   * about the picture, so covering the picture with it is the one thing it must
-   * not do. Below that it falls back to hugging the image's right edge, which
-   * still beats pushing the evidence around.
-   */
-  note: css`
-    position: absolute;
-    z-index: 5;
-    inset-inline-end: 12px;
-
-    width: min(280px, 76%);
-    padding: 12px;
-
-    /* Room for the close control, so it never lands on the author's name. */
-    padding-inline-end: 32px;
-
-    /* No frame: an elevated surface is the whole affordance, the way Figma's
-       comments read. A 1px box around content that already sits in a box is
-       what made the earlier rounds look like wireframes. */
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadowSecondary};
-
-    /* 920px reading column + 240px note + gaps — the point where the margin
-       can hold the note without the page growing a horizontal scrollbar. */
-    @media (width >= 1440px) {
-      inset-inline: calc(100% + 12px) auto;
-      width: 240px;
-    }
-  `,
-  /** Sits in the gutter the note reserves for it, clear of the panel's text. */
-  noteClose: css`
-    cursor: pointer;
-
-    position: absolute;
-    inset-block-start: 8px;
-    inset-inline-end: 8px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: none;
-
-    transition: all ${cssVar.motionDurationFast};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  noteFallbackHead: css`
-    padding-block-end: 4px;
-  `,
-  /**
-   * The collapsed pin: while a note is shut there has to be something in the
-   * margin saying it exists, or the only way to find a remark is to hunt for
-   * the marker on the box it points at.
-   */
-  pin: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 4;
-    inset-inline-end: -14px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 50% 50% 50% 2px;
-
-    color: ${cssVar.colorTextLightSolid};
-
-    box-shadow: ${cssVar.boxShadowTertiary};
-
-    &:hover {
-      filter: brightness(1.12);
-    }
-
-    @media (width >= 1440px) {
-      inset-inline: calc(100% + 12px) auto;
-    }
-  `,
-  /** The avatar fills the pin; the pin's own colour stays visible as its rim. */
-  pinFace: css`
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    object-fit: cover;
-  `,
-  pinInitial: css`
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-  `,
-  /** Positioning context for the floating note; the frame itself clips. */
-  stage: css`
-    position: relative;
-  `,
-  noteBody: css`
-    font-size: 13px;
-    line-height: 1.6;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
-  `,
-  rect: css`
-    pointer-events: none;
-
-    position: absolute;
-
-    border: 2px solid ${cssVar.colorError};
-    border-radius: ${cssVar.borderRadiusXS};
-
-    /*
-     * Two rings instead of one: the dark outside separates the box from a white
-     * screenshot, the light inside separates it from a dark one. The evidence
-     * image can be either, and neither the hue nor the reader's theme can tell
-     * us which — so the box carries its own contrast.
-     */
-    box-shadow:
-      0 0 0 1px rgb(0 0 0 / 45%),
-      inset 0 0 0 1px rgb(255 255 255 / 45%);
-  `,
-  swatch: css`
-    flex: none;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  `,
-}));
+const styles = {
+  // Use a 20px semantic metadata plate inside a 2px author-colour rim.
+  badge:
+    'absolute -inset-bs-3 -start-3 inline-flex size-6 items-center justify-center rounded-full',
+  badgeLabel:
+    'inline-flex size-5 items-center justify-center rounded-full bg-background text-xs font-semibold leading-5 text-foreground',
+  frame:
+    'relative max-w-full flex-none overflow-hidden rounded-(--radius-card) border border-divider',
+  frameFlat: 'rounded-none border-0',
+  // Compact32 keeps the -1px block-start and inline-end centre.
+  marker:
+    'pointer-events-auto absolute -inset-bs-4.25 -end-4.25 cursor-pointer rounded-full border border-background p-0 ring-1 ring-foreground shadow-(--shadow-raised) hover:ring-2',
+  markerActive: 'outline-2 outline-solid outline-background outline-offset-2',
+  note: 'absolute end-3 z-5 w-[min(280px,76%)] rounded-(--radius-overlay) bg-popover p-4 pe-12 shadow-(--shadow-popover) [@media(width>=1440px)]:start-[calc(100%+12px)] [@media(width>=1440px)]:end-auto [@media(width>=1440px)]:w-60',
+  noteClose:
+    'absolute inset-bs-2 end-2 border-0 bg-transparent p-0 text-foreground-tertiary hover:bg-accent hover:text-foreground',
+  noteFallbackHead: 'pbe-1',
+  // Compact32 surrounds the identity avatar; centre remains 2px outside the stage edge.
+  pin: 'absolute -end-4.5 z-4 cursor-pointer rounded-full border border-background p-0 ring-1 ring-foreground shadow-(--shadow-raised) hover:ring-2 [@media(width>=1440px)]:start-[calc(100%+8px)] [@media(width>=1440px)]:end-auto',
+  pinFace: 'size-4.5 rounded-full object-cover',
+  pinInitial:
+    'inline-flex size-5 items-center justify-center rounded-full bg-background text-xs font-semibold leading-5 text-foreground',
+  stage: 'relative',
+  noteBody: 'text-sm leading-5.5 whitespace-pre-wrap [overflow-wrap:anywhere]',
+  // Authored regions sit on unknown screenshot pixels, independently of the app theme.
+  rect: 'pointer-events-none absolute rounded-(--radius-chip) border-2 border-destructive shadow-[0_0_0_1px_var(--foreground),inset_0_0_0_1px_var(--background)]',
+  swatch: 'size-2 flex-none rounded-full',
+} as const;
 
 interface OverlayRectProps {
   annotation: EvidenceOverlay;
@@ -253,8 +62,8 @@ const OverlayRect = memo<OverlayRectProps>(
     // A settled region keeps its place but drops its author's colour: an
     // answered note should not compete with an open one for attention.
     const color = annotation.resolved
-      ? cssVar.colorTextQuaternary
-      : (annotation.color ?? cssVar.colorError);
+      ? 'var(--foreground-quaternary)'
+      : (annotation.color ?? 'var(--destructive)');
     const label = annotation.label ?? index + 1;
     return (
       <div
@@ -269,19 +78,21 @@ const OverlayRect = memo<OverlayRectProps>(
       >
         {numbered && (
           <span className={styles.badge} style={{ background: color }}>
-            {label}
+            <span className={styles.badgeLabel}>{label}</span>
           </span>
         )}
         {annotation.comment && (
-          <button
-            className={cx(styles.marker, opened && styles.markerActive)}
+          <Button
+            className={cn(styles.marker, opened && styles.markerActive)}
+            size="icon"
             style={{ background: color }}
             title={annotation.authorName}
             type={'button'}
+            variant="ghost"
             onClick={() => onToggle(index)}
           >
             {annotation.resolved ? (
-              <Check size={10} />
+              <Check className="size-4 rounded-full bg-background text-foreground" size={16} />
             ) : (
               <AnnotationFace
                 name={annotation.authorName}
@@ -289,7 +100,7 @@ const OverlayRect = memo<OverlayRectProps>(
                 src={annotation.authorAvatar}
               />
             )}
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -315,13 +126,10 @@ const AnnotationFace = memo<{ name?: string; size?: number; src?: string | null 
         />
       );
     const initial = name?.trim().slice(0, 1);
-    if (initial)
-      return (
-        <span className={styles.pinInitial} style={{ fontSize: size < 16 ? 9 : 11 }}>
-          {initial.toUpperCase()}
-        </span>
-      );
-    return <MessageSquare size={size < 16 ? 10 : 12} />;
+    if (initial) return <span className={styles.pinInitial}>{initial.toUpperCase()}</span>;
+    return (
+      <MessageSquare className="size-4 rounded-full bg-background text-foreground" size={16} />
+    );
   },
 );
 
@@ -374,22 +182,24 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
          * — findable if you know it is there, and nowhere near where the reader
          * is looking.
          */}
-        <button
+        <Button
           className={styles.noteClose}
+          size="icon"
           title={t('acceptance.comments.collapseThread')}
           type={'button'}
+          variant="ghost"
           onClick={() => setOpenedNote(undefined)}
         >
-          <X size={12} />
-        </button>
+          <X className="size-4" size={16} />
+        </Button>
         {opened.panel ?? (
           <div className="flex flex-col gap-1">
             <div className={`flex items-center gap-1.5 ${styles.noteFallbackHead}`}>
               <span
                 className={styles.swatch}
-                style={{ background: opened.color ?? cssVar.colorError }}
+                style={{ background: opened.color ?? 'var(--destructive)' }}
               />
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs leading-5 text-muted-foreground">
                 {numbered ? `${opened.label ?? openedNote! + 1} · ` : ''}
                 {opened.authorName}
               </div>
@@ -404,25 +214,27 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
       openedNote === undefined &&
       annotations?.map((annotation, index) =>
         annotation.comment ? (
-          <button
+          <Button
             className={styles.pin}
             key={index}
+            size="icon"
             title={annotation.authorName}
             type={'button'}
+            variant="ghost"
             style={{
               background: annotation.resolved
-                ? cssVar.colorTextQuaternary
-                : (annotation.color ?? cssVar.colorError),
+                ? 'var(--foreground-quaternary)'
+                : (annotation.color ?? 'var(--destructive)'),
               insetBlockStart: `${Math.min(Math.max(annotation.rect.y, 0), 0.86) * 100}%`,
             }}
             onClick={() => toggleNote(index)}
           >
             {annotation.resolved ? (
-              <Check size={12} />
+              <Check className="size-4 rounded-full bg-background text-foreground" size={16} />
             ) : (
               <AnnotationFace name={annotation.authorName} src={annotation.authorAvatar} />
             )}
-          </button>
+          </Button>
         ) : null,
       );
 
@@ -441,7 +253,7 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
       return shell(
         '100%',
         <div
-          className={cx(styles.frame, flat && styles.frameFlat)}
+          className={cn(styles.frame, flat && styles.frameFlat)}
           style={{ maxWidth: '100%', width: '100%' }}
         >
           <Image
@@ -472,7 +284,7 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
 
             return (
               <div
-                className={cx(styles.frame, flat && styles.frameFlat)}
+                className={cn(styles.frame, flat && styles.frameFlat)}
                 key={slice.index}
                 style={{
                   aspectRatio: `${natural.width} / ${slice.height}`,
@@ -522,7 +334,7 @@ export const ScreenshotTiles = memo<ScreenshotTilesProps>(
     return shell(
       portrait ? screenshotTileWidth(natural.width) : '100%',
       <div
-        className={cx(styles.frame, flat && styles.frameFlat)}
+        className={cn(styles.frame, flat && styles.frameFlat)}
         style={{
           aspectRatio: `${natural.width} / ${natural.height}`,
           maxWidth: '100%',

@@ -205,11 +205,11 @@ export const SavedViewProjectRow = memo<{ project: SavedViewProjectRowData }>(({
           <div className="truncate block font-medium">{project.name}</div>
         </div>
         {project.identifier ? (
-          <div className={cn('text-[12px]', styles.identifier)}>{project.identifier}</div>
+          <div className={cn('font-mono text-xs', styles.identifier)}>{project.identifier}</div>
         ) : null}
         {project.updatedAt ? (
           <div
-            className={cn('text-[12px]', styles.updatedAt)}
+            className={cn('text-xs', styles.updatedAt)}
             title={formatAbsoluteDateTime(project.updatedAt)}
           >
             {dayjs(project.updatedAt).fromNow()}
@@ -243,8 +243,8 @@ export const SavedViewProjectBoard = memo<{
           <div className={cx('flex flex-col', styles.boardColumn)} key={group.key}>
             <div className={cx('flex flex-row', styles.boardColumnHeader)}>
               <ProjectStatusIcon size={14} status={status} />
-              <div className="text-[13px] font-medium">{t(`status.${status}`)}</div>
-              <div className="text-[12px] text-muted-foreground">{group.total}</div>
+              <div className="text-(length:--text-dense) font-medium">{t(`status.${status}`)}</div>
+              <div className="text-xs text-muted-foreground">{group.total}</div>
             </div>
             <div className={cx('flex flex-col', styles.boardColumnBody)}>
               {group.tasks.map((project) => (
@@ -289,8 +289,8 @@ export const SavedViewProjectGroupList = memo<{
           <div className="flex flex-col gap-0.5" key={group.key}>
             <div className="flex flex-row items-center gap-2 px-2">
               <ProjectStatusIcon size={14} status={status} />
-              <div className="text-[13px] font-medium">{t(`status.${status}`)}</div>
-              <div className="text-[12px] text-muted-foreground">{group.total}</div>
+              <div className="text-(length:--text-dense) font-medium">{t(`status.${status}`)}</div>
+              <div className="text-xs text-muted-foreground">{group.total}</div>
             </div>
             {group.tasks.map((project) => (
               <SavedViewProjectRow key={project.id} project={project} />
@@ -417,13 +417,14 @@ const SavedViewPage = memo(() => {
     WorkQueryGroupPage<SavedViewProjectRowData>[]
   >([]);
   const pagedMore = usePagedLoadMore();
+  const { resetLoadMoreError } = pagedMore;
   useEffect(() => {
     setTail([]);
     setProjectTail([]);
     setGroupTail([]);
     setProjectGroupTail([]);
-    pagedMore.resetLoadMoreError();
-  }, [pagedMore.resetLoadMoreError, queryHash, viewId, workspaceId]);
+    resetLoadMoreError();
+  }, [resetLoadMoreError, queryHash, viewId, workspaceId]);
   const tasks = mergeWorkQueryPage(firstTasks, tail);
   const projectRows = mergeWorkQueryPage(firstProjects, projectTail);
   const groups = mergeWorkQueryGroups(firstGroups, groupTail);
@@ -784,7 +785,7 @@ const SavedViewPage = memo(() => {
         }
       />
       <WorkSurfaceToolbar>
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {t('savedViews.resultCount', { count: evaluation?.total ?? 0 })}
         </div>
         <div

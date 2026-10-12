@@ -3,7 +3,6 @@
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog } from '@orvilo/const';
 import { getActivePluginIds, upsertPluginMode } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { PlusIcon } from 'lucide-react';
 import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -703,7 +702,7 @@ const AgentTool = memo<AgentToolProps>(
         disabled={!canEdit}
         loading={updating}
         size="sm"
-        style={{ color: cssVar.colorTextSecondary }}
+        style={{ color: 'var(--ant-color-text-secondary)' }}
         variant="ghost"
       >
         <PlusIcon data-icon="inline-start" />

@@ -37,9 +37,7 @@ import zhChat from '../../locales/zh-CN/chat.json';
 import zhCommon from '../../locales/zh-CN/common.json';
 import zhPlugin from '../../locales/zh-CN/plugin.json';
 
-const NativeGlobalStyle = createGlobalStyle(({ theme }) =>
-  genGlobalStyle({ prefixCls: 'ant', token: theme }),
-);
+const NativeGlobalStyle = createGlobalStyle(genGlobalStyle);
 
 const themeModules = import.meta.glob<{ ThemeRoles: FC }>('../../src/styles/themeRoles.ts', {
   eager: true,

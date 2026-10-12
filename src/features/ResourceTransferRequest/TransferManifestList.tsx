@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { PowerOff, RotateCcw, TriangleAlert, Unlink } from 'lucide-react';
 import { createElement, type CSSProperties } from 'react';
@@ -35,13 +34,11 @@ const ManifestRow = ({ icon, text, warning }: Omit<RenderRow, 'id'>) => (
         size: 14,
         width: 14,
         height: 14,
-        color: warning ? cssVar.colorWarning : cssVar.colorTextTertiary,
+        color: warning ? 'var(--ant-color-warning)' : 'var(--ant-color-text-tertiary)',
         fill: 'transparent',
       })}
     </span>
-    <div className={warning ? 'text-[12px] text-warning' : 'text-[12px] text-muted-foreground'}>
-      {text}
-    </div>
+    <div className={warning ? 'text-xs text-warning' : 'text-xs text-muted-foreground'}>{text}</div>
   </div>
 );
 
@@ -149,8 +146,8 @@ const TransferManifestList = ({
     );
 
   return (
-    <div className="flex flex-col gap-2 p-3 rounded-lg bg-secondary" style={style}>
-      <div className="text-[12px] text-muted-foreground font-medium">
+    <div className="flex flex-col gap-2 p-3 rounded-(--radius-card) bg-secondary" style={style}>
+      <div className="text-xs text-muted-foreground font-medium">
         {t('transferRequest.manifestTitle')}
       </div>
       {list}

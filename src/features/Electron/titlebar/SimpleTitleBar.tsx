@@ -1,7 +1,7 @@
 'use client';
 
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { type FC } from 'react';
 
 import { ProductLogo } from '@/components/Branding/ProductLogo';

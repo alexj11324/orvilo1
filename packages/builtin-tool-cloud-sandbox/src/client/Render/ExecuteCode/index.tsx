@@ -29,7 +29,10 @@ const ExecuteCode = memo<BuiltinRenderProps<ExecuteCodeParams, ExecuteCodeState>
 
     return (
       <div className={cn('flex flex-col gap-2', styles.container)}>
-        <div className="rounded-md border bg-card flex flex-col" style={{ gap: 8, padding: 8 }}>
+        <div
+          className="rounded-(--radius-card) border bg-card flex flex-col"
+          style={{ gap: 8, padding: 8 }}
+        >
           <CodeBlock
             wrap
             code={args.code}
@@ -51,7 +54,7 @@ const ExecuteCode = memo<BuiltinRenderProps<ExecuteCodeParams, ExecuteCodeState>
                     <TerminalCopyButton />
                   </TerminalActions>
                 </TerminalHeader>
-                <TerminalContent className="max-h-[200px] p-2 text-xs" />
+                <TerminalContent className="max-h-50 p-2 text-xs" />
               </Terminal>
             ) : null,
           )}

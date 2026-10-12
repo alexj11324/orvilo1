@@ -37,7 +37,7 @@ const SearchSection = memo<PropsWithChildren>(({ children }) => {
           <InputGroup className="border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
             <InputGroupInput
               aria-label={t('settingsSearch.placeholder')}
-              className="placeholder:text-[var(--sidebar-muted)]"
+              className="placeholder:text-(--sidebar-muted)"
               placeholder={t('settingsSearch.placeholder')}
               ref={inputRef}
               type="search"

@@ -85,8 +85,10 @@ const LocalDeviceStatus = memo(() => {
 
   return (
     <div
-      className={'flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm'}
       data-testid="local-device-status"
+      className={
+        'flex items-center justify-between gap-3 rounded-(--radius-card) border px-3 py-2 text-sm'
+      }
     >
       <div className={'flex min-w-0 flex-col'}>
         <span className={'font-medium'}>

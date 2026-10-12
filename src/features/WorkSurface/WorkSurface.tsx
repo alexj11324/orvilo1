@@ -1,20 +1,12 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { SlidersHorizontalIcon } from 'lucide-react';
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-
-import {
-  WORK_SURFACE_CONTAINER,
-  WORK_SURFACE_DOCUMENT_MAX_WIDTH,
-  WORK_SURFACE_GUTTER_X,
-  WORK_SURFACE_GUTTER_Y,
-  WORK_SURFACE_SPLIT_LIST_WIDTH,
-} from './tokens';
 
 /**
  * Work-surface layout skeletons (v6 parity contract).
@@ -46,126 +38,26 @@ import {
  *   clipped control.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  collectionBody: css`
-    width: 100%;
-    padding-block: ${WORK_SURFACE_GUTTER_Y}px;
-    padding-inline: ${WORK_SURFACE_GUTTER_X}px;
-  `,
-  columnHeader: css`
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 0;
-    background: ${cssVar.colorBgLayout};
-  `,
-  documentBody: css`
-    width: min(${WORK_SURFACE_DOCUMENT_MAX_WIDTH}px, 100%);
-    margin-inline: auto;
-    padding-block: ${WORK_SURFACE_GUTTER_Y}px;
-    padding-inline: ${WORK_SURFACE_GUTTER_X}px;
-  `,
-  reviewFooter: css`
-    flex: none;
-    padding-block: 8px;
-    padding-inline: ${WORK_SURFACE_GUTTER_X}px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  reviewNav: css`
-    overflow-y: auto;
-    flex: none;
-    width: 280px;
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  root: css`
-    container-name: ${WORK_SURFACE_CONTAINER};
-    container-type: inline-size;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    min-width: 0;
-    height: 100%;
-    min-height: 0;
-  `,
-  scrollHost: css`
-    scrollbar-gutter: stable;
-
-    overflow: auto;
-    overscroll-behavior: contain;
-    flex: 1;
-
-    min-width: 0;
-    min-height: 0;
-  `,
-  split: css`
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-  `,
-  splitDetail: css`
-    overflow-y: auto;
-    flex: 1;
-    min-width: 0;
-  `,
-  splitList: css`
-    overflow-y: auto;
-    flex: none;
-
-    width: ${WORK_SURFACE_SPLIT_LIST_WIDTH}px;
-    max-width: 45%;
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  splitListSolo: css`
-    overflow-y: auto;
-    flex: 1;
-    min-width: 0;
-  `,
-  toolbar: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 8px;
-    padding-inline: ${WORK_SURFACE_GUTTER_X}px;
-  `,
-  toolbarAside: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-
-    margin-inline-start: auto;
-
-    /* literals: stylelint cannot resolve template interpolations in @container preludes */
-    @container work-surface (max-width: 560px) {
-      display: none;
-    }
-  `,
-  toolbarOverflowTrigger: css`
-    display: none;
-    flex: none;
-    margin-inline-start: auto;
-
-    @container work-surface (max-width: 560px) {
-      display: inline-flex;
-    }
-  `,
-  toolbarPrimary: css`
-    scrollbar-width: none;
-
-    overflow-x: auto;
-    overscroll-behavior: contain;
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-}));
+const styles = {
+  collectionBody: 'w-full p-4',
+  columnHeader: 'sticky inset-bs-0 z-1 bg-background',
+  documentBody: 'mx-auto [width:min(calc(var(--spacing)*240),100%)] p-4',
+  reviewFooter: 'flex-none border-bs border-divider px-4 py-2',
+  reviewNav: 'w-70 flex-none overflow-y-auto border-e border-divider',
+  root: '@container/work-surface flex h-full min-h-0 min-w-0 flex-1 flex-col',
+  scrollHost: 'min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]',
+  split: 'flex min-h-0 min-w-0 flex-1',
+  splitDetail: 'min-w-0 flex-1 overflow-y-auto',
+  splitList: 'w-90 max-w-9/20 flex-none overflow-y-auto border-e border-divider',
+  splitListSolo: 'min-w-0 flex-1 overflow-y-auto',
+  toolbar: 'flex min-w-0 flex-none items-center gap-2 px-4 py-2',
+  toolbarAside:
+    'ms-auto flex flex-none items-center gap-2 [@container_work-surface_(width<=560px)]:hidden',
+  toolbarOverflowTrigger:
+    'ms-auto hidden flex-none [@container_work-surface_(width<=560px)]:inline-flex',
+  toolbarPrimary:
+    'flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-contain [scrollbar-width:none]',
+};
 
 /* ---------------------------------- Root ---------------------------------- */
 
@@ -191,7 +83,7 @@ export interface WorkSurfaceCollectionProps {
 
 const WorkSurfaceCollection = memo<WorkSurfaceCollectionProps>(
   ({ children, className, columnHeader, style, toolbar }) => (
-    <div className="flex flex-1 flex-col" style={{ minHeight: 0, minWidth: 0 }}>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {toolbar}
       <div className={styles.scrollHost}>
         <div className={cx(styles.collectionBody, className)} style={style}>
@@ -273,8 +165,8 @@ export interface WorkSurfaceReviewProps {
 
 const WorkSurfaceReview = memo<WorkSurfaceReviewProps>(
   ({ children, footer, nav, navLabel, navWidth }) => (
-    <div className="flex flex-1 flex-col" style={{ minHeight: 0, minWidth: 0 }}>
-      <div className="flex flex-1" style={{ minHeight: 0, minWidth: 0 }}>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1">
         {nav ? (
           <div
             aria-label={navLabel}
@@ -319,6 +211,7 @@ const WorkSurfaceToolbar = memo<WorkSurfaceToolbarProps>(
                   aria-label={asideLabel}
                   className={styles.toolbarOverflowTrigger}
                   icon={SlidersHorizontalIcon}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 />
               }
             />

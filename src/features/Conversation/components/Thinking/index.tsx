@@ -1,5 +1,4 @@
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
-import { createStaticStyles } from 'antd-style';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { memo, useEffect, useState } from 'react';
 
@@ -11,18 +10,10 @@ import { type ChatCitationItem } from '@/types/index';
 
 import StatusIndicator from './StatusIndicator';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  contentScroll: css`
-    max-height: min(40vh, 320px);
-    padding-block-end: 8px;
-    padding-inline: 8px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  scrollRoot: css`
-    border-radius: 0;
-    background: transparent;
-  `,
-}));
+const styles = {
+  contentScroll: 'max-h-[min(40vh,320px)] pbe-2 px-2 text-foreground-description',
+  scrollRoot: 'rounded-none bg-transparent',
+};
 
 interface ThinkingProps {
   citations?: ChatCitationItem[];

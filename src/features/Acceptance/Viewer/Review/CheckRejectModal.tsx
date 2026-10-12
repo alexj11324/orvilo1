@@ -56,7 +56,7 @@ export const openCheckRejectModal = (options: CheckRejectModalProps) => {
           {modalTitle.title}
         </div>
         {modalTitle.description && (
-          <div className="text-[12px] text-muted-foreground">{modalTitle.description}</div>
+          <div className="text-xs text-muted-foreground">{modalTitle.description}</div>
         )}
       </div>
     ),

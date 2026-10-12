@@ -1,9 +1,9 @@
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+import { Button } from '@/components/ui/button';
+import { CLICKABLE_FOCUS_RING } from '@/utils/clickableProps';
 
 import { previewStyles } from './styles';
 import { type MinimapIndicator } from './types';
@@ -20,28 +20,38 @@ export const MinimapPreview = memo<MinimapPreviewProps>(
     const styles = previewStyles;
 
     return (
-      <div className={cx(styles.list, 'flex flex-col gap-0.5')}>
+      <div className={cn(styles.list, 'flex flex-col gap-0.5')}>
         {indicators.map(({ id, preview, virtuosoIndex, width }, position) => {
           const isActive = activePosition === position;
           const label = preview || t('minimap.emptyPreview');
 
           return (
-            <div
-              {...clickableProps()}
+            <Button
               aria-current={isActive ? 'true' : undefined}
               key={id}
+              size={'compact'}
+              variant={'ghost'}
               className={cn(
-                cx(
-                  cx(styles.item, isActive && styles.itemActive),
-                  'flex items-center gap-2.5 justify-end',
-                ),
+                styles.item,
+                isActive
+                  ? 'bg-selected [&:hover]:bg-selected text-primary-text'
+                  : 'text-muted-foreground',
                 CLICKABLE_FOCUS_RING,
               )}
               onClick={() => onJump(virtuosoIndex)}
             >
-              <span className={cx(styles.label, isActive && styles.labelActive)}>{label}</span>
-              <div className={cx(styles.dash, isActive && styles.dashActive)} style={{ width }} />
-            </div>
+              <span className={cn(styles.label, isActive && 'font-medium text-primary-text')}>
+                {label}
+              </span>
+              <span
+                aria-hidden
+                style={{ width }}
+                className={cn(
+                  styles.dash,
+                  isActive ? '[background:var(--primary)]' : '[background:var(--selected)]',
+                )}
+              />
+            </Button>
           );
         })}
       </div>

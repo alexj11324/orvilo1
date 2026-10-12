@@ -94,7 +94,7 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
             />
           </div>
         )}
-        <div className="text-[16px] text-muted-foreground">{t('consent.permissionsTitle')}</div>
+        <div className="text-base text-muted-foreground">{t('consent.permissionsTitle')}</div>
         <div className="flex flex-col gap-1 w-full" style={{ marginTop: 8 }}>
           {scopes.map((scope) => (
             <div className="flex flex-col p-4" key={scope}>

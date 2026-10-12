@@ -1,70 +1,24 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { TargetIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { useConversationStore } from '../../store';
 import { useGoalArmStore } from './goalArmStore';
 
-const styles = createStaticStyles(({ css }) => ({
-  chip: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 8px;
-    border-radius: 8px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    transition:
-      color 0.2s,
-      background 0.2s;
-
-    /* Reveal the "close" affordance on hover: the leading target icon crossfades
-       into an ✕, signalling the whole chip cancels the armed goal on click. */
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:hover .goal-armed-target {
-      opacity: 0;
-    }
-
-    &:hover .goal-armed-close {
-      opacity: 1;
-    }
-  `,
-  iconClose: css`
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: opacity 0.15s;
-  `,
-  iconSlot: css`
-    position: relative;
-
-    display: inline-flex;
-    flex: none;
-
-    width: 14px;
-    height: 14px;
-  `,
-  iconTarget: css`
-    transition: opacity 0.15s;
-  `,
-}));
+const styles = {
+  chip: 'cursor-pointer inline-flex gap-1 items-center px-2 rounded-(--radius-button) text-sm text-foreground-tertiary transition-[color,background-color] duration-(--orvilo-motion-mid) ease-[ease] hover:text-foreground hover:bg-accent [&:hover_.goal-armed-target]:opacity-0 [&:hover_.goal-armed-close]:opacity-100',
+  iconClose:
+    'absolute inset-0 opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+  iconSlot: 'relative inline-flex flex-none size-4',
+  iconTarget: 'transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+};
 
 /**
  * Pre-topic "armed goal" indicator — a Codex-style chip that sits inline in the
@@ -94,18 +48,21 @@ const GoalArmedChip = memo(() => {
       <Tooltip>
         <TooltipTrigger
           render={
-            <span style={{ display: 'inline-flex' }}>
-              <div
+            <span className="inline-flex">
+              <Button
                 {...clickableProps()}
                 className={cn(styles.chip, CLICKABLE_FOCUS_RING)}
+                size="compact"
+                type="button"
+                variant="ghost"
                 onClick={() => disarm(agentId)}
               >
                 <span className={styles.iconSlot}>
-                  <TargetIcon className={cx('goal-armed-target', styles.iconTarget)} size={14} />
-                  <XIcon className={cx('goal-armed-close', styles.iconClose)} size={14} />
+                  <TargetIcon className={cx('goal-armed-target', styles.iconTarget)} size={16} />
+                  <XIcon className={cx('goal-armed-close', styles.iconClose)} size={16} />
                 </span>
                 <span>{t('acceptance.tray.goalLabel')}</span>
-              </div>
+              </Button>
             </span>
           }
         />

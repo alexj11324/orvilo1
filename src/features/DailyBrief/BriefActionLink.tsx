@@ -104,6 +104,7 @@ export const BriefActionLink = memo<BriefActionLinkProps>(
         className={cn('rounded-full', className)}
         nativeButton={false}
         render={<a href={url} />}
+        size="compact"
         variant={primary ? 'default' : 'outline'}
         onClick={handleClick}
       >

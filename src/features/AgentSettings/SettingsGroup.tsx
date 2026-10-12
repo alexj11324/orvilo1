@@ -1,72 +1,19 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
-const styles = createStaticStyles(({ css }) => ({
-  detailContent: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  detailLabel: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  detailRow: css`
-    display: grid;
-    gap: 6px 16px;
-    align-items: center;
-
-    min-height: 44px;
-    padding-block: 8px;
-
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-
-    @container (min-width: 560px) {
-      &.has-label {
-        grid-template-columns: minmax(140px, 180px) minmax(0, 1fr);
-      }
-    }
-  `,
-  group: css`
-    padding-block: 8px 4px;
-
-    & + & {
-      margin-block-start: 16px;
-    }
-  `,
-  groupHeader: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 0 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  hint: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  select: css`
-    min-width: 220px;
-    max-width: 100%;
-  `,
-  title: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  `,
-}));
+const styles = {
+  detailContent: 'flex min-w-0 flex-wrap items-center gap-2',
+  detailLabel: 'text-sm leading-5.5 text-muted-foreground',
+  detailRow:
+    'grid min-h-11 items-center gap-x-4 gap-y-1.5 py-2 [&+&]:border-bs [&+&]:border-divider @min-[35rem]:[&.has-label]:grid-cols-[minmax(8.75rem,11.25rem)_minmax(0,1fr)]',
+  group: 'pbs-2 pbe-1 [&+&]:mbs-4',
+  groupHeader: 'flex items-center justify-between gap-3 border-be border-divider pbe-2',
+  hint: 'text-xs leading-5 text-foreground-description',
+  select: 'min-w-55 max-w-full',
+  title: 'text-base leading-6 font-semibold tracking-[0.04em] text-muted-foreground uppercase',
+};
 
 export const settingsStyles = styles;
 

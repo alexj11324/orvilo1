@@ -20,7 +20,7 @@ const BorderAngleProperty = createGlobalStyle`
 const styles = createStaticStyles(({ css }) => ({
   shell: css`
     position: relative;
-    border-radius: 8px;
+    border-radius: var(--radius-card);
   `,
   // `overflow: hidden` belongs to the generating state only: on the resting
   // shell it clips the wrapped input's own focus glow while the user types.

@@ -2,7 +2,6 @@
 
 import { PreviewCard } from '@base-ui/react/preview-card';
 import type { TaskTopicIntegration } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import {
   CircleCheck,
@@ -39,16 +38,16 @@ const STATE_META: Record<
 > = {
   // Corrective attempts are exhausted or the merge path failed — a person has
   // to look, so this is the one state that gets the error color.
-  blocked: { color: cssVar.colorError, icon: CircleX },
+  blocked: { color: 'var(--ant-color-error)', icon: CircleX },
   // Conflicted, with a corrective run dispatched or in flight — recoverable,
   // so warning rather than error.
-  conflict: { color: cssVar.colorWarning, icon: TriangleAlert },
-  integrated: { color: cssVar.colorSuccess, icon: CircleCheck },
-  merging: { color: cssVar.colorInfo, icon: Loader2, spin: true },
-  pending: { color: cssVar.colorTextTertiary, icon: CircleDashed },
-  publish_failed: { color: cssVar.colorError, icon: CircleX },
-  skipped: { color: cssVar.colorTextTertiary, icon: CircleMinus },
-  verification_pending: { color: cssVar.colorWarning, icon: TriangleAlert },
+  conflict: { color: 'var(--ant-color-warning)', icon: TriangleAlert },
+  integrated: { color: 'var(--ant-color-success)', icon: CircleCheck },
+  merging: { color: 'var(--ant-color-info)', icon: Loader2, spin: true },
+  pending: { color: 'var(--ant-color-text-tertiary)', icon: CircleDashed },
+  publish_failed: { color: 'var(--ant-color-error)', icon: CircleX },
+  skipped: { color: 'var(--ant-color-text-tertiary)', icon: CircleMinus },
+  verification_pending: { color: 'var(--ant-color-warning)', icon: TriangleAlert },
 };
 
 interface RunIntegrationTagProps {
@@ -91,30 +90,25 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
 
   const tooltip = (
     <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
-      <div
-        className="text-[12px] text-muted-foreground"
-        style={{ fontFamily: cssVar.fontFamilyCode }}
-      >
+      <div className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
         {integration.branch} → {integration.baseBranch}
         {integration.integratedSha ? ` @ ${integration.integratedSha.slice(0, 7)}` : ''}
       </div>
       {integration.role === 'integrate' && (
-        <div className="text-[12px] text-muted-foreground">
-          {t('taskDetail.integration.mergeRun')}
-        </div>
+        <div className="text-xs text-muted-foreground">{t('taskDetail.integration.mergeRun')}</div>
       )}
       {integration.attempts > 0 && (
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {t('taskDetail.integration.attempts', { count: integration.attempts })}
         </div>
       )}
       {!!integration.conflicts?.length && (
-        <div className="text-[12px] text-muted-foreground" style={{ wordBreak: 'break-all' }}>
+        <div className="text-xs text-muted-foreground" style={{ wordBreak: 'break-all' }}>
           {t('taskDetail.integration.conflicts', { files: integration.conflicts.join(', ') })}
         </div>
       )}
       {integration.lastError && (
-        <div className="text-[12px] text-destructive" style={{ wordBreak: 'break-all' }}>
+        <div className="text-xs text-destructive" style={{ wordBreak: 'break-all' }}>
           {integration.lastError}
         </div>
       )}
@@ -122,7 +116,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
         <a
           href={integration.prUrl}
           rel={'noopener noreferrer'}
-          style={{ color: cssVar.colorInfo, fontSize: 12 }}
+          style={{ color: 'var(--ant-color-info)', fontSize: 12 }}
           target={'_blank'}
           onClick={(event) => event.stopPropagation()}
         >
@@ -183,7 +177,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
       <PreviewCard.Portal>
         <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
           <PreviewCard.Popup
-            className={`${POPUP_Z_CLASS} flex flex-col rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
+            className={`${POPUP_Z_CLASS} flex flex-col rounded-(--radius-overlay) bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
           >
             {tooltip}
           </PreviewCard.Popup>

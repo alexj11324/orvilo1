@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { t } from 'i18next';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -6,6 +6,7 @@ import { memo, useState } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export type ErrorAlertType = 'error' | 'info' | 'secondary' | 'success' | 'warning';
@@ -81,36 +82,58 @@ const ErrorAlert = memo<ErrorAlertProps>(
 
     return (
       <Alert
-        className={cx(variant === 'borderless' && 'border-transparent bg-transparent', className)}
         style={style}
         variant={VARIANT_MAP[type]}
+        className={cn(
+          'rounded-(--radius-card) p-4 text-sm leading-5.5 has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-2',
+          variant === 'borderless' && 'border-transparent bg-transparent',
+          className,
+        )}
       >
         {showIcon ? (icon ?? <TypeIcon />) : null}
-        {(title ?? message) != null && <AlertTitle>{title ?? message}</AlertTitle>}
-        {description != null && <AlertDescription>{description}</AlertDescription>}
+        {(title ?? message) != null && (
+          <AlertTitle className="font-semibold">{title ?? message}</AlertTitle>
+        )}
+        {description != null && (
+          <AlertDescription className="leading-5.5 [&_p]:leading-5.5">
+            {description}
+          </AlertDescription>
+        )}
         {(action || closable) && (
           <AlertAction>
             {action}
             {closable ? (
-              <ActionIcon
-                icon={X}
-                size="small"
-                title={t('close', { ns: 'common' })}
-                onClick={handleClose}
-              />
+              <span className="inline-flex flex-none coarse:p-1.5">
+                <ActionIcon
+                  className="relative coarse:after:absolute coarse:after:-inset-1.5 coarse:after:content-['']"
+                  icon={X}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  title={t('close', { ns: 'common' })}
+                  onClick={handleClose}
+                />
+              </span>
             ) : null}
           </AlertAction>
         )}
         {extra != null &&
           (extraIsolate ? (
-            <AlertDescription className="col-start-1 col-span-3 mt-2">{extra}</AlertDescription>
+            <AlertDescription className="col-start-1 col-span-3 mbs-2 leading-5.5 [&_p]:leading-5.5">
+              {extra}
+            </AlertDescription>
           ) : (
             <Collapsible className="col-start-2" defaultOpen={extraDefaultExpand}>
-              <CollapsibleTrigger className="text-xs text-muted-foreground">
-                {text?.detail ?? t('appLoading.showDetail', { ns: 'common' })}
-              </CollapsibleTrigger>
+              <span className="inline-flex flex-none coarse:p-1.5">
+                <CollapsibleTrigger
+                  className="relative rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground hover:text-foreground coarse:after:absolute coarse:after:-inset-1.5 coarse:after:content-['']"
+                  render={<Button size="compact" type="button" variant="ghost" />}
+                >
+                  {text?.detail ?? t('appLoading.showDetail', { ns: 'common' })}
+                </CollapsibleTrigger>
+              </span>
               <CollapsibleContent>
-                <AlertDescription>{extra}</AlertDescription>
+                <AlertDescription className="leading-5.5 [&_p]:leading-5.5">
+                  {extra}
+                </AlertDescription>
               </CollapsibleContent>
             </Collapsible>
           ))}

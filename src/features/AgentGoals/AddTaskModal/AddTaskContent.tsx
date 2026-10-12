@@ -46,11 +46,14 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
   return (
     <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[13px] font-medium">{t('goalProcess.addTask.titleLabel')}</div>
+        <div className="text-(length:--text-dense) font-medium">
+          {t('goalProcess.addTask.titleLabel')}
+        </div>
         <Input
           autoFocus
           placeholder={t('goalProcess.addTask.titlePlaceholder')}
           value={title}
+          visualSize="normal"
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') void submit();
@@ -58,7 +61,9 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <div className="text-[13px] font-medium">{t('goalProcess.addTask.descriptionLabel')}</div>
+        <div className="text-(length:--text-dense) font-medium">
+          {t('goalProcess.addTask.descriptionLabel')}
+        </div>
         <Textarea
           placeholder={t('goalProcess.addTask.descriptionPlaceholder')}
           rows={3}
@@ -68,10 +73,13 @@ const AddTaskContent = memo<AddTaskContentProps>(({ onAdd }) => {
         />
       </div>
       <div className="flex gap-2 justify-end">
-        <Button onClick={() => close()}>{t('cancel', { ns: 'common' })}</Button>
+        <Button size="lg" onClick={() => close()}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
         <Button
           disabled={!title.trim()}
           loading={busy}
+          size="lg"
           variant="outline"
           onClick={() => void submit()}
         >

@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cx } from 'antd-style';
 import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -28,87 +28,31 @@ import { type LazyActions, useLazyActions } from './useLazyActions';
 const ACTION_CLASS_NAME = 'nav-item-actions';
 const CONTENT_CLASS_NAME = 'nav-item-content';
 
-const styles = createStaticStyles(({ css }) => ({
-  interactive: css`
-    cursor: pointer;
-
-    /* Hover and selected share the sidebar roles used by the primary rows:
-       --sidebar-accent for hover, the stronger --selected for the current row.
-       The doubled selector keeps the host's unlayered anchor reset (link colour,
-       colour transition, blue focus outline) from overriding them. */
-    &&:hover {
-      background-color: var(--sidebar-accent);
-      transition-property: none;
-    }
-
-    &&[data-active] {
-      background-color: var(--selected);
-    }
-
-    /* Same ring as the Button primitive (focus-visible:ring-3 ring-ring/50): 3px at 50% of
-       --ring. Drawn inset because rows sit flush in accordion / scroll-area wrappers
-       (overflow: hidden) that would clip an outer ring. */
-    &&:focus-visible {
-      outline: 2px solid transparent;
-      outline-offset: 2px;
-      box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
-    }
-  `,
-  container: css`
-    user-select: none;
-    overflow: hidden;
-    min-width: 32px;
-
-    /* Overlay instead of in-flow so revealing the actions never re-truncates the title. */
-    .${ACTION_CLASS_NAME} {
-      pointer-events: none;
-
-      position: absolute;
-      inset-block: 0;
-      inset-inline-end: 0;
-
-      padding-inline-end: 6px;
-
-      opacity: 0;
-    }
-
-    /* focus-visible, not focus-within: closing a dropdown hands focus back to its
-       trigger, which would pin the actions open after the pointer has left. */
-    &:hover,
-    &:has(.${ACTION_CLASS_NAME} :focus-visible),
-    &:has([data-popup-open]) {
-      .${ACTION_CLASS_NAME} {
-        pointer-events: auto;
-        opacity: 1;
-      }
-
-      /* Fade the covered text itself instead of painting a row-colored plate over it,
-         so the overlay matches any row background (hover / active / none). */
-      .${CONTENT_CLASS_NAME} {
-        mask-image: linear-gradient(
-          to right,
-          #000 calc(100% - 56px),
-          transparent calc(100% - 28px)
-        );
-      }
-    }
-
-    @media (hover: none) {
-      .${ACTION_CLASS_NAME} {
-        pointer-events: auto;
-        opacity: 1;
-      }
-
-      .${CONTENT_CLASS_NAME} {
-        mask-image: linear-gradient(
-          to right,
-          #000 calc(100% - 56px),
-          transparent calc(100% - 28px)
-        );
-      }
-    }
-  `,
-}));
+// Preserve149's public Emotion cx boundary for the open caller className.
+// Only the closed native defaults use cn; opaque registered caller classes never
+// enter Tailwind merging. Container, caller, defaults retain the public order.
+const twStyles = {
+  container: 'group/nav-item relative min-w-8 overflow-hidden select-none',
+  interactive:
+    'cursor-pointer hover:bg-sidebar-accent hover:transition-none data-[active]:bg-selected data-[active]:hover:bg-selected focus-visible:outline-2 focus-visible:outline-transparent focus-visible:outline-offset-2 focus-visible:inset-ring-3 focus-visible:inset-ring-ring/50',
+  actions: [
+    'pointer-events-none absolute inset-y-0 end-0 pe-1.5 opacity-0',
+    'group-hover/nav-item:pointer-events-auto group-hover/nav-item:opacity-100',
+    'group-has-[.nav-item-actions_:focus-visible]/nav-item:pointer-events-auto group-has-[.nav-item-actions_:focus-visible]/nav-item:opacity-100',
+    'group-has-[[data-popup-open]]/nav-item:pointer-events-auto group-has-[[data-popup-open]]/nav-item:opacity-100',
+    '[@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100',
+  ].join(' '),
+  content: [
+    'group-hover/nav-item:[mask-image:linear-gradient(to_right,black_calc(100%_-_var(--spacing)*14),transparent_calc(100%_-_var(--spacing)*7))]',
+    'rtl:group-hover/nav-item:[mask-image:linear-gradient(to_left,black_calc(100%_-_var(--spacing)*14),transparent_calc(100%_-_var(--spacing)*7))]',
+    'group-has-[.nav-item-actions_:focus-visible]/nav-item:[mask-image:linear-gradient(to_right,black_calc(100%_-_var(--spacing)*14),transparent_calc(100%_-_var(--spacing)*7))]',
+    'rtl:group-has-[.nav-item-actions_:focus-visible]/nav-item:[mask-image:linear-gradient(to_left,black_calc(100%_-_var(--spacing)*14),transparent_calc(100%_-_var(--spacing)*7))]',
+    'group-has-[[data-popup-open]]/nav-item:[mask-image:linear-gradient(to_right,black_calc(100%_-_var(--spacing)*14),transparent_calc(100%_-_var(--spacing)*7))]',
+    'rtl:group-has-[[data-popup-open]]/nav-item:[mask-image:linear-gradient(to_left,black_calc(100%_-_var(--spacing)*14),transparent_calc(100%_-_var(--spacing)*7))]',
+    '[@media(hover:none)]:[mask-image:linear-gradient(to_right,black_calc(100%_-_var(--spacing)*14),transparent_calc(100%_-_var(--spacing)*7))]',
+    'rtl:[@media(hover:none)]:[mask-image:linear-gradient(to_left,black_calc(100%_-_var(--spacing)*14),transparent_calc(100%_-_var(--spacing)*7))]',
+  ].join(' '),
+};
 
 export interface NavItemSlots {
   iconPostfix?: ReactNode;
@@ -127,6 +71,10 @@ export interface NavItemProps extends Omit<HTMLAttributes<HTMLElement>, 'childre
    */
   actions?: LazyActions;
   active?: boolean;
+  /** Native class overrides for the owned title and action layout slots. */
+  classNames?: { actions?: string; title?: string };
+  /** Keep the reveal fade by default; inline action rows can reserve their own space. */
+  contentMask?: boolean;
   contextMenuItems?: SidebarMenuItems | (() => SidebarMenuItems);
   /**
    * Optional second line rendered under the title (e.g. a topic's project
@@ -156,12 +104,14 @@ export interface NavItemProps extends Omit<HTMLAttributes<HTMLElement>, 'childre
 const NavItem = memo<NavItemProps>(
   ({
     className,
+    classNames,
+    contentMask = true,
     actions,
     contextMenuItems,
     active,
     href,
     icon,
-    iconSize = 18,
+    iconSize = 16,
     title,
     titleColor,
     description,
@@ -190,8 +140,8 @@ const NavItem = memo<NavItemProps>(
       onFocus?.(e);
     };
 
-    const iconColor = active ? cssVar.colorText : cssVar.colorTextDescription;
-    const textColor = titleColor ?? (active ? cssVar.colorText : cssVar.colorTextSecondary);
+    const iconColor = active ? 'var(--foreground)' : 'var(--foreground-description)';
+    const textColor = titleColor ?? (active ? 'var(--foreground)' : 'var(--muted-foreground)');
 
     const { titlePrefix, iconPostfix } = slots || {};
     // A real anchor lets cmd+click open a new tab; without an href the row is a
@@ -231,19 +181,17 @@ const NavItem = memo<NavItemProps>(
         aria-current={active && href ? 'page' : undefined}
         aria-disabled={disabled || undefined}
         data-active={active || undefined}
-        className={cn(
-          styles.container,
+        style={mergedStyle}
+        className={cx(
+          twStyles.container,
           className,
-          'flex items-center gap-2 px-1',
-          RootElement === 'button' && 'w-full text-left',
-          !disabled && styles.interactive,
+          cn(
+            'flex items-center gap-2 rounded-(--radius-button) px-1',
+            description ? 'py-2' : 'h-8',
+            RootElement === 'button' && 'w-full text-start',
+            !disabled && twStyles.interactive,
+          ),
         )}
-        style={{
-          borderRadius: cssVar.borderRadius,
-          height: description ? undefined : 28,
-          paddingBlock: description ? 8 : undefined,
-          ...mergedStyle,
-        }}
         onClick={(e: MouseEvent<HTMLElement>) => {
           // Always prevent default <a> navigation for normal clicks to avoid full page reload.
           // This must run before any early return to ensure SPA navigation is never bypassed.
@@ -261,15 +209,12 @@ const NavItem = memo<NavItemProps>(
       >
         {icon && (
           <div
-            className="flex flex-none items-center justify-center"
-            // With a description the row is two lines tall; align the leading icon
-            // to the title's first line (match its line-height) instead of letting
-            // it center across both lines, which drops it into the gap.
-            style={{
-              alignSelf: description ? 'flex-start' : undefined,
-              height: description ? 22 : 28,
-              width: 28,
-            }}
+            // The 28px column carries identity tiles and public caller icons;
+            // description aligns it to the unchanged 22px body title line.
+            className={cn(
+              'flex w-7 flex-none items-center justify-center',
+              description ? 'h-5.5 self-start' : 'h-8',
+            )}
           >
             {loading ? (
               <NeuralNetworkLoading size={iconSize} />
@@ -286,14 +231,17 @@ const NavItem = memo<NavItemProps>(
 
         {iconPostfix}
         <div
-          className={cn(CONTENT_CLASS_NAME, 'flex flex-1 items-center gap-2')}
-          style={{ overflow: 'hidden' }}
+          className={cn(
+            CONTENT_CLASS_NAME,
+            'flex flex-1 items-center gap-2 overflow-hidden',
+            contentMask && twStyles.content,
+          )}
         >
           {titlePrefix}
           {description ? (
-            <div className="flex flex-col flex-1 gap-[3px]" style={{ overflow: 'hidden' }}>
+            <div className="flex flex-col flex-1 gap-0.5 overflow-hidden">
               <div
-                className="truncate font-medium text-[13px]"
+                className={cn('truncate font-medium text-sm', classNames?.title)}
                 style={{ color: textColor }}
                 title={typeof title === 'string' ? title : undefined}
               >
@@ -303,7 +251,7 @@ const NavItem = memo<NavItemProps>(
             </div>
           ) : (
             <div
-              className="flex-1 truncate font-medium text-[13px]"
+              className={cn('flex-1 truncate font-medium text-sm', classNames?.title)}
               style={{ color: textColor }}
               title={typeof title === 'string' ? title : undefined}
             >
@@ -324,7 +272,12 @@ const NavItem = memo<NavItemProps>(
         </div>
         {actions && (
           <div
-            className={cn(ACTION_CLASS_NAME, 'flex items-center justify-end gap-0.5')}
+            className={cn(
+              ACTION_CLASS_NAME,
+              'flex items-center justify-end gap-0.5',
+              twStyles.actions,
+              classNames?.actions,
+            )}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();

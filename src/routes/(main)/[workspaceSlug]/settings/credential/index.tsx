@@ -117,7 +117,7 @@ const WorkspaceCredsSetting = () => {
   };
 
   const createButton = (
-    <Button disabled={!canCreate} onClick={handleCreate}>
+    <Button disabled={!canCreate} size="compact" onClick={handleCreate}>
       <Plus data-icon="inline-start" />
       {t('creds.create')}
     </Button>

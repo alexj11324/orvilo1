@@ -14,11 +14,11 @@ import { AnimatedNumber } from '../../components/AnimatedNumber';
 const MAX_PREVIEW_CHARS = 4000;
 
 const styles = {
-  container: 'w-full overflow-hidden rounded-[8px] border border-sidebar-border bg-card',
+  container: 'w-full overflow-hidden rounded-(--radius-card) border border-sidebar-border bg-card',
   header: 'px-3 py-2.5 [border-block-end:1px_solid_var(--sidebar-border)]',
   icon: 'text-primary',
-  meta: 'text-[var(--ant-color-text-description)]',
-  preview: 'max-h-[360px] overflow-auto px-3 py-2',
+  meta: 'text-foreground-description',
+  preview: 'max-h-90 overflow-auto px-3 py-2',
   title: 'line-clamp-1 font-medium text-foreground',
 };
 
@@ -54,16 +54,16 @@ export const InitPageStreaming = memo<BuiltinStreamingProps<InitDocumentArgs>>((
     <div className={cn('flex', 'flex-col', styles.container)}>
       <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
         <FileText className={styles.icon} size={16} />
-        <div className="flex flex-col flex-1 gap-[2px]">
+        <div className="flex flex-col flex-1 gap-0.5">
           <div className={styles.title}>
             {title || t('builtins.orvilo-page-agent.apiName.initPage.creating')}
           </div>
-          <div className={cn('flex', 'items-center', 'gap-[10px]', styles.meta)}>
-            <span className="text-[12px]" style={{ color: 'var(--ant-color-text-description)' }}>
+          <div className={cn('flex', 'items-center', 'gap-2.5', styles.meta)}>
+            <span className="text-xs" style={{ color: 'var(--ant-color-text-description)' }}>
               <ListTree size={12} /> <AnimatedNumber value={lines} />
               {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
             </span>
-            <span className="text-[12px]" style={{ color: 'var(--ant-color-text-description)' }}>
+            <span className="text-xs" style={{ color: 'var(--ant-color-text-description)' }}>
               <Hash size={12} /> <AnimatedNumber value={chars} />
               {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
             </span>

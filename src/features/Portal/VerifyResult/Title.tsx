@@ -1,47 +1,34 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 import { CheckCircle2, Circle, CircleAlert, LoaderCircle, XCircle } from 'lucide-react';
 
 import type { VerifyCheckResultItem } from '@/database/schemas/verify';
 import { useVerifyResults, useVerifyState } from '@/features/Acceptance/hooks';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
-import { oneLineEllipsis } from '@/styles';
 
-const styles = createStaticStyles(({ css }) => ({
-  badge: css`
-    display: inline-flex;
-    flex: none;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    font-weight: 600;
-  `,
-}));
+const styles = {
+  badge:
+    'inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-xs leading-5 font-semibold',
+} as const;
 
 const statusMeta = (
   status: VerifyCheckResultItem['status'] | undefined,
-): { bg: keyof typeof cssVar; icon: typeof CheckCircle2; text: keyof typeof cssVar } => {
+): { className: string; icon: typeof CheckCircle2 } => {
   switch (status) {
     case 'passed': {
-      return { bg: 'colorSuccess', icon: CheckCircle2, text: 'colorSuccessTextActive' };
+      return { className: 'bg-success-wash text-success-text', icon: CheckCircle2 };
     }
     case 'running': {
-      return { bg: 'colorInfo', icon: LoaderCircle, text: 'colorInfoTextActive' };
+      return { className: 'bg-info-wash text-info-text', icon: LoaderCircle };
     }
     case 'failed': {
-      return { bg: 'colorError', icon: XCircle, text: 'colorErrorTextActive' };
+      return { className: 'bg-destructive-wash text-destructive-text', icon: XCircle };
     }
     case 'skipped': {
-      return { bg: 'colorTextQuaternary', icon: CircleAlert, text: 'colorTextSecondary' };
+      return { className: 'bg-muted text-muted-foreground', icon: CircleAlert };
     }
     default: {
-      return { bg: 'colorTextQuaternary', icon: Circle, text: 'colorTextSecondary' };
+      return { className: 'bg-muted text-muted-foreground', icon: Circle };
     }
   }
 };
@@ -59,23 +46,18 @@ const Title = () => {
   const label = result?.verdict ?? result?.status;
 
   return (
-    <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
-      <div className={cn('text-muted-foreground', oneLineEllipsis)} style={{ fontSize: 16 }}>
+    <div className="flex min-w-0 flex-row items-center gap-2">
+      <div className={cn('truncate text-base font-semibold text-muted-foreground')}>
         {item?.title}
       </div>
       {label && (
-        <span
-          className={styles.badge}
-          style={{
-            background: `color-mix(in srgb, ${cssVar[sIcon.bg]} 12%, transparent)`,
-            color: cssVar[sIcon.text],
-          }}
-        >
+        <span className={clsx(styles.badge, sIcon.className)}>
           <span
-            className={cx('anticon', result?.status === 'running' && 'animate-spin')}
+            className={clsx('anticon', result?.status === 'running' && 'motion-safe:animate-spin')}
+            data-slot="verify-result-status-icon"
             role="img"
           >
-            <sIcon.icon fill={'transparent'} height={13} size={13} width={13} />
+            <sIcon.icon fill={'transparent'} height={16} size={16} width={16} />
           </span>
           {label}
         </span>

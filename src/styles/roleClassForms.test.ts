@@ -39,6 +39,13 @@ describe('role class forms', () => {
     expect(names).toEqual(
       expect.arrayContaining(['--text-dense', '--radius-card', '--radius-overlay']),
     );
-    for (const name of names) expect(root).toMatch(new RegExp(`${name}:\\s*\\d+px;`));
+    for (const name of names) {
+      if (name === '--shadow-raised') {
+        // Elevation consumes the resolved engine role; it is not a pixel dimension.
+        expect(root).toContain('--shadow-raised: var(--ant-box-shadow-tertiary, none);');
+      } else {
+        expect(root).toMatch(new RegExp(`${name}:\\s*\\d+px;`));
+      }
+    }
   });
 });

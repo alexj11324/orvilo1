@@ -10,7 +10,7 @@ import type { Plan } from '../../../types';
 
 const styles = {
   content:
-    'max-h-[100px] overflow-x-hidden overflow-y-auto rounded-(--ant-border-radius) bg-(--ant-color-fill-quaternary) p-3',
+    'max-h-25 overflow-x-hidden overflow-y-auto rounded-(--ant-border-radius) bg-fill-quaternary p-3',
   header: 'cursor-pointer px-0 py-1 transition-opacity duration-200 ease-[ease] hover:opacity-80',
 };
 
@@ -44,12 +44,12 @@ const PlanCard = memo<PlanCardProps>(({ plan }) => {
         onClick={handleHeaderClick}
       >
         <ListChecksIcon size={18} />
-        <div className="truncate text-[16px] font-medium">{plan.goal}</div>
+        <div className="truncate text-base font-medium">{plan.goal}</div>
       </div>
 
       {/* Description */}
       {plan.description && (
-        <div className="line-clamp-2 text-[14px] text-muted-foreground">{plan.description}</div>
+        <div className="line-clamp-2 text-sm text-muted-foreground">{plan.description}</div>
       )}
 
       {/* Context content */}

@@ -79,6 +79,7 @@ function OutputForm({ taskId, value, onSaved, readOnly = false }: Props) {
           placeholder="https://example.com/results"
           type="url"
           value={url}
+          visualSize="normal"
           onChange={(event) => setUrl(event.target.value)}
         />
       </label>
@@ -96,7 +97,7 @@ function OutputForm({ taskId, value, onSaved, readOnly = false }: Props) {
             value={credentialId}
             onValueChange={(value) => setCredentialId(value ?? 'none')}
           >
-            <SelectTrigger aria-label={t('result.credential')} className="w-full">
+            <SelectTrigger aria-label={t('result.credential')} className="w-full" size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -115,7 +116,7 @@ function OutputForm({ taskId, value, onSaved, readOnly = false }: Props) {
       </AsyncBoundary>
       {saveError ? <AsyncError error={saveError} variant="inline" /> : null}
       <div>
-        <Button disabled={readOnly} loading={pending} onClick={() => void save()}>
+        <Button disabled={readOnly} loading={pending} size="lg" onClick={() => void save()}>
           {t('result.save')}
         </Button>
       </div>

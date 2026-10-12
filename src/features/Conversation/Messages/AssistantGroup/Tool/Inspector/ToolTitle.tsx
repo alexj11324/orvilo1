@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronRight } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -11,43 +11,14 @@ import { shinyTextStyles } from '@/styles';
 import { getToolDisplayName } from '../../toolDisplayNames';
 import { extractToolKeyword } from './extractToolKeyword';
 
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  aborted: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  keyword: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-  `,
-  root: css`
-    overflow: hidden;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 1px;
-
-    color: ${cssVar.colorTextDescription};
-    white-space: nowrap;
-  `,
-  label: css`
-    flex: none;
-  `,
-  standalone: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-    min-width: 0;
-    text-overflow: ellipsis;
-  `,
-}));
+export const styles = {
+  aborted: 'text-foreground-quaternary',
+  keyword:
+    'overflow-hidden flex-initial min-w-0 font-mono text-xs leading-5 text-foreground-tertiary text-ellipsis',
+  root: 'overflow-hidden flex min-w-0 items-center gap-1.5 text-sm leading-5.5 text-foreground-description whitespace-nowrap',
+  label: 'flex-none',
+  standalone: 'overflow-hidden flex-initial min-w-0 text-ellipsis',
+};
 
 interface ToolTitleProps {
   apiName: string;
@@ -96,14 +67,14 @@ const ToolTitle = memo<ToolTitleProps>(
       keyword === extractToolKeyword({ description: effectiveArgs?.description });
 
     return (
-      <div className={cx(styles.root, isAborted && styles.aborted)}>
+      <div className={cn(styles.root, isAborted && styles.aborted)}>
         {isStandaloneDescription ? (
-          <span className={cx(styles.standalone, isLoading && shinyTextStyles.shinyText)}>
+          <span className={cn(styles.standalone, isLoading && shinyTextStyles.shinyText)}>
             {keyword}
           </span>
         ) : (
           <>
-            <span className={cx(styles.label, isLoading && shinyTextStyles.shinyText)}>
+            <span className={cn(styles.label, isLoading && shinyTextStyles.shinyText)}>
               {actionLabel || (
                 <>
                   {pluginTitle && (

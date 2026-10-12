@@ -15,7 +15,7 @@ const ConnectGitHubButton = ({ onConnected }: ConnectGitHubButtonProps) => {
   const { connect, starting, waiting } = useGitHubConnection(onConnected);
 
   return (
-    <Button loading={starting || waiting} onClick={() => void connect()}>
+    <Button loading={starting || waiting} size="lg" onClick={() => void connect()}>
       {t(
         waiting
           ? 'reviews.connectGitHubWaiting'

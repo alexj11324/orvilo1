@@ -75,6 +75,7 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
             maxLength={255}
             placeholder={t('create.milestone.name')}
             value={name}
+            visualSize="normal"
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.nativeEvent.isComposing) void submit();
@@ -111,12 +112,13 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
         </div>
       </div>
       <ModalFooter>
-        <Button variant="outline" onClick={close}>
+        <Button size="lg" variant="outline" onClick={close}>
           {t('common:cancel')}
         </Button>
         <Button
           aria-busy={saving}
           disabled={!name.trim() || saving}
+          size="lg"
           variant="default"
           onClick={() => void submit()}
         >

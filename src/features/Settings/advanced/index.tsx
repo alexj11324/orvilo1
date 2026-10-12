@@ -151,7 +151,7 @@ const Page = memo(() => {
               if (value !== null) handleChannelChange(value);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -1,6 +1,5 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { AGENT_DOCUMENT_CATEGORY } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import { FileTextIcon, Maximize2Icon, PenLineIcon, Trash2Icon } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useCallback, useMemo, useRef } from 'react';
@@ -59,40 +58,6 @@ const selectStemOfActiveRenameInput = (root: HTMLElement | null) => {
   if (dotIndex <= 0) return;
   input.setSelectionRange(0, dotIndex);
 };
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  tree: css`
-    --trees-bg-override: transparent;
-    --trees-border-color-override: transparent;
-    --trees-selected-bg-override: ${cssVar.colorFillSecondary};
-    --trees-selected-fg-override: ${cssVar.colorText};
-    --trees-bg-muted-override: ${cssVar.colorFillTertiary};
-
-    /* Every row is a document the user can open, so labels keep the primary
-       text color; only the glyphs step back. Mirrors the sidebar NavItem, which
-       pairs colorText titles with colorTextDescription icons. */
-    --trees-fg-override: ${cssVar.colorText};
-    --trees-fg-muted-override: ${cssVar.colorTextDescription};
-    --trees-accent-override: ${cssVar.colorPrimary};
-
-    /* Nesting reads from indentation alone — no indent guides. */
-    --trees-indent-guide-bg-override: transparent;
-
-    /* Documents are prose, not code: give rows the breathing room of a
-       Notion / 语雀 outline instead of the IDE density the Files tree wants.
-       Row height and label size match the sidebar NavItem (36px / 14px). */
-    --trees-font-size-override: ${DOCUMENT_TREE_LAYOUT.fontSize}px;
-    --trees-level-gap-override: ${DOCUMENT_TREE_LAYOUT.levelGap}px;
-    --trees-item-row-gap-override: ${DOCUMENT_TREE_LAYOUT.iconGap}px;
-    --trees-item-padding-x-override: 8px;
-    --trees-item-margin-x-override: 4px;
-    --trees-padding-inline-override: 4px;
-    --trees-border-radius-override: 8px;
-
-    /* Consumed by DOCUMENT_TREE_ICON_CSS inside the shadow root. */
-    --explorer-tree-icon-fg: ${cssVar.colorTextDescription};
-  `,
-}));
 
 interface Props {
   agentId: string;
@@ -420,15 +385,16 @@ const DocumentExplorerTree = memo<Props>(({ agentId, data, mutate, onOpenDocumen
   );
 
   return (
-    <div className={styles.tree} ref={containerRef} style={treeStyle}>
+    <div
+      className="[--trees-bg-override:transparent] [--trees-border-color-override:transparent] [--trees-selected-bg-override:var(--selected)] [--trees-selected-fg-override:var(--foreground)] [--trees-bg-muted-override:var(--accent)] [--trees-fg-override:var(--foreground)] [--trees-fg-muted-override:var(--foreground-description)] [--trees-accent-override:var(--primary)] [--trees-indent-guide-bg-override:transparent] [--trees-font-size-override:var(--text-sm)] [--trees-level-gap-override:--spacing(2)] [--trees-item-row-gap-override:--spacing(2)] [--trees-item-padding-x-override:--spacing(2)] [--trees-item-margin-x-override:--spacing(1)] [--trees-padding-inline-override:--spacing(1)] [--trees-border-radius-override:var(--radius-card)] [--explorer-tree-icon-fg:var(--foreground-description)]"
+      ref={containerRef}
+      style={treeStyle}
+    >
       {nodes.length === 0 ? (
         // Keep the toolbar reachable (new folder / new doc) above the placeholder.
         <div className="flex flex-col h-full">
           {toolbar}
-          <div
-            className="flex flex-col items-center justify-center flex-1"
-            style={{ paddingBlock: 24 }}
-          >
+          <div className="flex flex-1 flex-col items-center justify-center py-6">
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant={'icon'}>
@@ -445,13 +411,13 @@ const DocumentExplorerTree = memo<Props>(({ agentId, data, mutate, onOpenDocumen
           canDrag={canDrag}
           canDrop={canDrop}
           canRename={canRename}
+          className="h-full"
           getContextMenuItems={getContextMenuItems}
           header={toolbar}
           iconSet="complete"
           itemHeight={DOCUMENT_TREE_LAYOUT.itemHeight}
           nodes={nodes}
           ref={treeRef}
-          style={{ height: '100%' }}
           unsafeCSS={DOCUMENT_TREE_UNSAFE_CSS}
           onCommitRename={handleCommitRename}
           onMove={handleMove}

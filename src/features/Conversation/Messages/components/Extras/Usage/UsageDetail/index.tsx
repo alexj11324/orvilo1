@@ -1,6 +1,5 @@
 import { type ModelPerformance, type ModelUsage } from '@orvilo/types';
 import { formatUsageValue } from '@orvilo/utils';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { BadgeCent, CoinsIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -41,19 +40,19 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
   const detailTokens = getDetailsToken(usage, modelCard);
   const inputDetails = [
     !!detailTokens.inputAudio && {
-      color: cssVar.cyan9,
+      color: 'var(--ant-cyan-9)',
       id: 'reasoning',
       title: t('messages.tokenDetails.inputAudio'),
       value: isShowCredit ? detailTokens.inputAudio.credit : detailTokens.inputAudio.token,
     },
     !!detailTokens.inputCitation && {
-      color: cssVar.orange,
+      color: 'var(--ant-orange)',
       id: 'inputText',
       title: t('messages.tokenDetails.inputCitation'),
       value: isShowCredit ? detailTokens.inputCitation.credit : detailTokens.inputCitation.token,
     },
     !!detailTokens.inputText && {
-      color: cssVar.green,
+      color: 'var(--ant-green)',
       id: 'inputText',
       title: t('messages.tokenDetails.inputText'),
       value: isShowCredit ? detailTokens.inputText.credit : detailTokens.inputText.token,
@@ -62,7 +61,7 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
 
   const outputDetails = [
     !!detailTokens.outputReasoning && {
-      color: cssVar.pink,
+      color: 'var(--ant-pink)',
       id: 'reasoning',
       title: t('messages.tokenDetails.reasoning'),
       value: isShowCredit
@@ -70,19 +69,19 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
         : detailTokens.outputReasoning.token,
     },
     !!detailTokens.outputImage && {
-      color: cssVar.purple,
+      color: 'var(--ant-purple)',
       id: 'outputImage',
       title: t('messages.tokenDetails.outputImage'),
       value: isShowCredit ? detailTokens.outputImage.credit : detailTokens.outputImage.token,
     },
     !!detailTokens.outputAudio && {
-      color: cssVar.cyan9,
+      color: 'var(--ant-cyan-9)',
       id: 'outputAudio',
       title: t('messages.tokenDetails.outputAudio'),
       value: isShowCredit ? detailTokens.outputAudio.credit : detailTokens.outputAudio.token,
     },
     !!detailTokens.outputText && {
-      color: cssVar.green,
+      color: 'var(--ant-green)',
       id: 'outputText',
       title: t('messages.tokenDetails.outputText'),
       value: isShowCredit ? detailTokens.outputText.credit : detailTokens.outputText.token,
@@ -91,20 +90,20 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
 
   const totalDetail = [
     !!detailTokens.inputCacheMiss && {
-      color: cssVar.colorFill,
+      color: 'var(--ant-color-fill)',
 
       id: 'uncachedInput',
       title: t('messages.tokenDetails.inputUncached'),
       value: isShowCredit ? detailTokens.inputCacheMiss.credit : detailTokens.inputCacheMiss.token,
     },
     !!detailTokens.inputCached && {
-      color: cssVar.orange,
+      color: 'var(--ant-orange)',
       id: 'inputCached',
       title: t('messages.tokenDetails.inputCached'),
       value: isShowCredit ? detailTokens.inputCached.credit : detailTokens.inputCached.token,
     },
     !!detailTokens.inputCachedWrite && {
-      color: cssVar.yellow,
+      color: 'var(--ant-yellow)',
       id: 'cachedWriteInput',
       title: t('messages.tokenDetails.inputWriteCached'),
       value: isShowCredit
@@ -112,13 +111,13 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
         : detailTokens.inputCachedWrite.token,
     },
     !!detailTokens.inputTool && {
-      color: cssVar.geekblue,
+      color: 'var(--ant-geekblue)',
       id: 'inputTool',
       title: t('messages.tokenDetails.inputTool'),
       value: isShowCredit ? detailTokens.inputTool.credit : detailTokens.inputTool.token,
     },
     !!detailTokens.totalOutput && {
-      color: cssVar.colorSuccess,
+      color: 'var(--ant-color-success)',
       id: 'output',
       title: t('messages.tokenDetails.output'),
       value: isShowCredit ? detailTokens.totalOutput.credit : detailTokens.totalOutput.token,
@@ -154,7 +153,7 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
             {inputDetails.length > 1 && (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1 justify-between" style={{ width: '100%' }}>
-                  <div style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>
+                  <div style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}>
                     {t('messages.tokenDetails.inputTitle')}
                   </div>
                 </div>
@@ -164,7 +163,7 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
             {outputDetails.length > 1 && (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1 justify-between" style={{ width: '100%' }}>
-                  <div style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>
+                  <div style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}>
                     {t('messages.tokenDetails.outputTitle')}
                   </div>
                 </div>
@@ -176,21 +175,21 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
               <Separator style={{ marginBlock: 8 }} />
               {cacheRate && (
                 <div className="flex items-center gap-1 justify-between">
-                  <div style={{ color: cssVar.colorTextSecondary }}>
+                  <div style={{ color: 'var(--ant-color-text-secondary)' }}>
                     {t('messages.tokenDetails.cacheRate')}
                   </div>
                   <div style={{ fontWeight: 500 }}>{cacheRate}</div>
                 </div>
               )}
               <div className="flex items-center gap-1 justify-between">
-                <div style={{ color: cssVar.colorTextSecondary }}>
+                <div style={{ color: 'var(--ant-color-text-secondary)' }}>
                   {t('messages.tokenDetails.total')}
                 </div>
                 <div style={{ fontWeight: 500 }}>{detailTotal}</div>
               </div>
               {isShowCredit && (
                 <div className="flex items-center gap-1 justify-between">
-                  <div style={{ color: cssVar.colorTextSecondary }}>
+                  <div style={{ color: 'var(--ant-color-text-secondary)' }}>
                     {t('messages.tokenDetails.average')}
                   </div>
                   <div style={{ fontWeight: 500 }}>{averagePricing}</div>
@@ -199,7 +198,7 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
               {tps && (
                 <div className="flex items-center gap-1 justify-between">
                   <div className="flex gap-2">
-                    <div style={{ color: cssVar.colorTextSecondary }}>
+                    <div style={{ color: 'var(--ant-color-text-secondary)' }}>
                       {t('messages.tokenDetails.speed.tps.title')}
                     </div>
                     <InfoTooltip title={t('messages.tokenDetails.speed.tps.tooltip')} />
@@ -210,7 +209,7 @@ const TokenDetail = memo<TokenDetailProps>(({ usage, performance, model, provide
               {ttft && (
                 <div className="flex items-center gap-1 justify-between">
                   <div className="flex gap-2">
-                    <div style={{ color: cssVar.colorTextSecondary }}>
+                    <div style={{ color: 'var(--ant-color-text-secondary)' }}>
                       {t('messages.tokenDetails.speed.ttft.title')}
                     </div>
                     <InfoTooltip title={t('messages.tokenDetails.speed.ttft.tooltip')} />

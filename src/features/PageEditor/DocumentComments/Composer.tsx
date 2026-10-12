@@ -1,6 +1,7 @@
-import { ChatInput, ChatInputActionBar, SendButton, useEditor } from '@lobehub/editor/react';
+import { ChatInput, ChatInputActionBar, useEditor } from '@lobehub/editor/react';
 import type { DocumentCommentJson } from '@orvilo/types';
 import { cn } from 'cn';
+import { ArrowUp } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
 import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { AttachmentMenu } from '@/features/AttachmentInput';
 import { TypoBar } from '@/features/EditorCanvas';
 import {
@@ -135,10 +137,11 @@ const Composer = memo<ComposerProps>(({ documentId, onSubmit, onSuccess, parentC
               />
             }
             right={
-              <SendButton
+              <Button
                 loading={submitting}
-                shape={'round'}
-                type={'primary'}
+                size="normal"
+                type="button"
+                variant="default"
                 disabled={
                   attachmentState.hasIncompleteAttachments ||
                   (!draft.content.trim() && !attachmentState.hasCompletedAttachments)
@@ -149,7 +152,12 @@ const Composer = memo<ComposerProps>(({ documentId, onSubmit, onSuccess, parentC
                     : t('pageEditor.comments.publish')
                 }
                 onClick={() => void submit()}
-              />
+              >
+                <ArrowUp className="size-4" />
+                {parentCommentId
+                  ? t('pageEditor.comments.replyAction')
+                  : t('pageEditor.comments.publish')}
+              </Button>
             }
           />
         }

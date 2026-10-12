@@ -2,7 +2,6 @@
 
 import { isDesktop } from '@orvilo/const';
 import type { DeviceListItem, DeviceWorkspaceShare } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { FolderOpenIcon, FolderPlusIcon, LockIcon, XIcon } from 'lucide-react';
@@ -28,57 +27,20 @@ import { refreshDeviceList } from './const';
 import { getDeviceIcon } from './getDeviceIcon';
 import { useCanEditDevice } from './useCanEditDevice';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    padding-block: 16px;
-    padding-inline: 20px;
-  `,
-  dot: css`
-    flex: none;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  `,
-  header: css`
-    padding-block-end: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  iconTile: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  path: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM};
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  recentItem: css`
-    padding-block: 8px;
-    padding-inline: 8px;
-  `,
-}));
+const styles = {
+  container: 'py-4 px-5 text-sm leading-5.5',
+  dot: 'flex-none size-2 rounded-full',
+  header: 'pbe-4 border-be border-divider',
+  iconTile:
+    'flex flex-none items-center justify-center size-8 rounded-(--radius-card) text-muted-foreground bg-muted',
+  path: 'flex-1 min-w-0 truncate font-mono text-xs leading-5 text-muted-foreground',
+  recentItem: 'p-2',
+};
 
 // Section label — one consistent treatment for every field heading in the panel.
 const FieldLabel = memo<{ children: ReactNode; extra?: ReactNode }>(({ children, extra }) => (
   <div className="flex items-center justify-between">
-    <div className="text-[12px] text-muted-foreground font-medium">{children}</div>
+    <div className="text-xs text-muted-foreground font-medium">{children}</div>
     {extra}
   </div>
 ));
@@ -258,8 +220,8 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
     <div className={`flex flex-col gap-5 ${styles.container}`}>
       {/* ─── Header ─── */}
       <div className={`flex items-center gap-3 ${styles.header}`}>
-        <span className={styles.iconTile}>{getDeviceIcon(device.platform, 18)}</span>
-        <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+        <span className={styles.iconTile}>{getDeviceIcon(device.platform, 16)}</span>
+        <div className="flex flex-col flex-1 min-w-0 gap-0.5">
           <div className="truncate block font-semibold">
             {device.friendlyName || device.hostname || device.deviceId}
           </div>
@@ -275,7 +237,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
         <ActionIcon
           aria-label={t('close', { ns: 'common' })}
           icon={XIcon}
-          size={'small'}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
           onClick={onClose}
         />
       </div>
@@ -286,8 +248,8 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           enrollment (personal scope is always editable). */}
       {!canEdit && (
         <div className="flex items-center gap-2">
-          <LockIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
-          <div className="text-[12px] text-muted-foreground">
+          <LockIcon className="size-4 text-foreground-tertiary" size={16} />
+          <div className="text-xs text-muted-foreground">
             {t('workspaceSetting.devices.readonlyHint')}
           </div>
         </div>
@@ -314,7 +276,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           <FieldLabel>{t('devices.share.detailLabel')}</FieldLabel>
           {device.sharedWorkspaces.map((share) => (
             <div className="flex items-center gap-2" key={share.workspaceId}>
-              <div className="truncate block" style={{ flex: 1, minWidth: 0 }}>
+              <div className="truncate block flex-1 min-w-0">
                 {share.workspaceName ?? share.workspaceId}
               </div>
               <Tag size="sm">
@@ -324,7 +286,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
               </Tag>
               <ActionIcon
                 icon={XIcon}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('devices.share.revoke')}
                 onClick={() => handleRevokeShare(share)}
               />
@@ -339,17 +301,17 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
         {channels.length > 0 ? (
           channels.map((channel, index) => (
             <div className="flex items-center gap-2" key={`${channel.connectedAt}-${index}`}>
-              <span className={styles.dot} style={{ background: cssVar.colorSuccess }} />
+              <span className={cn(styles.dot, 'bg-success')} />
               {channel.channel && <Tag size="sm">{channel.channel}</Tag>}
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t('devices.channel.connected', { time: dayjs(channel.connectedAt).fromNow() })}
               </div>
             </div>
           ))
         ) : (
           <div className="flex items-center gap-2">
-            <span className={styles.dot} style={{ background: cssVar.colorTextQuaternary }} />
-            <div className="text-[12px] text-muted-foreground">
+            <span className={cn(styles.dot, 'bg-foreground-quaternary')} />
+            <div className="text-xs text-muted-foreground">
               {t('devices.status.offline')} ·{' '}
               {t('devices.lastSeen', { time: dayjs(device.lastSeen).fromNow() })}
             </div>
@@ -364,6 +326,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           <Input
             placeholder={t('devices.edit.friendlyNamePlaceholder')}
             value={name}
+            visualSize="normal"
             onBlur={commitName}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(event) => {
@@ -387,6 +350,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
             <Input
               placeholder={t('devices.edit.defaultCwdPlaceholder')}
               value={cwd}
+              visualSize="normal"
               onBlur={handleCwdBlur}
               onChange={(e) => setCwd(e.target.value)}
               onKeyDown={(event) => {
@@ -394,7 +358,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
               }}
             />
             {canBrowse && (
-              <Button onClick={handleBrowse}>
+              <Button size="normal" type="button" onClick={handleBrowse}>
                 {<FolderOpenIcon />}
                 {t('devices.edit.browse')}
               </Button>
@@ -416,7 +380,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
             canEdit && (
               <ActionIcon
                 icon={FolderPlusIcon}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('devices.detail.addDir')}
                 onClick={handleAddRecent}
               />
@@ -426,7 +390,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           {t('devices.detail.recentDirs')}
         </FieldLabel>
         {device.workingDirs.length === 0 ? (
-          <div className="text-[12px] text-muted-foreground">{t('devices.detail.noRecent')}</div>
+          <div className="text-xs text-muted-foreground">{t('devices.detail.noRecent')}</div>
         ) : canEdit ? (
           <Sortable
             getItemValue={(item: { id: string }) => item.id}
@@ -445,7 +409,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
                   <ActionIcon
                     aria-label={t('remove', { ns: 'common' })}
                     icon={XIcon}
-                    size={'small'}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                     onClick={() => handleRemoveRecent(item.id)}
                   />
                 </SortableItem>

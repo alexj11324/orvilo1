@@ -492,7 +492,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
             {t('screen5.entry.selfhostAction')}
           </Button>
           {!busy && (
-            <p className="text-muted-foreground mt-2 text-center text-[13px] leading-5">
+            <p className="text-muted-foreground mt-2 text-center text-(length:--text-dense) leading-5">
               {t('screen5.entry.browserHint')}
             </p>
           )}

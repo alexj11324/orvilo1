@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
@@ -278,7 +277,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
     const boardFormItems = [groupingFormItem, showCompletedFormItem];
 
     const panelContent = (
-      <div className="flex w-[280px] flex-col gap-3">
+      <div className="flex w-70 flex-col gap-3">
         <Tabs
           value={viewMode}
           onValueChange={(key) =>
@@ -299,7 +298,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         <FieldGroup className="gap-3">
           {(viewMode === 'kanban' ? boardFormItems : formItems).map((item) => (
             <Field key={item.label} orientation={'horizontal'}>
-              <FieldLabel style={{ color: cssVar.colorTextSecondary, fontSize: 14 }}>
+              <FieldLabel style={{ color: 'var(--ant-color-text-secondary)', fontSize: 14 }}>
                 {item.label}
               </FieldLabel>
               {item.children}
@@ -308,7 +307,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         </FieldGroup>
         <div
           className="flex justify-between"
-          style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, paddingTop: 8 }}
+          style={{ borderTop: `1px solid ${'var(--ant-color-border-secondary)'}`, paddingTop: 8 }}
         >
           <Button
             size="sm"

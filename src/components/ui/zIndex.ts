@@ -9,4 +9,4 @@
  * form opening a select), so they sit above the modal tier base with room
  * for nested layers — below the toast tier (100000).
  */
-export const POPUP_Z_CLASS = 'z-[1300]';
+export const POPUP_Z_CLASS = 'z-1300';

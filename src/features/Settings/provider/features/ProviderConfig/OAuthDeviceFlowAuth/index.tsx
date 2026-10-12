@@ -1,106 +1,32 @@
 'use client';
 
-import { CheckCircleFilled } from '@ant-design/icons';
-import { CopyButton, Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Button, confirmModal, Modal, Text } from '@lobehub/ui/base-ui';
-import { MAX_WIDTH } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { LogOutIcon, UnplugIcon } from 'lucide-react';
+import { CopyButton } from '@lobehub/ui';
+import { Avatar, confirmModal, Modal } from '@lobehub/ui/base-ui';
+import { CircleCheckIcon, LogOutIcon, UnplugIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaQuery } from '@/libs/trpc/client';
 
 import { useOAuthDeviceFlow } from './useOAuthDeviceFlow';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    overflow: hidden;
-
-    /* matches the borderless form below so both boxes end on the same edge */
-    width: 100%;
-    max-width: ${MAX_WIDTH}px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-  `,
-  codeBox: css`
-    display: flex;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-
-    padding-block: 16px;
-    padding-inline: 24px;
-    border-radius: 12px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 28px;
-    font-weight: 600;
-    letter-spacing: 6px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  content: css`
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    align-items: center;
-
-    padding-block: 8px 4px;
-  `,
-  errorText: css`
-    color: ${cssVar.colorError};
-  `,
-  header: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 12px;
-    padding-inline: 16px;
-  `,
-  // Prose, so it reads from the left edge rather than being centred with the
-  // code box below it.
-  hint: css`
-    width: 100%;
-
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-  `,
-  pollingHint: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-radius: 8px;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  successBadge: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 13px;
-    color: ${cssVar.colorSuccess};
-  `,
-  username: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  card: 'w-full max-w-256 overflow-hidden rounded-(--radius-card) border border-divider',
+  codeBox:
+    'flex flex-1 items-center justify-center rounded-(--radius-card) bg-accent px-6 py-4 font-mono text-base leading-6 font-semibold tracking-normal',
+  content: 'flex flex-col items-center gap-4 pbs-2 pbe-1 text-sm leading-5.5',
+  errorText: 'text-sm leading-5.5 text-destructive-text',
+  header: 'flex items-center justify-between gap-3 px-4 py-3',
+  hint: 'w-full text-start text-sm leading-5.5 text-muted-foreground',
+  pollingHint:
+    'flex items-center justify-center gap-2 rounded-(--radius-card) bg-fill-quaternary px-4 py-3 text-xs leading-5 text-muted-foreground',
+  successBadge: 'flex items-center gap-1.5 text-xs leading-5 text-success-text',
+  username: 'text-xs leading-5 text-muted-foreground',
+};
 
 export interface OAuthDeviceFlowAuthProps {
   /**
@@ -195,18 +121,21 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
         return (
           <>
             {username && (
-              <Flexbox horizontal align={'center'} gap={6}>
+              <div className="flex items-center gap-1.5">
                 {avatarUrl && <Avatar avatar={avatarUrl} size={20} title={username} />}
                 <span className={styles.username}>{username}</span>
-              </Flexbox>
+              </div>
             )}
             <Button
+              className="relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:top-[calc(var(--spacing)*-1.75)] pointer-coarse:after:bottom-[calc(var(--spacing)*-1.75)] pointer-coarse:after:left-[calc(var(--spacing)*-0.25)] pointer-coarse:after:right-[calc(var(--spacing)*-0.25)] pointer-coarse:after:content-['']"
               disabled={!canManageProvider}
-              icon={LogOutIcon}
               loading={revokeAuth.isPending}
-              size={'small'}
+              size="compact"
+              type="button"
+              variant="outline"
               onClick={handleDisconnect}
             >
+              <LogOutIcon className="size-4" />
               {t('providerModels.config.oauth.disconnect')}
             </Button>
           </>
@@ -214,10 +143,12 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
 
       return (
         <Button
+          className="relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:top-[calc(var(--spacing)*-1.75)] pointer-coarse:after:bottom-[calc(var(--spacing)*-1.75)] pointer-coarse:after:left-[calc(var(--spacing)*-0.25)] pointer-coarse:after:right-[calc(var(--spacing)*-0.25)] pointer-coarse:after:content-['']"
           disabled={!canManageProvider}
           loading={isAuthenticating}
-          size={'small'}
-          type={'primary'}
+          size="compact"
+          type="button"
+          variant="default"
           onClick={handleStartAuth}
         >
           {t('providerModels.config.oauth.connect')}
@@ -233,7 +164,9 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
         return (
           <div className={styles.content}>
             <Spinner className="size-6" />
-            <Text type="secondary">{t('providerModels.config.oauth.connecting')}</Text>
+            <span className="text-sm leading-5.5 text-muted-foreground">
+              {t('providerModels.config.oauth.connecting')}
+            </span>
           </div>
         );
 
@@ -242,18 +175,32 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
         const errorKey = `providerModels.config.oauth.${error}`;
         return (
           <div className={styles.content}>
-            <Flexbox horizontal align="center" gap={8}>
-              <Icon color={cssVar.colorError} icon={UnplugIcon} size={20} />
-              <Text className={styles.errorText}>{t(errorKey as any)}</Text>
-            </Flexbox>
-            <Flexbox gap={12} style={{ width: '100%' }}>
-              <Button block disabled={!canManageProvider} type="primary" onClick={handleStartAuth}>
+            <div className="flex items-center gap-2">
+              <UnplugIcon className="size-4 text-destructive-text" />
+              <span className={styles.errorText}>{t(errorKey as any)}</span>
+            </div>
+            <div className="flex w-full flex-col gap-3">
+              <Button
+                className="relative w-full pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:top-[calc(var(--spacing)*-1.25)] pointer-coarse:after:bottom-[calc(var(--spacing)*-1.25)] pointer-coarse:after:left-[calc(var(--spacing)*-0.25)] pointer-coarse:after:right-[calc(var(--spacing)*-0.25)] pointer-coarse:after:content-['']"
+                disabled={!canManageProvider}
+                size="normal"
+                type="button"
+                variant="default"
+                onClick={handleStartAuth}
+              >
                 {t('providerModels.config.oauth.retry')}
               </Button>
-              <Button block type="text" onClick={handleCancelAuth}>
+              <Button
+                className="relative w-full pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:top-[calc(var(--spacing)*-1.25)] pointer-coarse:after:bottom-[calc(var(--spacing)*-1.25)] pointer-coarse:after:left-[calc(var(--spacing)*-0.25)] pointer-coarse:after:right-[calc(var(--spacing)*-0.25)] pointer-coarse:after:content-['']"
+                disabled={false}
+                size="normal"
+                type="button"
+                variant="ghost"
+                onClick={handleCancelAuth}
+              >
                 {t('providerModels.config.oauth.cancel')}
               </Button>
-            </Flexbox>
+            </div>
           </div>
         );
       }
@@ -270,10 +217,10 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
             </a>
           </div>
 
-          <Flexbox horizontal align="center" gap={12} style={{ width: '100%' }}>
+          <div className="flex w-full items-center gap-3">
             <div className={styles.codeBox}>{deviceCodeInfo.userCode}</div>
             <CopyButton content={deviceCodeInfo.userCode} />
-          </Flexbox>
+          </div>
 
           <div className={styles.pollingHint}>
             <Spinner />
@@ -289,19 +236,19 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
           <div className={styles.header}>
             {/* The badge is a property of the provider, not an action on it, so
                 it sits with the name rather than among the controls. */}
-            <Flexbox horizontal align={'center'} gap={8}>
+            <div className="flex items-center gap-2">
               {title}
               {enabled && isAuthenticated && (
                 <div className={styles.successBadge}>
-                  <CheckCircleFilled />
+                  <CircleCheckIcon className="size-4" />
                   <span>{t('providerModels.config.oauth.connected')}</span>
                 </div>
               )}
-            </Flexbox>
-            <Flexbox horizontal align={'center'} gap={8}>
+            </div>
+            <div className="flex items-center gap-2">
               {extra}
               {renderAction()}
-            </Flexbox>
+            </div>
           </div>
         </div>
         {/* Dismissing the dialog abandons the pairing, which is what a user

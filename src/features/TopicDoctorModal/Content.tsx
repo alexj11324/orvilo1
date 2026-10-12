@@ -1,7 +1,7 @@
 'use client';
 
 import type { TopicIssue } from '@orvilo/conversation-flow';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleAlert, CircleCheck, EyeOff, Stethoscope } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,13 +19,9 @@ export interface TopicDoctorContentProps {
   topicId: string;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  issue: css`
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-  `,
-}));
+const styles = {
+  issue: 'p-4 border border-divider rounded-(--radius-card)',
+};
 
 const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) => {
   const { t } = useTranslation(['topic', 'common']);
@@ -51,10 +47,12 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
   // but never produces `data`, so a `!data` skeleton has no way back.
   if (error || !data)
     return (
-      <div className="flex flex-col items-center gap-3 py-6">
-        <CircleAlert color={cssVar.colorError} size={32} />
+      <div className="flex flex-col items-center gap-3 py-6 text-sm leading-5.5">
+        <CircleAlert className="text-destructive-text" size={16} />
         <div>{t('doctor.checkFailed')}</div>
-        <Button onClick={() => mutate()}>{t('retry', { ns: 'common' })}</Button>
+        <Button className="leading-5.5" size="lg" onClick={() => mutate()}>
+          {t('retry', { ns: 'common' })}
+        </Button>
       </div>
     );
 
@@ -62,8 +60,8 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
 
   if (issues.length === 0)
     return (
-      <div className="flex flex-col items-center gap-3 py-6">
-        <CircleCheck color={cssVar.colorSuccess} size={32} />
+      <div className="flex flex-col items-center gap-3 py-6 text-sm leading-5.5">
+        <CircleCheck className="text-success-text" size={16} />
         <div>{t('doctor.healthy')}</div>
       </div>
     );
@@ -110,24 +108,31 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 text-sm leading-5.5">
       {hiddenCount > 0 && (
         <div className="flex items-center gap-2">
-          <EyeOff color={cssVar.colorWarning} />
+          <EyeOff className="shrink-0 text-warning-text" size={16} />
           <div>{t('doctor.summary', { count: hiddenCount })}</div>
         </div>
       )}
 
       <div className="flex flex-col gap-2">
         {issues.map((issue) => (
-          <div className={cx(styles.issue, 'flex items-start gap-2')} key={issue.messageId}>
+          <div className={cn(styles.issue, 'flex items-start gap-2')} key={issue.messageId}>
             <CircleAlert
-              style={{ color: issue.repairable ? cssVar.colorWarning : cssVar.colorTextQuaternary }}
+              size={16}
+              className={
+                issue.repairable
+                  ? 'shrink-0 text-warning-text'
+                  : 'shrink-0 text-foreground-quaternary'
+              }
             />
             <div className="flex flex-col gap-0.5">
               <div>{describe(issue)}</div>
               {!issue.repairable && (
-                <div className="text-muted-foreground">{t('doctor.notRepairable')}</div>
+                <div className="text-xs leading-5 text-muted-foreground">
+                  {t('doctor.notRepairable')}
+                </div>
               )}
             </div>
           </div>
@@ -135,8 +140,16 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
       </div>
 
       <div className="flex gap-2 justify-end">
-        <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-        <Button disabled={patch.length === 0} loading={repairing} onClick={handleRepair}>
+        <Button className="leading-5.5" size="lg" onClick={close}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
+        <Button
+          className="leading-5.5"
+          disabled={patch.length === 0}
+          loading={repairing}
+          size="lg"
+          onClick={handleRepair}
+        >
           <Stethoscope data-icon="inline-start" />
           {t('doctor.repair')}
         </Button>

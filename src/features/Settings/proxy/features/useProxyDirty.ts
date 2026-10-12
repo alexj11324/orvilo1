@@ -1,8 +1,5 @@
 import { type NetworkProxySettings } from '@orvilo/electron-client-ipc';
-import { type FormInstance } from 'antd';
 import { useMemo } from 'react';
-
-import AntdForm from '@/components/GroupForm';
 
 const WATCH_FIELDS: readonly (keyof NetworkProxySettings)[] = [
   'enableProxy',
@@ -17,11 +14,9 @@ const WATCH_FIELDS: readonly (keyof NetworkProxySettings)[] = [
 const normalize = (v: unknown) => (v === undefined || v === null ? '' : v);
 
 export const useProxyDirty = (
-  form: FormInstance,
+  values: Partial<NetworkProxySettings>,
   saved: NetworkProxySettings | undefined,
 ): { isDirty: boolean } => {
-  const values = AntdForm.useWatch([], form);
-
   const isDirty = useMemo(() => {
     if (!saved || !values) return false;
     return WATCH_FIELDS.some((key) => normalize(values[key]) !== normalize(saved[key]));

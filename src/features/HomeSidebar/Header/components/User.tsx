@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cx } from 'antd-style';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -17,11 +17,6 @@ import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 // name) paints the system text-selection highlight across the whole row;
 // that bright blue is heavier than the Sidebar's active-route fill below
 // and inverts the visual hierarchy.
-const styles = createStaticStyles(({ css }) => ({
-  trigger: css`
-    user-select: none;
-  `,
-}));
 
 const User = memo<{ lite?: boolean }>(({ lite }) => {
   const [nickname, username, isSignedIn] = useUserStore((s) => [
@@ -41,16 +36,9 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
     <UserPanel>
       <div
         className={cx(
-          styles.trigger,
-          'flex cursor-pointer items-center gap-2 py-[2px] hover:bg-[var(--ant-color-fill-tertiary)]',
+          'flex min-h-8 min-w-8 cursor-pointer select-none items-center gap-2 overflow-hidden rounded-(--radius-button) ps-0.5 py-0.5 text-sm hover:bg-accent',
+          lite ? 'pe-0.5' : 'pe-2',
         )}
-        style={{
-          borderRadius: 10,
-          minWidth: 32,
-          overflow: 'hidden',
-          paddingInlineEnd: lite ? 2 : 8,
-          paddingInlineStart: 2,
-        }}
       >
         <UserAvatar
           avatarOverride={displayAvatar}
@@ -59,15 +47,17 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
           size={28}
         />
         {!lite && (
-          <div className="flex items-center gap-1" style={{ overflow: 'hidden' }}>
+          <div className="flex items-center gap-1 overflow-hidden">
             {!isSignedIn && !activeIdentity ? (
-              <ProductLogo color={cssVar.colorText} size={28} type={'text'} />
+              <ProductLogo color="var(--foreground)" size={28} type={'text'} />
             ) : (
-              <div className="truncate font-medium" style={{ flex: 1 }}>
-                {displayName}
-              </div>
+              <div className="flex-1 truncate font-medium">{displayName}</div>
             )}
-            <ChevronDownIcon color={cssVar.colorTextDescription} id={USER_DROPDOWN_ICON_ID} />
+            <ChevronDownIcon
+              className="text-foreground-description"
+              id={USER_DROPDOWN_ICON_ID}
+              size={16}
+            />
           </div>
         )}
       </div>

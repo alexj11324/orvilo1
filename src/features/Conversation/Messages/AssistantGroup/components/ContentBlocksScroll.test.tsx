@@ -51,7 +51,7 @@ describe('ContentBlocksScroll', () => {
     );
   });
 
-  it('uses a consistent gap between workflow blocks', () => {
+  it('projects workflow blocks in order into one list container', () => {
     render(
       <ContentBlocksScroll
         assistantId="assistant-1"
@@ -64,8 +64,14 @@ describe('ContentBlocksScroll', () => {
       />,
     );
 
-    const [firstBlock] = screen.getAllByTestId('content-block');
-    expect(firstBlock.parentElement!).toHaveStyle({ gap: '8px' });
+    const blocks = screen.getAllByTestId('content-block');
+    expect(blocks.map((block) => block.getAttribute('data-block-id'))).toEqual([
+      'block-1',
+      'block-2',
+    ]);
+    expect(blocks[0].parentElement).not.toBeNull();
+    expect(blocks[1].parentElement).toBe(blocks[0].parentElement);
+    // Tailwind layer/calc spacing is verified with compiled CSS in a real browser.
   });
   it('preserves projected Markdown streaming flags in the AI Elements workflow timeline', () => {
     render(

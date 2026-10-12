@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { t } from 'i18next';
 import { FileSearch, ServerCrash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo } from 'react';
@@ -26,16 +25,9 @@ import ViewSwitcher from '../AssignKnowledgeBase/ViewSwitcher';
 
 const PAGE_SIZE = 50;
 
-const styles = createStaticStyles(({ css }) => ({
-  grid: css`
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-
-    padding-block: 4px;
-  `,
-}));
+const styles = {
+  grid: 'overflow-y-auto grid grid-cols-2 gap-2 py-1',
+};
 
 interface ResourcePage {
   hasMore: boolean;
@@ -112,7 +104,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
 
   const renderAction = useCallback(
     (file: ResourceItem & { sourceType: 'file'; url: string }) => (
-      <Button variant="default" onClick={() => handleSelect(file)}>
+      <Button size="compact" variant="default" onClick={() => handleSelect(file)}>
         {t('knowledgeBase.library.action.add', { ns: 'chat' })}
       </Button>
     ),
@@ -138,8 +130,8 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
   }, [hasMore, isValidating, setSize]);
 
   return (
-    <div className="flex flex-col h-[500px] w-[100%]">
-      <div className="flex flex-row items-center justify-end" style={{ paddingBlockEnd: 12 }}>
+    <div className="flex flex-col h-125 w-full">
+      <div className="flex flex-row items-center justify-end pbe-3">
         <ViewSwitcher
           view={viewMode}
           onViewChange={(mode) => updateSystemStatus({ knowledgeBaseModalViewMode: mode })}
@@ -153,16 +145,17 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
             <ServerCrash fill={'transparent'} height={80} size={80} width={80} />
           </span>
           {t('networkError', { ns: 'file' })}
-          <Button variant="outline" onClick={() => void mutate()}>
+          <Button size="lg" variant="outline" onClick={() => void mutate()}>
             {t('retry', { ns: 'common' })}
           </Button>
         </div>
       ) : files.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 p-10">
           <SimpleEmpty
-            description={t('empty', { ns: 'file' })}
-            descriptionProps={{ fontSize: 14 }}
             icon={FileSearch}
+            description={
+              <span className="block text-sm leading-5.5">{t('empty', { ns: 'file' })}</span>
+            }
           />
         </div>
       ) : viewMode === 'list' ? (
@@ -188,7 +181,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
             />
           ))}
           {hasMore && (
-            <Button loading={isValidating} variant="ghost" onClick={loadMore}>
+            <Button loading={isValidating} size="compact" variant="ghost" onClick={loadMore}>
               {t('loadMore', { ns: 'file' })}
             </Button>
           )}
@@ -208,5 +201,5 @@ export const openLibraryFilePicker = (
     footer: false,
     styles: { content: { overflow: 'hidden' } },
     title: t('knowledgeBase.library.title', { ns: 'chat' }),
-    width: 600,
+    width: 'min(1024px, calc(100vw - 32px))',
   });

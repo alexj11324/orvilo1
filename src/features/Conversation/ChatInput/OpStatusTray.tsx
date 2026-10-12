@@ -1,19 +1,20 @@
 'use client';
 
 import { formatElapsedClockTime } from '@orvilo/utils';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import { CircleDollarSignIcon, CoinsIcon, FootprintsIcon } from 'lucide-react';
 import { createElement, Fragment, memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 import { AI_RUNTIME_OPERATION_TYPES } from '@/store/chat/slices/operation/types';
-import { shinyTextStyles } from '@/styles';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { calculateOperationUsageMetrics } from '@/utils/operationUsageMetrics';
 
 import { contextSelectors, dataSelectors, useConversationStore } from '../store';
@@ -24,186 +25,53 @@ import { parseStatusPhrases, pickRotatingStatusPhrase } from './OpStatusTray/log
 // stare back with the same line the whole time.
 const STATUS_PHRASE_ROTATION_MS = 4000;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    container-type: inline-size;
+const styles = {
+  container: '[container-type:inline-size] py-2 px-3.5 text-xs text-muted-foreground',
+  containerChrome:
+    'border border-divider border-be-0 rounded-ss-(--radius-card) rounded-se-(--radius-card) bg-card',
+  containerTopAttached: 'rounded-ss-none rounded-se-none',
+  containerSeamless: 'border-bs border-divider rounded-none bg-transparent',
+  divider: 'w-px h-3 bg-divider',
+  metric: 'inline-flex gap-1 items-center tabular-nums whitespace-nowrap',
+  metricGroup: 'inline-flex flex-none gap-2.5 items-center',
+  metricGroupFull: '[@container(width<=360px)]:hidden',
+  metricIcon: 'flex-none text-foreground-tertiary',
+  metricPopover: 'min-w-37.5 p-0.5',
+  metricPopoverLabel: 'text-foreground-tertiary',
+  metricPopoverRow: 'text-xs',
+  metricPopoverValue: 'tabular-nums text-muted-foreground',
+  metricValue: 'overflow-hidden max-w-14 text-ellipsis',
+  compactMetric: 'cursor-default hidden flex-none [@container(width<=360px)]:inline-flex',
+  statusMetric: 'overflow-hidden [flex:1_1_auto] min-w-0',
+  statusText: 'overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap',
+  statusPhrase: 'inline-block',
+  statusPhraseMotion:
+    'animate-[op-status-tray-phrase-enter_var(--orvilo-motion-mid)_ease] motion-reduce:animate-none',
+  timerValue: 'flex-none text-foreground-tertiary [@container(width<=260px)]:hidden',
+  activityGlyph: 'overflow-visible flex-none size-4 text-primary-text',
+  glyphCore: 'origin-center [transform-box:fill-box] fill-current',
+  glyphCoreMotion:
+    'animate-[op-status-tray-glyph-core_1.5s_ease-in-out_infinite] motion-reduce:animate-none',
+  glyphOrbit:
+    'origin-center [transform-box:fill-box] fill-none [stroke:color-mix(in_srgb,currentColor_76%,transparent)] [stroke-dasharray:9_18] [stroke-linecap:round] [stroke-width:1.5]',
+  glyphOrbitMotion:
+    'animate-[op-status-tray-glyph-spin_2s_linear_infinite] motion-reduce:animate-none',
+};
 
-    padding-block: 8px;
-    padding-inline: 14px;
-    border: 1px solid ${cssVar.colorFillSecondary};
-    border-block-end: none;
-    border-start-start-radius: 12px;
-    border-start-end-radius: 12px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorBgElevated};
-  `,
-  containerTopAttached: css`
-    border-start-start-radius: 0;
-    border-start-end-radius: 0;
-  `,
-  containerSeamless: css`
-    border: none;
-
-    /* keep a hairline divider on top so the tray still reads as separated from
-       the conversation above, even without the full card chrome */
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 0;
-    background: transparent;
-  `,
-  divider: css`
-    width: 1px;
-    height: 12px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  metric: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  `,
-  metricGroup: css`
-    display: inline-flex;
-    flex: none;
-    gap: 10px;
-    align-items: center;
-  `,
-  metricGroupFull: css`
-    @container (max-width: 360px) {
-      display: none;
-    }
-  `,
-  metricIcon: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  metricPopover: css`
-    min-width: 150px;
-    padding: 2px;
-  `,
-  metricPopoverLabel: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  metricPopoverRow: css`
-    font-size: 12px;
-  `,
-  metricPopoverValue: css`
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  metricValue: css`
-    overflow: hidden;
-    max-width: 56px;
-    text-overflow: ellipsis;
-  `,
-  compactMetric: css`
-    cursor: default;
-    display: none;
-    flex: none;
-
-    @container (max-width: 360px) {
-      display: inline-flex;
-    }
-  `,
-  statusMetric: css`
-    overflow: hidden;
-    flex: 1 1 auto;
-    min-width: 0;
-  `,
-  statusText: css`
-    overflow: hidden;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  statusPhrase: css`
-    @keyframes op-status-tray-phrase-enter {
-      from {
-        transform: translateY(3px);
-        opacity: 0;
-      }
-
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
-    display: inline-block;
-    animation: op-status-tray-phrase-enter 0.4s ease;
-  `,
-  timerValue: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-
-    @container (max-width: 260px) {
-      display: none;
-    }
-  `,
-  activityGlyph: css`
-    overflow: visible;
-    flex: none;
-
-    width: 16px;
-    height: 16px;
-
-    color: ${cssVar.colorPrimary};
-
-    @keyframes op-status-tray-glyph-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    @keyframes op-status-tray-glyph-core {
-      0%,
-      100% {
-        transform: scale(0.86);
-        opacity: 0.9;
-      }
-
-      50% {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-  `,
-  glyphCore: css`
-    transform-origin: center;
-    transform-box: fill-box;
-    fill: ${cssVar.colorPrimary};
-    animation: op-status-tray-glyph-core 1.5s ease-in-out infinite;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  `,
-  glyphOrbit: css`
-    transform-origin: center;
-    transform-box: fill-box;
-
-    fill: none;
-    stroke: color-mix(in srgb, ${cssVar.colorPrimary} 76%, transparent);
-    stroke-dasharray: 9 18;
-    stroke-linecap: round;
-    stroke-width: 1.5;
-
-    animation: op-status-tray-glyph-spin 2s linear infinite;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  `,
-}));
-
-const ActivityGlyph = () => (
+const ActivityGlyph = ({ motionEnabled }: { motionEnabled: boolean }) => (
   <svg aria-hidden className={styles.activityGlyph} viewBox="0 0 16 16">
-    {createElement('circle', { className: styles.glyphOrbit, cx: '8', cy: '8', r: '6.1' })}
-    {createElement('circle', { className: styles.glyphCore, cx: '8', cy: '8', r: '2.7' })}
+    {createElement('circle', {
+      className: cn(styles.glyphOrbit, motionEnabled && styles.glyphOrbitMotion),
+      cx: '8',
+      cy: '8',
+      r: '6.1',
+    })}
+    {createElement('circle', {
+      className: cn(styles.glyphCore, motionEnabled && styles.glyphCoreMotion),
+      cx: '8',
+      cy: '8',
+      r: '2.7',
+    })}
   </svg>
 );
 
@@ -245,6 +113,10 @@ interface MetricItem {
 
 const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
   const { t } = useTranslation(['chat', 'opStatusTray']);
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  // Phrase rotation is decorative. Elapsed time and usage keep updating below.
+  const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const phraseMotionEnabled = animationMode !== 'disabled' && !reducedMotion;
   const context = useConversationStore(contextSelectors.context);
   const dbMessages = useConversationStore(dataSelectors.dbMessages);
 
@@ -322,7 +194,7 @@ const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
       returnObjects: true,
     }),
   );
-  const rotationStep = Math.floor(elapsed / STATUS_PHRASE_ROTATION_MS);
+  const rotationStep = phraseMotionEnabled ? Math.floor(elapsed / STATUS_PHRASE_ROTATION_MS) : 0;
   const randomGeneratingStatus =
     pickRotatingStatusPhrase(
       generatingPhrases,
@@ -372,9 +244,9 @@ const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
       <Tooltip>
         <TooltipTrigger
           render={
-            <span style={{ display: 'inline-flex' }}>
+            <span className="inline-flex">
               <span className={styles.metric}>
-                {createElement(icon, { className: styles.metricIcon, size: 13 })}
+                {createElement(icon, { className: styles.metricIcon, size: 16 })}
                 <span className={styles.metricValue}>{value}</span>
               </span>
             </span>
@@ -392,8 +264,8 @@ const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
           className={cn('flex items-center gap-5 justify-between', styles.metricPopoverRow)}
           key={key}
         >
-          <span className={cx(styles.metric, styles.metricPopoverLabel)}>
-            {createElement(icon, { className: styles.metricIcon, size: 13 })}
+          <span className={cn(styles.metric, styles.metricPopoverLabel)}>
+            {createElement(icon, { className: styles.metricIcon, size: 16 })}
             <span>{label}</span>
           </span>
           <span className={styles.metricPopoverValue}>{value}</span>
@@ -406,18 +278,27 @@ const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
     <div
       className={cn(
         'flex items-center justify-between',
-        cx(
-          styles.container,
-          topAttached && styles.containerTopAttached,
-          seamless && styles.containerSeamless,
-        ),
+        styles.container,
+        seamless ? styles.containerSeamless : styles.containerChrome,
+        !seamless && topAttached && styles.containerTopAttached,
       )}
     >
-      <span className={cx(styles.metric, styles.statusMetric)}>
-        <ActivityGlyph />
+      <span className={cn(styles.metric, styles.statusMetric)}>
+        <ActivityGlyph motionEnabled={phraseMotionEnabled} />
         <span className={styles.statusText}>
-          <span className={styles.statusPhrase} key={statusText}>
-            <span className={shinyTextStyles.shinyText}>{statusText}...</span>
+          <span
+            className={cn(styles.statusPhrase, phraseMotionEnabled && styles.statusPhraseMotion)}
+            key={statusText}
+          >
+            <span
+              className={
+                phraseMotionEnabled
+                  ? 'text-shiny [--shiny-rest-color:var(--muted-foreground)]'
+                  : 'text-muted-foreground'
+              }
+            >
+              {statusText}...
+            </span>
           </span>
         </span>
         <span className={styles.timerValue}>{formatElapsedClockTime(elapsed)}</span>
@@ -425,7 +306,7 @@ const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
 
       {metrics.length > 0 && (
         <>
-          <span className={cx(styles.metricGroup, styles.metricGroupFull)}>
+          <span className={cn(styles.metricGroup, styles.metricGroupFull)}>
             {metrics.map((metric, i) => (
               <Fragment key={metric.key}>
                 {i > 0 && <span className={styles.divider} />}
@@ -438,8 +319,8 @@ const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
               <PopoverTrigger
                 openOnHover
                 render={
-                  <span className={cx(styles.metric, styles.compactMetric)}>
-                    <tokenMetric.icon className={styles.metricIcon} size={13} />
+                  <span className={cn(styles.metric, styles.compactMetric)}>
+                    <tokenMetric.icon className={styles.metricIcon} size={16} />
                     <span className={styles.metricValue}>{tokenMetric.value}</span>
                   </span>
                 }

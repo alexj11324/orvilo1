@@ -1,7 +1,6 @@
 'use client';
 
 import type { HeteroQuotaWindow } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, GaugeIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -9,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -17,137 +17,30 @@ import { SimpleTooltip } from '../../../SimpleTooltip';
 const QUOTA_STALE_MS = 60_000;
 const QUOTA_RETRY_COOLDOWN_MS = 60_000;
 
-const styles = createStaticStyles(({ css }) => ({
-  compactItem: css`
-    color: inherit;
-
-    &[data-quota-level='low'] {
-      color: ${cssVar.colorWarningText};
-    }
-  `,
-  compactItems: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-  `,
-  compactSeparator: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  emptyState: css`
-    padding-block: 10px;
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  error: css`
-    padding: 8px;
-    border: 1px solid ${cssVar.colorErrorBorder};
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 12px;
-    color: ${cssVar.colorError};
-
-    background: ${cssVar.colorErrorBg};
-  `,
-  refreshNotice: css`
-    padding: 8px;
-    border: 1px solid ${cssVar.colorWarningBorder};
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 12px;
-    color: ${cssVar.colorWarningText};
-
-    background: ${cssVar.colorWarningBg};
-  `,
-  header: css`
-    padding-block-end: 6px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  popover: css`
-    width: 292px;
-  `,
-  progressFill: css`
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorSuccess};
-  `,
-  progressFillWarning: css`
-    background: ${cssVar.colorWarning};
-  `,
-  progressTrack: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 24px;
-    height: 6px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  resetShort: css`
-    flex: none;
-    white-space: nowrap;
-  `,
-  trigger: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 4px;
-    border: 0;
-    border-radius: 4px;
-
-    font: inherit;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    appearance: none;
-    background: transparent;
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &[data-quota-level='low'] {
-      color: ${cssVar.colorWarningText};
-
-      &:hover {
-        color: ${cssVar.colorWarningText};
-      }
-    }
-  `,
-  triggerOpen: css`
-    color: ${cssVar.colorTextSecondary};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  value: css`
-    flex: none;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorText};
-  `,
-  valueWarning: css`
-    color: ${cssVar.colorWarningText};
-  `,
-  window: css`
-    min-width: 0;
-  `,
-  windowExhausted: css`
-    /* nothing to act on until reset → grey the whole row out */
-    opacity: 0.45;
-  `,
-  windowLabel: css`
-    flex: none;
-    width: 84px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  compactItem: 'text-inherit data-[quota-level=low]:text-warning-text',
+  compactItems: 'inline-flex gap-1 items-center text-xs leading-5',
+  compactSeparator: 'text-foreground-quaternary',
+  emptyState: 'py-2.5 text-sm leading-5.5 text-foreground-description',
+  error:
+    'p-2 border border-destructive-border rounded-(--radius-card) text-sm leading-5.5 text-destructive-text bg-destructive-wash',
+  refreshNotice:
+    'p-2 border border-warning-border rounded-(--radius-card) text-sm leading-5.5 text-warning-text bg-warning-wash',
+  header: 'pbe-1.5 border-be border-divider',
+  popover: 'w-73',
+  progressFill: 'h-full rounded-full bg-success',
+  progressFillWarning: 'bg-warning',
+  progressTrack: 'overflow-hidden flex-1 min-w-6 h-1.5 rounded-full bg-fill-quaternary',
+  resetShort: 'flex-none whitespace-nowrap text-xs leading-5',
+  trigger:
+    'cursor-pointer flex flex-none gap-1.5 items-center py-1 px-1 border-0 font-normal text-sm leading-5.5 text-muted-foreground bg-transparent transition-colors duration-(--orvilo-motion-fast) hover:text-muted-foreground hover:bg-accent aria-expanded:text-muted-foreground data-[quota-level=low]:text-warning-text data-[quota-level=low]:hover:text-warning-text data-[quota-level=low]:aria-expanded:text-warning-text focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+  triggerOpen: 'text-muted-foreground bg-selected hover:bg-selected aria-expanded:bg-selected',
+  value: 'flex-none tabular-nums text-foreground text-xs leading-5',
+  valueWarning: 'text-warning-text',
+  window: 'min-w-0',
+  windowExhausted: 'opacity-45',
+  windowLabel: 'flex-none w-21 text-muted-foreground text-xs leading-5',
+};
 
 const clampPercent = (value: number) => Math.min(100, Math.max(0, Math.round(value)));
 const LOW_QUOTA_THRESHOLD = 15;
@@ -622,42 +515,36 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
     return (
       <div
         key={key}
-        className={cx(
+        className={cn(
           'flex flex-row items-center gap-2',
-          cx(styles.window, exhausted && styles.windowExhausted),
+          cn(styles.window, exhausted && styles.windowExhausted),
         )}
       >
-        <div className={cn('truncate', styles.windowLabel)} style={{ fontSize: 12 }}>
-          {label}
-        </div>
+        <div className={cn('truncate', styles.windowLabel)}>{label}</div>
         <div className={styles.progressTrack}>
           <div
-            className={cx(styles.progressFill, lowQuota && styles.progressFillWarning)}
+            className={cn(styles.progressFill, lowQuota && styles.progressFillWarning)}
             data-quota-level={lowQuota ? 'low' : 'normal'}
             style={{ width: `${leftPercent}%` }}
           />
         </div>
-        <div className={cx(styles.value, lowQuota && styles.valueWarning)} style={{ fontSize: 12 }}>
+        <div className={cn(styles.value, lowQuota && styles.valueWarning)}>
           {exhausted ? t('heteroAgent.quota.exhausted') : `${leftPercent}%`}
         </div>
         {resetShort && (
-          <div className={cn('text-muted-foreground', styles.resetShort)} style={{ fontSize: 12 }}>
-            {resetShort}
-          </div>
+          <div className={cn('text-muted-foreground', styles.resetShort)}>{resetShort}</div>
         )}
       </div>
     );
   };
 
   const content = (
-    <div className={cx('flex flex-col gap-2.5', styles.popover)} style={{ width: contentWidth }}>
-      <div className={cx('flex flex-row items-center gap-2 justify-between', styles.header)}>
-        <div className="flex flex-row items-baseline gap-1.5" style={{ minWidth: 0 }}>
-          <div className="font-semibold" style={{ fontSize: 14 }}>
-            {title}
-          </div>
+    <div className={cn('flex flex-col gap-2.5', styles.popover)} style={{ width: contentWidth }}>
+      <div className={cn('flex flex-row items-center gap-2 justify-between', styles.header)}>
+        <div className="flex min-w-0 flex-row items-baseline gap-1.5">
+          <div className="font-semibold text-sm leading-5.5">{title}</div>
           {quota?.updatedAt && (
-            <div className="truncate text-muted-foreground" style={{ fontSize: 11 }}>
+            <div className="truncate text-muted-foreground text-xs leading-5">
               {formatUpdatedAt(quota.updatedAt)}
             </div>
           )}
@@ -667,7 +554,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
             aria-label={t('refresh', { ns: 'common' })}
             disabled={loading}
             icon={RefreshCwIcon}
-            size={'small'}
+            size={{ blockSize: 36, borderRadius: 'var(--radius-button)', size: 16 }}
             onClick={() => void loadQuota({ manual: true })}
           />
         </SimpleTooltip>
@@ -675,9 +562,9 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
 
       {loading && !hasQuotaData ? (
         <div className="flex flex-col gap-2">
-          <Skeleton style={{ height: 18 }} />
-          <Skeleton style={{ height: 18 }} />
-          <Skeleton style={{ height: 18 }} />
+          <Skeleton className="h-5" />
+          <Skeleton className="h-5" />
+          <Skeleton className="h-5" />
         </div>
       ) : quota?.status === 'unavailable' ? (
         <div className={styles.emptyState}>
@@ -704,12 +591,14 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
   );
 
   const trigger = (
-    <button
+    <Button
       aria-expanded={open}
       aria-haspopup="dialog"
       aria-label={tooltip}
-      className={cx(styles.trigger, open && styles.triggerOpen)}
+      className={cn(styles.trigger, open && styles.triggerOpen)}
+      size="compact"
       type="button"
+      variant="ghost"
       data-quota-level={
         compactItems.length === 1
           ? isLowQuota(compactItems[0].leftPercent)
@@ -719,7 +608,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       }
     >
       <span className="anticon" role="img">
-        <GaugeIcon fill={'transparent'} height={14} size={14} width={14} />
+        <GaugeIcon className="size-4" fill={'transparent'} height={16} size={16} width={16} />
       </span>
       {compactItems.length > 0 && (
         <span className={styles.compactItems}>
@@ -750,9 +639,9 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
         </span>
       )}
       <span className="anticon" role="img">
-        <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+        <ChevronDownIcon className="size-4" fill={'transparent'} height={16} size={16} width={16} />
       </span>
-    </button>
+    </Button>
   );
 
   return (

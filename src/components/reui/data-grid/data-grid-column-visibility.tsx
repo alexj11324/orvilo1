@@ -26,7 +26,7 @@ function DataGridColumnVisibility<TData extends object>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={trigger} />
-      <DropdownMenuContent align="end" className="min-w-[150px]">
+      <DropdownMenuContent align="end" className="min-w-37.5">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-medium">{i18n.labels.toggleColumns}</DropdownMenuLabel>
           {table

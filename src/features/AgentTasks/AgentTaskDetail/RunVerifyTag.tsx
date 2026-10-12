@@ -1,7 +1,6 @@
 'use client';
 
 import type { TaskRunVerifySummary } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { CircleCheck, CircleDashed, CircleX, Loader2, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,11 +18,11 @@ import { useGlobalStore } from '@/store/global';
  * tag saves.
  */
 const VERDICT_META = {
-  errored: { color: cssVar.colorError, icon: TriangleAlert, labelKey: 'errored' },
-  failed: { color: cssVar.colorError, icon: CircleX, labelKey: 'failed' },
-  passed: { color: cssVar.colorSuccess, icon: CircleCheck, labelKey: 'passed' },
-  pending: { color: cssVar.colorTextTertiary, icon: CircleDashed, labelKey: 'pending' },
-  running: { color: cssVar.colorInfo, icon: Loader2, labelKey: 'running', spin: true },
+  errored: { color: 'var(--ant-color-error)', icon: TriangleAlert, labelKey: 'errored' },
+  failed: { color: 'var(--ant-color-error)', icon: CircleX, labelKey: 'failed' },
+  passed: { color: 'var(--ant-color-success)', icon: CircleCheck, labelKey: 'passed' },
+  pending: { color: 'var(--ant-color-text-tertiary)', icon: CircleDashed, labelKey: 'pending' },
+  running: { color: 'var(--ant-color-info)', icon: Loader2, labelKey: 'running', spin: true },
 } as const;
 
 type VerdictKey = keyof typeof VERDICT_META;

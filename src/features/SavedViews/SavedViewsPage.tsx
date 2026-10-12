@@ -163,7 +163,7 @@ const viewIcon = (view: SavedViewItem) =>
 const renderDateCell = (value: Date | string | null | undefined) =>
   value ? (
     <div
-      className="text-[13px] text-muted-foreground" // linear-token-override: retain the existing dense date-cell typography.
+      className="text-(length:--text-dense) text-muted-foreground" // linear-token-override: retain the existing dense date-cell typography.
       title={formatAbsoluteDateTime(value)}
     >
       {dayjs(value).fromNow()}
@@ -345,7 +345,7 @@ const SavedViewsPage = memo(() => {
           return (
             <div className={styles.ownerCell}>
               <Avatar avatar={owner.avatar} name={owner.name} size={20} />
-              <div className="truncate block text-[13px]">{owner.name}</div>
+              <div className="truncate block text-(length:--text-dense)">{owner.name}</div>
             </div>
           );
         },
@@ -376,11 +376,12 @@ const SavedViewsPage = memo(() => {
     <Popover>
       <PopoverContent align="end" side="bottom">
         <div className={cx('flex flex-col gap-2.5', styles.displayPopover)}>
-          <div className="text-[12px] text-muted-foreground font-medium">
+          <div className="text-xs text-muted-foreground font-medium">
             {t('savedViews.ordering')}
           </div>
           <Select
             aria-label={t('savedViews.ordering')}
+            size="compact"
             style={{ width: '100%' }}
             value={prefs.ordering}
             options={(['name', 'owner', 'updated', 'created'] as const).map((value) => ({
@@ -399,6 +400,7 @@ const SavedViewsPage = memo(() => {
           />
           <Select
             aria-label={t('savedViews.direction')}
+            size="compact"
             style={{ width: '100%' }}
             value={prefs.direction}
             options={(['asc', 'desc'] as const).map((value) => ({
@@ -409,7 +411,7 @@ const SavedViewsPage = memo(() => {
               if (value === 'asc' || value === 'desc') updatePrefs({ direction: value });
             }}
           />
-          <div className="text-[12px] text-muted-foreground font-medium">
+          <div className="text-xs text-muted-foreground font-medium">
             {t('savedViews.displayProperties')}
           </div>
           {(
@@ -420,7 +422,7 @@ const SavedViewsPage = memo(() => {
             ] as const
           ).map(([key, labelKey]) => (
             <div className="flex flex-row items-center justify-between" key={key}>
-              <div className="text-[13px]">{t(labelKey)}</div>
+              <div className="text-(length:--text-dense)">{t(labelKey)}</div>
               <Switch
                 checked={prefs[key]}
                 onCheckedChange={(checked) => updatePrefs({ [key]: checked })}
@@ -515,8 +517,8 @@ const SavedViewsPage = memo(() => {
                     width={56}
                   />
                 </span>
-                <div className="text-[15px] font-semibold">{t('tab.views')}</div>
-                <div className="text-[13px] text-muted-foreground">
+                <div className="text-sm font-semibold">{t('tab.views')}</div>
+                <div className="text-(length:--text-dense) text-muted-foreground">
                   {t(
                     entityType === 'project'
                       ? 'teams.viewDirectoryDescriptionProjects'
@@ -524,7 +526,7 @@ const SavedViewsPage = memo(() => {
                   )}
                 </div>
                 <div className="flex flex-row gap-2">
-                  <Button variant="default" onClick={() => setCreating(true)}>
+                  <Button size="lg" variant="default" onClick={() => setCreating(true)}>
                     {
                       <span className="anticon" role="img">
                         <PlusIcon fill={'transparent'} height={14} size={14} width={14} />
@@ -533,6 +535,7 @@ const SavedViewsPage = memo(() => {
                     {t('teams.viewCreateNew')}
                   </Button>
                   <Button
+                    size="lg"
                     onClick={() => window.open(DIRECTORY_DOC_URL, '_blank', 'noopener,noreferrer')}
                   >
                     {t('teams.viewDocumentation')}

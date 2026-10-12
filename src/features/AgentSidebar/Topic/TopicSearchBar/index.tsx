@@ -38,6 +38,7 @@ const TopicSearchBar = memo<{ onClear?: () => void }>(({ onClear }) => {
         className="pl-8"
         placeholder={t('searchPlaceholder')}
         value={tempValue}
+        visualSize="compact"
         onBlur={() => {
           if (tempValue === '') {
             onClear?.();

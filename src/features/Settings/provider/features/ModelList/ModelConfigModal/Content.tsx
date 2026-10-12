@@ -1,16 +1,15 @@
 'use client';
 
-import { type FormInstance } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
 
-import ModelConfigForm from '../CreateNewModelModal/Form';
+import ModelConfigForm, { type ModelConfigFormHandle } from '../CreateNewModelModal/Form';
 
 interface ModelConfigContentProps {
   id: string;
-  onFormReady: (instance: FormInstance) => void;
+  onFormReady: (instance: ModelConfigFormHandle | undefined) => void;
   showDeployName?: boolean;
 }
 

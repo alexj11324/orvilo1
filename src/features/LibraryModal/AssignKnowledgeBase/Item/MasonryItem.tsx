@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { LockIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
@@ -8,40 +7,11 @@ import { type KnowledgeItem } from '@/types/knowledgeBase';
 
 import Actions from './Action';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    cursor: pointer;
-
-    position: relative;
-
-    overflow: hidden;
-
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-
-    transition: all ${cssVar.motionDurationMid};
-
-    &:hover {
-      border-color: ${cssVar.colorPrimary};
-      box-shadow: ${cssVar.boxShadowTertiary};
-    }
-  `,
-  desc: css`
-    margin: 0 !important;
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextDescription};
-  `,
-  title: css`
-    margin: 0 !important;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
-  `,
-}));
+const styles = {
+  card: 'cursor-pointer relative overflow-hidden p-4 border border-divider rounded-(--radius-card) bg-card transition-[border-color,box-shadow] duration-(--orvilo-motion-mid) ease-[ease] hover:border-primary hover:shadow-(--shadow-raised)',
+  desc: 'm-0 text-xs leading-5 text-foreground-description',
+  title: 'm-0 text-sm leading-5.5 font-medium',
+};
 
 interface MasonryItemProps extends KnowledgeItem {
   action?: ReactNode;
@@ -68,11 +38,11 @@ const MasonryItem = memo<MasonryItemProps>(
                 {visibility === 'private' && (
                   <span className="anticon" role="img">
                     <LockIcon
-                      color={cssVar.colorTextDescription}
+                      className="size-4 text-foreground-description"
                       fill={'transparent'}
-                      height={12}
-                      size={12}
-                      width={12}
+                      height={16}
+                      size={16}
+                      width={16}
                     />
                   </span>
                 )}

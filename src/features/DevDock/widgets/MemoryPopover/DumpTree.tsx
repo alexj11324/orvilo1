@@ -1,7 +1,6 @@
 'use client';
 
 import type { MemoryDumpNode, MemoryDumpProcess } from '@orvilo/electron-client-ipc';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment, memo, useState } from 'react';
@@ -38,26 +37,24 @@ const NodeRow = memo<{
       <div
         {...clickableProps(hasChildren)}
         className={cn(
-          cx(styles.row, styles.mono, hasChildren && styles.rowClickable),
+          cn(styles.row, styles.mono, hasChildren && styles.rowClickable),
           CLICKABLE_FOCUS_RING,
         )}
         onClick={hasChildren ? () => toggle(path) : undefined}
       >
-        <span
-          style={{ alignItems: 'center', display: 'flex', gap: 4, paddingInlineStart: depth * 14 }}
-        >
+        <span className="flex items-center gap-1" style={{ paddingInlineStart: depth * 14 }}>
           {hasChildren ? (
             open ? (
-              <ChevronDown size={11} />
+              <ChevronDown size={16} />
             ) : (
-              <ChevronRight size={11} />
+              <ChevronRight size={16} />
             )
           ) : (
-            <span style={{ width: 11 }} />
+            <span className="w-4" />
           )}
           <span className={depth === 0 ? undefined : styles.muted}>{node.name}</span>
         </span>
-        <span style={{ textAlign: 'end' }}>{formatCompactSize(node.sizeBytes)}</span>
+        <span className="text-end">{formatCompactSize(node.sizeBytes)}</span>
         <span className={styles.bar} title={`${percent.toFixed(1)}% of tracked`}>
           <span className={styles.barFill} style={{ width: `${Math.min(100, percent)}%` }} />
         </span>
@@ -95,11 +92,11 @@ const DumpTree = memo<{ process: MemoryDumpProcess }>(({ process }) => {
 
   return (
     <Fragment>
-      <div className={cx(styles.row, styles.mono)}>
+      <div className={cn(styles.row, styles.mono)}>
         <span>
           {process.name} <span className={styles.muted}>pid {process.pid}</span>
         </span>
-        <span style={{ textAlign: 'end' }}>{formatCompactSize(total)}</span>
+        <span className="text-end">{formatCompactSize(total)}</span>
         <span className={styles.muted}>
           {process.privateFootprintBytes === null
             ? 'tracked'
@@ -118,7 +115,7 @@ const DumpTree = memo<{ process: MemoryDumpProcess }>(({ process }) => {
         />
       ))}
       {counts.length > 0 && (
-        <div className={cx(styles.caption, styles.mono)}>
+        <div className={cn(styles.caption, styles.mono)}>
           {counts.map((key) => `${key} ${process.objectCounts[key].toLocaleString()}`).join(' · ')}
         </div>
       )}

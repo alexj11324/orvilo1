@@ -1,6 +1,7 @@
-import { useResponsive } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo, useMemo } from 'react';
+
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 import Grid from './Grid';
 import { MAX_SIZE_DESKTOP, MAX_SIZE_MOBILE } from './style';
@@ -11,7 +12,7 @@ interface GalleyGridProps<T = any> {
 }
 
 const GalleyGrid = memo<GalleyGridProps>(({ items, renderItem: Render }) => {
-  const { mobile } = useResponsive();
+  const mobile = useIsMobile();
 
   const { firstRow, lastRow } = useMemo(() => {
     if (items.length === 4) {

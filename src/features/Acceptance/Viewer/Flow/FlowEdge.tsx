@@ -6,7 +6,7 @@ import { getFlowEdgeLabelLayout } from './flowEdgeLabel';
 // Non-interactive captions retain an opaque surface beneath the translucent wash.
 const styles = {
   label:
-    'pointer-events-none absolute line-clamp-5 max-w-[200px] max-h-[94px] py-[5px] px-2.5 rounded-[8px] text-[12px] leading-[18px] text-muted-foreground wrap-anywhere whitespace-normal bg-card bg-[linear-gradient(var(--ant-color-fill-quaternary),var(--ant-color-fill-quaternary))]',
+    'pointer-events-none absolute overflow-hidden max-w-50 max-h-27.5 py-1.25 px-2.5 rounded-(--radius-card) text-xs text-muted-foreground wrap-anywhere whitespace-normal bg-card bg-[linear-gradient(var(--fill-quaternary),var(--fill-quaternary))]',
 };
 
 type TransitionEdge = Edge<{ laneOffset?: number }>;
@@ -33,7 +33,7 @@ export function FlowEdge(props: EdgeProps<TransitionEdge>) {
             transform: `translate(-50%, -50%) translate(${label.x}px, ${label.y}px)`,
           }}
         >
-          {props.label}
+          <div className="line-clamp-5">{props.label}</div>
         </div>
       </EdgeLabelRenderer>
     </>

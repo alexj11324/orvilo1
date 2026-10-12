@@ -228,7 +228,7 @@ export const Terminal = ({
     <TerminalContext value={contextValue}>
       <div
         className={cn(
-          'flex flex-col overflow-hidden rounded-lg border bg-card text-card-foreground',
+          'flex flex-col overflow-hidden rounded-(--radius-card) border bg-card text-card-foreground',
           className,
         )}
         {...props}

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { PencilIcon, X } from 'lucide-react';
 import { createElement, memo, useMemo } from 'react';
@@ -28,61 +27,13 @@ interface AvatarUploadProps {
   value?: string;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  delete: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 2px;
-    inset-inline-end: 2px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    border: 2px solid ${cssVar.colorBgContainer};
-    border-radius: 50%;
-
-    color: ${cssVar.colorTextLightSolid};
-
-    opacity: 0;
-    background: ${cssVar.colorError};
-
-    transition: opacity ${cssVar.motionDurationMid} ease;
-  `,
-  overlay: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 8px;
-
-    opacity: 0;
-    background: ${cssVar.colorBgMask};
-
-    transition: opacity ${cssVar.motionDurationMid} ease;
-  `,
-  wrapper: css`
-    cursor: pointer;
-    position: relative;
-    flex: none;
-    border-radius: 8px;
-
-    &:hover .avatar-edit-overlay,
-    &:hover .avatar-delete-badge {
-      opacity: 1;
-    }
-  `,
-}));
+const styles = {
+  delete:
+    'absolute inset-bs-0.5 end-0.5 z-2 flex size-8 cursor-pointer items-center justify-center rounded-full border-2 border-card bg-destructive-subtle text-destructive-text opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-[ease] group-hover/avatar:opacity-100 group-focus-within/avatar:opacity-100 focus-visible:opacity-100 motion-reduce:transition-none [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:opacity-100',
+  overlay:
+    'absolute inset-0 z-1 flex cursor-pointer items-center justify-center [border-radius:inherit] bg-overlay-mask text-overlay-mask-foreground opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-[ease] group-hover/avatar:opacity-100 group-focus-within/avatar:opacity-100 motion-reduce:transition-none',
+  wrapper: 'group/avatar relative flex-none cursor-pointer',
+};
 
 const AvatarUpload = memo<AvatarUploadProps>(
   ({
@@ -115,13 +66,15 @@ const AvatarUpload = memo<AvatarUploadProps>(
     return (
       <Upload beforeUpload={handleUpload} maxCount={1}>
         <div className="relative">
-          <div className={styles.wrapper}>
+          <div
+            className={cn(
+              styles.wrapper,
+              shape === 'circle' ? 'rounded-full' : 'rounded-(--radius-card)',
+            )}
+          >
             <Avatar avatar={value} shape={shape} size={size} title={title} />
             <div className={`${styles.overlay} avatar-edit-overlay`}>
-              {createElement(PencilIcon, {
-                size: 16,
-                style: { color: cssVar.colorTextLightSolid },
-              })}
+              {createElement(PencilIcon, { size: 16 })}
             </div>
             {allowDelete && (
               <div
@@ -132,7 +85,7 @@ const AvatarUpload = memo<AvatarUploadProps>(
                   onDelete?.();
                 }}
               >
-                {createElement(X, { size: 12 })}
+                {createElement(X, { size: 16 })}
               </div>
             )}
           </div>

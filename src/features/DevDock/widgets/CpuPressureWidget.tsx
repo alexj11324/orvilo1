@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useEffect, useState } from 'react';
 
 type PressureState = 'critical' | 'fair' | 'nominal' | 'serious';
@@ -23,19 +23,11 @@ type PressureObserverConstructor = new (
 const getPressureObserverCtor = (): PressureObserverConstructor | undefined =>
   (globalThis as { PressureObserver?: PressureObserverConstructor }).PressureObserver;
 
-const styles = createStaticStyles(({ css }) => ({
-  critical: css`
-    color: ${cssVar.colorError};
-  `,
-  serious: css`
-    color: ${cssVar.colorWarning};
-  `,
-  text: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  critical: 'text-destructive-text',
+  serious: 'text-warning-text',
+  text: 'font-mono text-xs leading-5 text-foreground-tertiary',
+};
 
 const STATE_CLASS: Partial<Record<PressureState, string>> = {
   critical: styles.critical,
@@ -65,7 +57,7 @@ const CpuPressureWidget = memo(() => {
   if (!state) return null;
 
   return (
-    <span className={cx(styles.text, STATE_CLASS[state])} title={'Compute Pressure (CPU)'}>
+    <span className={cn(styles.text, STATE_CLASS[state])} title={'Compute Pressure (CPU)'}>
       CPU {state}
     </span>
   );

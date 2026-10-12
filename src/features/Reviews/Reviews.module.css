@@ -1,0 +1,31 @@
+/* Current NavHeader44 + TabsList32 + tabs blockpadding16 + divider1.
+   This exact public chrome measure replaces the stale88px sticky offset;
+   rem-based producers scale together, while the divider remains1 CSSpx. */
+.queueList { --reviews-chrome-height: calc(var(--spacing) * 23 + 1px); }
+/* Only owned native router anchors. Keep text/hover/selection over retained
+   unlayered anchor resets without importance or an Emotion registration. */
+.row.row {
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: calc(var(--spacing) * 9);
+  padding-inline: 12px;
+  border-radius: var(--radius-button);
+  color: var(--foreground);
+  text-decoration: none;
+}
+.row.row:hover { color: var(--foreground); background: var(--muted); }
+.row.row[data-active='true'] { background: var(--selected); }
+.row.row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ring) 50%, transparent);
+  outline-offset: -2px;
+}
+.diffBody {
+  width: 100%;
+  max-width: 1500px;
+  margin-inline: auto;
+  padding-block: 16px 48px;
+  padding-inline: 24px;
+}
+@media (width <= 768px) { .diffBody { padding-inline: 8px; } }

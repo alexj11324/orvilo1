@@ -4,7 +4,6 @@ import { memo, type MouseEvent } from 'react';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
 import { type ActionIconProps } from '@/components/ActionIcon';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { appNavigate } from '@/features/Electron/navigation/appNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 
@@ -31,7 +30,7 @@ const BackButton = memo<ActionIconProps & { to?: string }>(({ to = '/', onClick,
       <ActionIcon
         icon={ChevronLeftIcon}
         id={BACK_BUTTON_ID}
-        size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+        size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
         {...rest}
       />
     </a>

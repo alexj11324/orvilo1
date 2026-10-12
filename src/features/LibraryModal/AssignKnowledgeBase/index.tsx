@@ -12,7 +12,7 @@ const Content = memo(() => {
 
   return (
     <div
-      className="flex flex-col w-[100%]"
+      className="flex flex-col w-full"
       style={{ maxHeight: mobile ? '-webkit-fill-available' : 'inherit', gap: mobile ? 8 : 16 }}
     >
       <List />

@@ -2,7 +2,6 @@
 
 import { OptionCard } from '@orvilo/shared-tool-ui/components';
 import type { TaskIntentAnalysis } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowLeft, Check, Sparkles } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,96 +12,20 @@ import { Textarea } from '@/components/ui/textarea';
 
 import type { ClarificationAnswers } from './taskIntent';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    overflow-y: auto;
-
-    /* Viewport-relative, because the footer holds the only way forward: a fixed
-       cap sized for a tall window pushed "create" below the fold on a short one,
-       leaving the panel's primary action unreachable without scrolling. The
-       question list scrolls inside this box instead, and the footer stays put.
-       (The absolute cap is the leftover from the confirm step's instruction
-        editor, which no longer exists — the questions never needed it.) */
-    max-height: min(420px, 42dvh);
-    padding-block: 12px 16px;
-    padding-inline: 16px;
-  `,
-  footer: css`
-    padding-block: 8px;
-    padding-inline: 8px 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  head: css`
-    padding-block: 12px 0;
-    padding-inline: 16px;
-  `,
-  // Mirrors OptionCard's own index chip so the free-text row reads as one more
-  // numbered choice rather than a separate control below the list.
-  customIndex: css`
-    flex-shrink: 0;
-
-    box-sizing: border-box;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 22px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  // Reuses OptionCard's row rhythm so the recap reads as the same list the
-  // user just answered, not as a different kind of object.
-  answerRow: css`
-    cursor: pointer;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: 8px;
-
-    transition: background 0.12s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  customRow: css`
-    margin-block-start: 2px;
-
-    /* Align the chip under OptionCard's own index chips. */
-    padding-inline: 12px;
-  `,
-  instruction: css`
-    overflow-y: auto;
-    max-height: 220px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-  `,
-  tabs: css`
-    [role='tablist'] {
-      width: 100%;
-    }
-  `,
-  title: css`
-    box-sizing: border-box;
-    width: 100%;
-    padding-block: 2px;
-    border: none;
-
-    font-family: inherit;
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.4;
-    color: inherit;
-
-    background: transparent;
-    outline: none;
-  `,
-}));
+const styles = {
+  body: 'overflow-y-auto [max-height:min(calc(var(--spacing)*105),42dvh)] pbs-3 pbe-4 px-4 text-sm leading-5.5',
+  footer: 'py-2 ps-2 pe-4 border-bs border-divider',
+  head: 'pbs-3 pbe-0 px-4',
+  customIndex:
+    'shrink-0 box-border flex items-center justify-center size-5.5 rounded-(--radius-chip) font-mono text-xs leading-5 font-semibold text-muted-foreground text-center bg-muted',
+  answerRow:
+    'cursor-pointer py-2 px-3 rounded-(--radius-card) transition-[background-color] duration-(--orvilo-motion-fast) hover:bg-accent motion-reduce:transition-none',
+  customRow: 'mbs-0.5 px-3',
+  instruction: 'overflow-y-auto max-h-55 border border-divider rounded-(--radius-input)',
+  tabs: '[&_[role=tablist]]:w-full',
+  title:
+    'box-border w-full py-0.5 border-0 [font-family:inherit] text-base leading-6 font-semibold text-inherit bg-transparent outline-none',
+};
 
 export interface TaskIntentReviewProps {
   analysis: TaskIntentAnalysis;
@@ -179,8 +102,8 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
     <>
       <div className={`flex flex-col gap-1.5 ${styles.head}`}>
         <div className="flex items-center gap-1.5">
-          <Sparkles color={cssVar.colorTextDescription} size={13} />
-          <div className="text-[12px] text-muted-foreground">{t('taskIntent.reviewStep')}</div>
+          <Sparkles className="size-3.5 text-foreground-description" size={14} />
+          <div className="text-xs text-muted-foreground">{t('taskIntent.reviewStep')}</div>
         </div>
         <input
           className={styles.title}
@@ -204,7 +127,7 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
                 <TabsTrigger key={index} value={String(index)}>
                   <span className="inline-flex items-center gap-1.5">
                     <div>{`Q${index + 1}`}</div>
-                    {isAnswered(index) && <Check size={12} />}
+                    {isAnswered(index) && <Check className="size-3" size={12} />}
                   </span>
                 </TabsTrigger>
               ))}
@@ -227,7 +150,7 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
                 <div className="flex flex-col gap-0.5">
                   <div className="font-semibold">{active.question}</div>
                   {active.impact && (
-                    <div className="text-[12px] text-muted-foreground">{active.impact}</div>
+                    <div className="text-xs text-muted-foreground">{active.impact}</div>
                   )}
                 </div>
 
@@ -244,10 +167,9 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
                   <div className={`flex items-center gap-3 ${styles.customRow}`}>
                     <span className={styles.customIndex}>{options.length + 1}</span>
                     <Textarea
-                      className="min-h-0"
+                      className="flex-1 min-h-0 max-h-29 rounded-(--radius-input) text-sm leading-5.5 md:text-sm"
                       placeholder={t('taskIntent.answerPlaceholder')}
                       rows={1}
-                      style={{ flex: 1, maxHeight: 116 }}
                       value={custom}
                       onChange={(e) => onAnswerChange(index, e.target.value)}
                     />
@@ -259,15 +181,15 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
       </div>
 
       <div className={`flex items-center justify-between ${styles.footer}`}>
-        <Button size="sm" variant="ghost" onClick={onBack}>
+        <Button size="normal" variant="ghost" onClick={onBack}>
           <ArrowLeft data-icon="inline-start" />
           {t('taskIntent.back')}
         </Button>
         <Button
-          className="rounded-full"
+          className="rounded-(--radius-button)"
           disabled={isCreating}
           loading={isCreating}
-          size="sm"
+          size="normal"
           variant="default"
           onClick={primary.action}
         >

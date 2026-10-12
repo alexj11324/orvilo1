@@ -65,7 +65,7 @@ const EditMetaForm: FC<EditMetaFormProps> = ({ cred, credsApi, onCancel, onSucce
         name="name"
         rules={[{ required: true, message: t('creds.form.nameRequired') }]}
       >
-        <Input disabled={!canManageCredentials} />
+        <Input disabled={!canManageCredentials} visualSize="normal" />
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">
@@ -77,12 +77,13 @@ const EditMetaForm: FC<EditMetaFormProps> = ({ cred, credsApi, onCancel, onSucce
       </Form.Item>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button size="lg" type="button" variant="outline" onClick={onCancel}>
           {t('creds.form.cancel')}
         </Button>
         <Button
           disabled={updateMutation.isPending || !canManageCredentials}
           loading={updateMutation.isPending}
+          size="lg"
           type="submit"
           variant="default"
         >

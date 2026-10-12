@@ -17,7 +17,7 @@ import { useGoalStore } from '@/store/goal';
 
 const styles = {
   row: '[padding-block:8px] [&:not(:last-child)]:[border-block-end:1px_dashed_var(--sidebar-border)]',
-  seq: 'flex-none font-mono text-xs leading-[inherit] text-(--ant-color-text-quaternary)',
+  seq: 'flex-none font-mono text-xs leading-[inherit] text-foreground-quaternary',
 };
 
 /**
@@ -104,12 +104,14 @@ const GoalAcceptanceCriteria = memo<{ criteriaIds: string[]; goalId: string }>(
     // accordion row in ProcessControl — this renders the list body only.
     return (
       <div
-        className="flex flex-col rounded-md border border-border"
+        className="flex flex-col rounded-(--radius-card) border border-border"
         style={{ paddingBlock: 4, paddingInline: 16 }}
       >
         {criteriaIds.length === 0 && (
           <div className={`flex flex-col ${styles.row}`}>
-            <div className="text-[13px] text-muted-foreground">{t('goalAcceptance.empty')}</div>
+            <div className="text-(length:--text-dense) text-muted-foreground">
+              {t('goalAcceptance.empty')}
+            </div>
           </div>
         )}
         {(criteria ?? []).map((item, index) => (

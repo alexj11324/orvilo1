@@ -2,54 +2,18 @@
 
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { INBOX_SESSION_ID } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import type { ReactNode } from 'react';
 
 import { ProductLogo } from '@/components/Branding';
 
-const styles = createStaticStyles(({ css }) => ({
-  composer: css`
-    position: relative;
-    z-index: 1;
-
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    gap: 16px;
-
-    width: min(744px, calc(100% - 16px));
-    margin-block: auto;
-  `,
-  root: css`
-    isolation: isolate;
-    position: relative;
-
-    overflow: hidden auto;
-
-    box-sizing: border-box;
-    min-height: 0;
-    padding-block: 16px;
-  `,
-  watermark: css`
-    pointer-events: none;
-
-    position: absolute;
-    z-index: 0;
-    inset-block-start: calc(50% - 92px);
-    inset-inline-start: 50%;
-    transform: translate(-50%, -50%);
-
-    aspect-ratio: 1;
-    width: min(336px, calc(100% - 54px));
-
-    opacity: 0.035;
-
-    [data-theme='dark'] & {
-      filter: invert(1);
-    }
-  `,
-}));
+const styles = {
+  composer:
+    'relative z-1 flex flex-none flex-col gap-4 w-186 [max-width:calc(100%_-_var(--spacing)*4)] my-auto',
+  root: 'isolate relative w-full min-h-0 box-border overflow-x-hidden overflow-y-auto py-4',
+  watermark:
+    'pointer-events-none absolute z-0 [inset-block-start:calc(50%_-_var(--spacing)*23)] start-1/2 aspect-square w-84 [max-width:calc(100%_-_var(--spacing)*13.5)] -translate-x-1/2 -translate-y-1/2 opacity-3.5 [[data-theme=dark]_&]:invert',
+} as const;
 
 interface InboxAgentLandingProps {
   children: ReactNode;
@@ -103,7 +67,6 @@ const InboxAgentLanding = ({ children }: InboxAgentLandingProps) => {
     <div
       className={cn('flex flex-col items-center flex-1', styles.root)}
       data-testid="inbox-agent-landing-scroll-region"
-      style={{ width: '100%' }}
     >
       <div aria-hidden className={styles.watermark}>
         <ProductLogo size={336} style={{ height: '100%', width: '100%' }} type={'mono'} />

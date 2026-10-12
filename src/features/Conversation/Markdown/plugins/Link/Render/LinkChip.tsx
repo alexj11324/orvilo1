@@ -1,7 +1,6 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import { PanelRightIcon } from 'lucide-react';
 import { memo, type MouseEvent, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,35 +8,14 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import { useGlobalStore } from '@/store/global';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    color: ${cssVar.colorLink};
-    text-decoration: none;
-    transition: color 0.15s;
+import referenceStyles from '../../ReferenceRender.module.css';
 
-    &:hover {
-      color: ${cssVar.colorLinkHover};
-    }
-  `,
-  icon: css`
-    display: inline-flex;
-    margin-inline-end: 4px;
-    vertical-align: -0.15em;
-  `,
-  sideBrowser: css`
-    color: ${cssVar.colorTextTertiary};
-    transition: color 0.15s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  wrapper: css`
-    display: inline-flex;
-    gap: 2px;
-    align-items: center;
-  `,
-}));
+const styles = {
+  icon: 'inline-flex me-1 align-[-0.15em]',
+  sideBrowser:
+    'text-foreground-tertiary transition-[color] duration-(--orvilo-motion-mid) ease-[ease] hover:text-foreground',
+  wrapper: 'inline-flex gap-0.5 items-center',
+};
 
 interface LinkChipProps {
   href?: string;
@@ -60,7 +38,13 @@ const LinkChip = memo<LinkChipProps>(({ href, icon, label }) => {
   );
 
   const link = (
-    <a className={styles.chip} href={href} rel="noopener noreferrer" target="_blank">
+    <a
+      className={referenceStyles.linkChip}
+      data-slot="markdown-link"
+      href={href}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
       {icon && <span className={styles.icon}>{icon}</span>}
       {label}
     </a>
@@ -77,8 +61,9 @@ const LinkChip = memo<LinkChipProps>(({ href, icon, label }) => {
       <ActionIcon
         data-side-browser
         className={styles.sideBrowser}
+        classNames={{ icon: 'size-4' }}
         icon={PanelRightIcon}
-        size={'small'}
+        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
         title={t('messageLink.openInSideBrowser')}
         onClick={openInSideBrowser}
       />

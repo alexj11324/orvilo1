@@ -75,7 +75,7 @@ const styles = {
   sidebarRow:
     'cursor-pointer flex gap-2 items-center w-full py-1.25 px-2 border-none rounded-[6px] text-foreground text-start bg-transparent hover:bg-accent',
   sidebarRowActive: 'text-primary bg-selected',
-  sidebarRowCount: 'ms-auto text-[12px] text-muted-foreground',
+  sidebarRowCount: 'ms-auto text-xs text-muted-foreground',
   sidebarSection: 'flex flex-col gap-0.5',
   viewChip:
     'cursor-pointer inline-flex items-center h-7 px-3 border border-transparent rounded-[999px] text-muted-foreground bg-transparent hover:bg-accent',
@@ -318,7 +318,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               type="button"
               onClick={() => toggleHealth(state)}
             >
-              <ProjectHealthIcon health={state} size={14} />
+              <ProjectHealthIcon health={state} size={16} />
               <span className="text-sm">
                 {t(`list.health.${state}`, { defaultValue: state, ns: 'project' })}
               </span>
@@ -365,7 +365,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
             type="button"
             onClick={() => toggleHealth(null)}
           >
-            <ProjectHealthIcon health={null} size={14} />
+            <ProjectHealthIcon health={null} size={16} />
             <span className="text-sm">{t('list.health.noUpdates', { ns: 'project' })}</span>
             <span className={styles.sidebarRowCount}>{summary.updateMissing}</span>
           </button>
@@ -493,7 +493,11 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                 }
               >
                 {filters.length === 0 ? (
-                  <Button variant="outline" onClick={() => openCreateProjectModal({ teamId })}>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => openCreateProjectModal({ teamId })}
+                  >
                     <PlusIcon aria-hidden className="size-4" />
                     {t('create.title', { ns: 'project' })}
                   </Button>
@@ -564,6 +568,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                     <Button
                       aria-busy={loadingMore}
                       disabled={loadingMore}
+                      size="compact"
                       variant="outline"
                       onClick={() => runLoadMore(loadMore)}
                     >

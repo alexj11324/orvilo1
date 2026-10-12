@@ -1,29 +1,14 @@
-import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  input: css`
-    width: 100%;
-    padding: 0;
-    border: 0;
-    border-radius: 2px;
-
-    background: transparent;
-    box-shadow: none;
-
-    &:focus-visible {
-      outline: 1px solid ${cssVar.colorPrimary};
-      outline-offset: 2px;
-    }
-  `,
-  error: css`
-    font-size: 12px;
-    color: ${cssVar.colorError};
-  `,
-}));
+const styles = {
+  input:
+    'w-full rounded-(--radius-input) border-0 bg-transparent p-0 shadow-none focus-visible:outline-1 focus-visible:outline-primary focus-visible:outline-offset-2',
+  error: 'text-xs leading-5 text-destructive-text',
+};
 
 interface ProjectOverviewFieldProps {
   canEdit?: boolean;
@@ -72,22 +57,24 @@ export function ProjectOverviewField({
   };
   return (
     <div>
+      {/* Inline-edit heading: no field chrome until focused, like the issue title. */}
       <Input
         aria-busy={saving || undefined}
         aria-invalid={failed || undefined}
         aria-label={t(kind === 'name' ? 'rename.nameLabel' : 'overview.projectSummary')}
-        // Inline-edit heading: no field chrome until focused, like the issue title.
-        className={`${styles.input} rounded-none border-0 px-0 shadow-none focus-visible:ring-0 dark:bg-transparent`}
-
         maxLength={kind === 'name' ? 255 : 280}
+
         placeholder={kind === 'summary' ? t('create.summaryPlaceholder') : undefined}
         readOnly={saving || !canEdit}
         value={draft ?? value}
-        style={{
-          fontSize: kind === 'name' ? 24 : 15,
-          fontWeight: kind === 'name' ? 600 : 450,
-          height: kind === 'name' ? 32 : 24,
-        }}
+        visualSize="normal"
+        className={cn(
+          styles.input,
+          'border-0 px-0 shadow-none focus-visible:ring-0 dark:bg-transparent',
+          kind === 'name'
+            ? 'text-2xl leading-8 font-semibold md:text-2xl'
+            : 'text-sm leading-5.5 font-normal md:text-sm',
+        )}
         onBlur={() => void save()}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {

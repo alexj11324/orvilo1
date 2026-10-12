@@ -1,53 +1,12 @@
 'use client';
 
-import { createStaticStyles, keyframes } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 
-const shimmer = keyframes`
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
-`;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 12px;
-  `,
-  progress: css`
-    position: relative;
-
-    overflow: hidden;
-
-    height: 3px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressShimmer: css`
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-
-    width: 100%;
-    height: 100%;
-
-    background: linear-gradient(90deg, transparent, ${cssVar.colorPrimaryBgHover}, transparent);
-
-    animation: ${shimmer} 2s infinite;
-
-    @media (prefers-reduced-motion: reduce) {
-      display: none;
-    }
-  `,
-}));
+const styles = { container: 'py-3' };
 
 const InitializingState = memo(() => {
   const { t } = useTranslation('chat');
@@ -55,8 +14,8 @@ const InitializingState = memo(() => {
   return (
     <div className={cn('flex flex-col gap-3', styles.container)}>
       <div className="flex items-center gap-2">
-        <NeuralNetworkLoading size={14} />
-        <div className="font-medium shinyTextStyles.shinyText">{t('task.status.initializing')}</div>
+        <NeuralNetworkLoading size={16} />
+        <div className="text-sm font-medium">{t('task.status.initializing')}</div>
       </div>
     </div>
   );

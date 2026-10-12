@@ -27,7 +27,7 @@ import { useMasonryViewState } from './useMasonryViewState';
 
 const styles = {
   selectAllHint:
-    'sticky z-1 [inset-block-start:53px] py-2 px-1 [border-block-end:1px_solid_var(--sidebar-border)] text-[12px] text-[var(--ant-color-text-description)] bg-accent',
+    'sticky z-1 [inset-block-start:53px] py-2 px-1 [border-block-end:1px_solid_var(--sidebar-border)] text-xs text-foreground-description bg-accent',
   toolbar:
     'sticky z-1 [inset-block-start:0] py-3 px-1 [border-block-end:1px_solid_var(--sidebar-border)] bg-card',
 };

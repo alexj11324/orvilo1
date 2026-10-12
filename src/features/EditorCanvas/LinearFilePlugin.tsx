@@ -1,7 +1,6 @@
 'use client';
 
 import { FilePlugin, UploadPlugin, useLexicalComposerContext } from '@lobehub/editor';
-import { createStaticStyles } from 'antd-style';
 import { DownloadIcon } from 'lucide-react';
 import {
   type FC,
@@ -24,126 +23,21 @@ import { createEditorFileUploadTracker } from './editorFileUploadTracker';
 import { openFileDownload } from './fileDownload';
 import type { EditorAttachmentUpload } from './useImageUpload';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    box-sizing: border-box;
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorBgContainer};
-
-    transition: background ${cssVar.motionDurationMid};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:hover [data-orvilo-file-download] {
-      opacity: 1;
-    }
-  `,
-  download: css`
-    flex-shrink: 0;
-    opacity: 0;
-    transition: opacity ${cssVar.motionDurationMid};
-  `,
-  info: css`
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: ${cssVar.fontSize};
-    font-weight: 500;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  progress: css`
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline-start: 0;
-
-    height: 3px;
-
-    background: ${cssVar.colorPrimary};
-
-    transition: width ${cssVar.motionDurationMid} ease-out;
-  `,
-  progressTrack: css`
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline: 0;
-
-    height: 3px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  size: css`
-    margin-block-start: 2px;
-    font-size: ${cssVar.fontSizeSM};
-    line-height: 1.4;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  state: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  uploadCard: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    box-sizing: border-box;
-    width: 100%;
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  uploadMeta: css`
-    overflow: hidden;
-
-    margin-block-start: 2px;
-
-    font-size: ${cssVar.fontSizeSM};
-    line-height: 1.4;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  card: 'cursor-pointer flex gap-3 items-center box-border w-full p-4 border border-divider rounded-(--radius-card) text-sm leading-5.5 text-foreground bg-card transition-[background-color] duration-(--orvilo-motion-mid) ease-[ease] hover:bg-accent hover:[&_[data-orvilo-file-download]]:opacity-100 focus-within:[&_[data-orvilo-file-download]]:opacity-100',
+  download: 'shrink-0 opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+  info: 'overflow-hidden flex-1 min-w-0',
+  name: 'truncate text-sm leading-5.5 font-medium text-foreground',
+  progress:
+    'absolute inset-be-0 inset-s-0 h-0.75 bg-primary transition-[width] duration-(--orvilo-motion-mid) ease-[ease-out]',
+  progressTrack: 'absolute inset-be-0 inset-x-0 h-0.75 bg-muted',
+  size: 'mbs-0.5 text-xs leading-5 text-foreground-tertiary',
+  state:
+    'flex gap-2 items-center p-4 border border-divider rounded-(--radius-card) text-sm leading-5.5 text-muted-foreground bg-card',
+  uploadCard:
+    'relative overflow-hidden flex gap-3 items-center box-border w-full p-4 border border-divider rounded-(--radius-card) text-sm leading-5.5 text-foreground bg-card',
+  uploadMeta: 'truncate mbs-0.5 text-xs leading-5 text-foreground-tertiary',
+};
 
 interface FileNodeLike {
   fileUrl?: string;
@@ -258,7 +152,7 @@ export const LinearFileCard = memo<LinearFileCardProps>(({ node, uploadTracker }
         <ActionIcon
           aria-label={t('download', { ns: 'common' })}
           icon={DownloadIcon}
-          size={'small'}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
           variant={'filled'}
           onClick={onDownloadClick}
         />

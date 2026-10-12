@@ -1,63 +1,24 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Maximize2, Minimize2, XIcon } from 'lucide-react';
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
 
-import { BAR_HEIGHT, BAR_OVERLAP } from './const';
+import { BAR_HEIGHT } from './const';
 import PanelErrorBoundary from './PanelErrorBoundary';
 import { type DevDockPanelItem, getItemComponent, useDevDockItems } from './registry';
 import { MIN_PANEL_HEIGHT, useDevDockStore } from './store';
 
-const styles = createStaticStyles(({ css }) => ({
-  content: css`
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-  `,
-  header: css`
-    flex-shrink: 0;
-
-    height: 30px;
-    padding-inline: 10px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  host: css`
-    position: relative;
-
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-
-    width: 100%;
-    margin-block-end: ${BAR_OVERLAP}px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  resizeHandle: css`
-    touch-action: none;
-    cursor: row-resize;
-
-    position: absolute;
-    z-index: 1;
-    inset-block-start: -3px;
-    inset-inline: 0;
-
-    height: 6px;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  content: 'overflow-hidden flex-1 min-w-0 min-h-0',
+  header:
+    'shrink-0 h-8 px-2.5 border-be border-divider text-sm leading-5.5 font-medium text-muted-foreground',
+  host: 'relative flex flex-col shrink-0 w-full mbe-2 border-bs border-divider bg-card',
+  resizeHandle:
+    'touch-none cursor-row-resize absolute z-1 -inset-bs-0.75 inset-x-0 h-1.5 hover:bg-accent',
+};
 
 const PanelHost = memo(() => {
   const expanded = useDevDockStore((s) => s.expanded);
@@ -121,19 +82,19 @@ const PanelHost = memo(() => {
   return (
     <section className={styles.host} style={{ height }}>
       {!maximized && <div className={styles.resizeHandle} onPointerDown={handleDragStart} />}
-      <div className={cx(styles.header, 'flex items-center gap-1.5')}>
-        <Icon size={12} />
+      <div className={cn(styles.header, 'flex items-center gap-1.5')}>
+        <Icon size={16} />
         <span>{item.label}</span>
-        <span style={{ flex: 1 }} />
+        <span className="flex-1" />
         <ActionIcon
           icon={maximized ? Minimize2 : Maximize2}
-          size={'small'}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
           title={maximized ? 'Restore' : 'Maximize'}
           onClick={() => setMaximized(!maximized)}
         />
         <ActionIcon
           icon={XIcon}
-          size={'small'}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
           title={'Close panel'}
           onClick={() => togglePanel(item.id)}
         />

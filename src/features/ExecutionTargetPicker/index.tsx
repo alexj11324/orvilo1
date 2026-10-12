@@ -1,7 +1,6 @@
 'use client';
 
 import type { DeviceExecutionTarget, DeviceListItem } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { BoxIcon, LaptopIcon, MonitorOffIcon, SparklesIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -13,33 +12,6 @@ export {
   executionTargetDeviceCandidates,
   groupExecutionTargetDevices,
 } from '@/helpers/executionTarget';
-
-const styles = createStaticStyles(({ css }) => ({
-  dotOffline: css`
-    flex: none;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorTextQuaternary};
-  `,
-  dotOnline: css`
-    flex: none;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorSuccess};
-    box-shadow: 0 0 0 2px ${cssVar.colorSuccessBg};
-  `,
-  status: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-  `,
-}));
 
 export const SHARED_EXECUTION_TARGETS = ['auto', 'device', 'none', 'sandbox'] as const;
 
@@ -110,7 +82,7 @@ interface ExecutionTargetIconProps {
 }
 
 export const ExecutionTargetIcon = memo<ExecutionTargetIconProps>(
-  ({ devicePlatform, size = 14, target }) => {
+  ({ devicePlatform, size = 16, target }) => {
     switch (target) {
       case 'auto': {
         return <SparklesIcon size={size} />;
@@ -141,8 +113,15 @@ interface ExecutionTargetDeviceStatusProps {
 
 export const ExecutionTargetDeviceStatus = memo<ExecutionTargetDeviceStatusProps>(
   ({ offlineLabel, online, onlineLabel }) => (
-    <span className={styles.status}>
-      <span aria-hidden className={online ? styles.dotOnline : styles.dotOffline} />
+    <span className="inline-flex items-center gap-1.5 text-xs leading-5">
+      <span
+        aria-hidden
+        className={
+          online
+            ? 'size-1.5 flex-none rounded-full bg-success [box-shadow:0_0_0_2px_var(--success-wash)]'
+            : 'size-1.5 flex-none rounded-full bg-foreground-quaternary'
+        }
+      />
       <span>{online ? onlineLabel : offlineLabel}</span>
     </span>
   ),

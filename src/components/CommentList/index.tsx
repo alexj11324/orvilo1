@@ -76,7 +76,7 @@ const CommentList = memo<CommentListProps>(({ initialData, fetchMore }) => {
           )}
         </div>
         {currentPage < totalPages && (
-          <Button className="w-full" loading={isPending} onClick={handleLoadMore}>
+          <Button className="w-full" loading={isPending} size="lg" onClick={handleLoadMore}>
             {loadMoreFailed ? tc('retry') : t('skills.details.comments.loadMore')}
           </Button>
         )}

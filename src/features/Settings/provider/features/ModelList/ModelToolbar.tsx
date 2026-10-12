@@ -67,7 +67,7 @@ const ModelToolbar = memo<ModelToolbarProps>(
         ) : isEmpty ? null : (
           <>
             <Search
-              className={mobile ? 'w-full' : 'w-full max-w-[260px]'}
+              className={mobile ? 'w-full' : 'w-full max-w-65'}
               value={searchKeyword}
               onChange={handleSearch}
             />

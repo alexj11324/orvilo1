@@ -86,7 +86,7 @@ const GridCard = memo<GridCardProps>(
               <div className="flex items-center gap-2 flex-wrap">
                 {title && typeof title === 'string' ? (
                   <h2
-                    className="line-clamp-2 text-[16px] font-medium"
+                    className="line-clamp-2 text-base font-medium"
                     style={{ lineHeight: 1.5, margin: 0 }}
                   >
                     {title}

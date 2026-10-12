@@ -254,6 +254,7 @@ const ToolDetectorSection = memo(() => {
           <Button
             aria-busy={detecting}
             disabled={detecting}
+            size="lg"
             variant="outline"
             onClick={handleRedetect}
           >

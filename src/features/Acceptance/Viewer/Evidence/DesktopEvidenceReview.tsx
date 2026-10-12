@@ -25,7 +25,7 @@ const styles = {
   thumbActive: 'border-primary',
   zoomBar:
     'absolute z-5 bottom-4 start-1/2 -translate-x-1/2 flex gap-1 items-center py-1 px-2 border border-sidebar-border rounded-[99px] bg-popover shadow-(--shadow-popover)',
-  zoomLabel: 'min-w-11 text-[12px] tabular-nums text-muted-foreground text-center',
+  zoomLabel: 'min-w-11 text-xs tabular-nums text-muted-foreground text-center',
 };
 
 interface DesktopEvidenceReviewProps {
@@ -114,15 +114,15 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
               </div>
               <div className={styles.notes}>
                 <div className="flex flex-col gap-0.5">
-                  <div className="font-semibold text-[13px]">
+                  <div className="font-semibold text-(length:--text-dense)">
                     {t('acceptance.review.regionComments')}
                   </div>
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('acceptance.review.annotateHint')}
                   </div>
                 </div>
                 {activeAnnotations.length === 0 && (
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('acceptance.review.regionCommentsEmpty')}
                   </div>
                 )}
@@ -143,7 +143,7 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
           </div>
         )}
         <div className="flex flex-col gap-2.5" style={{ width: '100%' }}>
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {hasEvidence
               ? t('acceptance.review.supplement')
               : t('acceptance.review.rejectDescription', { title: checkTitle })}
@@ -166,12 +166,13 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                 onRemove={model.removeAttachment}
               />
             </div>
-            <Button disabled={loading} onClick={close}>
+            <Button disabled={loading} size="lg" onClick={close}>
               {t('acceptance.actions.cancel')}
             </Button>
             <Button
               disabled={!canSubmit}
               loading={loading}
+              size="lg"
               variant="outline"
               onClick={model.submitReject}
             >

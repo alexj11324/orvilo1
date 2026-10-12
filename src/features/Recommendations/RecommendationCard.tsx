@@ -1,4 +1,4 @@
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -53,16 +53,18 @@ export const RecommendationCard = memo<RecommendationCardProps>(
     if (compact)
       return (
         <Button
+          multiline
           className={styles.compactRow}
           loading={loading}
+          size="normal"
           variant="ghost"
           onClick={handleClick}
         >
-          <div className="flex flex-row items-start gap-2.5" style={{ width: '100%' }}>
-            <div className="flex flex-col flex-none py-[2px]">
+          <div className="flex w-full flex-row items-start gap-2.5">
+            <div className="flex flex-col flex-none py-0.5">
               {renderIcon(RECOMMENDATION_ICON_SIZE.compact)}
             </div>
-            <div className={cx(homeType.itemTitleProse, styles.compactTitle)} style={{ flex: 1 }}>
+            <div className={cn(homeType.itemTitleProse, styles.compactTitle, 'flex-1')}>
               {title}
             </div>
           </div>
@@ -71,23 +73,19 @@ export const RecommendationCard = memo<RecommendationCardProps>(
 
     return (
       <div
-        style={{ borderRadius: cssVar.borderRadiusLG }}
-        className={cx(
+        className={cn(
           briefStyles.card,
           styles.card,
-          'rounded-md border bg-card flex flex-col gap-3 p-3',
+          'rounded-(--radius-card) border bg-card flex flex-col gap-3 p-3',
         )}
       >
         <div className="flex flex-row items-center gap-4 justify-between">
-          <div
-            className="flex flex-row items-center gap-2"
-            style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
-          >
+          <div className="flex min-w-0 flex-1 flex-row items-center gap-2 overflow-hidden">
             {renderIcon(RECOMMENDATION_ICON_SIZE.regular)}
-            <div className="truncate min-w-0 text-[16px] font-medium">{title}</div>
+            <div className="truncate min-w-0 text-base font-medium">{title}</div>
           </div>
         </div>
-        <Separator className="border-dashed" style={{ marginBlock: 0 }} />
+        <Separator className="my-0 border-dashed" />
         {description.trim().length > 0 ? <BriefCardSummary summary={description} /> : null}
         <div className="flex flex-row items-center gap-2 justify-between flex-wrap">
           <div className="flex flex-row items-center gap-2">
@@ -99,7 +97,7 @@ export const RecommendationCard = memo<RecommendationCardProps>(
           </div>
           <div className="flex flex-row items-center gap-2">
             <Button
-              className={cx(briefStyles.actionBtnPrimary, 'rounded-full')}
+              className={briefStyles.actionBtnPrimary}
               loading={loading}
               onClick={handleClick}
             >

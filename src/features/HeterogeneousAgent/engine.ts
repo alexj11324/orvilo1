@@ -1,4 +1,4 @@
-import { isBuiltinHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import { isBuiltinHeterogeneousType } from '@orvilo/heterogeneous-agents/config';
 import type {
   BuiltinHeterogeneousAgentType,
   HeterogeneousAgentType,

@@ -44,6 +44,7 @@ export const JobTitleRow = () => {
         placeholder={t('profile.jobTitlePlaceholder')}
         ref={inputRef}
         style={{ width: 180, maxWidth: '100%' }}
+        visualSize="normal"
         onBlur={() => void save()}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.nativeEvent.isComposing) {

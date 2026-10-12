@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import {
   Activity,
   type CSSProperties,
@@ -49,45 +48,11 @@ const slotStyle: CSSProperties = {
 };
 const hiddenSlotStyle: CSSProperties = { ...slotStyle, display: 'none' };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  divider: css`
-    cursor: col-resize;
-
-    position: absolute;
-    z-index: 10;
-    inset-block: 0;
-    transform: translateX(-50%);
-
-    width: 8px;
-
-    &::after {
-      content: '';
-
-      position: absolute;
-      inset-block: 0;
-      inset-inline-start: 50%;
-      transform: translateX(-50%);
-
-      width: 1px;
-
-      background: ${cssVar.colorBorderSecondary};
-
-      transition:
-        background 150ms ease,
-        width 150ms ease;
-    }
-
-    &:hover::after,
-    &:focus-visible::after {
-      width: 2px;
-      background: ${cssVar.colorPrimary};
-    }
-  `,
-  pane: css`
-    overflow: hidden;
-    min-width: 0;
-  `,
-}));
+const styles = {
+  divider:
+    "absolute z-10 inset-bs-0 inset-be-0 w-2 [transform:translateX(-50%)] cursor-col-resize after:absolute after:inset-bs-0 after:inset-be-0 after:inset-s-1/2 after:[transform:translateX(-50%)] after:w-px after:bg-divider after:content-[''] after:transition-[background-color,width] after:duration-(--orvilo-motion-fast) after:ease-[ease] hover:after:w-0.5 hover:after:bg-primary focus-visible:after:w-0.5 focus-visible:after:bg-primary motion-reduce:after:transition-none",
+  pane: 'min-w-0 overflow-hidden',
+};
 
 interface TabPaneProps {
   children: ReactNode;

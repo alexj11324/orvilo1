@@ -43,7 +43,7 @@ export const EntryShell = ({
     <header className="flex shrink-0 items-center justify-center">{brand}</header>
     <main className="mt-6 flex w-full flex-col items-center">{children}</main>
     {footer ? (
-      <footer className="text-muted-foreground mt-5 w-full max-w-sm text-center text-[13px] leading-5 text-balance">
+      <footer className="text-muted-foreground mt-5 w-full max-w-sm text-center text-(length:--text-dense) leading-5 text-balance">
         {footer}
       </footer>
     ) : null}

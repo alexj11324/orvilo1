@@ -1,30 +1,16 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CheckIcon } from 'lucide-react';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 
 import type { SwitcherItem } from './switcherItems';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  current: css`
-    background: ${cssVar.colorFillTertiary};
-  `,
-  row: css`
-    cursor: pointer;
-
-    overflow: hidden;
-    flex: none;
-
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  current: 'bg-selected hover:bg-selected',
+  row: 'cursor-pointer overflow-hidden flex-none px-2 rounded-(--radius-button) hover:bg-accent',
+};
 
 interface SwitcherRowProps {
   active?: boolean;
@@ -34,30 +20,34 @@ interface SwitcherRowProps {
 }
 
 const SwitcherRow = memo<SwitcherRowProps>(({ active, item, onSelect, privateLabel }) => (
-  <div
-    className={cx(
+  <Button
+    aria-current={active ? 'true' : undefined}
+    size="compact"
+    type="button"
+    variant="ghost"
+    className={cn(
       active ? `${styles.row} ${styles.current}` : styles.row,
-      'flex h-[36px] flex-none cursor-pointer items-center gap-2',
+      'flex w-full flex-none cursor-pointer items-center justify-start gap-2 border-0 text-start text-sm font-normal focus-visible:outline-none focus-visible:ring-0 focus-visible:inset-ring-3 focus-visible:inset-ring-ring/50 active:translate-y-0 [@media(pointer:coarse)]:min-h-11',
     )}
     onClick={() => onSelect(item.id)}
   >
     <Avatar avatar={item.avatar} background={item.background} shape={'square'} size={28} />
-    <div
-      className={cn('truncate', active && 'font-medium')}
-      style={{ flex: 1, color: active ? cssVar.colorText : cssVar.colorTextSecondary }}
+    <span
+      className={cn(
+        'flex-1 truncate',
+        active ? 'font-medium text-foreground' : 'text-muted-foreground',
+      )}
     >
       {item.title}
       {item.subtitle && (
-        <span style={{ fontSize: 12, marginInlineStart: 6, opacity: 0.6 }}>{item.subtitle}</span>
+        <span className="ms-1.5 text-xs leading-5 opacity-60">{item.subtitle}</span>
       )}
-    </div>
+    </span>
     {item.private && privateLabel && (
-      <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
-        {privateLabel}
-      </div>
+      <span className="text-xs leading-5 text-foreground-tertiary">{privateLabel}</span>
     )}
-    {active && <CheckIcon color={cssVar.colorText} size={14} />}
-  </div>
+    {active && <CheckIcon className="text-foreground" size={16} />}
+  </Button>
 ));
 
 SwitcherRow.displayName = 'SwitcherRow';

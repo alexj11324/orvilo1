@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { CheckCircle } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,13 +22,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    zeroCell: css`
-      color: ${cssVar.colorTextQuaternary};
-    `,
-  };
-});
+const styles = {
+  zeroCell: 'text-foreground-quaternary',
+};
 
 interface SuccessResultProps {
   dataSource?: {
@@ -50,38 +45,60 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
     return text || <span className={styles.zeroCell}>0</span>;
   };
   return (
-    <Empty style={{ paddingBlock: 24, paddingInline: 0 }}>
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <CheckCircle className="text-success" />
+    <Empty className="py-6 px-0 rounded-(--radius-card)">
+      <EmptyHeader className="w-full max-w-none">
+        <EmptyMedia className="rounded-(--radius-card)" variant="icon">
+          <CheckCircle className="text-success-text" />
         </EmptyMedia>
-        <EmptyTitle>{t('importModal.finish.title')}</EmptyTitle>
-        <EmptyDescription>
+        <EmptyTitle className="text-base leading-6 font-semibold">
+          {t('importModal.finish.title')}
+        </EmptyTitle>
+        <EmptyDescription className="min-w-0 max-w-full text-sm leading-5.5">
           {
             // if there is no importData, means it's only import the settings
             !dataSource ? (
               t('importModal.finish.onlySettings')
             ) : (
-              <div className="flex flex-col gap-4" style={{ width: 500 }}>
+              <div className="flex flex-col gap-4 w-125 max-w-full">
                 {t('importModal.finish.subTitle', { duration: (duration / 1000).toFixed(2) })}
-                <Table className="border-collapse border">
+                <Table className="border-collapse border border-divider text-sm leading-5.5">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="h-8 border">{t('importModal.result.type')}</TableHead>
-                      <TableHead className="h-8 border">{t('importModal.result.added')}</TableHead>
-                      <TableHead className="h-8 border">{t('importModal.result.skips')}</TableHead>
-                      <TableHead className="h-8 border">{t('importModal.result.errors')}</TableHead>
-                      <TableHead className="h-8 border">{t('importModal.result.update')}</TableHead>
+                      <TableHead className="h-8 border border-divider">
+                        {t('importModal.result.type')}
+                      </TableHead>
+                      <TableHead className="h-8 border border-divider">
+                        {t('importModal.result.added')}
+                      </TableHead>
+                      <TableHead className="h-8 border border-divider">
+                        {t('importModal.result.skips')}
+                      </TableHead>
+                      <TableHead className="h-8 border border-divider">
+                        {t('importModal.result.errors')}
+                      </TableHead>
+                      <TableHead className="h-8 border border-divider">
+                        {t('importModal.result.update')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {dataSource.map((row) => (
                       <TableRow key={row.title}>
-                        <TableCell className="border py-1.5">{cellRender(row.title)}</TableCell>
-                        <TableCell className="border py-1.5">{cellRender(row.added)}</TableCell>
-                        <TableCell className="border py-1.5">{cellRender(row.skips)}</TableCell>
-                        <TableCell className="border py-1.5">{cellRender(row.error)}</TableCell>
-                        <TableCell className="border py-1.5">{cellRender(row.updated)}</TableCell>
+                        <TableCell className="border border-divider py-1.5">
+                          {cellRender(row.title)}
+                        </TableCell>
+                        <TableCell className="border border-divider py-1.5">
+                          {cellRender(row.added)}
+                        </TableCell>
+                        <TableCell className="border border-divider py-1.5">
+                          {cellRender(row.skips)}
+                        </TableCell>
+                        <TableCell className="border border-divider py-1.5">
+                          {cellRender(row.error)}
+                        </TableCell>
+                        <TableCell className="border border-divider py-1.5">
+                          {cellRender(row.updated)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -92,7 +109,7 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button size="lg" variant="default" onClick={onClickFinish}>
+        <Button className="leading-5.5" size="lg" variant="default" onClick={onClickFinish}>
           {t('importModal.finish.start')}
         </Button>
       </EmptyContent>

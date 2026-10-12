@@ -1,12 +1,12 @@
 'use client';
 
-import type { ModalInstance } from '@lobehub/ui/base-ui';
-import { createModal } from '@lobehub/ui/base-ui';
-import type { FormInstance } from 'antd';
 import { t } from 'i18next';
+
+import { createModal, type ModalInstance } from '@/components/Modal';
 
 import CreateNewModelContent from './Content';
 import CreateNewModelFooter from './Footer';
+import type { ModelConfigFormHandle } from './Form';
 
 interface CreateNewModelModalOptions {
   existingModelIds?: string[];
@@ -16,7 +16,7 @@ interface CreateNewModelModalOptions {
 export const createCreateNewModelModal = (
   options: CreateNewModelModalOptions = {},
 ): ModalInstance => {
-  const formRef: { current?: FormInstance } = {};
+  const formRef: { current?: ModelConfigFormHandle } = {};
 
   return createModal({
     content: (

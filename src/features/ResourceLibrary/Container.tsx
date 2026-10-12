@@ -1,20 +1,10 @@
 'use client';
 
-import { useTheme } from 'antd-style';
 import { type FC, type PropsWithChildren } from 'react';
 
 const Container: FC<PropsWithChildren> = ({ children }) => {
-  const theme = useTheme();
-
   return (
-    <div
-      className="flex flex-col flex-1"
-      style={{
-        background: theme.colorBgContainerSecondary,
-        overflowY: 'auto',
-        position: 'relative',
-      }}
-    >
+    <div className="relative flex flex-1 flex-col overflow-y-auto bg-surface-secondary">
       {children}
     </div>
   );

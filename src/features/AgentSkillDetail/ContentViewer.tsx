@@ -2,30 +2,15 @@
 
 import { Markdown } from '@lobehub/ui';
 import { type SkillItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CodeBlock, CodeBlockContent } from '@/components/ui/code-block';
 
-const styles = createStaticStyles(({ css }) => ({
-  codeWrapper: css`
-    position: relative;
-    overflow-x: auto;
-    margin-block-start: 16px;
-    padding-block-end: calc(100cqb - 1lh);
-
-    pre {
-      margin: 0;
-    }
-  `,
-  docWrapper: css`
-    max-width: 798px;
-    margin-inline: auto;
-    padding-block: 8px;
-    padding-inline: 24px;
-  `,
-}));
+const styles = {
+  codeWrapper: 'relative overflow-x-auto mbs-4 [padding-block-end:calc(100cqb-1lh)] [&_pre]:m-0',
+  docWrapper: 'max-w-240 mx-auto p-4',
+};
 
 const getLanguage = (fileName: string): string => {
   const ext = fileName.toLowerCase().split('.').pop();
@@ -158,7 +143,9 @@ const ContentViewer = memo<ContentViewerProps>(
       if (!displayContent) {
         return (
           <div className={styles.docWrapper}>
-            <p style={{ opacity: 0.45 }}>{t('agentSkillDetail.noContent')}</p>
+            <p className="text-sm leading-5.5 text-muted-foreground">
+              {t('agentSkillDetail.noContent')}
+            </p>
           </div>
         );
       }
@@ -166,7 +153,9 @@ const ContentViewer = memo<ContentViewerProps>(
       return (
         <div className={styles.docWrapper}>
           {frontmatter && <CodeBlock code={frontmatter} language={'yaml'} />}
-          <Markdown variant={'chat'}>{body}</Markdown>
+          <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
+            {body}
+          </Markdown>
         </div>
       );
     }
@@ -178,7 +167,9 @@ const ContentViewer = memo<ContentViewerProps>(
       return (
         <div className={styles.docWrapper}>
           {frontmatter && <CodeBlock code={frontmatter} language={'yaml'} />}
-          <Markdown variant={'chat'}>{body}</Markdown>
+          <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
+            {body}
+          </Markdown>
         </div>
       );
     }

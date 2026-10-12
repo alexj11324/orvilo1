@@ -31,41 +31,22 @@ const SNAP_POINTS = [320, 800] as const;
 const MID_SNAP_POINT = SNAP_POINTS[0];
 const MAX_SNAP_POINT = SNAP_POINTS.at(-1)!;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  panel: css`
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    align-self: stretch;
-
-    width: 100%;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-
-    transition:
-      border-block-start-color 240ms cubic-bezier(0.32, 0.72, 0, 1),
-      background 240ms cubic-bezier(0.32, 0.72, 0, 1);
-
-    &[data-collapsed='true'] {
-      border-block-start-color: transparent;
-      background: transparent;
-    }
-  `,
-  panelEmbedded: css`
-    flex: 1;
-    min-height: 0;
-    border-block-start: none;
-  `,
+const registeredStyles = createStaticStyles(({ css }) => ({
   sheetSeamless: css`
     border: none;
     border-radius: 0;
     box-shadow: none;
   `,
-  titleSpacer: css`
-    flex: 1;
-  `,
 }));
+
+const styles = {
+  panel:
+    'flex flex-col shrink-0 self-stretch w-full border-bs border-divider bg-card transition-[border-block-start-color,background-color] duration-(--orvilo-motion-mid) ease-[cubic-bezier(0.32,0.72,0,1)] data-[collapsed=true]:border-bs-transparent data-[collapsed=true]:bg-transparent',
+  panelEmbedded:
+    'flex flex-col flex-1 min-h-0 self-stretch w-full border-bs-0 bg-card transition-[border-block-start-color,background-color] duration-(--orvilo-motion-mid) ease-[cubic-bezier(0.32,0.72,0,1)] data-[collapsed=true]:border-bs-transparent data-[collapsed=true]:bg-transparent',
+  sheetSeamless: registeredStyles.sheetSeamless,
+  titleSpacer: 'flex-1',
+};
 
 export interface FloatingChatPanelProps {
   /**
@@ -220,7 +201,7 @@ const FloatingChatPanel = memo<FloatingChatPanelProps>(
       <ActionIcon
         data-testid="floating-chat-panel-collapse-button"
         icon={ChevronDown}
-        size="small"
+        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
         title={t('floatingChatPanel.collapse', { defaultValue: 'Collapse' })}
         onClick={collapse}
       />
@@ -265,7 +246,7 @@ const FloatingChatPanel = memo<FloatingChatPanelProps>(
         onMessagesChange={handleMessagesChange}
       >
         <div
-          className={`${styles.panel} ${isEmbedded ? styles.panelEmbedded : ''}`}
+          className={isEmbedded ? styles.panelEmbedded : styles.panel}
           data-collapsed={isEmbedded ? false : isCollapsed}
           data-mode={mode}
           data-testid="floating-chat-panel"

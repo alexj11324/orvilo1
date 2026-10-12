@@ -2,7 +2,6 @@ import type { IEditor } from '@lobehub/editor';
 import { getHotkeyById, HotkeyEnum } from '@lobehub/editor';
 import type { ChatInputActionsProps } from '@lobehub/editor/react';
 import { ChatInputActionBar, ChatInputActions, useEditorState } from '@lobehub/editor/react';
-import { cssVar } from 'antd-style';
 import {
   BoldIcon,
   CodeXmlIcon,
@@ -121,7 +120,7 @@ export const TypoBar = memo<TypoBarProps>(({ editor }) => {
     <ChatInputActionBar
       left={<ChatInputActions items={items} />}
       style={{
-        background: cssVar.colorFillQuaternary,
+        background: 'var(--ant-color-fill-quaternary)',
         borderTopLeftRadius: 8,
         borderTopRightRadius: 8,
       }}

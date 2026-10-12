@@ -189,6 +189,7 @@ const TaskDescriptionHistory = ({ taskId, canEdit, onChanged }: HistoryModalProp
           {more && (data?.data.versions.length ?? 0) >= 50 ? (
             <Button
               loading={pending}
+              size="compact"
               type="button"
               variant="ghost"
               onClick={() => void loadOlder()}
@@ -197,7 +198,7 @@ const TaskDescriptionHistory = ({ taskId, canEdit, onChanged }: HistoryModalProp
             </Button>
           ) : null}
         </div>
-        <div className="max-h-96 min-w-0 overflow-auto rounded-md border p-3">
+        <div className="max-h-96 min-w-0 overflow-auto rounded-(--radius-card) border p-3">
           <Markdown>{selected?.instruction ?? ''}</Markdown>
         </div>
       </div>
@@ -221,12 +222,13 @@ const TaskDescriptionHistory = ({ taskId, canEdit, onChanged }: HistoryModalProp
         </div>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button disabled={pending} type="button" variant="outline" onClick={close}>
+        <Button disabled={pending} size="lg" type="button" variant="outline" onClick={close}>
           {t('close', { ns: 'common' })}
         </Button>
         <Button
           disabled={!canEdit || index === 0 || !selected}
           loading={pending}
+          size="lg"
           title={index === 0 ? t('taskDetail.menu.currentVersionHint') : undefined}
           type="button"
           onClick={() => void restore()}

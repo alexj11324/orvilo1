@@ -1,5 +1,4 @@
 import { type SidebarGroup } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { HashIcon, Loader2 } from 'lucide-react';
 import React, { memo, useCallback, useMemo, useState } from 'react';
 
@@ -13,11 +12,7 @@ import SessionList from '../List';
 import Actions from './Actions';
 import { useGroupDropdownMenu } from './useDropdownMenu';
 
-const styles = createStaticStyles(({ css }) => ({
-  item: css`
-    padding-inline-start: 14px;
-  `,
-}));
+const styles = { item: 'ps-3.5' };
 
 const GroupItem = memo<SidebarGroup>(({ items, id, name, visibility }) => {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -44,9 +39,9 @@ const GroupItem = memo<SidebarGroup>(({ items, id, name, visibility }) => {
 
   const groupIcon = useMemo(() => {
     if (isUpdating) {
-      return <Loader2 className="animate-spin" size={16} style={{ opacity: 0.5 }} />;
+      return <Loader2 className="animate-spin opacity-50" size={16} />;
     }
-    return <HashIcon size={16} style={{ opacity: 0.5 }} />;
+    return <HashIcon className="opacity-50" size={16} />;
   }, [isUpdating]);
 
   return (
@@ -55,8 +50,8 @@ const GroupItem = memo<SidebarGroup>(({ items, id, name, visibility }) => {
         <div ref={setAnchor}>
           <div className="flex items-center">
             <div className="min-w-0 flex-1">
-              <AccordionTrigger>
-                <div className="flex items-center gap-[6px]" style={{ overflow: 'hidden' }}>
+              <AccordionTrigger className="h-8 rounded-(--radius-button) py-0 text-start transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid)">
+                <div className="flex items-center gap-1.5 overflow-hidden">
                   {groupIcon}
                   <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                     {name}

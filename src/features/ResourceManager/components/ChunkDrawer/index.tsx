@@ -21,11 +21,11 @@ const ChunkDrawer = memo(() => {
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && closeChunkDrawer()}>
-      <SheetContent className="h-full w-[736px] gap-0 p-0 sm:max-w-[736px]" side={'right'}>
+      <SheetContent className="h-full w-184 gap-0 p-0 sm:max-w-184" side={'right'}>
         <SheetHeader className="p-4">
           <SheetTitle>{file?.name}</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-row h-[100%]" style={{ overflow: 'hidden' }}>
+        <div className="flex flex-row h-full" style={{ overflow: 'hidden' }}>
           {file && (
             <div className="flex flex-col" style={{ overflow: 'scroll', flex: 2 }}>
               <FileViewer {...file} id={file.fileId ?? file.id} />

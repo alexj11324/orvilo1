@@ -1,7 +1,6 @@
 'use client';
 
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { ChevronLeftIcon } from 'lucide-react';
 import { memo, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,37 +17,11 @@ import { useProjectSkillsDeviceId } from '@/hooks/useProjectSkillsDeviceId';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  backLink: css`
-    display: flex;
-    gap: 2px;
-    align-items: center;
-
-    width: fit-content;
-    padding-block: 3px;
-    padding-inline: 4px 6px;
-    border-radius: 6px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-decoration: none;
-
-    background: transparent;
-
-    transition:
-      color 150ms ease,
-      background 150ms ease;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  body: css`
-    overflow-y: auto;
-    height: 100%;
-  `,
-}));
+const styles = {
+  backLink:
+    'flex min-h-8 w-fit items-center gap-0.5 rounded-(--radius-button) bg-transparent py-0.75 ps-1 pe-1.5 text-sm leading-5.5 text-foreground-tertiary no-underline transition-[color,background-color] duration-(--orvilo-motion-fast) ease-[ease] hover:bg-accent hover:text-muted-foreground motion-reduce:transition-none',
+  body: 'h-full overflow-y-auto',
+};
 
 const AgentDocumentSidebarContent = memo(() => {
   const { t } = useTranslation('chat');
@@ -71,9 +44,14 @@ const AgentDocumentSidebarContent = memo(() => {
   };
 
   const header = (
-    <div className="flex items-center flex-none justify-between" style={{ padding: '8px 6px' }}>
-      <a className={styles.backLink} href={agentPath} onClick={handleBack}>
-        <ChevronLeftIcon size={14} />
+    <div className="flex flex-none items-center justify-between px-1.5 py-2">
+      <a
+        className={styles.backLink}
+        data-slot="agent-document-back-link"
+        href={agentPath}
+        onClick={handleBack}
+      >
+        <ChevronLeftIcon size={16} />
         {t('agentDocument.backToAgent', { name: agentTitle })}
       </a>
     </div>

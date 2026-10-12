@@ -1,8 +1,9 @@
 'use client';
 
-import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import { useState } from 'react';
 import { useLocation } from 'react-router';
+
+import { useIsMediumViewport } from '@/hooks/useIsMobile';
 
 import { useAcceptanceScope } from './AcceptanceScope';
 import AcceptanceCheckInventory from './Checks/AcceptanceCheckInventory';
@@ -22,30 +23,12 @@ import AcceptanceIdentity from './Header/AcceptanceIdentity';
 import AcceptanceStatusControl from './Header/AcceptanceStatusControl';
 import type { AcceptanceTabKey } from './Header/AcceptanceTabs';
 import AcceptanceTabs from './Header/AcceptanceTabs';
-import { acceptanceContentLayout } from './layout';
 import { flowPlanPhase } from './Plan/planReview';
 import AcceptanceDecision from './Review/AcceptanceDecision';
 import { checksForTurn } from './turnChecks';
 import { useAcceptanceBundle } from './useAcceptanceBundle';
 import { useAcceptanceTurn } from './useAcceptanceTurn';
 
-const styles = createStaticStyles(({ css }) => ({
-  column: css`
-    width: 100%;
-    max-width: ${acceptanceContentLayout.maxWidth}px;
-    margin-inline: auto;
-    padding-inline: 24px;
-
-    @media (width <= 767px) {
-      padding-inline: 16px;
-    }
-  `,
-  headerBand: css`
-    flex: none;
-    padding-block: 20px 0;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
 interface AcceptancePageProps {
   onDraftToComposer?: (text: string) => boolean;
 }
@@ -58,7 +41,7 @@ interface AcceptancePageProps {
 export const AcceptanceOverview = ({
   onDraftToComposer,
 }: Pick<AcceptancePageProps, 'onDraftToComposer'>) => {
-  const { md = false } = useResponsive();
+  const md = useIsMediumViewport();
   const { acceptanceId, embedded } = useAcceptanceScope();
   const { turn } = useAcceptanceTurn(embedded);
   const { data } = useAcceptanceBundle(acceptanceId);
@@ -85,8 +68,8 @@ export const AcceptanceOverview = ({
 
   return (
     <>
-      <div className={`flex flex-col ${styles.headerBand}`}>
-        <div className={`flex flex-col gap-3 ${styles.column}`}>
+      <div className="flex flex-col flex-none pbs-5 pbe-0 border-be border-solid border-divider">
+        <div className="flex flex-col gap-3 w-full max-w-230 mx-auto px-6 [@media(width<=767px)]:px-4">
           <AcceptanceIdentity
             statusSlot={<AcceptanceStatusControl />}
             topicSlot={<AcceptanceOriginTopic />}
@@ -95,7 +78,7 @@ export const AcceptanceOverview = ({
           {/* The requirement needs room to land before the tabs start a new
               thought — at the band's uniform gap it read as another row of
               the same list. */}
-          <div className="flex flex-col" style={{ paddingBlockStart: 16 }}>
+          <div className="flex flex-col pbs-4">
             <AcceptanceTabs
               active={tab}
               checkCount={checks.length}
@@ -109,8 +92,8 @@ export const AcceptanceOverview = ({
       </div>
 
       <div
-        className={`flex flex-col gap-4 ${styles.column}`}
-        style={{ paddingBlock: 20, ...(tab === 'flow' ? { maxWidth: 1500 } : undefined) }}
+        className="flex flex-col gap-4 w-full max-w-230 mx-auto px-6 [@media(width<=767px)]:px-4 py-5"
+        style={{ ...(tab === 'flow' ? { maxWidth: 1500 } : undefined) }}
       >
         {/* Deciding belongs where the evidence is. The discussion is a
             conversation; ending one there put the closing act under a thread

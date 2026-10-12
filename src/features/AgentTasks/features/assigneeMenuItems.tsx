@@ -1,5 +1,4 @@
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
-import { cssVar } from 'antd-style';
 import { UserRoundX } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -91,7 +90,7 @@ export const useAssigneeMenuItems = (
       {
         disabled,
         extra: renderMenuCheck(!currentUserId),
-        icon: <UserRoundX size={16} style={{ color: cssVar.colorTextDescription }} />,
+        icon: <UserRoundX size={16} style={{ color: 'var(--ant-color-text-description)' }} />,
         key: 'assignee:unassigned',
         label: t('taskList.unassigned'),
         onClick: ({ domEvent }: MenuInfo) => {

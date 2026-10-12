@@ -137,7 +137,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
               {t('integrations.appsDescription')}
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-secondary p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-(--radius-card) border border-border bg-secondary p-5">
             <div className="flex items-center gap-4">
               <SlackMark />
               <div>
@@ -147,7 +147,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                 </p>
               </div>
             </div>
-            <Button render={<Link to={`${basePath}/slack`} />} variant="outline">
+            <Button render={<Link to={`${basePath}/slack`} />} size="lg" variant="outline">
               {t('integrations.configure')}
               <ArrowRight size={16} />
             </Button>
@@ -155,7 +155,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
         </section>
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-secondary p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-(--radius-card) border border-border bg-secondary p-5">
             <div className="flex items-center gap-4">
               <SlackMark />
               <div>
@@ -173,6 +173,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
             ) : (
               <Button
                 loading={oauthMode === 'workspace'}
+                size="lg"
                 disabled={
                   disabled || !data?.configured || !data.canManage || isLoading || Boolean(error)
                 }
@@ -208,7 +209,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
             />
           )}
           {data && !data.configured && (
-            <div className="rounded-lg border border-border p-5">
+            <div className="rounded-(--radius-card) border border-border p-5">
               <h2 className="font-medium">{t('integrations.slack.unconfiguredTitle')}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 {t('integrations.slack.unconfigured')}
@@ -216,6 +217,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
               <Button
                 className="mt-3"
                 loading={isValidating}
+                size="lg"
                 variant="outline"
                 onClick={() => {
                   void mutate();
@@ -230,11 +232,12 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
           )}
           {oauthMode && (
             <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-4"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-border p-4"
               role="status"
             >
               <span className="text-sm">{t('integrations.slack.oauth.waiting')}</span>
               <Button
+                size="lg"
                 variant="outline"
                 onClick={() => {
                   authController.current?.abort();
@@ -273,6 +276,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                   <Button
                     disabled={disabled}
                     loading={pending === 'personal'}
+                    size="lg"
                     variant="outline"
                     onClick={() => {
                       void runWrite('personal', () =>
@@ -286,6 +290,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                   <Button
                     disabled={!connected || disabled}
                     loading={oauthMode === 'personal'}
+                    size="lg"
                     variant="outline"
                     onClick={() => {
                       void connect('personal');
@@ -298,7 +303,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
               <section className="flex flex-col gap-3">
                 <h2 className="font-medium">{t('integrations.slack.workspaces')}</h2>
                 {data.installation ? (
-                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-(--radius-card) border border-border p-4">
                     <div>
                       <p className="text-sm font-medium">{data.installation.teamName}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
@@ -310,6 +315,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                       <Button
                         disabled={!data.canManage || disabled}
                         loading={pending === 'workspace'}
+                        size="lg"
                         variant="outline"
                         onClick={() =>
                           confirmModal({
@@ -335,7 +341,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                   </p>
                 )}
               </section>
-              <section className="overflow-hidden rounded-lg border border-border">
+              <section className="overflow-hidden rounded-(--radius-card) border border-border">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary p-4">
                   <div>
                     <h2 className="text-sm font-medium">{t('integrations.slack.connections')}</h2>
@@ -359,16 +365,16 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                   <div className="flex flex-col gap-3 p-4">
                     {data.bindings.map((binding) => (
                       <div
-                        className="flex flex-col gap-3 rounded-lg border border-border p-3"
+                        className="flex flex-col gap-3 rounded-(--radius-card) border border-border p-3"
                         key={binding.id}
                       >
                         <div className="flex flex-wrap items-center gap-3 text-sm">
-                          <span className="flex min-w-0 flex-1 items-center gap-2 rounded-md bg-secondary p-3">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 rounded-(--radius-card) bg-secondary p-3">
                             <Hash className="size-4 shrink-0" />
                             <span className="break-all">{binding.slackChannelName}</span>
                           </span>
                           <ArrowRight size={16} />
-                          <span className="flex min-w-0 flex-1 items-center gap-2 rounded-md bg-secondary p-3">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 rounded-(--radius-card) bg-secondary p-3">
                             <Bot className="size-4 shrink-0" />
                             <span className="break-all">{binding.agentName}</span>
                           </span>

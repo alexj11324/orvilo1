@@ -1,51 +1,21 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { ComponentType, ReactNode } from 'react';
 import { createElement, Fragment, isValidElement, memo } from 'react';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import type { ActionMenuItem } from '../../menuItems';
 import { useDetailPopoverState } from '../components/useDetailPopoverState';
 import { useScrollSignal } from './ScrollSignalContext';
 
-export const toolsListStyles = createStaticStyles(({ css }) => ({
-  groupLabel: css`
-    padding-block: 12px 4px;
-    padding-inline: 12px;
-  `,
-  item: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: 6px;
-
-    transition: background-color 0.2s;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  itemContent: css`
-    flex: 1;
-    min-width: 0;
-  `,
-  itemIcon: css`
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 24px;
-    height: 24px;
-  `,
-}));
+export const toolsListStyles = {
+  groupLabel: 'pbs-3 pbe-1 px-3',
+  item: 'cursor-pointer flex gap-3 items-center min-h-9 pointer-coarse:min-h-11 py-2 px-3 rounded-(--radius-button) text-sm leading-5.5 transition-[background-color] duration-(--orvilo-motion-mid) motion-reduce:transition-none hover:bg-accent',
+  itemContent: 'flex-1 min-w-0',
+  itemIcon: 'flex flex-none items-center justify-center size-6',
+};
 
 interface ToolItemData {
   children?: ToolItemData[];
@@ -69,7 +39,7 @@ interface ToolsListProps {
 }
 
 const SeparatorItem = memo<{ index: number }>(({ index }) => (
-  <Separator key={`divider-${index}`} style={{ margin: '4px 0' }} />
+  <Separator className="my-1" key={`divider-${index}`} />
 ));
 
 const RegularItem = memo<{
@@ -95,7 +65,7 @@ const RegularItem = memo<{
             size?: number | string;
             width?: number | string;
           }>,
-          { size: 20, width: 20, height: 20, fill: 'transparent' },
+          { size: 16, width: 16, height: 16, fill: 'transparent' },
         )}
       </span>
     )
@@ -103,10 +73,9 @@ const RegularItem = memo<{
 
   const row = (
     <div
-      className={toolsListStyles.item}
+      {...(!item.popoverContent ? clickableProps(item.onClick) : {})}
+      className={cn(toolsListStyles.item, CLICKABLE_FOCUS_RING)}
       key={item.key || `item-${index}`}
-      role="button"
-      tabIndex={0}
       onClick={item.onClick}
     >
       {iconNode && <div className={toolsListStyles.itemIcon}>{iconNode}</div>}
@@ -122,7 +91,13 @@ const RegularItem = memo<{
   // be read as an outside press that dismisses the surrounding popover.
   return (
     <Popover open={!detailPopoverDisabled && open} onOpenChange={onOpenChange}>
-      <PopoverTrigger openOnHover delay={300} disabled={detailPopoverDisabled} render={row} />
+      <PopoverTrigger
+        openOnHover
+        delay={300}
+        disabled={detailPopoverDisabled}
+        nativeButton={false}
+        render={row}
+      />
       <PopoverContent
         align={'start'}
         className={'pointer-events-none w-auto p-0'}
@@ -141,7 +116,7 @@ const GroupItem = memo<{
   item: ToolItemData;
 }>(({ detailPopoverDisabled, item, index }) => (
   <Fragment key={item.key || `group-${index}`}>
-    <div className={cn('text-[12px] text-muted-foreground', toolsListStyles.groupLabel)}>
+    <div className={cn('text-xs leading-5 text-muted-foreground', toolsListStyles.groupLabel)}>
       {item.label}
     </div>
     {item.children?.map((child, childIndex) => (

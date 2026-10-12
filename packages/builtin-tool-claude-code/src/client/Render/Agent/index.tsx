@@ -2,7 +2,6 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -14,36 +13,13 @@ import { portalThreadSelectors, threadSelectors } from '@/store/chat/selectors';
 
 import type { AgentArgs } from '../../../types';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    padding-block: 4px;
-  `,
-  label: css`
-    padding-inline-start: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  labelRow: css`
-    margin-block-end: 4px;
-  `,
-  openThread: css`
-    height: 22px;
-    padding-inline: 6px;
-    font-size: 12px;
-  `,
-  promptBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillTertiary};
-  `,
-  resultBox: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  container: 'py-1 text-sm leading-5.5',
+  label: 'ps-1 text-xs leading-5 text-foreground-tertiary',
+  labelRow: 'mbe-1',
+  promptBox: 'rounded-(--radius-card) bg-muted px-3 py-2',
+  resultBox: 'px-3 py-2',
+};
 
 /**
  * Render for CC's `Agent` (subagent-spawn) tool.
@@ -97,13 +73,13 @@ const Agent = memo<BuiltinRenderProps<AgentArgs, unknown, string>>(
     const showResultSection = !!result || !!subagentThread;
 
     return (
-      <div className={cx('flex flex-col gap-3', styles.container)}>
+      <div className={cn('flex flex-col gap-3', styles.container)}>
         {prompt && (
           <div className="flex flex-col">
-            <div className={cn(styles.label)} style={{ marginBlockEnd: 4 }}>
+            <div className={cn(styles.label, 'mbe-1')}>
               {t('builtins.orvilo-claude-code.agent.instruction')}
             </div>
-            <div className={cx('flex flex-col', styles.promptBox)}>
+            <div className={cn('flex flex-col', styles.promptBox)}>
               <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
                 {prompt}
               </Markdown>
@@ -113,17 +89,12 @@ const Agent = memo<BuiltinRenderProps<AgentArgs, unknown, string>>(
 
         {showResultSection && (
           <div className="flex flex-col">
-            <div className={cx('flex flex-row items-center justify-between', styles.labelRow)}>
+            <div className={cn('flex flex-row items-center justify-between', styles.labelRow)}>
               <div className={cn(styles.label)}>
                 {t('builtins.orvilo-claude-code.agent.result')}
               </div>
               {subagentThread && (
-                <Button
-                  className={cn(styles.openThread)}
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleToggleThread}
-                >
+                <Button size="compact" variant="ghost" onClick={handleToggleThread}>
                   <ListTree data-icon="inline-start" />
                   {isOpenInPortal
                     ? tChat('thread.closeSubagentThread')
@@ -132,7 +103,7 @@ const Agent = memo<BuiltinRenderProps<AgentArgs, unknown, string>>(
               )}
             </div>
             {result && (
-              <div className={cx('flex flex-col', styles.resultBox)}>
+              <div className={cn('flex flex-col', styles.resultBox)}>
                 <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
                   {result}
                 </Markdown>

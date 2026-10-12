@@ -7,10 +7,10 @@ import test from 'node:test';
 
 const guard = path.resolve(import.meta.dirname, 'checkChineseUiFont.mjs');
 
-function checkFixture(source) {
+function checkFixture(source, fileName = 'ProjectPage.tsx') {
   const dir = mkdtempSync(path.join(tmpdir(), 'orvilo-font-guard-'));
   try {
-    writeFileSync(path.join(dir, 'ProjectPage.tsx'), source);
+    writeFileSync(path.join(dir, fileName), source);
     try {
       return execFileSync(process.execPath, ['--import', 'tsx', guard, '--scan-dir', dir], {
         encoding: 'utf8',
@@ -104,4 +104,67 @@ test('still rejects generated local styles, literal theme fonts and unowned gene
     `),
     /local font-family override: genFontFamily/,
   );
+});
+
+test('accepts inherited Tailwind arbitrary properties without consuming the class-list tail', () => {
+  assert.match(
+    checkFixture(`
+      const input = 'h-9 [font-family:inherit] [font-weight:inherit] text-inherit focus-visible:outline-2';
+      const path = \`truncate [font-family:inherit] [font-size:inherit] text-muted-foreground\`;
+    `),
+    /Chinese UI font guard passed/,
+  );
+});
+
+test('accepts only the two verified canonical native font roles', () => {
+  assert.match(
+    checkFixture(`
+      const code = { fontFamily: 'var(--font-mono)' };
+      const body = css\`font-family: var(--font-sans);\`;
+      const path = '[font-family:var(--font-mono)] text-xs';
+    `),
+    /Chinese UI font guard passed/,
+  );
+  assert.match(
+    checkFixture(
+      '.code { font-family: var(--font-mono); } .body { font-family: var(--font-sans); }',
+      'FontRoles.css',
+    ),
+    /Chinese UI font guard passed/,
+  );
+});
+
+test('still rejects local Tailwind families, font shorthand and later overrides', () => {
+  const result = checkFixture(`
+    const first = '[font-family:inherit] text-sm [font-family:SimSun] text-foreground';
+    const inter = '[font-family:Inter_Variable] focus-visible:outline-2';
+    const shorthand = '[font:400_16px/1.5_SimSun] text-sm';
+  `);
+  assert.match(result, /local font-family override: SimSun/);
+  assert.match(result, /Inter_Variable/);
+  assert.match(result, /400_16px\/1.5_SimSun/);
+});
+
+test('rejects unknown and legacy font tokens and fallback stacks', () => {
+  const result = checkFixture(`
+    const arbitrary = { fontFamily: 'var(--custom-font)' };
+    const legacy = { fontFamily: 'var(--ant-font-family-code)' };
+    const fallback = css\`font-family: var(--font-sans, SimSun);\`;
+  `);
+  assert.match(result, /var\(--custom-font\)/);
+  assert.match(result, /var\(--ant-font-family-code\)/);
+  assert.match(result, /var\(--font-sans, SimSun\)/);
+});
+
+test('rejects local canonical-role redefinition in CSS, arbitrary properties and style objects', () => {
+  const result = checkFixture(`
+    const cssOverride = css\`--font-sans: SimSun; font-family: var(--font-sans);\`;
+    const classOverride = '[--font-mono:Inter_Variable] [font-family:var(--font-mono)]';
+    const inlineOverride = { '--font-sans': 'SimSun', fontFamily: 'var(--font-sans)' };
+    element.style.setProperty('--font-mono', 'Inter Variable');
+  `);
+  assert.match(result, /local native font role override: SimSun/);
+  assert.match(result, /local native font role override: Inter_Variable/);
+  assert.match(result, /local native font role override: 'SimSun'/);
+  assert.match(result, /local native font role override: 'Inter Variable'/);
 });

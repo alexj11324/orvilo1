@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { useFetchProjectSkills } from '@/hooks/useFetchProjectSkills';
 import { useProjectSkillsDeviceId } from '@/hooks/useProjectSkillsDeviceId';
+import { useAgentStore } from '@/store/agent';
+import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { useToolStore } from '@/store/tool';
 import { agentDocumentSkillsSelectors } from '@/store/tool/selectors';
@@ -20,6 +22,7 @@ import type { AgentDocumentSkillItem } from '@/store/tool/slices/agentDocumentSk
 import { useAgentId } from '../../hooks/useAgentId';
 import { useChatInputStore } from '../../store';
 import { INSERT_ACTION_TAG_COMMAND, type InsertActionTagPayload } from './command';
+import { resolveSlashInstalledSkills } from './slashInstalledSkills';
 import { type ActionTagData, BUILTIN_COMMANDS } from './types';
 import { useInstalledSkillsAndTools } from './useInstalledSkillsAndTools';
 
@@ -78,9 +81,12 @@ export const useSlashActionItems = (): SlashOptions['items'] => {
   // Installed skills shared with the @ mention menu (builtin / orvilo / market / user agent skills).
   // Tools intentionally stay out of slash — they remain @-mention only.
   const installedSkillsAndTools = useInstalledSkillsAndTools();
+  const isHetero = useAgentStore((s) =>
+    agentId ? agentByIdSelectors.isAgentHeterogeneousById(agentId)(s) : false,
+  );
   const installedSkills = useMemo(
-    () => installedSkillsAndTools.filter((item) => item.category === 'skill'),
-    [installedSkillsAndTools],
+    () => resolveSlashInstalledSkills(installedSkillsAndTools, isHetero),
+    [installedSkillsAndTools, isHetero],
   );
 
   return useCallback(

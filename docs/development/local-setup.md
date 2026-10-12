@@ -121,6 +121,11 @@ The stub (`clerk-stub.mjs`) listens on loopback only, vouches for seed sessions
 and forwards every other Clerk Backend call unchanged, so a normal sign-in on
 the same server still works. It refuses to start with `NODE_ENV=production`.
 
+This path needs no Clerk keys, so a fork without access to a Clerk instance can
+still develop: when the two keys are unset, `dev-up.sh` fills in placeholders
+that pass the startup format check. Only seed sessions can sign in then; the
+sign-in page needs a real development instance.
+
 `bun run dev:desktop:skip-login` does all of this in one command: it starts the
 stub, the Next.js server and Electron on a temporary profile, then signs the
 seed user in, main process included. It preserves `CLERK_SECRET_KEY` from the

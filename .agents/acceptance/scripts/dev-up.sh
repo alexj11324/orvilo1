@@ -19,6 +19,8 @@
 #   ORVILO_CLERK_STUB (unset) — set to 1 to route the server's Clerk Backend
 #     calls through clerk-stub.mjs, which seeded test sessions need
 #     (seed-session.mjs). Real sign-ins still work: other calls are forwarded.
+#     Needs no Clerk keys: unset ones get placeholders, and then only seed
+#     sessions can sign in.
 #   CLERK_STUB_PORT (3411)
 set -euo pipefail
 
@@ -123,6 +125,11 @@ start_dev() {
     # Bun loads this worktree's .env while preserving shell overrides.
     CLERK_SECRET_KEY="$(cd "$ROOT" && bun --print 'process.env.CLERK_SECRET_KEY || "sk_test_orvilo_local_stub"')"
     export CLERK_SECRET_KEY
+    # Startup checks the publishable key's format. Without a Clerk instance this
+    # placeholder names a host that does not exist: seed sessions work, the
+    # sign-in page does not.
+    VITE_CLERK_PUBLISHABLE_KEY="$(cd "$ROOT" && bun --print 'process.env.VITE_CLERK_PUBLISHABLE_KEY || "pk_test_" + btoa("clerk.local.test$")')"
+    export VITE_CLERK_PUBLISHABLE_KEY
     if ! lsof -nP -iTCP:"$CLERK_STUB_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
       c_step "starting clerk-stub on :$CLERK_STUB_PORT"
       (CLERK_STUB_PORT="$CLERK_STUB_PORT" nohup node "$SCRIPT_DIR/clerk-stub.mjs" >"$CLERK_STUB_LOG" 2>&1 &)

@@ -100,11 +100,11 @@ const CollapsedStatusBadges = memo<{ counts: ProjectTopicStatusCounts }>(({ coun
                   {loading ? (
                     <RingLoadingIcon
                       ringColor={`color-mix(in srgb, ${cssVar.colorWarning} 28%, transparent)`}
-                      size={11}
+                      size={16}
                       style={{ color: cssVar.colorWarning }}
                     />
                   ) : (
-                    icon && createElement(icon, { size: 11, strokeWidth: 2 })
+                    icon && createElement(icon, { size: 16, strokeWidth: 2 })
                   )}
                   {count}
                 </span>

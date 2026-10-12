@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarIcon, PlusIcon, XIcon } from 'lucide-react';
@@ -19,32 +18,14 @@ interface ProjectMilestoneEditorProps {
   onChange: (milestones: CreateProjectMilestone[]) => void;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-    flex: none;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-  `,
-  header: css`
-    min-height: 44px;
-    padding-block: 8px;
-    padding-inline: 12px;
-  `,
-  row: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  composer: css`
-    padding-block: 12px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  composerActions: css`
-    padding-block-start: 4px;
-  `,
-}));
+const styles = {
+  container:
+    'overflow-hidden flex-none rounded-(--radius-card) border border-divider text-sm leading-5.5',
+  header: 'min-h-11 px-4 py-2',
+  row: 'border-bs border-divider px-4 py-2',
+  composer: 'border-bs border-divider p-4',
+  composerActions: 'pbs-1',
+};
 
 const createEmptyMilestone = (): CreateProjectMilestone => ({ name: '' });
 
@@ -69,15 +50,13 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
   };
 
   return (
-    <div className={cn('flex flex-col', styles.container)} style={{ gap: 0 }}>
-      <div className={cn('flex flex-row', styles.header)} style={{ alignItems: 'center', gap: 8 }}>
-        <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-          {t('create.milestones')}
-        </span>
-        <div className="flex flex-col" style={{ flex: 1 }} />
+    <div className={cn('flex flex-col gap-0', styles.container)}>
+      <div className={cn('flex flex-row items-center gap-2', styles.header)}>
+        <span className="text-sm leading-5.5 font-medium">{t('create.milestones')}</span>
+        <div className="flex flex-1 flex-col" />
         <Button
           aria-label={t('create.addMilestone')}
-          size="icon-sm"
+          size="icon"
           variant="ghost"
           onClick={() => setComposerOpen((open) => !open)}
         >
@@ -85,25 +64,19 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
         </Button>
       </div>
       {milestones.map((milestone, index) => (
-        <div
-          className={cn('flex flex-col', styles.row)}
-          key={`${milestone.name}-${index}`}
-          style={{ gap: 4 }}
-        >
-          <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
-            <MilestoneIcon size={14} />
-            <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-              {milestone.name}
-            </span>
+        <div className={cn('flex flex-col gap-1', styles.row)} key={`${milestone.name}-${index}`}>
+          <div className="flex items-center gap-2">
+            <MilestoneIcon size={16} />
+            <span className="text-sm leading-5.5 font-medium">{milestone.name}</span>
             {milestone.date && (
-              <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+              <span className="text-xs leading-5 text-muted-foreground">
                 {formatProjectDate(milestone.date)}
               </span>
             )}
-            <div className="flex flex-col" style={{ flex: 1 }} />
+            <div className="flex flex-1 flex-col" />
             <Button
               aria-label={t('create.removeMilestone')}
-              size="icon-sm"
+              size="icon"
               variant="ghost"
               onClick={() => onChange(milestones.filter((_, itemIndex) => itemIndex !== index))}
             >
@@ -111,17 +84,13 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             </Button>
           </div>
           {milestone.description && (
-            <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
-              {milestone.description}
-            </span>
+            <span className="text-xs leading-5 text-muted-foreground">{milestone.description}</span>
           )}
         </div>
       ))}
       {composerOpen && (
-        <div className={cn('flex flex-col', styles.composer)} style={{ gap: 8 }}>
-          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-            {t('create.milestone.create')}
-          </span>
+        <div className={cn('flex flex-col gap-2', styles.composer)}>
+          <span className="text-sm leading-5.5 font-medium">{t('create.milestone.create')}</span>
           <Input
             aria-label={t('create.milestone.name')}
             placeholder={t('create.milestone.name')}
@@ -133,7 +102,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
             aria-label={t('create.milestone.date')}
             format="YYYY/MM/DD"
             placeholder={t('create.milestone.date')}
-            prefix={<CalendarIcon size={13} />}
+            prefix={<CalendarIcon size={16} />}
             size="normal"
             suffixIcon={null}
             value={draft.date ? dayjs(draft.date) : null}
@@ -153,10 +122,7 @@ const ProjectMilestoneEditor = memo<ProjectMilestoneEditorProps>(({ milestones, 
               setDraft((current) => ({ ...current, description: event.target.value }))
             }
           />
-          <div
-            className={cn('flex flex-row', styles.composerActions)}
-            style={{ justifyContent: 'end', gap: 8 }}
-          >
+          <div className={cn('flex flex-row justify-end gap-2', styles.composerActions)}>
             <Button
               size="lg"
               variant="outline"

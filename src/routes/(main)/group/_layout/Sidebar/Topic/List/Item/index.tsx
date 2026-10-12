@@ -232,9 +232,9 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
         titleColor={cssVar.colorText}
         icon={
           isLoading ? (
-            <RingLoadingIcon className="text-warning-text" ringColor={loadingRingColor} size={14} />
+            <RingLoadingIcon className="text-warning-text" ringColor={loadingRingColor} size={16} />
           ) : (
-            <MessageSquareDashed className="size-3.5 text-foreground-description" size={14} />
+            <MessageSquareDashed className="size-4 text-foreground-description" size={16} />
           )
         }
         title={
@@ -258,11 +258,11 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
   const statusIconNode = (() => {
     if (isWaitingForHuman) {
       const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-      return <visual.icon className="size-3.5" size={14} style={{ color: visual.color }} />;
+      return <visual.icon className="size-4" size={16} style={{ color: visual.color }} />;
     }
     if (isLoading || isRunning) {
       return (
-        <RingLoadingIcon className="text-warning-text" ringColor={loadingRingColor} size={14} />
+        <RingLoadingIcon className="text-warning-text" ringColor={loadingRingColor} size={16} />
       );
     }
     if (isFailed) {
@@ -273,7 +273,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
             <TooltipTrigger
               render={
                 <span className="inline-flex">
-                  <visual.icon className="size-3.5" size={14} style={{ color: visual.color }} />
+                  <visual.icon className="size-4" size={16} style={{ color: visual.color }} />
                 </span>
               }
             />
@@ -284,7 +284,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
     }
     if (isCompleted) {
       const visual = TOPIC_STATUS_VISUALS.completed;
-      return <visual.icon className="size-3.5" size={14} style={{ color: visual.color }} />;
+      return <visual.icon className="size-4" size={16} style={{ color: visual.color }} />;
     }
     return null;
   })();
@@ -311,7 +311,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
             <TopicCreatorAvatar corner={statusIconNode} userId={userId} />
           ) : (
             (statusIconNode ?? (
-              <HashIcon className="size-3.5 text-foreground-description" size={14} />
+              <HashIcon className="size-4 text-foreground-description" size={16} />
             ))
           )
         }

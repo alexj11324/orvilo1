@@ -43,7 +43,7 @@ export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
     >
       <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
         <div className="flex items-center gap-1.75">
-          <GoalStatusGlyph size={13} status={goal.status} />
+          <GoalStatusGlyph size={16} status={goal.status} />
           <div className="truncate min-w-0 text-sm font-semibold">{goal.title}</div>
         </div>
         {goal.requirement && goal.requirement !== goal.title && (

@@ -9,7 +9,6 @@ import {
   type WorkQueryLayout,
   type WorkQuerySortMode,
 } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import {
   BellOffIcon,
@@ -66,37 +65,12 @@ import {
   workQueryLoadedTasks,
   type WorkQueryResultTask,
 } from './workQueryPaging';
+import rowVisibilityStyles from './WorkQueryResults.module.css';
 import WorkQueryVirtualList, { type WorkQueryPeekKeys } from './WorkQueryVirtualList';
 
 export type { WorkQueryResultTask } from './workQueryPaging';
 
-const styles = createStaticStyles(({ css }) => ({
-  rowHideAssignee: css`
-    & [data-collab-id$=':assignee'] {
-      display: none;
-    }
-  `,
-  rowHideLabels: css`
-    & [data-task-labels] {
-      display: none;
-    }
-  `,
-  rowHidePriority: css`
-    & div:has(> [data-collab-id$=':status']) > :first-child {
-      display: none;
-    }
-  `,
-  rowHideStatus: css`
-    & [data-collab-id$=':status'] {
-      display: none;
-    }
-  `,
-  rowHideUpdated: css`
-    & div:has(> [data-collab-id$=':assignee']) > :last-child:not([data-collab-id$=':assignee']) {
-      display: none;
-    }
-  `,
-}));
+const styles = rowVisibilityStyles;
 
 /** Property → row modifier class, in one place so a hidden chip is one lookup. */
 const ROW_PROPERTY_HIDE_CLASS: Record<MyWorkRowProperty, string | undefined> = {
@@ -390,9 +364,9 @@ export const WorkQueryTaskRow = memo(
         data-issue-context={muted || undefined}
         data-issue-slot={slotKey}
         className={cn(
-          'group/work-row relative flex items-center rounded-lg pe-2',
-          selected && 'bg-accent',
-          bulkSelected && 'bg-primary/10',
+          'group/work-row relative flex items-center rounded-(--radius-card) pe-2',
+          selected && cn('bg-selected', styles.rowSelected),
+          bulkSelected && cn('bg-selected', styles.rowSelected),
           ...rowPropertyClassNames(hiddenProperties),
         )}
         onDoubleClick={peekOnSelect && onOpenTask ? handleDoubleClick : undefined}
@@ -574,7 +548,7 @@ const WorkQueryStatusGroup = memo<{
       <div className="flex flex-col">
         <div
           className={cn(
-            'group/work-group sticky top-0 z-2 flex items-center gap-1 bg-background pe-1',
+            'group/work-group sticky inset-bs-0 z-2 flex items-center gap-1 bg-background pe-1',
             subGroup && 'static ps-4',
           )}
         >
@@ -598,7 +572,7 @@ const WorkQueryStatusGroup = memo<{
             <span className="truncate">
               {label ?? (labelKey ? t(labelKey as never) : columnKey)}
             </span>
-            <span className="text-muted-foreground">{total ?? tasks.length}</span>
+            <span className="text-xs leading-5 text-muted-foreground">{total ?? tasks.length}</span>
           </Button>
           {onCreateInGroup ? (
             <span className="work-query-group-actions shrink-0 opacity-0 transition-opacity group-hover/work-group:opacity-100 group-focus-within/work-group:opacity-100 [@media(hover:none)]:opacity-100">
@@ -723,12 +697,12 @@ const WorkQueryExternalReviewRow = memo<{ review: WorkQueryExternalReview }>(({ 
   const body = (
     <>
       {/* Every queued review is an open PR — Linear draws open PRs green. */}
-      <GitPullRequestIcon className="size-4 shrink-0 text-green-600 dark:text-green-500" />
+      <GitPullRequestIcon className="size-4 shrink-0 text-success-text" />
       <div className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{review.title}</span>
       </div>
       {identifier ? (
-        <span className="min-w-16 shrink-0 text-end text-sm text-muted-foreground">
+        <span className="min-w-16 shrink-0 text-end text-xs leading-5 text-muted-foreground">
           {identifier}
         </span>
       ) : null}
@@ -736,7 +710,7 @@ const WorkQueryExternalReviewRow = memo<{ review: WorkQueryExternalReview }>(({ 
   );
 
   return (
-    <div className="flex items-center rounded-lg">
+    <div className="flex items-center rounded-(--radius-card)">
       {href ? (
         <a
           className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-inherit no-underline"

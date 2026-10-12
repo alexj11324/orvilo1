@@ -379,7 +379,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
             isLoading ? (
               <RingLoadingIcon
                 ringColor={loadingRingColor}
-                size={14}
+                size={16}
                 style={{ color: cssVar.colorWarning }}
               />
             ) : undefined
@@ -410,7 +410,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       if (isScheduled) {
         const visual = TOPIC_STATUS_VISUALS.scheduled;
         const runAt = metadata?.scheduledRun?.runAt;
-        const icon = <visual.icon size={14} style={{ color: visual.color }} />;
+        const icon = <visual.icon size={16} style={{ color: visual.color }} />;
         return runAt ? (
           <Tooltip>
             <TooltipTrigger render={<span>{icon}</span>} />
@@ -424,13 +424,13 @@ const TopicItemRow = memo<TopicItemRowProps>(
       }
       if (isWaitingForHuman) {
         const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-        return <visual.icon size={14} style={{ color: visual.color }} />;
+        return <visual.icon size={16} style={{ color: visual.color }} />;
       }
       if (shouldShowRunningIcon) {
         return (
           <RingLoadingIcon
             ringColor={loadingRingColor}
-            size={14}
+            size={16}
             style={{ color: cssVar.colorWarning }}
           />
         );
@@ -442,7 +442,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
             <TooltipTrigger
               render={
                 <span>
-                  <visual.icon size={14} style={{ color: visual.color }} />
+                  <visual.icon size={16} style={{ color: visual.color }} />
                 </span>
               }
             />
@@ -461,7 +461,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       // the masked post-output tail cannot fall back to a static running icon.
       if (status && status !== 'active' && status !== 'running') {
         const visual = TOPIC_STATUS_VISUALS[status];
-        return <visual.icon size={14} style={{ color: visual.color }} />;
+        return <visual.icon size={16} style={{ color: visual.color }} />;
       }
       return null;
     })();

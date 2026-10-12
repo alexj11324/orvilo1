@@ -3,7 +3,6 @@
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
-import { createStaticStyles, cssVar, responsive } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,91 +16,25 @@ import {
   type SidebarMenuItems,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import AgentAvatar from './AgentAvatar';
 import { type AgentRowAuthor, formatUpdatedAt } from './AgentRow';
+import nativeStyles from './AgentViewAll.module.css';
 import ItemActions from './ItemActions';
 
 // Card layout: icon + title + trailing state on one row, a two-line
 // description below, hover lift on the whole card.
-export const cardStyles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: stretch;
-
-    min-height: 104px;
-    padding-block: 12px;
-    padding-inline: 12px;
-
-    transition:
-      transform 0.18s,
-      box-shadow 0.18s,
-      border-color 0.18s;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-
-      &:hover {
-        transform: none;
-      }
-    }
-  `,
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    line-height: 1.5;
-  `,
-  grid: css`
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-
-    width: 100%;
-    min-width: 0;
-
-    ${responsive.md} {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    ${responsive.sm} {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  `,
-  /* Top-right "…" slot, a SIBLING of the card link (absolutely positioned
-     over it) — nesting an interactive menu trigger inside the <a> would put
-     a button inside a link in the accessibility tree. Aligned with the
-     card's 12px padding so it sits where the header row used to hold it. */
-  actions: css`
-    position: absolute;
-    inset-block-start: 12px;
-    inset-inline-end: 12px;
-  `,
-  link: css`
-    display: block;
-    min-width: 0;
-    height: 100%;
-    color: inherit;
-  `,
-  wrapper: css`
-    position: relative;
-    min-width: 0;
-    height: 100%;
-  `,
-  updatedAt: css`
-    flex: none;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-}));
+export const cardStyles = {
+  card: 'flex h-full min-h-26 cursor-pointer flex-col gap-2 items-stretch p-4 border border-divider rounded-(--radius-card) text-foreground transition-[transform,box-shadow,border-color] duration-(--orvilo-motion-mid) ease-[ease] hover:border-border hover:shadow-(--shadow-raised)',
+  description: 'line-clamp-2 text-sm leading-5.5',
+  grid: 'grid w-full min-w-0 grid-cols-3 gap-3 [@media(width<=767.98px)]:grid-cols-2 [@media(width<=575.98px)]:grid-cols-1',
+  actions: 'absolute inset-bs-4 inset-e-4',
+  link: nativeStyles.cardLink,
+  wrapper: 'relative min-w-0 h-full',
+  updatedAt: 'flex-none text-xs leading-5 text-muted-foreground',
+};
 
 interface AgentCardProps {
   /** Creator profile; rendered only when `showAuthor` is set. */
@@ -113,6 +46,7 @@ interface AgentCardProps {
 
 const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
   const { t } = useTranslation('common');
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
   const { description, id, type, updatedAt } = item;
   // Groups have no personal name, so this resolves to their title.
   const displayTitle = agentDisplayName(item, t('agentViewAll.untitled'));
@@ -141,53 +75,38 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
             onPointerEnter={activateMenu}
           >
             <div
-              className={cn('flex flex-col', cardStyles.card)}
-              style={{
-                cursor: 'pointer',
-                height: '100%',
-                border: `1px solid ${cssVar.colorBorder}`,
-                borderRadius: cssVar.borderRadiusLG,
-              }}
+              className={cn(
+                cardStyles.card,
+                animationMode !== 'disabled' && 'motion-safe:hover:-translate-y-px',
+              )}
             >
               {/* Right padding reserves the header slot the absolutely
                   positioned "…" sibling overlays. */}
-              <div
-                className="flex items-center gap-2"
-                style={{ minWidth: 0, paddingInlineEnd: 28 }}
-              >
+              <div className="flex min-w-0 items-center gap-2 pe-9">
                 <AgentAvatar item={item} size={24} />
-                <div className="flex items-center flex-1 gap-1.5" style={{ minWidth: 0 }}>
-                  <div className="truncate block font-semibold" style={{ minWidth: 0 }}>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <div className="block min-w-0 truncate text-sm leading-5.5 font-semibold">
                     {displayTitle}
                   </div>
                   {roleTag ? (
-                    <Tag size="sm" style={{ flex: 'none' }}>
+                    <Tag className="flex-none rounded-(--radius-chip) text-xs leading-5" size="sm">
                       {roleTag}
                     </Tag>
                   ) : null}
                 </div>
               </div>
-              <div
-                className={cn(
-                  'text-xs leading-normal',
-                  'text-muted-foreground',
-                  cardStyles.description,
-                )}
-              >
+              <div className={cn('text-muted-foreground', cardStyles.description)}>
                 {description}
               </div>
-              <div
-                className="flex items-center gap-2 justify-between"
-                style={{ marginBlockStart: 'auto' }}
-              >
+              <div className="flex items-center justify-between gap-2 mbs-auto">
                 {showAuthor ? (
-                  <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                  <div className="flex min-w-0 items-center gap-1.5">
                     {author ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
                             render={
-                              <span style={{ display: 'inline-flex' }}>
+                              <span className="inline-flex">
                                 <Avatar avatar={author.avatar || DEFAULT_AVATAR} size={18} />
                               </span>
                             }
@@ -196,7 +115,7 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
                         </Tooltip>
                       </TooltipProvider>
                     ) : (
-                      <div className="text-xs text-muted-foreground">–</div>
+                      <div className="text-xs leading-5 text-muted-foreground">–</div>
                     )}
                   </div>
                 ) : (

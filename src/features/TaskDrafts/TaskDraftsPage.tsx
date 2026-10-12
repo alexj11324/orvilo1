@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import dayjs from 'dayjs';
 import { FilePenLineIcon, MessageCircleIcon, SquarePenIcon, Trash2Icon } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -36,200 +36,34 @@ import {
   useTaskCreateDrafts,
 } from './taskCreateDrafts';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    position: relative;
-
-    overflow: hidden;
-    display: block;
-
-    /* Linear: a fixed 140px card whose preview box runs off the bottom edge. */
-    height: 140px;
-    border: 0.5px solid ${cssVar.colorBorder};
-    border-radius: 10px;
-
-    color: ${cssVar.colorText};
-    text-decoration: none;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:hover .draft-discard,
-    &:focus-within .draft-discard {
-      opacity: 1;
-    }
-  `,
-  cardButton: css`
-    cursor: pointer;
-
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-
-    display: block;
-
-    padding: 0;
-    border: none;
-
-    font: inherit;
-    color: inherit;
-    text-align: start;
-
-    background: none;
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: 2px;
-    }
-  `,
-  cardLink: css`
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-
-    display: block;
-
-    color: inherit;
-    text-decoration: none;
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: 2px;
-    }
-  `,
-  cardContent: css`
-    padding-block: 12px 0;
-    padding-inline: 16px;
-  `,
-  cardHeading: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    /* Clears the hover discard button (36px, inset 11px) so a long title
-       ellipsizes before it instead of running underneath. */
-    padding-inline-end: 36px;
-  `,
-  cardGrid: css`
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 468px), 468px));
-    gap: 16px;
-
-    padding-block: 8px 24px;
-    padding-inline: 18px;
-
-    @media (width <= 680px) {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  `,
-  cardTitle: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-
-    font-size: 13px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  discard: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 11px;
-    inset-inline-end: 11px;
-
-    opacity: 0;
-
-    transition: opacity ${cssVar.motionDurationFast};
-
-    @media (hover: none) {
-      opacity: 1;
-    }
-  `,
-  excerpt: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    max-height: 42px;
-
-    font-size: 13px;
-    line-height: 21px;
-
-    p {
-      margin: 0;
-    }
-  `,
-  issueChip: css`
-    overflow: hidden;
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 1px;
-    padding-inline: 6px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 4px;
-
-    white-space: nowrap;
-  `,
-  issueChipIdentifier: css`
-    flex: none;
-    font-family: ${cssVar.fontFamilyCode};
-  `,
-  issueChipName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-  `,
-  preview: css`
-    overflow: hidden;
-
-    height: 90px;
-    margin-block-start: 16px;
-    border: 0.5px solid ${cssVar.colorBorder};
-    border-block-end: none;
-    border-radius: 10px 10px 0 0;
-  `,
-  previewLabel: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    height: 32px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    font-weight: 450;
-    color: ${cssVar.colorTextDescription};
-    white-space: nowrap;
-  `,
-  previewLabelText: css`
-    flex: none;
-  `,
-  previewBody: css`
-    overflow: hidden;
-    padding-block: 8px;
-    padding-inline: 12px;
-  `,
-  header: css`
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  sectionTitle: css`
-    padding-block: 16px 0;
-    padding-inline: 18px;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorTextDescription};
-  `,
-}));
+const styles = {
+  card: 'relative block h-35 overflow-hidden rounded-(--radius-card) border-[0.5px] border-border bg-fill-quaternary text-foreground no-underline hover:bg-accent [&:hover_.draft-discard]:opacity-100 [&:focus-within_.draft-discard]:opacity-100',
+  cardButton:
+    'absolute inset-0 z-1 block cursor-pointer border-0 bg-transparent p-0 [font:inherit] text-inherit text-start outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2',
+  cardLink:
+    'absolute inset-0 z-1 block text-inherit no-underline outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2',
+  cardContent: 'pbs-4 pbe-0 px-4',
+  cardHeading: 'flex items-center gap-2 pe-9',
+  cardGrid:
+    'grid grid-cols-[repeat(auto-fill,minmax(min(100%,468px),468px))] gap-4 pbs-2 pbe-6 px-4 [@media(width<=680px)]:grid-cols-[minmax(0,1fr)]',
+  cardTitle:
+    'min-w-0 shrink grow-0 basis-auto overflow-hidden text-sm leading-5.5 font-medium text-ellipsis whitespace-nowrap',
+  discard:
+    'absolute z-2 inset-bs-3 inset-e-3 opacity-0 transition-opacity duration-(--orvilo-motion-fast) [@media(hover:none)]:opacity-100',
+  excerpt: 'overflow-hidden line-clamp-2 max-h-11 text-sm leading-5.5 [&_p]:m-0',
+  issueChip:
+    'inline-flex min-w-0 items-center gap-1 overflow-hidden rounded-(--radius-chip) border border-divider px-1.5 py-0.25 text-xs leading-5 whitespace-nowrap',
+  issueChipIdentifier: 'flex-none font-mono',
+  issueChipName: 'overflow-hidden text-ellipsis',
+  preview:
+    'h-22.5 overflow-hidden mbs-4 rounded-ss-(--radius-card) rounded-se-(--radius-card) border-[0.5px] border-border border-be-0',
+  previewLabel:
+    'flex h-8 items-center gap-2 border-be border-divider px-3 text-xs leading-5 font-medium text-foreground-description whitespace-nowrap',
+  previewLabelText: 'flex-none',
+  previewBody: 'overflow-hidden py-2 px-3',
+  header: 'border-be border-divider',
+  sectionTitle: 'pbs-4 pbe-0 px-4 text-base leading-6 font-semibold text-foreground-description',
+};
 
 // The page renders its own NavHeader, so the in-page skeleton is body-only;
 // the route-level meta keeps the headered variant for chunk loads.
@@ -311,7 +145,7 @@ const TaskDraftsPage = () => {
   const isEmpty = drafts.length === 0 && issueDrafts.length === 0;
 
   return (
-    <div className="flex flex-col flex-1 h-full" style={{ minHeight: 0 }}>
+    <div className="flex min-h-0 flex-col flex-1 h-full text-sm leading-5.5">
       <NavHeader
         className={styles.header}
         left={<div className="font-medium">{t('drafts.title')}</div>}
@@ -321,6 +155,7 @@ const TaskDraftsPage = () => {
               aria-label={t('drafts.discardAll')}
               disabled={!!deleting}
               icon={Trash2Icon}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               onClick={() =>
                 confirmModal({
                   content: t('drafts.confirmDiscardAll.content'),
@@ -343,7 +178,7 @@ const TaskDraftsPage = () => {
           <SimpleEmpty description={t('drafts.empty')} icon={FilePenLineIcon} />
         </div>
       ) : (
-        <div style={{ overflowY: 'auto' }}>
+        <div className="overflow-y-auto">
           {issueDrafts.length > 0 && (
             <>
               <div className={styles.sectionTitle}>{t('drafts.issues')}</div>
@@ -360,6 +195,7 @@ const TaskDraftsPage = () => {
                         className={cx(styles.discard, 'draft-discard')}
                         disabled={!!deleting}
                         icon={Trash2Icon}
+                        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                         onClick={() =>
                           confirmModal({
                             content: t('drafts.confirmDiscardIssue.content'),
@@ -380,7 +216,7 @@ const TaskDraftsPage = () => {
                         <div className={styles.cardHeading}>
                           <div className={styles.cardTitle}>{title}</div>
                           <div
-                            className="text-xs text-muted-foreground"
+                            className="text-xs leading-5 text-muted-foreground"
                             title={dayjs(draft.updatedAt).toString()}
                           >
                             {formatInboxAge(draft.updatedAt, { locale: i18n.language })}
@@ -388,7 +224,7 @@ const TaskDraftsPage = () => {
                         </div>
                         <div className={styles.preview}>
                           <div className={styles.previewLabel}>
-                            <SquarePenIcon size={16} style={{ flex: 'none' }} />
+                            <SquarePenIcon className="shrink-0" size={16} />
                             <span className={styles.previewLabelText}>{t('drafts.newIssue')}</span>
                           </div>
                           <div aria-hidden inert className={styles.previewBody}>
@@ -421,6 +257,7 @@ const TaskDraftsPage = () => {
                         className={cx(styles.discard, 'draft-discard')}
                         disabled={!!deleting}
                         icon={Trash2Icon}
+                        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                         onClick={() =>
                           confirmModal({
                             content: t('drafts.confirmDiscard.content'),
@@ -440,7 +277,7 @@ const TaskDraftsPage = () => {
                         <div className={styles.cardHeading}>
                           <div className={styles.cardTitle}>{title}</div>
                           <div
-                            className="text-xs text-muted-foreground"
+                            className="text-xs leading-5 text-muted-foreground"
                             title={String(draft.updatedAt)}
                           >
                             {formatInboxAge(draft.updatedAt, { locale: i18n.language })}
@@ -448,7 +285,7 @@ const TaskDraftsPage = () => {
                         </div>
                         <div className={styles.preview}>
                           <div className={styles.previewLabel}>
-                            <MessageCircleIcon size={16} style={{ flex: 'none' }} />
+                            <MessageCircleIcon className="shrink-0" size={16} />
                             <span className={styles.previewLabelText}>
                               {t('drafts.commentingOnIssue')}
                             </span>

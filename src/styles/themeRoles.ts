@@ -98,6 +98,7 @@ export const ThemeRoles = createGlobalStyle(({ theme }) => {
       --foreground-tertiary: ${theme.colorTextTertiary};
       --foreground-quaternary: ${theme.colorTextQuaternary};
       --foreground-description: ${theme.colorTextDescription};
+      --info-hover-wash: ${theme.colorInfoBgHover};
       --fill-quaternary: ${theme.colorFillQuaternary};
       --divider: ${theme.colorBorderSecondary};
       --primary-wash: ${theme.colorPrimaryBg};

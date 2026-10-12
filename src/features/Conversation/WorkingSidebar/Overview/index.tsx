@@ -270,7 +270,7 @@ const Overview = memo<OverviewProps>(
             value={t('workingPanel.overview.sync.behind', { count: aheadBehind!.behind })}
             trailing={
               pulling ? (
-                <RingLoadingIcon size={12} />
+                <RingLoadingIcon size={16} />
               ) : (
                 <span className={rowStyles.rowAction}>{t('workingPanel.overview.sync.pull')}</span>
               )
@@ -284,7 +284,7 @@ const Overview = memo<OverviewProps>(
             value={t('workingPanel.overview.sync.ahead', { count: aheadBehind!.ahead })}
             trailing={
               pushing ? (
-                <RingLoadingIcon size={12} />
+                <RingLoadingIcon size={16} />
               ) : (
                 <span className={rowStyles.rowAction}>{t('workingPanel.overview.sync.push')}</span>
               )

@@ -303,9 +303,9 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
             {chip && (
               <div className="flex items-center gap-1.25">
                 {chip.icon ? (
-                  <chip.icon color={chip.color} size={13} />
+                  <chip.icon color={chip.color} size={16} />
                 ) : (
-                  <RunningGlyph size={13} />
+                  <RunningGlyph size={16} />
                 )}
                 <span className={styles.chipText} style={{ color: chip.color }}>
                   {chip.text}

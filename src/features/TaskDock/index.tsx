@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   CheckIcon,
@@ -8,12 +7,25 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from 'lucide-react';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, useAnimationControls, usePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import Item from './Item';
@@ -32,51 +44,62 @@ const AUTO_DISMISS_DELAY = 3000;
 /** Lets a burst of dismissals finish before the dock changes shape. */
 const SHAPE_SETTLE_DELAY = 400;
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    position: fixed;
-    z-index: 100;
-    inset-block-end: 24px;
-    inset-inline-end: 24px;
+const styles = {
+  container:
+    'fixed z-100 inset-be-6 inset-e-6 flex flex-col w-85 overflow-hidden rounded-(--radius-overlay) border border-divider bg-card text-sm leading-5.5 text-foreground shadow-(--shadow-popover)',
+  groupHead:
+    'border-be border-divider bg-fill-quaternary font-mono text-xs leading-5 text-foreground-description uppercase tracking-[0.08em]',
+  head: 'cursor-pointer px-4 py-2',
+  headDivider: 'border-be border-divider',
+  list: 'max-h-85 overflow-y-auto',
+  row: 'not-first:border-bs not-first:border-divider',
+};
 
-    overflow: hidden;
+// Presence retains exiting children. Keep the real live subscriptions in the
+// frame so disabling motion also settles an exit already in progress.
+const TaskDockMotionContent = ({ children }: { children: ReactNode }) => {
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const disableMotion = animationMode === 'disabled' || reducedMotion;
+  const controls = useAnimationControls();
+  const [isPresent, safeToRemove] = usePresence();
 
-    width: 340px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 12px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  groupHead: css`
-    border-block-end: 1px solid ${cssVar.colorFillQuaternary};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextDescription};
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  head: css`
-    cursor: pointer;
-    padding-block: 9px;
-    padding-inline: 12px;
-  `,
-  headDivider: css`
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  list: css`
-    overflow-y: auto;
-    max-height: 340px;
-  `,
-  row: css`
-    &:not(:first-child) {
-      border-block-start: 1px solid ${cssVar.colorFillQuaternary};
+  useLayoutEffect(() => {
+    let active = true;
+    controls.stop();
+    if (disableMotion) {
+      controls.set({ height: 'auto', opacity: 1 });
+    } else {
+      void controls
+        .start(
+          { height: isPresent ? 'auto' : 0, opacity: isPresent ? 1 : 0 },
+          { duration: animationMode === 'agile' ? 0.1 : 0.2, ease: 'easeInOut' },
+        )
+        .then(() => {
+          if (active && !isPresent) safeToRemove?.();
+        });
     }
-  `,
-}));
+    return () => {
+      active = false;
+      controls.stop();
+    };
+  }, [animationMode, controls, disableMotion, isPresent, safeToRemove]);
+
+  // Notify after AnimatePresence's parent layout-effect registration exists.
+  useEffect(() => {
+    if (disableMotion && !isPresent) safeToRemove?.();
+  }, [disableMotion, isPresent, safeToRemove]);
+
+  return (
+    <m.div
+      animate={controls}
+      className="overflow-hidden"
+      initial={disableMotion ? false : { height: 0, opacity: 0 }}
+    >
+      {children}
+    </m.div>
+  );
+};
 
 const useSettledShape = (count: number): 'solo' | 'panel' => {
   const [shape, setShape] = useState<'solo' | 'panel'>(count > 1 ? 'panel' : 'solo');
@@ -162,16 +185,16 @@ const TaskDock = memo(() => {
   const icon = useMemo(() => {
     switch (status) {
       case 'success': {
-        return <CheckIcon color={cssVar.colorSuccess} size={16} />;
+        return <CheckIcon className="text-success-text" size={16} />;
       }
       case 'error': {
-        return <TriangleAlertIcon color={cssVar.colorError} size={16} />;
+        return <TriangleAlertIcon className="text-destructive-text" size={16} />;
       }
       case 'cancelled': {
-        return <CircleSlashIcon color={cssVar.colorTextDescription} size={16} />;
+        return <CircleSlashIcon className="text-foreground-description" size={16} />;
       }
       default: {
-        return <LoaderCircleIcon className="animate-spin" size={16} />;
+        return <LoaderCircleIcon className="motion-safe:animate-spin" size={16} />;
       }
     }
   }, [status]);
@@ -199,9 +222,9 @@ const TaskDock = memo(() => {
         onClick={() => setExpand(!expand)}
       >
         {icon}
-        <div className="flex flex-1 items-baseline gap-1.75" style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 14 }}>{t(`taskDock.status.${status}`)}</div>
-          <div className="truncate min-w-0 text-muted-foreground" style={{ fontSize: 12 }}>
+        <div className="flex min-w-0 flex-1 items-baseline gap-1.75">
+          <div className="text-sm leading-5.5">{t(`taskDock.status.${status}`)}</div>
+          <div className="truncate min-w-0 text-xs leading-5 text-muted-foreground">
             {activeCount > 0
               ? t('taskDock.activeOf', { active: activeCount, total: tasks.length })
               : t('taskDock.totalCount', { count: tasks.length })}
@@ -214,46 +237,44 @@ const TaskDock = memo(() => {
           }}
         >
           {canCancel && (
-            <div
-              {...clickableProps()}
-              className={cn('text-muted-foreground', CLICKABLE_FOCUS_RING)}
-              style={{ cursor: 'pointer', flexShrink: 0, fontSize: 12 }}
+            <Button
+              className="text-muted-foreground"
+              size="compact"
+              variant="ghost"
               onClick={cancelAll}
             >
               {t('taskDock.cancelAll')}
-            </div>
+            </Button>
           )}
           {isRunning ? (
             <ActionIcon
               icon={ChevronDownIcon}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               style={{ transform: expand ? undefined : 'rotate(180deg)' }}
               title={t(expand ? 'taskDock.collapse' : 'taskDock.expand')}
               onClick={() => setExpand(!expand)}
             />
           ) : (
-            <ActionIcon icon={XIcon} size={'small'} title={t('close')} onClick={dismissAll} />
+            <ActionIcon
+              icon={XIcon}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+              title={t('close')}
+              onClick={dismissAll}
+            />
           )}
         </div>
       </div>
 
       <AnimatePresence initial={false}>
         {expand && (
-          <m.div
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            initial={{ height: 0, opacity: 0 }}
-            style={{ overflow: 'hidden' }}
-            transition={{ duration: 0.22, ease: 'easeInOut' }}
-          >
+          <TaskDockMotionContent>
             <div className={`flex flex-col ${styles.list}`}>
               {groups.map((group) => (
                 <div className="flex flex-col" key={group.label}>
                   <div
-                    className={`flex items-center justify-between py-1.25 ${styles.groupHead}`}
-                    // The count aligns with the rows' action glyphs, which sit
-                    // 5px inside their own hit area — not with the row padding.
-                    style={{ paddingInlineEnd: 19, paddingInlineStart: 12 }}
+                    className={`flex items-center justify-between py-1.5 ps-4 pe-6 ${styles.groupHead}`}
+                    // The 32px action target places its 16px glyph 8px inside
+                    // the row's 16px end gutter; the group count shares that edge.
                   >
                     <span>{group.label}</span>
                     <span>
@@ -270,7 +291,7 @@ const TaskDock = memo(() => {
                 </div>
               ))}
             </div>
-          </m.div>
+          </TaskDockMotionContent>
         )}
       </AnimatePresence>
     </div>

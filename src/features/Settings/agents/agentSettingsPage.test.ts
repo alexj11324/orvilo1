@@ -37,7 +37,6 @@ const SETTINGS_SURFACE_FILES = [
   'src/features/Settings/agents/AgentSettingsDetailPage.tsx',
   'src/features/Settings/agents/AgentSettingsHeader.tsx',
   'src/features/AgentSettings/AgentAccessSettings.tsx',
-  'src/features/AgentSettings/AgentAdvancedSettings.tsx',
   'src/features/AgentSettings/AgentDeviceSettings.tsx',
   'src/features/AgentSettings/AgentModelSettings.tsx',
   'src/features/AgentSettings/ExternalAgentConnectionSettings.tsx',

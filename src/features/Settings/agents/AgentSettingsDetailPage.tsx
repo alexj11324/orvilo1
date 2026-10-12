@@ -11,7 +11,6 @@ import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import AgentAccessSettings from '@/features/AgentSettings/AgentAccessSettings';
-import AgentAdvancedSettings from '@/features/AgentSettings/AgentAdvancedSettings';
 import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
 import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
 import AgentModelSettings from '@/features/AgentSettings/AgentModelSettings';
@@ -130,7 +129,6 @@ const AgentSettingsDetailPage = memo<AgentSettingsDetailPageProps>(({ agentId })
             </details>
             <AgentAccessSettings agentId={agentId} />
             <AgentUseSettings agentId={agentId} />
-            <AgentAdvancedSettings agentId={agentId} />
           </div>
         </AsyncBoundary>
       </SettingContainer>

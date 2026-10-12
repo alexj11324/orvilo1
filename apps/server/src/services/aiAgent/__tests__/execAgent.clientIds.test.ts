@@ -269,10 +269,8 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
       } else {
         await service.execGroupAgent({ agentId: 'agent-1', groupId: 'group-1', message: 'Group' });
       }
-      expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-        model: 'default',
-        provider: 'claude-code',
-      });
+      expect(mockTopicCreate.mock.calls[0][0]).not.toHaveProperty('model');
+      expect(mockTopicCreate.mock.calls[0][0]).not.toHaveProperty('provider');
       runSpy.mockRestore();
     },
   );
@@ -312,20 +310,14 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
     },
   );
 
-  it('keeps the execution-binding pin when a chat-model override is scheduled', async () => {
-    // 'override-model' is not a heterogeneous model id, so the run falls back
-    // to the deployment's default 'orvilo' binding.
+  it('schedules an Agent without per-topic model/provider pins', async () => {
     await service.scheduleAgentRun({
       agentId: 'agent-1',
-      model: 'override-model',
-      provider: 'override-provider',
       prompt: 'Scheduled',
       runAt: new Date(Date.now() + 60000).toISOString(),
     });
-    expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-      model: 'default',
-      provider: 'claude-code',
-    });
+    expect(mockTopicCreate.mock.calls[0][0]).not.toHaveProperty('model');
+    expect(mockTopicCreate.mock.calls[0][0]).not.toHaveProperty('provider');
   });
 
   it('admits real group tools and ACP role context for the verified supervisor', async () => {

@@ -5,7 +5,6 @@ import type {
   OrviloAgentSession,
   OrviloGroupSession,
 } from '@orvilo/types';
-import { TRPCError } from '@trpc/server';
 import { and, asc, count, desc, eq, inArray, not, or, sql } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
@@ -200,8 +199,6 @@ export class SessionModel {
     slug?: string;
     type: 'agent' | 'group';
   }): Promise<SessionItem> => {
-    if (this.workspaceId && config.visibility === 'private')
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Workspace Agents must be public' });
     return this.db.transaction(async (trx) => {
       if (slug) {
         const existResult = await trx.query.sessions.findFirst({

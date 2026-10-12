@@ -251,7 +251,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   }, [catalog.data?.models, defaultLabel, isCatalogModel, model]);
 
   const handleModelChange = (value: string) => {
-    if (!capability?.model) return;
+    if (!provider || !capability?.model) return;
     const selection = resolveModelSwitchSelection({
       capability: { ...capability, model: capability.model },
       effort,

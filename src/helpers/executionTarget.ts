@@ -154,7 +154,7 @@ export const isHeterogeneousSandboxExecutionAvailable = (type: string | undefine
  * never silently becomes the execution host, and no implicit cloud-sandbox
  * fallback fills the gap. Desktop surfaces that CAN prove this machine's
  * device identity (the registered gateway `deviceId`) persist an explicit
- * `local` + `boundDeviceId` binding instead (see `useSelectExecutionTarget`).
+ * `local` + `boundDeviceId` binding instead in Agent settings.
  *
  * A desktop `local` pick pins that desktop's own `deviceId` as
  * `boundDeviceId`, and the server routes such a config to that bound device —

@@ -50,8 +50,6 @@ beforeEach(async () => {
       deviceId: 'shared-host',
       identitySource: 'installation',
       userId,
-      visibility: 'public',
-      workspaceId,
     },
   ]);
   await db.insert(credentials).values({
@@ -175,7 +173,7 @@ describe('Agent creation admission', () => {
       agencyConfig: {
         boundDeviceId: 'saved-host',
         executionTarget: 'local',
-        heterogeneousProvider: { type: 'pi' },
+        heterogeneousProvider: { type: 'pi', model: 'default' },
       },
     });
     await expect(
@@ -214,7 +212,7 @@ describe('Agent creation admission', () => {
       agencyConfig: {
         boundDeviceId: 'saved-host',
         executionTarget: 'local',
-        heterogeneousProvider: { command: 'codex', type: 'codex' },
+        heterogeneousProvider: { command: 'codex', type: 'codex', model: 'default' },
       },
       title: 'My Codex',
     });
@@ -255,27 +253,24 @@ describe('Agent creation admission', () => {
     expect(await db.select().from(agents)).toHaveLength(0);
   });
 
-  it('keeps private personal hosts private instead of allowing a shared workspace default', async () => {
+  it('allows both workspace Agent visibilities on the creator-owned host', async () => {
     const scoped = new AgentModel(db, userId, workspaceId);
-    await expect(scoped.create({ ...prime, visibility: 'public' })).rejects.toMatchObject({
-      code: 'FORBIDDEN',
-    });
-    await expect(scoped.create({ ...prime, visibility: 'private' })).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
-      message: 'New workspace Agents must be public',
-    });
-    expect(await db.select().from(agents)).toHaveLength(0);
+    for (const visibility of ['private', 'public'] as const) {
+      const created = await scoped.create({ ...prime, visibility });
+      expect(created).toMatchObject({ visibility, workspaceId, agencyConfig: prime.agencyConfig });
+    }
+    expect(await db.select().from(agents)).toHaveLength(2);
   });
 
-  it('refuses legacy metadata-only duplication while leaving existing name edits available', async () => {
+  it('requires a runtime on save as well as duplication', async () => {
     const [legacy] = await db.insert(agents).values({ title: 'Legacy', userId }).returning();
-    await model.updateConfig(legacy.id, { name: 'My legacy name' });
+    await expect(model.updateConfig(legacy.id, { name: 'Incomplete name edit' })).rejects.toThrow(
+      'AGENT_HOST_REQUIRED',
+    );
     await expect(model.duplicate(legacy.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
     });
-    expect((await db.select().from(agents).where(eq(agents.id, legacy.id)))[0].name).toBe(
-      'My legacy name',
-    );
+    expect((await db.select().from(agents).where(eq(agents.id, legacy.id)))[0].name).toBeNull();
     expect(await db.select().from(agents)).toHaveLength(1);
   });
 });

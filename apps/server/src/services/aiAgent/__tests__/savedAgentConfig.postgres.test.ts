@@ -1,6 +1,7 @@
 // @vitest-environment node
 import type { OrviloDatabase } from '@orvilo/database';
 import { getTestDB } from '@orvilo/database/test-utils';
+import type { WorkspaceUserPreference } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -83,7 +84,7 @@ beforeAll(async () => {
           [agentId]: { boundDeviceId: `old-${userId}`, executionTarget: 'local' },
         },
         agentModelOverrides: { [agentId]: { model: `old-${userId}`, provider: 'old-provider' } },
-      },
+      } as unknown as WorkspaceUserPreference,
     });
   }
 });

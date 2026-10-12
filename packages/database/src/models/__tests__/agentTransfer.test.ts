@@ -81,27 +81,21 @@ beforeEach(async () => {
       deviceId: `creation-host-${userId}`,
       identitySource: 'installation',
       userId,
-      visibility: 'private',
     },
     {
       deviceId: `creation-host-${targetUserId}`,
       identitySource: 'installation',
       userId: targetUserId,
-      visibility: 'private',
     },
     {
       deviceId: `creation-host-${wsId1}`,
       identitySource: 'installation',
       userId,
-      visibility: 'public',
-      workspaceId: wsId1,
     },
     {
       deviceId: `creation-host-${wsId2}`,
       identitySource: 'installation',
       userId,
-      visibility: 'public',
-      workspaceId: wsId2,
     },
   ]);
 });
@@ -109,12 +103,12 @@ beforeEach(async () => {
 // A codex-typed runtime satisfies admission with a host binding alone, so the
 // fixtures need no provider bindings. `actor`/`workspaceId` mirror the scope
 // of the AgentModel being exercised.
-const withRuntime = (config: Partial<NewAgent> = {}, actor = userId, workspaceId?: string) => ({
+const withRuntime = (config: Partial<NewAgent> = {}, actor = userId, _workspaceId?: string) => ({
   ...config,
   agencyConfig: {
-    boundDeviceId: `creation-host-${workspaceId ?? actor}`,
+    boundDeviceId: `creation-host-${actor}`,
     executionTarget: 'device' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: { type: 'codex' as const, model: 'default' },
     ...config.agencyConfig,
   },
 });

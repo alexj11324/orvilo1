@@ -627,7 +627,6 @@ describe('resolveExecutionPlan', () => {
       resolveExecutionPlan({
         agencyConfig: cfg({
           boundDeviceId: 'device-a',
-          executionTargetSelectionPolicy: 'fixed',
           executionTarget: 'device',
         }),
         clientExecutionAvailable: false,
@@ -642,7 +641,6 @@ describe('resolveExecutionPlan', () => {
       resolveExecutionPlan({
         agencyConfig: cfg({
           executionTarget: 'sandbox',
-          executionTargetSelectionPolicy: 'fixed',
         }),
         clientExecutionAvailable: false,
         onlineDeviceIds: ONLINE_AB,

@@ -233,39 +233,35 @@ export const mcpEventsRouter = router({
     };
   }),
 
-  readiness: eventProcedure
-    .input(taskInput.extend({ deviceId: z.string().min(1).optional() }))
-    .query(async ({ ctx, input }) => {
-      if (!ctx.workspaceId) throw new TRPCError({ code: 'PRECONDITION_FAILED' });
-      const task = await ctx.eventTaskModel.resolve(input.taskId);
-      if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
-      const [trigger] = await ctx.eventTriggers.list(
-        { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId },
-        task.id,
-      );
-      if (!trigger) throw new TRPCError({ code: 'NOT_FOUND' });
-      const binding = await ctx.eventBindings.get(
-        { tenantId: trigger.tenantId, connectorId: trigger.sourceId },
-        trigger.subscriptionId,
-      );
-      return {
-        data: await checkMcpAutomationReadiness({
-          db: ctx.serverDB,
-          task,
-          trigger,
-          binding,
-          deviceId: input.deviceId,
-        }),
-        success: true as const,
-      };
-    }),
+  readiness: eventProcedure.input(taskInput).query(async ({ ctx, input }) => {
+    if (!ctx.workspaceId) throw new TRPCError({ code: 'PRECONDITION_FAILED' });
+    const task = await ctx.eventTaskModel.resolve(input.taskId);
+    if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
+    const [trigger] = await ctx.eventTriggers.list(
+      { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId },
+      task.id,
+    );
+    if (!trigger) throw new TRPCError({ code: 'NOT_FOUND' });
+    const binding = await ctx.eventBindings.get(
+      { tenantId: trigger.tenantId, connectorId: trigger.sourceId },
+      trigger.subscriptionId,
+    );
+    return {
+      data: await checkMcpAutomationReadiness({
+        db: ctx.serverDB,
+        task,
+        trigger,
+        binding,
+      }),
+      success: true as const,
+    };
+  }),
 
   enable: eventWriteProcedure
     .input(
       taskInput.extend({
         triggerRevision: z.number().int().nonnegative(),
         definitionVersionId: z.string().min(1),
-        deviceId: z.string().min(1).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -297,7 +293,6 @@ export const mcpEventsRouter = router({
         task,
         trigger,
         binding,
-        deviceId: input.deviceId,
       });
       if (!readiness.canEnable)
         return { data: { enabled: false, ...readiness }, success: true as const };
@@ -339,7 +334,6 @@ export const mcpEventsRouter = router({
             status: 'scheduled',
             config: {
               ...(isRecord(fresh.config) ? fresh.config : {}),
-              automationDeviceId: readiness.deviceId,
               automationEnabledAt:
                 trigger.enabled && isRecord(fresh.config)
                   ? fresh.config.automationEnabledAt

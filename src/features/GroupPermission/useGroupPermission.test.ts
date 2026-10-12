@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   permissionResourceId: undefined as string | undefined,
   policiesAgentId: undefined as string | undefined,
   setAccessLevel: vi.fn(),
-  setModelPolicy: vi.fn(),
   setTopicSharePolicy: vi.fn(),
 }));
 
@@ -26,11 +25,6 @@ vi.mock('@/features/ResourcePermission/useAgentSelectionPolicies', () => ({
     mocks.policiesAgentId = agentId;
 
     return {
-      canFixExecutionTarget: true,
-      executionTargetPolicy: 'member',
-      modelPolicy: 'member',
-      setExecutionTargetPolicy: vi.fn(),
-      setModelPolicy: mocks.setModelPolicy,
       setTopicSharePolicy: mocks.setTopicSharePolicy,
       topicSharePolicy: 'member',
     };
@@ -138,18 +132,12 @@ describe('useGroupPermission', () => {
   });
 
   describe('editable settings', () => {
-    it('reads and writes the policies on the supervisor agent', () => {
-      // A group conversation IS a conversation with the supervisor
-      // (`useGroupContext` resolves the chat agentId to supervisorAgentId), so
-      // the group chat's model switcher reads exactly that row.
+    it('does not expose removed model/device selection policies', () => {
       const { result } = setup();
-
       expect(mocks.policiesAgentId).toBe('agt-supervisor');
-      expect(result.current.modelPolicy).toBe('member');
-      expect(result.current.executionTargetPolicy).toBe('member');
-
-      result.current.setModelPolicy('fixed');
-      expect(mocks.setModelPolicy).toHaveBeenCalledWith('fixed');
+      expect(result.current).not.toHaveProperty('modelPolicy');
+      expect(result.current).not.toHaveProperty('executionTargetPolicy');
+      expect(result.current).not.toHaveProperty('setModelPolicy');
     });
 
     it('routes the topic-share policy to the supervisor too', () => {

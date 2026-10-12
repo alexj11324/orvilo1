@@ -317,7 +317,6 @@ function GithubWebhookSetup({
 /** Saved bindings stay manageable even when source inventory/discovery is unavailable. */
 function SavedEventTrigger({ taskId }: { taskId: string }) {
   const { t } = useTranslation('automation');
-  const [deviceId, setDeviceId] = useState<string>();
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<unknown>();
   const [readiness, setReadiness] =
@@ -332,7 +331,7 @@ function SavedEventTrigger({ taskId }: { taskId: string }) {
     setActionError(undefined);
     try {
       if (operation === 'check') {
-        setReadiness((await mcpEventsService.readiness(taskId, deviceId)).data);
+        setReadiness((await mcpEventsService.readiness(taskId)).data);
       } else if (operation === 'pause') {
         await mcpEventsService.pause(taskId, trigger.revision);
         setReadiness(undefined);
@@ -341,7 +340,6 @@ function SavedEventTrigger({ taskId }: { taskId: string }) {
           taskId,
           triggerRevision: trigger.revision,
           definitionVersionId: observed.definitionVersionId,
-          deviceId: deviceId ?? observed.deviceId,
         });
         if (!result.data.enabled) throw new Error(result.data.reasons.join(', '));
         setReadiness(undefined);
@@ -384,26 +382,6 @@ function SavedEventTrigger({ taskId }: { taskId: string }) {
             )}
           {trigger.bindingState !== 'revoked' && (
             <div className={'flex flex-col gap-2'}>
-              {observed && observed.devices.length > 1 && !observed.deviceId && (
-                <Select
-                  value={deviceId ?? null}
-                  onValueChange={(value) => {
-                    setDeviceId(value ?? undefined);
-                    setReadiness(undefined);
-                  }}
-                >
-                  <SelectTrigger aria-label={t('events.device')}>
-                    <SelectValue placeholder={t('events.device')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {observed.devices.map((device) => (
-                      <SelectItem key={device.id} value={device.id}>
-                        {device.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
               {observed?.deviceId && (
                 <span>{t('events.boundDevice', { device: observed.deviceId })}</span>
               )}

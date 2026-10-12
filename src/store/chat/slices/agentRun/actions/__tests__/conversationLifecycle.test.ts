@@ -1,6 +1,6 @@
 import type { IEditor } from '@lobehub/editor';
 import type * as OrvilochatConstModule from '@orvilo/const';
-import type { ExecAgentResult } from '@orvilo/types';
+import type { ExecAgentResult, WorkspaceUserPreference } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { TRPCClientError } from '@trpc/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1837,14 +1837,12 @@ describe('ConversationLifecycle actions', () => {
         ).toBe(false);
       });
 
-      it('should snapshot the agent model onto the newTopic (top-level) when the send creates the topic', async () => {
+      it('creates a gateway optimistic topic without a per-topic model', async () => {
         const { result } = renderHook(() => useChatStore());
         const agentId = TEST_IDS.SESSION_ID;
         const newTopicId = TEST_IDS.NEW_TOPIC_ID;
 
-        // The gateway path carries the model snapshot on the `optimisticTopic`
-        // it hands to executeGatewayAgent — there is no sendMessageInServer
-        // `newTopic` payload on this path anymore.
+        // The optimistic topic carries conversation identity and metadata only.
         const executeGatewayAgentSpy = vi.fn(async (params: any) => {
           useChatStore.getState().internal_replaceTopicId({
             nextId: newTopicId,
@@ -1879,23 +1877,17 @@ describe('ConversationLifecycle actions', () => {
         expect(sendMessageInServerSpy).not.toHaveBeenCalled();
         expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            optimisticTopic: expect.objectContaining({
-              model: expect.any(String),
-              provider: expect.any(String),
-            }),
+            optimisticTopic: expect.objectContaining({ id: expect.any(String) }),
           }),
         );
       });
 
-      it('should hand blank-composer picks to the gateway send as newTopicPins', async () => {
+      it('forwards the blank-composer effort without model/provider pins', async () => {
         const { result } = renderHook(() => useChatStore());
         const agentId = TEST_IDS.SESSION_ID;
         const newTopicId = TEST_IDS.NEW_TOPIC_ID;
 
-        // The gateway path lets the SERVER create the topic, so the picks have
-        // no client row to land on — they must travel with the request or the
-        // persisted topic silently falls back to the agent's stored
-        // model/effort (the optimistic row above only decorates the sidebar).
+        // The server creates the topic; forward effort without model/device pins.
         const executeGatewayAgentSpy = vi.fn(async (params: any) => {
           useChatStore.getState().internal_replaceTopicId({
             nextId: newTopicId,
@@ -1913,7 +1905,6 @@ describe('ConversationLifecycle actions', () => {
             activeAgentId: agentId,
             activeTopicId: undefined,
             composerHeteroEffort: 'high',
-            composerModelSelection: { model: 'opus', provider: 'claude-code' },
             executeClientAgent: vi.fn().mockResolvedValue(undefined),
             executeGatewayAgent: executeGatewayAgentSpy,
             isGatewayModeEnabled: () => true,
@@ -1930,17 +1921,15 @@ describe('ConversationLifecycle actions', () => {
 
         expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            newTopicPins: { effort: 'high', model: 'opus', provider: 'claude-code' },
+            newTopicEffort: 'high',
           }),
         );
         // Consumed by this send, exactly like the client-side createTopic path:
         // leaving them set would leak the pick into the next conversation.
-        expect(useChatStore.getState().composerModelSelection).toBeUndefined();
         expect(useChatStore.getState().composerHeteroEffort).toBeUndefined();
       });
 
-      it('keeps blank-composer model and effort after a rejected first send so retry uses them', async () => {
-        const picks = { model: 'opus', provider: 'claude-code' };
+      it('keeps blank-composer effort after a rejected first send so retry uses it', async () => {
         const setDocument = vi.fn();
         const executeGatewayAgent = vi.fn().mockRejectedValue(new Error('start rejected'));
         useChatStore.setState({
@@ -1948,7 +1937,6 @@ describe('ConversationLifecycle actions', () => {
           activeTopicId: undefined,
           composerAgentId: TEST_IDS.SESSION_ID,
           composerHeteroEffort: 'high',
-          composerModelSelection: picks,
           executeGatewayAgent,
           isGatewayModeEnabled: () => true,
           mainInputEditor: { getJSONState: vi.fn(), setDocument } as any,
@@ -1960,7 +1948,6 @@ describe('ConversationLifecycle actions', () => {
             .sendMessage({ context: createTestContext(), message: 'Retry me' });
         });
         expect(setDocument).toHaveBeenCalledWith('markdown', 'Retry me');
-        expect(useChatStore.getState().composerModelSelection).toEqual(picks);
         expect(useChatStore.getState().composerHeteroEffort).toBe('high');
 
         await act(async () => {
@@ -1968,17 +1955,12 @@ describe('ConversationLifecycle actions', () => {
             .getState()
             .sendMessage({ context: createTestContext(), message: 'Retry me' });
         });
-        expect(executeGatewayAgent.mock.calls[1][0].newTopicPins).toEqual({
-          effort: 'high',
-          model: 'opus',
-          provider: 'claude-code',
-        });
+        expect(executeGatewayAgent.mock.calls[1][0].newTopicEffort).toBe('high');
       });
 
       it('does not consume newer blank-composer picks when an earlier send is accepted', async () => {
-        const newerPick = { model: 'sonnet', provider: 'claude-code' };
         const executeGatewayAgent = vi.fn(async (params: any) => {
-          useChatStore.setState({ composerModelSelection: newerPick, composerHeteroEffort: 'low' });
+          useChatStore.setState({ composerHeteroEffort: 'low' });
           params.onMessageAccepted();
           return makeGatewayResult();
         });
@@ -1987,7 +1969,6 @@ describe('ConversationLifecycle actions', () => {
           activeTopicId: undefined,
           composerAgentId: TEST_IDS.SESSION_ID,
           composerHeteroEffort: 'high',
-          composerModelSelection: { model: 'opus', provider: 'claude-code' },
           executeGatewayAgent,
           isGatewayModeEnabled: () => true,
         });
@@ -1996,7 +1977,6 @@ describe('ConversationLifecycle actions', () => {
             .getState()
             .sendMessage({ context: createTestContext(), message: 'First send' });
         });
-        expect(useChatStore.getState().composerModelSelection).toEqual(newerPick);
         expect(useChatStore.getState().composerHeteroEffort).toBe('low');
       });
 
@@ -2012,7 +1992,6 @@ describe('ConversationLifecycle actions', () => {
           activeTopicId: undefined,
           composerAgentId: TEST_IDS.SESSION_ID,
           composerHeteroEffort: 'high',
-          composerModelSelection: undefined,
           executeGatewayAgent,
           isGatewayModeEnabled: () => true,
         });
@@ -2024,7 +2003,7 @@ describe('ConversationLifecycle actions', () => {
         expect(useChatStore.getState().composerHeteroEffort).toBe('high');
       });
 
-      it('should omit newTopicPins when the composer made no pick', async () => {
+      it('omits a new-topic effort when the composer made no pick', async () => {
         const { result } = renderHook(() => useChatStore());
         const agentId = TEST_IDS.SESSION_ID;
         const newTopicId = TEST_IDS.NEW_TOPIC_ID;
@@ -2046,7 +2025,6 @@ describe('ConversationLifecycle actions', () => {
             activeAgentId: agentId,
             activeTopicId: undefined,
             composerHeteroEffort: undefined,
-            composerModelSelection: undefined,
             executeClientAgent: vi.fn().mockResolvedValue(undefined),
             executeGatewayAgent: executeGatewayAgentSpy,
             isGatewayModeEnabled: () => true,
@@ -2062,7 +2040,8 @@ describe('ConversationLifecycle actions', () => {
         });
 
         // No pick ⇒ the wire payload is unchanged for every existing caller.
-        expect(executeGatewayAgentSpy.mock.calls[0][0].newTopicPins).toBeUndefined();
+        expect(executeGatewayAgentSpy.mock.calls[0][0].newTopicEffort).toBeUndefined();
+        expect(executeGatewayAgentSpy.mock.calls[0][0]).not.toHaveProperty('newTopicPins');
       });
 
       it('should stop the sidebar spinner after a gateway send creates the topic', async () => {
@@ -2365,11 +2344,8 @@ describe('ConversationLifecycle actions', () => {
         // the server topic replaced it.
         expect(useChatStore.getState().topicDataMap[topicKey]?.items[0]).toEqual(
           expect.objectContaining({
-            // Pinned model is a top-level column, not metadata.
-            model: expect.any(String),
-            provider: expect.any(String),
             metadata: {
-              executionConfig: { inheritWorkspaceScope: true },
+              executionConfig: {},
               repos: [selectedRepo],
               workingDirectory: selectedRepo,
               workingDirectoryConfig: { path: selectedRepo, repoType: 'github' },
@@ -2379,10 +2355,8 @@ describe('ConversationLifecycle actions', () => {
         expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
           expect.objectContaining({
             optimisticTopic: expect.objectContaining({
-              model: expect.any(String),
-              provider: expect.any(String),
               metadata: {
-                executionConfig: { inheritWorkspaceScope: true },
+                executionConfig: {},
                 repos: [selectedRepo],
                 workingDirectory: selectedRepo,
                 workingDirectoryConfig: { path: selectedRepo, repoType: 'github' },
@@ -2472,11 +2446,7 @@ describe('ConversationLifecycle actions', () => {
         // run executes in); the config keeps the SOURCE repo, which is what
         // By-Project groups on.
         const expectedMetadata = {
-          executionConfig: {
-            boundDeviceId: deviceId,
-            executionTarget: 'local',
-            inheritWorkspaceScope: true,
-          },
+          executionConfig: {},
           workingDirectory: worktreePath,
           workingDirectoryConfig: {
             git: { activeWorktree: worktreePath },
@@ -2543,11 +2513,7 @@ describe('ConversationLifecycle actions', () => {
           expect.objectContaining({
             optimisticTopic: expect.objectContaining({
               metadata: {
-                executionConfig: {
-                  boundDeviceId: deviceId,
-                  executionTarget: 'device',
-                  inheritWorkspaceScope: true,
-                },
+                executionConfig: {},
                 workingDirectory: '/repo/default',
                 workingDirectoryConfig: { path: '/repo/default' },
               },
@@ -2595,11 +2561,7 @@ describe('ConversationLifecycle actions', () => {
           expect.objectContaining({
             optimisticTopic: expect.objectContaining({
               metadata: {
-                executionConfig: {
-                  boundDeviceId: deviceId,
-                  executionTarget: 'local',
-                  inheritWorkspaceScope: true,
-                },
+                executionConfig: {},
                 workingDirectory: '/repo/orvilo',
                 workingDirectoryConfig: { path: '/repo/orvilo' },
               },
@@ -2656,11 +2618,7 @@ describe('ConversationLifecycle actions', () => {
           expect.objectContaining({
             optimisticTopic: expect.objectContaining({
               metadata: {
-                executionConfig: {
-                  boundDeviceId: deviceId,
-                  executionTarget: 'local',
-                  inheritWorkspaceScope: true,
-                },
+                executionConfig: {},
               },
             }),
           }),
@@ -2784,11 +2742,7 @@ describe('ConversationLifecycle actions', () => {
           // The server-side runner spawns here — a regression sends it to
           // ~/Desktop and the `--resume` session bucket moves with it.
           expect(optimisticTopicMetadata()).toEqual({
-            executionConfig: {
-              boundDeviceId: HETERO_DEVICE_ID,
-              executionTarget: 'local',
-              inheritWorkspaceScope: true,
-            },
+            executionConfig: {},
             workingDirectory: '/repo/device-default',
             workingDirectoryConfig: { path: '/repo/device-default' },
           });
@@ -4139,10 +4093,7 @@ describe('ConversationLifecycle actions', () => {
 
         const { result } = renderHook(() => useChatStore());
 
-        // FIX-C: the model row is persisted by the server through the gateway
-        // admission now — the client hands over the optimistic topic snapshot
-        // ({model:'default', provider:'codex'}) and a minted assistant id, and
-        // never sends the requested model itself.
+        // The gateway receives message identities without persisting a topic model.
         const sendMessageInServerSpy = vi.spyOn(aiChatService, 'sendMessageInServer');
         executeGatewayAgentMock.mockResolvedValue(
           makeGatewayResult({ topicId: TEST_IDS.TOPIC_ID }),
@@ -4163,17 +4114,14 @@ describe('ConversationLifecycle actions', () => {
             clientIds: expect.objectContaining({
               assistantMessageId: expect.stringMatching(/^msg_/),
             }),
-            optimisticTopic: expect.objectContaining({
-              model: 'default',
-              provider: 'codex',
-            }),
+            optimisticTopic: expect.objectContaining({ id: expect.any(String) }),
           }),
         );
         expect(sendMessageInServerSpy).not.toHaveBeenCalled();
         expect(executeHeterogeneousAgentMock).not.toHaveBeenCalled();
       });
 
-      it('overrides the heterogeneous runtime with the active topic model', async () => {
+      it('uses the saved heterogeneous runtime in an existing topic', async () => {
         mockConstEnv.isDesktop = true;
         setupMockSelectors({
           agentConfig: {
@@ -4205,8 +4153,6 @@ describe('ConversationLifecycle actions', () => {
                   {
                     createdAt: Date.now(),
                     id: TEST_IDS.TOPIC_ID,
-                    model: 'topic-model',
-                    provider: 'cursor',
                     title: 'Topic A',
                     updatedAt: Date.now(),
                   },
@@ -4217,10 +4163,7 @@ describe('ConversationLifecycle actions', () => {
             },
           });
         });
-        // FIX-C: the pinned topic model is resolved server-side now — the
-        // client no longer rewrites the provider payload to feed a private
-        // spawn. The send enters unified admission and the renderer-IPC
-        // executor is never reached.
+        // Execution follows the saved Agent; the renderer-IPC executor is never reached.
         const sendMessageInServerSpy = vi.spyOn(aiChatService, 'sendMessageInServer');
         executeGatewayAgentMock.mockResolvedValue(
           makeGatewayResult({ topicId: TEST_IDS.TOPIC_ID }),
@@ -4337,7 +4280,7 @@ describe('ConversationLifecycle actions', () => {
                 executionTarget: 'local',
               },
             },
-          },
+          } as unknown as WorkspaceUserPreference,
         });
 
         // FIX-C regression net: a workspace-owned agent with a member `local`
@@ -4437,7 +4380,7 @@ describe('ConversationLifecycle actions', () => {
                 executionTarget: 'local',
               },
             },
-          },
+          } as unknown as WorkspaceUserPreference,
         });
 
         const executeGatewayAgent = vi
@@ -4496,7 +4439,7 @@ describe('ConversationLifecycle actions', () => {
                 executionTarget: 'local',
               },
             },
-          },
+          } as unknown as WorkspaceUserPreference,
         });
         rememberAgentManagementAccess('admin-user', TEST_IDS.SESSION_ID, true);
 
@@ -4560,7 +4503,7 @@ describe('ConversationLifecycle actions', () => {
                 executionTarget: 'local',
               },
             },
-          },
+          } as unknown as WorkspaceUserPreference,
         });
 
         const executeGatewayAgent = vi

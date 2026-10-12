@@ -51,22 +51,7 @@ export const seedPrimeRuntime = async (
   });
   await db
     .insert(devices)
-    .values(
-      workspaceId
-        ? {
-            deviceId,
-            identitySource: 'installation',
-            userId,
-            visibility: 'public' as const,
-            workspaceId,
-          }
-        : {
-            deviceId,
-            identitySource: 'installation',
-            userId,
-            visibility: 'private' as const,
-          },
-    )
+    .values({ deviceId, identitySource: 'installation', userId })
     .onConflictDoNothing();
   const [source] = await db
     .insert(agents)

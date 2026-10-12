@@ -61,7 +61,6 @@ export async function checkMcpAutomationReadiness(input: {
   task: TaskItem;
   trigger: McpEventTrigger;
   binding?: McpEventBinding;
-  deviceId?: string;
 }): Promise<AutomationReadiness> {
   const { db, task, trigger, binding } = input;
   const reasons: AutomationReadinessCode[] = [];
@@ -115,29 +114,12 @@ export async function checkMcpAutomationReadiness(input: {
   }
 
   const deviceModel = new DeviceModel(db, trigger.userId, trigger.workspaceId);
-  const [workspaceRows, personalRows, workspaceOnline, personalOnline] = await Promise.all([
-    deviceModel.queryForExecution(),
-    deviceModel.query(),
-    deviceGateway.queryDeviceList(trigger.userId, trigger.workspaceId),
-    deviceGateway.queryDeviceList(trigger.userId),
-  ]);
-  const workspaceOnlineIds = new Set(workspaceOnline.map((device) => device.deviceId));
-  const personalOnlineIds = new Set(personalOnline.map((device) => device.deviceId));
-  const rows = [
-    ...workspaceRows,
-    ...personalRows.filter(
-      (row) => !workspaceRows.some((workspace) => workspace.deviceId === row.deviceId),
-    ),
-  ];
-  const onlineIds = new Set(
-    rows
-      .filter((row) =>
-        workspaceRows.includes(row)
-          ? workspaceOnlineIds.has(row.deviceId)
-          : personalOnlineIds.has(row.deviceId),
-      )
-      .map((row) => row.deviceId),
-  );
+  const rows = await deviceModel.queryForExecution();
+  const owners = [...new Set(rows.map((row) => row.userId))];
+  const online = (
+    await Promise.all(owners.map((owner) => deviceGateway.queryDeviceList(owner)))
+  ).flat();
+  const onlineIds = new Set(online.map((device) => device.deviceId));
   const devices = rows
     .filter((row) => onlineIds.has(row.deviceId))
     .map((row) => ({ id: row.deviceId, name: row.hostname ?? row.deviceId }));
@@ -152,19 +134,9 @@ export async function checkMcpAutomationReadiness(input: {
       : null;
   if (!agent) reasons.push('AUTH_REQUIRED');
   const agency = agent?.agencyConfig;
-  const pinned =
-    typeof config.automationDeviceId === 'string'
-      ? config.automationDeviceId
-      : typeof workspace.deviceId === 'string'
-        ? workspace.deviceId
-        : agency?.boundDeviceId;
-  // A pinned target is never replaced by another available machine.
-  const deviceId = pinned ?? input.deviceId ?? (devices.length === 1 ? devices[0].id : undefined);
-  if (pinned && input.deviceId && pinned !== input.deviceId) reasons.push('CONFIGURATION_INVALID');
-  if (!deviceId)
-    reasons.push(devices.length > 1 ? 'DEVICE_SELECTION_REQUIRED' : 'DEVICE_UNAVAILABLE');
-  else if (!devices.some((device) => device.id === deviceId)) reasons.push('DEVICE_UNAVAILABLE');
-  if (agent && agency?.boundDeviceId !== deviceId) reasons.push('CONFIGURATION_INVALID');
+  const deviceId = agency?.boundDeviceId;
+  if (!deviceId || !devices.some((device) => device.id === deviceId))
+    reasons.push('DEVICE_UNAVAILABLE');
 
   if (
     agent &&
@@ -212,11 +184,8 @@ export async function checkMcpAutomationReadiness(input: {
             deviceDefaultCwd: deviceRow?.defaultCwd,
             workingDirByDevice: agency?.workingDirByDevice,
           });
-    const deviceWorkspaceId = workspaceRows.some((row) => row.deviceId === deviceId)
-      ? trigger.workspaceId
-      : undefined;
     const response = await deviceGateway.executeToolCall(
-      { userId: trigger.userId, workspaceId: deviceWorkspaceId, deviceId },
+      { userId: trigger.userId, workspaceId: trigger.workspaceId, deviceId },
       {
         identifier: 'local',
         apiName: 'checkAutomationReadiness',

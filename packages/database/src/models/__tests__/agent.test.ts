@@ -54,8 +54,6 @@ const withRuntime = async (
       deviceId: boundDeviceId,
       identitySource: 'installation',
       userId: actor,
-      visibility: workspaceId ? 'public' : 'private',
-      workspaceId,
     })
     .onConflictDoNothing();
   return {
@@ -223,7 +221,7 @@ describe('agent runtime identity', () => {
   it('keeps the runtime on rename and partial provider updates, and rejects invalid replacements', async () => {
     const agent = await agentModel.create(
       await withRuntime({
-        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        agencyConfig: { heterogeneousProvider: { type: 'codex', model: 'default' } },
         name: 'Codex',
       }),
     );
@@ -405,7 +403,7 @@ describe('AgentModel', () => {
     it('merges an effort-only provider patch with the persisted runtime type', async () => {
       const agent = await agentModel.create(
         await withRuntime({
-          agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+          agencyConfig: { heterogeneousProvider: { type: 'codex', model: 'default' } },
         }),
       );
       await agentModel.updateConfig(agent.id, {
@@ -429,7 +427,7 @@ describe('AgentModel', () => {
       async (agencyConfig) => {
         const agent = await agentModel.create(
           await withRuntime({
-            agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+            agencyConfig: { heterogeneousProvider: { type: 'codex', model: 'default' } },
           }),
         );
         await expect(agentModel.update(agent.id, { agencyConfig } as any)).rejects.toThrow(
@@ -2431,12 +2429,12 @@ describe('AgentModel', () => {
         {
           title: 'Agent 2',
           model: undefined,
-          agencyConfig: { heterogeneousProvider: { type: 'codex' as const } },
+          agencyConfig: { heterogeneousProvider: { type: 'codex' as const, model: 'default' } },
         },
         {
           title: 'Agent 3',
           model: undefined,
-          agencyConfig: { heterogeneousProvider: { type: 'codex' as const } },
+          agencyConfig: { heterogeneousProvider: { type: 'codex' as const, model: 'default' } },
         },
       ];
 
@@ -3635,10 +3633,8 @@ describe('AgentModel', () => {
       await serverDB.insert(workspaceMembers).values({ workspaceId: wsId, userId, role: 'owner' });
       await serverDB.insert(devices).values({
         deviceId: 'ws-device-1',
-        visibility: 'public',
         identitySource: 'machine-id',
         userId,
-        workspaceId: wsId,
       });
     };
 

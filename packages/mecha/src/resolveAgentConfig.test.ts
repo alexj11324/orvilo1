@@ -10,7 +10,9 @@ import { resolveAgentConfig } from './resolveAgentConfig';
  * by hand and never mocks a store. If a store read creeps back in, these fail
  * where the client-side suite would still pass.
  */
-const snapshot = (overrides: Partial<AgentConfigSnapshot> = {}): AgentConfigSnapshot => ({
+const snapshot = (
+  overrides: Partial<AgentConfigSnapshot> & Record<string, unknown> = {},
+): AgentConfigSnapshot => ({
   agentConfig: { model: 'gpt-5', provider: 'openai', systemRole: 'You are helpful.' } as never,
   canManage: true,
   chatConfig: {} as never,

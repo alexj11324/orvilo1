@@ -84,6 +84,17 @@ successfully to the isolated database. Commit hooks and `git diff --check` passe
 The full repository Typecheck remains a separate CI gate; no passing local full
 typecheck is claimed.
 
+CI subsequently exposed retired fields in existing test fixtures and two
+configuration typing gaps. The follow-up removes the remaining private-Agent
+restriction from Session creation and the separate event-automation device
+selector/pin. Tasks dispatch without task-level model/provider/device overrides;
+readiness queries each registered device owner's gateway and uses the Agent's
+saved device. The affected Session, transfer, copy, task-run and readiness
+regressions passed (287 tests). The final cleanup lint is clean across 50 files.
+These follow-up changes reuse the Electron evidence for the unchanged creation,
+chat and device surfaces; the event-readiness/dispatch changes have automated
+coverage and are not claimed as a live webhook end-to-end test.
+
 `runtime-evidence.json` contains only whitelisted fixture identifiers, saved
 runtime fields, operation outcomes and the named offline error. No login tokens,
 environment variables, gateway secrets or private signing keys are included.

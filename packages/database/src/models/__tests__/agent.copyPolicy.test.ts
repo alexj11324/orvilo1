@@ -24,8 +24,9 @@ const workspaceId = 'copy-policy-workspace';
 const agencyConfig = {
   executionTarget: 'device' as const,
   boundDeviceId: 'copy-policy-host',
-  heterogeneousProvider: { type: 'codex' as const },
+  heterogeneousProvider: { type: 'codex' as const, model: 'default' },
 };
+const memberAgencyConfig = { ...agencyConfig, boundDeviceId: 'copy-policy-member-host' };
 
 beforeAll(async () => {
   await db.insert(users).values([{ id: owner }, { id: member }]);
@@ -38,9 +39,12 @@ beforeAll(async () => {
   ]);
   await db.insert(devices).values({
     deviceId: agencyConfig.boundDeviceId,
-    workspaceId,
     userId: owner,
-    visibility: 'public',
+    identitySource: 'fixture',
+  });
+  await db.insert(devices).values({
+    deviceId: memberAgencyConfig.boundDeviceId,
+    userId: member,
     identitySource: 'fixture',
   });
 });
@@ -120,21 +124,26 @@ describe('Agent copy and public workspace boundaries', () => {
     ).toBe('use');
   });
 
-  it('rejects explicit private Session creation with no Agent, Session or Use write', async () => {
-    const before = await rowCounts();
-    await expect(
-      new SessionModel(db, member, workspaceId).create({
-        type: 'agent',
-        config: { visibility: 'private', systemRole: 'PRIVATE_DRAFT_FIXTURE', agencyConfig },
-      }),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    expect(await rowCounts()).toEqual(before);
+  it('creates a private workspace Session Agent on its creator-owned host', async () => {
+    const session = await new SessionModel(db, member, workspaceId).create({
+      type: 'agent',
+      config: {
+        visibility: 'private',
+        systemRole: 'PRIVATE_DRAFT_FIXTURE',
+        agencyConfig: memberAgencyConfig,
+      },
+    });
+    const created = await new SessionModel(db, member, workspaceId).findByIdOrSlug(session.id);
+    expect(created?.agent).toMatchObject({
+      visibility: 'private',
+      agencyConfig: memberAgencyConfig,
+    });
   });
 
   it('keeps omitted visibility Session creation public', async () => {
     const session = await new SessionModel(db, member, workspaceId).create({
       type: 'agent',
-      config: { agencyConfig },
+      config: { agencyConfig: memberAgencyConfig },
     });
     const [link] = await db
       .select()
@@ -149,7 +158,6 @@ describe('Agent copy and public workspace boundaries', () => {
     await db.insert(devices).values({
       deviceId: 'copy-policy-personal-host',
       userId: member,
-      visibility: 'private',
       identitySource: 'fixture',
     });
     const personal = new SessionModel(db, member);
@@ -186,7 +194,7 @@ describe('Agent copy and public workspace boundaries', () => {
     expect(await db.select().from(resourcePermissions)).toEqual(before);
   });
 
-  it('refuses workspace private visibility before changing config or confirmed Use', async () => {
+  it('preserves runtime and confirmed Use when switching to private visibility', async () => {
     const original = await source();
     const permissions = new ResourcePermissionModel(db, workspaceId);
     await permissions.upsertCollaborators({
@@ -197,12 +205,13 @@ describe('Agent copy and public workspace boundaries', () => {
       createdBy: owner,
     });
     const before = await db.select().from(resourcePermissions);
-    await expect(
-      new AgentModel(db, owner, workspaceId).setVisibility(original.id, 'private'),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await new AgentModel(db, owner, workspaceId).setVisibility(original.id, 'private');
     expect((await db.select().from(agents).where(eq(agents.id, original.id)))[0].visibility).toBe(
-      'public',
+      'private',
     );
+    expect(
+      (await db.select().from(agents).where(eq(agents.id, original.id)))[0].agencyConfig,
+    ).toEqual(agencyConfig);
     expect(await db.select().from(resourcePermissions)).toEqual(before);
   });
 });

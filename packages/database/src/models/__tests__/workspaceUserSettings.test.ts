@@ -117,7 +117,7 @@ describe('WorkspaceUserSettingsModel', () => {
   it('cascades on workspace delete — FK removes every row for that workspace', async () => {
     const model = new WorkspaceUserSettingsModel(serverDB, userA, workspaceId);
     await model.updatePreference({
-      agentDeviceOverrides: { a: { executionTarget: 'sandbox' } },
+      agentModeOverrides: { a: true },
     });
     expect(await model.get()).toBeDefined();
 
@@ -128,7 +128,7 @@ describe('WorkspaceUserSettingsModel', () => {
   it('cascades on user delete — FK removes every row for that user', async () => {
     const model = new WorkspaceUserSettingsModel(serverDB, userA, workspaceId);
     await model.updatePreference({
-      agentDeviceOverrides: { a: { executionTarget: 'sandbox' } },
+      agentModeOverrides: { a: true },
     });
     expect(await model.get()).toBeDefined();
 

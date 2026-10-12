@@ -45,7 +45,7 @@ const renderGuide = () =>
   render(
     <>
       <ModalHost />
-      <DeviceConnectModal open initialTab="cli" scope="workspace" onClose={vi.fn()} />
+      <DeviceConnectModal open initialTab="cli" onClose={vi.fn()} />
     </>,
   );
 
@@ -72,7 +72,7 @@ describe('Device CLI installation guide', () => {
     const view = render(
       <>
         <ModalHost />
-        <DeviceConnectModal open scope="personal" onClose={close} />
+        <DeviceConnectModal open onClose={close} />
       </>,
     );
     fireEvent.click(
@@ -90,7 +90,7 @@ describe('Device CLI installation guide', () => {
   it('keeps download instructions for browser popups without native capabilities', () => {
     query.hostKind = 'popup';
     query.native = false;
-    const view = render(<DeviceConnectModal open scope="personal" onClose={vi.fn()} />);
+    const view = render(<DeviceConnectModal open onClose={vi.fn()} />);
     expect(
       view.queryByRole('button', { name: 'devices.connectWizard.desktop.connectThisComputer' }),
     ).toBeNull();
@@ -111,15 +111,7 @@ describe('Device CLI installation guide', () => {
     expect(view.queryByText('devices.connectWizard.cli.unavailable')).toBeNull();
     query.isLoading = false;
     query.error = new Error('offline');
-    view.rerender(
-      <DeviceConnectModal
-        open
-        initialTab="cli"
-        scope="workspace"
-        visibility="public"
-        onClose={vi.fn()}
-      />,
-    );
+    view.rerender(<DeviceConnectModal open initialTab="cli" onClose={vi.fn()} />);
     fireEvent.click(view.getByRole('button', { name: 'error.retry' }));
     expect(query.mutate).toHaveBeenCalledOnce();
     expect(view.queryByText(/npm install -g/)).toBeNull();

@@ -206,40 +206,25 @@ describe('ErrorMessageExtra', () => {
     displayMessageMock.clear();
   });
 
-  it('offers device setup for an admission failure instead of regeneration', () => {
-    displayMessageMock.set('msg-device', { parentId: 'user-1' });
-    render(
-      <ErrorMessageExtra
-        error={{ message: 'Temporary runtime outage' }}
-        data={{
-          id: 'msg-device',
-          error: {
-            type: AgentRuntimeErrorType.AgentRuntimeError,
-            body: { detail: 'DEVICE_REQUIRED: No authorized device.' },
-          },
-        }}
-      />,
-    );
-    expect(screen.getByText('deviceAdmission.required')).toBeInTheDocument();
-    expect(screen.queryByText('card-retry')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
-    expect(navigateMock).toHaveBeenCalledWith('/settings/devices');
-  });
-  it('keeps a fixed workspace device repair on workspace settings', () => {
+  it('routes structured device admission errors to their recovery card', () => {
+    const body = {
+      code: 'DEVICE_REQUIRED',
+      detail: 'Choose a device in Agent settings.',
+      retryable: false,
+    };
     render(
       <ErrorMessageExtra
         error={{ message: 'DEVICE_REQUIRED' }}
         data={{
-          id: 'fixed-device',
-          error: {
-            type: AgentRuntimeErrorType.AgentRuntimeError,
-            body: { detail: 'DEVICE_REQUIRED: Workspace pool is empty.' },
-          },
+          id: 'msg-device',
+          agentId: 'saved-agent',
+          error: { type: AgentRuntimeErrorType.AgentRuntimeError, body },
         }}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
-    expect(navigateMock).toHaveBeenCalledWith('/settings/devices');
+    expect(dynamicComponentPropsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ body, agentId: 'saved-agent', id: 'msg-device' }),
+    );
   });
 
   // Regression: the standalone surfaces (Assistant / Task / AgentCouncil) render

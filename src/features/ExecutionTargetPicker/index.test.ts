@@ -21,8 +21,6 @@ const device = (overrides: Partial<DeviceListItem>): DeviceListItem =>
     online: false,
     platform: null,
     registered: true,
-    scope: 'personal',
-    visibility: null,
     workingDirs: [],
     ...overrides,
   }) as DeviceListItem;
@@ -41,8 +39,6 @@ describe('ExecutionTargetPicker helpers', () => {
   describe('resolveExecutionTargetSelection', () => {
     const publicDevice = device({
       deviceId: 'public',
-      scope: 'workspace',
-      visibility: 'public',
     });
 
     it('resolves a bound device only while that device is still reachable', () => {

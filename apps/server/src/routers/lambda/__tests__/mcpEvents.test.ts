@@ -362,13 +362,13 @@ describe('MCP Events router authorization decisions (auth transport mocked)', ()
       expect.objectContaining({
         status: 'scheduled',
         config: expect.objectContaining({
-          automationDeviceId: 'device',
           automationEnabledAt: expect.any(String),
         }),
       }),
       { userId: 'user' },
       expect.anything(),
     );
+    expect(mocks.updateTask.mock.calls.at(-1)?.[1].config).not.toHaveProperty('automationDeviceId');
     expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }), 3);
   });
   it('refuses stale definition or trigger revisions before readiness', async () => {

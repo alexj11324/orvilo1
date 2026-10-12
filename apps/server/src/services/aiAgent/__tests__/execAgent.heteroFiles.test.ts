@@ -1,3 +1,4 @@
+import type { WorkspaceUserPreference } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import {
   afterEach,
@@ -1874,7 +1875,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       await workspaceDb!.insert(workspaceUserSettings).values({
         userId: 'member-user',
         workspaceId: 'workspace-a',
-        preference: { agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } } },
+        preference: {
+          agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } },
+        } as unknown as WorkspaceUserPreference,
       });
       mockQueryPersonalDevices.mockResolvedValue([
         { deviceId: 'member-desktop', userId: 'member-user' },

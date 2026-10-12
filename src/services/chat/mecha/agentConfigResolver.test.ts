@@ -4,6 +4,7 @@ import { NotebookIdentifier } from '@orvilo/builtin-tool-notebook';
 import { OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { TaskIdentifier } from '@orvilo/builtin-tool-task';
+import type { WorkspaceUserPreference } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as agentStore from '@/store/agent';
@@ -167,7 +168,7 @@ describe('resolveAgentConfig', () => {
           agentModelOverrides: {
             'test-agent': { model: 'member-model', provider: 'member-provider' },
           },
-        },
+        } as unknown as WorkspaceUserPreference,
       });
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
@@ -188,7 +189,7 @@ describe('resolveAgentConfig', () => {
           agentModelOverrides: {
             'test-agent': { model: 'member-model', provider: 'member-provider' },
           },
-        },
+        } as unknown as WorkspaceUserPreference,
       });
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
@@ -217,7 +218,7 @@ describe('resolveAgentConfig', () => {
           agentModelOverrides: {
             'test-agent': { model: 'member-model', provider: 'member-provider' },
           },
-        },
+        } as unknown as WorkspaceUserPreference,
       });
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
@@ -243,7 +244,7 @@ describe('resolveAgentConfig', () => {
           agentModelOverrides: {
             'test-agent': { model: 'member-model', provider: 'member-provider' },
           },
-        },
+        } as unknown as WorkspaceUserPreference,
       });
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
@@ -269,7 +270,7 @@ describe('resolveAgentConfig', () => {
           agentModelOverrides: {
             'test-agent': { model: 'member-model', provider: 'member-provider' },
           },
-        },
+        } as unknown as WorkspaceUserPreference,
       });
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });

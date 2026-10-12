@@ -813,14 +813,12 @@ describe('TopicModel', () => {
   });
 
   describe('update', () => {
-    it.each([{ title: 'renamed' }, { model: 'a', provider: 'openai' }])(
-      'preserves reasoning when the model does not change %j',
+    it.each([{ title: 'renamed' }, { favorite: true }])(
+      'preserves reasoning when changing topic metadata %j',
       async (patch) => {
         const metadata = { reasoningConfig: { reasoningEffort: 'high' as const } };
         const topic = await topicModel.create({
           metadata,
-          model: 'a',
-          provider: 'openai',
           title: 'pin',
         });
         const [updated] = await topicModel.update(topic.id, patch);

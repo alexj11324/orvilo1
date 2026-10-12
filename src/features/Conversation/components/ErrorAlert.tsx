@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { t } from 'i18next';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
@@ -84,8 +84,8 @@ const ErrorAlert = memo<ErrorAlertProps>(
       <Alert
         style={style}
         variant={VARIANT_MAP[type]}
-        className={cx(
-          'rounded-(--radius-card)',
+        className={cn(
+          'rounded-(--radius-card) p-4 text-sm leading-5.5 has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-2',
           variant === 'borderless' && 'border-transparent bg-transparent',
           className,
         )}
@@ -105,7 +105,7 @@ const ErrorAlert = memo<ErrorAlertProps>(
             {closable ? (
               <span className="inline-flex flex-none coarse:p-1.5">
                 <ActionIcon
-                  className="relative coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
+                  className="relative coarse:after:absolute coarse:after:-inset-1.5 coarse:after:content-['']"
                   icon={X}
                   size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('close', { ns: 'common' })}
@@ -124,7 +124,7 @@ const ErrorAlert = memo<ErrorAlertProps>(
             <Collapsible className="col-start-2" defaultOpen={extraDefaultExpand}>
               <span className="inline-flex flex-none coarse:p-1.5">
                 <CollapsibleTrigger
-                  className="relative rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground hover:text-foreground coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
+                  className="relative rounded-(--radius-button) text-sm leading-5.5 text-muted-foreground hover:text-foreground coarse:after:absolute coarse:after:-inset-1.5 coarse:after:content-['']"
                   render={<Button size="compact" type="button" variant="ghost" />}
                 >
                   {text?.detail ?? t('appLoading.showDetail', { ns: 'common' })}

@@ -58,13 +58,15 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
       action={
         showRetry ? (
           <Button
+            multiline
+            className="min-w-0 max-w-full break-words [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             disabled={!onRetry && disabled}
             loading={!onRetry && loading}
-            size="sm"
+            size="compact"
             variant="default"
             onClick={handleRetry}
           >
-            <RotateCw /> {t('unknownError.retry')}
+            <RotateCw className="size-4" size={16} /> {t('unknownError.retry')}
           </Button>
         ) : undefined
       }

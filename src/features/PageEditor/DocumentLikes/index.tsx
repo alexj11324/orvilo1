@@ -1,7 +1,6 @@
 'use client';
 
 import type { DocumentLikeSummary } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ThumbsUp } from 'lucide-react';
 import { memo, useCallback, useRef } from 'react';
@@ -11,6 +10,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
@@ -19,97 +19,17 @@ import { documentLikeService } from '@/services/documentLike';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
-const BUTTON_SIZE = 56;
-const ICON_SIZE = 22;
+const BUTTON_SIZE = 40;
+const ICON_SIZE = 16;
 
-const styles = createStaticStyles(({ css }) => ({
-  avatars: css`
-    flex-wrap: wrap;
-    justify-content: center;
-
-    /* ~15 avatars per row: 15 × (32px avatar + 8px gap) */
-    max-width: 600px;
-    min-height: 32px;
-  `,
-  button: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: ${BUTTON_SIZE}px;
-    height: ${BUTTON_SIZE}px;
-    padding: 0;
-    border: 1px solid ${cssVar.colorPrimary};
-    border-radius: 50%;
-
-    color: ${cssVar.colorPrimary};
-
-    background: transparent;
-
-    transition:
-      transform ${cssVar.motionDurationMid} ${cssVar.motionEaseOutBack},
-      background-color ${cssVar.motionDurationMid},
-      border-color ${cssVar.motionDurationMid},
-      color ${cssVar.motionDurationMid},
-      box-shadow ${cssVar.motionDurationMid};
-
-    &:hover {
-      transform: scale(1.06);
-      background: ${cssVar.colorPrimaryBg};
-    }
-
-    &:active {
-      transform: scale(0.94);
-    }
-
-    &:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 3px ${cssVar.colorPrimaryBg};
-    }
-
-    &[aria-pressed='true'] {
-      border-color: ${cssVar.colorWarning};
-      color: ${cssVar.colorWhite};
-      background: ${cssVar.colorWarning};
-      box-shadow: 0 8px 24px ${cssVar.colorWarningBg};
-
-      &:hover {
-        background: ${cssVar.colorWarningHover};
-      }
-
-      &:focus-visible {
-        box-shadow: 0 0 0 3px ${cssVar.colorWarningBg};
-      }
-    }
-
-    &:disabled {
-      cursor: progress;
-      opacity: 0.7;
-    }
-  `,
-  caption: css`
-    display: flex;
-    gap: 16px;
-    align-items: center;
-
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
-
-    &::before,
-    &::after {
-      content: '';
-      width: 40px;
-      height: 1px;
-      background: ${cssVar.colorBorderSecondary};
-    }
-  `,
-  section: css`
-    width: 100%;
-    margin-block-start: 48px;
-  `,
-}));
+const styles = {
+  avatars: 'flex-wrap justify-center max-w-150 min-h-8',
+  button:
+    "relative w-10 p-0 rounded-full border-primary bg-transparent text-primary-text hover:bg-primary-wash aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-on-fill aria-pressed:hover:bg-primary-hover aria-pressed:hover:text-primary-hover-foreground coarse:after:absolute coarse:after:-inset-0.5 coarse:after:content-['']",
+  caption:
+    "flex items-center gap-4 text-xs leading-5 text-muted-foreground whitespace-nowrap before:content-[''] before:w-10 before:h-px before:bg-divider after:content-[''] after:w-10 after:h-px after:bg-divider",
+  section: 'w-full mbs-8',
+};
 
 const useDocumentLikeSummary = (workspaceId: string | null, documentId?: string | null) =>
   useClientDataSWR<DocumentLikeSummary>(
@@ -231,12 +151,14 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
       className={cn('flex flex-col items-center gap-4', styles.section)}
       onClick={(event) => event.stopPropagation()}
     >
-      <button
+      <Button
         aria-label={ariaLabel}
         aria-pressed={liked}
         className={styles.button}
         disabled={isLoading || !data}
+        size="large"
         type={'button'}
+        variant="outline"
         onClick={() => void toggle()}
       >
         <ThumbsUp
@@ -244,11 +166,9 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
           size={ICON_SIZE}
           strokeWidth={liked ? 0 : 1.5}
         />
-      </button>
+      </Button>
       <span className={styles.caption}>
-        <span className="text-(length:--text-dense)" style={{ color: 'inherit' }}>
-          {label}
-        </span>
+        <span className="text-xs leading-5 text-inherit">{label}</span>
       </span>
       {(likers.length > 0 || overflow > 0) && (
         <div className={cn('flex gap-2', styles.avatars)}>
@@ -270,7 +190,7 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
             );
           })}
           {overflow > 0 && (
-            <div className="text-(length:--text-dense) text-muted-foreground">
+            <div className="text-xs leading-5 text-muted-foreground">
               {t('pageEditor.likes.more', { count: overflow })}
             </div>
           )}

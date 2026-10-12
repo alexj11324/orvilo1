@@ -1,13 +1,12 @@
 'use client';
 
 import { DraggablePanel } from '@lobehub/ui/base-ui';
-import { cssVar, useResponsive } from 'antd-style';
-import { cn } from 'cn';
 import { PanelRightOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+import { Button } from '@/components/ui/button';
+import { useIsLargeViewport } from '@/hooks/useIsMobile';
 
 import { AcceptanceDrawer } from '../../AcceptanceDrawer';
 import ReportViewer from '../../Report/ReportViewer';
@@ -22,7 +21,7 @@ import { useAcceptanceRailState } from './useAcceptanceRailState';
 
 const AcceptanceLedgerRail = () => {
   const { t } = useTranslation('verify');
-  const { lg = true } = useResponsive();
+  const lg = useIsLargeViewport();
   const isNarrowViewport = !lg;
   const params = useParams<{ checkId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -99,20 +98,23 @@ const AcceptanceLedgerRail = () => {
   return (
     <>
       {!focused && !expand && (
-        <div
-          {...clickableProps()}
+        <Button
+          aria-label={`${t('acceptance.ledger.expand')} (${data.rounds.length})`}
+          className="absolute z-10 inset-bs-4 end-3 w-8 rounded-full border-divider bg-card p-0 hover:border-border hover:bg-fill-quaternary coarse:before:absolute coarse:before:-inset-1.5 coarse:before:content-['']"
+          size="compact"
           title={t('acceptance.ledger.expand')}
-          className={cn(
-            `flex flex-col items-center gap-1.5 ${'cursor-pointer absolute z-10 inset-bs-4 end-3 min-w-8 py-2 px-2 border border-solid border-divider rounded-full bg-card hover:border-border hover:bg-fill-quaternary'}`,
-            CLICKABLE_FOCUS_RING,
-          )}
+          type="button"
+          variant="outline"
           onClick={() => onExpandChange(true)}
         >
-          <PanelRightOpen size={16} />
-          <div className={cn('text-xs font-medium leading-5 text-muted-foreground')}>
+          <PanelRightOpen className="size-4" size={16} />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-bs-1 -end-1 min-w-5 rounded-(--radius-chip) bg-card px-1 text-xs font-medium leading-5 text-muted-foreground"
+          >
             {data.rounds.length}
-          </div>
-        </div>
+          </span>
+        </Button>
       )}
       {isNarrowViewport ? (
         <AcceptanceDrawer
@@ -129,7 +131,7 @@ const AcceptanceLedgerRail = () => {
         </AcceptanceDrawer>
       ) : (
         <DraggablePanel
-          backgroundColor={cssVar.colorBgLayout}
+          backgroundColor={'var(--background)'}
           defaultSize={{ width: 340 }}
           expand={expand}
           minWidth={300}

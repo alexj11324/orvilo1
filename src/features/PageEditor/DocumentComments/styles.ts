@@ -1,4 +1,6 @@
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
+
+import pagePresentation from '../PageEditor.module.css';
 
 /** Max rendered height of an image inside the comment composer / edit box. */
 export const COMMENT_EDITOR_IMAGE_MAX_HEIGHT = 400;
@@ -27,29 +29,7 @@ export const RESIZED_IMAGE_SELECTOR =
 
 const RESIZED_IMAGE = RESIZED_IMAGE_SELECTOR;
 
-export const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    margin-inline-start: 40px;
-    padding-block-start: 8px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  body: css`
-    margin-inline-start: 40px;
-    padding-block-start: 8px;
-    line-height: 1.7;
-  `,
-  card: css`
-    margin-inline: -12px;
-    padding-block: 20px 12px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    transition: background-color 600ms ${cssVar.motionEaseOut};
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
+const retainedImageStyles = createStaticStyles(({ css }) => ({
   commentContent: css`
     /* Published comments render images as left-aligned thumbnails: the
        renderer inlines the stored (natural) width, which would otherwise span
@@ -127,81 +107,30 @@ export const styles = createStaticStyles(({ css }) => ({
       max-height: ${COMMENT_EDITOR_IMAGE_MAX_HEIGHT}px;
     }
   `,
-  composer: css`
-    min-width: 0;
-    transition:
-      border-color ${cssVar.motionDurationFast},
-      box-shadow ${cssVar.motionDurationFast};
-
-    &:focus-within {
-      border-color: ${cssVar.colorPrimary};
-      box-shadow: 0 0 0 2px ${cssVar.colorPrimaryBg};
-    }
-  `,
-  composerAvatar: css`
-    flex: none;
-    align-self: flex-start;
-  `,
-  deleted: css`
-    font-style: italic;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  editComposer: css`
-    min-width: 0;
-
-    &:focus-within {
-      border-color: ${cssVar.colorPrimary};
-      box-shadow: 0 0 0 2px ${cssVar.colorPrimaryBg};
-    }
-  `,
-  header: css`
-    min-height: 32px;
-  `,
-  /* Applied briefly when a notification deep link lands on the card. */
-  highlighted: css`
-    background-color: ${cssVar.colorPrimaryBg};
-  `,
-  meta: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  replyBody: css`
-    margin-inline-start: 36px;
-  `,
-  replyCard: css`
-    padding-block: 12px 8px;
-  `,
-  replyCardActions: css`
-    margin-inline-start: 36px;
-  `,
-  replyList: css`
-    margin-inline-start: 40px;
-    padding-block: 4px;
-    padding-inline-start: 16px;
-  `,
-  replyTargetIcon: css`
-    flex: none;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  section: css`
-    width: 100%;
-    margin-block-start: 64px;
-    padding-block-end: 80px;
-  `,
-  textarea: css`
-    resize: none;
-    padding: 0;
-    font-size: ${cssVar.fontSize};
-    line-height: ${cssVar.lineHeight};
-  `,
-  thread: css`
-    padding-block-end: 20px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: 0;
-    }
-  `,
-  threadList: css`
-    gap: 8px;
-  `,
 }));
+
+export const styles = {
+  actions: `${pagePresentation.commentActions} pbs-2 text-muted-foreground`,
+  body: `${pagePresentation.commentBody} pbs-2 text-sm leading-5.5`,
+  card: `${pagePresentation.commentCard} -mx-3 px-3 rounded-(--radius-card) transition-[background-color] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-out) motion-reduce:transition-none`,
+  commentContent: retainedImageStyles.commentContent,
+  commentEditor: retainedImageStyles.commentEditor,
+  composer:
+    'min-w-0 rounded-(--radius-input) transition-[border-color,box-shadow] duration-(--orvilo-motion-fast) ease-[ease] focus-within:border-primary focus-within:[box-shadow:0_0_0_2px_var(--primary-wash)] motion-reduce:transition-none',
+  composerAvatar: 'flex-none self-start',
+  deleted: 'italic text-muted-foreground',
+  editComposer:
+    'min-w-0 rounded-(--radius-input) focus-within:border-primary focus-within:[box-shadow:0_0_0_2px_var(--primary-wash)]',
+  header: 'min-h-8',
+  highlighted: 'bg-primary-wash',
+  meta: 'text-xs leading-5 text-muted-foreground',
+  replyBody: `${pagePresentation.commentReplyBody}`,
+  replyCard: `${pagePresentation.commentReplyCard}`,
+  replyCardActions: `${pagePresentation.commentReplyActions}`,
+  replyList: 'mis-10 py-1 pis-4',
+  replyTargetIcon: 'flex-none text-muted-foreground',
+  section: 'w-full mbs-8 pbe-20',
+  textarea: 'resize-none p-0 text-sm leading-5.5',
+  thread: 'pbe-5 border-be border-divider last:border-be-0',
+  threadList: 'gap-2',
+};

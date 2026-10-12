@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -39,7 +38,17 @@ const VerifyMessage = memo<VerifyMessageProps>(({ id }) => {
 
   return (
     <div className="flex flex-col py-2">
-      <div className={styles.card} style={{ background: phaseCardBackground(phase, cssVar) }}>
+      <div
+        className={styles.card}
+        style={{
+          background: phaseCardBackground(phase, {
+            colorBgElevated: 'var(--popover)',
+            colorError: 'var(--destructive)',
+            colorSuccess: 'var(--success)',
+            colorWarning: 'var(--warning)',
+          }),
+        }}
+      >
         <RunResult embedded operationId={operationId} round={ordinal} />
         <CheckerDock embedded operationId={operationId} />
       </div>

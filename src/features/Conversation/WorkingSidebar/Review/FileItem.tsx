@@ -2,7 +2,6 @@
 import { PatchDiff } from '@lobehub/ui';
 import type { GitFileDiffStatus } from '@orvilo/electron-client-ipc';
 import { nanoid } from '@orvilo/utils';
-import { cssVar as themeCssVar } from 'antd-style';
 import { cn } from 'cn';
 import { CopyIcon, LocateFixedIcon, Undo2Icon } from 'lucide-react';
 import path from 'path-browserify-esm';
@@ -24,69 +23,82 @@ import { buildCodeContextSelection } from './selection';
 const styles = {
   additions: 'text-success-text',
   actions:
-    'pointer-events-none absolute inset-bs-0 inset-be-0 -end-2 items-center ps-7 pe-0 opacity-0 [background:linear-gradient(to_right,transparent_0,var(--accent)_28px),linear-gradient(to_right,transparent_0,var(--card)_28px)] rtl:[background:linear-gradient(to_left,transparent_0,var(--accent)_28px),linear-gradient(to_left,transparent_0,var(--card)_28px)] transition-opacity duration-(--orvilo-motion-mid) ease-[ease] [[data-review-row]:hover_&]:pointer-events-auto [[data-review-row]:hover_&]:opacity-100',
-  rowAction: 'flex-none text-foreground-tertiary',
+    'pointer-events-none absolute inset-bs-0 inset-be-0 -end-2 items-center ps-7 pe-0 opacity-0 [background:linear-gradient(to_right,transparent_0,var(--accent)_28px),linear-gradient(to_right,transparent_0,var(--card)_28px)] rtl:[background:linear-gradient(to_left,transparent_0,var(--accent)_28px),linear-gradient(to_left,transparent_0,var(--card)_28px)] transition-opacity duration-(--orvilo-motion-mid) ease-[ease] [[data-review-row]:hover_&]:pointer-events-auto [[data-review-row]:hover_&]:opacity-100 [[data-review-row]:focus-within_&]:pointer-events-auto [[data-review-row]:focus-within_&]:opacity-100',
+  rowAction: 'flex-none text-muted-foreground',
   revertDanger: 'hover:text-destructive-text',
   deletions: 'text-destructive-text',
-  empty: 'py-3 text-sm text-foreground-tertiary text-center',
-  dir: '[direction:rtl] overflow-hidden [flex:0_1_auto] min-w-0 text-foreground-tertiary text-start text-ellipsis whitespace-nowrap',
-  fileName: 'flex-none text-foreground whitespace-nowrap',
-  header: 'relative flex gap-2 items-center w-full min-w-0 text-xs',
+  empty: 'py-3 text-sm leading-5.5 text-muted-foreground text-center',
+  dir: '[direction:rtl] overflow-hidden [flex:0_1_auto] min-w-0 text-xs leading-5 text-muted-foreground text-start text-ellipsis whitespace-nowrap',
+  fileName: 'flex-none text-sm leading-5.5 text-foreground whitespace-nowrap',
+  header: 'relative flex gap-2 items-center w-full min-w-0 text-xs leading-5',
   pathWrapper: 'overflow-hidden flex [flex:0_1_auto] min-w-0',
-  stats: 'flex-none font-mono text-xs tabular-nums',
+  stats: 'flex-none font-mono text-xs leading-5 tabular-nums',
 };
 
 const reviewDiffUnsafeCSS = `
   :host {
-    --diffs-dark-bg: transparent !important;
-    --diffs-light-bg: transparent !important;
+    --diffs-dark-bg: transparent;
+    --diffs-light-bg: transparent;
     --diffs-gap-fallback: 8px;
-    --diffs-added-light: ${themeCssVar.colorSuccessHover};
-    --diffs-added-dark: ${themeCssVar.colorSuccessBorderHover};
-    --diffs-modified-light: ${themeCssVar.colorInfoHover};
-    --diffs-modified-dark: ${themeCssVar.colorInfoBorderHover};
-    --diffs-deleted-light: ${themeCssVar.colorErrorHover};
-    --diffs-deleted-dark: ${themeCssVar.colorErrorBorderHover};
+    --diffs-font-family: var(--font-mono);
+    --diffs-header-font-family: var(--font-sans);
+    --diffs-font-size: var(--text-sm);
+    --diffs-line-height: calc(var(--spacing) * 5.5);
+    --diffs-added-light: var(--ant-color-success-hover);
+    --diffs-added-dark: var(--ant-color-success-border-hover);
+    --diffs-modified-light: var(--ant-color-info-hover);
+    --diffs-modified-dark: var(--ant-color-info-border-hover);
+    --diffs-deleted-light: var(--ant-color-error-hover);
+    --diffs-deleted-dark: var(--ant-color-error-border-hover);
   }
 
   [data-gutter-buffer] {
-    opacity: 0.2 !important;
+    opacity: 0.2;
   }
 
   [data-code] {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   [data-gutter] {
-    backdrop-filter: blur(16px) !important;
+    backdrop-filter: blur(16px);
   }
 
   [data-gutter-utility-slot] [data-utility-button] {
-    width: 18px !important;
-    min-width: 18px !important;
-    height: 18px !important;
-    margin-right: calc(1ch - 8px) !important;
-    border: 1px solid #0969da !important;
-    border-radius: 4px !important;
-    background: #0969da !important;
-    background-color: #0969da !important;
-    color: #fff !important;
-    fill: currentColor !important;
-    box-shadow: 0 1px 3px ${themeCssVar.colorFillSecondary} !important;
+    width: calc(var(--spacing) * 8);
+    min-width: calc(var(--spacing) * 8);
+    height: calc(var(--spacing) * 8);
+    margin-right: calc(1ch + 1px - var(--spacing) * 4);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-button);
+    background: var(--primary);
+    color: var(--primary-on-fill);
+    fill: currentColor;
+    box-shadow: none;
   }
 
   [data-gutter-utility-slot] [data-utility-button]:is(:hover, :focus-visible, :active) {
-    border-color: #0860ca !important;
-    background: #0860ca !important;
-    background-color: #0860ca !important;
-    color: #fff !important;
-    fill: currentColor !important;
+    border-color: var(--primary-hover);
+    background: var(--primary-hover);
+    color: var(--primary-hover-foreground);
+    fill: currentColor;
+  }
+
+  [data-gutter-utility-slot] [data-utility-button]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 
   [data-gutter-utility-slot] [data-utility-button] [data-icon] {
-    width: 10px !important;
-    height: 10px !important;
+    width: calc(var(--spacing) * 4);
+    height: calc(var(--spacing) * 4);
+  }
+
+  @media (pointer: coarse) {
+    [data-gutter-utility-slot] [data-utility-button]::before {
+      inset: calc(var(--spacing) * -1.5);
+    }
   }
 `;
 
@@ -191,7 +203,7 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
           {additions > 0 && deletions > 0 && ' '}
           {deletions > 0 && <span className={styles.deletions}>-{deletions}</span>}
         </span>
-        <div className={cn('flex items-center gap-0.5', styles.actions)}>
+        <div className={cn('flex items-center gap-1', styles.actions)}>
           <ActionIcon
             className={styles.rowAction}
             classNames={{ icon: 'size-4' }}

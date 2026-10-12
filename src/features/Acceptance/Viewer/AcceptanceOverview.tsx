@@ -1,8 +1,9 @@
 'use client';
 
-import { useResponsive } from 'antd-style';
 import { useState } from 'react';
 import { useLocation } from 'react-router';
+
+import { useIsMediumViewport } from '@/hooks/useIsMobile';
 
 import { useAcceptanceScope } from './AcceptanceScope';
 import AcceptanceCheckInventory from './Checks/AcceptanceCheckInventory';
@@ -40,7 +41,7 @@ interface AcceptancePageProps {
 export const AcceptanceOverview = ({
   onDraftToComposer,
 }: Pick<AcceptancePageProps, 'onDraftToComposer'>) => {
-  const { md = false } = useResponsive();
+  const md = useIsMediumViewport();
   const { acceptanceId, embedded } = useAcceptanceScope();
   const { turn } = useAcceptanceTurn(embedded);
   const { data } = useAcceptanceBundle(acceptanceId);

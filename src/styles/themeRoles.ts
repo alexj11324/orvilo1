@@ -196,6 +196,7 @@ const ThemeRoleStyles = createGlobalStyle(({ theme }) => {
 interface ResolvedThemeRoleValues {
   fillTertiary: string;
   largeMinWidth: number;
+  mediumMinWidth: number;
   mobileMaxWidth: number;
 }
 
@@ -207,6 +208,8 @@ const ResolvedFillTertiaryContext = createContext<ResolvedThemeRoleValues | unde
 const DEFAULT_MOBILE_MAX_WIDTH = 575;
 // Installed/public screenLG alias default; deliberately not Tailwind lg1024.
 const DEFAULT_LARGE_MIN_WIDTH = 992;
+// Installed public screenMD default; medium remains independent of LG992/XS575.
+const DEFAULT_MEDIUM_MIN_WIDTH = 768;
 
 export function ThemeRoles({ children }: { children?: ReactNode }) {
   const theme = useTheme();
@@ -215,8 +218,9 @@ export function ThemeRoles({ children }: { children?: ReactNode }) {
       fillTertiary: theme.colorFillTertiary,
       mobileMaxWidth: theme.screenXSMax,
       largeMinWidth: theme.screenLG,
+      mediumMinWidth: theme.screenMD,
     }),
-    [theme.colorFillTertiary, theme.screenXSMax, theme.screenLG],
+    [theme.colorFillTertiary, theme.screenXSMax, theme.screenLG, theme.screenMD],
   );
   return createElement(
     ResolvedFillTertiaryContext.Provider,
@@ -242,4 +246,9 @@ export function useResolvedMobileMaxWidth(): number {
 export function useResolvedLargeMinWidth(): number {
   const values = use(ResolvedFillTertiaryContext);
   return values?.largeMinWidth ?? DEFAULT_LARGE_MIN_WIDTH;
+}
+
+export function useResolvedMediumMinWidth(): number {
+  const values = use(ResolvedFillTertiaryContext);
+  return values?.mediumMinWidth ?? DEFAULT_MEDIUM_MIN_WIDTH;
 }

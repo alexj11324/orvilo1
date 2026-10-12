@@ -1,7 +1,6 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { type MouseEvent, type ReactNode } from 'react';
@@ -258,7 +257,7 @@ const MessageItem = memo<MessageItemProps>(
           data-index={index}
           className={cn(
             'flex flex-col',
-            cx(styles.message, className, shouldDimCreatingMessage && styles.loading),
+            cn(styles.message, className, shouldDimCreatingMessage && styles.loading),
           )}
           onContextMenu={onContextMenu}
         >

@@ -1,7 +1,6 @@
 'use client';
 
 import { DEFAULT_BLOCK_ANCHOR_PADDING, EditorProvider } from '@lobehub/editor/react';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import type { CSSProperties, FC, ReactNode, UIEvent } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
@@ -24,6 +23,7 @@ import Header from './Header';
 import LockedAlert from './LockedAlert';
 import LockStatusBanner from './LockStatusBanner';
 import { PageAgentProvider } from './PageAgentProvider';
+import editorStyles from './PageEditor.module.css';
 import { PageEditorProvider } from './PageEditorProvider';
 import RightPanel from './RightPanel';
 import { usePageEditorStore } from './store';
@@ -68,22 +68,7 @@ const styles = {
   editorContainer: 'relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
 };
 
-const overrideStyles = createStaticStyles(({ css }) => ({
-  editorContent: css`
-    .orvilo-editor-table-scroll-wrapper.orvilo-editor-table-scroll-wrapper {
-      --lobe-block-anchor-padding: var(--orvilo-pageeditor-table-bleed-inline);
-
-      position: relative;
-      box-sizing: border-box;
-      width: 100cqi;
-      margin-inline: calc(var(--orvilo-pageeditor-table-bleed-inline) * -1);
-    }
-
-    .orvilo-editor-table-scroll-wrapper .editor_table {
-      width: max-content;
-    }
-  `,
-}));
+const overrideStyles = { editorContent: editorStyles.editorContent };
 
 interface PageEditorProps {
   /** Composer that receives selections created by the Ask Copilot toolbar item. */

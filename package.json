@@ -170,7 +170,8 @@
       "eslint --fix",
       "prettier --parser=typescript --write",
       "tsx scripts/ci/checkNativeControls.mjs",
-      "tsx scripts/ci/checkHostDeviceBoundaries.mjs"
+      "tsx scripts/ci/checkHostDeviceBoundaries.mjs",
+      "node scripts/ci/checkCaseOnlyFilenames.mjs"
     ],
     "*.{yml,yaml}": [
       "eslint --fix"

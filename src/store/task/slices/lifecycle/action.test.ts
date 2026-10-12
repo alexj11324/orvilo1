@@ -324,6 +324,22 @@ describe('TaskLifecycleSliceAction', () => {
     });
   });
 
+  describe('a refused stop of a run', () => {
+    it('is reported and still rejects, so the confirmation stays open', async () => {
+      const { toast } = await import('@/components/toast');
+      const error = vi.spyOn(toast, 'error').mockReturnValue({} as any);
+      vi.mocked(taskService.cancelTopic).mockRejectedValue(
+        Object.assign(new Error('denied'), { data: { code: 'FORBIDDEN' } }),
+      );
+
+      await expect(useTaskStore.getState().cancelTopic('tpc_1')).rejects.toThrow('denied');
+
+      expect(error).toHaveBeenCalledTimes(1);
+      expect(String(error.mock.calls[0]?.[0])).not.toContain('denied');
+      error.mockRestore();
+    });
+  });
+
   describe('deleteTopic', () => {
     it('should call service and refresh active detail', async () => {
       const { mutate } = await import('@/libs/swr');

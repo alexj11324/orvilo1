@@ -46,16 +46,25 @@ platform branches.
 
 ## Authorize and connect
 
-Build the embedded CLI in each new worktree before testing device execution:
+The desktop dev launcher (`apps/desktop/scripts/dev.mjs`, which `electron-dev.sh`
+and `bun run dev:desktop` both use) builds the embedded CLI on every start and
+holds Electron until that build finishes. The build produces `apps/cli/dist/index.js`
+and stages the Prime runner; a local Agent run fails with `Embedded CLI not found`
+without them. If the launcher prints `embedded CLI build failed`, Electron still
+starts but device execution will not work: the launcher removes the previous CLI so
+a run cannot use an older revision. Fix the build, or run it by hand to see the error.
+
+Dev instances of one checkout share that output. The first instance to start
+builds it and keeps the claim until it stops; later ones reuse its CLI and print
+`another dev instance of this checkout owns the embedded CLI`. Restart the owning
+instance to pick up CLI changes:
 
 ```sh
-cd apps/cli
-bun run build
+cd apps/desktop
+bun run build:cli
 ```
 
-This produces `dist/index.js` and stages the Prime runner. Starting the Electron
-renderer alone does not produce these artifacts. Verify the complete build
-succeeds, then launch Electron from an environment where `opencode --version`
+Check that the launcher reported no CLI build failure, then launch Electron from an environment where `opencode --version`
 works. In a disposable integration environment, install the CLI under a private
 tools directory and put its `bin` directory on the desktop process's PATH.
 

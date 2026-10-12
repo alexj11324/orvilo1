@@ -496,6 +496,29 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
     });
 
+    // Nothing has been sent to a runtime yet, so this is a known failure. A
+    // throw here made the task runner park the run as "outcome unknown".
+    it('reports a token signing failure as a failed start, before anything is dispatched', async () => {
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      const { signHeteroOperationJWT } = await import('@/libs/trpc/utils/internalJwt');
+      vi.mocked(signHeteroOperationJWT).mockRejectedValueOnce(
+        new Error('JWKS_KEY environment variable is not set'),
+      );
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(result).toMatchObject({
+        autoStarted: false,
+        error: 'OPERATION_TOKEN_SIGNING_FAILED',
+        status: 'error',
+        success: false,
+      });
+      // The cause can name server configuration; it stays in the server log.
+      expect(JSON.stringify(result)).not.toContain('JWKS_KEY');
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+    });
+
     it('upgrades a bound `local` target to the bound device (server-side run)', async () => {
       await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'local' });
 

@@ -777,6 +777,57 @@ describe('TaskDetailSliceAction', () => {
     });
   });
 
+  describe('updateTask refused while the Issue is executing', () => {
+    const refusal = Object.assign(
+      new Error('HANDOFF_REQUIRED: the agent of an executing Issue changes by handoff.'),
+      { data: { code: 'CONFLICT', httpStatus: 409 } },
+    );
+
+    it('offers to transfer execution instead of a Retry that cannot succeed', async () => {
+      useTaskStore.setState({
+        taskDetailMap: { 'T-1': { agentId: 'agt_A', identifier: 'T-1', instruction: 'x' } },
+      });
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { domainRevision: 9, id: 'task-uuid-1' },
+      } as any);
+      vi.mocked(taskService.update).mockRejectedValue(refusal);
+      vi.mocked(taskService.handoff).mockResolvedValue({} as any);
+
+      await expect(
+        useTaskStore.getState().updateTask('T-1', { assigneeAgentId: 'agt_B' }),
+      ).rejects.toThrow();
+
+      const options = vi.mocked(toast.error).mock.calls.at(-1)?.[0];
+      if (!options || typeof options === 'string') throw new Error('Expected a toast with actions');
+      expect(options.title).toBe('This issue is being worked on');
+      expect(String(options.description ?? '')).not.toContain('HANDOFF_REQUIRED');
+      expect(options.actions).toHaveLength(1);
+
+      options.actions?.[0]?.onClick?.();
+      await vi.waitFor(() =>
+        expect(taskService.handoff).toHaveBeenCalledWith(
+          expect.objectContaining({ taskId: 'task-uuid-1', toAgentId: 'agt_B' }),
+        ),
+      );
+      expect(taskService.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the ordinary save failure for any other conflict', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({ data: { domainRevision: 9 } } as any);
+      vi.mocked(taskService.update).mockRejectedValue(
+        Object.assign(new Error('Task changed'), { data: { code: 'CONFLICT' } }),
+      );
+
+      await expect(
+        useTaskStore.getState().updateTask('T-1', { assigneeAgentId: 'agt_B' }),
+      ).rejects.toThrow();
+
+      const options = vi.mocked(toast.error).mock.calls.at(-1)?.[0];
+      if (!options || typeof options === 'string') throw new Error('Expected a toast');
+      expect(options.title).not.toBe('This issue is being worked on');
+    });
+  });
+
   describe('handoffTask', () => {
     it('reports and rejects a failed ownership lookup so confirmation can retry', async () => {
       const error = new Error('offline');

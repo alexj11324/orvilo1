@@ -2566,10 +2566,11 @@ export const taskRouter = router({
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
         if (error instanceof TaskHandoffRequiredError) {
+          // The leading code is what the client matches to offer the transfer;
+          // the sentence after it is for API callers.
           throw new TRPCError({
             code: 'CONFLICT',
-            message:
-              'Cannot change the agent assignee of a running task. Transfer execution with task.handoff instead.',
+            message: `${error.code}: the agent of an executing Issue changes by task.handoff.`,
           });
         }
         console.error('[task:update]', error);

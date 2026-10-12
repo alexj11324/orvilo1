@@ -108,6 +108,10 @@ export interface TaskUpdateOptions {
 
 const TASK_DETAIL_POLL_INTERVAL = 10_000;
 
+/** The server refuses a bare agent change on an executing Issue with this code. */
+const isHandoffRequiredError = (error: unknown): boolean =>
+  error instanceof Error && error.message.startsWith('HANDOFF_REQUIRED');
+
 const hasInFlightSubtask = (subtasks: TaskDetailSubtask[] | undefined): boolean =>
   subtasks?.some(
     (subtask) =>
@@ -620,6 +624,26 @@ export class TaskDetailSliceActionImpl {
             ...options,
             source: 'external',
           });
+        // The Issue is executing, so the same write can never succeed: offer
+        // the transfer the server asked for in place of Retry.
+        if (assigneeAgentId !== undefined && isHandoffRequiredError(error)) {
+          toast.error({
+            actions: [
+              {
+                label: t('taskDetail.handoff.transfer', { ns: 'chat' }),
+                // handoffTask reports its own failure.
+                onClick: () =>
+                  void this.#get()
+                    .handoffTask(id, assigneeAgentId)
+                    .catch(() => {}),
+                variant: 'primary',
+              },
+            ],
+            description: t('taskDetail.handoff.requiredDesc', { ns: 'chat' }),
+            title: t('taskDetail.handoff.required', { ns: 'chat' }),
+          });
+          return;
+        }
         saveToast(error, { retry });
       },
       setStatus: (status) => this.#get().internal_setTaskSaveStatus(id, status),

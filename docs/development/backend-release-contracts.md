@@ -61,6 +61,10 @@ Refused parent and relation writes carry a stable `code` in the error data: `CYC
 
 Deleting a parent Issue does not delete its sub-issues; they become top-level Issues.
 
+**Starts that fail before dispatch.** A start that cannot reach a runtime is a known failure, not an unknown outcome: the run result carries `success: false`, `status: 'error'` and an error code, the dispatch settles as `failed`, and the Issue offers Retry. This includes a failure to sign the token a device or sandbox run reports back with (`OPERATION_TOKEN_SIGNING_FAILED`; the cause stays in the server log because it can name server configuration). `outcome_unknown` is reserved for a start whose request may have reached a runtime.
+
+**Changing the agent of an executing Issue.** `task.update` refuses it with `CONFLICT` and a message that begins `HANDOFF_REQUIRED`; clients match that prefix, not the sentence after it. An Issue is executing while it has an active dispatch, which includes `outcome_unknown`, so the Issue's `status` alone does not predict the refusal. The client answers the refusal by offering the transfer (`task.handoff`) in place of Retry.
+
 ## Inbox and external alerts
 
 Relevant Inbox work/action records are durable. Recipient selection, subscriptions, actor exclusion, authorization, and deduplication still apply. This follows the separation documented by [Linear](https://linear.app/docs/notifications) and [Plane](https://docs.plane.so/communication-and-collaboration/notifications).

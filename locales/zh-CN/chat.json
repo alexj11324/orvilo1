@@ -1912,6 +1912,8 @@
   "taskDetail.goalTimeline.rounds": "{{count}} 轮",
   "taskDetail.goalTimeline.title": "轮次进展",
   "taskDetail.handoff.confirm": "停止当前运行并将此 Issue 移交给 {{agent}}？",
+  "taskDetail.handoff.required": "此 Issue 正在执行中",
+  "taskDetail.handoff.requiredDesc": "更换 Agent 会停止当前运行。点击“移交”把 Issue 交给新的 Agent。",
   "taskDetail.handoff.title": "移交执行？",
   "taskDetail.handoff.transfer": "移交",
   "taskDetail.instruction": "Issue 说明",

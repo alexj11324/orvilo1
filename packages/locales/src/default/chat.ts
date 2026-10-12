@@ -2114,6 +2114,9 @@ export default {
   'taskDetail.runAll.partialFailure_one': 'Started {{ok}} of {{total}} subtask; {{failed}} failed.',
   'taskDetail.runAll.loading': 'Loading sub-issue plan...',
   'taskDetail.reassignDisabled': 'Cannot reassign agent while issue is running',
+  'taskDetail.handoff.required': 'This issue is being worked on',
+  'taskDetail.handoff.requiredDesc':
+    'Changing the agent stops the current run. Transfer it to hand the issue over.',
   'taskDetail.handoff.title': 'Transfer execution?',
   'taskDetail.handoff.confirm': 'Stop the current run and transfer this issue to {{agent}}?',
   'taskDetail.handoff.transfer': 'Transfer',

@@ -11,3 +11,7 @@ Working-directory and worktree changes use the active conversation identity and 
 First-login setup creates a real Agent before the workspace wizard, verifies a provider/model and execution device, and persists that Agent through workspace completion. Release acquisition and failed-send recovery are separate dependent layers; integration must preserve their regressions and later corrections.
 
 Verify these connected behaviors in the same fixed Electron candidate before release. Shared component geometry CI, focused tests and remote Typecheck are supporting evidence; development and mock-provider runs do not prove public installer or model-provider acceptance.
+
+## Composer settings popover
+
+The settings button beside the Agent picker opens the per-conversation controls (working directory, permission mode). The Agent picker is the one place that names the selected Agent. The popover adds an Agent block (`src/features/AIChatbot/AgentInfo.tsx`) only when that Agent has a description or instructions to show; an Agent with neither gets no block, so its name is not repeated.

@@ -299,6 +299,13 @@ jobs:
           node scripts/ci/checkHostDeviceBoundaries.mjs
           node --test scripts/ci/checkHostDeviceBoundaries.test.mjs
 
+      - name: Check case-only filename collisions
+        # Linux keeps `AgentInfo.tsx` and `agentInfo.ts` apart; macOS and
+        # Windows resolve both imports to one file. Only this step catches it.
+        run: |
+          node scripts/ci/checkCaseOnlyFilenames.mjs
+          node --test scripts/ci/checkCaseOnlyFilenames.test.mjs
+
       - name: Fail fast — cancel sibling jobs
         if: failure() && env.CI_RUN_ALL != 'true'
         env:

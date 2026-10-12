@@ -15,10 +15,9 @@ export interface ExperimentGroupData extends GraphNodeData {
 }
 
 const styles = {
-  frame:
-    'box-border size-full border border-border rounded-[12px] bg-[color-mix(in_srgb,var(--info)_3%,transparent)]',
+  frame: 'box-border size-full border border-border rounded-(--radius-card) bg-muted',
   header:
-    'py-3 px-4 [border-block-end:1px_solid_var(--sidebar-border)] rounded-t-[12px] rounded-b-none bg-card',
+    'box-border h-[calc(var(--spacing)*12.5)] px-4 border-be border-divider rounded-t-(--radius-card) rounded-b-none bg-card',
   title: 'min-w-0 truncate',
 };
 
@@ -34,25 +33,28 @@ const ExperimentGroup = ({ data }: NodeProps) => {
         <Button
           aria-expanded
           aria-label={t('goalExperiment.collapseNamed', { title: view.node.title })}
-          className={cn('nodrag')}
-          size="sm"
-          style={{ minWidth: 0 }}
+          size="compact"
           title={view.node.title}
+          className={cn(
+            "nodrag flex-1 min-w-0 relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']",
+          )}
           onClick={(event) => {
             event.stopPropagation();
             onToggle();
           }}
         >
-          <ChevronDown size={14} />
-          <FlaskConical size={14} />
+          <ChevronDown size={16} />
+          <FlaskConical size={16} />
           <span className={styles.title}>
             {t('goalExperiment.number', { number: view.seq })} · {view.node.title}
           </span>
         </Button>
-        <div className="flex gap-1" style={{ flexShrink: 0 }}>
+        <div className="flex shrink-0 gap-1">
           <Button
-            className={cn('nodrag')}
-            size="sm"
+            size="compact"
+            className={cn(
+              "nodrag relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']",
+            )}
             onClick={(event) => {
               event.stopPropagation();
               onInspect();
@@ -62,8 +64,10 @@ const ExperimentGroup = ({ data }: NodeProps) => {
           </Button>
           <Button
             aria-label={t('goalExperiment.drillNamed', { title: view.node.title })}
-            className={cn('nodrag')}
-            size="sm"
+            size="compact"
+            className={cn(
+              "nodrag relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']",
+            )}
             onClick={(event) => {
               event.stopPropagation();
               onEnter();
@@ -73,9 +77,9 @@ const ExperimentGroup = ({ data }: NodeProps) => {
           </Button>
         </div>
       </div>
-      <div className="flex gap-3" style={{ paddingBlock: 6, paddingInline: 16 }}>
+      <div className="box-border flex h-7 items-center gap-3 py-1 px-4">
         <div className="flex items-center gap-1.25">
-          <status.icon color={status.color} size={13} />
+          <status.icon color={status.color} size={16} />
           <div className="text-xs" style={{ color: status.color }}>
             {t(`goalExperiment.status.${view.node.status}`)}
           </div>

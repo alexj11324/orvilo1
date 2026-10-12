@@ -13,13 +13,13 @@ import {
   toast,
   useModalContext,
 } from '@lobehub/ui/base-ui';
-import { Form } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import { BrainIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import { ModalFooter } from '@/components/Modal';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';

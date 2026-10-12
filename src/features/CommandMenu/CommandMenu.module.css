@@ -1,0 +1,220 @@
+.commandRoot {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: min(calc(var(--spacing) * 160), 90vw);
+  max-height: min(calc(var(--spacing) * 125), 70vh);
+  border-radius: var(--radius-overlay);
+  background: var(--popover);
+  box-shadow: var(--shadow-popover);
+  animation: command-menu-native-enter 120ms ease-out;
+}
+
+.commandRoot[data-closing='true'] {
+  animation: command-menu-native-exit 150ms ease-out forwards;
+}
+
+/* cmdk documents these attributes as its public styling API. No generated
+   registered class, private child path or selector copied from a vendor cache. */
+.commandRoot [cmdk-input] {
+  flex: 1;
+  min-width: 0;
+  height: calc(var(--spacing) * 9);
+  padding: 0;
+  border: none;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: calc(1.375 / 0.875);
+  color: var(--foreground);
+  background: transparent;
+  outline: none;
+}
+
+.commandRoot [cmdk-input]:focus-visible {
+  border-radius: var(--radius-input);
+  outline: calc(var(--spacing) * 0.5) solid var(--ring);
+  outline-offset: calc(var(--spacing) * 0.5);
+}
+
+.commandRoot [cmdk-input]::placeholder {
+  color: var(--muted-foreground);
+}
+
+.commandRoot [cmdk-list] {
+  overflow-y: auto;
+  min-height: 0;
+  max-height: calc(var(--spacing) * 100);
+  padding: calc(var(--spacing) * 2);
+}
+
+.commandRoot [cmdk-empty] {
+  padding-block: calc(var(--spacing) * 8);
+  padding-inline: calc(var(--spacing) * 4);
+  font-size: var(--text-sm);
+  line-height: calc(1.375 / 0.875);
+  color: var(--foreground-tertiary);
+  text-align: center;
+}
+
+.commandRoot [cmdk-item] {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  gap: calc(var(--spacing) * 3);
+  align-items: center;
+  min-height: calc(var(--spacing) * 9);
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 4);
+  border-radius: var(--radius-button);
+  color: var(--foreground);
+  transition: background-color var(--orvilo-motion-mid), color var(--orvilo-motion-mid);
+}
+
+.commandRoot [cmdk-item]:not([data-disabled='true']):hover {
+  background: var(--accent);
+}
+
+.commandRoot [cmdk-item][aria-selected='true'] {
+  background: var(--selected);
+}
+
+.commandRoot [cmdk-item][data-disabled='true'] {
+  cursor: default;
+}
+
+.commandRoot [cmdk-group-heading] {
+  user-select: none;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 4);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: calc(1.25 / 0.75);
+  color: var(--muted-foreground);
+}
+
+.commandRoot [cmdk-separator] {
+  height: calc(var(--spacing) * 0.25);
+  margin-block: calc(var(--spacing));
+  background: var(--divider);
+}
+
+.itemActionsButton {
+  position: relative;
+  color: var(--foreground-tertiary);
+  opacity: 0;
+  transition: opacity var(--orvilo-motion-mid), color var(--orvilo-motion-mid), background-color var(--orvilo-motion-mid);
+}
+
+.itemActionsButton:focus-visible,
+[cmdk-item][aria-selected='true'] .itemActionsButton,
+[cmdk-item]:hover .itemActionsButton {
+  opacity: 1;
+}
+
+.itemActionsKey {
+  font-family: inherit;
+}
+
+.itemIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--spacing) * 5);
+  height: calc(var(--spacing) * 5);
+  color: var(--muted-foreground);
+}
+
+.overlay {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-block-start: 15vh;
+  background: var(--overlay-mask);
+  animation: command-menu-native-fade-in 100ms ease-in-out;
+}
+
+.overlay[data-closing='true'] {
+  animation: command-menu-native-fade-out 150ms ease-out forwards;
+}
+
+.skeleton {
+  height: calc(var(--spacing) * 4);
+  border-radius: var(--radius-chip);
+  background: linear-gradient(90deg, var(--selected) 25%, var(--accent) 50%, var(--selected) 75%);
+  background-size: 200% 100%;
+  animation: command-menu-native-pulse 1.5s ease-in-out infinite;
+}
+
+@media (pointer: coarse) {
+  .commandRoot [cmdk-item] {
+    /*32px nested action +14px allocation leaves1px around44px target,
+      including the existing public Button active translation. */
+    min-height: calc(var(--spacing) * 11.5);
+    padding-block: calc(var(--spacing) * 1.75);
+  }
+
+  .itemActionsButton {
+    min-width: calc(var(--spacing) * 11);
+    opacity: 1;
+  }
+
+  .itemActionsButton::after {
+    position: absolute;
+    inset-block: calc(var(--spacing) * -1.75);
+    inset-inline: calc(var(--spacing) * -0.25);
+    content: '';
+  }
+}
+
+.overlay[data-motion-disabled],
+.overlay[data-motion-disabled] .commandRoot,
+.overlay[data-motion-disabled] .skeleton {
+  animation: none;
+}
+
+.overlay[data-motion-disabled] [cmdk-item],
+.overlay[data-motion-disabled] .itemActionsButton {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .commandRoot,
+  .skeleton {
+    animation: none;
+  }
+
+  .commandRoot [cmdk-item],
+  .itemActionsButton {
+    transition: none;
+  }
+}
+
+@keyframes command-menu-native-enter {
+  from { transform: translateY(calc(var(--spacing) * -5)) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes command-menu-native-exit {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(calc(var(--spacing) * -5)) scale(0.96); opacity: 0; }
+}
+
+@keyframes command-menu-native-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes command-menu-native-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes command-menu-native-pulse {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}

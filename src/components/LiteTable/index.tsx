@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 

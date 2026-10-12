@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { type CSSProperties, memo, type ReactNode } from 'react';
 
@@ -9,7 +9,7 @@ import { type InlineTableSortOrder, sortIconActiveClass } from './sortOrder';
 const styles = {
   hoverToActive: 'opacity-60 hover:opacity-100 focus-within:opacity-100',
   sortButton:
-    'inline-flex min-h-7 cursor-pointer items-center gap-1 rounded-(--radius-input) border-0 bg-transparent p-0 [font:inherit] [font-weight:inherit] text-inherit focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+    'inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-(--radius-button) border-0 bg-transparent p-0 [font:inherit] [font-weight:inherit] text-inherit focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 pointer-coarse:min-h-11',
   sortIcon: 'inline-flex text-foreground-tertiary [&.active]:text-foreground',
   table:
     'overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_table]:leading-5.5 [&_th]:bg-fill-quaternary [&_th]:px-3 [&_th]:py-2 [&_th]:text-start [&_th]:font-medium [&_th]:text-muted-foreground [&_td]:px-3 [&_td]:py-2 [&_td]:align-middle [&_tr>:is(td,th):first-child]:ps-6 [&_tr>:is(td,th):last-child]:pe-6',

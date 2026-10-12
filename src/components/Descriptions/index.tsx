@@ -1,5 +1,4 @@
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { type LucideIcon } from 'lucide-react';
 import {
   createElement,

@@ -71,6 +71,10 @@ export interface NavItemProps extends Omit<HTMLAttributes<HTMLElement>, 'childre
    */
   actions?: LazyActions;
   active?: boolean;
+  /** Native class overrides for the owned title and action layout slots. */
+  classNames?: { actions?: string; title?: string };
+  /** Keep the reveal fade by default; inline action rows can reserve their own space. */
+  contentMask?: boolean;
   contextMenuItems?: SidebarMenuItems | (() => SidebarMenuItems);
   /**
    * Optional second line rendered under the title (e.g. a topic's project
@@ -100,6 +104,8 @@ export interface NavItemProps extends Omit<HTMLAttributes<HTMLElement>, 'childre
 const NavItem = memo<NavItemProps>(
   ({
     className,
+    classNames,
+    contentMask = true,
     actions,
     contextMenuItems,
     active,
@@ -228,14 +234,14 @@ const NavItem = memo<NavItemProps>(
           className={cn(
             CONTENT_CLASS_NAME,
             'flex flex-1 items-center gap-2 overflow-hidden',
-            twStyles.content,
+            contentMask && twStyles.content,
           )}
         >
           {titlePrefix}
           {description ? (
             <div className="flex flex-col flex-1 gap-0.5 overflow-hidden">
               <div
-                className="truncate font-medium text-sm"
+                className={cn('truncate font-medium text-sm', classNames?.title)}
                 style={{ color: textColor }}
                 title={typeof title === 'string' ? title : undefined}
               >
@@ -245,7 +251,7 @@ const NavItem = memo<NavItemProps>(
             </div>
           ) : (
             <div
-              className="flex-1 truncate font-medium text-sm"
+              className={cn('flex-1 truncate font-medium text-sm', classNames?.title)}
               style={{ color: textColor }}
               title={typeof title === 'string' ? title : undefined}
             >
@@ -270,6 +276,7 @@ const NavItem = memo<NavItemProps>(
               ACTION_CLASS_NAME,
               'flex items-center justify-end gap-0.5',
               twStyles.actions,
+              classNames?.actions,
             )}
             onClick={(e) => {
               e.preventDefault();

@@ -1,5 +1,5 @@
 import { PreviewCard } from '@base-ui/react/preview-card';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { XIcon } from 'lucide-react';
 import { type CSSProperties, type FC, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

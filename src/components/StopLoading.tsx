@@ -1,7 +1,7 @@
 'use client';
 
 import { type IconType } from '@lobehub/icons';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { useMediaQuery } from 'react-responsive';
 
 import { useUserStore } from '@/store/user';

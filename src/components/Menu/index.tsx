@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import {
   createElement,
   type CSSProperties,
@@ -20,7 +20,7 @@ export type { MenuInfo };
 
 const styles = {
   compact: 'flex flex-col gap-0.5',
-  item: 'flex h-auto cursor-pointer items-center gap-3 rounded-(--radius-button) px-3 text-sm leading-5.5',
+  item: 'flex h-auto cursor-pointer items-center gap-3 rounded-(--radius-button) px-3 text-sm leading-5.5 pointer-coarse:min-h-11',
   groupLabel: 'px-3 py-1.5 text-xs leading-5 text-foreground-tertiary',
   icon: 'inline-flex text-muted-foreground [&_svg]:size-4',
   label: 'min-w-0 flex-1',

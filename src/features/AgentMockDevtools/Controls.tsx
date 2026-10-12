@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Pause, Play, Repeat, RotateCcw, SkipForward, Square } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
@@ -11,68 +10,24 @@ import { useAgentMockReplayTarget } from './hooks/useAgentMockReplayTarget';
 import { useMockCases } from './hooks/useMockCases';
 import { useAgentMockStore } from './store/agentMockStore';
 
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    flex-shrink: 0;
-    height: 40px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  controls: css`
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-  `,
-  counter: css`
-    font-size: 11px;
-    font-feature-settings: 'tnum';
-    color: ${cssVar.colorTextSecondary};
-  `,
-  progress: css`
-    touch-action: none;
-    cursor: pointer;
+const styles = {
+  actions:
+    'flex min-h-10 shrink-0 items-center gap-1 border-be border-divider px-3 pointer-coarse:min-h-[calc(var(--spacing)*11.25)]',
+  controls: 'flex shrink-0 flex-col',
+  counter: 'text-xs leading-5 tabular-nums text-muted-foreground',
+  progress:
+    'group/progress flex h-7 shrink-0 touch-none cursor-pointer items-center border-be border-divider px-3 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 focus-visible:outline-none pointer-coarse:h-11',
+  progressFill:
+    'pointer-events-none absolute inset-y-0 start-0 h-full rounded-[inherit] bg-foreground transition-[width] duration-(--orvilo-motion-mid) ease-linear motion-reduce:transition-none',
+  progressTrack:
+    'relative h-1 flex-1 overflow-hidden rounded-full bg-selected group-hover/progress:bg-accent data-[scrubbing=true]:bg-accent',
+};
 
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:hover .agent-mock-progress-track {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  progressFill: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-
-    height: 100%;
-    border-radius: inherit;
-
-    background: ${cssVar.colorText};
-
-    transition: width 0.16s linear;
-  `,
-  progressTrack: css`
-    position: relative;
-
-    overflow: hidden;
-    flex: 1;
-
-    height: 4px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressTrackScrubbing: css`
-    background: ${cssVar.colorFillTertiary} !important;
-  `,
-}));
+const COMPACT_ACTION_SIZE = {
+  blockSize: 32,
+  borderRadius: 'var(--radius-button)',
+  size: 16,
+} as const;
 
 // Coarse trigger allocates44px; one existing border needs45px outer space.
 const SELECTION_CLASS =
@@ -175,7 +130,7 @@ export const Controls = memo(() => {
     <div className={styles.controls}>
       <div className={SELECTION_CLASS}>
         <CaseTrigger placement={'topLeft'} />
-        <span style={{ flex: 1 }} />
+        <span className="flex-1" />
         <span className={styles.counter}>
           {playback ? `${playback.currentEventIndex}/${playback.totalEvents}` : '—'}
         </span>
@@ -190,53 +145,54 @@ export const Controls = memo(() => {
         tabIndex={0}
         onPointerDown={handleScrubStart}
       >
-        <div
-          className={`agent-mock-progress-track ${styles.progressTrack} ${
-            scrubbing ? styles.progressTrackScrubbing : ''
-          }`}
-        >
+        <div className={styles.progressTrack} data-scrubbing={scrubbing || undefined}>
           <div className={styles.progressFill} style={{ width: `${pct}%` }} />
         </div>
       </div>
-      <div className={`flex items-center gap-1 ${styles.actions}`}>
+      <div className={styles.actions}>
         <ActionIcon
+          className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
           disabled={disabled}
           icon={running ? Pause : Play}
-          size={'small'}
+          size={COMPACT_ACTION_SIZE}
           title={running ? 'Pause' : paused ? 'Resume' : 'Play'}
           onClick={handlePlay}
         />
         <ActionIcon
+          className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
           disabled={disabled}
           icon={SkipForward}
-          size={'small'}
+          size={COMPACT_ACTION_SIZE}
           title={'Next event'}
           onClick={stepEvent}
         />
         <ActionIcon
+          className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
           disabled={disabled}
           icon={RotateCcw}
-          size={'small'}
+          size={COMPACT_ACTION_SIZE}
           title={'Replay from start'}
           onClick={handleReplay}
         />
         <ActionIcon
           active={loop}
           aria-pressed={loop}
+          className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
           icon={Repeat}
-          size={'small'}
+          size={COMPACT_ACTION_SIZE}
           title={loop ? 'Loop on' : 'Loop off'}
           onClick={() => setLoop(!loop)}
         />
         <ActionIcon
           danger
+          className="pointer-coarse:min-h-11 pointer-coarse:min-w-11"
           disabled={!stoppable}
           icon={Square}
-          size={'small'}
+          size={COMPACT_ACTION_SIZE}
           title={'Stop playback'}
           onClick={stop}
         />
-        <span style={{ flex: 1 }} />
+        <span className="flex-1" />
         <span className={styles.counter}>{selected ? selected.name : 'No case selected'}</span>
       </div>
     </div>

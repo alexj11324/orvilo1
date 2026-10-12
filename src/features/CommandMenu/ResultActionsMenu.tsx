@@ -101,7 +101,7 @@ const ResultActionsMenu = memo(() => {
     if (detailPath) {
       entries.push(
         {
-          icon: <CornerDownLeftIcon />,
+          icon: <CornerDownLeftIcon size={16} />,
           key: 'open',
           label: t('cmdk.resultActions.open'),
           run: () => {
@@ -110,7 +110,7 @@ const ResultActionsMenu = memo(() => {
           },
         },
         {
-          icon: <LinkIcon />,
+          icon: <LinkIcon size={16} />,
           key: 'copy-link',
           label: t('cmdk.resultActions.copyLink'),
           run: () => {
@@ -131,7 +131,7 @@ const ResultActionsMenu = memo(() => {
     if (actionTarget.type === 'task') {
       entries.push(
         {
-          icon: <CircleDashedIcon />,
+          icon: <CircleDashedIcon size={16} />,
           key: 'status',
           label: t('cmdk.resultActions.setStatus'),
           run: () => pushPage(RESULT_STATUS_PAGE),
@@ -139,14 +139,14 @@ const ResultActionsMenu = memo(() => {
         },
         {
           disabled: !canEdit || !selfUserId,
-          icon: <UserRoundPlusIcon />,
+          icon: <UserRoundPlusIcon size={16} />,
           key: 'assign-to-me',
           label: t('cmdk.resultActions.assignToMe'),
           run: () =>
             runMutation(() => updateTask(actionTarget.id, { assigneeUserId: selfUserId! })),
         },
         {
-          icon: <BarChart3Icon />,
+          icon: <BarChart3Icon size={16} />,
           key: 'priority',
           label: t('cmdk.resultActions.setPriority'),
           run: () => pushPage(RESULT_PRIORITY_PAGE),
@@ -156,7 +156,7 @@ const ResultActionsMenu = memo(() => {
     } else if (actionTarget.type === 'project') {
       entries.push(
         {
-          icon: <CircleDashedIcon />,
+          icon: <CircleDashedIcon size={16} />,
           key: 'status',
           label: t('cmdk.resultActions.setStatus'),
           run: () => pushPage(RESULT_STATUS_PAGE),
@@ -164,14 +164,14 @@ const ResultActionsMenu = memo(() => {
         },
         {
           disabled: !canEdit || !selfUserId,
-          icon: <UserRoundPlusIcon />,
+          icon: <UserRoundPlusIcon size={16} />,
           key: 'lead-to-me',
           label: t('cmdk.resultActions.setLeadToMe'),
           run: () =>
             runMutation(() => projectService.update(actionTarget.id, { leadUserId: selfUserId! })),
         },
         {
-          icon: <BarChart3Icon />,
+          icon: <BarChart3Icon size={16} />,
           key: 'priority',
           label: t('cmdk.resultActions.setPriority'),
           run: () => pushPage(RESULT_PRIORITY_PAGE),
@@ -204,7 +204,7 @@ const ResultActionsMenu = memo(() => {
         const visual = WORKFLOW_CATEGORY_VISUALS[category];
         return {
           disabled: !canEdit,
-          icon: createElement(visual.icon, { color: visual.color }),
+          icon: createElement(visual.icon, { color: visual.color, size: 16 }),
           key: `status-${category}`,
           label: t(COLUMN_I18N_KEYS[choice.column.key] as never, { ns: 'chat' }),
           run: () =>
@@ -220,7 +220,7 @@ const ResultActionsMenu = memo(() => {
     if (actionTarget.type === 'project') {
       return PROJECT_CREATABLE_STATUSES.map((status) => ({
         disabled: !canEdit,
-        icon: <ProjectStatusIcon size={14} status={status} />,
+        icon: <ProjectStatusIcon size={16} status={status} />,
         key: `status-${status}`,
         label: t(`status.${status}`, { ns: 'project' }),
         run: () => runMutation(() => projectService.updateStatus(actionTarget.id, status)),

@@ -855,6 +855,30 @@ describe('TaskDetailHeaderActions', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/tasks');
   });
 
+  it('states in the delete confirmation that sub-issues become top-level issues', () => {
+    setDetail({
+      subtasks: [
+        { identifier: 'T-2', status: 'backlog' },
+        { identifier: 'T-3', status: 'backlog' },
+      ],
+    });
+    render(<TaskDetailHeaderActions />);
+
+    item('delete')?.onClick?.();
+
+    expect(mocks.confirmModal.mock.calls[0][0].content).toContain(
+      'taskDetail.deleteConfirm.contentWithSubIssues',
+    );
+  });
+
+  it('keeps the plain delete warning for an issue without sub-issues', () => {
+    render(<TaskDetailHeaderActions />);
+
+    item('delete')?.onClick?.();
+
+    expect(mocks.confirmModal.mock.calls[0][0].content).toBe('taskDetail.deleteConfirm.content');
+  });
+
   describe('cancel / reopen', () => {
     it('cancels an open issue through the shared status command', () => {
       setDetail({ workflowCategory: 'in_progress' });

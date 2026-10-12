@@ -45,6 +45,10 @@ import {
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
+import {
+  taskDependencyRequestScope,
+  taskDependencyRowScope,
+} from '@/database/utils/taskDependencyLock';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 
 import { assertCanUseWorkspaceAgent } from '../../routers/lambda/_helpers/workspaceAgentGuard';
@@ -214,6 +218,19 @@ export class TaskService {
       const parent = await this.resolveOrThrow(createData.parentTaskId);
       createData.parentTaskId = parent.id;
       parentVisibility = parent.visibility;
+      // The new Issue is filed in this request's scope. A parent readable here
+      // but filed elsewhere (the caller's unfiled Issues, seen from a
+      // workspace) would start a tree spanning two scopes — refused like any
+      // other new cross-scope parent link.
+      if (
+        taskDependencyRowScope(parent) !== taskDependencyRequestScope(this.userId, this.workspaceId)
+      ) {
+        throw new TRPCError({
+          cause: { data: { code: 'CROSS_SCOPE' } },
+          code: 'BAD_REQUEST',
+          message: 'Parent task must belong to the same workspace',
+        });
+      }
       if (createData.projectId && createData.projectId !== parent.projectId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -1211,6 +1228,17 @@ export class TaskService {
         message: 'Assignee user cannot manage tasks in this workspace',
       });
     }
+  }
+
+  /**
+   * Take the assignee's membership row lock in the caller's transaction.
+   * Every assignment write locks that row before any task-graph lock, so a
+   * caller that needs both and opens its own transaction takes this first.
+   * No-op outside a workspace or without an assignee, like the write itself.
+   */
+  async lockAssigneeUser(db: OrviloDatabase, assigneeUserId?: string | null): Promise<void> {
+    if (!assigneeUserId || !this.workspaceId) return;
+    await this.assertAssigneeUserAssignableWithDatabase(db, assigneeUserId, true);
   }
 
   private async withAssigneeUserLock<T>(

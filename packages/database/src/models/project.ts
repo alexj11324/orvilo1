@@ -1362,7 +1362,8 @@ export class ProjectModel {
         SELECT ${tasks.id}
         FROM ${tasks}
         WHERE ${tasks.id} = ${root.id} AND ${taskScope}
-        UNION ALL
+        -- UNION, not UNION ALL: terminates on a tree whose parent pointers loop.
+        UNION
         SELECT ${tasks.id}
         FROM ${tasks}
         JOIN task_tree parent ON ${tasks.parentTaskId} = parent.id

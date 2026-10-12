@@ -1,6 +1,6 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cn } from 'cn';
-import { Flag, Link2, LinkIcon, MoreHorizontal, Plus, Search } from 'lucide-react';
+import { CheckIcon, Flag, Link2, LinkIcon, MoreHorizontal, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -24,9 +24,18 @@ import { workAttentionService } from '@/services/workAttention';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 import { copyToClipboard } from '@/utils/clipboard';
+import { isTrpcErrorCode, trpcErrorMessage } from '@/utils/trpcError';
 
 import TaskStatusIcon from '../features/TaskStatusIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
+import {
+  dependentIdentifier,
+  type RelationCandidate,
+  relationPickerRows,
+  relationRejectionKey,
+  toggleRelationCandidate,
+  writeRelationsOneByOne,
+} from './issueRelationPicker';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import {
   isOpenBlocker,
@@ -70,11 +79,7 @@ interface RelationEdge {
   workflowStateId?: string | null;
 }
 
-interface SearchHit {
-  id: string;
-  identifier: string;
-  title: string;
-}
+type SearchHit = RelationCandidate;
 
 const useRelationEdges = () => {
   const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
@@ -133,10 +138,11 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
   const addDependency = useTaskStore((s) => s.addDependency);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string>();
+  const [errors, setErrors] = useState<string[]>([]);
   const [picker, setPicker] = useState<IssueRelationKind | null>(null);
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<SearchHit[]>([]);
+  const [selected, setSelected] = useState<SearchHit[]>([]);
   const [searching, setSearching] = useState(false);
   const { edges, grouped } = useRelationEdges();
   const linkedKey = edges.map((edge) => edge.dependsOn).join('\n');
@@ -172,7 +178,13 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
     setSearching(true);
     const timer = setTimeout(() => {
       void workAttentionService
-        .search({ limitPerType: 8, query: needle, type: 'task' })
+        .search({
+          // Relations stay inside one project; the server only returns those.
+          eligibleFor: { relation: 'dependency', taskId },
+          limitPerType: 8,
+          query: needle,
+          type: 'task',
+        })
         .then((response) => {
           if (!active) return;
           const next = (response.data ?? [])
@@ -198,33 +210,66 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
     };
   }, [linkedKey, picker, query, taskId]);
 
+  /**
+   * The server's stated reason when it gives one (cycle, another project, an
+   * unfinished prerequisite on a running Issue…), else its own message, else
+   * the generic line. `dependent` is the Issue that would gain a prerequisite.
+   */
+  const describeFailure = (err: unknown, dependent: string) => {
+    const reasonKey = relationRejectionKey(err, 'dependency');
+    if (reasonKey) return t(reasonKey, { identifier: dependent });
+    if (isTrpcErrorCode(err, 'NOT_FOUND')) return t('taskDetail.prerequisites.unavailable');
+    return trpcErrorMessage(err) ?? t('taskDetail.prerequisites.error');
+  };
+
   const change = async (operation: () => Promise<void>) => {
     if (!allowed || pending) return;
     setPending(true);
-    setError(undefined);
+    setErrors([]);
     try {
       await operation();
     } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      const key = /not found|unavailable/i.test(message) ? 'unavailable' : 'error';
-      setError(t(`taskDetail.prerequisites.${key}`));
+      setErrors([describeFailure(err, taskId)]);
     } finally {
       setPending(false);
     }
   };
 
-  const addRelation = (hit: SearchHit) => {
-    if (!picker) return;
+  const closePicker = () => {
+    setPicker(null);
+    setQuery('');
+    setHits([]);
+    setSelected([]);
+  };
+
+  /** Write every picked Issue; keep the ones that were refused, each with its reason. */
+  const addSelected = () => {
+    const kind = picker;
+    if (!kind || selected.length === 0) return;
     void change(async () => {
-      if (picker === 'blocking') {
-        await addDependency(hit.identifier, taskId, 'blocks');
-        await refreshTaskDetail(taskId);
-      } else {
-        await addDependency(taskId, hit.identifier, picker === 'relates' ? 'relates' : 'blocks');
+      const { added, failed } = await writeRelationsOneByOne(selected, (hit) =>
+        kind === 'blocking'
+          ? addDependency(hit.identifier, taskId, 'blocks')
+          : addDependency(taskId, hit.identifier, kind === 'relates' ? 'relates' : 'blocks'),
+      );
+      // A "blocking" edge is stored on the other Issue, so this one is refetched by hand.
+      if (kind === 'blocking' && added.length > 0) await refreshTaskDetail(taskId);
+      if (failed.length === 0) {
+        closePicker();
+        return;
       }
-      setPicker(null);
-      setQuery('');
-      setHits([]);
+      setSelected(failed.map((item) => item.candidate));
+      setErrors(
+        failed.map((item) =>
+          t('taskDetail.picker.notAdded', {
+            identifier: item.candidate.identifier,
+            reason: describeFailure(
+              item.error,
+              dependentIdentifier(kind === 'blocking', taskId, item.candidate.identifier),
+            ),
+          }),
+        ),
+      );
     });
   };
 
@@ -279,6 +324,7 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
                     setPicker(picker === kind ? null : kind);
                     setQuery('');
                     setHits([]);
+                    setSelected([]);
                   }}
                 >
                   <Plus />
@@ -307,27 +353,51 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
                     {t('taskDetail.relations.noMatches')}
                   </div>
                 )}
-                {hits.map((hit) => (
-                  <Button
-                    className="h-9 w-full justify-start gap-3 rounded-none border-0 px-2 font-normal"
-                    disabled={pending}
-                    key={hit.id}
-                    variant="ghost"
-                    onClick={() => addRelation(hit)}
-                  >
-                    <span
-                      className="font-mono text-muted-foreground"
-                      style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
+                {relationPickerRows(selected, hits).map((hit) => {
+                  const picked = selected.some((item) => item.id === hit.id);
+                  return (
+                    <Button
+                      aria-pressed={picked}
+                      className="h-9 w-full justify-start gap-3 rounded-none border-0 px-2 font-normal"
+                      disabled={pending}
+                      key={hit.id}
+                      variant="ghost"
+                      onClick={() =>
+                        setSelected((current) => toggleRelationCandidate(current, hit))
+                      }
                     >
-                      {hit.identifier}
-                    </span>
-                    {hit.title !== hit.identifier && (
-                      <span className="truncate" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
-                        {hit.title}
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'flex size-4 shrink-0 items-center justify-center rounded-(--radius-chip) border',
+                          picked
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border',
+                        )}
+                      >
+                        {picked ? <CheckIcon className="size-3" /> : null}
                       </span>
-                    )}
-                  </Button>
-                ))}
+                      <span
+                        className="font-mono text-muted-foreground"
+                        style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
+                      >
+                        {hit.identifier}
+                      </span>
+                      {hit.title !== hit.identifier && (
+                        <span className="truncate" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
+                          {hit.title}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
+                {selected.length > 0 && (
+                  <div className="flex justify-end border-t p-1">
+                    <Button disabled={pending} loading={pending} size="sm" onClick={addSelected}>
+                      {t('taskDetail.picker.add', { count: selected.length })}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
             {rows.length === 0
@@ -429,9 +499,11 @@ const TaskRelationFields = ({ revealedKinds, taskId }: RelationFieldsProps) => {
         );
       })}
       {!allowed && reason && <div className="px-2 text-xs text-muted-foreground">{reason}</div>}
-      {error && (
-        <div className="px-2 text-xs text-destructive" role="alert">
-          {error}
+      {errors.length > 0 && (
+        <div className="flex flex-col gap-1 px-2 text-xs text-destructive" role="alert">
+          {errors.map((message) => (
+            <span key={message}>{message}</span>
+          ))}
         </div>
       )}
     </>

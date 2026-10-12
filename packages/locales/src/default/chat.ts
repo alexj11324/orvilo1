@@ -2029,6 +2029,51 @@ export default {
   'taskDetail.statusCascade.parentOnly': 'Update parent only',
   'taskDetail.statusCascade.title': 'Update open sub-issues too?',
   'taskDetail.statusCascade.updateAll': 'Update all',
+  'taskDetail.deleteConfirm.contentUnknownSubIssues':
+    'If this issue has sub-issues, they are not deleted: they become top-level issues. Deleting this issue cannot be undone.',
+  'taskDetail.deleteConfirm.contentWithSubIssues_one':
+    'This issue has {{count}} sub-issue. It is not deleted: it becomes a top-level issue. Deleting this issue cannot be undone.',
+  'taskDetail.deleteConfirm.contentWithSubIssues_other':
+    'This issue has {{count}} sub-issues. They are not deleted: they become top-level issues. Deleting this issue cannot be undone.',
+  'taskDetail.parentBar.actions': 'Parent issue actions',
+  'taskDetail.parentBar.change': 'Change parent…',
+  'taskDetail.parentBar.changeTitle': 'Change parent issue',
+  'taskDetail.parentBar.remove': 'Remove parent',
+  'taskDetail.picker.add_one': 'Add {{count}} issue',
+  'taskDetail.picker.add_other': 'Add {{count}} issues',
+  'taskDetail.picker.addNone': 'Select issues to add',
+  'taskDetail.picker.movesFrom': 'Moves from {{identifier}}',
+  'taskDetail.picker.notAdded': '{{identifier}} was not added. {{reason}}',
+  'taskDetail.picker.scope.child':
+    'Search issues in this project. Issues above or below this one in the sub-issue tree are not listed.',
+  'taskDetail.picker.scope.dependency':
+    'Search issues in this project. Relations cannot cross projects.',
+  'taskDetail.picker.scope.parent':
+    'Search issues in this project. This issue’s own sub-issues and its current parent are not listed.',
+  'taskDetail.picker.selected_one': '{{count}} selected',
+  'taskDetail.picker.selected_other': '{{count}} selected',
+  'taskDetail.relationError.alreadyBlocking':
+    'These two issues already have a blocking relation. Remove it before marking them as related.',
+  'taskDetail.relationError.brokenParentChain':
+    'The parent issue sits in a chain of parents that is too deep or loops back on itself, so nothing can be put under it. Pick a different parent.',
+  'taskDetail.relationError.crossProject':
+    'That issue is in another project. Move it into this project first, then link it.',
+  'taskDetail.relationError.crossScope':
+    'That issue is filed in a different workspace from this one, so one cannot be the other’s sub-issue. Pick an issue from the same workspace.',
+  'taskDetail.relationError.dependencyCycle':
+    'That would make these issues wait on each other in a loop. Remove one of the existing blocking relations first.',
+  'taskDetail.relationError.parentCycle':
+    'That issue is already above this one in the sub-issue tree, so it cannot go under it. Remove it from that chain first.',
+  'taskDetail.relationError.self': 'An issue cannot be linked to itself.',
+  'taskDetail.relationError.unavailable':
+    'That issue was deleted or you can no longer open it. Refresh and pick another.',
+  'taskDetail.relationError.unfinishedPrerequisite':
+    '{{identifier}} is running or already done. Pause or reopen it before giving it an unfinished prerequisite.',
+  'taskDetail.subIssue.addExisting': 'Add existing issues…',
+  'taskDetail.subIssue.addExistingTitle': 'Add existing issues as sub-issues',
+  'taskDetail.subIssue.createNew': 'Create new sub-issue',
+  'taskDetail.subIssue.removeFromParent': 'Remove from parent {{identifier}}',
+  'taskDetail.subIssue.rowActions': 'Actions for {{identifier}}',
   'taskDetail.subtasks': 'Sub-issues',
   'taskDetail.addSubtask': 'Add sub-issue',
   'taskDetail.add.document': 'Add document',

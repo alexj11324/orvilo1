@@ -2027,7 +2027,30 @@ export class WorkQueryModel {
    * Thin name/identifier match for CommandMenu. Not a new FTS entity.
    * Task ACL matches list/Inbox: ownership plus private-team readability.
    */
-  searchTasks = async (needle: string, limit = 8) => {
+  searchTasks = async (
+    needle: string,
+    limit = 8,
+    /**
+     * Relation pickers narrow the match to one project (`null` = Issues with
+     * no project) and drop Issues that can never be linked, so the page of
+     * results is not spent on rows the write would refuse.
+     */
+    scope?: {
+      /** Drop this Issue and every Issue above it in the sub-issue tree. */
+      excludeAncestorsOf?: string;
+      /** Drop every Issue below this one in the sub-issue tree. */
+      excludeDescendantsOf?: string;
+      /** A handful of known ids; tree-sized sets use the two walks above. */
+      excludeIds?: string[];
+      projectId: string | null;
+      /**
+       * Only Issues filed where this row is: its workspace, or — for an
+       * unfiled row — its owner's other unfiled Issues. Parent links may not
+       * cross that boundary.
+       */
+      sameScopeAs?: { createdByUserId: string | null; workspaceId: string | null };
+    },
+  ) => {
     const q = needle.trim();
     if (!q) return [];
     const pattern = `%${escapeLike(q)}%`;
@@ -2037,12 +2060,56 @@ export class WorkQueryModel {
         id: tasks.id,
         identifier: tasks.identifier,
         name: tasks.name,
+        parentTaskId: tasks.parentTaskId,
         updatedAt: tasks.updatedAt,
       })
       .from(tasks)
       .where(
         and(
           this.ownership(),
+          scope
+            ? scope.projectId === null
+              ? isNull(tasks.projectId)
+              : eq(tasks.projectId, scope.projectId)
+            : undefined,
+          scope?.excludeIds?.length ? notInArray(tasks.id, scope.excludeIds) : undefined,
+          scope?.sameScopeAs
+            ? scope.sameScopeAs.workspaceId
+              ? eq(tasks.workspaceId, scope.sameScopeAs.workspaceId)
+              : scope.sameScopeAs.createdByUserId
+                ? and(
+                    isNull(tasks.workspaceId),
+                    eq(tasks.createdByUserId, scope.sameScopeAs.createdByUserId),
+                  )
+                : sql`false`
+            : undefined,
+          // Both walks run inside this one statement, so a large subtree is
+          // never loaded into memory or sent back as a parameter list. UNION
+          // (not UNION ALL) ends the recursion even on a corrupt cyclic tree.
+          scope?.excludeAncestorsOf
+            ? sql`${tasks.id} NOT IN (
+                WITH RECURSIVE chain(id, parent_task_id) AS (
+                  SELECT a.id, a.parent_task_id FROM tasks a
+                  WHERE a.id = ${scope.excludeAncestorsOf}
+                  UNION
+                  SELECT p.id, p.parent_task_id FROM tasks p
+                  JOIN chain c ON p.id = c.parent_task_id
+                )
+                SELECT id FROM chain
+              )`
+            : undefined,
+          scope?.excludeDescendantsOf
+            ? sql`${tasks.id} NOT IN (
+                WITH RECURSIVE subtree(id) AS (
+                  SELECT d.id FROM tasks d
+                  WHERE d.parent_task_id = ${scope.excludeDescendantsOf}
+                  UNION
+                  SELECT n.id FROM tasks n
+                  JOIN subtree s ON n.parent_task_id = s.id
+                )
+                SELECT id FROM subtree
+              )`
+            : undefined,
           or(
             sql`${tasks.name} ILIKE ${pattern} ESCAPE '\\'`,
             sql`${tasks.identifier} ILIKE ${pattern} ESCAPE '\\'`,
@@ -2051,6 +2118,20 @@ export class WorkQueryModel {
       )
       .orderBy(desc(tasks.updatedAt), asc(tasks.id))
       .limit(Math.min(Math.max(limit, 1), WORK_SEARCH_MAX_PER_TYPE));
+  };
+
+  /**
+   * Identifiers for the given task ids, under the same readable-task rule the
+   * search applies — an Issue the caller cannot read is simply absent, so a
+   * hit never names a parent the caller could not have found themselves.
+   */
+  readableTaskIdentifiers = async (ids: string[]): Promise<Map<string, string>> => {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: tasks.id, identifier: tasks.identifier })
+      .from(tasks)
+      .where(and(this.ownership(), inArray(tasks.id, ids)));
+    return new Map(rows.map((row) => [row.id, row.identifier]));
   };
 
   /** Name match for CommandMenu. Project ACL matches `ProjectModel.readable`. */

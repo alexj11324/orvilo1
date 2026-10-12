@@ -785,7 +785,10 @@ describe('TaskDetailSliceAction', () => {
 
     it('offers to transfer execution instead of a Retry that cannot succeed', async () => {
       useTaskStore.setState({
-        taskDetailMap: { 'T-1': { agentId: 'agt_A', identifier: 'T-1', instruction: 'x' } },
+        // Not `running`: the gap where the client does not ask for a handoff.
+        taskDetailMap: {
+          'T-1': { agentId: 'agt_A', identifier: 'T-1', instruction: 'x', status: 'paused' },
+        },
       });
       vi.mocked(taskService.find).mockResolvedValue({
         data: { domainRevision: 9, id: 'task-uuid-1' },

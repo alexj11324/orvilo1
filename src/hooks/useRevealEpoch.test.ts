@@ -10,7 +10,7 @@ const Probe = () => {
   return null;
 };
 const pane = (mode: 'hidden' | 'visible') =>
-  createElement(Activity, { mode }, createElement(Probe));
+  createElement(Activity, { children: createElement(Probe), mode });
 
 describe('useRevealEpoch', () => {
   it('stays at 0 while the component is never hidden', () => {

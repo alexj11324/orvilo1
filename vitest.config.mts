@@ -82,7 +82,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['crypto', 'util', 'tty'],
-    include: ['@lobehub/tts'],
   },
   plugins: [
     tsconfigPaths({ projects: ['.'] }),

@@ -28,6 +28,7 @@ import {
   resolvePostOnboardingTargetUrl,
   stashOnboardingCallbackUrl,
 } from '@/utils/onboardingRedirect';
+import { isWorkspaceSlugTakenError } from '@/utils/workspaceSlugError';
 
 import AccountMenu from './AccountMenu';
 import DesktopAuthGate from './DesktopAuthGate';
@@ -51,6 +52,7 @@ function OnboardingSetup() {
     workspaceName,
     workspaceSlug,
     workspaceSlugError,
+    markWorkspaceSlugTaken,
     onWorkspaceNameChange,
     onWorkspaceSlugChange,
   } = useWorkspaceSlug(setup?.workspaceName, setup?.workspaceSlug);
@@ -72,6 +74,7 @@ function OnboardingSetup() {
   const [agentVerified, setAgentVerified] = useState(false);
   const [orchestratorAgentId, setOrchestratorAgentId] = useState(setup?.orchestratorAgentId);
   const [orchestratorReady, setOrchestratorReady] = useState(false);
+  const [alsoDefaultAgent, setAlsoDefaultAgent] = useState(true);
 
   const saveWorkspace = async (candidate: { id: string; slug: string }) => {
     const state = useUserStore.getState();
@@ -132,7 +135,10 @@ function OnboardingSetup() {
         useUserStore.getState().onboarding?.setup?.workspaceId,
         createdWorkspaceRef,
         saveWorkspace,
-      );
+      ).catch((error) => {
+        if (isWorkspaceSlugTakenError(error)) markWorkspaceSlugTaken();
+        throw error;
+      });
       createdWorkspaceRef.current = resolved;
       await saveWorkspace(resolved);
       setSavedWorkspace({ ...resolved, name: workspaceName.trim() });
@@ -218,7 +224,10 @@ function OnboardingSetup() {
       await finishOnboardingAndNavigate(
         state.finishOnboarding,
         navigate,
-        () => verifyOnboardingOrchestrator(orchestratorAgentId, workspace.id),
+        () =>
+          verifyOnboardingOrchestrator(orchestratorAgentId, workspace.id, {
+            alsoDefault: alsoDefaultAgent,
+          }),
         firstAgentId,
       );
     });
@@ -366,9 +375,11 @@ function OnboardingSetup() {
         ) : agentVerified ? (
           <>
             <ConfiguredOrchestratorSelector
+              alsoDefault={alsoDefaultAgent}
               disabled={busy}
               value={orchestratorAgentId}
               workspaceId={workspace.id}
+              onAlsoDefaultChange={setAlsoDefaultAgent}
               onSelect={(id) => void selectOrchestrator(id)}
               onUnavailable={() => setOrchestratorReady(false)}
               onCreated={async (id) => {

@@ -65,6 +65,12 @@ describe('DeviceGateway', () => {
     ).rejects.toThrow('device offline');
   });
 
+  it('returns a stable unavailable code for an unconfigured gateway', async () => {
+    expect(await new DeviceGateway().queryDeviceStatus('user-1')).toMatchObject({
+      errorCode: 'GATEWAY_NOT_CONFIGURED',
+    });
+  });
+
   describe('isConfigured', () => {
     it('should return false when DEVICE_GATEWAY_URL is not set', () => {
       const proxy = new DeviceGateway();
@@ -82,7 +88,11 @@ describe('DeviceGateway', () => {
     it('should return offline status when not configured', async () => {
       const proxy = new DeviceGateway();
       const result = await proxy.queryDeviceStatus('user-1');
-      expect(result).toEqual({ deviceCount: 0, online: false });
+      expect(result).toEqual({
+        deviceCount: 0,
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
+        online: false,
+      });
     });
 
     it('should return status from client on success', async () => {
@@ -1057,7 +1067,11 @@ describe('DeviceGateway', () => {
       const proxy = new DeviceGateway();
       const result = await proxy.queryDeviceStatus('user-1');
 
-      expect(result).toEqual({ deviceCount: 0, online: false });
+      expect(result).toEqual({
+        deviceCount: 0,
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
+        online: false,
+      });
       expect(MockGatewayHttpClient).not.toHaveBeenCalled();
     });
 
@@ -1066,7 +1080,11 @@ describe('DeviceGateway', () => {
       const proxy = new DeviceGateway();
       const result = await proxy.queryDeviceStatus('user-1');
 
-      expect(result).toEqual({ deviceCount: 0, online: false });
+      expect(result).toEqual({
+        deviceCount: 0,
+        errorCode: 'GATEWAY_NOT_CONFIGURED',
+        online: false,
+      });
       expect(MockGatewayHttpClient).not.toHaveBeenCalled();
     });
 

@@ -1,6 +1,5 @@
 'use client';
 
-// Highlighter is intentionally avoided: it pulls every shiki grammar (~10 MB) into the auth bundle
 import { cn } from 'cn';
 import { FrownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -16,12 +15,14 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 
+import { resolveOAuthFailureReason } from './failureReason';
+
 const FailedPage = () => {
   const { t } = useTranslation('oauth');
   const [searchParams] = useSearchParams();
 
-  const reason = searchParams.get('reason');
-  const errorMessage = searchParams.get('errorMessage');
+  // Only a known reason code selects copy; no text from the URL is rendered.
+  const reason = resolveOAuthFailureReason(searchParams.get('reason'));
 
   return (
     <Empty>
@@ -30,28 +31,8 @@ const FailedPage = () => {
         <EmptyTitle>{<div className="text-[32px] font-bold">{t('error.title')}</div>}</EmptyTitle>
         <EmptyDescription>
           {
-            <div className="flex flex-col gap-2">
-              <div className="text-[16px] text-muted-foreground">
-                {t('error.desc', {
-                  reason: t(`error.reason.${reason}` as any, { defaultValue: reason ?? '' }),
-                })}
-              </div>
-              {!!errorMessage && (
-                <div className="flex flex-col p-3" style={{ maxHeight: 240, overflowY: 'auto' }}>
-                  <pre
-                    style={{
-                      fontFamily: 'monospace',
-                      margin: 0,
-                      overflowX: 'auto',
-                      textAlign: 'start',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    {errorMessage}
-                  </pre>
-                </div>
-              )}
+            <div className="text-[16px] text-muted-foreground">
+              {t(`error.explanation.${reason}`)}
             </div>
           }
         </EmptyDescription>

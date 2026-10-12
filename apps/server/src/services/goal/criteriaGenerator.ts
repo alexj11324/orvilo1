@@ -20,9 +20,8 @@ import debug from 'debug';
 import { z } from 'zod';
 
 import type { OrviloDatabase } from '@/database/type';
-import { AiGenerationService } from '@/server/services/aiGeneration';
 
-import { resolveGoalModelConfig } from './modelConfig';
+import { generateGoalObject } from './generation';
 
 const log = debug('orvilo-server:goal-criteria-generator');
 const DEFAULT_MAX_CRITERIA = 4;
@@ -118,17 +117,13 @@ export class GoalCriteriaGeneratorService {
     maxCriteria?: number;
   }): Promise<GoalPlanDraft | undefined> {
     const maxCriteria = params.maxCriteria ?? DEFAULT_MAX_CRITERIA;
-    const modelConfig = await resolveGoalModelConfig(
+    const raw = await generateGoalObject(
       this.db,
       this.userId,
-      params.agentId,
       this.workspaceId,
-    );
-    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
-    const raw = await ai.generateObject(
+      params.agentId,
       {
         ...chainGoalCriteriaDraft({ ...params, maxCriteria }),
-        ...modelConfig,
         schema: GOAL_CRITERIA_DRAFT_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       },
@@ -176,17 +171,13 @@ export class GoalCriteriaGeneratorService {
     agentId?: string | null;
     requirement: string;
   }): Promise<GoalDecompositionDraft | undefined> {
-    const modelConfig = await resolveGoalModelConfig(
+    const raw = await generateGoalObject(
       this.db,
       this.userId,
-      params.agentId,
       this.workspaceId,
-    );
-    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
-    const raw = await ai.generateObject(
+      params.agentId,
       {
         ...chainGoalDecompose(params),
-        ...modelConfig,
         schema: GOAL_DECOMPOSE_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       },

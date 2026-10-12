@@ -97,23 +97,23 @@ describe('UserUpdater', () => {
     unmount();
   });
 
-  it('restores the authenticated user avatar and project preference before user-state returns', () => {
+  it('restores the authenticated user avatar and collaboration preference before user-state returns', () => {
     writeUserDisplaySnapshot('u1', {
       avatar: '/cached-avatar.webp',
-      preference: { lab: { enableProjects: true } },
+      preference: { showInCollaboration: false },
     });
     useSessionMock.mockReturnValue(sampleSession());
     render(<UserUpdater />);
 
     expect(useUserStore.getState().user?.avatar).toBe('/cached-avatar.webp');
-    expect(useUserStore.getState().preference.lab?.enableProjects).toBe(true);
+    expect(useUserStore.getState().preference.showInCollaboration).toBe(false);
     expect(useUserStore.getState().isSignedIn).toBe(true);
   });
 
   it('does not restore another user display snapshot or authenticate from a cache entry', () => {
     writeUserDisplaySnapshot('u1', {
       avatar: '/private-avatar.webp',
-      preference: { lab: { enableProjects: !DEFAULT_PREFERENCE.lab?.enableProjects } },
+      preference: { showInCollaboration: !DEFAULT_PREFERENCE.showInCollaboration },
     });
     useSessionMock.mockReturnValue({ data: null, error: null, isPending: true });
     const { unmount } = render(<UserUpdater />);

@@ -10,7 +10,7 @@ import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { projects, taskDispatches, tasks } from '@/database/schemas';
+import { projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
@@ -18,6 +18,7 @@ import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 import { createTaskRuntime } from '@/server/services/toolExecution/serverRuntimes/task';
 
 import { taskRouter } from '../../task';
+import { workAttentionRouter } from '../../workAttention';
 import {
   cleanupTestUser,
   createTestAgent,
@@ -76,6 +77,11 @@ vi.mock('@/server/modules/ModelRuntime', () => ({
 // These tests exercise the orchestrated-dispatch path (cascade, batch run):
 // keep the CAID admission gate open here — the flag-off hold is covered in
 // `services/taskDispatch`'s unit tests.
+// These cases cover the inbox fallback, which exists only while the built-in
+// harness is offered; the refusal without it is covered in the runner's tests.
+vi.mock('@/server/featureFlags/builtinHarness', () => ({
+  isBuiltinHarnessOffered: async () => true,
+}));
 vi.mock('@/server/featureFlags/caidAdmission', () => ({
   isCaidDispatchAllowed: vi.fn(async () => true),
 }));
@@ -387,6 +393,69 @@ describe('Task Router Integration', () => {
       expect(result.data.createdByUserId).toBe(userId);
     });
 
+    it("rejects a createdByAgentId the caller cannot use, so no feed row can be forged in another agent's name", async () => {
+      otherUserId = await createTestUser(serverDB);
+      const foreignAgentId = await createTestAgent(serverDB, otherUserId);
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+
+      await expect(
+        caller.create({
+          createdByAgentId: foreignAgentId,
+          instruction: 'Forged author',
+          name: 'Forged',
+          parentTaskId: parent.data.id,
+        }),
+      ).rejects.toThrow();
+
+      // Nothing was created, and the parent's feed gained no sub-issue row.
+      const model = new TaskModel(serverDB, userId);
+      expect(await model.findSubtasks(parent.data.id)).toHaveLength(0);
+      expect(await model.getActivities(parent.data.id)).toHaveLength(0);
+    });
+
+    it('replaces a claimed createdByAgentId with the trusted acting agent on both feed rows', async () => {
+      const claimedAgentId = await createTestAgent(serverDB, userId, 'agt_claimed');
+      const agentCaller = taskRouter.createCaller({
+        ...createTestContext(userId),
+        actingAgentId: testAgentId,
+      });
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+
+      const child = await agentCaller.create({
+        createdByAgentId: claimedAgentId,
+        instruction: 'Child',
+        name: 'Child',
+        parentTaskId: parent.data.id,
+      });
+
+      // The new Issue's own "created" row reads from this column.
+      expect(child.data.createdByAgentId).toBe(testAgentId);
+      const [row] = await new TaskModel(serverDB, userId).getActivities(parent.data.id);
+      expect(row).toMatchObject({
+        actorAgentId: testAgentId,
+        payload: { actorKind: 'agent', toId: child.data.id },
+        type: 'sub_issue_added',
+      });
+    });
+
+    it('credits the signed-in person on the parent when no agent is involved', async () => {
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const child = await caller.create({
+        instruction: 'Child',
+        name: 'Child',
+        parentTaskId: parent.data.id,
+      });
+
+      expect(child.data.createdByAgentId).toBeNull();
+      const [row] = await new TaskModel(serverDB, userId).getActivities(parent.data.id);
+      expect(row).toMatchObject({
+        actorAgentId: null,
+        actorUserId: userId,
+        payload: { actorKind: 'user' },
+        type: 'sub_issue_added',
+      });
+    });
+
     it('should leave createdByAgentId null when omitted (UI-created task)', async () => {
       const result = await caller.create({
         instruction: 'Created via UI',
@@ -573,6 +642,129 @@ describe('Task Router Integration', () => {
       await expect(
         wsCaller.update({ id: created.data.id, workflowCategory: 'todo' }),
       ).rejects.toThrow('No Linear state is mapped to todo');
+    });
+  });
+
+  describe('activity feed container names', () => {
+    it('names a private team, its workflow state, a private project and its milestone only for a reader who can open them', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { projectMilestones, teams, teamWorkflowStates, workspaces, workspaceMembers } =
+        await import('@/database/schemas');
+      const workspaceId = 'activity-container-names-workspace';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Container names',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      const teamId = 'activity-container-private-team';
+      await serverDB.insert(teams).values({
+        id: teamId,
+        key: 'SEC',
+        name: 'Secret team',
+        visibility: 'private',
+        workspaceId,
+      });
+      const [state] = await serverDB
+        .insert(teamWorkflowStates)
+        .values({ category: 'in_progress', name: 'Secret review', teamId, workspaceId })
+        .returning();
+      const [project] = await serverDB
+        .insert(projects)
+        .values({
+          identifier: 'SECRET',
+          name: 'Secret project',
+          userId,
+          visibility: 'private',
+          workspaceId,
+        })
+        .returning();
+      const [milestone] = await serverDB
+        .insert(projectMilestones)
+        .values({ name: 'Secret milestone', projectId: project.id })
+        .returning();
+
+      const ownerCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
+      const memberCaller = taskRouter.createCaller({
+        ...createTestContext(otherUserId),
+        workspaceId,
+      });
+      const task = await ownerCaller.create({ instruction: 'Shared Issue', name: 'Shared Issue' });
+      // The rows as the writers leave them: the name copied in next to the id.
+      const model = new TaskModel(serverDB, userId, workspaceId);
+      const row = { actorUserId: userId, taskId: task.data.id };
+      await model.addActivity({
+        ...row,
+        payload: { actorKind: 'user', fromId: null, toId: teamId, toLabel: 'Secret team' },
+        type: 'team',
+      });
+      await model.addActivity({
+        ...row,
+        payload: { actorKind: 'user', fromId: null, toId: project.id, toLabel: 'Secret project' },
+        type: 'project',
+      });
+      await model.addActivity({
+        ...row,
+        payload: {
+          actorKind: 'user',
+          fromId: null,
+          toId: milestone.id,
+          toLabel: 'Secret milestone',
+        },
+        type: 'milestone',
+      });
+      await model.addActivity({
+        ...row,
+        payload: {
+          actorKind: 'user',
+          from: 'todo',
+          fromId: null,
+          to: 'in_progress',
+          toId: state.id,
+          toLabel: 'Secret review',
+        },
+        type: 'workflow_state',
+      });
+
+      const changes = async (caller: typeof ownerCaller) =>
+        ((await caller.detail({ id: task.data.id })).data.activities ?? []).flatMap((activity) =>
+          activity.type === 'property' ? [activity.propertyChange] : [],
+        );
+
+      // The owner administers the workspace and reads every team and project.
+      expect(await changes(ownerCaller)).toEqual(
+        expect.arrayContaining([
+          { field: 'team', from: null, to: 'Secret team' },
+          { field: 'project', from: null, to: 'Secret project' },
+          { field: 'milestone', from: null, to: 'Secret milestone' },
+          {
+            field: 'workflow',
+            from: { category: 'todo', name: null },
+            to: { category: 'in_progress', name: 'Secret review' },
+          },
+        ]),
+      );
+
+      // A member outside the team and the project can read the Issue, and
+      // learns that it moved — but not the names of what it moved to.
+      const seen = await changes(memberCaller);
+      expect(seen).toEqual(
+        expect.arrayContaining([
+          { field: 'team', from: null, to: '' },
+          { field: 'project', from: null, to: '' },
+          { field: 'milestone', from: null, to: '' },
+          {
+            field: 'workflow',
+            from: { category: 'todo', name: null },
+            to: { category: 'in_progress', name: null },
+          },
+        ]),
+      );
+      expect(JSON.stringify(seen)).not.toMatch(/Secret/);
     });
   });
 
@@ -895,6 +1087,784 @@ describe('Task Router Integration', () => {
           parentTaskId: child.data.identifier,
         }),
       ).rejects.toThrow('Task cannot be parented to its own descendant');
+    });
+
+    const seedProject = async (suffix: string) => {
+      const projectId = `project-${suffix}-${userId}`;
+      await serverDB
+        .insert(projects)
+        .values({ id: projectId, identifier: suffix.toUpperCase(), name: suffix, userId });
+      return projectId;
+    };
+
+    /** The stable reason the error formatter forwards to clients as `errorData.code`. */
+    const rejectionCode = async (write: Promise<unknown>) => {
+      const error = await write.then(
+        () => undefined,
+        (failure: { cause?: { data?: { code?: string } } }) => failure,
+      );
+      return error?.cause?.data?.code;
+    };
+
+    it('puts several existing issues under one parent in a single write', async () => {
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const oldParent = await caller.create({ instruction: 'Old parent', name: 'Old Parent' });
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({
+        instruction: 'Second',
+        name: 'Second',
+        parentTaskId: oldParent.data.id,
+      });
+
+      const result = await caller.setParentBatch({
+        parentTaskId: parent.data.identifier,
+        taskIds: [first.data.identifier, second.data.id, first.data.id],
+      });
+
+      expect(result.data.map((task) => task.id)).toEqual([first.data.id, second.data.id]);
+      const detail = await caller.detail({ id: parent.data.identifier });
+      expect(detail.data.subtasks?.map((task) => task.name).sort()).toEqual(['First', 'Second']);
+      // An issue that already had a parent is moved, not refused.
+      expect((await caller.detail({ id: oldParent.data.identifier })).data.subtasks ?? []).toEqual(
+        [],
+      );
+    });
+
+    it('rolls the whole batch back when one issue cannot become a child', async () => {
+      const grandparent = await caller.create({ instruction: 'Grandparent', name: 'Grandparent' });
+      const parent = await caller.create({
+        instruction: 'Parent',
+        name: 'Parent',
+        parentTaskId: grandparent.data.id,
+      });
+      const loose = await caller.create({ instruction: 'Loose', name: 'Loose' });
+
+      // The grandparent is an ancestor of the target parent — a cycle.
+      const write = caller.setParentBatch({
+        parentTaskId: parent.data.id,
+        taskIds: [loose.data.id, grandparent.data.id],
+      });
+      await expect(write).rejects.toThrow('Task cannot be parented to its own descendant');
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({
+            parentTaskId: parent.data.id,
+            taskIds: [loose.data.id, grandparent.data.id],
+          }),
+        ),
+      ).toBe('CYCLE');
+
+      expect((await caller.find({ id: loose.data.id })).data.parentTaskId).toBeNull();
+    });
+
+    it('refuses a cycle that runs through an issue the caller cannot read', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const otherCaller = taskRouter.createCaller(createTestContext(otherUserId));
+      const top = await caller.create({ instruction: 'Top', name: 'Top' });
+      const hidden = await otherCaller.create({ instruction: 'Hidden', name: 'Hidden' });
+      const bottom = await caller.create({ instruction: 'Bottom', name: 'Bottom' });
+      const loose = await caller.create({ instruction: 'Loose', name: 'Loose' });
+      // top → hidden → bottom, where the caller cannot read the middle Issue,
+      // so a walk down from `top` through readable Issues never reaches `bottom`.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: top.data.id })
+        .where(eq(tasks.id, hidden.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: hidden.data.id })
+        .where(eq(tasks.id, bottom.data.id));
+
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({
+            parentTaskId: bottom.data.id,
+            taskIds: [loose.data.id, top.data.id],
+          }),
+        ),
+      ).toBe('CYCLE');
+      expect(
+        await rejectionCode(caller.update({ id: top.data.id, parentTaskId: bottom.data.id })),
+      ).toBe('CYCLE');
+      expect((await caller.find({ id: loose.data.id })).data.parentTaskId).toBeNull();
+      expect((await caller.find({ id: top.data.id })).data.parentTaskId).toBeNull();
+    });
+
+    it('never lets two concurrent parent writes close a loop', async () => {
+      const left = await caller.create({ instruction: 'Left', name: 'Left' });
+      const right = await caller.create({ instruction: 'Right', name: 'Right' });
+
+      // Each write is legal alone; together they would make each the other's parent.
+      const outcomes = await Promise.allSettled([
+        caller.update({ id: left.data.id, parentTaskId: right.data.id }),
+        caller.setParentBatch({ parentTaskId: left.data.id, taskIds: [right.data.id] }),
+      ]);
+
+      expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+      const parents = [
+        (await caller.find({ id: left.data.id })).data.parentTaskId,
+        (await caller.find({ id: right.data.id })).data.parentTaskId,
+      ];
+      expect(parents.filter(Boolean)).toHaveLength(1);
+    });
+
+    it('answers the same for an issue that is hidden and one that does not exist', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const otherCaller = taskRouter.createCaller(createTestContext(otherUserId));
+      const foreign = await otherCaller.create({ instruction: 'Foreign', name: 'Secret title' });
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const failure = (write: Promise<unknown>) =>
+        write.then(
+          () => undefined,
+          (error: { code?: string; message?: string }) => ({
+            code: error.code,
+            message: error.message,
+          }),
+        );
+
+      const hidden = await failure(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [foreign.data.id] }),
+      );
+      const missing = await failure(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: ['task_does_not_exist'] }),
+      );
+      expect(hidden).toEqual({ code: 'NOT_FOUND', message: 'Task not found' });
+      expect(hidden).toEqual(missing);
+      expect(
+        await failure(
+          // By database id: identifiers are numbered per owner, so the other
+          // user's `T-n` would resolve to one of the caller's own Issues.
+          caller.setParentBatch({ parentTaskId: foreign.data.id, taskIds: [parent.data.id] }),
+        ),
+      ).toEqual(missing);
+    });
+
+    it('keeps hidden issues out of a relation search, as hits and as parent labels', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const otherCaller = taskRouter.createCaller(createTestContext(otherUserId));
+      const search = workAttentionRouter.createCaller(createTestContext(userId)).search;
+      const foreign = await otherCaller.create({ instruction: 'Foreign', name: 'Scope foreign' });
+      const anchor = await caller.create({ instruction: 'Anchor', name: 'Scope anchor' });
+      const candidate = await caller.create({ instruction: 'Mine', name: 'Scope mine' });
+      // The candidate hangs under an Issue the caller cannot read.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: foreign.data.id })
+        .where(eq(tasks.id, candidate.data.id));
+
+      const hits = (
+        await search({
+          eligibleFor: { relation: 'child', taskId: anchor.data.id },
+          limitPerType: 50,
+          query: 'Scope',
+          type: 'task',
+        })
+      ).data;
+      expect(hits.map((hit) => hit.title)).toEqual(['Scope mine']);
+      expect(hits[0]).toMatchObject({ parentIdentifier: null });
+      expect(JSON.stringify(hits)).not.toContain(foreign.data.id);
+
+      // Anchoring the search on a hidden Issue reads like anchoring it on nothing.
+      const anchored = (taskId: string) =>
+        search({ eligibleFor: { relation: 'child', taskId }, query: 'Scope', type: 'task' }).then(
+          () => undefined,
+          (error: { code?: string; message?: string }) => [error.code, error.message],
+        );
+      expect(await anchored(foreign.data.id)).toEqual(['NOT_FOUND', 'Task not found']);
+      expect(await anchored(foreign.data.id)).toEqual(await anchored('task_does_not_exist'));
+    });
+
+    describe('scope of a parent link', () => {
+      const workspaceId = 'task-parent-scope-workspace';
+      let wsCaller: ReturnType<typeof taskRouter.createCaller>;
+      const setParentRaw = (id: string, parentTaskId: string | null) =>
+        serverDB.update(tasks).set({ parentTaskId }).where(eq(tasks.id, id));
+      const parentOf = async (id: string) =>
+        (await serverDB.select({ p: tasks.parentTaskId }).from(tasks).where(eq(tasks.id, id)))[0]
+          ?.p;
+
+      beforeEach(async () => {
+        const { workspaces, workspaceMembers } = await import('@/database/schemas');
+        await serverDB.insert(workspaces).values({
+          id: workspaceId,
+          name: 'Parent scope workspace',
+          primaryOwnerId: userId,
+          slug: workspaceId,
+        });
+        await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+        wsCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
+      });
+
+      it('refuses a new link between an unfiled issue and a workspace issue', async () => {
+        const unfiled = await caller.create({ instruction: 'Unfiled', name: 'Unfiled' });
+        const filed = await wsCaller.create({ instruction: 'Filed', name: 'Filed' });
+
+        // The workspace context can read both, so only the scope rule stops it.
+        expect(
+          await rejectionCode(
+            wsCaller.update({ id: filed.data.id, parentTaskId: unfiled.data.id }),
+          ),
+        ).toBe('CROSS_SCOPE');
+        expect(
+          await rejectionCode(
+            wsCaller.update({ id: unfiled.data.id, parentTaskId: filed.data.id }),
+          ),
+        ).toBe('CROSS_SCOPE');
+        expect(
+          await rejectionCode(
+            wsCaller.setParentBatch({ parentTaskId: filed.data.id, taskIds: [unfiled.data.id] }),
+          ),
+        ).toBe('CROSS_SCOPE');
+        expect(
+          await rejectionCode(
+            wsCaller.setParentBatch({ parentTaskId: unfiled.data.id, taskIds: [filed.data.id] }),
+          ),
+        ).toBe('CROSS_SCOPE');
+        expect(await parentOf(filed.data.id)).toBeNull();
+        expect(await parentOf(unfiled.data.id)).toBeNull();
+      });
+
+      it('refuses to create a sub-issue under a parent filed elsewhere', async () => {
+        const unfiled = await caller.create({ instruction: 'Unfiled', name: 'Unfiled' });
+
+        expect(
+          await rejectionCode(
+            wsCaller.create({ instruction: 'Child', name: 'Child', parentTaskId: unfiled.data.id }),
+          ),
+        ).toBe('CROSS_SCOPE');
+      });
+
+      it('still links two issues of one scope, in a workspace and in personal mode', async () => {
+        const wsParent = await wsCaller.create({ instruction: 'P', name: 'Workspace parent' });
+        const wsChild = await wsCaller.create({ instruction: 'C', name: 'Workspace child' });
+        const wsOther = await wsCaller.create({ instruction: 'O', name: 'Workspace other' });
+        const parent = await caller.create({ instruction: 'P', name: 'Personal parent' });
+        const child = await caller.create({ instruction: 'C', name: 'Personal child' });
+
+        await wsCaller.update({ id: wsChild.data.id, parentTaskId: wsParent.data.id });
+        await wsCaller.setParentBatch({
+          parentTaskId: wsParent.data.id,
+          taskIds: [wsOther.data.id],
+        });
+        await caller.update({ id: child.data.id, parentTaskId: parent.data.id });
+        // Two unfiled issues link from the workspace context too: same scope.
+        const second = await caller.create({ instruction: 'S', name: 'Personal second' });
+        await wsCaller.update({ id: second.data.id, parentTaskId: parent.data.id });
+        await wsCaller.create({ instruction: 'N', name: 'New', parentTaskId: wsParent.data.id });
+
+        expect(await parentOf(wsChild.data.id)).toBe(wsParent.data.id);
+        expect(await parentOf(wsOther.data.id)).toBe(wsParent.data.id);
+        expect(await parentOf(child.data.id)).toBe(parent.data.id);
+        expect(await parentOf(second.data.id)).toBe(parent.data.id);
+      });
+
+      it('lets an existing cross-scope parent be removed or replaced', async () => {
+        const unfiled = await caller.create({ instruction: 'Unfiled', name: 'Unfiled' });
+        const filed = await wsCaller.create({ instruction: 'Filed', name: 'Filed' });
+        const sameScope = await wsCaller.create({ instruction: 'Same', name: 'Same scope' });
+        // Written before the rule existed.
+        await setParentRaw(filed.data.id, unfiled.data.id);
+
+        const replaced = await wsCaller.update({
+          id: filed.data.id,
+          parentTaskId: sameScope.data.id,
+        });
+        expect(replaced.data.parentTaskId).toBe(sameScope.data.id);
+
+        await setParentRaw(filed.data.id, unfiled.data.id);
+        const removed = await wsCaller.update({ id: filed.data.id, parentTaskId: null });
+        expect(removed.data.parentTaskId).toBeNull();
+      });
+
+      it('offers only same-scope issues as sub-issue or parent candidates', async () => {
+        const search = workAttentionRouter.createCaller({
+          ...createTestContext(userId),
+          workspaceId,
+        }).search;
+        await caller.create({ instruction: 'Unfiled', name: 'Reach unfiled' });
+        const anchor = await wsCaller.create({ instruction: 'Anchor', name: 'Reach anchor' });
+        await wsCaller.create({ instruction: 'Filed', name: 'Reach filed' });
+        const titles = async (relation: 'child' | 'parent') =>
+          (
+            await search({
+              eligibleFor: { relation, taskId: anchor.data.id },
+              limitPerType: 50,
+              query: 'Reach',
+              type: 'task',
+            })
+          ).data.map((hit) => hit.title);
+
+        // The unfiled issue is readable here — an unscoped search returns it —
+        // but it is never offered as a parent or a child.
+        const unscoped = (await search({ limitPerType: 50, query: 'Reach', type: 'task' })).data;
+        expect(unscoped.map((hit) => hit.title).sort()).toEqual([
+          'Reach anchor',
+          'Reach filed',
+          'Reach unfiled',
+        ]);
+        expect(await titles('child')).toEqual(['Reach filed']);
+        expect(await titles('parent')).toEqual(['Reach filed']);
+      });
+
+      it('refuses with CONFLICT when an issue changed scope after it was read', async () => {
+        const parent = await wsCaller.create({ instruction: 'P', name: 'Parent' });
+        const child = await wsCaller.create({ instruction: 'C', name: 'Child' });
+        // The request reads both rows as workspace issues and picks its locks
+        // from them. Right after its last read before the transaction (the
+        // second time it resolves the parent), a transfer moves the child to
+        // the caller's unfiled issues.
+        const realResolve = TaskModel.prototype.resolve;
+        let parentReads = 0;
+        const resolve = vi.spyOn(TaskModel.prototype, 'resolve').mockImplementation(async function (
+          this: TaskModel,
+          id: string,
+        ) {
+          const row = await realResolve.call(this, id);
+          if (row?.id === parent.data.id && ++parentReads === 2) {
+            await serverDB
+              .update(tasks)
+              .set({ workspaceId: null })
+              .where(eq(tasks.id, child.data.id));
+          }
+          return row;
+        });
+
+        try {
+          await expect(
+            wsCaller.update({ id: child.data.id, parentTaskId: parent.data.id }),
+          ).rejects.toMatchObject({ code: 'CONFLICT' });
+        } finally {
+          resolve.mockRestore();
+        }
+        expect(await parentOf(child.data.id)).toBeNull();
+      });
+
+      it('returns from both tree reads on a tree whose parent pointers loop', async () => {
+        const first = await caller.create({ instruction: 'First', name: 'First' });
+        const second = await caller.create({ instruction: 'Second', name: 'Second' });
+        const leaf = await caller.create({
+          instruction: 'Leaf',
+          name: 'Leaf',
+          parentTaskId: second.data.id,
+        });
+        await setParentRaw(first.data.id, second.data.id);
+        await setParentRaw(second.data.id, first.data.id);
+
+        const tree = await caller.getTaskTree({ id: first.data.id });
+        expect(tree.data.map((task) => task.id).sort()).toEqual(
+          [first.data.id, second.data.id, leaf.data.id].sort(),
+        );
+
+        // The project move walks the same subtree. It only checks that the
+        // root's parent is already in the target project, so file that one there.
+        const projectId = await seedProject('loop');
+        await serverDB.update(tasks).set({ projectId }).where(eq(tasks.id, second.data.id));
+        const moved = await new ProjectModel(serverDB, userId).moveTaskTree(
+          projectId,
+          first.data.id,
+        );
+        expect(moved?.map((row) => row.id).sort()).toEqual(
+          [first.data.id, second.data.id, leaf.data.id].sort(),
+        );
+      });
+
+      it('leaves a normal tree read unchanged', async () => {
+        const root = await caller.create({ instruction: 'Root', name: 'Root' });
+        const a = await caller.create({ instruction: 'A', name: 'A', parentTaskId: root.data.id });
+        const b = await caller.create({ instruction: 'B', name: 'B', parentTaskId: a.data.id });
+
+        const tree = await caller.getTaskTree({ id: root.data.id });
+        expect(tree.data.map((task) => task.id)).toEqual([root.data.id, a.data.id, b.data.id]);
+      });
+    });
+
+    it('walks descendants of a looping tree once and stops', async () => {
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({ instruction: 'Second', name: 'Second' });
+      const third = await caller.create({
+        instruction: 'Third',
+        name: 'Third',
+        parentTaskId: second.data.id,
+      });
+      // A corrupt legacy loop: first ⇄ second.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: second.data.id })
+        .where(eq(tasks.id, first.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: first.data.id })
+        .where(eq(tasks.id, second.data.id));
+
+      const descendants = await new TaskModel(serverDB, userId).findAllDescendants(first.data.id);
+
+      expect(descendants.map((task) => task.id).sort()).toEqual(
+        [second.data.id, third.data.id].sort(),
+      );
+    });
+
+    it('moves an issue out of a looping tree instead of hanging on it', async () => {
+      const stuck = await caller.create({ instruction: 'Stuck', name: 'Stuck' });
+      const partner = await caller.create({ instruction: 'Partner', name: 'Partner' });
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const batchParent = await caller.create({ instruction: 'Batch', name: 'Batch parent' });
+      // `stuck` is its own descendant: stuck ⇄ partner.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: partner.data.id })
+        .where(eq(tasks.id, stuck.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: stuck.data.id })
+        .where(eq(tasks.id, partner.data.id));
+
+      const moved = await caller.update({ id: stuck.data.id, parentTaskId: parent.data.id });
+      expect(moved.data.parentTaskId).toBe(parent.data.id);
+
+      // And through the batch write, from the same corrupt starting point.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: partner.data.id })
+        .where(eq(tasks.id, stuck.data.id));
+      const batch = await caller.setParentBatch({
+        parentTaskId: batchParent.data.id,
+        taskIds: [stuck.data.id],
+      });
+      expect(batch.data.map((task) => task.parentTaskId)).toEqual([batchParent.data.id]);
+    });
+
+    it('names a parent whose own chain is unusable differently from a cycle', async () => {
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({ instruction: 'Second', name: 'Second' });
+      const loose = await caller.create({ instruction: 'Loose', name: 'Loose' });
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: second.data.id })
+        .where(eq(tasks.id, first.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: first.data.id })
+        .where(eq(tasks.id, second.data.id));
+
+      // `loose` is not in the loop, so this is not a cycle it would create.
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({ parentTaskId: first.data.id, taskIds: [loose.data.id] }),
+        ),
+      ).toBe('BROKEN_PARENT_CHAIN');
+      expect(
+        await rejectionCode(caller.update({ id: loose.data.id, parentTaskId: first.data.id })),
+      ).toBe('BROKEN_PARENT_CHAIN');
+      // An issue that is in the chain is still a cycle.
+      expect(
+        await rejectionCode(caller.update({ id: second.data.id, parentTaskId: first.data.id })),
+      ).toBe('CYCLE');
+    });
+
+    it('sets a parent and an assignee in one update', async () => {
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      const child = await caller.create({ instruction: 'Child', name: 'Child' });
+
+      const updated = await caller.update({
+        assigneeUserId: userId,
+        expectedDomainRevision: await revisionOf(child.data.id),
+        id: child.data.id,
+        parentTaskId: parent.data.id,
+      });
+
+      expect(updated.data).toMatchObject({
+        assigneeUserId: userId,
+        parentTaskId: parent.data.id,
+      });
+    });
+
+    it('refuses to extend a parent chain that never reaches a root', async () => {
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({ instruction: 'Second', name: 'Second' });
+      const loose = await caller.create({ instruction: 'Loose', name: 'Loose' });
+      // A corrupt legacy loop: first ⇄ second.
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: second.data.id })
+        .where(eq(tasks.id, first.data.id));
+      await serverDB
+        .update(tasks)
+        .set({ parentTaskId: first.data.id })
+        .where(eq(tasks.id, second.data.id));
+
+      await expect(
+        caller.setParentBatch({ parentTaskId: first.data.id, taskIds: [loose.data.id] }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect((await caller.find({ id: loose.data.id })).data.parentTaskId).toBeNull();
+    });
+
+    it('bounds the batch and the ids it accepts', async () => {
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+      await expect(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [] }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        caller.setParentBatch({
+          parentTaskId: parent.data.id,
+          taskIds: Array.from({ length: 51 }, (_, index) => `task-${index}`),
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: ['x'.repeat(129)] }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    });
+
+    it('rejects a batch that crosses a project boundary with a stable reason', async () => {
+      const projectId = await seedProject('pa');
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent', projectId });
+      const outsider = await caller.create({ instruction: 'Outsider', name: 'Outsider' });
+
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [outsider.data.id] }),
+        ),
+      ).toBe('CROSS_PROJECT');
+      expect(
+        await rejectionCode(
+          caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [parent.data.id] }),
+        ),
+      ).toBe('SELF');
+    });
+
+    it('refuses a batch parent write for an issue the caller cannot read', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const otherCaller = taskRouter.createCaller(createTestContext(otherUserId));
+      const foreign = await otherCaller.create({ instruction: 'Foreign', name: 'Foreign' });
+      const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });
+
+      await expect(
+        caller.setParentBatch({ parentTaskId: parent.data.id, taskIds: [foreign.data.id] }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(
+        caller.setParentBatch({ parentTaskId: foreign.data.id, taskIds: [parent.data.id] }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+
+    it('searches only the issues that can legally take the requested link', async () => {
+      const projectId = await seedProject('pc');
+      const search = workAttentionRouter.createCaller(createTestContext(userId)).search;
+      const make = (name: string, extra: { parentTaskId?: string; projectId?: string } = {}) =>
+        caller.create({ instruction: name, name: `Pick ${name}`, projectId, ...extra });
+      const grandparent = await make('grandparent');
+      const anchor = await make('anchor', { parentTaskId: grandparent.data.id });
+      const child = await make('child', { parentTaskId: anchor.data.id });
+      // Two levels down: the exclusion follows the whole subtree, not one level.
+      await make('grandchild', { parentTaskId: child.data.id });
+      const otherParent = await make('other parent');
+      await make('adopted', { parentTaskId: otherParent.data.id });
+      await make('free');
+      await caller.create({ instruction: 'Elsewhere', name: 'Pick elsewhere' });
+
+      const names = async (relation: 'child' | 'dependency' | 'parent') =>
+        (
+          await search({
+            eligibleFor: { relation, taskId: anchor.data.identifier },
+            limitPerType: 50,
+            query: 'Pick',
+            type: 'task',
+          })
+        ).data
+          .map((hit) => hit.title)
+          .sort();
+
+      // Not itself, its ancestor, its existing child, or another project's issue.
+      expect(await names('child')).toEqual(['Pick adopted', 'Pick free', 'Pick other parent']);
+      // Not itself, its descendant, or the parent it already has.
+      expect(await names('parent')).toEqual(['Pick adopted', 'Pick free', 'Pick other parent']);
+      expect(await names('dependency')).toEqual([
+        'Pick adopted',
+        'Pick child',
+        'Pick free',
+        'Pick grandchild',
+        'Pick grandparent',
+        'Pick other parent',
+      ]);
+
+      const hits = (
+        await search({
+          eligibleFor: { relation: 'child', taskId: anchor.data.id },
+          limitPerType: 50,
+          query: 'Pick adopted',
+          type: 'task',
+        })
+      ).data;
+      // A candidate under another parent says where it would be moved from.
+      expect(hits).toEqual([
+        expect.objectContaining({ parentIdentifier: otherParent.data.identifier }),
+      ]);
+      // The lookup id is bounded like any other client-supplied reference.
+      await expect(
+        search({
+          eligibleFor: { relation: 'child', taskId: 'x'.repeat(129) },
+          query: 'Pick',
+          type: 'task',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      // An unscoped search is unchanged: every project, the anchor included.
+      const unscoped = (await search({ limitPerType: 50, query: 'Pick', type: 'task' })).data;
+      expect(unscoped).toHaveLength(8);
+    });
+
+    it('names why a dependency was refused with a stable reason code', async () => {
+      const projectId = await seedProject('pb');
+      const inProject = await caller.create({ instruction: 'In', name: 'In', projectId });
+      const outside = await caller.create({ instruction: 'Out', name: 'Out' });
+      const first = await caller.create({ instruction: 'First', name: 'First' });
+      const second = await caller.create({ instruction: 'Second', name: 'Second' });
+      await caller.addDependency({ dependsOnId: first.data.id, taskId: second.data.id });
+
+      expect(
+        await rejectionCode(
+          caller.addDependency({ dependsOnId: outside.data.id, taskId: inProject.data.id }),
+        ),
+      ).toBe('CROSS_PROJECT');
+      // Related links stay inside one project too.
+      expect(
+        await rejectionCode(
+          caller.addDependency({
+            dependsOnId: outside.data.id,
+            taskId: inProject.data.id,
+            type: 'relates',
+          }),
+        ),
+      ).toBe('CROSS_PROJECT');
+      expect(
+        await rejectionCode(
+          caller.addDependency({ dependsOnId: second.data.id, taskId: first.data.id }),
+        ),
+      ).toBe('CYCLE');
+    });
+  });
+
+  describe('handoff from an agent the caller cannot use', () => {
+    // The incumbent belongs to the workspace owner; neither member holds Use on it.
+    const setup = async (phase: 'outcome_unknown' | 'running' = 'running') => {
+      const workspaceId = 'task-handoff-takeover-workspace';
+      const { agents, workspaces, workspaceMembers } = await import('@/database/schemas');
+      otherUserId = await createTestUser(serverDB);
+      const creatorId = otherUserId;
+      const memberId = await createTestUser(serverDB);
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Handoff Takeover Workspace',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: creatorId, workspaceId },
+        { role: 'member', userId: memberId, workspaceId },
+      ]);
+      const agent = async (id: string, ownerId: string) => {
+        await serverDB.insert(agents).values({ id, slug: id, userId: ownerId, workspaceId });
+        return id;
+      };
+      const incumbent = await agent('agt_takeover_incumbent', userId);
+      const creatorAgent = await agent('agt_takeover_creator', creatorId);
+      const memberAgent = await agent('agt_takeover_member', memberId);
+      const callerFor = (id: string) =>
+        taskRouter.createCaller({ ...createTestContext(id), workspaceId });
+      const created = await callerFor(creatorId).create({ instruction: 'Held by another agent' });
+      await serverDB
+        .update(tasks)
+        // A start whose outcome was lost parks the Issue while its dispatch
+        // stays live, so the Issue reads as paused and not as running.
+        .set({
+          assigneeAgentId: incumbent,
+          ...(phase === 'running'
+            ? {}
+            : { context: { execution: { parked: { reason: 'outcome_unknown' } } } }),
+        })
+        .where(eq(tasks.id, created.data.id));
+      // Execution truth is a live dispatch row, not the status column.
+      await serverDB.insert(taskDispatches).values({
+        agentId: incumbent,
+        generation: 1,
+        id: 'dispatch-handoff-takeover',
+        idempotencyKey: 'manual:handoff:takeover',
+        phase,
+        policyRevision: 1,
+        requestedBy: `user:${userId}`,
+        requirementRevision: 1,
+        taskId: created.data.id,
+        taskRevision: 1,
+        workspaceId,
+      });
+      const handoff = async (as: string, toAgentId: string) =>
+        callerFor(as).handoff({
+          expectedDomainRevision: (await revisionOf(created.data.id))!,
+          taskId: created.data.id,
+          toAgentId,
+        });
+      return { creatorAgent, creatorId, handoff, memberAgent, memberId, taskId: created.data.id };
+    };
+
+    it('refuses a member who neither created the Issue nor may use the incumbent', async () => {
+      const { handoff, memberAgent, memberId } = await setup();
+      try {
+        await expect(handoff(memberId, memberAgent)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      } finally {
+        await cleanupTestUser(serverDB, memberId);
+      }
+    });
+
+    it('lets the creator take the Issue over, to an agent the creator may use only', async () => {
+      const { creatorAgent, creatorId, handoff, memberAgent, memberId, taskId } = await setup();
+      try {
+        await expect(handoff(creatorId, memberAgent)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+        await handoff(creatorId, creatorAgent);
+        const [row] = await serverDB
+          .select({ assigneeAgentId: tasks.assigneeAgentId })
+          .from(tasks)
+          .where(eq(tasks.id, taskId));
+        expect(row.assigneeAgentId).toBe(creatorAgent);
+      } finally {
+        await cleanupTestUser(serverDB, memberId);
+      }
+    });
+
+    it('lets the creator, and not another member, stop a run of an agent neither may use', async () => {
+      const { creatorId, memberId, taskId } = await setup('outcome_unknown');
+      const workspaceId = 'task-handoff-takeover-workspace';
+      const topicId = await createTestTopic(serverDB, creatorId, 'tpc_takeover_stop');
+      const { topics } = await import('@/database/schemas');
+      await serverDB.update(topics).set({ workspaceId }).where(eq(topics.id, topicId));
+      await new TaskTopicModel(serverDB, creatorId, workspaceId).add(taskId, topicId, {
+        operationId: 'op_takeover_stop',
+        seq: 1,
+      });
+      const callerFor = (id: string) =>
+        taskRouter.createCaller({ ...createTestContext(id), workspaceId });
+      try {
+        await expect(callerFor(memberId).cancelTopic({ topicId })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        await callerFor(creatorId).cancelTopic({ topicId });
+        const [row] = await serverDB
+          .select({ status: taskTopics.status })
+          .from(taskTopics)
+          .where(eq(taskTopics.topicId, topicId));
+        expect(row.status).toBe('canceled');
+      } finally {
+        await cleanupTestUser(serverDB, memberId);
+      }
+    });
+
+    it('says the last run is unconfirmed when there is no running process to fence', async () => {
+      const { creatorAgent, creatorId, handoff, memberId } = await setup('outcome_unknown');
+      try {
+        await expect(handoff(creatorId, creatorAgent)).rejects.toMatchObject({
+          code: 'CONFLICT',
+          message: expect.stringMatching(/^EXECUTION_UNSETTLED/),
+        });
+      } finally {
+        await cleanupTestUser(serverDB, memberId);
+      }
     });
   });
 
@@ -1290,6 +2260,143 @@ describe('Task Router Integration', () => {
         workspaceId,
       };
     };
+
+    it('toggles the reader own subscription through the router and refuses an Issue they cannot read', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { wsCaller, wsOtherCaller, workspaceId } = await setupWorkspace();
+      const { workAttentionRouter } = await import('../../workAttention');
+      const attention = (id: string, scoped = true) =>
+        workAttentionRouter.createCaller({
+          ...createTestContext(id),
+          ...(scoped ? { workspaceId } : {}),
+        });
+      const task = await wsCaller.create({ instruction: 'Follow me', name: 'Followed' });
+      const subscribed = async (reader: typeof wsCaller) =>
+        (await reader.detail({ id: task.data.id })).data?.isSubscribed;
+
+      // The creator follows their own Issue from the start; a bystander does not.
+      expect(await subscribed(wsCaller)).toBe(true);
+      expect(await subscribed(wsOtherCaller)).toBe(false);
+
+      await attention(userId).unsubscribe({ taskId: task.data.id });
+      expect(await subscribed(wsCaller)).toBe(false);
+      await attention(otherUserId).subscribe({ taskId: task.data.id });
+      expect(await subscribed(wsOtherCaller)).toBe(true);
+      // One person's toggle never moves another's.
+      expect(await subscribed(wsCaller)).toBe(false);
+      await attention(userId).subscribe({ taskId: task.data.id });
+      expect(await subscribed(wsCaller)).toBe(true);
+
+      // A personal Issue of someone else is not readable, so not followable.
+      const personal = await caller.create({ instruction: 'Mine alone', name: 'Personal' });
+      await expect(
+        attention(otherUserId, false).subscribe({ taskId: personal.data.id }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(
+        attention(otherUserId, false).unsubscribe({ taskId: personal.data.id }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      const { taskSubscriptions } = await import('@/database/schemas');
+      expect(
+        await serverDB
+          .select()
+          .from(taskSubscriptions)
+          .where(eq(taskSubscriptions.taskId, personal.data.id)),
+      ).toEqual([]);
+    });
+
+    it('subscribes people who comment, are mentioned, are assigned or review, but never over an unsubscribe', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const thirdUserId = await createTestUser(serverDB);
+      const { wsCaller, wsOtherCaller, workspaceId } = await setupWorkspace();
+      const { taskSubscriptions, workspaceMembers } = await import('@/database/schemas');
+      await serverDB
+        .insert(workspaceMembers)
+        .values({ role: 'member', userId: thirdUserId, workspaceId });
+      const { TaskSubscriptionModel } = await import('@/database/models/taskSubscription');
+      const subscriptionsOf = async (taskId: string) =>
+        Object.fromEntries(
+          (
+            await serverDB
+              .select()
+              .from(taskSubscriptions)
+              .where(eq(taskSubscriptions.taskId, taskId))
+          ).map((row) => [row.userId, row.unsubscribedAt ? 'unsubscribed' : row.reason]),
+        );
+
+      const task = await wsCaller.create({ instruction: 'Involve', name: 'Involve' });
+      expect(await subscriptionsOf(task.data.id)).toEqual({});
+      expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(false);
+
+      // Commenting subscribes the author; the detail payload says so.
+      await wsOtherCaller.addComment({ content: 'I am in', id: task.data.id });
+      expect(await subscriptionsOf(task.data.id)).toEqual({ [otherUserId!]: 'commented' });
+      expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(true);
+      // The creator has no row and still follows their own Issue.
+      expect((await wsCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(true);
+
+      // A mention subscribes the mentioned member, and the author as a commenter.
+      await wsCaller.addComment({
+        content: '@third',
+        editorData: editorDataWith(thirdUserId),
+        id: task.data.id,
+      });
+      expect(await subscriptionsOf(task.data.id)).toEqual({
+        [otherUserId!]: 'commented',
+        [thirdUserId]: 'mentioned',
+        [userId]: 'commented',
+      });
+
+      // An explicit unsubscribe survives every automatic rule.
+      await new TaskSubscriptionModel(serverDB, otherUserId!, workspaceId).unsubscribe(
+        task.data.id,
+      );
+      await wsOtherCaller.addComment({ content: 'still talking', id: task.data.id });
+      await wsCaller.addComment({
+        content: '@other',
+        editorData: editorDataWith(otherUserId!),
+        id: task.data.id,
+      });
+      await wsCaller.update({
+        assigneeUserId: otherUserId!,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+        reviewerUserId: otherUserId!,
+      });
+      expect((await subscriptionsOf(task.data.id))[otherUserId!]).toBe('unsubscribed');
+      expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(false);
+
+      // Assignee and reviewer are subscribed at creation and on change.
+      const assigned = await wsCaller.create({
+        assigneeUserId: otherUserId!,
+        instruction: 'Yours',
+        name: 'Yours',
+      });
+      expect(await subscriptionsOf(assigned.data.id)).toEqual({ [otherUserId!]: 'assigned' });
+      await wsCaller.update({ id: assigned.data.id, reviewerUserId: thirdUserId });
+      expect(await subscriptionsOf(assigned.data.id)).toEqual({
+        [otherUserId!]: 'assigned',
+        [thirdUserId]: 'reviewer',
+      });
+    });
+
+    it('does not subscribe anyone for an agent-authored comment', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { wsCaller } = await setupWorkspace();
+      const { taskSubscriptions } = await import('@/database/schemas');
+      const task = await wsCaller.create({ instruction: 'Agent notes', name: 'Agent notes' });
+      await new TaskModel(serverDB, userId, 'task-comment-notify-workspace').addComment({
+        authorAgentId: testAgentId,
+        content: 'progress',
+        taskId: task.data.id,
+        userId,
+      });
+      expect(
+        await serverDB
+          .select()
+          .from(taskSubscriptions)
+          .where(eq(taskSubscriptions.taskId, task.data.id)),
+      ).toEqual([]);
+    });
 
     it('should ping the task creator and @mentioned members on a new member comment', async () => {
       otherUserId = await createTestUser(serverDB);

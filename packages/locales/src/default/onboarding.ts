@@ -361,6 +361,9 @@ export default {
   'setup.error.workspace.title': 'Couldn’t create your workspace',
   'setup.error.workspace.description':
     'Check the name and URL, then try again. If the URL is already taken, choose another one.',
+  'setup.error.workspaceSlugTaken.title': 'That workspace URL is already taken',
+  'setup.error.workspaceSlugTaken.description':
+    'Another workspace uses this URL. Enter a different URL and continue. Your workspace name is kept.',
   'setup.error.agent.title': 'Couldn’t set up your Agent',
   'setup.error.agent.description':
     'Check your provider and device settings, then try again. Your progress is saved.',

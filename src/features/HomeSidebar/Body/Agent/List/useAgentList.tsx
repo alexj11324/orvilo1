@@ -3,24 +3,44 @@
 import isEqual from 'fast-deep-equal';
 import { useMemo } from 'react';
 
+import {
+  isAgentRuntimeOffered,
+  useBuiltinHarnessOffered,
+} from '@/features/HeterogeneousAgent/builtinHarness';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
 /**
- * Per-item sidebar membership was retired with the fixed sidebar IA — the
- * sidebar no longer lists per-agent rows, so every visible item stays listed
- * everywhere. The helper survives as an identity filter so the list-shaping
- * call sites keep one seam.
+ * Drop agents whose runtime is not offered. Chat groups carry no runtime stamp
+ * and are kept.
  */
-export const useKeepSidebarListed = () =>
-  useMemo(
+export const keepOfferedAgents = <T,>(items: T[], builtinOffered: boolean): T[] =>
+  builtinOffered
+    ? items
+    : items.filter((item) => {
+        const row = item as { heterogeneousType?: string | null; type?: string };
+        return (
+          (row.type ?? 'agent') !== 'agent' || isAgentRuntimeOffered(row.heterogeneousType, false)
+        );
+      });
+
+/**
+ * The one seam every agent list is shaped through. Per-item sidebar membership
+ * was retired with the fixed sidebar IA, so the only rows it drops are agents
+ * on a runtime the deployment does not offer.
+ */
+export const useKeepSidebarListed = () => {
+  const builtinOffered = useBuiltinHarnessOffered();
+
+  return useMemo(
     () =>
       <T,>(items: T[]) =>
-        items,
-    [],
+        keepOfferedAgents(items, builtinOffered),
+    [builtinOffered],
   );
+};
 
 /**
  * Folder visibility went away with the per-item preference — categories are

@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
   updateNavigationSnapshot: vi.fn(),
 }));
 
+vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('@/hooks/useFetchAgentList', () => ({ useFetchAgentList: mocks.useFetchAgentList }));
 
 vi.mock('@/platform', async (importOriginal) => ({

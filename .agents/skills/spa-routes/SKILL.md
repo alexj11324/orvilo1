@@ -110,11 +110,11 @@ The thin router adapters are not duplicated trees. Other route modules may still
 
 Known variants today:
 
-| Base file (web)                                       | Desktop file (Electron)                                       | Purpose                                                                                                                                    |
-| ----------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/routes/(main)/settings/features/componentMap.ts` | `src/routes/(main)/settings/features/componentMap.desktop.ts` | Settings tab → component map. Web uses dynamic `import()`; desktop uses sync imports. `componentMap.sync.test.ts` enforces identical keys. |
-| `src/routes/(main)/agent/index.tsx`                   | `src/routes/(main)/agent/index.desktop.tsx`                   | Page entry. Desktop variant overrides the web page wholesale (e.g. extra popup guards).                                                    |
-| `src/routes/(main)/group/index.tsx`                   | `src/routes/(main)/group/index.desktop.tsx`                   | Same pattern as agent.                                                                                                                     |
+| Base file (web)                                  | Desktop file (Electron)                                  | Purpose                                                                                                                                    |
+| ------------------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/features/Settings/features/componentMap.ts` | `src/features/Settings/features/componentMap.desktop.ts` | Settings tab → component map. Web uses dynamic `import()`; desktop uses sync imports. `componentMap.sync.test.ts` enforces identical keys. |
+| `src/routes/(main)/agent/index.tsx`              | `src/routes/(main)/agent/index.desktop.tsx`              | Page entry. Desktop variant overrides the web page wholesale (e.g. extra popup guards).                                                    |
+| `src/routes/(main)/group/index.tsx`              | `src/routes/(main)/group/index.desktop.tsx`              | Same pattern as agent.                                                                                                                     |
 
 **Rules:**
 

@@ -7,6 +7,7 @@ import type { AgentScanState } from '@/features/ConnectAgent/useAgentScan';
 import { RuntimeFields, useAgentRuntimeForm } from './RuntimeFields';
 
 const state = vi.hoisted(() => ({
+  builtinOffered: true,
   host: { deviceId: 'local-device', isLocal: true, loading: false },
   scan: vi.fn().mockResolvedValue(undefined),
   reset: vi.fn(),
@@ -14,6 +15,9 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => undefined,
+}));
+vi.mock('@/features/HeterogeneousAgent/builtinHarness', () => ({
+  useBuiltinHarnessOffered: () => state.builtinOffered,
 }));
 vi.mock('./useExecutionHost', () => ({ useExecutionHost: () => ({ devices: [], ...state.host }) }));
 vi.mock('@/features/ConnectAgent/useAgentScan', () => ({
@@ -41,6 +45,7 @@ vi.mock('@/services/providerBinding', () => ({
 }));
 
 beforeEach(() => {
+  state.builtinOffered = true;
   state.host = { deviceId: 'local-device', isLocal: true, loading: false };
   state.scanState = { agents: { codex: { available: true } }, status: 'success' };
 });
@@ -89,6 +94,32 @@ describe('shared Agent runtime form', () => {
       expect(screen.getByText('createAgent.selectedUnavailable')).toBeTruthy();
     },
   );
+  // The built-in harness used to be the form's starting choice. Withheld, it
+  // must be neither preselected nor listed, and the form has to land on a CLI
+  // the scan actually found.
+  it('offers only installed CLIs and adopts the first one while the built-in harness is withheld', async () => {
+    state.builtinOffered = false;
+    let form: ReturnType<typeof useAgentRuntimeForm> | undefined;
+    const Harness = () => {
+      form = useAgentRuntimeForm({});
+      return createElement(RuntimeFields, { form });
+    };
+    render(createElement(Harness));
+
+    await waitFor(() => expect(form?.choice).toBe('codex'));
+    fireEvent.click(screen.getByRole('combobox', { name: 'createAgent.step.agent' }));
+    expect(await screen.findByRole('option', { name: 'Codex' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: 'Orvilo AI' })).toBeNull();
+  });
+  it('stays empty and not ready when no CLI is installed and the built-in harness is withheld', async () => {
+    state.builtinOffered = false;
+    state.scanState = { agents: {}, status: 'success' };
+    const { result } = renderHook(() => useAgentRuntimeForm({}));
+
+    await waitFor(() => expect(state.scan).toHaveBeenCalled());
+    expect(result.current.choice).toBeUndefined();
+    expect(result.current.ready).toBe(false);
+  });
   it('clears incompatible effort after choosing a different model', async () => {
     const { result } = renderHook(() => useAgentRuntimeForm({ initialType: 'codex' }));
     await waitFor(() => expect(result.current.ready).toBe(true));

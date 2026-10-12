@@ -12,6 +12,11 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { TaskService } from './index';
 
+const admissionFlags = vi.hoisted(() => ({ read: vi.fn(async () => ({})) }));
+vi.mock('@/server/featureFlags', () => ({
+  getServerFeatureFlagsFromRuntimeConfig: admissionFlags.read,
+}));
+
 const { cancelScheduled, scheduleNextTopic } = vi.hoisted(() => ({
   cancelScheduled: vi.fn(),
   scheduleNextTopic: vi.fn(),
@@ -189,6 +194,9 @@ describe('TaskService', () => {
     findBlockedTaskIds: vi.fn().mockResolvedValue([]),
     addActivities: vi.fn(),
     addActivity: vi.fn(),
+    logWorkflowMove: vi.fn(),
+    logSubIssueAdded: vi.fn(),
+    workflowStateNames: vi.fn().mockResolvedValue(new Map()),
     findSubtasks: vi.fn(),
     lockForStatusChange: vi.fn<(...args: unknown[]) => unknown>(),
     updateStatusForIds: vi.fn<(...args: unknown[]) => unknown>(),
@@ -247,6 +255,8 @@ describe('TaskService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    admissionFlags.read.mockResolvedValue({});
+    findActiveDispatchMock.mockResolvedValue(undefined);
     mockTaskModel.areAllDependenciesCompleted.mockResolvedValue(true);
     mockTaskModel.derivedStatusByIds.mockResolvedValue({});
     mockTaskModel.findBlockedTaskIds.mockResolvedValue([]);
@@ -349,6 +359,46 @@ describe('TaskService', () => {
 
   describe('getTaskDetail', () => {
     it.each([
+      [{}, 'disabled', 'caid_dispatch_disabled'],
+      [{ caid_dispatch: [userId] }, 'enabled', null],
+      [{ caid_dispatch: false, caid_dispatch_workspaces: ['workspace-1'] }, 'enabled', null],
+      [
+        { caid_dispatch: false, caid_dispatch_workspaces: ['other-workspace'] },
+        'disabled',
+        'caid_dispatch_disabled',
+      ],
+    ])(
+      'exposes final admission and the durable dispatch reason for %j',
+      async (flags, admission, reason) => {
+        admissionFlags.read.mockResolvedValue(flags);
+        mockTaskModel.resolve.mockResolvedValue({
+          id: 'task_001',
+          identifier: 'TASK-1',
+          totalTopics: 0,
+        });
+        mockTaskModel.findAllDescendants.mockResolvedValue([]);
+        mockTaskModel.getDependencies.mockResolvedValue([]);
+        mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+        mockTaskModel.getComments.mockResolvedValue([]);
+        mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+        mockTaskModel.findByIds.mockResolvedValue([]);
+        mockTaskModel.getCheckpointConfig.mockReturnValue({});
+        mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+        findActiveDispatchMock.mockResolvedValue({
+          phase: 'waiting',
+          waitingReason: 'caid_dispatch_disabled',
+        });
+        const result = await new TaskService(db, userId, 'workspace-1').getTaskDetail('TASK-1');
+        expect(result).toMatchObject({
+          orchestrationAdmission: admission,
+          orchestrationAdmissionReason: reason,
+          dispatchWaitingReason: 'caid_dispatch_disabled',
+        });
+        expect(admissionFlags.read).toHaveBeenCalledWith(userId);
+      },
+    );
+
+    it.each([
       [
         { identifier: 'TASK-2', name: 'Canonical', isDeleted: false },
         { identifier: 'TASK-2', name: 'Canonical' },
@@ -379,6 +429,58 @@ describe('TaskService', () => {
       expect(result?.duplicateOf).toEqual(expected);
       expect(JSON.stringify(result)).not.toContain('private-target-id');
       expect(mockTaskModel.findById).toHaveBeenCalledWith('private-target-id');
+    });
+
+    it('names the run a comment was left on, and leaves ordinary comments unmarked', async () => {
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'task_001',
+        identifier: 'TASK-1',
+        instruction: 'Runs',
+        status: 'backlog',
+        totalTopics: 2,
+      });
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getDependencies.mockResolvedValue([]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue([
+        {
+          createdAt: new Date('2024-01-03T00:00:00Z'),
+          seq: 3,
+          status: 'completed',
+          topicId: 'tpc_3',
+        },
+      ]);
+      mockBriefModel.findByTaskId.mockResolvedValue([]);
+      const comment = (id: string, topicId: string | null) => ({
+        authorUserId: userId,
+        capabilities: { canDelete: true, canEdit: true },
+        content: id,
+        createdAt: new Date('2024-01-04T00:00:00Z'),
+        id,
+        topicId,
+        updatedAt: new Date('2024-01-04T00:00:00Z'),
+      });
+      mockTaskModel.getComments.mockResolvedValue([
+        comment('on-run-3', 'tpc_3'),
+        comment('on-old-run', 'tpc_gone'),
+        comment('plain', null),
+      ]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-1');
+      const byId = Object.fromEntries(
+        (result?.activities ?? [])
+          .filter((activity) => activity.type === 'comment')
+          .map((activity) => [activity.id, activity.replyToRun]),
+      );
+
+      expect(byId).toEqual({
+        'on-old-run': { seq: null, topicId: 'tpc_gone' },
+        'on-run-3': { seq: 3, topicId: 'tpc_3' },
+        'plain': undefined,
+      });
     });
 
     it('should return null when task is not found', async () => {
@@ -1160,6 +1262,85 @@ describe('TaskService', () => {
       expect(topicActivity?.content).toBe(
         'The raw last assistant message shown as the run result.',
       );
+    });
+
+    it('carries why each run failed, and lends the task error only to the latest run', async () => {
+      const task = {
+        assigneeAgentId: null,
+        assigneeUserId: null,
+        createdAt: null,
+        description: null,
+        error: 'Heartbeat watchdog gave up',
+        heartbeatInterval: null,
+        heartbeatTimeout: null,
+        id: 'task_001',
+        identifier: 'TASK-1',
+        instruction: null,
+        lastHeartbeatAt: null,
+        name: 'Task 1',
+        parentTaskId: null,
+        priority: 'normal',
+        status: 'failed',
+        totalTopics: 0,
+      };
+
+      // Newest first, as the model returns them.
+      const topics = [
+        {
+          createdAt: new Date('2024-01-05T00:00:00Z'),
+          handoff: null,
+          seq: 4,
+          status: 'timeout',
+          topicId: 'topic-4',
+        },
+        {
+          createdAt: new Date('2024-01-04T00:00:00Z'),
+          handoff: { error: { message: 'codex exited with code 1' } },
+          seq: 3,
+          status: 'failed',
+          topicId: 'topic-3',
+        },
+        {
+          createdAt: new Date('2024-01-03T00:00:00Z'),
+          handoff: null,
+          seq: 2,
+          status: 'failed',
+          topicId: 'topic-2',
+        },
+        {
+          createdAt: new Date('2024-01-02T00:00:00Z'),
+          handoff: { content: 'done', error: { message: 'stale reason from an earlier attempt' } },
+          seq: 1,
+          status: 'completed',
+          topicId: 'topic-1',
+        },
+      ];
+
+      mockTaskModel.resolve.mockResolvedValue(task);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getDependencies.mockResolvedValue([]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue(topics);
+      mockBriefModel.findByTaskId.mockResolvedValue([]);
+      mockTaskModel.getComments.mockResolvedValue([]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-1');
+
+      const reasonByRun = Object.fromEntries(
+        (result?.activities ?? []).filter((a) => a.type === 'topic').map((a) => [a.id, a.error]),
+      );
+      expect(reasonByRun).toEqual({
+        // A succeeded run never reports a failure reason.
+        'topic-1': null,
+        // An older failed run with nothing recorded does not borrow the task error.
+        'topic-2': null,
+        'topic-3': 'codex exited with code 1',
+        // The latest run has no reason of its own, so the task's current error stands in.
+        'topic-4': 'Heartbeat watchdog gave up',
+      });
     });
 
     it('should resolve author info for activities', async () => {
@@ -2202,6 +2383,75 @@ describe('TaskService', () => {
 
       expect(mockTaskModel.updateContext).toHaveBeenCalledTimes(1);
     });
+
+    it('logs a system move under no actor, from where the Issue was to where it landed', async () => {
+      const prev = baseTask({ status: 'backlog', workflowCategory: 'in_progress' });
+      const next = baseTask({ status: 'completed', workflowCategory: 'done' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateStatus.mockResolvedValue(next);
+
+      await new TaskService(db, userId).updateStatus({ id: 'T-1', status: 'completed' as any });
+
+      expect(mockTaskModel.logWorkflowMove).toHaveBeenCalledWith(next.id, prev, next, {});
+    });
+
+    it("leaves a person's move to the logged writer instead of logging it twice", async () => {
+      const prev = baseTask({ status: 'backlog', workflowCategory: 'in_progress' });
+      const next = baseTask({ status: 'completed', workflowCategory: 'done' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateWithLog.mockResolvedValue(next);
+
+      await new TaskService(db, userId).updateStatus(
+        { id: 'T-1', status: 'completed' as any },
+        { userId },
+      );
+
+      expect(mockTaskModel.updateWithLog).toHaveBeenCalledTimes(1);
+      expect(mockTaskModel.logWorkflowMove).not.toHaveBeenCalled();
+    });
+
+    it('credits a contract-fenced move to the person the caller named', async () => {
+      const prev = baseTask({ status: 'backlog', workflowCategory: 'todo' });
+      const next = baseTask({ status: 'canceled', workflowCategory: 'canceled' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateStatusForExecutionContract.mockResolvedValue(next);
+
+      await new TaskService(db, userId).updateStatus(
+        {
+          expectedContract: {
+            assigneeAgentId: null,
+            executionGeneration: 0,
+            policyRevision: 1,
+            requirementRevision: 1,
+          },
+          id: 'T-1',
+          status: 'canceled' as any,
+        },
+        { userId },
+      );
+
+      // That writer does not log, so the service does — once, as that person.
+      expect(mockTaskModel.updateWithLog).not.toHaveBeenCalled();
+      expect(mockTaskModel.logWorkflowMove).toHaveBeenCalledWith(next.id, prev, next, { userId });
+    });
+
+    it('still reports the transition when its feed line cannot be written', async () => {
+      const prev = baseTask({ status: 'backlog', workflowCategory: 'in_progress' });
+      const next = baseTask({ status: 'paused', workflowCategory: 'in_review' });
+      mockTaskModel.resolve.mockResolvedValue(prev);
+      mockTaskModel.updateStatus.mockResolvedValue(next);
+      mockTaskModel.logWorkflowMove.mockRejectedValueOnce(new Error('insert failed'));
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await new TaskService(db, userId).updateStatus({
+        id: 'T-1',
+        status: 'paused' as any,
+      });
+
+      expect(result.task).toBe(next);
+      expect(logged).toHaveBeenCalled();
+      logged.mockRestore();
+    });
   });
 
   describe('task visibility independent of agent access', () => {
@@ -2278,12 +2528,37 @@ describe('TaskService', () => {
     });
   });
 
+  describe('sub-issue scope', () => {
+    it('refuses a sub-issue whose parent is filed outside the creating workspace', async () => {
+      // The caller's own unfiled Issue, readable from the workspace.
+      mockTaskModel.resolve.mockResolvedValue({
+        createdByUserId: userId,
+        id: 'parent_id',
+        identifier: 'T-1',
+        visibility: 'private',
+        workspaceId: null,
+      });
+      const service = new TaskService(db, userId, 'ws-1');
+
+      await expect(
+        service.createTask({ instruction: 'child', parentTaskId: 'T-1' }),
+      ).rejects.toMatchObject({
+        cause: { data: { code: 'CROSS_SCOPE' } },
+        code: 'BAD_REQUEST',
+      });
+      expect(mockTaskModel.create).not.toHaveBeenCalled();
+    });
+  });
+
   describe('workspace subtask visibility', () => {
     it('normalizes old private requests under legacy private parents', async () => {
       mockTaskModel.resolve.mockResolvedValue({
         id: 'parent_id',
         identifier: 'T-1',
         visibility: 'private',
+        // Filed in the workspace the sub-issue is created in — a parent link
+        // may not cross workspaces.
+        workspaceId: 'ws-1',
       });
       mockTaskModel.create.mockImplementation(async (data: any) => ({
         ...data,
@@ -2296,6 +2571,37 @@ describe('TaskService', () => {
         service.createTask({ instruction: 'child', parentTaskId: 'T-1', visibility: 'private' }),
       ).resolves.toMatchObject({ visibility: 'public', parentTaskId: 'parent_id' });
     });
+
+    it("records a created sub-issue on its parent, credited to the new Issue's creator", async () => {
+      mockTaskModel.resolve.mockResolvedValue({
+        id: 'parent_id',
+        visibility: 'public',
+        workspaceId: 'ws-1',
+      });
+      mockTaskModel.create.mockImplementation(async (data: any) => ({
+        ...data,
+        createdByAgentId: 'agt_creator',
+        createdByUserId: userId,
+        id: 'task_child',
+        identifier: 'T-2',
+      }));
+
+      await new TaskService(db, userId, 'ws-1').createTask({
+        instruction: 'child',
+        parentTaskId: 'T-1',
+      });
+
+      expect(mockTaskModel.logSubIssueAdded).toHaveBeenCalledWith('parent_id', 'task_child', {
+        agentId: 'agt_creator',
+        userId,
+      });
+    });
+
+    it('says nothing on any parent for a top-level Issue', async () => {
+      await new TaskService(db, userId, 'ws-1').createTask({ instruction: 'top level' });
+
+      expect(mockTaskModel.logSubIssueAdded).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateStatusCascade activity log', () => {
@@ -2304,7 +2610,7 @@ describe('TaskService', () => {
       parentTaskId: null,
       ...overrides,
     });
-    it('writes one status row per family member a person cascaded', async () => {
+    it('writes one workflow row per family member a person cascaded', async () => {
       const parent = baseTask({
         id: 'task-p',
         identifier: 'P-1',
@@ -2334,23 +2640,42 @@ describe('TaskService', () => {
       mockTaskModel.resolve.mockResolvedValue(parent);
       mockTaskModel.findAllDescendants.mockResolvedValue([openChild, doneChild, openGrandchild]);
       mockTaskModel.updateStatusForIds.mockResolvedValue([
-        { ...parent, status: 'canceled' },
-        { ...openChild, status: 'canceled' },
-        { ...openGrandchild, status: 'canceled' },
+        { ...parent, status: 'canceled', workflowCategory: 'canceled', workflowStateRefId: 'st-x' },
+        { ...openChild, status: 'canceled', workflowCategory: 'canceled' },
+        { ...openGrandchild, status: 'canceled', workflowCategory: 'canceled' },
       ]);
       // What each task is *leaving* comes from the locked read inside the
       // transaction, not the dialog-time snapshot: the child moved backlog →
-      // paused in between, and the log must say so.
+      // in review in between, and the log must say so.
       mockTaskModel.lockForStatusChange.mockResolvedValue([
-        { id: 'task-p', status: 'running', visibility: 'public' },
-        { id: 'task-c1', status: 'paused', visibility: 'private' },
-        { id: 'task-g1', status: 'running', visibility: 'public' },
+        {
+          id: 'task-p',
+          status: 'running',
+          visibility: 'public',
+          workflowCategory: 'in_progress',
+          workflowStateRefId: 'st-doing',
+        },
+        {
+          id: 'task-c1',
+          status: 'paused',
+          visibility: 'private',
+          workflowCategory: 'in_review',
+          workflowStateRefId: null,
+        },
+        {
+          id: 'task-g1',
+          status: 'running',
+          visibility: 'public',
+          workflowCategory: 'in_progress',
+          workflowStateRefId: null,
+        },
       ]);
-      mockTaskModel.derivedStatusByIds.mockResolvedValue({
-        'task-c1': 'paused',
-        'task-g1': 'running',
-        'task-p': 'running',
-      });
+      mockTaskModel.workflowStateNames.mockResolvedValue(
+        new Map([
+          ['st-doing', 'Doing'],
+          ['st-x', "Won't do"],
+        ]),
+      );
       mockTaskTopicModel.cancelRunningByTaskIds.mockResolvedValue([]);
       (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
 
@@ -2367,25 +2692,50 @@ describe('TaskService', () => {
         {
           actorAgentId: null,
           actorUserId: userId,
-          payload: { actorKind: 'user', from: 'running', to: 'canceled' },
+          // Named by the team state on each side where the Issue has one.
+          payload: {
+            actorKind: 'user',
+            from: 'in_progress',
+            fromId: 'st-doing',
+            fromLabel: 'Doing',
+            to: 'canceled',
+            toId: 'st-x',
+            toLabel: "Won't do",
+          },
           taskId: 'task-p',
-          type: 'status',
+          type: 'workflow_state',
           visibility: 'public',
         },
         {
           actorAgentId: null,
           actorUserId: userId,
-          payload: { actorKind: 'user', from: 'paused', to: 'canceled' },
+          payload: {
+            actorKind: 'user',
+            from: 'in_review',
+            fromId: null,
+            fromLabel: null,
+            to: 'canceled',
+            toId: null,
+            toLabel: null,
+          },
           taskId: 'task-c1',
-          type: 'status',
+          type: 'workflow_state',
           visibility: 'private',
         },
         {
           actorAgentId: null,
           actorUserId: userId,
-          payload: { actorKind: 'user', from: 'running', to: 'canceled' },
+          payload: {
+            actorKind: 'user',
+            from: 'in_progress',
+            fromId: null,
+            fromLabel: null,
+            to: 'canceled',
+            toId: null,
+            toLabel: null,
+          },
           taskId: 'task-g1',
-          type: 'status',
+          type: 'workflow_state',
           visibility: 'public',
         },
       ]);

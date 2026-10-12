@@ -56,10 +56,9 @@ refreshBenchmarks = async () => {
 };
 ```
 
-Read the current [benchmark action](../../../src/store/eval/slices/benchmark/action.ts)
-for store wiring and the [SWR wrappers](../../../src/libs/swr/index.ts) for their
-actual options. These links locate implementation; they do not make every existing
-call site a template to copy unchanged.
+Read the [SWR wrappers](../../../src/libs/swr/index.ts) for their actual options.
+The link locates implementation; it does not make every existing call site a template
+to copy unchanged.
 
 Hooks that share a known parent id can run together. If one request needs a value
 returned by another, keep its key `null` until that value exists. Do not assume the

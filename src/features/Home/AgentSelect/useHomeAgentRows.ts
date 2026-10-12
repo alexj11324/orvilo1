@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { DEFAULT_INBOX_AVATAR } from '@/const/meta';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import {
   useKeepSidebarGroupsListed,
   useKeepSidebarListed,
@@ -74,6 +75,8 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
   // Per-item sidebar membership was retired with the fixed IA — keep() is an
   // identity seam shared with the other list-shaping call sites.
   const keep = useKeepSidebarListed();
+  // The inbox and task agents are virtual rows on the built-in harness.
+  const builtinOffered = useBuiltinHarnessOffered();
   const keepGroups = useKeepSidebarGroupsListed();
 
   return useMemo(() => {
@@ -111,7 +114,7 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
     ]);
 
     const workspaceRows: AgentRow[] = [];
-    if (inboxAgentId && !seen.has(inboxAgentId)) {
+    if (builtinOffered && inboxAgentId && !seen.has(inboxAgentId)) {
       seen.add(inboxAgentId);
       workspaceRows.push({
         avatar:
@@ -122,7 +125,7 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
         title: agentDisplayName(inboxMeta, 'Orvilo AI'),
       });
     }
-    if (options?.includeTaskAgent && taskAgentId && !seen.has(taskAgentId)) {
+    if (builtinOffered && options?.includeTaskAgent && taskAgentId && !seen.has(taskAgentId)) {
       seen.add(taskAgentId);
       workspaceRows.push({
         avatar: typeof taskAgentMeta?.avatar === 'string' ? taskAgentMeta.avatar : undefined,
@@ -153,6 +156,7 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
   }, [
     activeWorkspaceId,
     agentGroups,
+    builtinOffered,
     inboxAgentId,
     inboxMeta,
     keep,

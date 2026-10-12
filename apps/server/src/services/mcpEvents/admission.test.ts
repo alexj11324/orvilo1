@@ -27,6 +27,7 @@ import { sweepMcpEventInbox } from './runtime';
 
 const db: OrviloDatabase = await getTestDB();
 const userId = 'event-admission-user';
+const agentAuthorId = 'event-admission-agent-author';
 const workspaceId = 'event-admission-workspace';
 const tenantId = workspaceId;
 const connectorId = '00000000-0000-4000-8000-0000000000e1';
@@ -51,6 +52,7 @@ const cleanup = async () => {
   await db.delete(workspaceMembers).where(eq(workspaceMembers.workspaceId, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(users).where(eq(users.id, userId));
+  await db.delete(users).where(eq(users.id, agentAuthorId));
 };
 
 const seed = async (
@@ -80,7 +82,13 @@ const seed = async (
     userId,
     workspaceId,
   });
-  await db.insert(agents).values({ id: agentId, title: 'Event runner', userId, workspaceId });
+  // The initiator runs their own Agent without a Use row, so the no-Use case
+  // needs an Agent somebody else created.
+  const agentCreatorId = options.useGranted === false ? agentAuthorId : userId;
+  if (agentCreatorId !== userId) await db.insert(users).values({ id: agentCreatorId });
+  await db
+    .insert(agents)
+    .values({ id: agentId, title: 'Event runner', userId: agentCreatorId, workspaceId });
   if (options.useGranted !== false) {
     await db.insert(resourcePermissions).values({
       accessLevel: 'use',

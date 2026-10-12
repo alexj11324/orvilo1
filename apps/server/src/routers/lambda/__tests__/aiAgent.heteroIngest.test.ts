@@ -121,6 +121,7 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
   describe('heteroIngest', () => {
     it('delegates the batch to HeterogeneousAgentService and acks', async () => {
       const events = [
+        buildEvent('session_title', 0),
         buildEvent('stream_start', 0),
         buildEvent('stream_chunk', 1),
         buildEvent('stream_end', 2),

@@ -1,4 +1,4 @@
-import { INVITATION_EXPIRY_DAYS } from '@orvilo/const';
+import { CURRENT_ONBOARDING_VERSION, INVITATION_EXPIRY_DAYS } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
@@ -406,6 +406,16 @@ export const acceptInvitation = async (
   }
   if (found.status === 'accepted') {
     if (found.acceptedBy === params.userId) {
+      const account = await findUserById(db, params.userId);
+      if (!account?.onboarding?.finishedAt) {
+        await new UserModel(db, params.userId).updateUser({
+          onboarding: {
+            ...account?.onboarding,
+            finishedAt: new Date().toISOString(),
+            version: CURRENT_ONBOARDING_VERSION,
+          },
+        });
+      }
       return { alreadyMember: true, workspaceId: found.workspaceId };
     }
     throw new TRPCError({ code: 'CONFLICT', message: 'Invitation already used' });
@@ -522,6 +532,16 @@ export const acceptInvitation = async (
       );
       if (!marked) {
         throw new TRPCError({ code: 'CONFLICT', message: 'Invitation already used' });
+      }
+
+      if (!account?.onboarding?.finishedAt) {
+        await new UserModel(tx, params.userId).updateUser({
+          onboarding: {
+            ...account?.onboarding,
+            finishedAt: new Date().toISOString(),
+            version: CURRENT_ONBOARDING_VERSION,
+          },
+        });
       }
 
       await recordAudit(tx, {

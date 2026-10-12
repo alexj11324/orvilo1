@@ -515,6 +515,10 @@ export interface GoalGraphSnapshot {
    */
   integrations?: Record<string, GoalNodeIntegration>;
   nodes: GoalGraphNode[];
+  /** Final admission for the requesting user and active workspace; does not gate manual runs. */
+  orchestrationAdmission?: 'enabled' | 'disabled';
+  /** Current admission gate reason, not the execution state of an existing run. */
+  orchestrationAdmissionReason?: 'caid_dispatch_disabled' | null;
   /**
    * Live heartbeat per active task node id: the `agent_operations.updatedAt`
    * of the run behind it. The runtime refreshes that lease every ~90s, while
@@ -588,5 +592,6 @@ export interface GoalTickResult {
   message: string;
   nodeId?: string;
   outcome: GoalTickOutcome;
+  reason?: 'caid_dispatch_disabled';
   taskId?: string;
 }

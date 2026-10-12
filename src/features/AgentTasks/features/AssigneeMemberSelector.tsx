@@ -28,6 +28,8 @@ interface AssigneeMemberSelectorProps {
   /** Render the trigger as a real Button (the Issue rail's value cell). */
   control?: PickerControl;
   currentUserId?: string | null;
+  /** Open the picker as soon as it mounts ("+ Add property" → Reviewer). */
+  defaultOpen?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
   onChange?: (userId: string | null, member?: WorkspaceMemberRow) => void;
@@ -85,10 +87,19 @@ const matchesSearch = (member: WorkspaceMemberRow, query: string) =>
   );
 
 const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
-  ({ children, control, currentUserId, disabled, fullWidth, onChange, taskIdentifier }) => {
+  ({
+    children,
+    control,
+    currentUserId,
+    defaultOpen = false,
+    disabled,
+    fullWidth,
+    onChange,
+    taskIdentifier,
+  }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(defaultOpen);
     const [search, setSearch] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const listRef = useRef<HTMLDivElement>(null);

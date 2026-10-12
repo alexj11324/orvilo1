@@ -2,6 +2,7 @@ import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { PROVIDER_CONFIG_ANCHOR_MODEL, resolveHeteroCliAgentType } from '@orvilo/types';
 
 import { scanLocal } from '@/features/ConnectAgent/useAgentScan';
+import { isAgentRuntimeOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { agentReadiness } from '@/features/Home/AgentSelect/agentReadiness';
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
@@ -22,7 +23,11 @@ export const resolveOnboardingAgentHost = (
 });
 
 /** Verify the selected saved runtime without transferring or rewriting its source. */
-export const verifyOnboardingOrchestrator = async (agentId: string, workspaceId: string) => {
+export const verifyOnboardingOrchestrator = async (
+  agentId: string,
+  workspaceId: string,
+  options?: { alsoDefault?: boolean },
+) => {
   if (!agentId) throw new Error('ORCHESTRATOR_SETUP_REQUIRED');
   const client = createWorkspaceLambdaClient(workspaceId);
   const personalClient = createWorkspaceLambdaClient(null);
@@ -76,7 +81,10 @@ export const verifyOnboardingOrchestrator = async (agentId: string, workspaceId:
     )
       throw new Error('PROVIDER_CHECK_UNAVAILABLE');
   }
-  await client.workspaceUserSettings.updatePreference.mutate({ orchestratorAgentId: agentId });
+  await client.workspaceUserSettings.updatePreference.mutate({
+    orchestratorAgentId: agentId,
+    ...(options?.alsoDefault && { defaultAgentId: agentId }),
+  });
 };
 
 export const getConfiguredOrchestratorRuntime = async (
@@ -102,10 +110,14 @@ const listSavedAgents = async (client: ReturnType<typeof createWorkspaceLambdaCl
 export const listConfiguredOrchestrators = async (
   workspaceId: string | null,
   visibility: 'private' | 'public',
+  builtinOffered = true,
 ) => {
   const client = createWorkspaceLambdaClient(workspaceId);
   const [agents, devices, bindings] = await Promise.all([
-    listSavedAgents(client),
+    // Filtered before the per-Agent runtime lookup, so a withheld Agent costs no request.
+    listSavedAgents(client).then((saved) =>
+      saved.filter((agent) => isAgentRuntimeOffered(agent.heterogeneousType, builtinOffered)),
+    ),
     client.device.listDevices.query(),
     createWorkspaceLambdaClient(null).providerBinding.list.query(),
   ]);

@@ -101,6 +101,21 @@ const STATUS_KEY = {
   scheduled: 'taskDetail.status.scheduled',
 } as const;
 
+const WORKFLOW_CATEGORY_KEYS = {
+  backlog: 'taskDetail.workflow.category.backlog',
+  canceled: 'taskDetail.workflow.category.canceled',
+  done: 'taskDetail.workflow.category.done',
+  in_progress: 'taskDetail.workflow.category.in_progress',
+  in_review: 'taskDetail.workflow.category.in_review',
+  todo: 'taskDetail.workflow.category.todo',
+  triage: 'taskDetail.workflow.category.triage',
+} as const;
+
+const workflowCategoryLabel = (t: TFunction<'chat'>, category: string) => {
+  const key = WORKFLOW_CATEGORY_KEYS[category as keyof typeof WORKFLOW_CATEGORY_KEYS];
+  return key ? t(key) : category;
+};
+
 const statusLabel = (t: TFunction<'chat'>, status: unknown) => {
   const key = STATUS_KEY[status as keyof typeof STATUS_KEY];
   return key ? t(key) : String(status ?? '—');
@@ -144,6 +159,22 @@ const RowSentence = ({ row }: { row: ActivityFeedRow }) => {
             actor,
             from: value(from ? statusLabel(t, from) : '—'),
             to: value(to ? statusLabel(t, to) : '—'),
+          }}
+        />
+      );
+    }
+    case 'workflow_state': {
+      // Named by the team state where the Issue had one, else by the category.
+      const side = (category: unknown, name?: string | null) =>
+        name || (typeof category === 'string' ? workflowCategoryLabel(t, category) : '—');
+      return (
+        <Trans
+          i18nKey={'taskDetail.activities.status.changed'}
+          ns={'chat'}
+          components={{
+            actor,
+            from: value(side(row.payload?.from, row.payload?.fromLabel)),
+            to: value(side(row.payload?.to, row.payload?.toLabel)),
           }}
         />
       );

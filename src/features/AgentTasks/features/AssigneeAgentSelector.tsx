@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { confirmModal } from '@/components/Modal';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type SidebarAgentItem } from '@/database/repositories/home';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
+import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import AgentItem from '@/features/PageEditor/Copilot/AgentSelector/AgentItem';
@@ -108,15 +110,17 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     );
 
     useFetchAgentList();
+    const keep = useKeepSidebarListed();
+    const builtinOffered = useBuiltinHarnessOffered();
 
     const workspaceAgents = useMemo<SidebarAgentItem[]>(() => {
       const groupedItems = agentGroups.flatMap((group) => group.items);
-      const available = [...pinnedAgents, ...groupedItems, ...ungroupedAgents].filter(
+      const available = keep([...pinnedAgents, ...groupedItems, ...ungroupedAgents]).filter(
         (agent) => agent.type === 'agent',
       );
       const hasInbox = available.some((agent) => agent.id === inboxAgentId);
 
-      if (inboxAgentId && !hasInbox) {
+      if (builtinOffered && inboxAgentId && !hasInbox) {
         return [
           {
             avatar: inboxMeta?.avatar || DEFAULT_INBOX_AVATAR,
@@ -132,14 +136,23 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
       }
 
       return available;
-    }, [pinnedAgents, agentGroups, ungroupedAgents, inboxAgentId, inboxMeta, t]);
+    }, [
+      pinnedAgents,
+      agentGroups,
+      ungroupedAgents,
+      inboxAgentId,
+      inboxMeta,
+      t,
+      keep,
+      builtinOffered,
+    ]);
 
     const privateAgents = useMemo<SidebarAgentItem[]>(() => {
       const groupedItems = privateAgentGroups.flatMap((group) => group.items);
-      return [...privatePinnedAgents, ...groupedItems, ...privateUngroupedAgents].filter(
+      return keep([...privatePinnedAgents, ...groupedItems, ...privateUngroupedAgents]).filter(
         (agent) => agent.type === 'agent',
       );
-    }, [privateAgentGroups, privatePinnedAgents, privateUngroupedAgents]);
+    }, [keep, privateAgentGroups, privatePinnedAgents, privateUngroupedAgents]);
 
     const query = search.trim().toLowerCase();
     const filteredPrivate = useMemo(

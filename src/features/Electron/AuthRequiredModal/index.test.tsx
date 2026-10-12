@@ -1,5 +1,5 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { createElement, type ReactElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { sessionAuthEvents } from '@/layout/AuthProvider/SessionAuth/events';
@@ -230,6 +230,76 @@ describe('useAuthRequiredModal', () => {
 
     expect(screen.getByText('Session Expired')).toBeInTheDocument();
     expect(screen.queryByText('authModal.title')).not.toBeInTheDocument();
+  });
+
+  it('consumes a typed sign-in failure and restores the retry action', async () => {
+    translations.current = {
+      'desktop-onboarding:screen5.errors.network': 'Check your network connection',
+    };
+    electronStore.current.connectRemoteServer.mockRejectedValueOnce(
+      Object.assign(new Error('failed'), { code: 'network' }),
+    );
+    const { result } = renderHook(() => useAuthRequiredModal());
+    act(() => result.current.open());
+    const [modalProps] = createModalMock.mock.calls[0] as [ModalProps];
+    const ready = vi.fn();
+    const state = vi.fn();
+    const content = modalProps.content as ReactElement<any>;
+    render(
+      createElement(content.type, {
+        ...content.props,
+        onActionReady: ready,
+        onSigningInChange: state,
+      }),
+    );
+    await act(async () => {
+      await expect(ready.mock.calls[0][0].signIn()).resolves.toBeUndefined();
+    });
+    expect(state).toHaveBeenLastCalledWith(false);
+    // The failure is explained by its code, never by the rejected error's own text.
+    expect(screen.getByText('Check your network connection')).toBeInTheDocument();
+    expect(screen.queryByText('failed')).not.toBeInTheDocument();
+
+    electronStore.current.connectRemoteServer.mockResolvedValueOnce(undefined);
+    await act(async () => {
+      await ready.mock.calls.at(-1)![0].signIn();
+    });
+    expect(screen.queryByText('Check your network connection')).not.toBeInTheDocument();
+  });
+
+  it('explains an authorization that fails after the browser opened', async () => {
+    translations.current = {
+      'desktop-onboarding:screen5.errors.timedOut': 'Authorization timed out',
+    };
+    electronStore.current.connectRemoteServer.mockResolvedValueOnce(undefined);
+    const { result } = renderHook(() => useAuthRequiredModal());
+    act(() => result.current.open());
+    const [modalProps] = createModalMock.mock.calls[0] as [ModalProps];
+    const ready = vi.fn();
+    const state = vi.fn();
+    const content = modalProps.content as ReactElement<any>;
+    render(
+      createElement(content.type, {
+        ...content.props,
+        onActionReady: ready,
+        onSigningInChange: state,
+      }),
+    );
+    await act(async () => {
+      await ready.mock.calls[0][0].signIn();
+    });
+    expect(state).toHaveBeenLastCalledWith(true);
+
+    act(() => {
+      (broadcastHandlers.get('authorizationFailed') as (payload: unknown) => void)({
+        code: 'timeout',
+        error: 'Handoff expired',
+      });
+    });
+
+    expect(state).toHaveBeenLastCalledWith(false);
+    expect(screen.getByText('Authorization timed out')).toBeInTheDocument();
+    expect(screen.queryByText('Handoff expired')).not.toBeInTheDocument();
   });
 
   it('keeps the close button available while removing the Later action', () => {

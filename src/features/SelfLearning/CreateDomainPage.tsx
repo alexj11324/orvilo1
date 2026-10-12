@@ -33,11 +33,20 @@ import type { ExpertiseDomainDraft } from '@/services/expertise';
 import { expertiseService } from '@/services/expertise';
 import { useAgentStore } from '@/store/agent';
 import { shinyTextStyles } from '@/styles';
+import { isTrpcPreconditionReason } from '@/utils/trpcError';
 
 import { type AdjustmentTarget, mergeAdjustedBlock } from './createDomainAdjustment';
 import { useCreateDomainDraft } from './useCreateDomainDraft';
 
 const GENERATION_ESTIMATE_SECONDS = 90;
+
+/**
+ * Drafting is optional model work. On a deployment with no usable model for it
+ * the server answers with this stable reason — a state of the deployment, not
+ * a failed attempt worth retrying.
+ */
+const isExpertiseUnavailable = (error: unknown) =>
+  isTrpcPreconditionReason(error, 'EXPERTISE_UNAVAILABLE');
 
 const emptyAdjustments: Record<AdjustmentTarget, string> = {
   canonEntries: '',
@@ -241,8 +250,9 @@ const CreateDomainPage = memo(() => {
     try {
       setDraft(await expertiseService.draftDomain({ agentId, brief: brief.trim() }));
       setStep('review');
-    } catch {
-      toast.error(t('create.failed'));
+    } catch (error) {
+      if (isExpertiseUnavailable(error)) toast.info(t('create.unavailable'));
+      else toast.error(t('create.failed'));
       setStep(draft ? 'review' : 'describe');
     }
   }, [agentId, brief, draft, setDraft, setStep, t]);
@@ -262,8 +272,9 @@ const CreateDomainPage = memo(() => {
         setDraft((current) => (current ? mergeAdjustedBlock(current, adjusted, target) : current));
         setAdjustments((current) => ({ ...current, [target]: '' }));
         setOpenAdjustment(undefined);
-      } catch {
-        toast.error(t('create.adjust.failed'));
+      } catch (error) {
+        if (isExpertiseUnavailable(error)) toast.info(t('create.unavailable'));
+        else toast.error(t('create.adjust.failed'));
       } finally {
         setRefiningTarget(undefined);
       }

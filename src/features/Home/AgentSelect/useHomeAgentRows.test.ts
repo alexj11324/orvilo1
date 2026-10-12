@@ -9,6 +9,7 @@ import { useHomeAgentRows } from './useHomeAgentRows';
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: undefined as string | undefined,
+  builtinOffered: true,
   agentState: {
     agentMap: {} as Record<string, unknown>,
     builtinAgentIdMap: { inbox: 'agt_inbox' } as Record<string, string>,
@@ -27,6 +28,10 @@ const mocks = vi.hoisted(() => ({
   sidebarVisibilityOverrides: {} as Record<string, boolean>,
 }));
 
+vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBuiltinHarnessOffered: () => mocks.builtinOffered,
+}));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => mocks.activeWorkspaceId,
 }));
@@ -103,6 +108,7 @@ const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
 describe('useHomeAgentRows', () => {
   beforeEach(() => {
     mocks.activeWorkspaceId = undefined;
+    mocks.builtinOffered = true;
     mocks.currentUserId = 'member-1';
     mocks.sidebarHiddenAgentIds = [];
     mocks.sidebarHiddenGroupIds = [];
@@ -276,5 +282,28 @@ describe('useHomeAgentRows', () => {
     const { result } = renderHook(() => useHomeAgentRows());
 
     expect(ids(result.current.workspaceRows)).toEqual(['agt_inbox', 'agt_a']);
+  });
+
+  // While the product runs agents through ACP only, nothing on the built-in
+  // harness may be offered: not the virtual inbox and task rows, not a Prime
+  // agent, and not a pre-harness agent that carries no runtime stamp.
+  it('lists only ACP agents while the built-in harness is withheld', () => {
+    mocks.builtinOffered = false;
+    mocks.activeWorkspaceId = 'ws_1';
+    mocks.agentState.builtinAgentIdMap['task-agent'] = 'agt_task';
+    mocks.homeState.pinnedAgents = [agent('agt_prime', 'Prime', { heterogeneousType: 'orvilo' })];
+    mocks.homeState.ungroupedAgents = [
+      agent('agt_legacy', 'Legacy', { heterogeneousType: null }),
+      agent('agt_codex', 'Codex', { heterogeneousType: 'codex' }),
+    ];
+    mocks.homeState.privateUngroupedAgents = [
+      agent('agt_private_legacy', 'Private legacy'),
+      agent('agt_cc', 'Claude Code', { heterogeneousType: 'claude-code' }),
+    ];
+
+    const { result } = renderHook(() => useHomeAgentRows({ includeTaskAgent: true }));
+
+    expect(ids(result.current.workspaceRows)).toEqual(['agt_codex']);
+    expect(ids(result.current.privateRows)).toEqual(['agt_cc']);
   });
 });

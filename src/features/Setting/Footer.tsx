@@ -25,8 +25,14 @@ export const LayoutSettingsFooterClassName = 'settings-layout-footer';
 const Footer = memo<PropsWithChildren>(() => {
   const { t } = useTranslation('common');
 
+  // An engagement prompt, so it follows the promotion flag (off by default)
+  // rather than appearing wherever GitHub links are merely allowed.
   const hideGitHubEngagementFooter = useServerConfigStore((s) =>
-    Boolean(s.featureFlags.hideGitHub || s.serverConfig.enableBusinessFeatures),
+    Boolean(
+      !s.featureFlags.showCloudPromotion ||
+      s.featureFlags.hideGitHub ||
+      s.serverConfig.enableBusinessFeatures,
+    ),
   );
 
   const handleOpenStar = () =>

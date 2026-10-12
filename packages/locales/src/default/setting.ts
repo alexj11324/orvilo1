@@ -16,6 +16,15 @@ export default {
   'settingAgent.modelSettings.unavailable.unverified':
     'Connection is not verified. Check the key, endpoint and model access, then retry.',
   'settingAgent.modelSettings.verifyBinding': 'Verify connection',
+  'defaultAgentPicker.title': 'Default Agent',
+  'defaultAgentPicker.description':
+    'Opens when you start a chat or ask from the command menu without naming an Agent.',
+  'defaultAgentPicker.choose': 'Choose an Agent',
+  'defaultAgentPicker.saved': 'Default Agent saved',
+  'defaultAgentPicker.fallback.orchestrator': 'No default is set, so your Orchestrator is used.',
+  'defaultAgentPicker.fallback.first':
+    'No default is set, so the first Agent in your list is used.',
+  'orchestrator.alsoDefault': 'Also set as my default Agent',
   'tab.orchestrator': 'Orchestrator',
   'orchestrator.description':
     'Choose a configured Agent to coordinate new projects. Existing projects keep their current coordinator.',
@@ -23,7 +32,7 @@ export default {
   'orchestrator.personalScope': 'Applies to your new personal projects.',
   'orchestrator.select': 'Choose Orchestrator Agent',
   'orchestrator.unsupported': 'This engine cannot coordinate projects. Choose a supported Agent.',
-  'orchestrator.empty': 'Create and configure an Agent to choose an Orchestrator.',
+  'orchestrator.empty': 'Connect an Agent in Settings → Agents to choose an Orchestrator.',
   'orchestrator.selectionUnavailable':
     'The selected Agent is unavailable. Configure it or choose another Agent.',
   'orchestrator.create': 'Create Agent',
@@ -961,19 +970,13 @@ export default {
   'notification.channel.status.enabledCount': 'Enabled for {{num}} notification types',
   'notification.channel.status.notLinked': 'Not linked',
   'notification.channel.types.title': 'Notification types',
-  'notification.email.desc': 'Receive email notifications when important events occur',
-  'notification.email.title': 'Email Notifications',
-  'notification.inbox.desc': 'Show notifications in the in-app inbox',
-  'notification.inbox.title': 'Inbox Notifications',
   'notification.matrix.all': 'All notifications',
+  'notification.matrix.desc':
+    'Choose which events alert you on desktop. Mobile alerts are coming soon. Inbox always keeps a record of work assigned to you, whatever you choose here.',
   'notification.matrix.cell': '{{channel}}: {{event}}',
   'notification.matrix.event': 'Event',
-  'notification.matrix.inbox': 'Inbox',
-  'notification.matrix.push': 'Desktop & mobile',
+  'notification.matrix.push': 'Desktop',
   'notification.matrix.title': 'Event notifications',
-  'notification.push.desc':
-    'Send push notifications to your mobile devices (Orvilo mobile app required)',
-  'notification.push.title': 'Mobile Push Notifications',
   'notification.test.action': 'Send test notification',
   'notification.test.failed': 'Test notification failed: {{reason}}',
   'notification.test.notDelivered': 'Test notification was not delivered',
@@ -1476,7 +1479,7 @@ export default {
     'messenger, chat platform, bot, telegram, slack, discord, wechat',
   'settingsSearch.tabKeywords.memory': 'memory, memories, personalization',
   'settingsSearch.tabKeywords.notification':
-    'notification, email, push, alerts, inbox, telegram, slack, discord, wechat',
+    'notification, push, alerts, inbox, telegram, slack, discord, wechat',
   'settingsSearch.tabKeywords.oauthApps': 'oauth, oauth apps, developer apps',
   'settingsSearch.tabKeywords.plans': 'subscription, plan, upgrade, pricing, membership',
   'settingsSearch.tabKeywords.profile':
@@ -3785,7 +3788,6 @@ export default {
   'workspaceSetting.general.name': 'Name',
   'workspaceSetting.general.url': 'URL',
   'workspaceSetting.general.created': 'Created',
-  'workspaceSetting.notification.title': 'Notifications',
   'workspaceSetting.notification.channels': 'Channels',
   'workspaceSetting.notification.inbox': 'In-app inbox',
   'workspaceSetting.notification.inboxDesc': 'Notifications in your Orvilo inbox',
@@ -4263,9 +4265,10 @@ export default {
   'settingAgent.list.error': 'Could not load configuration',
   'settingAgent.useMembers.title': 'Who can use this agent',
   'settingAgent.useMembers.hint':
-    'Selected members can send messages, run this agent, and answer its questions. Viewers remain read-only. Workspace members can read Issue conversations.',
+    'The creator and the selected members can send messages, run this agent, and answer its questions. Viewers remain read-only. Workspace members can read Issue conversations.',
   'settingAgent.useMembers.add': 'Select members who can use this agent',
   'settingAgent.useMembers.empty': 'No members can use this agent',
+  'settingAgent.useMembers.creator': 'Creator',
   'permission.configAccess.agentManageRequired':
     'Agent configuration requires its creator or a workspace admin. You can still read Issue conversations.',
   'settingAgent.deviceSettings.runtimeUnverifiedTitle': 'Device runtime verification incomplete',

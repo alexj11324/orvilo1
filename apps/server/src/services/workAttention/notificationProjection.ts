@@ -1,9 +1,4 @@
-import {
-  EVENT_CONSUMERS,
-  notificationEventEnabled,
-  type NotificationMetadata,
-  type NotificationSettings,
-} from '@orvilo/types';
+import { EVENT_CONSUMERS, type NotificationMetadata } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
@@ -11,7 +6,6 @@ import { EventConsumerReceiptModel } from '@/database/models/eventConsumerReceip
 import { NotificationModel } from '@/database/models/notification';
 import { allocateFeedRevision } from '@/database/models/notificationFeed';
 import { TaskModel } from '@/database/models/task';
-import { UserModel } from '@/database/models/user';
 import {
   agents,
   taskComments,
@@ -167,18 +161,31 @@ export class NotificationProjectionService {
       )
       .limit(1);
     if (!task) return [];
-    const subscriptions = await this.db
-      .select({ userId: taskSubscriptions.userId })
+    const subscriptionRows = await this.db
+      .select({
+        unsubscribedAt: taskSubscriptions.unsubscribedAt,
+        userId: taskSubscriptions.userId,
+      })
       .from(taskSubscriptions)
       .where(
         and(
           eq(taskSubscriptions.taskId, task.id),
-          isNull(taskSubscriptions.unsubscribedAt),
           row.workspaceId
             ? eq(taskSubscriptions.workspaceId, row.workspaceId)
             : isNull(taskSubscriptions.workspaceId),
         ),
       );
+    const optedOut = new Set(
+      subscriptionRows.filter((item) => item.unsubscribedAt).map((item) => item.userId),
+    );
+    // The creator and the assignee follow the Issue without a row, until they
+    // opt out. `TaskSubscriptionModel.listActiveForTaskIds` reports the same.
+    const followers = [
+      ...[task.createdByUserId, task.assigneeUserId].filter(
+        (userId): userId is string => !!userId && !optedOut.has(userId),
+      ),
+      ...subscriptionRows.filter((item) => !item.unsubscribedAt).map((item) => item.userId),
+    ];
     const recipientKinds = new Map<
       string,
       'comment' | 'completion' | 'mention' | 'status' | 'assigned' | 'review'
@@ -204,24 +211,13 @@ export class NotificationProjectionService {
       task.workflowCategory === 'in_review';
     if (!completion && !comment && !statusChange && !assignment && !review) return [];
     if (statusChange) {
-      for (const userId of [
-        task.createdByUserId,
-        task.assigneeUserId,
-        ...subscriptions.map((item) => item.userId),
-      ]) {
-        if (userId) recipientKinds.set(userId, 'status');
-      }
+      for (const userId of followers) recipientKinds.set(userId, 'status');
     }
     if (assignment && task.assigneeUserId) recipientKinds.set(task.assigneeUserId, 'assigned');
     if (review) recipientKinds.set(task.reviewerUserId!, 'review');
     if (completion || row.eventType === 'task.comment.created') {
-      for (const userId of [
-        task.createdByUserId,
-        task.assigneeUserId,
-        ...subscriptions.map((item) => item.userId),
-      ]) {
-        if (userId) recipientKinds.set(userId, completion ? 'completion' : 'comment');
-      }
+      for (const userId of followers)
+        recipientKinds.set(userId, completion ? 'completion' : 'comment');
     }
     // Only real member nodes in the persisted comment can upgrade a recipient to a mention.
     const previousMentions = new Set(
@@ -396,16 +392,8 @@ export class NotificationProjectionService {
         ? await this.resolveIssueTargets(row)
         : resolveNotificationTargets(row);
     for (const target of targets) {
-      const settings = (await new UserModel(this.db, target.recipientUserId).getUserSettings())
-        ?.notification;
-      if (
-        !notificationEventEnabled(
-          settings as NotificationSettings | undefined,
-          'inbox',
-          target.type,
-        )
-      )
-        continue;
+      // Inbox is the durable work record. Preferences only suppress external alerts;
+      // legacy personal/workspace inbox switches must not discard relevant events.
       await this.db.transaction(async (tx) => {
         const model = new NotificationModel(tx as typeof this.db, target.recipientUserId, {
           workspaceId: row.workspaceId ?? null,

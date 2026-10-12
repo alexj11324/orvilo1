@@ -39,6 +39,9 @@ import { isAutomationArmed, isParked, predicateForLegacyStatus } from './taskExe
 
 const TERMINAL_TOPIC_STATUSES = new Set(['canceled', 'completed', 'failed', 'timeout']);
 
+/** A runtime can hand back a whole stack trace; the run row keeps a readable head of it. */
+export const MAX_HANDOFF_ERROR_LENGTH = 4000;
+
 /**
  * Normalized poll-failure stage map for CAS guards: the versioned
  * `verificationPollFailureStages` key wins; a legacy bare number stored under
@@ -594,6 +597,29 @@ export class TaskTopicModel {
       .update(taskTopics)
       .set({
         handoff: sql`jsonb_set(COALESCE(${taskTopics.handoff}, '{}'::jsonb), '{content}', ${JSON.stringify(content)}::jsonb)`,
+      })
+      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
+  }
+
+  /**
+   * Record why a run failed on the run itself (`handoff.error`). `tasks.error`
+   * only ever holds the current failure and is cleared by the next attempt, so
+   * without this an older failed run has no reason left to show. Same
+   * order-independent `jsonb_set` patch as `updateHandoffContent`.
+   */
+  async updateHandoffError(
+    taskId: string,
+    topicId: string,
+    error: { code?: string; message: string },
+  ): Promise<void> {
+    const value = {
+      ...(error.code ? { code: error.code } : {}),
+      message: error.message.slice(0, MAX_HANDOFF_ERROR_LENGTH),
+    };
+    await this.db
+      .update(taskTopics)
+      .set({
+        handoff: sql`jsonb_set(COALESCE(${taskTopics.handoff}, '{}'::jsonb), '{error}', ${JSON.stringify(value)}::jsonb)`,
       })
       .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
   }

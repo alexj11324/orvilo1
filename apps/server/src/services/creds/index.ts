@@ -118,7 +118,8 @@ export class OwnCredsService {
   private requireMarketService = () => {
     if (!this.marketService) {
       throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
+        cause: { data: { code: 'MARKET_UNAVAILABLE' } },
+        code: 'SERVICE_UNAVAILABLE',
         message: 'Market service is required for this operation',
       });
     }

@@ -182,12 +182,15 @@ const SchedulerTab = memo<SchedulerTabProps>(({ disabled, taskId }) => {
 interface TaskScheduleConfigProps {
   children?: ReactNode;
   currentInterval?: number;
+  /** Open the popover as soon as it mounts ("+ Add property" → Schedule). */
+  defaultOpen?: boolean;
   taskId?: string;
 }
 
 const TaskScheduleConfig = memo(function TaskScheduleConfig({
   children,
   currentInterval,
+  defaultOpen,
   taskId,
 }: TaskScheduleConfigProps) {
   const { t, i18n } = useTranslation('chat');
@@ -390,7 +393,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
   if (!canEditTask) return trigger;
 
   return (
-    <Popover>
+    <Popover defaultOpen={defaultOpen}>
       <PopoverTrigger render={trigger} />
       <PopoverContent align={'end'} className={`w-auto p-0 ${styles.popover}`}>
         {content}

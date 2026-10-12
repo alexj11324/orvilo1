@@ -29,6 +29,7 @@ import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentVisibleTo } from '@/database/utils/agent-access';
+import { isBuiltinHarnessOffered } from '@/server/featureFlags/builtinHarness';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
@@ -236,6 +237,19 @@ export class TaskRunnerService {
     const resolvedTask = await this.taskModel.resolve(idOrIdentifier);
     if (!resolvedTask) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+    }
+    // An Issue with no Agent runs on the inbox Agent, which needs the built-in
+    // harness. While that is withheld there is nobody to hand the Issue to, and
+    // it must not acquire the inbox Agent as its assignee.
+    if (
+      !delegation &&
+      !resolvedTask.assigneeAgentId &&
+      !(await isBuiltinHarnessOffered(this.userId))
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Assign an Agent to this Issue before running it',
+      });
     }
     // Reading a shared task does not grant use of its owner's personal Agent.
     // Validate the actual executor before mutating task policy or dispatch state.

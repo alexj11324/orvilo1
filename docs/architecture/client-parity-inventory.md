@@ -30,18 +30,18 @@
 
 ## 2. 执行目标 / Agent 会话
 
-| 项                                                                          | 现状                                                                                        | 判定                        | 动作                                                           |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
-| `resolveExecutionTarget`                                                    | 默认 `clientAvailable?'local':'none'`；hetero none→local/sandbox；Web unbound local→sandbox | **查看端推导 + 隐式云回退** | 改契约（见 contract §2）：默认 `none`；删隐式升级              |
-| `resolveExecutionPlan`                                                      | hetero + `sandboxAvailable` → `sandbox` 兜底                                                | 隐式云回退                  | 删；hetero 无绑定停 `none` 待选                                |
-| `selectRuntimeType`                                                         | `local`→`hetero`(renderer IPC spawn)；其他→`gateway`                                        | local = 显式选择时保留      | 保留；`clientExecutionAvailable` 参数语义改 "本端可进程内执行" |
-| `heterogeneousAgentExecutor`                                                | renderer 私有 IPC 生命周期（start/prompt/cancel/stop/intervention），无服务端准入 / 持久化  | **已知缺口**                | W2-E：本机执行接入统一 ingest 链路；本轮记录为 gap             |
-| `heterogeneousAgentCatalogService.listModels`                               | `deviceId ? tRPC : electronIPC`                                                             | 隐式 IPC 回退               | `assertLocalTargetTransport` 显式化；Web→`TargetRequiredError` |
-| `fetchClaudeCodeQuotaSnapshot` / `gitService` / `projectFileService`        | 同上 `deviceId?` 双传输                                                                     | 同左                        | 同左                                                           |
-| `heterogeneousAgentExecutor` 的 `submitIntervention`（conversationControl） | 仅 local 会话可达                                                                           | 同生命周期缺口              | W2-E 一并收敛                                                  |
-| 服务端 hetero 生命周期                                                      | `apps/server/services/heterogeneousAgent`：ingest/finish/generation/admission/fanout        | 统一链路已存在              | 复用，不重建                                                   |
-| device router                                                               | `apps/server/routers/lambda/device.ts`：capability/scan/git/files/quota/list/share/register | 完整可复用                  | 复用；Codex quota RPC 缺口列待办                               |
-| `useSelectExecutionTarget`                                                  | `local` 选择时绑定本机 `gatewayDeviceInfo.deviceId`                                         | 显式绑定                    | 保留                                                           |
+| 项                                                                          | 现状                                                                                            | 判定                        | 动作                                                           |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
+| `resolveExecutionTarget`                                                    | 默认 `clientAvailable?'local':'none'`；hetero none→local/sandbox；Web unbound local→sandbox     | **查看端推导 + 隐式云回退** | 改契约（见 contract §2）：默认 `none`；删隐式升级              |
+| `resolveExecutionPlan`                                                      | hetero + `sandboxAvailable` → `sandbox` 兜底                                                    | 隐式云回退                  | 删；hetero 无绑定停 `none` 待选                                |
+| `selectRuntimeType`                                                         | `local`→`hetero`(renderer IPC spawn)；其他→`gateway`                                            | local = 显式选择时保留      | 保留；`clientExecutionAvailable` 参数语义改 "本端可进程内执行" |
+| `heterogeneousAgentExecutor`                                                | renderer 私有 IPC 生命周期（start/prompt/cancel/stop/intervention），无服务端准入 / 持久化      | **已知缺口**                | W2-E：本机执行接入统一 ingest 链路；本轮记录为 gap             |
+| `heterogeneousAgentCatalogService.listModels`                               | `deviceId ? tRPC : electronIPC`                                                                 | 隐式 IPC 回退               | `assertLocalTargetTransport` 显式化；Web→`TargetRequiredError` |
+| `fetchClaudeCodeQuotaSnapshot` / `gitService` / `projectFileService`        | 同上 `deviceId?` 双传输                                                                         | 同左                        | 同左                                                           |
+| `heterogeneousAgentExecutor` 的 `submitIntervention`（conversationControl） | 仅 local 会话可达                                                                               | 同生命周期缺口              | W2-E 一并收敛                                                  |
+| 服务端 hetero 生命周期                                                      | `apps/server/src/services/heterogeneousAgent`：ingest/finish/generation/admission/fanout        | 统一链路已存在              | 复用，不重建                                                   |
+| device router                                                               | `apps/server/src/routers/lambda/device.ts`：capability/scan/git/files/quota/list/share/register | 完整可复用                  | 复用；Codex quota RPC 缺口列待办                               |
+| `useSelectExecutionTarget`                                                  | `local` 选择时绑定本机 `gatewayDeviceInfo.deviceId`                                             | 显式绑定                    | 保留                                                           |
 
 ## 3. 工具 / 技能可用性
 

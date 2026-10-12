@@ -3,7 +3,6 @@ import { type UserServiceModelConfig } from '@/types/user/settings';
 
 const protectedKeys = Object.keys(DEFAULT_SYSTEM_AGENT_CONFIG);
 
-const defaultTrueLey = new Set(['promptRewrite', 'autoSuggestion']);
 const memoryServiceModelKeys = new Set([
   'memoryAnalysisAgentConfig',
   'userMemoryEmbedding',
@@ -46,7 +45,6 @@ export const parseSystemAgent = (envString: string = ''): Partial<UserServiceMod
 
       if (protectedKeys.includes(key)) {
         config[key as keyof UserServiceModelConfig] = {
-          enabled: defaultTrueLey.has(key) ? true : undefined,
           model: model.trim(),
           provider: provider.trim(),
         } as any;
@@ -61,7 +59,6 @@ export const parseSystemAgent = (envString: string = ''): Partial<UserServiceMod
     for (const key of defaultModelAssignmentKeys) {
       if (!config[key as keyof UserServiceModelConfig]) {
         config[key as keyof UserServiceModelConfig] = {
-          enabled: defaultTrueLey.has(key) ? true : undefined,
           model: defaultSetting.model,
           provider: defaultSetting.provider,
         } as any;

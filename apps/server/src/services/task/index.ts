@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { TASK_ASSIGNEE_PERMISSION_CODES } from '@orvilo/const/rbac';
 import type {
   TaskAssignmentKind,
-  TaskAutomationSnapshot,
   TaskContext,
   TaskDetailActivity,
   TaskDetailActivityAuthor,
@@ -33,6 +32,7 @@ import {
 } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
+import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
@@ -41,10 +41,16 @@ import { VerifyRunModel } from '@/database/models/verifyRun';
 import {
   resolveWorkflowMove,
   workflowCategoryForLegacyStatus,
+  workflowStatePayload,
 } from '@/database/models/workflowMove';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
+import {
+  taskDependencyRequestScope,
+  taskDependencyRowScope,
+} from '@/database/utils/taskDependencyLock';
+import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 
 import { assertCanUseWorkspaceAgent } from '../../routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '../aiAgent';
@@ -57,6 +63,15 @@ import { TaskRunnerService } from '../taskRunner';
 import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { createTaskSchedulerModule } from '../taskScheduler';
 import { resolveTaskAcceptance } from '../verify/taskAcceptance';
+import {
+  resolveReadableActivityContainers,
+  withReadableContainerNames,
+} from './activityContainerAccess';
+import {
+  activityLogPropertyChange,
+  collectActivityIssueIds,
+  type ReadableIssueRefs,
+} from './activityLogChange';
 import { collapseActivityLog } from './collapseActivityLog';
 
 const emptyWorkspace: WorkspaceData = { nodeMap: {}, tree: [] };
@@ -213,6 +228,19 @@ export class TaskService {
       const parent = await this.resolveOrThrow(createData.parentTaskId);
       createData.parentTaskId = parent.id;
       parentVisibility = parent.visibility;
+      // The new Issue is filed in this request's scope. A parent readable here
+      // but filed elsewhere (the caller's unfiled Issues, seen from a
+      // workspace) would start a tree spanning two scopes — refused like any
+      // other new cross-scope parent link.
+      if (
+        taskDependencyRowScope(parent) !== taskDependencyRequestScope(this.userId, this.workspaceId)
+      ) {
+        throw new TRPCError({
+          cause: { data: { code: 'CROSS_SCOPE' } },
+          code: 'BAD_REQUEST',
+          message: 'Parent task must belong to the same workspace',
+        });
+      }
       if (createData.projectId && createData.projectId !== parent.projectId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -247,6 +275,21 @@ export class TaskService {
 
     const task = await this.createTaskWithAssigneeLock(createData, mutation);
 
+    // The parent's feed says it gained a sub-issue, credited to whoever the
+    // new Issue itself records as its creator — the same identity its own
+    // "created the issue" row shows, so the two can never disagree.
+    // Best-effort: the Issue exists and must not be reported as failed.
+    if (task.parentTaskId) {
+      try {
+        await this.taskModel.logSubIssueAdded(task.parentTaskId, task.id, {
+          agentId: task.createdByAgentId,
+          userId: task.createdByUserId,
+        });
+      } catch (error) {
+        console.error('[TaskService:createTask] failed to log sub-issue on parent', error);
+      }
+    }
+
     return task;
   }
 
@@ -263,8 +306,10 @@ export class TaskService {
     if (unconfirmed) {
       throw new TRPCError({
         code: 'CONFLICT',
+        // The leading code is what the client matches; by now the stop is
+        // recorded on the dispatch and the cancellation sweep finishes it.
         message:
-          'Task interruption was not confirmed. The execution remains active; retry stopping it before starting another attempt.',
+          'STOP_UNCONFIRMED: Task interruption was not confirmed. The execution remains active; retry stopping it before starting another attempt.',
       });
     }
   };
@@ -693,6 +738,22 @@ export class TaskService {
     }
     options?.onStatusCommitted?.();
 
+    // A person's plain move is logged inside `updateWithLog`. Every other
+    // write went through an unlogged writer: the system reacting to a run
+    // (settlement, delivery review, lifecycle), or a contract-fenced move.
+    // When that moved the Issue, the feed says so — under the system's name
+    // unless the caller named who did it — otherwise an Issue arrives in
+    // In Review or Done with no trace of how. Best-effort: the transition is
+    // already committed and must not be reported as failed because its feed
+    // line could not be written.
+    if (expectedContract || !actor) {
+      try {
+        await this.taskModel.logWorkflowMove(task.id, resolved, task, actor ?? {});
+      } catch (error) {
+        console.error('[TaskService:updateStatus] failed to log workflow move', error);
+      }
+    }
+
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
     // must never break the status change itself.
@@ -949,11 +1010,9 @@ export class TaskService {
       // the interruption passes. A competing run must cross the same
       // task-status boundary, so no new execution can slip between this check
       // and the terminal status update.
+      // `locked` also carries where each Issue sits in its workflow right
+      // now — what the activity feed names as the state it is leaving.
       const locked = await taskModel.lockForStatusChange(targetIds);
-      // What each task is leaving, derived before the interrupt passes below
-      // disturb the execution rows — the activity feed logs this, not the
-      // frozen `tasks.status` column.
-      const statusBeforeById = await taskModel.derivedStatusByIds(locked.map((task) => task.id));
       const transactionRunningTopics = await taskTopicModel.findRunningByTaskIds(targetIds);
       if (transactionRunningTopics.some((topic) => !topic.operationId)) {
         throw new TRPCError({
@@ -1033,23 +1092,29 @@ export class TaskService {
       }
 
       // A person confirmed this for the whole family, so every member that
-      // moved gets its own row — one INSERT, not one per task.
+      // moved gets its own row — one INSERT, not one per task — named the way
+      // the board names the move (the team state where the Issue has one).
       if (actor) {
+        const afterById = new Map(updatedTasks.map((task) => [task.id, task]));
+        const stateNames = await taskModel.workflowStateNames(
+          [...locked, ...updatedTasks].map((task) => task.workflowStateRefId),
+        );
         const { actorKind, ...actorColumns } = taskActivityActor(actor);
         await taskModel.addActivities(
-          locked
-            .filter((before) => statusBeforeById[before.id] !== input.status)
-            .map((before) => ({
-              ...actorColumns,
-              payload: {
-                actorKind,
-                from: statusBeforeById[before.id] ?? 'backlog',
-                to: input.status,
+          locked.flatMap((before) => {
+            const after = afterById.get(before.id);
+            const payload = after && workflowStatePayload(before, after, stateNames);
+            if (!payload) return [];
+            return [
+              {
+                ...actorColumns,
+                payload: { ...payload, actorKind },
+                taskId: before.id,
+                type: 'workflow_state' as const,
+                visibility: before.visibility,
               },
-              taskId: before.id,
-              type: 'status' as const,
-              visibility: before.visibility,
-            })),
+            ];
+          }),
         );
       }
     });
@@ -1210,6 +1275,17 @@ export class TaskService {
         message: 'Assignee user cannot manage tasks in this workspace',
       });
     }
+  }
+
+  /**
+   * Take the assignee's membership row lock in the caller's transaction.
+   * Every assignment write locks that row before any task-graph lock, so a
+   * caller that needs both and opens its own transaction takes this first.
+   * No-op outside a workspace or without an assignee, like the write itself.
+   */
+  async lockAssigneeUser(db: OrviloDatabase, assigneeUserId?: string | null): Promise<void> {
+    if (!assigneeUserId || !this.workspaceId) return;
+    await this.assertAssigneeUserAssignableWithDatabase(db, assigneeUserId, true);
   }
 
   private async withAssigneeUserLock<T>(
@@ -1551,6 +1627,9 @@ export class TaskService {
       workspace,
       acceptance,
       taskLabels,
+      admitted,
+      activeDispatch,
+      isSubscribed,
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
       this.taskModel.getIssueRelations(task.id),
@@ -1561,6 +1640,18 @@ export class TaskService {
       this.taskModel.getTreePinnedDocuments(task.id).catch(() => emptyWorkspace),
       resolveTaskAcceptance(this.db, this.userId, task.id, this.workspaceId).catch(() => undefined),
       this.taskLabelModel.listForTask(task.id).catch(() => []),
+      isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }),
+      new TaskDispatchModel(this.db, this.workspaceId).findActiveByTaskId(task.id),
+      // Rides on the detail read so the header toggle needs no request of its own.
+      new TaskSubscriptionModel(this.db, this.userId, this.workspaceId)
+        .isSubscribed(task.id)
+        .catch((error) => {
+          console.warn(
+            '[TaskService] reading the Issue subscription failed:',
+            error instanceof Error ? error.name : 'unknown error',
+          );
+          return false;
+        }),
     ]);
 
     // What the reader is shown, not what was written: a burst of edits to one
@@ -1831,6 +1922,32 @@ export class TaskService {
       .findByOperations(topics.map((t) => t.operationId).filter((id): id is string => Boolean(id)))
       .catch(() => new Map());
 
+    // Other Issues named by relation / parent / duplicate rows. One lookup
+    // through the model's own read scope, so a row never names an Issue this
+    // reader could not open — it reads as "an Issue that is no longer
+    // available" instead.
+    const activityIssueIds = collectActivityIssueIds(shownLogs);
+    const activityIssueRefs: ReadableIssueRefs = new Map(
+      (activityIssueIds.length > 0
+        ? await this.taskModel.findByIds(activityIssueIds).catch(() => [])
+        : []
+      )
+        .filter((row) => !row.isDeleted && !row.deletedAt)
+        .map((row) => [row.id, { identifier: row.identifier, name: row.name }]),
+    );
+
+    // Project / milestone / team / workflow-state names are copied into the
+    // row when it is written; show one only when this reader may read the
+    // container it names.
+    const readableContainers = await resolveReadableActivityContainers(
+      this.db,
+      { userId: this.userId, workspaceId: this.workspaceId },
+      shownLogs,
+    );
+
+    const topicSeqById = new Map<string, number>();
+    for (const t of topics) if (t.topicId && t.seq != null) topicSeqById.set(t.topicId, t.seq);
+
     const creatorId = task.createdByAgentId ?? task.createdByUserId;
     const createdActivity: TaskDetailActivity | null =
       task.createdAt && creatorId
@@ -1840,6 +1957,19 @@ export class TaskService {
             type: 'created' as const,
           }
         : null;
+
+    // `directTopics` is newest-first. A run that failed before its reason was
+    // recorded on the run row (older rows, or a failure that never reached topic
+    // settlement) can still borrow the task's current error — but only the
+    // latest run of this task: `tasks.error` describes nothing older.
+    const latestDirectTopicId = directTopics[0]?.topicId ?? null;
+    const topicFailureReason = (t: TaskTopicActivityRow): string | null => {
+      if (t.status !== 'failed' && t.status !== 'timeout' && t.status !== 'canceled') return null;
+      const recorded = (t.handoff as TaskTopicHandoff | null)?.error?.message;
+      if (recorded) return recorded;
+      const isLatestOwnRun = !t.sourceTaskId && !!t.topicId && t.topicId === latestDirectTopicId;
+      return isLatestOwnRun && t.status !== 'canceled' ? (task.error ?? null) : null;
+    };
 
     const activities: TaskDetailActivity[] = [
       ...(createdActivity ? [createdActivity] : []),
@@ -1854,6 +1984,7 @@ export class TaskService {
           // Raw last assistant message of the run, shown alongside
           // the synthesized summary on the run card.
           content: handoff?.content,
+          error: topicFailureReason(t),
           id: t.topicId ?? undefined,
           // The run's workspace-integration record (merge state, branch, PR) —
           // null for runs that never provisioned an isolated worktree.
@@ -1901,12 +2032,18 @@ export class TaskService {
           editorData: c.editorData ?? undefined,
           files: files.length > 0 ? files : undefined,
           id: c.id,
+          // A follow-up left on one run says which run, so it does not read as
+          // an unanswered comment on the Issue. `seq` is null when that run is
+          // older than the loaded window of runs.
+          replyToRun: c.topicId
+            ? { seq: topicSeqById.get(c.topicId) ?? null, topicId: c.topicId }
+            : undefined,
           time: toISO(c.createdAt),
           updatedAt: c.updatedAt ? toISO(c.updatedAt) : undefined,
           type: 'comment' as const,
         };
       }),
-      ...shownLogs.map((log): TaskDetailActivity => {
+      ...shownLogs.flatMap((log): TaskDetailActivity[] => {
         const stub = (id: string, type: 'agent' | 'user'): TaskDetailActivityAuthor => ({
           id,
           name: null,
@@ -1926,27 +2063,30 @@ export class TaskService {
               : // Genuinely nobody: the runner's system fallback.
                 undefined;
 
-        if (log.type === 'status' || log.type === 'priority' || log.type === 'automation') {
-          const from = log.payload?.from ?? null;
-          const to = log.payload?.to ?? null;
-          const propertyChange: NonNullable<TaskDetailActivity['propertyChange']> =
-            log.type === 'status'
-              ? { field: 'status', from: from as TaskStatus | null, to: to as TaskStatus }
-              : log.type === 'priority'
-                ? { field: 'priority', from: from as number | null, to: to as number | null }
-                : {
-                    field: 'automation',
-                    from: from as TaskAutomationSnapshot | null,
-                    to: to as TaskAutomationSnapshot | null,
-                  };
-          return {
-            author,
-            id: log.id,
-            propertyChange,
-            time: toISO(log.createdAt),
-            type: 'property',
-          };
+        const propertyChange = activityLogPropertyChange(
+          withReadableContainerNames(log, readableContainers),
+          activityIssueRefs,
+        );
+        if (propertyChange) {
+          return [
+            {
+              author,
+              id: log.id,
+              propertyChange,
+              time: toISO(log.createdAt),
+              type: 'property',
+            },
+          ];
         }
+        // A kind this build cannot describe (written by a newer server, or a
+        // malformed payload) is left out rather than dressed up as an
+        // assignment it never was.
+        if (
+          log.type !== 'assignee_agent' &&
+          log.type !== 'assignee_user' &&
+          log.type !== 'reviewer'
+        )
+          return [];
 
         const kind: TaskAssignmentKind =
           log.type === 'assignee_agent' ? 'agent' : log.type === 'reviewer' ? 'reviewer' : 'member';
@@ -1959,17 +2099,19 @@ export class TaskService {
           if (!id) return null;
           return authorMap.get(id) ?? stub(id, kind === 'agent' ? 'agent' : 'user');
         };
-        return {
-          assignment: {
-            from: resolveSide(log.payload?.fromId),
-            kind,
-            to: resolveSide(log.payload?.toId),
+        return [
+          {
+            assignment: {
+              from: resolveSide(log.payload?.fromId),
+              kind,
+              to: resolveSide(log.payload?.toId),
+            },
+            author,
+            id: log.id,
+            time: toISO(log.createdAt),
+            type: 'assignment' as const,
           },
-          author,
-          id: log.id,
-          time: toISO(log.createdAt),
-          type: 'assignment' as const,
-        };
+        ];
       }),
     ].sort((a, b) => {
       if (!a.time) return 1;
@@ -1993,6 +2135,9 @@ export class TaskService {
     const scheduleConfig = (taskConfig?.schedule ?? {}) as { maxExecutions?: number | null };
 
     return {
+      orchestrationAdmission: admitted ? 'enabled' : 'disabled',
+      orchestrationAdmissionReason: admitted ? null : 'caid_dispatch_disabled',
+      dispatchWaitingReason: activeDispatch?.waitingReason ?? null,
       capabilities: await this.taskModel.getCapabilities(task),
       agentId: task.assigneeAgentId,
       automationMode: task.automationMode ?? null,
@@ -2035,6 +2180,7 @@ export class TaskService {
       id: task.id,
       identifier: task.identifier,
       instruction: task.instruction,
+      isSubscribed,
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,

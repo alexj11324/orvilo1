@@ -5,10 +5,13 @@ import type { IssueStatusMoveTarget } from './useIssueStatusMove';
 import { useIssueStatusMove } from './useIssueStatusMove';
 
 const mocks = vi.hoisted(() => ({
+  confirmModal: vi.fn(),
+  contractContext: vi.fn(),
   find: vi.fn(),
   moveBoardMaybePickingState: vi.fn(),
   mutate: vi.fn(),
   refreshDetail: vi.fn(),
+  resolveStatusCascade: vi.fn(),
   runTask: vi.fn(),
   taskDetailMap: {} as Record<
     string,
@@ -23,8 +26,14 @@ vi.mock('@/services/task', () => ({
   taskService: { find: mocks.find },
 }));
 
+vi.mock('@/libs/trpc/client', () => ({
+  lambdaClient: { task: { contractContext: { query: mocks.contractContext } } },
+}));
+vi.mock('@/components/Modal', () => ({ confirmModal: mocks.confirmModal }));
+
 vi.mock('@/features/MyWork/workQueryBoardMove', () => ({
   moveBoardMaybePickingState: mocks.moveBoardMaybePickingState,
+  resolveStatusCascade: mocks.resolveStatusCascade,
   workQueryBoardMoveToastKey: mocks.toastKey,
 }));
 
@@ -69,10 +78,18 @@ const target = (overrides: Partial<IssueStatusMoveTarget> = {}): IssueStatusMove
 describe('useIssueStatusMove', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.contractContext.mockResolvedValue({ data: {} });
     mocks.find.mockResolvedValue(teamTask());
     mocks.moveBoardMaybePickingState.mockResolvedValue(true);
     mocks.mutate.mockResolvedValue(undefined);
     mocks.refreshDetail.mockResolvedValue(undefined);
+    // Default: the Issue has no open sub-issues, so nothing is asked.
+    mocks.resolveStatusCascade.mockImplementation(
+      async (input: { parentOnly: () => Promise<number> }) => ({
+        cascaded: false,
+        revision: await input.parentOnly(),
+      }),
+    );
     mocks.runTask.mockResolvedValue({ success: true });
     mocks.taskDetailMap = {};
     mocks.updateTask.mockResolvedValue('T-9');
@@ -120,6 +137,111 @@ describe('useIssueStatusMove', () => {
     expect(mocks.mutate).not.toHaveBeenCalled();
   });
 
+  describe('moving a parent to Done or Canceled', () => {
+    const refreshedEveryDetail = () =>
+      mocks.mutate.mock.calls.some((call) => call[0](['task:detail', 'T-other']) === true);
+
+    it('asks about open sub-issues for Done and Canceled, and for nothing else', async () => {
+      const { result } = renderHook(() => useIssueStatusMove());
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'in_progress' }) });
+      expect(mocks.resolveStatusCascade).not.toHaveBeenCalled();
+
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'done' }) });
+      expect(mocks.resolveStatusCascade).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          status: 'completed',
+          task: { id: 'tsk_9', identifier: 'T-9' },
+        }),
+      );
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'canceled' }) });
+      expect(mocks.resolveStatusCascade).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: 'canceled' }),
+      );
+    });
+
+    it('continues from the cascade revision and refreshes every cached detail on "update all"', async () => {
+      mocks.resolveStatusCascade.mockResolvedValue({ cascaded: true, revision: 12 });
+      const { result } = renderHook(() => useIssueStatusMove());
+      const moved = await result.current({
+        taskIdentifier: 'T-9',
+        target: target({ category: 'done' }),
+      });
+
+      expect(moved).toBe(true);
+      expect(mocks.moveBoardMaybePickingState).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedDomainRevision: 12, targetKey: 'done' }),
+      );
+      // Sub-issue rows live in other Issues' details — all of them are refetched.
+      expect(refreshedEveryDetail()).toBe(true);
+    });
+
+    it('moves only the parent, from its own revision, on "parent only"', async () => {
+      const { result } = renderHook(() => useIssueStatusMove());
+      const moved = await result.current({
+        taskIdentifier: 'T-9',
+        target: target({ category: 'done' }),
+      });
+
+      expect(moved).toBe(true);
+      expect(mocks.moveBoardMaybePickingState).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedDomainRevision: 7, targetKey: 'done' }),
+      );
+      expect(refreshedEveryDetail()).toBe(false);
+      expect(mocks.refreshDetail).toHaveBeenCalledWith('T-9');
+    });
+
+    it('writes nothing when the question is dismissed', async () => {
+      mocks.resolveStatusCascade.mockResolvedValue(undefined);
+      const { result } = renderHook(() => useIssueStatusMove());
+      const moved = await result.current({
+        taskIdentifier: 'T-9',
+        target: target({ category: 'canceled' }),
+      });
+
+      expect(moved).toBe(false);
+      expect(mocks.moveBoardMaybePickingState).not.toHaveBeenCalled();
+      expect(mocks.updateTask).not.toHaveBeenCalled();
+      expect(mocks.mutate).not.toHaveBeenCalled();
+    });
+
+    it('does not write the category a second time for a team-less Issue the cascade already moved', async () => {
+      mocks.find.mockResolvedValue(teamTask({ teamId: null }));
+      mocks.resolveStatusCascade.mockResolvedValue({ cascaded: true, revision: 12 });
+      const { result } = renderHook(() => useIssueStatusMove());
+      const moved = await result.current({
+        taskIdentifier: 'T-9',
+        target: target({ category: 'done' }),
+      });
+
+      expect(moved).toBe(true);
+      expect(mocks.updateTask).not.toHaveBeenCalled();
+      expect(refreshedEveryDetail()).toBe(true);
+    });
+
+    it('skips the question where the board skips it', async () => {
+      // Tied to a provider workflow state: the exact state is chosen instead.
+      mocks.find.mockResolvedValue(teamTask({ workflowStateId: 'linear-state-1' }));
+      const { result } = renderHook(() => useIssueStatusMove());
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'done' }) });
+      // Already Done: picking another Done state is not a move into Done.
+      mocks.find.mockResolvedValue(teamTask({ workflowCategory: 'done' }));
+      await result.current({ taskIdentifier: 'T-9', target: target({ category: 'done' }) });
+
+      expect(mocks.resolveStatusCascade).not.toHaveBeenCalled();
+    });
+
+    it('reports a failed sub-issue check and moves nothing', async () => {
+      mocks.resolveStatusCascade.mockRejectedValue(new Error('offline'));
+      const { result } = renderHook(() => useIssueStatusMove());
+
+      await expect(
+        result.current({ taskIdentifier: 'T-9', target: target({ category: 'done' }) }),
+      ).rejects.toThrow('offline');
+      expect(mocks.toastError).toHaveBeenCalledTimes(1);
+      expect(mocks.moveBoardMaybePickingState).not.toHaveBeenCalled();
+    });
+  });
+
   it('keeps the plain category write for tasks without a team', async () => {
     mocks.find.mockResolvedValue(teamTask({ teamId: null }));
     const { result } = renderHook(() => useIssueStatusMove());
@@ -163,6 +285,44 @@ describe('useIssueStatusMove', () => {
       target: target({ category: 'in_progress' }),
     });
     expect(mocks.runTask).toHaveBeenCalledWith('T-9');
+  });
+
+  // The move is how an Issue starts, so it takes the same contract check as
+  // the Issue's own Start / Retry / Resume.
+  it('confirms pending constraint edits before the move starts a repair run', async () => {
+    mocks.contractContext.mockResolvedValue({
+      data: { contract: { revision: 3 }, pendingConstraintEdits: true },
+    });
+    mocks.confirmModal.mockImplementation((options: { onOk: () => void }) => options.onOk());
+    mocks.find.mockResolvedValue(
+      teamTask({ automationMode: null, status: 'backlog', workflowCategory: 'todo' }),
+    );
+    const { result } = renderHook(() => useIssueStatusMove());
+    await result.current({ taskIdentifier: 'T-9', target: target({ category: 'in_progress' }) });
+
+    expect(mocks.confirmModal).toHaveBeenCalledTimes(1);
+    expect(mocks.runTask).toHaveBeenCalledWith('T-9', { intent: 'repair' });
+  });
+
+  it('keeps the move and starts nothing when that confirmation is declined', async () => {
+    mocks.contractContext.mockResolvedValue({
+      data: { contract: { revision: 3 }, pendingConstraintEdits: true },
+    });
+    mocks.confirmModal.mockImplementation((options: { onCancel: () => void }) =>
+      options.onCancel(),
+    );
+    mocks.find.mockResolvedValue(
+      teamTask({ automationMode: null, status: 'backlog', workflowCategory: 'todo' }),
+    );
+    const { result } = renderHook(() => useIssueStatusMove());
+    const moved = await result.current({
+      taskIdentifier: 'T-9',
+      target: target({ category: 'in_progress' }),
+    });
+
+    expect(moved).toBe(true);
+    expect(mocks.runTask).not.toHaveBeenCalled();
+    expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
   it('does not start a run while an open blocker is still on the issue', async () => {

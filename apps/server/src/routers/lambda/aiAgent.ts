@@ -1493,6 +1493,7 @@ const AgentStreamEventSchema = z.object({
     'step_start',
     'step_complete',
     'notify_update',
+    'session_title',
     'error',
   ]),
 });

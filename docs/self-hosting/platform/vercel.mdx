@@ -6,7 +6,7 @@ description: >-
 tags:
   - Deploy Orvilo
   - Vercel Deployment
-  - Better Auth
+  - Clerk
   - S3 Storage
 ---
 
@@ -99,17 +99,13 @@ The server-side database needs to be paired with a user authentication service t
 <Steps>
   ### Add Authentication Environment Variables
 
-  In Vercel's deployment environment variables, add the following environment variables to enable authentication (powered by [Better Auth](https://www.better-auth.com)):
+  In Vercel's deployment environment variables, add the following environment variables to enable authentication (sign-in is delegated to the Clerk accounts portal — see [Authentication Service](/docs/self-hosting/auth)):
 
-  Click the button below to generate `AUTH_SECRET` (session encryption key):
-
-  <GenerateSecret envName="AUTH_SECRET" />
-
-  You also need to configure the `JWKS_KEY` environment variable for signing and verifying JWTs. Click the button below to generate:
+  Configure the `JWKS_KEY` environment variable for signing and verifying JWTs. Click the button below to generate:
 
   <GenerateJWKSKey />
 
-  With these variables, users can register and login with email and password.
+  Also set `AUTH_ACCOUNTS_URL` to the origin of your accounts portal and `CLERK_SECRET_KEY` to the secret key of the Clerk instance behind it. Sign-in methods are configured in the Clerk dashboard.
 
   <Callout type={'info'}>
     For advanced features like SSO providers, magic link login, and email verification, see [Authentication Service](/docs/self-hosting/auth).
@@ -321,7 +317,8 @@ DATABASE_URL=
 KEY_VAULTS_SECRET=jgwsK28dspyVQoIf8/M3IIHl1h6LYYceSYNXeLpy6uk=
 
 # Authentication
-AUTH_SECRET=jgwsK28dspyVQoIf8/M3IIHl1h6LYYceSYNXeLpy6uk=
+AUTH_ACCOUNTS_URL=https://accounts.example.com
+CLERK_SECRET_KEY=your-clerk-secret-key
 JWKS_KEY='{"keys":[...]}'
 
 # S3 related configurations

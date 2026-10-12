@@ -20,7 +20,7 @@ Orvilo 的测试策略包括使用 [Vitest][vitest-url] 进行单元测试，以
 
 - **单元测试** — 使用 Vitest 测试函数、组件和状态存储
 - **E2E 测试** — 使用 Playwright + Cucumber 测试用户流程
-- **类型检查** — TypeScript 编译器（`bun run type-check`）
+- **类型检查** — TypeScript 编译器（全仓 `bun run type-check` 仅在 CI 中运行）
 - **代码规范** — ESLint、Stylelint
 
 ## 快速参考
@@ -32,10 +32,10 @@ Orvilo 的测试策略包括使用 [Vitest][vitest-url] 进行单元测试，以
 bunx vitest run --silent='passed-only' 'path/to/test.test.ts'
 
 # 在包中运行测试（例如 database 包）
-cd packages/database && bunx vitest run --silent='passed-only' 'src/models/user.test.ts'
+cd packages/database && bunx vitest run --silent='passed-only' 'src/models/__tests__/user.test.ts'
 
-# 类型检查
-bun run type-check
+# 类型检查（限定在单个包内；全仓检查仅在 CI 中运行）
+cd apps/server && pnpm type-check
 
 # E2E 测试
 pnpm e2e
@@ -246,11 +246,11 @@ it('应处理错误', async () => {
 ```bash
 # 客户端 DB 测试
 cd packages/database
-bunx vitest run --silent='passed-only' 'src/models/user.test.ts'
+bunx vitest run --silent='passed-only' 'src/models/__tests__/user.test.ts'
 
 # 服务端 DB 测试
 cd packages/database
-TEST_SERVER_DB=1 bunx vitest run --silent='passed-only' 'src/models/user.test.ts'
+TEST_SERVER_DB=1 bunx vitest run --silent='passed-only' 'src/models/__tests__/user.test.ts'
 ```
 
 ## 使用 Playwright 进行 E2E 测试
@@ -274,19 +274,16 @@ E2E 测试位于 `e2e/` 目录下：
 
 ```
 e2e/
-├── features/             # Cucumber feature 文件（.feature）
-│   ├── auth.feature
-│   └── chat.feature
-├── step-definitions/     # 步骤实现
-│   ├── auth.steps.ts
-│   └── chat.steps.ts
-├── support/              # 共享辅助函数和 hooks
-└── playwright.config.ts
+├── src/
+│   ├── features/         # Cucumber feature 文件（.feature）
+│   ├── steps/            # 步骤实现
+│   └── support/          # 共享辅助函数
+└── cucumber.config.js
 ```
 
 ### 编写 E2E 测试
 
-**Feature 文件** (`e2e/features/chat.feature`)：
+**Feature 文件** (`e2e/src/features/chat.feature`)：
 
 ```gherkin
 Feature: 聊天功能
@@ -300,7 +297,7 @@ Feature: 聊天功能
     And 我应该看到 AI 的回复
 ```
 
-**步骤定义** (`e2e/step-definitions/chat.steps.ts`)：
+**步骤定义** (`e2e/src/steps/chat.steps.ts`)：
 
 ```typescript
 import { Given, When, Then } from '@cucumber/cucumber';

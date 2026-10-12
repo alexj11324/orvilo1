@@ -15,6 +15,8 @@ export interface ResourceGeneralAccess {
 
 export interface ResourceCollaborator {
   accessLevel: ResourceAccessLevel;
+  /** Agent rosters only: the Agent's creator, who can use it without a row and cannot be removed. */
+  isCreator?: boolean;
   /** `null` when the member's account no longer exists — the grant stays revocable. */
   user: {
     avatar: string | null;

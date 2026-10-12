@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,6 +11,7 @@ import TaskProperties from './TaskProperties';
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
+  labelSelectorDefaultOpen: vi.fn(),
   moveWorkflow: vi.fn(),
   openTaskScheduleDialog: vi.fn(),
   taskState: {
@@ -30,6 +31,10 @@ const mocks = vi.hoisted(() => ({
   } as Record<string, unknown>,
 }));
 
+vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBuiltinHarnessOffered: () => true,
+}));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     i18n: { language: 'en-US' },
@@ -68,7 +73,10 @@ vi.mock('../features/AssigneeUserAvatar', () => ({
 }));
 
 vi.mock('../features/TaskLabelSelector', () => ({
-  default: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  default: ({ children, defaultOpen }: { children?: ReactNode; defaultOpen?: boolean }) => {
+    mocks.labelSelectorDefaultOpen(defaultOpen);
+    return <>{children}</>;
+  },
 }));
 
 vi.mock('../features/TaskPriorityTag', () => ({
@@ -117,6 +125,7 @@ describe('TaskProperties', () => {
     mocks.activeWorkspaceId = 'workspace-1';
     mocks.moveWorkflow.mockClear();
     mocks.openTaskScheduleDialog.mockClear();
+    mocks.labelSelectorDefaultOpen.mockClear();
   });
 
   afterEach(() => {
@@ -267,6 +276,88 @@ describe('TaskProperties', () => {
     }
   });
 
+  it('always shows Execution once an agent is assigned, as "not started" before any run', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.agentId = 'agent-1';
+    detail.workflowCategory = 'todo';
+    try {
+      render(<TaskProperties />);
+      const execution = screen.getByRole('group', { name: 'taskDetail.executionStatus' });
+      expect(execution.textContent).toContain('taskDetail.execution.view.notStarted');
+      expect(execution.textContent).toContain('taskDetail.execution.hint.moveToStart');
+      // Starting is the status move; there is no button for it here.
+      expect(execution.querySelector('button')).toBeNull();
+    } finally {
+      delete detail.agentId;
+      delete detail.workflowCategory;
+    }
+  });
+
+  it('says an In Progress Issue with no agent needs one', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.workflowCategory = 'in_progress';
+    try {
+      render(<TaskProperties />);
+      const execution = screen.getByRole('group', { name: 'taskDetail.executionStatus' });
+      expect(execution.textContent).toContain('taskDetail.execution.view.needsAgent');
+      expect(execution.textContent).toContain('taskDetail.execution.hint.needsAgent');
+    } finally {
+      delete detail.workflowCategory;
+    }
+  });
+
+  it('reads a succeeded run that is not accepted yet differently from Done', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.agentId = 'agent-1';
+    detail.dispatchPhase = 'succeeded';
+    detail.status = 'paused';
+    detail.workflowCategory = 'in_review';
+    try {
+      const { unmount } = render(<TaskProperties />);
+      expect(screen.getByText('taskDetail.execution.view.awaitingAcceptance')).toBeTruthy();
+      unmount();
+
+      detail.status = 'completed';
+      detail.workflowCategory = 'done';
+      render(<TaskProperties />);
+      expect(screen.queryByText('taskDetail.execution.view.awaitingAcceptance')).toBeNull();
+      expect(screen.getByText('succeeded')).toBeTruthy();
+    } finally {
+      delete detail.agentId;
+      delete detail.dispatchPhase;
+      detail.status = 'backlog';
+      delete detail.workflowCategory;
+    }
+  });
+
+  it('shows why the latest run failed as plain text under the failed state', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    const reason = '<img src=x onerror=alert(1)> **exit 1**';
+    detail.dispatchPhase = 'failed';
+    detail.status = 'failed';
+    detail.workflowCategory = 'in_progress';
+    detail.activities = [{ error: reason, id: 'run-1', seq: 1, status: 'failed', type: 'topic' }];
+    try {
+      const { container } = render(<TaskProperties />);
+      expect(screen.getByTestId('run-failure-reason').textContent).toBe(reason);
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.querySelector('strong')).toBeNull();
+    } finally {
+      delete detail.dispatchPhase;
+      detail.status = 'backlog';
+      delete detail.workflowCategory;
+      delete detail.activities;
+    }
+  });
+
   it('leaves the idle execution property out of the rail without changing compact badges', () => {
     const { unmount } = render(<TaskProperties />);
     expect(screen.queryByText('goalProcess.summary.notStarted')).toBeNull();
@@ -318,26 +409,46 @@ describe('TaskProperties', () => {
     }
     expect(screen.queryByText('taskDetail.property.addReviewer')).toBeNull();
 
+    // Adding a due date goes straight to its dialog. No empty row is left
+    // behind, so there is nothing to lose by looking at another Issue.
     fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
     fireEvent.click(await screen.findByText('taskDetail.dueDate'));
 
-    expect(screen.getByRole('group', { name: 'taskDetail.dueDate' })).toBeTruthy();
-    expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
+    expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({ dueDate: null, identifier: 'T-1' });
+    expect(screen.queryByRole('group', { name: 'taskDetail.dueDate' })).toBeNull();
+
+    // Labels need their row as the picker's anchor: it appears with the picker open.
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+    fireEvent.click(await screen.findByText('taskDetail.labels.title'));
+
+    expect(screen.getByRole('group', { name: 'taskDetail.labels.title' })).toBeTruthy();
+    // Open on mount, and only then: a later rebuild of the row must not reopen it.
+    expect(mocks.labelSelectorDefaultOpen.mock.calls[0]).toEqual([true]);
+    await waitFor(() => expect(mocks.labelSelectorDefaultOpen).toHaveBeenLastCalledWith(false));
   });
 
   // The due date used to be a clickable <div>: no role, no tab stop, so the
   // dialog could not be opened from the keyboard.
   it('exposes the due date as a focusable button that opens the schedule dialog', async () => {
-    render(<TaskProperties />);
+    const detailMap = mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>;
+    const original = detailMap['T-1'];
+    detailMap['T-1'] = { ...original, dueDate: '2026-05-01T00:00:00.000Z' };
+    try {
+      render(<TaskProperties />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
-    fireEvent.click(await screen.findByText('taskDetail.dueDate'));
+      const dueDate = within(screen.getByRole('group', { name: 'taskDetail.dueDate' })).getByRole(
+        'button',
+      );
+      expect(dueDate.tagName).toBe('BUTTON');
+      expect(dueDate.tabIndex).toBe(0);
 
-    const dueDate = screen.getByRole('button', { name: 'taskDetail.property.addDueDate' });
-    expect(dueDate.tagName).toBe('BUTTON');
-    expect(dueDate.tabIndex).toBe(0);
-
-    fireEvent.click(dueDate);
-    expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({ dueDate: null, identifier: 'T-1' });
+      fireEvent.click(dueDate);
+      expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({
+        dueDate: '2026-05-01T00:00:00.000Z',
+        identifier: 'T-1',
+      });
+    } finally {
+      detailMap['T-1'] = original;
+    }
   });
 });

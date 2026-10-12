@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EventConsumerReceiptModel } from '@/database/models/eventConsumerReceipt';
 import { NotificationModel } from '@/database/models/notification';
 import { TaskModel } from '@/database/models/task';
+import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import {
   agents,
@@ -162,7 +163,7 @@ describe('real Issue notification producers and projection', () => {
   const feed = (userId: string) =>
     new NotificationModel(db, userId, { workspaceId: wsId }).listFeed();
 
-  it('honors personal event switches inside a workspace and preserves other recipients', async () => {
+  it('retains status and review inbox records despite legacy personal and workspace switches', async () => {
     await db.insert(userSettings).values({
       id: subscriber,
       notification: { inbox: { items: { work: { task_status_changed: false } } } },
@@ -185,14 +186,34 @@ describe('real Issue notification producers and projection', () => {
       payload: { userId: owner },
     });
     await project();
-    expect(await feed(subscriber)).toHaveLength(0);
+    expect(await feed(subscriber)).toEqual([
+      expect.objectContaining({ type: 'task_status_changed' }),
+    ]);
     expect(await feed(owner)).toHaveLength(0);
     expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_review' })]);
     await project();
     expect(await feed(author)).toHaveLength(1);
   });
 
-  it('honors an inbox channel opt-out for assignment and keeps unauthorized users out', async () => {
+  it('retains assignments despite legacy workspace inbox opt-out', async () => {
+    await db.insert(workspaceUserSettings).values({
+      workspaceId: wsId,
+      userId: author,
+      preference: { notification: { inbox: { enabled: false } } },
+    });
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'workspace-disabled-assignment',
+      eventType: 'task.assigned',
+      workspaceId: wsId,
+      payload: { userId: owner },
+    });
+    await project();
+    expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_assigned' })]);
+  });
+
+  it('retains assignments despite legacy personal inbox opt-out and keeps unauthorized users out', async () => {
     await db.insert(userSettings).values({
       id: author,
       notification: { inbox: { enabled: false } },
@@ -206,7 +227,7 @@ describe('real Issue notification producers and projection', () => {
       payload: { userId: owner, assigneeUserId: outsider },
     });
     await project();
-    expect(await feed(author)).toHaveLength(0);
+    expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_assigned' })]);
     expect(await feed(outsider)).toHaveLength(0);
   });
 
@@ -330,6 +351,28 @@ describe('real Issue notification producers and projection', () => {
     ]);
     expect(await feed(author)).toEqual([]);
     expect(await feed(outsider)).toEqual([]);
+  });
+
+  it('stops notifying a creator and an assignee who unsubscribed', async () => {
+    const comment = (userId: string, content: string) =>
+      new TaskModel(db, userId, wsId).addComment({
+        authorUserId: userId,
+        content,
+        taskId: 'projection-issue',
+        userId,
+      });
+    // Neither has a subscription row: they are notified as creator and assignee.
+    await new TaskSubscriptionModel(db, owner, wsId).unsubscribe('projection-issue');
+    await comment(subscriber, 'First');
+    await project();
+    expect(await feed(owner)).toEqual([]);
+    expect(await feed(author)).toHaveLength(1);
+
+    await new TaskSubscriptionModel(db, author, wsId).unsubscribe('projection-issue');
+    await comment(subscriber, 'Second');
+    await project();
+    expect(await feed(owner)).toEqual([]);
+    expect(await feed(author)).toHaveLength(1);
   });
 
   it('projects manual and scheduled Agent completion without excluding its human owner or changing Issue status', async () => {

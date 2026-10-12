@@ -1,6 +1,7 @@
 import isEqual from 'fast-deep-equal';
 
 import { collectConnectedHarnessTypes } from '@/features/ChatInput/ActionBar/Agent/localHarnessRows';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useFetchOnboardingAgent } from '@/store/agent/useFetchOnboardingAgent';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -16,8 +17,10 @@ export const useAgentAvailability = () => {
   const agents = useHomeStore((s) => s.useFetchAgentList)(isLogin);
   const bindings = useProviderBindingStore((s) => s.bindings);
   const providers = useFetchProviderBindings();
+  const builtinOffered = useBuiltinHarnessOffered();
   const personalAvailability = resolveAgentAvailability({
     bindings,
+    builtinOffered,
     connectedTypes: collectConnectedHarnessTypes(agentList),
   });
   const setup = useUserStore((s) => s.onboarding?.setup);
@@ -30,6 +33,7 @@ export const useAgentAvailability = () => {
   );
   const availability = resolveAgentAvailability({
     bindings,
+    builtinOffered,
     connectedTypes: collectConnectedHarnessTypes(
       resumed.data?.agent ? [...agentList, resumed.data.agent] : agentList,
     ),

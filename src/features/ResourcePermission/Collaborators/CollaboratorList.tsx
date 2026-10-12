@@ -49,8 +49,9 @@ interface CollaboratorListProps {
 
 /**
  * The collaborator grants of one resource: who is lifted above the workspace
- * access level, at which grade, with per-row revoke. Static management list —
- * rows are not links and carry no hover chrome.
+ * access level, at which grade, with per-row revoke. An Agent's creator is
+ * listed without a revoke control: they can use it without a grant. Static
+ * management list — rows are not links and carry no hover chrome.
  */
 const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType }) => {
   const { t } = useTranslation('setting');
@@ -108,34 +109,38 @@ const CollaboratorList = memo<CollaboratorListProps>(({ resourceId, resourceType
             {resourceType !== 'agent' && levelLabel ? (
               <Badge variant="secondary">{levelLabel}</Badge>
             ) : null}
-            <AlertDialog>
-              <AlertDialogTrigger
-                render={
-                  <ActionIcon
-                    disabled={mutating}
-                    icon={XIcon}
-                    size="small"
-                    title={t('permission.collaborators.remove')}
-                  />
-                }
-              />
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {t('permission.collaborators.removeConfirmTitle', { name })}
-                  </AlertDialogTitle>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
-                  <AlertDialogConfirm
-                    variant="destructive"
-                    onClick={() => void removeCollaborator(collaborator.userId)}
-                  >
-                    {t('permission.collaborators.remove')}
-                  </AlertDialogConfirm>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {collaborator.isCreator ? (
+              <Badge variant="secondary">{t('settingAgent.useMembers.creator')}</Badge>
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger
+                  render={
+                    <ActionIcon
+                      disabled={mutating}
+                      icon={XIcon}
+                      size="small"
+                      title={t('permission.collaborators.remove')}
+                    />
+                  }
+                />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {t('permission.collaborators.removeConfirmTitle', { name })}
+                    </AlertDialogTitle>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
+                    <AlertDialogConfirm
+                      variant="destructive"
+                      onClick={() => void removeCollaborator(collaborator.userId)}
+                    >
+                      {t('permission.collaborators.remove')}
+                    </AlertDialogConfirm>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         );
       })}

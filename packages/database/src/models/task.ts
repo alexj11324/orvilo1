@@ -21,7 +21,7 @@ import type {
   WorkspaceDocNode,
   WorkspaceTreeNode,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
+import { deriveLegacyTaskStatus, TASK_ACTIVITY_COLLAPSE_WINDOW_MS } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -50,6 +50,7 @@ import { agentOperations } from '../schemas/agentOperations';
 import { executionGrants } from '../schemas/executionGrant';
 import { documents } from '../schemas/file';
 import { mcpEventTriggers } from '../schemas/mcpEvents';
+import { projects } from '../schemas/project';
 import type {
   NewTaskActivity,
   NewTaskComment,
@@ -65,10 +66,11 @@ import {
   taskTopics,
 } from '../schemas/task';
 import { taskDescriptionHistories } from '../schemas/taskDescriptionHistory';
-import { teams } from '../schemas/team';
+import { teams, teamWorkflowStates } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
+import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
 import { lockTaskDependencyGraph } from '../utils/taskDependencyLock';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
@@ -93,7 +95,12 @@ import {
   TASK_OPEN_WORKFLOW,
   taskAttentionReasonExpr,
 } from './taskExecutionSql';
-import { workflowCategoryForLegacyStatus } from './workflowMove';
+import { TaskSubscriptionModel } from './taskSubscription';
+import {
+  type TaskWorkflowPosition,
+  workflowCategoryForLegacyStatus,
+  workflowStatePayload,
+} from './workflowMove';
 import { getActiveWorkspaceMembershipRole } from './workspace';
 
 /**
@@ -130,7 +137,37 @@ const TRACKED_TASK_COLUMNS = [
   'status',
   'triageStatus',
   'workflowCategory',
+  // A team-state pick can stay inside one category (two "started" states),
+  // so the state columns have to enter the logged path on their own.
+  'workflowStateId',
+  'workflowStateRefId',
+  // What the Issue asks for and where it is filed: each change is one feed row.
+  'dueDate',
+  'duplicateOfTaskId',
+  'editorData',
+  'instruction',
+  'name',
+  'parentTaskId',
+  'projectId',
 ] as const satisfies readonly (keyof NewTask)[];
+
+const isTerminalWorkflowCategory = (category?: string | null): boolean =>
+  category === 'done' || category === 'canceled';
+
+/**
+ * Activity kinds the project Activity tab renders. The Issue's own feed shows
+ * every kind; the project roll-up stays a summary of who is working on what
+ * and how far it has moved.
+ */
+const PROJECT_FEED_ACTIVITY_TYPES: TaskActivityLogType[] = [
+  'assignee_agent',
+  'assignee_user',
+  'automation',
+  'priority',
+  'reviewer',
+  'status',
+  'workflow_state',
+];
 
 /** Task fields that must wake a linked Linear issue even without an activity row. */
 const LINEAR_SYNC_TASK_COLUMNS = [
@@ -212,6 +249,12 @@ const TASK_POLICY_COLUMNS = [
 ] as const satisfies readonly (keyof NewTask)[];
 
 export interface TaskMutationContext {
+  /**
+   * Who the activity feed credits for this write, when a server caller knows
+   * better than `source` can say — a person's menu action that keeps the
+   * default event source. Server-resolved only; never taken from a request.
+   */
+  activityActor?: { agentId?: string | null; userId?: string | null };
   /** Server-resolved Agent actor, verified by the router before model mutation. */
   actorAgentId?: string;
   /** External event/delivery id carried into planner diagnostics. */
@@ -774,6 +817,12 @@ export class TaskModel {
         } as NewTask)
         .returning(taskRowColumns);
 
+      // People named on a new Issue are involved from the start (agents are
+      // never subscribers; these are member ids only).
+      const subscriptions = new TaskSubscriptionModel(runner, this.userId, this.workspaceId);
+      await subscriptions.ensureSubscribed(task.id, [task.assigneeUserId], 'assigned');
+      await subscriptions.ensureSubscribed(task.id, [task.reviewerUserId], 'reviewer');
+
       if (this.workspaceId && !options.mutation?.suppressDomainEvent) {
         await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
           changedFields: ['created'],
@@ -966,6 +1015,27 @@ export class TaskModel {
       : {};
   }
 
+  /**
+   * `completed_at` follows the Issue into and out of a terminal category no
+   * matter who moved it. Settlement passes its own instant and always wins;
+   * a person's move (rail picker, board drop) carries none, so the column is
+   * stamped here — once, when the Issue becomes terminal — and cleared when
+   * it is reopened. A write that keeps the Issue on the same side leaves the
+   * existing value alone, so re-saving Done does not move the completion time
+   * and a parked failure keeps the instant it failed at.
+   */
+  private static completionStampSet(
+    category: TaskWorkflowCategory | undefined,
+    explicit?: Date | null,
+  ) {
+    if (category === undefined || explicit !== undefined) return {};
+    return {
+      completedAt: isTerminalWorkflowCategory(category)
+        ? sql<Date>`case when ${tasks.workflowCategory} in ('done', 'canceled') then coalesce(${tasks.completedAt}, now()) else now() end`
+        : sql<Date | null>`case when ${tasks.workflowCategory} in ('done', 'canceled') then null else ${tasks.completedAt} end`,
+    };
+  }
+
   private static reviewerBackfillSet(status: string | undefined, explicit?: string | null) {
     if (status !== 'paused' || explicit !== undefined) return {};
     return {
@@ -1062,6 +1132,11 @@ export class TaskModel {
     if (this.workspaceId) writeData.visibility = 'public';
     const transitionPatch =
       transition === undefined ? {} : TaskModel.statusTransitionPatch(transition, parkedReason);
+    const completionStamp = TaskModel.completionStampSet(
+      data.workflowCategory ??
+        (transition === undefined ? undefined : workflowCategoryForLegacyStatus(transition)),
+      data.completedAt,
+    );
     if (!eventType) {
       const updated = await this.db
         .update(tasks)
@@ -1069,6 +1144,7 @@ export class TaskModel {
           ...writeData,
           ...transitionPatch,
           ...TaskModel.workflowCategorySet(transition, data.workflowCategory),
+          ...completionStamp,
           ...TaskModel.reviewerBackfillSet(transition, data.reviewerUserId),
           updatedAt: new Date(),
         })
@@ -1110,6 +1186,7 @@ export class TaskModel {
           ...writeData,
           ...transitionPatch,
           ...TaskModel.workflowCategorySet(transition, data.workflowCategory),
+          ...completionStamp,
           ...TaskModel.reviewerBackfillSet(transition, data.reviewerUserId),
           domainRevision: sql`${tasks.domainRevision} + 1`,
           ...(changesPolicy ? { policyRevision: sql`${tasks.policyRevision} + 1` } : {}),
@@ -1285,6 +1362,35 @@ export class TaskModel {
           task,
         });
       }
+
+      // A team move changes who can see and plan the Issue; its feed keeps
+      // both team names as they read at the time of the move.
+      const teamIds = [before.teamId, teamId].filter((value): value is string => !!value);
+      const teamNames = new Map(
+        teamIds.length > 0
+          ? (
+              await runner
+                .select({ id: teams.id, name: teams.name })
+                .from(teams)
+                .where(inArray(teams.id, teamIds))
+            ).map((row) => [row.id, row.name])
+          : [],
+      );
+      const { actorKind, ...actorColumns } = taskActivityActor(this.mutationActor(mutation));
+      await new TaskModel(runner, this.userId, this.workspaceId, {
+        managedSubject: this.managedSubject,
+      }).addActivity({
+        ...actorColumns,
+        payload: {
+          actorKind,
+          fromId: before.teamId ?? null,
+          fromLabel: (before.teamId && teamNames.get(before.teamId)) || null,
+          toId: teamId,
+          toLabel: (teamId && teamNames.get(teamId)) || null,
+        },
+        taskId: task.id,
+        type: 'team',
+      });
 
       return task;
     });
@@ -1538,9 +1644,11 @@ export class TaskModel {
           .set({ visibility })
           .where(and(inArray(taskTopics.taskId, taskIds), this.topicsOwnership()));
 
+        // A visibility flip is not an edit: keep `updatedAt`, which the
+        // comment card reads as "edited".
         await tx
           .update(taskComments)
-          .set({ visibility })
+          .set({ updatedAt: taskComments.updatedAt, visibility })
           .where(and(inArray(taskComments.taskId, taskIds), this.commentsOwnership()));
 
         await tx
@@ -2430,10 +2538,12 @@ export class TaskModel {
 
   /**
    * Fetch all descendants of a root task using Drizzle select() (returns camelCase fields).
-   * Uses breadth-first traversal with O(depth) queries.
+   * Uses breadth-first traversal with O(depth) queries. Each row is visited
+   * once, so a corrupt tree whose parent pointers loop still terminates.
    */
   async findAllDescendants(rootTaskId: string): Promise<TaskItem[]> {
     const all: TaskItem[] = [];
+    const seen = new Set<string>([rootTaskId]);
     let parentIds = [rootTaskId];
 
     while (parentIds.length > 0) {
@@ -2443,10 +2553,12 @@ export class TaskModel {
         .where(and(inArray(tasks.parentTaskId, parentIds), this.ownership()))
         .orderBy(tasks.sortOrder, tasks.seq);
 
-      if (children.length === 0) break;
+      const fresh = children.filter((child) => !seen.has(child.id));
+      if (fresh.length === 0) break;
 
-      all.push(...children);
-      parentIds = children.map((c) => c.id);
+      for (const child of fresh) seen.add(child.id);
+      all.push(...fresh);
+      parentIds = fresh.map((c) => c.id);
     }
 
     return all;
@@ -2459,7 +2571,9 @@ export class TaskModel {
     const result = await this.db.execute(sql`
       WITH RECURSIVE task_tree AS (
         SELECT * FROM tasks WHERE id = ${rootTaskId} AND ${ownership}
-        UNION ALL
+        -- UNION, not UNION ALL: a row already in the tree is not added again,
+        -- so a corrupt tree whose parent pointers loop still terminates.
+        UNION
         SELECT t.* FROM tasks t
         JOIN task_tree tt ON t.parent_task_id = tt.id
         WHERE ${childOwnership}
@@ -3303,7 +3417,8 @@ export class TaskModel {
         model.addDependency(taskId, dependsOnId, type, mutation),
       );
     }
-    if (taskId === dependsOnId) throw new TaskDependencyError('A task cannot depend on itself.');
+    if (taskId === dependsOnId)
+      throw new TaskDependencyError('A task cannot depend on itself.', 'BAD_REQUEST', 'SELF');
     if (type !== 'blocks' && type !== 'relates')
       throw new TaskDependencyError('Invalid dependency type.');
     const dependencyTasks = await this.findByIds([taskId, dependsOnId]);
@@ -3317,10 +3432,14 @@ export class TaskModel {
       dependsOn.deletedAt ||
       dependsOn.isDeleted
     ) {
-      throw new TaskDependencyError('Task not found or unavailable.');
+      throw new TaskDependencyError('Task not found or unavailable.', 'BAD_REQUEST', 'UNAVAILABLE');
     }
     if (task.projectId !== dependsOn.projectId && (task.projectId || dependsOn.projectId)) {
-      throw new TaskDependencyError('Task dependencies cannot cross project boundaries.');
+      throw new TaskDependencyError(
+        'Task dependencies cannot cross project boundaries.',
+        'BAD_REQUEST',
+        'CROSS_PROJECT',
+      );
     }
 
     const existing = (await this.getDependencies(taskId)).find(
@@ -3328,7 +3447,11 @@ export class TaskModel {
     );
     if (existing?.type === type) return;
     if (existing?.type === 'blocks' && type === 'relates') {
-      throw new TaskDependencyError('A blocking relationship already exists for this issue pair.');
+      throw new TaskDependencyError(
+        'A blocking relationship already exists for this issue pair.',
+        'BAD_REQUEST',
+        'ALREADY_BLOCKING',
+      );
     }
     if (type === 'relates') {
       // An ordinary relation is symmetric even though the legacy table stores
@@ -3364,7 +3487,11 @@ export class TaskModel {
         ) SELECT id FROM upstream WHERE id = ${taskId} LIMIT 1
       `);
       if (cycle.rows.length > 0)
-        throw new TaskDependencyError('This dependency would create a cycle.');
+        throw new TaskDependencyError(
+          'This dependency would create a cycle.',
+          'BAD_REQUEST',
+          'CYCLE',
+        );
       // A task mid-flight or already done cannot take a new open prerequisite.
       // `task.status` / `dependsOn.status` are the derived labels — live
       // execution and terminal workflow, never the retired column. A held run
@@ -3376,6 +3503,7 @@ export class TaskModel {
         throw new TaskDependencyError(
           'Pause or reopen this task before adding an unfinished prerequisite.',
           'PRECONDITION_FAILED',
+          'UNFINISHED_PREREQUISITE',
         );
       }
     }
@@ -3408,7 +3536,11 @@ export class TaskModel {
       })
       .where(and(eq(tasks.id, taskId), this.ownership()))
       .returning(taskRowColumns);
-    if (!updated) throw new TaskDependencyError('Task not found or unavailable.');
+    if (!updated)
+      throw new TaskDependencyError('Task not found or unavailable.', 'BAD_REQUEST', 'UNAVAILABLE');
+    // Dependencies decide whether an agent may run at all, so both Issues
+    // keep a record of who linked them.
+    await this.logRelationChange('added', { dependsOnId, taskId, type }, mutation);
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],
@@ -3449,7 +3581,8 @@ export class TaskModel {
       );
     }
     const currentTask = await this.findById(taskId);
-    if (!currentTask) throw new TaskDependencyError('Task not found.');
+    if (!currentTask)
+      throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     const deleted = await this.db
       .delete(taskDependencies)
       .where(
@@ -3479,6 +3612,18 @@ export class TaskModel {
         type: taskDependencies.type,
       });
     if (deleted.length === 0) return;
+    // A symmetric relation can be stored in both directions; it is still one
+    // relation to the people reading either feed.
+    const loggedPairs = new Set<string>();
+    for (const row of deleted) {
+      const pair =
+        row.type === 'relates'
+          ? [row.taskId, row.dependsOnId].sort().join(':')
+          : `${row.taskId}>${row.dependsOnId}`;
+      if (loggedPairs.has(pair)) continue;
+      loggedPairs.add(pair);
+      await this.logRelationChange('removed', row, mutation);
+    }
 
     const syncModel = this.workspaceId ? new LinearSyncModel(this.db, this.workspaceId) : null;
     const syncSourceId =
@@ -3534,7 +3679,7 @@ export class TaskModel {
       })
       .where(and(eq(tasks.id, eventTaskId), this.ownership()))
       .returning(taskRowColumns);
-    if (!updated) throw new TaskDependencyError('Task not found.');
+    if (!updated) throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     if (syncModel && !mutation.suppressDomainEvent) {
       await syncModel.recordTaskChangeInTransaction(this.db, {
         changedFields: ['dependencies'],
@@ -3574,14 +3719,15 @@ export class TaskModel {
         model.removeDependencyByRelationId(taskId, relationId, mutation),
       );
     }
-    if (!(await this.findById(taskId))) throw new TaskDependencyError('Task not found.');
+    if (!(await this.findById(taskId)))
+      throw new TaskDependencyError('Task not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     const [relation] = await this.db
       .select()
       .from(taskDependencies)
       .where(and(eq(taskDependencies.id, relationId), this.issueRelationOwnership()))
       .limit(1);
     if (!relation || (relation.taskId !== taskId && relation.dependsOnId !== taskId)) {
-      throw new TaskDependencyError('Relation not found.');
+      throw new TaskDependencyError('Relation not found.', 'BAD_REQUEST', 'UNAVAILABLE');
     }
     const peerId = relation.taskId === taskId ? relation.dependsOnId : relation.taskId;
     // A "blocking" row is stored on the other issue. Remove it from that
@@ -4138,6 +4284,15 @@ export class TaskModel {
         .insert(taskComments)
         .values({ ...data, visibility, workspaceId: this.workspaceId ?? null })
         .returning();
+      // A member who joins the discussion keeps hearing about the Issue.
+      // Agent-authored comments subscribe nobody.
+      if (!comment.authorAgentId) {
+        await new TaskSubscriptionModel(runner, this.userId, this.workspaceId).ensureSubscribed(
+          comment.taskId,
+          [comment.authorUserId],
+          'commented',
+        );
+      }
       await this.recordCommentMutation(runner, {
         action: 'created',
         comment,
@@ -4329,6 +4484,246 @@ export class TaskModel {
       .returning();
   }
 
+  /** Names of projects, for the label a project activity row keeps. */
+  private async projectNames(ids: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const wanted = [...new Set(ids.filter((id): id is string => !!id))];
+    if (wanted.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: projects.id, name: projects.name })
+      .from(projects)
+      .where(inArray(projects.id, wanted));
+    return new Map(rows.map((row) => [row.id, row.name]));
+  }
+
+  /**
+   * Who a write that carries only a `TaskMutationContext` is attributed to.
+   * The agent comes from `actorAgentId`, which only trusted server code sets;
+   * the person is this model's own authenticated user, and only when the
+   * caller says a person made the change. Anything else — sync, planning,
+   * settlement — is the system.
+   */
+  private mutationActor(mutation: TaskMutationContext): {
+    agentId?: string | null;
+    userId?: string | null;
+  } {
+    if (mutation.activityActor) return mutation.activityActor;
+    if (mutation.actorAgentId) return { agentId: mutation.actorAgentId, userId: this.userId };
+    return mutation.source === 'user' ? { userId: this.userId } : {};
+  }
+
+  /**
+   * One relation row seen from both ends: the dependent Issue is "blocked by"
+   * its prerequisite, the prerequisite is "blocking" the dependent, and an
+   * ordinary relation reads the same from either side.
+   */
+  private async logRelationChange(
+    action: 'added' | 'removed',
+    relation: { dependsOnId: string; taskId: string; type: string },
+    mutation: TaskMutationContext,
+  ): Promise<void> {
+    const type = action === 'added' ? 'relation_added' : 'relation_removed';
+    const related = relation.type === 'relates';
+    await this.addActivitiesOnOtherTasks(this.mutationActor(mutation), [
+      {
+        relation: related ? 'related' : 'blocked_by',
+        taskId: relation.taskId,
+        toId: relation.dependsOnId,
+        type,
+      },
+      {
+        relation: related ? 'related' : 'blocking',
+        taskId: relation.dependsOnId,
+        toId: relation.taskId,
+        type,
+      },
+    ]);
+  }
+
+  /**
+   * Append a `session` activity (description body, acceptance criteria): an
+   * edit with no before/after worth naming, saved many times in one sitting.
+   * When the Issue's newest row is the same kind by the same actor inside the
+   * collapse window, that row is moved to now instead of adding another, so a
+   * sitting is one row however many times it saved. Anything else in between
+   * — another actor, another kind of change — starts a new entry.
+   *
+   * The caller must hold the task row lock (`FOR UPDATE`): two concurrent
+   * saves would otherwise both read the same newest row and both insert.
+   */
+  private async appendSessionActivity(
+    taskId: string,
+    type: 'description' | 'verify_config',
+    actor: { agentId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    const { actorKind, ...actorColumns } = taskActivityActor(actor);
+    const [newest] = await this.db
+      .select({
+        actorAgentId: taskActivities.actorAgentId,
+        actorUserId: taskActivities.actorUserId,
+        createdAt: taskActivities.createdAt,
+        id: taskActivities.id,
+        payload: taskActivities.payload,
+        type: taskActivities.type,
+      })
+      .from(taskActivities)
+      .where(eq(taskActivities.taskId, taskId))
+      .orderBy(desc(taskActivities.createdAt), desc(taskActivities.id))
+      .limit(1);
+    const sameSitting =
+      !!newest &&
+      newest.type === type &&
+      newest.actorAgentId === actorColumns.actorAgentId &&
+      newest.actorUserId === actorColumns.actorUserId &&
+      // A deleted actor leaves both id columns null; the kind keeps "someone
+      // who is gone" apart from the system.
+      (newest.payload?.actorKind ?? 'system') === actorKind &&
+      Date.now() - new Date(newest.createdAt).getTime() <= TASK_ACTIVITY_COLLAPSE_WINDOW_MS;
+    if (sameSitting) {
+      // The database clock, like every inserted row, so the feed order holds.
+      await this.db
+        .update(taskActivities)
+        .set({ createdAt: sql`now()` })
+        .where(eq(taskActivities.id, newest.id));
+      return;
+    }
+    await this.addActivity({ ...actorColumns, payload: { actorKind }, taskId, type });
+  }
+
+  /**
+   * {@link appendSessionActivity} for a caller that is not already inside a
+   * write on the task: opens the transaction and takes the row lock itself.
+   * Does nothing when the task is not writable in this scope.
+   */
+  async logSessionActivity(
+    taskId: string,
+    type: 'description' | 'verify_config',
+    actor: { agentId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const [locked] = await runner
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), this.ownership()))
+        .for('update')
+        .limit(1);
+      if (!locked) return;
+      await new TaskModel(runner, this.userId, this.workspaceId, {
+        managedSubject: this.managedSubject,
+      }).appendSessionActivity(taskId, type, actor);
+    });
+  }
+
+  /**
+   * Record on a parent Issue that it gained a sub-issue through creation —
+   * the one way a sub-issue appears without a parent *change* on the child.
+   * Skipped when the parent is not readable in this scope.
+   */
+  async logSubIssueAdded(
+    parentTaskId: string,
+    childTaskId: string,
+    actor: { agentId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    await this.addActivitiesOnOtherTasks(actor, [
+      { taskId: parentTaskId, toId: childTaskId, type: 'sub_issue_added' },
+    ]);
+  }
+
+  /**
+   * Append rows to the feeds of several Issues at once — both ends of a
+   * relation, or the parents on either side of a move. A target this caller
+   * cannot read (or that no longer exists) is skipped: its feed is not
+   * theirs to write to, and a missing row would fail the whole transaction.
+   */
+  private async addActivitiesOnOtherTasks(
+    actor: { agentId?: string | null; userId?: string | null },
+    entries: {
+      relation?: TaskActivityLogPayload['relation'];
+      taskId: string | null | undefined;
+      toId: string;
+      type: TaskActivityLogType;
+    }[],
+  ): Promise<void> {
+    const targets = entries.filter(
+      (entry): entry is typeof entry & { taskId: string } => !!entry.taskId,
+    );
+    if (targets.length === 0) return;
+    const readable = await this.db
+      .select({ id: tasks.id, visibility: taskVisibilitySql() })
+      .from(tasks)
+      .where(
+        and(
+          inArray(
+            tasks.id,
+            targets.map((entry) => entry.taskId),
+          ),
+          this.ownership(),
+        ),
+      );
+    const visibilityById = new Map(readable.map((row) => [row.id, row.visibility]));
+    const { actorKind, ...actorColumns } = taskActivityActor(actor);
+    await this.addActivities(
+      targets.flatMap((entry) => {
+        const visibility = visibilityById.get(entry.taskId);
+        if (!visibility) return [];
+        return [
+          {
+            ...actorColumns,
+            payload: {
+              actorKind,
+              toId: entry.toId,
+              ...(entry.relation ? { relation: entry.relation } : {}),
+            },
+            taskId: entry.taskId,
+            type: entry.type,
+            visibility,
+          },
+        ];
+      }),
+    );
+  }
+
+  /**
+   * Names of team workflow states, for the label a workflow activity row
+   * keeps. Unknown or missing ids are simply absent from the map.
+   */
+  async workflowStateNames(ids: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const wanted = [...new Set(ids.filter((id): id is string => !!id))];
+    if (wanted.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: teamWorkflowStates.id, name: teamWorkflowStates.name })
+      .from(teamWorkflowStates)
+      .where(inArray(teamWorkflowStates.id, wanted));
+    return new Map(rows.map((row) => [row.id, row.name]));
+  }
+
+  /**
+   * Record a workflow move that a plain writer made — the system paths
+   * (run settlement, lifecycle) that never go through `updateWithLog`.
+   * `before` is what the caller read ahead of its write; nothing is written
+   * when the Issue ended up where it was.
+   */
+  async logWorkflowMove(
+    taskId: string,
+    before: TaskWorkflowPosition,
+    after: TaskWorkflowPosition,
+    actor: { agentId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    const payload = workflowStatePayload(
+      before,
+      after,
+      await this.workflowStateNames([before.workflowStateRefId, after.workflowStateRefId]),
+    );
+    if (!payload) return;
+    const { actorKind, ...actorColumns } = taskActivityActor(actor);
+    await this.addActivity({
+      ...actorColumns,
+      payload: { ...payload, actorKind },
+      taskId,
+      type: 'workflow_state',
+    });
+  }
+
   /**
    * Lock a set of tasks for the rest of the transaction and return what a
    * bulk status write needs to describe them afterwards: the status each one
@@ -4336,9 +4731,13 @@ export class TaskModel {
    * before the lock would let a concurrent edit slip in between and the log
    * would name a transition that never happened.
    */
-  async lockForStatusChange(
-    ids: string[],
-  ): Promise<{ id: string; status: string; visibility: 'private' | 'public' }[]> {
+  async lockForStatusChange(ids: string[]): Promise<
+    ({
+      id: string;
+      status: string;
+      visibility: 'private' | 'public';
+    } & Required<TaskWorkflowPosition>)[]
+  > {
     if (ids.length === 0) return [];
     await this.lockDependencyGraph();
     return this.db
@@ -4346,6 +4745,8 @@ export class TaskModel {
         id: tasks.id,
         status: sql<string>`${legacyStatusExpr}`,
         visibility: taskVisibilitySql(),
+        workflowCategory: tasks.workflowCategory,
+        workflowStateRefId: tasks.workflowStateRefId,
       })
       .from(tasks)
       .where(and(inArray(tasks.id, ids), this.ownership()))
@@ -4366,10 +4767,11 @@ export class TaskModel {
    *
    * Which edits reach the feed is decided by the caller, not here: anything
    * that goes through this method is logged. Person-made changes (the update
-   * procedure, the agent `editTask` tool, the status picker) and the runner's
-   * inbox fallback come here; the runner / lifecycle / watchdog status
-   * transitions use the plain writers, because the run row already tells that
-   * story.
+   * procedure, the agent `editTask` tool, the status picker, the board move)
+   * and the runner's inbox fallback come here. The runner / lifecycle /
+   * watchdog transitions use the plain writers: their execution-side status
+   * is told by the run row, and where one of them also moves the Issue in
+   * its workflow the caller records that with {@link logWorkflowMove}.
    */
   async updateWithLog(
     id: string,
@@ -4396,12 +4798,18 @@ export class TaskModel {
           automationMode: tasks.automationMode,
           config: tasks.config,
           context: tasks.context,
+          dueDate: tasks.dueDate,
+          duplicateOfTaskId: tasks.duplicateOfTaskId,
           heartbeatInterval: tasks.heartbeatInterval,
+          name: tasks.name,
+          parentTaskId: tasks.parentTaskId,
           priority: tasks.priority,
+          projectId: tasks.projectId,
           reviewerUserId: tasks.reviewerUserId,
           schedulePattern: tasks.schedulePattern,
           scheduleTimezone: tasks.scheduleTimezone,
           workflowCategory: tasks.workflowCategory,
+          workflowStateRefId: tasks.workflowStateRefId,
           executionLive: sql<boolean>`${hasActiveExecution}`,
         })
         .from(tasks)
@@ -4424,6 +4832,17 @@ export class TaskModel {
         throw new TaskHandoffRequiredError();
       }
 
+      // The description body is read only when this write carries one — it
+      // can be large, and the row is already locked by the read above.
+      const [beforeBody] =
+        data.instruction !== undefined || data.editorData !== undefined
+          ? await runner
+              .select({ editorData: tasks.editorData, instruction: tasks.instruction })
+              .from(tasks)
+              .where(eq(tasks.id, id))
+              .limit(1)
+          : [];
+
       const source = actor.agentId ? 'agent' : actor.userId ? 'user' : 'system';
       const updated = await scoped.update(id, data, {
         ...mutation,
@@ -4432,6 +4851,11 @@ export class TaskModel {
       if (!updated) return null;
 
       const events: { payload: TaskActivityLogPayload; type: TaskActivityLogType }[] = [];
+      const subscriptions = new TaskSubscriptionModel(
+        runner,
+        this.userId,
+        updated.workspaceId ?? undefined,
+      );
 
       // The two assignee slots are independent — one edit can move both, and
       // each gets its own row so the feed reads one change per line.
@@ -4446,6 +4870,9 @@ export class TaskModel {
           payload: { fromId: before.assigneeUserId, toId: updated.assigneeUserId },
           type: 'assignee_user',
         });
+        // Being assigned is being involved: the new assignee keeps hearing
+        // about the Issue after it is handed on, unless they unsubscribed.
+        await subscriptions.ensureSubscribed(id, [updated.assigneeUserId], 'assigned');
       }
       // Only an explicit reviewer write earns a feed row — the COALESCE
       // backfill stamped on a paused transition is the system's fallback
@@ -4456,12 +4883,26 @@ export class TaskModel {
           payload: { fromId: before.reviewerUserId, toId: updated.reviewerUserId },
           type: 'reviewer',
         });
+        await subscriptions.ensureSubscribed(id, [updated.reviewerUserId], 'reviewer');
       }
+      // Where the Issue sits in its workflow, in the words the board uses.
+      const workflowPayload = workflowStatePayload(
+        before,
+        updated,
+        await scoped.workflowStateNames([before.workflowStateRefId, updated.workflowStateRefId]),
+      );
+      if (workflowPayload) events.push({ payload: workflowPayload, type: 'workflow_state' });
       // 'status' events carry the legacy status vocabulary — derived from
       // canonical workflow/execution state, the column itself is never read.
+      // They remain the record of execution-side changes (parked for review,
+      // failed, scheduled, running). When the Issue itself moved and landed
+      // on a plain workflow position, the workflow row above already says
+      // so; a second line in the retired vocabulary would only repeat it.
       const statusBefore = before.executionLive ? 'running' : deriveLegacyTaskStatus(before);
       const statusAfter = (await scoped.derivedStatusByIds([id]))[id] ?? 'backlog';
-      if (statusBefore !== statusAfter) {
+      const toldByWorkflowRow =
+        !!workflowPayload && ['backlog', 'canceled', 'completed'].includes(statusAfter);
+      if (statusBefore !== statusAfter && !toldByWorkflowRow) {
         events.push({
           payload: { from: statusBefore, to: statusAfter },
           type: 'status',
@@ -4482,14 +4923,83 @@ export class TaskModel {
         });
       }
 
+      if ((before.name ?? null) !== (updated.name ?? null)) {
+        events.push({
+          payload: { from: before.name ?? null, to: updated.name ?? null },
+          type: 'title',
+        });
+      }
+      // Same test the description history uses to decide a version was
+      // written, so every feed entry has a history entry to point at. The
+      // row carries no text: the history holds it, behind its own access.
+      if (
+        beforeBody &&
+        (beforeBody.instruction !== updated.instruction ||
+          JSON.stringify(beforeBody.editorData) !== JSON.stringify(updated.editorData))
+      ) {
+        events.push({ payload: {}, type: 'description' });
+      }
+      if ((before.dueDate ?? null) !== (updated.dueDate ?? null)) {
+        events.push({
+          payload: { from: before.dueDate ?? null, to: updated.dueDate ?? null },
+          type: 'due_date',
+        });
+      }
+      if ((before.duplicateOfTaskId ?? null) !== (updated.duplicateOfTaskId ?? null)) {
+        events.push({
+          payload: {
+            fromId: before.duplicateOfTaskId ?? null,
+            toId: updated.duplicateOfTaskId ?? null,
+          },
+          type: 'duplicate',
+        });
+      }
+      if ((before.projectId ?? null) !== (updated.projectId ?? null)) {
+        const names = await scoped.projectNames([before.projectId, updated.projectId]);
+        events.push({
+          payload: {
+            fromId: before.projectId ?? null,
+            fromLabel: (before.projectId && names.get(before.projectId)) || null,
+            toId: updated.projectId ?? null,
+            toLabel: (updated.projectId && names.get(updated.projectId)) || null,
+          },
+          type: 'project',
+        });
+      }
+      const parentChanged = (before.parentTaskId ?? null) !== (updated.parentTaskId ?? null);
+      if (parentChanged) {
+        events.push({
+          payload: {
+            fromId: before.parentTaskId ?? null,
+            toId: updated.parentTaskId ?? null,
+          },
+          type: 'parent',
+        });
+      }
+
       const { actorKind, ...actorColumns } = taskActivityActor(actor);
       for (const event of events) {
+        // An autosaving editor writes many times a minute; one sitting is
+        // one row, kept current, so it cannot crowd older history out of
+        // the window the feed reads. The task row is locked by this write.
+        if (event.type === 'description') {
+          await scoped.appendSessionActivity(id, event.type, actor);
+          continue;
+        }
         await scoped.addActivity({
           ...actorColumns,
           payload: { ...event.payload, actorKind },
           taskId: id,
           type: event.type,
         });
+      }
+      // The other end of a parent change: the Issue that lost or gained a
+      // sub-issue shows it in its own feed too.
+      if (parentChanged) {
+        await scoped.addActivitiesOnOtherTasks(actor, [
+          { taskId: before.parentTaskId, toId: id, type: 'sub_issue_removed' },
+          { taskId: updated.parentTaskId, toId: id, type: 'sub_issue_added' },
+        ]);
       }
 
       return updated;
@@ -4501,9 +5011,18 @@ export class TaskModel {
    * oldest-first) so a long-lived task does not ship its whole history on
    * every detail poll; the table itself is the full audit trail.
    */
-  async getActivities(taskId: string, limit?: number): Promise<TaskActivityItem[]> {
+  async getActivities(
+    taskId: string,
+    limit?: number,
+    /** Only rows of these kinds — so a row a caller looks for cannot be pushed out of `limit` by other kinds. */
+    types?: TaskActivityLogType[],
+  ): Promise<TaskActivityItem[]> {
     if (!(await this.findById(taskId))) return [];
-    const where = and(eq(taskActivities.taskId, taskId), this.activitiesOwnership());
+    const where = and(
+      eq(taskActivities.taskId, taskId),
+      this.activitiesOwnership(),
+      types?.length ? inArray(taskActivities.type, types) : undefined,
+    );
     if (limit === undefined) {
       return this.db.select().from(taskActivities).where(where).orderBy(taskActivities.createdAt);
     }
@@ -4541,6 +5060,9 @@ export class TaskModel {
       eq(tasks.projectId, projectId),
       this.ownership(),
       this.activitiesOwnership(),
+      // Only the kinds the project tab words. Filtering here rather than in
+      // the client keeps every page full and the cursor honest.
+      inArray(taskActivities.type, PROJECT_FEED_ACTIVITY_TYPES),
     ];
     if (cursorId) {
       // Keyset on the feed's (createdAt desc, id desc) order. The cursor row
@@ -4705,12 +5227,19 @@ export class TaskModel {
         .where(inArray(taskDocuments.taskId, ids));
       await (trx as OrviloDatabase)
         .update(taskComments)
-        .set({ ...ownershipUpdate, ...visibilityUpdate })
+        // Moving an Issue is not an edit of its comments (see the "edited" marker).
+        .set({ ...ownershipUpdate, ...visibilityUpdate, updatedAt: taskComments.updatedAt })
         .where(inArray(taskComments.taskId, ids));
       await (trx as OrviloDatabase)
         .update(taskActivities)
         .set({ ...ownershipUpdate, ...visibilityUpdate })
         .where(inArray(taskActivities.taskId, ids));
+      // A subscription belongs to its subscriber, so only the scope moves:
+      // recipients are matched on it when a notification is projected.
+      await (trx as OrviloDatabase)
+        .update(taskSubscriptions)
+        .set({ updatedAt: taskSubscriptions.updatedAt, workspaceId: targetWorkspaceId })
+        .where(inArray(taskSubscriptions.taskId, ids));
 
       return { taskIds: ids };
     });

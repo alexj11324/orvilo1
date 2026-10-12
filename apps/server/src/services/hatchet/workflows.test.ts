@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { HATCHET_TASK_NAMES } from './taskNames';
-import { cancelHatchetWorkflow, triggerHatchetWorkflow } from './workflows';
+import { cancelHatchetWorkflow, isHatchetWorkflowPath, triggerHatchetWorkflow } from './workflows';
 
 const mocks = vi.hoisted(() => ({
   enqueueHatchetTask: vi.fn(),
@@ -48,6 +48,12 @@ describe('triggerHatchetWorkflow', () => {
         })),
       })),
     });
+  });
+
+  it('does not admit retired topic auto-summary workflows', () => {
+    expect(isHatchetWorkflowPath('/api/workflows/topic-auto-summary/dispatch')).toBe(false);
+    expect(isHatchetWorkflowPath('/api/workflows/topic-auto-summary/execute')).toBe(false);
+    expect(isHatchetWorkflowPath('/api/workflows/agent-signal/run')).toBe(true);
   });
 
   it('stores the private payload in Postgres and sends only opaque ids to Hatchet', async () => {

@@ -23,6 +23,10 @@ import { UserModel } from '@/database/models/user';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
+import {
+  resolveReadableActivityContainers,
+  withReadableContainerNames,
+} from '@/server/services/task/activityContainerAccess';
 
 import { getResourceConfigAccess, redactAgentConfig } from './_helpers/resourceConfigGuard';
 
@@ -88,11 +92,23 @@ export const projectRouter = router({
       try {
         const project = requireResult(await ctx.projectModel.findByIdOrSlug(input.id));
         const taskModel = new TaskModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined);
-        const { items: rows, nextCursor } = await taskModel.getProjectActivities(
+        const { items: page, nextCursor } = await taskModel.getProjectActivities(
           project.id,
           input.limit,
           input.cursor ?? undefined,
         );
+
+        // A workflow-state name was copied into the row when it was written.
+        // The project's readers are not all readers of the Issue's team.
+        const readableContainers = await resolveReadableActivityContainers(
+          ctx.serverDB,
+          { userId: ctx.userId, workspaceId: ctx.workspaceId },
+          page.map((row) => row.activity),
+        );
+        const rows = page.map((row) => ({
+          ...row,
+          activity: withReadableContainerNames(row.activity, readableContainers),
+        }));
 
         const agentIds = new Set<string>();
         const userIds = new Set<string>();

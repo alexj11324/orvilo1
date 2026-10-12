@@ -607,6 +607,26 @@ export class TaskLifecycleService {
       } else if (reason === 'error') {
         const errorText = params.errorMessage || errorMessage || 'Unknown error';
 
+        // Keep the reason on the run itself: `tasks.error` holds only the current
+        // failure and the next attempt clears it, so an older failed run would
+        // otherwise have nothing to show. Best-effort — losing the copy must not
+        // stop the failure from settling.
+        if (topicId) {
+          try {
+            await this.taskTopicModel.updateHandoffError(taskId, topicId, {
+              code: errorCode,
+              message: errorText,
+            });
+          } catch (e) {
+            // Name only: a query error carries its parameters, which here are the
+            // runtime's error text.
+            console.warn(
+              '[TaskLifecycle] persisting run failure reason failed:',
+              e instanceof Error ? e.name : 'unknown error',
+            );
+          }
+        }
+
         // A budget / plan failure won't clear on a blind Retry — lead the card with
         // the fix (Upgrade → plans page) instead. Other causes keep retry + feedback.
         const isBillingError = errorCode ? BILLING_ERROR_CODES.has(errorCode) : false;
@@ -1215,10 +1235,7 @@ export class TaskLifecycleService {
     currentTask: any,
   ): Promise<void> {
     try {
-      const [{ model, provider }, responseLanguage] = await Promise.all([
-        (this.systemAgentService as any).getTaskModelConfig('topic'),
-        this.systemAgentService.getUserLocale(),
-      ]);
+      const responseLanguage = await this.systemAgentService.getUserLocale();
 
       const payload = chainTaskTopicHandoff({
         lastAssistantContent,
@@ -1234,8 +1251,6 @@ export class TaskLifecycleService {
       ).generateObject(
         {
           messages: payload.messages as any[],
-          model,
-          provider,
           schema: { name: TASK_TOPIC_HANDOFF_SCHEMA_NAME, schema: TASK_TOPIC_HANDOFF_SCHEMA },
         },
         {
@@ -1335,10 +1350,7 @@ export class TaskLifecycleService {
       const artifacts: BriefArtifacts = { documents: pinnedDocs };
       const handoff = (topicLink?.handoff as TaskTopicHandoff | null) ?? null;
 
-      const [{ model, provider }, responseLanguage] = await Promise.all([
-        (this.systemAgentService as any).getTaskModelConfig('topic'),
-        this.systemAgentService.getUserLocale(),
-      ]);
+      const responseLanguage = await this.systemAgentService.getUserLocale();
 
       let decision: BriefDecision;
       if (ruleVerdict.emit === 'unknown') {
@@ -1359,8 +1371,6 @@ export class TaskLifecycleService {
         ).generateObject(
           {
             messages: judgePayload.messages as any[],
-            model,
-            provider,
             schema: { name: JUDGE_BRIEF_EMIT_SCHEMA_NAME, schema: JUDGE_BRIEF_EMIT_SCHEMA },
           },
           {
@@ -1382,7 +1392,6 @@ export class TaskLifecycleService {
         decision = {
           decidedAt: new Date().toISOString(),
           emit: judgeResult.emit === true,
-          model,
           reason: judgeResult.reason || 'llm-judge-unknown',
           source: 'llm-judge',
         };
@@ -1429,8 +1438,6 @@ export class TaskLifecycleService {
       ).generateObject(
         {
           messages: payload.messages as any[],
-          model,
-          provider,
           schema: { name: GENERATE_BRIEF_SCHEMA_NAME, schema: GENERATE_BRIEF_SCHEMA },
         },
         {

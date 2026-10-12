@@ -46,6 +46,8 @@ export interface AgentOperationJudgmentContext {
    * never dispatches a second writer for the same launch.
    */
   intentKey?: string;
+  /** Planning rounds persist their result through the operation-bound CLI tool. */
+  outputMode?: 'tool';
   /** Stable consumer identifier, e.g. 'verify.judge', 'goal.criteriaDraft'. */
   purpose: string;
 }

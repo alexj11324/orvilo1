@@ -10,7 +10,7 @@
 #   setup-auth.sh cli-seed      # configure CLI API-key auth from seeded local env
 #   setup-auth.sh cli           # interactive CLI device-code login (run by a human)
 #   setup-auth.sh open-chrome   # open SERVER_URL in Chrome and show DevTools
-#   setup-auth.sh web-seed      # insert an auth_sessions row for the seeded user and inject the orvilo_auth cookie
+#   setup-auth.sh web-seed      # seed a session for the local user (seed-session.mjs) and inject the orvilo_auth cookie
 #   setup-auth.sh web           # stdin = Cookie header -> inject into agent-browser session
 #   setup-auth.sh web-verify    # live-check the agent-browser session is authenticated
 #
@@ -18,8 +18,9 @@
 #   SERVER_URL  (default from test-env.sh)        dev server under test
 #   SESSION     (default orvilo-dev)             agent-browser session name
 #   AUTH_DIR    (default ~/.orvilo-agent-testing) where web state is persisted
-#   DATABASE_URL                                  Postgres the dev server uses (web-seed inserts into auth_sessions)
+#   DATABASE_URL                                  Postgres the dev server uses (web-seed writes the session there)
 #   SEED_EMAIL                                    seeded user (session owner; id resolved from users.email)
+#   SEED_SESSION_SCRIPT                           replaces seed-session.mjs (the script's own test uses it)
 
 set -euo pipefail
 
@@ -446,42 +447,16 @@ cmd_web_seed() {
     return 1
   fi
 
-  local session_token
+  # seed-session.mjs writes the account binding and the hashed session row the
+  # server expects, and checks the server accepts the result before printing it.
+  local seed_script session_token
+  seed_script="${SEED_SESSION_SCRIPT:-$(dirname "${BASH_SOURCE[0]}")/seed-session.mjs}"
   session_token="$(
-    DATABASE_URL="$DATABASE_URL" SEED_EMAIL="$SEED_EMAIL" node - << 'NODE'
-const crypto = require('node:crypto');
-const pg = require('pg');
-
-const run = async () => {
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
-  await client.connect();
-  try {
-    const { rows } = await client.query('SELECT id FROM users WHERE email = $1', [
-      process.env.SEED_EMAIL,
-    ]);
-    if (!rows.length) throw new Error('no users row for seed email');
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const token = crypto.randomBytes(24).toString('base64url');
-    await client.query(
-      'INSERT INTO auth_sessions (id, token, user_id, expires_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)',
-      [crypto.randomBytes(9).toString('base64url'), token, rows[0].id, expiresAt.toISOString(), now.toISOString()],
-    );
-    process.stdout.write(token);
-  } finally {
-    await client.end();
-  }
-};
-
-run().catch((err) => {
-  console.error(err.message);
-  process.exit(1);
-});
-NODE
+    DATABASE_URL="$DATABASE_URL" SEED_EMAIL="$SEED_EMAIL" SERVER_URL="$SERVER_URL" node "$seed_script"
   )" || {
-    bad "failed to insert an auth_sessions row for $SEED_EMAIL"
-    note "make sure the seed user exists:"
-    note "./.agents/acceptance/scripts/init-dev-env.sh seed-user"
+    bad "could not seed a web session for $SEED_EMAIL (reason above)"
+    note "the dev server must run behind the Clerk stub: ORVILO_CLERK_STUB=1 ./.agents/acceptance/scripts/dev-up.sh restart"
+    note "and the seed user must exist: ./.agents/acceptance/scripts/init-dev-env.sh seed-user"
     return 1
   }
 

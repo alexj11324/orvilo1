@@ -1,4 +1,5 @@
-// Start the local Next backend and Electron, then sign in an existing seed user.
+// Start the local Next backend (behind the Clerk stub) and Electron, then sign the
+// existing seed user in — renderer and main process — without a browser.
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import net from 'node:net';
@@ -18,23 +19,27 @@ const cdpPort = process.env.ORVILO_DESKTOP_CDP_PORT || '9263';
 if (!Number.isInteger(Number(cdpPort)) || Number(cdpPort) < 1 || Number(cdpPort) > 65535) {
   throw new Error('Invalid Electron CDP port');
 }
-const portBusy = await new Promise((resolve) => {
-  const socket = net.createConnection({ host: '127.0.0.1', port: Number(cdpPort) });
-  socket.once('connect', () => {
-    socket.destroy();
-    resolve(true);
+const listening = (port) =>
+  new Promise((resolve) => {
+    const socket = net.createConnection({ host: '127.0.0.1', port: Number(port) });
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.setTimeout(1000, () => {
+      socket.destroy();
+      resolve(true);
+    });
   });
-  socket.once('error', () => {
-    socket.destroy();
-    resolve(false);
-  });
-  socket.setTimeout(1000, () => {
-    socket.destroy();
-    resolve(true);
-  });
-});
-if (portBusy) throw new Error(`Electron CDP port ${cdpPort} is already in use`);
+if (await listening(cdpPort)) throw new Error(`Electron CDP port ${cdpPort} is already in use`);
+const clerkStubPort = process.env.CLERK_STUB_PORT || '3411';
 const userDataDir = mkdtempSync(path.join(tmpdir(), 'orvilo-electron-seed-'));
+// Electron writes its authorization request here instead of opening a browser.
+const authUrlFile = path.join(userDataDir, 'desktop-auth-url');
 const children = [];
 let closing = false;
 let cleaned = false;
@@ -62,8 +67,8 @@ function stop(code = 0) {
 
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => stop());
 
-function start(script, env = {}) {
-  const child = spawn('bun', ['run', script], {
+function start(script, env = {}, command = ['bun', 'run', script]) {
+  const child = spawn(command[0], command.slice(1), {
     stdio: 'inherit',
     detached: process.platform !== 'win32',
     env: { ...process.env, ...env },
@@ -83,8 +88,19 @@ function start(script, env = {}) {
   return child;
 }
 
-start('dev:next', { PORT: serverUrl.port });
+// Seed sessions are only accepted while the server asks the stub about them; it
+// forwards every other Clerk call, so a normal sign-in keeps working.
+if (!(await listening(clerkStubPort)))
+  start('clerk-stub', { CLERK_STUB_PORT: clerkStubPort }, [
+    'node',
+    '.agents/acceptance/scripts/clerk-stub.mjs',
+  ]);
+start('dev:next', {
+  CLERK_API_URL: `http://127.0.0.1:${clerkStubPort}`,
+  PORT: serverUrl.port,
+});
 const desktopChild = start('dev:desktop', {
+  ORVILO_DESKTOP_AUTH_URL_FILE: authUrlFile,
   ORVILO_DESKTOP_CDP_PORT: cdpPort,
   ORVILO_DESKTOP_USER_DATA_DIR: userDataDir,
   ORVILO_IPC_ID: `orvilo-seed-${process.pid}`,
@@ -122,10 +138,11 @@ function ownsCdpPort() {
 
 async function ready() {
   try {
-    const response = await fetch(new URL('/api/auth/get-session', serverUrl), {
+    // Signed out, this answers 401: any answer below 500 means the server is up.
+    const response = await fetch(new URL('/api/auth/session', serverUrl), {
       signal: AbortSignal.timeout(2000),
     });
-    if (!response.ok) return false;
+    if (response.status >= 500) return false;
     const cdp = await fetch(`http://127.0.0.1:${cdpPort}/json/list`, {
       signal: AbortSignal.timeout(2000),
     });
@@ -150,10 +167,13 @@ if (!closing) {
     try {
       const { userId } = await seedElectronLogin({
         serverUrl: serverUrl.href,
+        authUrlFile,
         cdpPort,
         verifyTarget: ownsCdpPort,
       });
-      console.log(`Electron development ready; local seed user ${userId} is signed in`);
+      console.log(
+        `Electron development ready; local seed user ${userId} is signed in and the main process is authorized`,
+      );
     } catch (error) {
       console.error(`Electron local login failed: ${error.message}`);
       stop(1);

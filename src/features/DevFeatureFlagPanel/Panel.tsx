@@ -20,7 +20,8 @@ const styles = {
   body: 'overflow-auto flex-1 min-h-0',
   empty: 'py-8 text-sm leading-5.5 text-foreground-description text-center',
   footer: 'flex gap-2 items-center justify-between py-2 px-3 border-bs border-divider',
-  toolbar: 'flex shrink-0 items-center h-11 border-be border-divider',
+  toolbar:
+    'flex shrink-0 items-center h-11 border-be border-divider pointer-coarse:h-[calc(var(--spacing)*11.25)]',
   toolbarFilter: 'flex shrink-0 gap-1.5 items-center h-full px-3 border-s border-divider',
 };
 
@@ -59,15 +60,19 @@ const Panel = memo(() => {
   return (
     <div className={devDockPanelStyles.root}>
       <div className={styles.toolbar}>
-        <Input
-          className={devDockPanelStyles.searchInput}
-          placeholder={'Search flag name…'}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <label className="flex min-w-0 flex-1 items-center pointer-coarse:p-1">
+          <Input
+            aria-label={'Search flag name…'}
+            className={devDockPanelStyles.searchInput}
+            placeholder={'Search flag name…'}
+            value={search}
+            visualSize="normal"
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
         <div className={`${styles.toolbarFilter} flex`}>
           <Switch checked={overriddenOnly} size="sm" onCheckedChange={setOverriddenOnly} />
-          <div className="text-muted-foreground text-xs leading-5 whitespace-nowrap">
+          <div className="text-muted-foreground text-sm leading-5.5 whitespace-nowrap">
             overridden only
           </div>
         </div>

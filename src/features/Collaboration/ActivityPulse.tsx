@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo, useSyncExternalStore } from 'react';
 
 import type { ActivityPhase, ServerActivityEvent } from '@/store/collaboration';
@@ -8,21 +8,14 @@ import type { ActivityPhase, ServerActivityEvent } from '@/store/collaboration';
 import { collabIdForTarget } from './anchors';
 import { useCollaborationContext } from './context';
 
-const registeredStyles = createStaticStyles(({ css }) => ({
-  started: css`
-    @media (prefers-reduced-motion: no-preference) {
-      animation: collab-dot-pulse 1.4s ease-out infinite;
-    }
-  `,
-}));
-
 const styles = {
   pulse:
     'pointer-events-none will-change-transform absolute inset-bs-0 inset-s-0 size-2.5 rounded-full',
   committed: 'bg-success',
   failed: 'bg-destructive',
   proposed: 'border-[1.5px] border-dashed border-muted-foreground bg-transparent',
-  started: cx('bg-primary', registeredStyles.started),
+  started:
+    'bg-primary motion-safe:animate-pulse motion-safe:[animation-duration:1.4s] motion-safe:[animation-timing-function:ease-out]',
 };
 
 const PHASE_CLASS: Record<ActivityPhase, string> = {

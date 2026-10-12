@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -34,24 +33,9 @@ const persistAgreement = (accepted: boolean) => {
   }
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  link: css`
-    cursor: pointer;
-    color: inherit;
-    text-decoration: underline;
-
-    &:active,
-    &:focus,
-    &:hover,
-    &:visited {
-      text-decoration: underline;
-    }
-
-    &:visited {
-      color: ${cssVar.colorLinkActive};
-    }
-  `,
-}));
+const styles = {
+  link: 'cursor-pointer text-inherit underline active:underline focus:underline hover:underline visited:underline visited:text-link-active focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+};
 
 type AuthAgreementProps =
   | {
@@ -148,19 +132,16 @@ export const useAuthAgreement = (requestConfirmation?: RequestAgreementConfirmat
 const AuthAgreement = memo<AuthAgreementProps>(({ checked, onChange }) => {
   if (checked === undefined || onChange === undefined) {
     return (
-      <div
-        className="text-(length:--text-dense) text-muted-foreground"
-        style={{ display: 'block', marginBlockStart: 8 }}
-      >
+      <div className="mbs-2 block text-xs leading-5 text-muted-foreground">
         <AgreementText i18nKey={'footer.agreement'} />
       </div>
     );
   }
 
   return (
-    <label className="flex items-start gap-2" style={{ marginBlockEnd: 12, width: '100%' }}>
-      <Checkbox checked={checked} style={{ marginBlockStart: 2 }} onCheckedChange={onChange} />
-      <span className="text-(length:--text-dense) text-muted-foreground">
+    <label className="mbe-3 flex min-h-9 w-full items-start gap-2 [@media(pointer:coarse)]:min-h-11">
+      <Checkbox checked={checked} className="mbs-0.5" onCheckedChange={onChange} />
+      <span className="text-sm leading-5.5 text-muted-foreground">
         <AgreementText i18nKey={'agreement.checkbox'} />
       </span>
     </label>

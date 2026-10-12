@@ -1,32 +1,19 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
 import { devDockPanelStyles } from '@/features/DevDock/panelStyles';
 
-const retainedMenuStyles = createStaticStyles(({ css }) => ({
-  menu: css`
-    padding-block: 4px;
-    border-inline-end: none !important;
-
-    .ant-menu-item,
-    .ant-menu-submenu-title {
-      width: 100%;
-      margin-inline: 0;
-      border-radius: 0;
-    }
-  `,
-}));
+import menuStyles from './Sidebar.module.css';
 
 const styles = {
   menuItem:
-    'cursor-pointer block w-full min-h-8 py-1 px-3 border-0 rounded-none text-sm leading-5.5 text-foreground text-start bg-none bg-transparent hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
+    'cursor-pointer block w-full min-h-8 py-1 px-3 border-0 rounded-(--radius-button) text-sm leading-5.5 text-foreground text-start bg-none bg-transparent hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
   menuItemActive: 'text-foreground bg-selected hover:bg-selected',
   sidebar: 'flex flex-col shrink-0 w-65 h-full border-e border-divider bg-card',
   scroll: 'overflow-auto flex-1',
-  menu: retainedMenuStyles.menu,
+  menu: menuStyles.menu,
 };
 
 export interface DevMenuItem {

@@ -1,7 +1,7 @@
 import { Markdown } from '@lobehub/ui';
 import type { VerifierType } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
@@ -22,7 +22,7 @@ import { chatPortalSelectors, threadSelectors } from '@/store/chat/selectors';
 const styles = {
   confidenceCard: 'rounded-(--radius-card) border border-divider bg-fill-quaternary p-3',
   confidenceValue: 'text-xl font-semibold tabular-nums',
-  fill: 'h-full rounded-full transition-[width] duration-(--orvilo-motion-mid) ease-[var(--ant-motion-ease-in-out)] motion-reduce:transition-none',
+  fill: 'h-full rounded-full transition-[width] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) motion-reduce:transition-none',
   label: 'mbe-1.5 text-xs leading-5 font-semibold text-muted-foreground',
   metaKey: 'text-foreground-tertiary',
   metaRow: 'flex items-center justify-between gap-3 text-sm leading-5.5',
@@ -31,11 +31,11 @@ const styles = {
   track: 'h-2 w-full overflow-hidden rounded-full bg-selected',
 } as const;
 
-/** Score zone → theme color token, mirroring the A/B/F grade bands. */
-const confidenceColor = (ratio: number): keyof typeof cssVar => {
-  if (ratio >= 0.8) return 'colorSuccess';
-  if (ratio >= 0.6) return 'colorWarning';
-  return 'colorError';
+/** Score zone → separate status text and solid-fill roles, keeping the A/B/F bands. */
+const confidenceColor = (ratio: number): { fill: string; text: string } => {
+  if (ratio >= 0.8) return { fill: 'bg-success', text: 'text-success-text' };
+  if (ratio >= 0.6) return { fill: 'bg-warning', text: 'text-warning-text' };
+  return { fill: 'bg-destructive', text: 'text-destructive-text' };
 };
 
 const methodKey = (type: VerifierType) =>
@@ -128,33 +128,20 @@ const Body = () => {
   };
 
   return (
-    <div
-      className="flex flex-col gap-4 h-full px-2"
-      style={{ overflow: 'auto', paddingBlock: '4px 16px' }}
-    >
+    <div className="flex flex-col gap-4 h-full overflow-auto px-2 pbs-1 pbe-4">
       {ratio !== undefined && (
         <div className={styles.confidenceCard}>
-          <div
-            className="flex flex-row items-baseline justify-between"
-            style={{ marginBlockEnd: 8 }}
-          >
-            <span className={styles.label} style={{ marginBlockEnd: 0 }}>
-              {t('detail.confidence')}
-            </span>
-            <span
-              className={styles.confidenceValue}
-              style={{ color: cssVar[confidenceColor(ratio)] }}
-            >
+          <div className="flex flex-row items-baseline justify-between mbe-2">
+            <span className={cn(styles.label, 'mbe-0')}>{t('detail.confidence')}</span>
+            <span className={cn(styles.confidenceValue, confidenceColor(ratio).text)}>
               {Math.round(ratio * 100)}%
             </span>
           </div>
           <div className={styles.track}>
             <div
-              className={styles.fill}
-              style={{
-                background: cssVar[confidenceColor(ratio)],
-                width: `${Math.round(ratio * 100)}%`,
-              }}
+              className={cn(styles.fill, confidenceColor(ratio).fill)}
+              data-slot="verify-result-confidence-fill"
+              style={{ width: `${Math.round(ratio * 100)}%` }}
             />
           </div>
         </div>

@@ -1,0 +1,13 @@
+/* This owner renders a native role=menu div, not an ant-menu root. */
+.menu {
+  padding-block: 4px;
+  border-inline-end: 0;
+
+  /* Preserve the public ReactNode label's existing descendant normalization. */
+  :global(.ant-menu-item),
+  :global(.ant-menu-submenu-title) {
+    width: 100%;
+    margin-inline: 0;
+    border-radius: var(--radius-button);
+  }
+}

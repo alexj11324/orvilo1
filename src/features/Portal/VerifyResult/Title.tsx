@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { clsx, cn } from 'cn';
 import { CheckCircle2, Circle, CircleAlert, LoaderCircle, XCircle } from 'lucide-react';
 
@@ -14,22 +13,22 @@ const styles = {
 
 const statusMeta = (
   status: VerifyCheckResultItem['status'] | undefined,
-): { bg: keyof typeof cssVar; icon: typeof CheckCircle2; text: keyof typeof cssVar } => {
+): { className: string; icon: typeof CheckCircle2 } => {
   switch (status) {
     case 'passed': {
-      return { bg: 'colorSuccessBg', icon: CheckCircle2, text: 'colorSuccessText' };
+      return { className: 'bg-success-wash text-success-text', icon: CheckCircle2 };
     }
     case 'running': {
-      return { bg: 'colorInfoBg', icon: LoaderCircle, text: 'colorInfoText' };
+      return { className: 'bg-info-wash text-info-text', icon: LoaderCircle };
     }
     case 'failed': {
-      return { bg: 'colorErrorBg', icon: XCircle, text: 'colorErrorText' };
+      return { className: 'bg-destructive-wash text-destructive-text', icon: XCircle };
     }
     case 'skipped': {
-      return { bg: 'colorFillTertiary', icon: CircleAlert, text: 'colorTextSecondary' };
+      return { className: 'bg-muted text-muted-foreground', icon: CircleAlert };
     }
     default: {
-      return { bg: 'colorFillTertiary', icon: Circle, text: 'colorTextSecondary' };
+      return { className: 'bg-muted text-muted-foreground', icon: Circle };
     }
   }
 };
@@ -47,24 +46,16 @@ const Title = () => {
   const label = result?.verdict ?? result?.status;
 
   return (
-    <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
+    <div className="flex min-w-0 flex-row items-center gap-2">
       <div className={cn('truncate text-base font-semibold text-muted-foreground')}>
         {item?.title}
       </div>
       {label && (
-        <span
-          className={styles.badge}
-          style={{
-            background: cssVar[sIcon.bg],
-            color: cssVar[sIcon.text],
-          }}
-        >
+        <span className={clsx(styles.badge, sIcon.className)}>
           <span
+            className={clsx('anticon', result?.status === 'running' && 'motion-safe:animate-spin')}
+            data-slot="verify-result-status-icon"
             role="img"
-            className={clsx(
-              'anticon',
-              result?.status === 'running' && 'animate-spin motion-reduce:animate-none',
-            )}
           >
             <sIcon.icon fill={'transparent'} height={16} size={16} width={16} />
           </span>

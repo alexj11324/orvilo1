@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { CheckCircle2, CirclePlay, FileEdit, XCircle } from 'lucide-react';
 import { memo, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,27 +10,14 @@ import type { ActivityPhase, ServerActivityEvent } from '@/store/collaboration';
 import { collabIdForTarget } from './anchors';
 import { useCollaborationContext } from './context';
 
-const registeredStyles = createStaticStyles(({ css }) => ({
-  started: css`
-    @media (prefers-reduced-motion: no-preference) {
-      &::before {
-        border: 1px solid ${cssVar.colorPrimaryBorder};
-        animation: collab-pulse 1.6s ease-out infinite;
-      }
-    }
-  `,
-}));
-
 const styles = {
   bubble:
     "pointer-events-none will-change-transform select-none absolute inset-bs-0 inset-s-0 flex gap-1 items-center py-0.5 px-1.5 rounded-full text-xs leading-5 font-medium whitespace-nowrap before:content-[''] before:absolute before:-inset-0.75 before:rounded-full",
   committed: 'border border-success-border text-success-text bg-success-wash',
   failed: 'border border-destructive-border text-destructive-text bg-destructive-wash',
   proposed: 'border border-dashed border-border text-muted-foreground bg-popover',
-  started: cx(
-    'border border-primary-border text-primary-text bg-primary-wash',
-    registeredStyles.started,
-  ),
+  started:
+    'border border-primary-border text-primary-text bg-primary-wash motion-safe:before:border motion-safe:before:border-primary-border motion-safe:before:animate-pulse motion-safe:before:[animation-duration:1.6s] motion-safe:before:[animation-timing-function:ease-out]',
 };
 
 export const AGENT_PHASE_ICON: Record<ActivityPhase, typeof FileEdit> = {

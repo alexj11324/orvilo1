@@ -1,7 +1,7 @@
 'use client';
 
-import { cx, useTheme } from 'antd-style';
-import { memo, type ReactNode, useCallback, useEffect, useMemo } from 'react';
+import { clsx as cx } from 'cn';
+import { memo, type ReactNode, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 
 import DragUploadZone from '@/components/DragUploadZone';
@@ -20,7 +20,7 @@ import { useTopLevelFileUpload } from './hooks/useTopLevelFileUpload';
 const ChunkDrawer = dynamic(() => import('./components/ChunkDrawer'), { ssr: false });
 
 const styles = {
-  container: 'relative overflow-hidden',
+  container: 'relative overflow-hidden [--editor-overlay-bg:var(--surface-secondary)]',
   editorOverlay:
     'absolute z-1 inset-0 size-full [background-color:var(--editor-overlay-bg,var(--card))]',
   pageEditorOverlay: 'absolute z-1 inset-0 size-full bg-background',
@@ -42,7 +42,6 @@ interface ResourceManagerProps {
 }
 
 const ResourceManager = memo<ResourceManagerProps>(({ content }) => {
-  const theme = useTheme();
   const [, setSearchParams] = useSearchParams();
   const [mode, currentViewItemId, libraryId, setMode, setCurrentViewItemId] =
     useResourceManagerStore((s) => [
@@ -64,13 +63,6 @@ const ResourceManager = memo<ResourceManagerProps>(({ content }) => {
       void uploadTopLevel(files);
     },
     [canUpload, uploadTopLevel],
-  );
-
-  const cssVariables = useMemo<Record<string, string>>(
-    () => ({
-      '--editor-overlay-bg': theme.colorBgContainerSecondary,
-    }),
-    [theme.colorBgContainerSecondary],
   );
 
   // Fetch specific document when switching to page mode if not already loaded
@@ -121,12 +113,8 @@ const ResourceManager = memo<ResourceManagerProps>(({ content }) => {
 
   return (
     <>
-      <DragUploadZone
-        enabledFiles={canUpload}
-        style={{ height: '100%' }}
-        onUploadFiles={handleUploadFiles}
-      >
-        <div className={cx('flex flex-col h-full', styles.container)} style={cssVariables}>
+      <DragUploadZone className="h-full" enabledFiles={canUpload} onUploadFiles={handleUploadFiles}>
+        <div className={cx('flex flex-col h-full', styles.container)}>
           {/* Explorer stays mounted to preserve its state, unless the caller
               swaps in its own base content (resource home dashboard) */}
           {content ?? <Explorer />}

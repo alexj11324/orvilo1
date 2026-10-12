@@ -65,7 +65,7 @@ for attempt in $(seq 1 30); do
   sleep 2
 done
 python3 - "$snapshot" <<'CHECK'
-import hashlib,json,pathlib,subprocess,sys
+import json,pathlib,subprocess,sys
 snapshot=pathlib.Path(sys.argv[1]); images=json.loads((snapshot/'images.before.json').read_text())
 token=next(line.split('=',1)[1] for line in pathlib.Path('/run/orvilo-agent-gateway/app.env').read_text().splitlines() if line.startswith('AGENT_GATEWAY_SERVICE_TOKEN='))
 for service,container in [('orvilo','orvilo'),('hatchet-worker','orvilo-hatchet-worker')]:
@@ -75,7 +75,7 @@ for service,container in [('orvilo','orvilo'),('hatchet-worker','orvilo-hatchet-
     assert env['AGENT_GATEWAY_SERVICE_TOKEN']==token
     assert env['AGENT_GATEWAY_URL']=='https://agent-gateway.aspectlylabs.com'
     assert env['DEVICE_GATEWAY_URL']=='https://device-gateway.aspectlylabs.com'
-receipt={'source_sha':'81f26f8af942484da644921eae08371f834bfd72','binary_sha256':hashlib.sha256(pathlib.Path('/var/lib/orvilo1/agent-gateway/agent-gateway').read_bytes()).hexdigest(),'image_id':subprocess.check_output(['docker','inspect','--format','{{.Image}}','orvilo-agent-gateway'],text=True).strip(),'original_app_images':images,'credentials_match':True,'rollback_snapshot':str(snapshot)}
+receipt={'build':json.loads(pathlib.Path('/var/lib/orvilo1/agent-gateway/build-receipt.json').read_text()),'image_id':subprocess.check_output(['docker','inspect','--format','{{.Image}}','orvilo-agent-gateway'],text=True).strip(),'original_app_images':images,'credentials_match':True,'rollback_snapshot':str(snapshot)}
 (snapshot/'activation-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
 print(json.dumps(receipt))
 CHECK

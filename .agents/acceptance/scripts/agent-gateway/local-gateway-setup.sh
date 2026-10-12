@@ -76,7 +76,7 @@ case "${1:-}" in
       process.stdout.write(JSON.stringify({ keys }));
     ')" || die 'JWKS_KEY is not a JWKS document'
     SERVICE_TOKEN="$(cat "$TOKEN_FILE")"
-    export JWKS_PUBLIC_KEY SERVICE_TOKEN PORT ORVILO_API_BASE_URL="$SERVER_URL"
+    export JWKS_PUBLIC_KEY SERVICE_TOKEN PORT LOBE_API_BASE_URL="$SERVER_URL"
     unset JWKS_KEY
     echo "agent gateway $GATEWAY_REF on http://localhost:$PORT" >&2
     exec "$BINARY"

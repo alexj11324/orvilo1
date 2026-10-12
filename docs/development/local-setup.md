@@ -123,7 +123,10 @@ the same server still works. It refuses to start with `NODE_ENV=production`.
 
 `bun run dev:desktop:skip-login` does all of this in one command: it starts the
 stub, the Next.js server and Electron on a temporary profile, then signs the
-seed user in, main process included. `bun run dev:desktop:login-local` signs an
+seed user in, main process included. It preserves `CLERK_SECRET_KEY` from the
+shell or `.env`; when absent, a local stub-only placeholder lets the server
+check seeded sessions. Normal Clerk sign-in still requires a real key.
+`bun run dev:desktop:login-local` signs an
 Electron instance that is already running in (CDP port from
 `ORVILO_DESKTOP_CDP_PORT`, default 9263). Both read `DATABASE_URL` from `.env`
 when the shell does not set it, and need the seed user to exist.
@@ -138,7 +141,8 @@ DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cd
 
 A development build then writes its authorization request to the file and opens
 no browser; the script completes it with the seeded session and waits until the
-device gateway connection is up. A packaged build ignores the variable. For real local-agent requests, follow
+main process has an access token. It does not verify gateway reachability or a
+connected execution device. A packaged build ignores the variable. For real local-agent requests, follow
 [Electron real-model integration](./electron-real-model.md).
 
 ## Running Issues on this machine (device gateway)

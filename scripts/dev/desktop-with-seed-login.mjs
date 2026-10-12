@@ -8,6 +8,11 @@ import path from 'node:path';
 
 import { localServerUrl, seedElectronLogin } from './electron-seed-login.mjs';
 
+try {
+  process.loadEnvFile('.env');
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
 if (process.env.NODE_ENV === 'production')
   throw new Error('Local seed login is disabled in production');
 const serverUrl = localServerUrl(process.env.SERVER_URL || 'http://localhost:3010/');
@@ -97,6 +102,8 @@ if (!(await listening(clerkStubPort)))
   ]);
 start('dev:next', {
   CLERK_API_URL: `http://127.0.0.1:${clerkStubPort}`,
+  // The server requires a key before calling the stub; seed sessions need no real key.
+  CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY || 'local-seed-stub',
   PORT: serverUrl.port,
 });
 const desktopChild = start('dev:desktop', {

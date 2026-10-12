@@ -1,7 +1,6 @@
 'use client';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { type FC, isValidElement, memo, type ReactNode, useState } from 'react';
@@ -11,6 +10,7 @@ import ActionIcon from '@/components/ActionIcon';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIsDark } from '@/hooks/useIsDark';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
@@ -36,7 +36,7 @@ interface ReactionPickerProps {
 
 const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) => {
   const { t } = useTranslation('chat');
-  const theme = useTheme();
+  const isDark = useIsDark();
   const { allowed: canEdit } = usePermission('edit_own_content');
   const { canUseResource } = useConversationResourceAccess();
   const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
@@ -65,7 +65,7 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
       locale={locale?.split('-')[0] || 'en'}
       previewPosition="none"
       skinTonePosition="none"
-      theme={theme.appearance === 'dark' ? 'dark' : 'light'}
+      theme={isDark ? 'dark' : 'light'}
       onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
     />
   ) : (

@@ -2,7 +2,6 @@
 
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
-import { createStaticStyles } from 'antd-style';
 import {
   BadgeCheckIcon,
   BotIcon,
@@ -21,44 +20,13 @@ import { agentDocumentService, agentDocumentSWRKeys } from '@/services/agentDocu
 import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
 
+import referenceStyles from '../../ReferenceRender.module.css';
 import { type InternalLinkReference, isBareLinkLabel } from '../internalLink';
 import {
   getPreviewData,
   InternalEntityPreview,
   internalEntityPreviewKey,
 } from './InternalEntityPreview';
-
-const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
-  link: css`
-    /* Keep the label on the surrounding text baseline instead of the icon's flex baseline. */
-    display: inline;
-
-    color: ${cssVar.colorText} !important;
-
-    /* Tertiary, not colorBorder: on a dark background colorBorder sits so
-       close to the bubble that the underline vanishes and the link reads as
-       plain text — findability is the underline's whole job here. */
-    text-decoration-color: ${cssVar.colorTextTertiary};
-    text-decoration-line: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
-
-    transition:
-      color var(--orvilo-motion-mid),
-      text-decoration-color var(--orvilo-motion-mid);
-
-    &:hover {
-      color: ${cssVar.colorText} !important;
-      text-decoration-color: ${cssVar.colorTextSecondary};
-    }
-
-    &:focus-visible {
-      border-radius: var(--radius-chip);
-      outline: 2px solid ${cssVar.colorPrimaryBorder};
-      outline-offset: 2px;
-    }
-  `,
-}));
 
 const styles = {
   icon: 'me-1 size-4 text-muted-foreground align-[-0.15em]',
@@ -214,7 +182,7 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
   const link = (
     <a
       {...{ [RENDERER_HANDLED_LINK_ATTR]: 'true' }}
-      className={registeredStyles.link}
+      className={referenceStyles.entityLink}
       data-slot="markdown-entity-link"
       href={href}
       rel="noopener noreferrer"

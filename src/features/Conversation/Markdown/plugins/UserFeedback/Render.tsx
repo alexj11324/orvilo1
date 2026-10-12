@@ -1,28 +1,11 @@
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { MessageSquareText } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import referenceStyles from '../ReferenceRender.module.css';
 import { type MarkdownElementProps } from '../type';
 import { type ParsedUserFeedbackComment, parseUserFeedback } from './parseUserFeedback';
-
-const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
-  root: css`
-    /* Override @lobehub/ui Markdown's default <details> card chrome (bg + padding + box-shadow).
-       Need !important because the lib targets via .parent details (higher specificity).
-       padding-bottom puts a 12px gap above the divider; margin-bottom puts a 12px gap below it,
-       matching the symmetric 12px the task card uses around its own internal divider. */
-    margin-block: 0 12px !important;
-    padding-block: 0 12px !important;
-    padding-inline: 0 !important;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary} !important;
-    border-radius: 0 !important;
-
-    background: transparent !important;
-    box-shadow: none !important;
-  `,
-}));
 
 const styles = {
   body: 'pt-3 ps-11',
@@ -53,7 +36,7 @@ const Render = memo<MarkdownElementProps>(({ children }) => {
   const countLabel = t('userFeedback.commentCount', { count: comments.length });
 
   return (
-    <details className={registeredStyles.root}>
+    <details className={referenceStyles.feedback} data-slot="markdown-feedback">
       <summary className={styles.summary} data-slot="markdown-feedback-summary">
         <div className="flex items-center gap-3">
           <span className={styles.headerIcon}>

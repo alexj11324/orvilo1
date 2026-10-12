@@ -1,10 +1,6 @@
-import { css, cx } from 'antd-style';
+import styles from './style.module.css';
 
-// Override the default outlined chip style from `@lobehub/editor`'s mention
-// plugin so @-mentions render as a flat filled chip, matching the look of
-// other inline references (ActionMention, ReferTopic) in the chat UI.
-export const mentionFilledClassName = cx(css`
-  .editor_mention {
-    border: none;
-  }
-`);
+// The editor and renderer expose .editor_mention descendants through className.
+// Keep their border override without changing the editor's separate outer node
+// frame or the plugin's selection, serialization, and keyboard behavior.
+export const mentionFilledClassName = styles.mentionFilled;

@@ -1,43 +1,12 @@
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ClipboardList } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import referenceStyles from '../ReferenceRender.module.css';
 import { type MarkdownElementProps } from '../type';
 import { useTaskCardScope } from './context';
 import { type ParsedTaskContent, parseTaskContent } from './parseTaskContent';
-
-const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
-  fallback: css`
-    overflow: auto;
-
-    padding-block: 12px;
-    padding-inline: 14px;
-    border: 1px dashed ${cssVar.colorBorderSecondary};
-    border-radius: var(--radius-card);
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    line-height: 20px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: pre-wrap;
-  `,
-  rawList: css`
-    margin: 0;
-    padding: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    line-height: 20px;
-    color: ${cssVar.colorTextSecondary};
-    list-style: none;
-
-    li {
-      white-space: pre-wrap;
-    }
-  `,
-}));
 
 const styles = {
   divider: 'w-full h-px bg-divider',
@@ -69,7 +38,7 @@ const RawSection = memo<{ items: string[]; label: string }>(({ items, label }) =
       <summary data-slot="markdown-task-summary">
         {label} ({items.length})
       </summary>
-      <ul className={registeredStyles.rawList}>
+      <ul className={referenceStyles.taskRawList} data-slot="markdown-task-raw-list">
         {items.map((line, idx) => (
           <li key={idx}>{line}</li>
         ))}
@@ -89,7 +58,11 @@ const Render = memo<TaskRenderProps>(({ children }) => {
   const parsed = useMemo<ParsedTaskContent>(() => parseTaskContent(text), [text]);
 
   if (!enabled) {
-    return <pre className={registeredStyles.fallback}>{text}</pre>;
+    return (
+      <pre className={referenceStyles.taskFallback} data-slot="markdown-task-fallback">
+        {text}
+      </pre>
+    );
   }
 
   const titleText = parsed.name || parsed.identifier || '';

@@ -9,7 +9,6 @@ import {
 } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -27,33 +26,16 @@ import {
 } from '@/features/Acceptance/CriterionList';
 
 import type { CreateGoalParams, GoalCriterionDraft } from '../../types';
-
-const retainedStyles = createStaticStyles(({ css }) => ({
-  instructionEditor: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: var(--radius-input);
-    background: ${cssVar.colorFillQuaternary};
-
-    /* This editable instruction is an ordinary confirmation-form field.
-       Keep the public rich editor's descendant contract while applying the
-       DESIGN body role; its public Editor currently does not forward theme. */
-    &,
-    & * {
-      font-size: var(--text-sm);
-      line-height: calc(1.375 / 0.875);
-    }
-  `,
-}));
+import editorStyles from './CreateGoal.module.css';
 
 const styles = {
   header: 'sticky z-2 -inset-bs-2 pbs-2 pbe-1 bg-popover',
-  instructionEditor: retainedStyles.instructionEditor,
+  instructionEditor: 'py-2 px-3 rounded-(--radius-input) bg-fill-quaternary',
   list: '[background:transparent] dark:[&>*+*]:border-bs-border',
   root: '-mbs-2',
   section: 'py-2 [&+&]:border-bs [&+&]:border-divider',
   sectionHeader:
-    'cursor-pointer select-none min-h-8 rounded-(--radius-button) pointer-coarse:min-bs-11',
+    'w-full justify-start px-0 text-start whitespace-normal duration-(--orvilo-motion-fast) motion-reduce:transition-none pointer-coarse:min-bs-11',
   sectionLabel: 'text-sm font-medium text-muted-foreground',
   seq: 'text-xs text-foreground-tertiary',
   titleInput: 'py-0.5 px-0 text-base md:text-base leading-6 font-semibold',
@@ -74,15 +56,22 @@ interface SectionProps {
  */
 const Section = memo<SectionProps>(({ children, extra, label, onToggle, open }) => (
   <div className={cn('flex', 'flex-col', 'gap-1.75', styles.section)}>
-    <div className={cn('flex', 'items-center', 'gap-1.5', styles.sectionHeader)} onClick={onToggle}>
+    <Button
+      aria-expanded={open}
+      className={styles.sectionHeader}
+      size="compact"
+      type="button"
+      variant="ghost"
+      onClick={onToggle}
+    >
       <ChevronRight
-        className="size-3.5 text-foreground-quaternary transition-transform duration-(--orvilo-motion-mid) motion-reduce:transition-none"
-        size={14}
+        className="size-4 text-foreground-quaternary transition-transform duration-(--orvilo-motion-mid) motion-reduce:transition-none"
+        size={16}
         style={{ transform: open ? 'rotate(90deg)' : 'none' }}
       />
-      <div className={styles.sectionLabel}>{label}</div>
+      <span className={styles.sectionLabel}>{label}</span>
       {extra}
-    </div>
+    </Button>
     {open && children}
   </div>
 ));
@@ -156,7 +145,14 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
           open={openSections.instruction}
           onToggle={() => toggleSection('instruction')}
         >
-          <div className={cx('flex', 'flex-col', styles.instructionEditor)}>
+          <div
+            className={cn(
+              'flex',
+              'flex-col',
+              styles.instructionEditor,
+              editorStyles.instructionEditor,
+            )}
+          >
             <Editor
               content={initialInstruction}
               editor={editor}

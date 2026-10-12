@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { type CSSProperties, useEffect, useLayoutEffect } from 'react';
 
@@ -14,6 +13,7 @@ import { isMacOS } from '@/utils/platform';
 
 import { AppSidebar } from './AppSidebar';
 import { SHELL9_SIDEBAR_WIDTH } from './constants';
+import hostStyles from './SidebarShell.module.css';
 
 const SIDEBAR_STYLE = {
   '--header-height': '50px',
@@ -22,91 +22,6 @@ const SIDEBAR_STYLE = {
 
 const useNativeTransparency = isDesktop && isMacOS();
 const NATIVE_SIDEBAR_STYLE = { ...SIDEBAR_STYLE, '--sidebar': 'transparent' };
-
-// The host's unlayered Ant Design reset styles every anchor (link colour,
-// transition: color 0.2s, a blue :focus-visible outline) and, being unlayered,
-// beats the primitive's layered utilities. This block is the single place that hands those
-// properties back to the sidebar primitive. It keys on 'data-sidebar', which the
-// primitives always set, never on 'data-slot': a Base UI trigger composed around
-// a node (context menu, dropdown, tooltip) may relabel its slot.
-const hostStyles = createStaticStyles(({ css }) => ({
-  sidebar: css`
-    [data-sidebar='menu-button'],
-    [data-sidebar='menu-sub-button'],
-    [data-sidebar='group-label'] {
-      text-decoration: none;
-    }
-
-    /* Primitive transitions only: background and text change together, instantly. */
-    [data-sidebar='menu-button'] {
-      overflow: hidden;
-      color: var(--sidebar-muted);
-      transition-property: width, height, padding;
-    }
-
-    [data-sidebar='menu-sub-button'] {
-      color: var(--sidebar-group);
-      transition-property: none;
-    }
-
-    [data-sidebar='group-label'] {
-      font-size: var(--text-xs);
-      line-height: calc(4 / 3);
-      color: var(--sidebar-group);
-      transition-property: margin, opacity;
-    }
-
-    /* The ring itself (3px at 50% of '--ring', inset) is defined once, by the primitive's
-       'focus-visible:ring-3 ring-ring/50 ring-inset'. This rule only hands back what the
-       unlayered host reset takes: its anchor ':focus-visible' outline and a Button's
-       'focus-visible:border-ring'. No box-shadow here, so there is one ring definition. */
-    :is(
-      [data-sidebar='menu-button'],
-      [data-sidebar='menu-sub-button'],
-      [data-sidebar='menu-action'],
-      [data-sidebar='group-action'],
-      [data-sidebar='group-label'],
-      [data-sidebar='trigger']
-    ):focus-visible {
-      border-color: transparent;
-      outline: 2px solid transparent;
-      outline-offset: 2px;
-    }
-
-    /* Leading icons rest dimmed; a trailing affordance (the switcher chevron) opts out. */
-    [data-sidebar='menu-button'] > svg:where(:not([data-sidebar-affordance])) {
-      opacity: 0.55;
-    }
-
-    [data-sidebar='menu-button']:hover,
-    [data-sidebar='menu-sub-button']:hover,
-    button[data-sidebar='group-label']:hover {
-      color: var(--sidebar-accent-foreground);
-      background: var(--sidebar-accent);
-    }
-
-    [data-sidebar='menu-button']:hover > svg,
-    [data-sidebar='menu-button'][data-active] > svg {
-      opacity: 1;
-    }
-
-    /* Selected is a persistent signal, stronger than hover; it stays on top of it. */
-    [data-sidebar='menu-button'][data-active],
-    [data-sidebar='menu-sub-button'][data-active] {
-      color: var(--sidebar-accent-foreground);
-      background: var(--selected);
-    }
-
-    /* The global thin scrollbar would otherwise keep a permanent thumb here. */
-    [data-sidebar='content'] {
-      scrollbar-color: transparent transparent;
-    }
-
-    [data-sidebar='content']:hover {
-      scrollbar-color: color-mix(in srgb, var(--sidebar-muted) 40%, transparent) transparent;
-    }
-  `,
-}));
 
 const SIDEBAR_CLASS_TOKENS = [hostStyles.sidebar];
 
@@ -165,7 +80,7 @@ export function SidebarShell() {
         hostStyles.sidebar,
         isDesktop &&
           '[&_[data-slot=sidebar-container]]:absolute [&_[data-slot=sidebar-container]]:h-full',
-        useNativeTransparency && '[&_[data-sidebar=sidebar]]:bg-transparent!',
+        useNativeTransparency && hostStyles.nativeTransparent,
       )}
       onOpenChange={setOpen}
       onOpenMobileChange={setOpen}

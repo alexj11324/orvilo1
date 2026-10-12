@@ -2,7 +2,6 @@
 
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
-import { createStaticStyles } from 'antd-style';
 import type { MouseEvent } from 'react';
 import { memo, useCallback } from 'react';
 
@@ -11,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
+import referenceStyles from '../ReferenceRender.module.css';
 import type { MarkdownElementProps } from '../type';
 import type { ParsedLocalFileHref } from './parse';
 import { parseLocalFileHref } from './parse';
@@ -19,47 +19,6 @@ interface LocalFileLinkProperties {
   linkHref?: string;
   linkLabel?: string;
 }
-
-const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
-  link: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    margin-inline: -2px;
-    padding-inline: 2px;
-    border-radius: var(--radius-chip);
-
-    text-decoration: none;
-    vertical-align: -0.16em;
-
-    transition:
-      color var(--orvilo-motion-mid) ${cssVar.motionEaseOut},
-      background var(--orvilo-motion-mid) ${cssVar.motionEaseOut},
-      box-shadow var(--orvilo-motion-mid) ${cssVar.motionEaseOut};
-
-    &:hover {
-      color: ${cssVar.colorLinkHover};
-      text-decoration: underline;
-      text-underline-offset: 2px;
-
-      background: ${cssVar.colorFillSecondary};
-      box-shadow: inset 0 0 0 1px ${cssVar.colorPrimaryBorder};
-    }
-
-    &:active {
-      color: ${cssVar.colorLinkActive};
-      background: ${cssVar.colorFill};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimaryBorder};
-      outline-offset: 2px;
-    }
-  `,
-}));
 
 const styles = {
   reference: 'inline-flex gap-1 items-center align-[-0.16em]',
@@ -133,7 +92,7 @@ const Render = memo<MarkdownElementProps<LocalFileLinkProperties>>(({ node }) =>
             <span className="inline-flex">
               <a
                 {...(parsed ? { [RENDERER_HANDLED_LINK_ATTR]: 'true' } : {})}
-                className={registeredStyles.link}
+                className={referenceStyles.localFileLink}
                 data-slot="markdown-local-file-link"
                 href={linkHref}
                 onClick={handleClick}

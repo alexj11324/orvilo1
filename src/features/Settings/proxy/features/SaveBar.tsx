@@ -1,6 +1,5 @@
 'use client';
 
-import { useTheme } from 'antd-style';
 import { AnimatePresence, useAnimationControls, usePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import {
@@ -15,6 +14,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
+
+// AppTheme's fast role is100ms in both agile and elegant modes: the actual
+// motionBase0 + motionUnit0.05/0.1 producer emits(toFixed(1))0.1s.
+// Keep this private feature's role independent of the retired theme hook.
+const FAST_MOTION_DURATION_SECONDS = 0.1;
 
 const styles = {
   container:
@@ -34,7 +40,7 @@ interface SaveBarProps {
 // Exiting presence children keep old props. Own the live motion subscriptions here
 // so disabling motion also reaches a frame that is already leaving the tree.
 const SaveBarMotionFrame = ({ children }: { children: ReactNode }) => {
-  const theme = useTheme();
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
   const reduceMotion = useSyncExternalStore(
     useCallback((onChange: () => void) => {
       const query = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -44,7 +50,7 @@ const SaveBarMotionFrame = ({ children }: { children: ReactNode }) => {
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     () => false,
   );
-  const disableMotion = theme.motion === false || reduceMotion;
+  const disableMotion = animationMode === 'disabled' || reduceMotion;
   const controls = useAnimationControls();
   const [isPresent, safeToRemove] = usePresence();
 
@@ -59,7 +65,7 @@ const SaveBarMotionFrame = ({ children }: { children: ReactNode }) => {
       void controls
         .start(
           { opacity: isPresent ? 1 : 0, y: isPresent ? 0 : 16 },
-          { duration: Number.parseFloat(theme.motionDurationFast), ease: 'easeOut' },
+          { duration: FAST_MOTION_DURATION_SECONDS, ease: 'easeOut' },
         )
         .then(() => {
           if (active && !isPresent) safeToRemove?.();
@@ -70,7 +76,7 @@ const SaveBarMotionFrame = ({ children }: { children: ReactNode }) => {
       active = false;
       controls.stop();
     };
-  }, [controls, disableMotion, isPresent, safeToRemove, theme.motionDurationFast]);
+  }, [controls, disableMotion, isPresent, safeToRemove]);
 
   // AnimatePresence creates its exit-completion entry in the parent layout
   // effect. Notify in the passive phase, after that entry exists.

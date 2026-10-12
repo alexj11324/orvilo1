@@ -3,7 +3,7 @@
 import type { IEditor } from '@lobehub/editor';
 import { ReactMentionPlugin, ReactTablePlugin, ReactToolbarPlugin } from '@lobehub/editor';
 import { Editor } from '@lobehub/editor/react';
-import { createStaticStyles, cx } from 'antd-style';
+import { clsx } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CodeXmlIcon, LetterTextIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -26,20 +26,16 @@ import { useMentionOptions } from '../ProfileEditor/MentionList';
 import { useProfileStore, useStoreApi } from '../store';
 import { type UpdateConfigById } from '../store/action';
 import { selectors as profileSelectors } from '../store/selectors';
+import nativeStyles from './EditorCanvas.module.css';
 import TypoBar from './TypoBar';
 import { useSlashItems } from './useSlashItems';
-
-const registeredStyles = createStaticStyles(({ css }) => ({
-  sourceEditor: css`
-    min-height: 262px;
-    background: transparent;
-  `,
-}));
 
 const styles = {
   editorShell: 'min-h-75 rounded-(--radius-card) border border-divider bg-card p-4',
   root: 'pbe-4',
-  sourceEditor: registeredStyles.sourceEditor,
+  // The public caller class reaches the native container. An unlayered local
+  // reset preserves its transparent frame over layered bg-card without important.
+  sourceEditor: nativeStyles.sourceEditor,
   title: 'cursor-default text-base font-semibold text-foreground',
 } as const;
 
@@ -415,7 +411,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
   ]);
 
   return (
-    <div className={cx('flex flex-col gap-4', styles.root)}>
+    <div className={clsx('flex flex-col gap-4', styles.root)}>
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">

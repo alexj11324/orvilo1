@@ -1,9 +1,10 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
+
+import mediaStyles from './EvidenceComparisonCard.module.css';
 
 /** The `metadata.comparison` an evidence artifact may carry (authored at ingest). */
 export interface EvidenceComparisonMeta {
@@ -54,23 +55,6 @@ export const readEvidenceComparison = (metadata: unknown): EvidenceComparisonMet
   };
 };
 
-const registeredStyles = createStaticStyles(({ css }) => ({
-  /* The card frames the capture; an inner border/radius would double the frame,
-     so whatever media the caller renders inside is flattened to the card edge. */
-  content: css`
-    flex: 1;
-    min-width: 0;
-
-    img,
-    video {
-      display: block;
-      width: 100%;
-      border: none !important;
-      border-radius: 0 !important;
-    }
-  `,
-}));
-
 const styles = {
   card: 'grid w-full grid-cols-2 gap-px overflow-hidden rounded-(--radius-card) border border-divider bg-divider [@media(width<=640px)]:grid-cols-1',
   cardVertical: 'grid-cols-1',
@@ -79,7 +63,7 @@ const styles = {
   labelBefore: 'border-be border-destructive-border bg-destructive-wash text-destructive-text',
   labelAfter: 'border-be border-success-border bg-success-wash text-success-text',
   caption: 'min-w-0 opacity-85',
-  content: registeredStyles.content,
+  content: mediaStyles.content,
 } as const;
 
 export interface EvidenceComparisonSide {
@@ -111,7 +95,7 @@ export const EvidenceComparisonCard = memo<EvidenceComparisonCardProps>(
           <div className={styles.side} key={role}>
             {side.caption && (
               <div
-                className={cx(
+                className={clsx(
                   styles.label,
                   role === 'before' ? styles.labelBefore : styles.labelAfter,
                 )}

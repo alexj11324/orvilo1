@@ -1,7 +1,6 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
 import { PanelRightIcon } from 'lucide-react';
 import { memo, type MouseEvent, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,17 +8,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import { useGlobalStore } from '@/store/global';
 
-const registeredStyles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    color: ${cssVar.colorLink};
-    text-decoration: none;
-    transition: color var(--orvilo-motion-mid);
-
-    &:hover {
-      color: ${cssVar.colorLinkHover};
-    }
-  `,
-}));
+import referenceStyles from '../../ReferenceRender.module.css';
 
 const styles = {
   icon: 'inline-flex me-1 align-[-0.15em]',
@@ -50,7 +39,7 @@ const LinkChip = memo<LinkChipProps>(({ href, icon, label }) => {
 
   const link = (
     <a
-      className={registeredStyles.chip}
+      className={referenceStyles.linkChip}
       data-slot="markdown-link"
       href={href}
       rel="noopener noreferrer"

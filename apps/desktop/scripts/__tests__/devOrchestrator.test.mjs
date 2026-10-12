@@ -304,13 +304,79 @@ describe('createDevOrchestrator', () => {
       expect(h.options.logError).toHaveBeenCalledWith(expect.stringContaining('spawn bun ENOENT'));
     });
 
-    it('stops a CLI build that is still running on shutdown', () => {
-      const h = createHarness({ cliBuildCommand });
+    it('stops a CLI build and the commands it started on shutdown', () => {
+      const killTree = vi.fn();
+      const h = createHarness({ cliBuildCommand, killTree });
       h.orchestrator.start();
 
       h.orchestrator.shutdown(0);
 
-      expect(cliBuilds(h)[0].child.kill).toHaveBeenCalled();
+      expect(killTree).toHaveBeenCalledWith(cliBuilds(h)[0].child);
+    });
+
+    it('removes the previous CLI when its replacement fails to build', async () => {
+      const output = '/repo/apps/cli/dist/index.js';
+      const h = createHarness({ cliBuildCommand: { ...cliBuildCommand, output } });
+      h.orchestrator.start();
+
+      cliBuilds(h)[0].child.emit('exit', 1);
+
+      expect(h.options.rmSync).toHaveBeenCalledWith(output, { force: true });
+    });
+
+    it('lets a first CLI build outlast the bundle deadline', async () => {
+      const h = createHarness({ cliBuildCommand, initialBuildTimeoutMs: 5000 });
+      h.orchestrator.start();
+
+      await h.becomeReady();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(h.options.exit).not.toHaveBeenCalled();
+
+      cliBuilds(h)[0].child.emit('exit', 0);
+      await vi.advanceTimersByTimeAsync(500);
+      expect(h.electronSpawns()).toHaveLength(1);
+    });
+
+    describe('with other dev instances of the same checkout', () => {
+      const lockFile = '/repo/apps/cli/node_modules/.cache/dev-cli.lock';
+      const locked = (owner, alive) => ({
+        cliBuildCommand: { ...cliBuildCommand, lockFile },
+        isProcessAlive: vi.fn(() => alive),
+        mkdirSync: vi.fn(),
+        pid: 100,
+        readFileSync: vi.fn(() => String(owner)),
+        writeFileSync: vi.fn((file, content, options) => {
+          if (owner && options?.flag === 'wx') throw new Error('EEXIST');
+        }),
+      });
+
+      it('reuses the CLI of a running instance instead of rebuilding under it', async () => {
+        const h = createHarness(locked(200, true));
+        h.orchestrator.start();
+        await h.becomeReady();
+
+        expect(cliBuilds(h)).toHaveLength(0);
+        expect(h.electronSpawns()).toHaveLength(1);
+
+        h.orchestrator.shutdown(0);
+        expect(h.options.rmSync).not.toHaveBeenCalledWith(lockFile, { force: true });
+      });
+
+      it('takes over the claim of an instance that is gone', () => {
+        const h = createHarness(locked(200, false));
+        h.orchestrator.start();
+
+        expect(cliBuilds(h)).toHaveLength(1);
+        expect(h.options.writeFileSync).toHaveBeenLastCalledWith(lockFile, '100');
+      });
+
+      it('releases its claim when it stops', () => {
+        const h = createHarness(locked(undefined, false));
+        h.orchestrator.start();
+        h.orchestrator.shutdown(0);
+
+        expect(h.options.rmSync).toHaveBeenCalledWith(lockFile, { force: true });
+      });
     });
   });
 });

@@ -1,10 +1,17 @@
 'use client';
 
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useId, useMemo, useState } from 'react';
+import {
+  memo,
+  type ReactNode,
+  useCallback,
+  useId,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
@@ -36,6 +43,7 @@ import {
   type ReviewQueueItem,
 } from './reviewQueueGroups';
 import { reviewRelativeTime } from './reviewRelativeTime';
+import nativeStyles from './Reviews.module.css';
 import {
   reviewsDetailPath,
   reviewsIsNarrow,
@@ -49,124 +57,37 @@ import { useScopedTailPager } from './scopedTailPager';
 const resolveTab = (value: string | null): ReviewsTab =>
   value === 'created' ? 'created' : 'for-me';
 
-const styles = createStaticStyles(({ css }) => ({
-  chevron: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-    transition: transform ${cssVar.motionDurationFast};
-  `,
-  chevronCollapsed: css`
-    transform: rotate(-90deg);
-  `,
-  detailEmpty: css`
-    height: 100%;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  detailOverlay: css`
-    position: absolute;
-    z-index: 3;
-    inset: 0;
+const styles = {
+  chevron:
+    'flex-none size-4 text-muted-foreground transition-transform duration-(--orvilo-motion-fast) ease-[ease]',
+  chevronCollapsed: '-rotate-90',
+  detailEmpty: 'h-full text-muted-foreground',
+  detailOverlay: 'absolute z-3 inset-0 overflow-hidden bg-card',
+  draftIcon: 'flex-none text-muted-foreground',
+  meta: 'flex-none text-xs leading-5 text-muted-foreground',
+  prIcon: 'flex-none text-success-text',
+  queueHeading:
+    'sticky z-1 inset-bs-(--reviews-chrome-height) w-full justify-start gap-1.5 px-3 py-1 border-0 rounded-(--radius-button) font-normal text-muted-foreground bg-fill-quaternary hover:bg-muted aria-expanded:bg-fill-quaternary aria-expanded:hover:bg-muted duration-(--orvilo-motion-fast)',
+  row: nativeStyles.row,
+  stage: 'relative flex flex-1 min-h-0',
+  list: `flex flex-col min-h-full ${nativeStyles.queueList}`,
+  listBody: 'flex-1 min-h-0 pbe-2',
+  listChrome: 'sticky z-2 inset-bs-0 bg-card',
+  tabs: 'flex-none py-2 px-3 border-be border-divider',
+} as const;
 
-    overflow: hidden;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  draftIcon: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  meta: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  prIcon: css`
-    flex: none;
-    color: ${cssVar.colorSuccess};
-  `,
-  queueHeading: css`
-    cursor: pointer;
-    user-select: none;
-
-    position: sticky;
-    z-index: 1;
-    inset-block-start: 88px;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 6px;
-    padding-inline: 12px;
-    border: none;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  row: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    min-height: 40px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    color: inherit;
-    text-decoration: none;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    &[data-active='true'] {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-  `,
-  stage: css`
-    position: relative;
-    display: flex;
-    flex: 1;
-    min-height: 0;
-  `,
-  list: css`
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-  `,
-  listBody: css`
-    flex: 1;
-    min-height: 0;
-    padding-block-end: 8px;
-  `,
-  listChrome: css`
-    position: sticky;
-    z-index: 2;
-    inset-block-start: 0;
-    background: ${cssVar.colorBgContainer};
-  `,
-  tabs: css`
-    flex: none;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-}));
+// This page consumes only Grid.useBreakpoint's lg. The current AppTheme does
+// not override screenLG; installed antd publishes exactly min-width992.
+// Keep SSR/hydration lg=undefined rather than turning the server into narrow.
+const REVIEWS_LARGE_QUERY = '(min-width: 992px)';
+const subscribeReviewsLarge = (notify: () => void) => {
+  const media = window.matchMedia(REVIEWS_LARGE_QUERY);
+  media.addEventListener('change', notify);
+  return () => media.removeEventListener('change', notify);
+};
+const readReviewsLarge = () =>
+  typeof window === 'undefined' ? undefined : window.matchMedia(REVIEWS_LARGE_QUERY).matches;
+const readReviewsLargeOnServer = () => undefined;
 
 const PullRequestRow = memo<{
   active: boolean;
@@ -183,27 +104,37 @@ const PullRequestRow = memo<{
       title={`${item.repository}#${item.number}${item.author ? ` · ${item.author}` : ''}`}
       to={detailPath}
     >
-      <span className={cx('anticon', styles.prIcon)} role="img">
-        <GitPullRequestIcon fill={'transparent'} height={14} size={14} width={14} />
+      <span className={cn('anticon', styles.prIcon)} role="img">
+        <GitPullRequestIcon
+          className="size-4"
+          fill={'transparent'}
+          height={16}
+          size={16}
+          width={16}
+        />
       </span>
-      <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
-        <div className="truncate block text-(length:--text-dense) font-medium">{item.title}</div>
+      <div className="flex min-w-0 flex-col flex-1">
+        <div className="truncate block text-sm leading-5.5 font-medium">{item.title}</div>
       </div>
       {item.isDraft ? (
         <span
           aria-label={t('reviews.state.draft')}
-          className={cx('anticon', styles.draftIcon)}
+          className={cn('anticon', styles.draftIcon)}
           role="img"
           title={t('reviews.state.draft')}
         >
-          <SquarePenIcon fill={'transparent'} height={14} size={14} width={14} />
+          <SquarePenIcon className="size-4" fill={'transparent'} height={16} size={16} width={16} />
         </span>
       ) : null}
       {item.reviewDecision === 'APPROVED' ? (
-        <Tag variant="success-light">{t('reviews.decision.approved')}</Tag>
+        <Tag className="rounded-(--radius-chip) text-xs leading-5" variant="success-light">
+          {t('reviews.decision.approved')}
+        </Tag>
       ) : null}
       {item.reviewDecision === 'CHANGES_REQUESTED' ? (
-        <Tag variant="destructive-light">{t('reviews.decision.changesRequested')}</Tag>
+        <Tag className="rounded-(--radius-chip) text-xs leading-5" variant="destructive-light">
+          {t('reviews.decision.changesRequested')}
+        </Tag>
       ) : null}
       {item.updatedAt ? (
         <div className={cn(styles.meta)} title={formatAbsoluteDateTime(item.updatedAt)}>
@@ -243,23 +174,25 @@ const QueueGroup = ({
 }) => {
   const regionId = useId();
   return (
-    <div className="flex flex-col" style={{ gap: collapsed ? 0 : 4 }}>
-      <button
+    <div className={cn('flex flex-col', collapsed ? 'gap-0' : 'gap-1')}>
+      <Button
         aria-controls={regionId}
         aria-expanded={!collapsed}
         className={styles.queueHeading}
+        size="compact"
         type={'button'}
+        variant="ghost"
         onClick={onToggle}
       >
         <ChevronDownIcon
           className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
-          size={14}
+          size={16}
         />
-        <div className="text-xs font-medium">{label}</div>
+        <span className="text-sm leading-5.5 font-medium">{label}</span>
         {typeof count === 'number' ? (
-          <div className="text-xs text-muted-foreground">{count}</div>
+          <span className="text-xs leading-5 text-muted-foreground">{count}</span>
         ) : null}
-      </button>
+      </Button>
       <div hidden={collapsed} id={regionId}>
         {children}
       </div>
@@ -281,8 +214,12 @@ const ReviewsPage = memo(() => {
   const selectedId = rawReviewId ? decodeURIComponent(rawReviewId) : null;
   const [searchParams] = useSearchParams();
   const tab = resolveTab(searchParams.get('tab'));
-  const responsive = useResponsive();
-  const isNarrow = reviewsIsNarrow(responsive.lg);
+  const large = useSyncExternalStore(
+    subscribeReviewsLarge,
+    readReviewsLarge,
+    readReviewsLargeOnServer,
+  );
+  const isNarrow = reviewsIsNarrow(large);
   const surface = reviewsSurface(isNarrow, Boolean(selectedId));
   const listPath = reviewsListPath(tab);
 
@@ -412,7 +349,7 @@ const ReviewsPage = memo(() => {
   // Group collapse is owned here, keyed by group key: a tab switch swaps the
   // whole queue branch (fallback ↔ populated groups), and mounted-local
   // state would reset with it.
-  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() => new Set());
   const toggleQueueGroup = useCallback((key: string) => {
     setCollapsedGroups((current) => {
       const next = new Set(current);
@@ -429,20 +366,13 @@ const ReviewsPage = memo(() => {
     <div className={styles.list}>
       <div className={styles.listChrome}>
         <NavHeader
-          left={
-            <div
-              className="text-(length:--text-dense) font-medium"
-              style={{ paddingInlineStart: 4 }}
-            >
-              {t('tab.reviews')}
-            </div>
-          }
+          left={<div className="ps-1 text-sm leading-5.5 font-medium">{t('tab.reviews')}</div>}
         />
         <div className={styles.tabs}>
           <Tabs value={tab} onValueChange={(value) => writeTab(value as ReviewsTab)}>
-            <TabsList>
+            <TabsList className="rounded-(--radius-button)">
               {tabs.map((item) => (
-                <TabsTrigger key={item.key} value={item.key}>
+                <TabsTrigger className="rounded-(--radius-button)" key={item.key} value={item.key}>
                   {item.label}
                 </TabsTrigger>
               ))}
@@ -520,7 +450,7 @@ const ReviewsPage = memo(() => {
               ) : null}
               {queueHasMore || (queueTail?.items.length ?? 0) > 0 ? (
                 <div className="flex flex-row items-center justify-between px-3">
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs leading-5 text-muted-foreground">
                     {t('reviews.loadedCount', {
                       loaded: allPullRequests.length,
                       total: queueTotal ?? '…',
@@ -529,7 +459,7 @@ const ReviewsPage = memo(() => {
                   {queueHasMore ? (
                     <Button
                       loading={queuePager.isLoading('queue')}
-                      size="sm"
+                      size="normal"
                       variant="ghost"
                       onClick={loadMoreQueue}
                     >
@@ -581,22 +511,22 @@ const ReviewsPage = memo(() => {
   ) : queue.isLoading ? (
     <SkeletonList rows={5} style={{ padding: 24 }} />
   ) : notConnected ? (
-    <div className={cx('flex flex-col items-center justify-center gap-2 p-6', styles.detailEmpty)}>
+    <div className={cn('flex flex-col items-center justify-center gap-2 p-6', styles.detailEmpty)}>
       <SimpleEmpty description={t('reviews.connectGitHub')} icon={PlugIcon} />
       <ConnectGitHubButton onConnected={refresh} />
     </div>
   ) : queue.error ? (
-    <div className={cx('flex flex-col items-center justify-center p-6', styles.detailEmpty)}>
+    <div className={cn('flex flex-col items-center justify-center p-6', styles.detailEmpty)}>
       <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
     </div>
   ) : (
     /* Reference shows a single `N reviews` line under the illustration —
        the queue total for the active tab is the closest count we own. */
-    <div className={cx('flex flex-col items-center justify-center gap-2', styles.detailEmpty)}>
+    <div className={cn('flex flex-col items-center justify-center gap-2', styles.detailEmpty)}>
       <span className="anticon" role="img">
         <GitPullRequestIcon fill={'transparent'} height={44} size={44} width={44} />
       </span>
-      <div className="text-(length:--text-dense) text-muted-foreground">
+      <div className="text-sm leading-5.5 text-muted-foreground">
         {t('reviews.detailEmpty', { count: queueTotal ?? allPullRequests.length })}
       </div>
     </div>

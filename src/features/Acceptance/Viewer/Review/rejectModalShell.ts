@@ -1,6 +1,7 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 
 import { frostedModalStyles } from './modals';
+import nativeStyles from './rejectModalShell.module.css';
 
 export const CHECK_REJECT_MODAL_SIZE = { height: '98dvh', width: '98vw' } as const;
 export const TEXT_REJECT_MODAL_WIDTH = 'min(560px, calc(100vw - 32px))';
@@ -11,56 +12,16 @@ export const TEXT_REJECT_MODAL_WIDTH = 'min(560px, calc(100vw - 32px))';
  * answer for both breakpoints in one node, unlike the body, which mounts one
  * presentation or the other.
  */
-const registeredStyles = createStaticStyles(({ css }) => ({
-  mobileClose: css`
-    @media (width <= 767px) {
-      inset-block-start: max(4px, env(safe-area-inset-top));
-      inset-inline-end: 4px;
-      width: 44px;
-      height: 44px;
-    }
-  `,
-  mobilePopup: css`
-    @media (width <= 767px) {
-      max-width: 100vw !important;
-
-      > div {
-        width: 100vw;
-        max-width: 100vw;
-        height: 100dvh;
-        max-height: 100dvh;
-        padding: 0;
-        border-radius: 0;
-      }
-    }
-  `,
-  modalPopupMedia: css`
-    > div {
-      width: ${CHECK_REJECT_MODAL_SIZE.width};
-      max-width: ${CHECK_REJECT_MODAL_SIZE.width};
-      height: ${CHECK_REJECT_MODAL_SIZE.height};
-
-      @media (width <= 767px) {
-        width: 100vw;
-        max-width: 100vw;
-        height: 100dvh;
-        max-height: 100dvh;
-        padding: 0;
-        border-radius: 0;
-      }
-    }
-  `,
-}));
 
 const styles = {
-  mobileClose: registeredStyles.mobileClose,
+  mobileClose: nativeStyles.close,
   mobileContent:
     '[@media(width<=767px)]:px-3 [@media(width<=767px)]:pbs-0 [@media(width<=767px)]:[padding-block-end:max(12px,env(safe-area-inset-bottom))]',
   mobileHeader:
     '[@media(width<=767px)]:min-h-14 [@media(width<=767px)]:ps-3 [@media(width<=767px)]:pe-13 [@media(width<=767px)]:[padding-block-start:max(12px,env(safe-area-inset-top))] [@media(width<=767px)]:pbe-3',
-  mobilePopup: registeredStyles.mobilePopup,
-  modalPopup: '[&>div]:flex [&>div]:flex-col',
-  modalPopupMedia: registeredStyles.modalPopupMedia,
+  mobilePopup: nativeStyles.popup,
+  modalPopup: 'flex flex-col',
+  modalPopupMedia: nativeStyles.mediaPopup,
 } as const;
 
 /** Evidence earns a near-fullscreen stage; a text-only reject stays a dialog. */
@@ -76,10 +37,25 @@ export const checkRejectModalShell = (evidenceCount: number) => {
       close: styles.mobileClose,
       content: styles.mobileContent,
       header: styles.mobileHeader,
-      popup: cx(styles.modalPopup, styles.mobilePopup, evidenceCount > 0 && styles.modalPopupMedia),
+      popup: cn(styles.modalPopup, styles.mobilePopup, evidenceCount > 0 && styles.modalPopupMedia),
     },
     styles: {
       ...frostedModalStyles,
+      // Public styles slots follow the primitive defaults, including its inline
+      // maxWidth and close size. Owned media variables need no importance.
+      close: {
+        height: 'var(--acceptance-reject-close-size)',
+        insetBlockStart: 'var(--acceptance-reject-close-block-start)',
+        insetInlineEnd: 'var(--acceptance-reject-close-inline-end)',
+        width: 'var(--acceptance-reject-close-size)',
+      },
+      popup: {
+        borderRadius: 'var(--acceptance-reject-popup-radius)',
+        height: 'var(--acceptance-reject-popup-height)',
+        maxHeight: 'var(--acceptance-reject-popup-max-height)',
+        maxWidth: 'var(--acceptance-reject-popup-width)',
+        width: 'var(--acceptance-reject-popup-width)',
+      },
       content: { display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' },
     },
     width: modalSize.width,

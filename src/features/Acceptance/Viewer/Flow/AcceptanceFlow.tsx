@@ -3,7 +3,6 @@
 import '@xyflow/react/dist/style.css';
 
 import { MarkerType, ReactFlowProvider } from '@xyflow/react';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { use, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -22,9 +21,9 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
-import { acceptanceContentLayout } from '../layout';
 import { AcceptancePlanReview } from '../Plan/AcceptancePlanReview';
 import { useAcceptanceBundle } from '../useAcceptanceBundle';
+import nativeStyles from './AcceptanceFlow.module.css';
 import { FlowCanvas } from './FlowCanvas';
 import { buildFlowGraph } from './flowGraph';
 import { FlowGroup } from './FlowGroup';
@@ -34,45 +33,14 @@ import { FlowOutline } from './FlowOutline';
 import { FlowPanelHostContext } from './FlowPanelHost';
 import { FlowResults } from './FlowResults';
 
-const registeredStyles = createStaticStyles(({ css }) => ({
-  // Fullscreen is a two-column shell, the same shape the page uses: the details
-  // rail owns the full height of the right edge and the toolbar belongs to the
-  // canvas beside it, not to a band stretched across both.
-  fullscreen: css`
-    position: fixed;
-    z-index: ${cssVar.zIndexPopupBase};
-    inset: 0;
-    background: ${cssVar.colorBgContainer};
-
-    @media (width <= 640px) {
-      flex-direction: column;
-    }
-  `,
-  toolbar: css`
-    width: 100%;
-    max-width: ${acceptanceContentLayout.maxWidth - 2 * acceptanceContentLayout.paddingInline}px;
-    margin-inline: auto;
-  `,
-  // The outline is reading material, so it keeps the page's text measure while
-  // the canvas next to it is allowed the full width.
-  outline: css`
-    overflow: auto;
-
-    width: 100%;
-    min-width: 0;
-    max-width: ${acceptanceContentLayout.maxWidth - 2 * acceptanceContentLayout.paddingInline}px;
-    margin-inline: auto;
-  `,
-}));
-
 const styles = {
-  fullscreen: registeredStyles.fullscreen,
+  fullscreen: nativeStyles.fullscreen,
   stage: 'min-h-0 min-w-0 p-4',
   details:
     'h-full min-h-0 w-[min(440px,42%)] flex-none overflow-hidden [@media(width<=640px)]:h-[40%] [@media(width<=640px)]:w-full',
   workspace: 'min-h-0 min-w-0 [@media(width<=640px)]:flex-col',
-  toolbar: registeredStyles.toolbar,
-  outline: registeredStyles.outline,
+  toolbar: nativeStyles.measure,
+  outline: `overflow-auto w-full min-w-0 ${nativeStyles.measure}`,
 } as const;
 const nodeTypes = { state: FlowNode, flowGroup: FlowGroup };
 
@@ -201,10 +169,7 @@ export function AcceptanceFlow() {
       className={`flex flex-col gap-4 ${fullscreen ? styles.stage : undefined}`}
       style={{ flex: fullscreen ? 1 : undefined }}
     >
-      <div
-        className={`flex items-center gap-2 justify-between ${styles.toolbar}`}
-        style={{ flexWrap: 'wrap' }}
-      >
+      <div className={`flex flex-wrap items-center gap-2 justify-between ${styles.toolbar}`}>
         <div className="flex items-center gap-1">
           <Button size="compact" type="button" variant="ghost" onClick={() => setFocus(undefined)}>
             {t('flow.allGroups')}
@@ -223,7 +188,7 @@ export function AcceptanceFlow() {
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-2">
           <AcceptancePlanReview runId={candidates[0]?.run?.verifyRunId} />
           <Button
             size="compact"
@@ -249,7 +214,7 @@ export function AcceptanceFlow() {
               setSelected(undefined);
             }}
           >
-            <SelectTrigger size="compact" style={{ width: 120, flexShrink: 0 }}>
+            <SelectTrigger className="w-30 shrink-0" size="compact">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

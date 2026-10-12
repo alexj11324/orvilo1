@@ -590,3 +590,101 @@
         transform: translate(var(--orvilo-boot-shell-hint-offset-x), 0);
     }
 }
+
+/* Shared owner for the existing SelfLearning generation phrase roll. */
+@theme inline {
+  --animate-self-learning-generation-roll: self-learning-generation-roll 16s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes self-learning-generation-roll {
+  0%, 20% { transform: translateY(0); }
+  25%, 45% { transform: translateY(-22px); }
+  50%, 70% { transform: translateY(-44px); }
+  75%, 95% { transform: translateY(-66px); }
+  100% { transform: translateY(-88px); }
+}
+
+/* One native publisher for the existing 3x3 importer busy artwork. */
+@theme inline {
+  --animate-data-import-loading-grid: data-import-loading-grid 2s infinite linear;
+}
+
+@keyframes data-import-loading-grid {
+  12.5% {
+    box-shadow:
+      28px -28px 0 0,
+      56px -28px 0 0,
+      84px -28px 0 5px,
+      28px 0 0 5px,
+      56px 0 0 0,
+      84px 0 0 5px,
+      28px 28px 0 0,
+      56px 28px 0 0,
+      84px 28px 0 0;
+  }
+
+  25% {
+    box-shadow:
+      28px -28px 0 5px,
+      56px -28px 0 0,
+      84px -28px 0 5px,
+      28px 0 0 0,
+      56px 0 0 0,
+      84px 0 0 0,
+      28px 28px 0 0,
+      56px 28px 0 5px,
+      84px 28px 0 0;
+  }
+
+  50% {
+    box-shadow:
+      28px -28px 0 5px,
+      56px -28px 0 5px,
+      84px -28px 0 0,
+      28px 0 0 0,
+      56px 0 0 0,
+      84px 0 0 0,
+      28px 28px 0 0,
+      56px 28px 0 0,
+      84px 28px 0 5px;
+  }
+
+  62.5% {
+    box-shadow:
+      28px -28px 0 0,
+      56px -28px 0 0,
+      84px -28px 0 0,
+      28px 0 0 5px,
+      56px 0 0 0,
+      84px 0 0 0,
+      28px 28px 0 0,
+      56px 28px 0 5px,
+      84px 28px 0 5px;
+  }
+
+  75% {
+    box-shadow:
+      28px -28px 0 0,
+      56px -28px 0 5px,
+      84px -28px 0 0,
+      28px 0 0 0,
+      56px 0 0 0,
+      84px 0 0 5px,
+      28px 28px 0 0,
+      56px 28px 0 0,
+      84px 28px 0 5px;
+  }
+
+  87.5% {
+    box-shadow:
+      28px -28px 0 0,
+      56px -28px 0 5px,
+      84px -28px 0 0,
+      28px 0 0 0,
+      56px 0 0 5px,
+      84px 0 0 0,
+      28px 28px 0 5px,
+      56px 28px 0 0,
+      84px 28px 0 0;
+  }
+}

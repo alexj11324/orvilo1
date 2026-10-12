@@ -9,32 +9,15 @@ interface FileTreeSkeletonProps {
   showRootFile?: boolean;
 }
 
-const ROW_HEIGHT = 28;
-
 const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile = true }) => {
   const skeletonRows = Array.from({ length: rows }, (_, index) => index);
 
   return (
     <div className="flex flex-col gap-0.5">
       {showRootFile && (
-        <div className="flex flex-row items-center gap-1.5 px-2" style={{ height: ROW_HEIGHT }}>
-          <Skeleton
-            style={{
-              borderRadius: 'var(--ant-border-radius)',
-              height: 14,
-              minWidth: 14,
-              width: 14,
-            }}
-          />
-          <Skeleton
-            style={{
-              borderRadius: 'var(--ant-border-radius)',
-              height: 16,
-              minWidth: 80,
-              opacity: 0.6,
-              width: '40%',
-            }}
-          />
+        <div className="flex h-8 flex-row items-center gap-1.5 px-2">
+          <Skeleton className="size-4 min-w-4 rounded-(--radius-chip)" />
+          <Skeleton className="h-4 min-w-20 w-2/5 rounded-(--radius-chip) opacity-60" />
         </div>
       )}
       {skeletonRows.map((rowIndex) => {
@@ -43,26 +26,14 @@ const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile =
 
         return (
           <div
-            className="flex flex-row items-center gap-1.5 px-2"
+            className="flex h-8 flex-row items-center gap-1.5 px-2"
             key={rowIndex}
-            style={{ paddingInlineStart: 8 + depth * 16, height: ROW_HEIGHT }}
+            style={{ paddingInlineStart: 8 + depth * 16 }}
           >
+            <Skeleton className="size-4 min-w-4 rounded-(--radius-chip)" />
             <Skeleton
-              style={{
-                borderRadius: 'var(--ant-border-radius)',
-                height: 14,
-                minWidth: 14,
-                width: 14,
-              }}
-            />
-            <Skeleton
-              style={{
-                borderRadius: 'var(--ant-border-radius)',
-                height: 16,
-                minWidth: 70,
-                opacity: 0.55,
-                width,
-              }}
+              className="h-4 min-w-17.5 rounded-(--radius-chip) opacity-55"
+              style={{ width }}
             />
           </div>
         );

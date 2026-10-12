@@ -1,6 +1,5 @@
 'use client';
 import type { TeamItem } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -15,155 +14,25 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { type TeamHomeDestination, teamHomeDestinations } from '../teamHomeDestinations';
 import TeamIdentity from '../TeamIdentity';
 import type { TeamHomeMember } from './teamHomeMembersModel';
+import nativeStyles from './TeamHomeOverview.module.css';
 import TeamResources from './TeamResources';
 
-const styles = createStaticStyles(({ css }) => ({
-  description: css`
-    margin-block-start: 28px;
-
-    font-size: 15px;
-    font-weight: 450;
-    line-height: 23px;
-    white-space: pre-wrap;
-  `,
-  identity: css`
-    min-width: 0;
-  `,
-  left: css`
-    display: flex;
-    grid-area: left;
-    flex-direction: column;
-    min-width: 0;
-
-    @container work-surface (max-width: 1000px) {
-      display: contents;
-    }
-  `,
-  main: css`
-    min-width: 0;
-    padding-block-start: 20px;
-
-    @container work-surface (max-width: 1000px) {
-      order: 0;
-      padding-block-start: 4px;
-    }
-  `,
-  member: css`
-    display: inline-flex;
-    align-items: center;
-    min-width: 0;
-    height: 26px;
-  `,
-  memberGroup: css`
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    @container work-surface (max-width: 1000px) {
-      flex-direction: row;
-      gap: 4px;
-      align-items: center;
-      padding-inline: 12px;
-    }
-  `,
-  name: css`
-    overflow: hidden;
-
-    margin: 0;
-
-    font-size: 24px;
-    font-weight: 500;
-    line-height: 32px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  navGroup: css`
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    @container work-surface (max-width: 1000px) {
-      flex-flow: row wrap;
-      gap: 0;
-      align-items: center;
-      padding-inline: 6px;
-    }
-  `,
-  navLink: css`
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    width: fit-content;
-    min-height: 32px;
-    padding-block: 0;
-    padding-inline: 0;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorText};
-    text-decoration: none;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  rail: css`
-    display: flex;
-    grid-area: rail;
-    flex-direction: column;
-    gap: 23px;
-
-    min-width: 0;
-    padding-block-start: 42px;
-
-    @container work-surface (max-width: 1000px) {
-      flex-flow: row wrap;
-      gap: 4px;
-      align-items: center;
-      order: 1;
-
-      padding-block-start: 16px;
-    }
-  `,
-  rest: css`
-    min-width: 0;
-
-    @container work-surface (max-width: 1000px) {
-      order: 2;
-    }
-  `,
-  root: css`
-    display: grid;
-    grid-template-areas: 'left rail';
-    grid-template-columns: minmax(0, 700px) 212px;
-    column-gap: 48px;
-
-    width: 100%;
-
-    /* On narrow surfaces the left wrapper becomes display: contents, so
-       the rail can move between the description and resources. */
-    @container work-surface (max-width: 1000px) {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-  `,
-  railTitle: css`
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorTextDescription};
-
-    @container work-surface (max-width: 1000px) {
-      display: none;
-    }
-  `,
-  section: css`
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-block-start: 32px;
-  `,
-}));
+const styles = {
+  description: 'mbs-7 text-sm leading-5.5 font-normal whitespace-pre-wrap',
+  identity: 'min-w-0',
+  left: nativeStyles.left,
+  main: nativeStyles.main,
+  member: 'inline-flex items-center min-w-0 h-6.5',
+  memberGroup: nativeStyles.memberGroup,
+  name: 'm-0 overflow-hidden text-2xl leading-8 font-semibold text-ellipsis whitespace-nowrap',
+  navGroup: nativeStyles.navGroup,
+  navLink: nativeStyles.navLink,
+  rail: nativeStyles.rail,
+  rest: nativeStyles.rest,
+  root: nativeStyles.root,
+  railTitle: nativeStyles.railTitle,
+  section: 'flex flex-col gap-3.5 mbs-8',
+} as const;
 
 // The rail destinations draw the same entity marks the sidebar's team
 // sub-navigation uses — triage is the inbox tray, not a generic arrow.
@@ -253,7 +122,9 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
             ) : membersError ? (
               <AsyncError error={membersError} variant="inline" onRetry={onMembersRetry} />
             ) : members.length === 0 ? (
-              <span className="text-sm text-muted-foreground">{t('teams.membersEmpty')}</span>
+              <span className="text-sm leading-5.5 text-muted-foreground">
+                {t('teams.membersEmpty')}
+              </span>
             ) : (
               <div className="flex flex-row items-center gap-1 flex-wrap">
                 {members.map((member) => (
@@ -273,7 +144,7 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
                   'aria-hidden': true,
                   'className': 'size-4 shrink-0',
                 })}
-                <span className="text-(length:--text-dense)">{t(destinationLabels[key])}</span>
+                <span className="text-sm leading-5.5">{t(destinationLabels[key])}</span>
               </WorkspaceLink>
             ))}
           </nav>

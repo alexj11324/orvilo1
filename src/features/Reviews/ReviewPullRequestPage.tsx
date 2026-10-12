@@ -2,7 +2,6 @@
 
 import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
@@ -15,8 +14,9 @@ import {
   PlugIcon,
   XCircleIcon,
 } from 'lucide-react';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 import { useLocation, useParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -33,6 +33,8 @@ import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys } from '@/libs/swr/keys';
 import { pullRequestService, type ReviewPageCollection } from '@/services/pullRequest';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import CollectionFooter from './CollectionFooter';
@@ -49,6 +51,7 @@ import {
   type ReviewPagerPage,
   reviewPagerScope,
 } from './reviewPager';
+import nativeStyles from './Reviews.module.css';
 import { reviewSubmitScope } from './reviewsSurface';
 import {
   isReviewStale,
@@ -61,133 +64,48 @@ import ReviewThreadCard from './ReviewThreadCard';
 import type { PullRequestDetail, ReviewThread, WriteOutcome } from './types';
 import { useReviewComposer } from './useReviewComposer';
 
-const styles = createStaticStyles(({ css }) => ({
-  detailBody: css`
-    width: 100%;
-    min-width: 0;
-  `,
-  headerCounter: css`
-    @media (width <= 768px) {
-      display: none;
-    }
-  `,
-  headerCrumb: css`
-    @media (width <= 768px) {
-      display: none;
-    }
-  `,
-  headerTitle: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  diffBody: css`
-    width: 100%;
-    max-width: 1500px;
-    margin-inline: auto;
-    padding-block: 16px 48px;
-    padding-inline: 24px;
-
-    @media (width <= 768px) {
-      padding-inline: 8px;
-    }
-  `,
-  modeBar: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-
-    min-height: 44px;
-    padding-inline: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  modeButton: css`
-    cursor: pointer;
-
-    min-height: 28px;
-    padding-inline: 10px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &[aria-selected='true'] {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-    }
-  `,
-  reviewComposer: css`
-    padding-block: 16px 0;
-    padding-inline: 24px;
-  `,
-  reviewCard: css`
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorBgContainer};
-  `,
-  sectionTitle: css`
-    padding-inline-start: 4px;
-  `,
-  staleBanner: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorWarningBorder};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorWarningBg};
-  `,
-}));
+const styles = {
+  detailBody: 'w-full min-w-0',
+  headerCounter: '[@media(width<=768px)]:hidden',
+  headerCrumb: '[@media(width<=768px)]:hidden',
+  headerTitle: 'overflow-hidden flex-1 min-w-0 text-ellipsis whitespace-nowrap',
+  diffBody: nativeStyles.diffBody,
+  modeBar: 'flex flex-none gap-2 items-center min-h-11 px-4 border-bs border-be border-divider',
+  modeButton:
+    'rounded-full text-sm leading-5.5 font-medium text-muted-foreground bg-transparent aria-selected:text-foreground aria-selected:bg-selected hover:bg-muted',
+  reviewComposer: 'pbs-4 pbe-0 px-6',
+  reviewCard: 'p-3 border border-divider rounded-(--radius-card) bg-card',
+  sectionTitle: 'ps-1 text-sm leading-5.5',
+  staleBanner:
+    'flex gap-2 items-center justify-between py-2 px-3 border border-warning-border rounded-(--radius-card) bg-warning-wash text-warning-text',
+} as const;
 
 const reviewStateVisual = (state: string | null) => {
   switch (state) {
     case 'APPROVED': {
       return {
-        color: cssVar.colorSuccess,
+        color: 'var(--success-text)',
         icon: CheckCircle2Icon,
         labelKey: 'reviews.state.approved',
       };
     }
     case 'CHANGES_REQUESTED': {
       return {
-        color: cssVar.colorError,
+        color: 'var(--destructive-text)',
         icon: XCircleIcon,
         labelKey: 'reviews.state.changesRequested',
       };
     }
     case 'DISMISSED': {
       return {
-        color: cssVar.colorTextTertiary,
+        color: 'var(--muted-foreground)',
         icon: CircleDashedIcon,
         labelKey: 'reviews.state.dismissed',
       };
     }
     default: {
       return {
-        color: cssVar.colorTextSecondary,
+        color: 'var(--muted-foreground)',
         icon: MessageSquarePlusIcon,
         labelKey: 'reviews.state.commented',
       };
@@ -224,6 +142,44 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
   const { reviewId: rawId } = useParams<{ reviewId: string }>();
   const reviewId = rawId ? decodeURIComponent(rawId) : '';
   const workspaceId = useActiveWorkspaceId();
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const systemReduceMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const motionEnabled = animationMode !== 'disabled' && !systemReduceMotion;
+  const reviewSurface = useRef<HTMLDivElement | null>(null);
+  const scrollMounted = useRef(true);
+  const nativeScroll = useRef<{
+    cleanup: () => void;
+    containers: HTMLElement[];
+    target: HTMLElement;
+  } | null>(null);
+
+  // Own only scrolls started by this page. Release on native completion or
+  // user interaction so a later preference change cannot stop manual scrolling.
+  useLayoutEffect(() => {
+    scrollMounted.current = true;
+    return () => {
+      scrollMounted.current = false;
+      nativeScroll.current?.cleanup();
+      nativeScroll.current = null;
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (motionEnabled) return;
+    const request = nativeScroll.current;
+    nativeScroll.current = null;
+    request?.cleanup();
+    const surface = reviewSurface.current;
+    if (!request?.target.isConnected || !surface?.contains(request.target)) return;
+    for (const container of request.containers) {
+      if (container.isConnected && surface.contains(container)) {
+        container.scrollTo({
+          left: container.scrollLeft,
+          top: container.scrollTop,
+          behavior: 'instant',
+        });
+      }
+    }
+  }, [motionEnabled]);
   const navigate = useWorkspaceAwareNavigate();
   const location = useLocation();
   // The queue passes its exact URL; fall back to the workspace-aware list.
@@ -514,9 +470,57 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
   const writeDisabled = stale || !pullRequest?.headSha || !pullRequest.reviewWritesEnabled;
 
   const scrollToFile = (filename: string) => {
-    document
-      .getElementById(`file-${encodeURIComponent(filename)}`)
-      ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    if (!scrollMounted.current) return;
+    const target = document.getElementById(`file-${encodeURIComponent(filename)}`);
+    const surface = reviewSurface.current;
+    if (!target || !surface?.contains(target)) return;
+    nativeScroll.current?.cleanup();
+    nativeScroll.current = null;
+    // Both requestAnimationFrame callbacks are preserved below. Read the
+    // actual current preference/MQL here, not the render that scheduled them.
+    const allowMotion =
+      userGeneralSettingsSelectors.animationMode(useUserStore.getState()) !== 'disabled' &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (allowMotion) {
+      const containers: HTMLElement[] = [];
+      for (
+        let container = target.parentElement;
+        container && surface.contains(container);
+        container = container.parentElement
+      ) {
+        const computed = window.getComputedStyle(container);
+        const scrollsVertically =
+          /^(?:auto|scroll|overlay)$/.test(computed.overflowY) &&
+          container.scrollHeight > container.clientHeight;
+        const scrollsHorizontally =
+          /^(?:auto|scroll|overlay)$/.test(computed.overflowX) &&
+          container.scrollWidth > container.clientWidth;
+        if (scrollsVertically || scrollsHorizontally) containers.push(container);
+      }
+      if (containers.length) {
+        const removers: (() => void)[] = [];
+        const request = {
+          containers,
+          target,
+          cleanup: () => removers.forEach((remove) => remove()),
+        };
+        const release = () => {
+          if (nativeScroll.current !== request) return;
+          request.cleanup();
+          nativeScroll.current = null;
+        };
+        for (const container of containers) {
+          container.addEventListener('scrollend', release);
+          removers.push(() => container.removeEventListener('scrollend', release));
+        }
+        for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const) {
+          surface.addEventListener(event, release, { capture: true, passive: true });
+          removers.push(() => surface.removeEventListener(event, release, true));
+        }
+        nativeScroll.current = request;
+      }
+    }
+    target.scrollIntoView({ block: 'start', behavior: allowMotion ? 'smooth' : 'instant' });
   };
 
   // The diff tree mounts lazily on first visit, then stays mounted so per-file
@@ -554,48 +558,51 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
   const canSubmitReview = submitScope !== 'none';
 
   return (
-    <WorkSurface>
+    <WorkSurface ref={reviewSurface}>
       <NavHeader
-        styles={{ left: { flex: 1, minWidth: 0 }, right: { flex: 'none' } }}
+        slotClassNames={{ left: 'flex-1 min-w-0', right: 'flex-none' }}
         left={
-          <div className="flex flex-row items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex flex-1 min-w-0 flex-row items-center gap-2">
             {!embedded || showBack ? (
               <Button
                 aria-label={t('reviews.backToPullRequests')}
-                size="sm"
+                size="compact"
                 variant="ghost"
                 onClick={() => navigate(returnTo)}
               >
                 {
                   <span className="anticon" role="img">
                     <ChevronLeftIcon
+                      className="size-4"
                       fill={'transparent'}
-                      height={'1em'}
-                      size={'1em'}
-                      width={'1em'}
+                      height={16}
+                      size={16}
+                      width={16}
                     />
                   </span>
                 }
               </Button>
             ) : null}
-            <div className={cn('text-xs', 'text-muted-foreground', styles.headerCrumb)}>
+            <div className={cn('text-xs leading-5', 'text-muted-foreground', styles.headerCrumb)}>
               {t('tab.reviews')}
             </div>
-            <div className={cn('text-xs', 'text-muted-foreground', styles.headerCrumb)}>›</div>
+            <div className={cn('text-xs leading-5', 'text-muted-foreground', styles.headerCrumb)}>
+              ›
+            </div>
             <span className="anticon" role="img">
               <GitPullRequestIcon
-                color={cssVar.colorSuccess}
+                className="size-4 text-success-text"
                 fill={'transparent'}
-                height={14}
-                size={14}
-                width={14}
+                height={16}
+                size={16}
+                width={16}
               />
             </span>
             <div
               className={cn(
                 'truncate',
                 'block',
-                'text-(length:--text-dense)',
+                'text-sm leading-5.5',
                 'font-medium',
                 styles.headerTitle,
               )}
@@ -607,21 +614,15 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
         right={
           pullRequest ? (
             <div className="flex flex-row items-center gap-2">
-              <div
-                className={cn('text-xs', styles.headerCounter)}
-                style={{ color: cssVar.colorSuccess }}
-              >
+              <div className={cn('text-xs leading-5 text-success-text', styles.headerCounter)}>
                 +{pullRequest.additions}
               </div>
-              <div
-                className={cn('text-xs', styles.headerCounter)}
-                style={{ color: cssVar.colorError }}
-              >
+              <div className={cn('text-xs leading-5 text-destructive-text', styles.headerCounter)}>
                 −{pullRequest.deletions}
               </div>
               <Button
                 aria-label={t('reviews.openInGitHub')}
-                size="sm"
+                size="compact"
                 title={t('reviews.openInGitHub')}
                 variant="ghost"
                 onClick={() => window.open(pullRequest.url, '_blank', 'noopener,noreferrer')}
@@ -629,10 +630,11 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                 {
                   <span className="anticon" role="img">
                     <ExternalLinkIcon
+                      className="size-4"
                       fill={'transparent'}
-                      height={'1em'}
-                      size={'1em'}
-                      width={'1em'}
+                      height={16}
+                      size={16}
+                      width={16}
                     />
                   </span>
                 }
@@ -642,30 +644,34 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
         }
       />
       <div className={styles.modeBar}>
-        <button
+        <Button
           aria-selected={activeView === 'overview'}
           className={styles.modeButton}
           role={'tab'}
+          size="compact"
           type={'button'}
+          variant="ghost"
           onClick={() => setDetailViewState({ id: reviewId, view: 'overview' })}
         >
           {t('reviews.overview')}
-        </button>
-        <button
+        </Button>
+        <Button
           aria-selected={activeView === 'diff'}
           className={styles.modeButton}
           role={'tab'}
+          size="compact"
           type={'button'}
+          variant="ghost"
           onClick={openDiff}
         >
           {t('reviews.diff')}
-        </button>
+        </Button>
         <div className="flex flex-col flex-1" />
         {pullRequest && canSubmitReview ? (
           <Button
             aria-expanded={composer.open}
             disabled={writeDisabled}
-            size="sm"
+            size="normal"
             variant="default"
             onClick={() => composer.setOpen(!composer.open)}
           >
@@ -673,7 +679,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
           </Button>
         ) : pullRequest ? (
           <Button
-            size="sm"
+            size="normal"
             variant="default"
             onClick={() => window.open(pullRequest.url, '_blank', 'noopener,noreferrer')}
           >
@@ -695,9 +701,9 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
           ) : pullRequest ? (
             <>
               {stale ? (
-                <div className={cx('flex flex-col', styles.staleBanner)} role={'alert'}>
-                  <div className="text-(length:--text-dense)">{t('reviews.staleBanner')}</div>
-                  <Button size="sm" onClick={() => void refresh()}>
+                <div className={cn('flex flex-col', styles.staleBanner)} role={'alert'}>
+                  <div className="text-sm leading-5.5">{t('reviews.staleBanner')}</div>
+                  <Button size="normal" onClick={() => void refresh()}>
                     {t('reviews.staleAction')}
                   </Button>
                 </div>
@@ -724,7 +730,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                   onViewMoreFiles={openDiff}
                 >
                   {unattachedThreads.length + allReviews.length > 0 ? (
-                    <div className="flex flex-col gap-2" style={{ marginBlockStart: 32 }}>
+                    <div className="flex flex-col gap-2 mbs-8">
                       <div
                         className={cn('text-muted-foreground', 'font-medium', styles.sectionTitle)}
                       >
@@ -734,7 +740,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                         const visual = reviewStateVisual(review.state);
                         return (
                           <div
-                            className={cx('flex flex-col gap-1', styles.reviewCard)}
+                            className={cn('flex flex-col gap-1', styles.reviewCard)}
                             key={review.id ?? index}
                           >
                             <div className="flex flex-row items-center gap-2">
@@ -745,20 +751,21 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                               />
                               <span className="anticon" role="img">
                                 <visual.icon
+                                  className="size-4"
                                   color={visual.color}
                                   fill={'transparent'}
-                                  height={14}
-                                  size={14}
-                                  width={14}
+                                  height={16}
+                                  size={16}
+                                  width={16}
                                 />
                               </span>
-                              <div className="text-xs font-medium">{review.author}</div>
-                              <div className="text-xs text-muted-foreground">
+                              <div className="text-xs leading-5 font-medium">{review.author}</div>
+                              <div className="text-xs leading-5 text-muted-foreground">
                                 {t(visual.labelKey as never)}
                               </div>
                               {review.submittedAt ? (
                                 <div
-                                  className="text-xs text-muted-foreground"
+                                  className="text-xs leading-5 text-muted-foreground"
                                   title={formatAbsoluteDateTime(review.submittedAt)}
                                 >
                                   {dayjs(review.submittedAt).fromNow()}
@@ -766,7 +773,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                               ) : null}
                             </div>
                             {review.body ? (
-                              <Markdown fontSize={13} variant={'chat'}>
+                              <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
                                 {review.body}
                               </Markdown>
                             ) : null}
@@ -822,7 +829,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                     </div>
                   ) : null}
                   {allChecks.length > 0 ? (
-                    <div style={{ marginBlockStart: 32 }}>
+                    <div className="mbs-8">
                       <ReviewChecksPanel
                         checks={{
                           ...pullRequest.checks,
@@ -841,21 +848,24 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
               </div>
               <div hidden={activeView !== 'diff'}>
                 {diffMountedFor === reviewId ? (
-                  <div className={cx('flex flex-col gap-3', styles.diffBody)}>
+                  <div className={cn('flex flex-col gap-3', styles.diffBody)}>
                     <div className="flex flex-row items-center gap-2">
                       <div className="font-medium">
                         {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
                       </div>
                       <div className="flex flex-col flex-1" />
                       <ToggleGroup
-                        size="sm"
+                        className="rounded-(--radius-button)"
+                        size="default"
                         value={[viewMode]}
                         onValueChange={(value) =>
                           value[0] && setViewMode(value[0] as 'split' | 'unified')
                         }
                       >
-                        <ToggleGroupItem value="split">{t('reviews.viewSplit')}</ToggleGroupItem>
-                        <ToggleGroupItem value="unified">
+                        <ToggleGroupItem className="rounded-(--radius-button)" value="split">
+                          {t('reviews.viewSplit')}
+                        </ToggleGroupItem>
+                        <ToggleGroupItem className="rounded-(--radius-button)" value="unified">
                           {t('reviews.viewUnified')}
                         </ToggleGroupItem>
                       </ToggleGroup>

@@ -47,3 +47,23 @@ that makes these keys stable.
 Both Continue and Fork are explicit user agent picks, so each writes
 `lastUsedAgentId` — matching the update-point contract in
 [last-used-agent-default.md](./last-used-agent-default.md).
+
+## Server rules for Continue
+
+`topic.updateTopic` is the write behind Continue. When its input carries an
+`agentId`:
+
+- The row's `agent_id` is set to that Agent. Its `session_id` follows: the
+  Agent's legacy session when it has one, otherwise `null`, so the previous
+  Agent's session never stays on the row. A `sessionId` sent together with the
+  `agentId` is ignored for the same reason.
+- The move counts as a transfer. In a workspace, only the topic's creator or a
+  workspace owner may do it, the same rule as `batchMoveTopics`. Other members
+  can still co-edit the title, status and metadata.
+- The target Agent must be reachable by the caller. The `use` guard skips ids
+  outside the caller's scope, so the route also confirms the Agent exists in
+  that scope and answers `NOT_FOUND` otherwise.
+
+The integration tests in
+`apps/server/src/routers/lambda/__tests__/integration/topic.integration.test.ts`
+cover the flip, the cleared session and the rejected foreign Agent.

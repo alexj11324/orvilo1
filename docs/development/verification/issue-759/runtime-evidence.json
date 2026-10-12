@@ -1,0 +1,114 @@
+{
+  "agents": [
+    {
+      "id": "agt_MyZrMM4klRxT",
+      "name": "759 Private Agent",
+      "savedModel": "default",
+      "visibility": "private",
+      "workspaceId": "gHPBspnnCbtNxIWY",
+      "savedDeviceId": "0cc1d9bca3f59b499d6497aaf4278be1"
+    },
+    {
+      "id": "agt_7enCswIUBqef",
+      "name": "759 Workspace Agent",
+      "savedModel": "default",
+      "visibility": "public",
+      "workspaceId": "gHPBspnnCbtNxIWY",
+      "savedDeviceId": "0cc1d9bca3f59b499d6497aaf4278be1"
+    },
+    {
+      "id": "agt_vTbVtEbtvKCk",
+      "name": "759 OpenCode Workspace",
+      "savedModel": "opencode/mimo-v2.6-flash-free",
+      "visibility": "public",
+      "workspaceId": "gHPBspnnCbtNxIWY",
+      "savedDeviceId": "0cc1d9bca3f59b499d6497aaf4278be1"
+    },
+    {
+      "id": "agt_FCGGD83PDSow",
+      "name": "759 Final Private Agent",
+      "savedModel": "default",
+      "visibility": "private",
+      "workspaceId": "gHPBspnnCbtNxIWY",
+      "savedDeviceId": "0cc1d9bca3f59b499d6497aaf4278be1"
+    },
+    {
+      "id": "agt_HbpPCnNyytC6",
+      "name": "759 OpenCode Private",
+      "savedModel": "opencode/mimo-v2.6-flash-free",
+      "visibility": "private",
+      "workspaceId": "gHPBspnnCbtNxIWY",
+      "savedDeviceId": "0cc1d9bca3f59b499d6497aaf4278be1"
+    }
+  ],
+  "crossMemberRunRevision": "cf5cd6e50973c8659d82ac9ed9e3b3aefebf6033",
+  "fixture": {
+    "workspaceId": "gHPBspnnCbtNxIWY",
+    "owner": "user_agent_testing_001",
+    "member": "user_759_member",
+    "ownerDeviceId": "0cc1d9bca3f59b499d6497aaf4278be1",
+    "memberDeviceId": "22889b2cc80139a7c01ef5649d98fa32",
+    "twoElectronProcessesOnOneLinuxHost": true,
+    "ownerOrchestratorAgentId": "agt_HbpPCnNyytC6",
+    "ownerDefaultAgentId": "agt_HbpPCnNyytC6"
+  },
+  "offlineConnectionObservations": {
+    "owner": "disconnected",
+    "member": "connected",
+    "displayedImmediatelyAfterSend": true
+  },
+  "offlineMessage": {
+    "id": "msg_xy9E66UpilLE",
+    "code": "DEVICE_OFFLINE",
+    "detail": "Device “759 Owner Device” is offline. Ask its owner to connect it, then retry.",
+    "deviceId": "0cc1d9bca3f59b499d6497aaf4278be1"
+  },
+  "operations": [
+    {
+      "id": "op_1791837490533_agt_vTbVtEbtvKCk_tpc_bKsQtqXll0Xp_54G2HLOQ",
+      "status": "done",
+      "agentId": "agt_vTbVtEbtvKCk",
+      "topicId": "tpc_bKsQtqXll0Xp",
+      "deviceId": "0cc1d9bca3f59b499d6497aaf4278be1",
+      "modelRoute": {
+        "model": "opencode/mimo-v2.6-flash-free",
+        "provider": "opencode"
+      },
+      "workspaceId": "gHPBspnnCbtNxIWY",
+      "deviceOwnerId": "user_agent_testing_001",
+      "initiatingUserId": "user_759_member"
+    },
+    {
+      "id": "op_1791838222833_agt_vTbVtEbtvKCk_tpc_bKsQtqXll0Xp_JihsdERC",
+      "status": "error",
+      "agentId": "agt_vTbVtEbtvKCk",
+      "topicId": "tpc_bKsQtqXll0Xp",
+      "deviceId": null,
+      "modelRoute": null,
+      "workspaceId": "gHPBspnnCbtNxIWY",
+      "deviceOwnerId": null,
+      "initiatingUserId": "user_759_member"
+    },
+    {
+      "id": "op_1791838537862_agt_HbpPCnNyytC6_tpc_YwtpPZX3ECAt_UThDbASc",
+      "status": "done",
+      "agentId": "agt_HbpPCnNyytC6",
+      "topicId": "tpc_YwtpPZX3ECAt",
+      "deviceId": "0cc1d9bca3f59b499d6497aaf4278be1",
+      "modelRoute": {
+        "model": "opencode/mimo-v2.6-flash-free",
+        "provider": "opencode"
+      },
+      "workspaceId": "gHPBspnnCbtNxIWY",
+      "deviceOwnerId": "user_agent_testing_001",
+      "initiatingUserId": "user_agent_testing_001"
+    }
+  ],
+  "permissionConfirmation": {
+    "memberSelected": "Allow once",
+    "submissionSucceeded": true,
+    "outputFile": "/tmp/orvilo-759-token-proof.txt",
+    "outputFileContent": "759 final owner proof"
+  },
+  "sourceRevision": "eda79373d85df4268d1b668e774d8fe0703b4cfa"
+}

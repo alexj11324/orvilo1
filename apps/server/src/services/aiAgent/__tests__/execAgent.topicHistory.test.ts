@@ -299,22 +299,23 @@ describe('AiAgentService.execAgent - topic history loading', () => {
     vi.restoreAllMocks();
   });
 
-  it('keeps a continued topic on its snapshotted execution target', async () => {
+  it('uses the saved Agent target instead of stale conversation runtime hints', async () => {
     mockTopicFindById.mockResolvedValue({
       id: 'topic-existing',
       metadata: { executionConfig: { executionTarget: 'none' } },
     });
     mockMessageQuery.mockResolvedValue([]);
+    const staleDeviceHint = { deviceId: 'another-desktop' };
     await service.execAgent({
+      ...staleDeviceHint,
       agentId: 'agent-1',
       appContext: { topicId: 'topic-existing' },
       prompt: 'Continue',
-      deviceId: 'another-desktop',
     });
     expect(mockDispatchHeteroAgent).toHaveBeenCalled();
     const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
     expect(runContext.agentConfig.agencyConfig).toMatchObject({
-      executionTarget: 'none',
+      executionTarget: 'sandbox',
     });
   });
 

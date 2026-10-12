@@ -69,6 +69,8 @@ export const ensureTestUserPrimeAgent = async (request: APIRequestContext): Prom
     visibility: 'private',
   });
   if (!created?.agentId) throw new Error('E2E Prime agent creation returned no agentId');
+  // Blank Chat uses the configured Orchestrator, including after command-menu creation.
+  await lambdaCall(request, 'user.updatePreference', { orchestratorAgentId: created.agentId });
   primeAgentId = created.agentId;
   return primeAgentId;
 };

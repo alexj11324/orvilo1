@@ -162,7 +162,13 @@ describe('Agent runtime candidate query', () => {
     mocks.executeToolCall.mockResolvedValue({
       success: true,
       content: JSON.stringify({
-        agents: { 'codex': { available: false }, 'claude-code': { available: true } },
+        authenticated: 'unknown',
+        checkedAt: new Date().toISOString(),
+        executor: 'codex',
+        installed: false,
+        repositoryAccessible: 'unknown',
+        requiredToolsSupported: 'unknown',
+        unattended: 'unknown',
       }),
     });
     const inventory = await caller().listAgentCandidates({
@@ -174,6 +180,9 @@ describe('Agent runtime candidate query', () => {
     expect(inventory.inventoryComplete).toBe(false);
     expect(inventory.candidates[0].capabilityStatus).toBe('incompatible');
     expect(inventory.candidates[1].capabilityStatus).toBe('pending');
+    expect(JSON.parse(mocks.executeToolCall.mock.calls[0][1].arguments)).toEqual({
+      agentType: 'codex',
+    });
   });
 
   it('persists the existing scanAgents result without inventing missing runtime keys', async () => {
@@ -219,12 +228,13 @@ describe('server-derived Agent candidate scope', () => {
     mocks.queryDeviceList.mockResolvedValue([]);
   });
 
-  it('includes owned personal and authorized shared installed runtimes for nonfixed member choice', async () => {
+  it('limits public Agent runtime candidates to authorized shared devices', async () => {
     const inventory = await caller('workspace-1').listAgentCandidates({ agentId: 'agent-1' });
     expect(inventory.inventoryComplete).toBe(true);
     expect(
       inventory.candidates.filter(isSelectableDevice).map((candidate) => candidate.deviceId),
-    ).toEqual(['shared', 'personal']);
+    ).toEqual(['shared']);
+    expect(mocks.queryPersonal).not.toHaveBeenCalled();
   });
 
   it('probes shared installed runtimes as the actual caller, not the enroller or Agent creator', async () => {
@@ -240,7 +250,15 @@ describe('server-derived Agent candidate scope', () => {
     mocks.queryDeviceList.mockResolvedValue([{ deviceId: 'shared', online: true }]);
     mocks.executeToolCall.mockResolvedValue({
       success: true,
-      content: JSON.stringify({ agents: { codex: { available: true } } }),
+      content: JSON.stringify({
+        authenticated: 'unknown',
+        checkedAt: new Date().toISOString(),
+        executor: 'codex',
+        installed: true,
+        repositoryAccessible: 'unknown',
+        requiredToolsSupported: 'unknown',
+        unattended: 'unknown',
+      }),
     });
     const inventory = await caller('workspace-1').listAgentCandidates({ agentId: 'agent-1' });
     expect(inventory.candidates.filter(isSelectableDevice).map(({ deviceId }) => deviceId)).toEqual(
@@ -249,7 +267,7 @@ describe('server-derived Agent candidate scope', () => {
     expect(mocks.executeToolCall.mock.calls[0][0].userId).toBe('user-1');
   });
   it.each([false, true])(
-    'gives authorized public Agent callers the same own-personal pool regardless of Manage=%s',
+    'keeps public Agent candidates shared regardless of Manage=%s or stale personal hints',
     async (canManage) => {
       mocks.canManage.mockResolvedValue(canManage);
       mocks.isAuthorOrAdmin.mockResolvedValue(canManage);
@@ -260,11 +278,12 @@ describe('server-derived Agent candidate scope', () => {
       } as never);
       expect(
         inventory.candidates.filter(isSelectableDevice).map((candidate) => candidate.deviceId),
-      ).toEqual(['shared', 'personal']);
+      ).toEqual(['shared']);
+      expect(mocks.queryPersonal).not.toHaveBeenCalled();
     },
   );
 
-  it('does not let a stale personal preference bypass a fixed member policy', async () => {
+  it('does not let a stale personal preference change the saved public Agent device scope', async () => {
     mocks.getAgentConfig.mockResolvedValue({
       id: 'agent-1',
       userId: 'another-author',
@@ -272,7 +291,6 @@ describe('server-derived Agent candidate scope', () => {
       workspaceId: 'workspace-1',
       agencyConfig: {
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
         boundDeviceId: 'shared',
         heterogeneousProvider: { type: 'codex', command: 'codex' },
       },

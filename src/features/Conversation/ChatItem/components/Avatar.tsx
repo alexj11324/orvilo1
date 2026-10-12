@@ -7,6 +7,7 @@ import { memo } from 'react';
 import A from '@/components/Avatar';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useIsDark } from '@/hooks/useIsDark';
+import { useRevealEpoch } from '@/hooks/useRevealEpoch';
 
 import { type ChatItemProps } from '../type';
 
@@ -24,6 +25,9 @@ export interface AvatarProps {
 const Avatar = memo<AvatarProps>(
   ({ loading, avatar, unoptimized, onClick, size = 28, style, alt, assistantAvatar }) => {
     const dark = useIsDark();
+    // The canvas keeps its drawing layers on the DOM node; after a tab was
+    // hidden and shown again they come back empty and only the eyes are drawn.
+    const revealEpoch = useRevealEpoch();
     const useBot = assistantAvatar && (!avatar.avatar || avatar.avatar === DEFAULT_INBOX_AVATAR);
     const displayName = agentDisplayName(avatar);
 
@@ -54,6 +58,7 @@ const Avatar = memo<AvatarProps>(
             <BotAvatar
               aria-hidden="true"
               interactive={false}
+              key={revealEpoch}
               shading="fabric"
               size={size}
               state={loading ? 'working' : 'default'}

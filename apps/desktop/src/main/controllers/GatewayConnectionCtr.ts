@@ -339,19 +339,10 @@ export default class GatewayConnectionCtr extends ControllerModule {
         return { reason: 'Remote server URL not configured', status: 'rejected' };
       }
 
-      // Reuse this device's own logged-in session as the run identity. The
-      // access token is a full user OIDC token (7-day TTL, longer than any run),
-      // which heteroIngest/heteroFinish now accept (ownership-gated), AND which
-      // gives the spawned Claude Code's nested `orvilo` calls a real login state —
-      // unlike the narrow `hetero-operation` token, which only works for the
-      // ingest endpoints. We deliberately do NOT pass the refresh token to the
-      // CLI: the device stays the single refresher (refresh tokens rotate), and
-      // the 7-day access token outlives the run so no mid-run refresh is needed.
-      //
-      // Fall back to the dispatched `request.jwt` when the device has no access
-      // token (e.g. not logged in), preserving the prior behavior gracefully.
-      const accessToken = await this.remoteServerConfigCtr.getAccessToken();
-      const jwt = accessToken || request.jwt;
+      // The physical host can belong to another member. Preserve the server-issued
+      // operation identity for ingest, renewal, and permission responses; using this
+      // device’s login would replace the initiating member and break operation ownership.
+      const jwt = request.jwt;
 
       // The embedded CLI handles spawn -> adapt -> BatchIngester ->
       // heteroIngest/heteroFinish -> server -> Gateway -> clients. Wait until
@@ -367,9 +358,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
         imageList: request.imageList,
         jwt,
         operationId: request.operationId,
-        // `request.jwt` is the operation-scoped token — keep it for builtin
-        // tool callbacks (`hetero:tool:exec`) even though `jwt` above was
-        // swapped for this device's user token (see the comment above).
+        // Builtin callbacks use the same run-scoped capabilities.
         operationJwt: request.jwt,
         // Prime adapter: when the dispatch carries a descriptor the host
         // launches `orvilo prime exec` — the resolved device executes the run.

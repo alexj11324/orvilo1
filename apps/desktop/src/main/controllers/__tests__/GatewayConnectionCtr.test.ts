@@ -319,6 +319,7 @@ describe('GatewayConnectionCtr', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValue('mock-access-token');
     resolveCliScriptMock.mockReturnValue('/mock/apps/cli/dist/index.js');
     primeProbeMock.mockResolvedValue({ installed: false });
     vi.useFakeTimers();
@@ -1111,9 +1112,7 @@ describe('GatewayConnectionCtr', () => {
       expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({
           agentType: 'openclaw',
-          // Reuses the device's own session token as the run identity, not the
-          // dispatched operation jwt.
-          jwt: 'mock-access-token',
+          jwt: 'mock-jwt',
           operationId: 'op-xyz',
           prompt: 'hello',
           serverUrl: 'https://server.example.com',
@@ -1122,21 +1121,24 @@ describe('GatewayConnectionCtr', () => {
       );
     });
 
-    it('reuses the device access token as the run jwt instead of request.jwt', async () => {
+    it('retains the initiating member’s operation token on another member’s device', async () => {
       const client = await connectAndOpen();
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockClear();
       client.simulateAgentRunRequest('claude-code', 'op-auth', 'hi', 'dispatched-operation-jwt');
       await vi.advanceTimersByTimeAsync(0);
 
       expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
-        expect.objectContaining({ jwt: 'mock-access-token' }),
+        expect.objectContaining({
+          jwt: 'dispatched-operation-jwt',
+          operationJwt: 'dispatched-operation-jwt',
+        }),
       );
+      expect(mockRemoteServerConfigCtr.getAccessToken).not.toHaveBeenCalled();
     });
 
-    it('falls back to request.jwt when the device has no access token', async () => {
+    it('retains the operation token without borrowing a device login', async () => {
       const client = await connectAndOpen();
-      // Set after connect so the auto-connect getAccessToken call isn't the one
-      // that returns null — only the executeAgentRun lookup should see no token.
-      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(null);
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValue(null);
       client.simulateAgentRunRequest(
         'claude-code',
         'op-fallback',

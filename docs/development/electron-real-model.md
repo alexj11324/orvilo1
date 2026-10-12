@@ -32,7 +32,7 @@ key. Health responses alone do not prove that the keys and tokens agree.
 
 Use the repository's workspace-capable device gateway from a successful
 [CI build](../../docker-compose/deploy/device-gateway/README.md), and verify its
-SHA256 manifest before running it. The unpatched upstream 0.4.0 device gateway
+SHA256 manifest before running it. LobeHub's upstream 0.4.0 device gateway
 does not implement Orvilo's workspace pools. Use an artifact matching the host
 architecture, or user-mode emulation for an isolated local test. Do not run the
 production activation script or bypass the CI-only build guard.

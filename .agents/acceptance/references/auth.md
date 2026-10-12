@@ -78,6 +78,30 @@ cd apps/cli && ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts login --server http:
   `ORVILO_CLI_API_KEY` when present, otherwise checks the stored server URL).
 - `UNAUTHORIZED` on API calls means the token expired — re-run login.
 
+## Seeded sessions need the Clerk stub
+
+The server rechecks every session against the Clerk Backend API, stores only a
+digest of a 64-character token, and requires the user's Clerk account binding.
+A seeded session is therefore accepted only when both of these hold:
+
+1. The dev server runs with `CLERK_API_URL` pointing at `clerk-stub.mjs`, which
+   vouches for seed sessions and forwards every other call to the real Clerk
+   API (a normal sign-in keeps working). Start it with
+   `ORVILO_CLERK_STUB=1 .agents/acceptance/scripts/dev-up.sh restart`.
+2. The session is created by `seed-session.mjs`, which writes the account
+   binding and the `auth_sessions` row in the form the server expects.
+
+```bash
+# Electron: point a running instance at the dev server and sign it in
+DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cdpPort>
+
+# Web: print a token, then inject it with the cookie path below
+DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs | sed 's/^/orvilo_auth=/' | $SCRIPT web
+```
+
+`web-seed` below predates this and inserts a row the server rejects (401); use
+the commands above instead until it is rebuilt on `seed-session.mjs`.
+
 ## Web — seeded session
 
 The Web test surface is `agent-browser --session orvilo-dev`. The user's
@@ -193,10 +217,10 @@ Login state must be **injected directly**, never acquired through a login page:
    from it. A signed-out boot usually means the snapshot is stale because a
    previous instance was killed instead of stopped (see the traps below) — a
    `save-login <id>` from any still-live signed-in instance repairs it.
-2. **Mint the state via CLI/API** — the same philosophy as `web-seed`: create
-   the session server-side (seeded `auth_sessions` row / dev token issuance)
-   and inject it into the app's storage, with zero UI login. Prefer building on
-   `setup-auth.sh` seeding over anything that renders a sign-in page.
+2. **Mint the state via CLI** — `seed-session.mjs --electron <cdpPort>` creates
+   the session server-side and injects it into the running instance, with zero
+   UI login (see "Seeded sessions need the Clerk stub"). Follow it with
+   `$EDEV save-login <id>` so the next instance starts signed in.
 3. **Neither works → report auth as ❌ Blocked and stop.** Tell the user the
    Electron surface needs one manual sign-in (once — the snapshot then covers
    future runs). Do not open any login page on their behalf.

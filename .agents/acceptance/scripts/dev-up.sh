@@ -16,6 +16,10 @@
 # Env overrides:
 #   PG_PORT (5432)   Redis is probed on localhost:6379 via redis-cli.
 #   DEV_WAIT_SECONDS (120) — how long `start` waits for the server to answer.
+#   ORVILO_CLERK_STUB (unset) — set to 1 to route the server's Clerk Backend
+#     calls through clerk-stub.mjs, which seeded test sessions need
+#     (seed-session.mjs). Real sign-ins still work: other calls are forwarded.
+#   CLERK_STUB_PORT (3411)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -23,6 +27,9 @@ LOCK_FILE="$ROOT/.next/dev/lock"
 LOG_FILE="$ROOT/.records/env/dev-server.log"
 PG_PORT="${PG_PORT:-5432}"
 DEV_WAIT_SECONDS="${DEV_WAIT_SECONDS:-120}"
+CLERK_STUB_PORT="${CLERK_STUB_PORT:-3411}"
+CLERK_STUB_LOG="$ROOT/.records/env/clerk-stub.log"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 c_ok()   { printf '\033[32m✓\033[0m %s\n' "$*"; }
 c_warn() { printf '\033[33m!\033[0m %s\n' "$*"; }
@@ -112,6 +119,16 @@ start_dev() {
     return 0 # caller prints reuse message
   fi
   mkdir -p "$(dirname "$LOG_FILE")"
+  if [ "${ORVILO_CLERK_STUB:-}" = "1" ]; then
+    # Bun loads this worktree's .env while preserving shell overrides.
+    CLERK_SECRET_KEY="$(cd "$ROOT" && bun --print 'process.env.CLERK_SECRET_KEY || "sk_test_orvilo_local_stub"')"
+    export CLERK_SECRET_KEY
+    if ! lsof -nP -iTCP:"$CLERK_STUB_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+      c_step "starting clerk-stub on :$CLERK_STUB_PORT"
+      (CLERK_STUB_PORT="$CLERK_STUB_PORT" nohup node "$SCRIPT_DIR/clerk-stub.mjs" >"$CLERK_STUB_LOG" 2>&1 &)
+    fi
+    export CLERK_API_URL="http://127.0.0.1:$CLERK_STUB_PORT"
+  fi
   c_step "spawning 'bun run dev' (log: ${LOG_FILE#$ROOT/})"
   (cd "$ROOT" && nohup bun run dev >"$LOG_FILE" 2>&1 &)
   local i

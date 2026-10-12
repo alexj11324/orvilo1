@@ -109,20 +109,23 @@ parent instance's static public key. Reload should retain the session, and `/api
 should report the signed-in user. Normal Electron sign-in uses this same local
 server and the existing browser/PKCE callback flow.
 
-The seed user and Better Auth helper commands below are legacy test workflows;
-they do not validate the normal Clerk/Google sign-in path.
+To sign a local Electron instance in as the seed user without the portal, run
+the dev server behind the local Clerk stub and seed a session:
 
-For Electron development, run `bun run dev:desktop:skip-login` after the local
-database already has the seed user. The command starts Next.js and Electron,
-signs in through Better Auth, and prints the user ID only after both the
-renderer and backend accept the session. It does not create a user or seed a
-database. `SEED_EMAIL` and `SEED_PASSWORD` can select another existing local
-test account. `Ctrl-C` stops both processes and removes the temporary desktop
-profile. For an Electron instance already running with CDP on port 9263, use
-`bun run dev:desktop:login-local`; set `ORVILO_DESKTOP_CDP_PORT` if it uses a
-different port. Both commands require an HTTP server on literal `localhost`.
+```bash
+ORVILO_CLERK_STUB=1 .agents/acceptance/scripts/dev-up.sh restart
+DATABASE_URL=... node .agents/acceptance/scripts/seed-session.mjs --electron <cdpPort>
+```
 
-These renderer-session helpers do **not** authorize the Electron main process or
+The stub (`clerk-stub.mjs`) listens on loopback only, vouches for seed sessions
+and forwards every other Clerk Backend call unchanged, so a normal sign-in on
+the same server still works. It refuses to start with `NODE_ENV=production`.
+
+`bun run dev:desktop:skip-login` and `bun run dev:desktop:login-local` do not
+work any more: they sign in through the removed Better Auth
+`/api/auth/sign-in/email` endpoint.
+
+A seeded renderer session does **not** authorize the Electron main process or
 connect an execution device. For real local-agent requests, follow
 [Electron real-model integration](./electron-real-model.md).
 

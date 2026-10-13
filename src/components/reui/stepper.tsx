@@ -340,7 +340,7 @@ function StepperSeparator({ className }: React.ComponentProps<'div'>) {
       data-slot="stepper-separator"
       data-state={state}
       className={cn(
-        'bg-muted rounded-sm m-0.5 group-data-[orientation=horizontal]/stepper-nav:h-0.5 group-data-[orientation=horizontal]/stepper-nav:flex-1 group-data-[orientation=vertical]/stepper-nav:h-12 group-data-[orientation=vertical]/stepper-nav:w-0.5',
+        'bg-muted rounded-full m-0.5 group-data-[orientation=horizontal]/stepper-nav:h-0.5 group-data-[orientation=horizontal]/stepper-nav:flex-1 group-data-[orientation=vertical]/stepper-nav:h-12 group-data-[orientation=vertical]/stepper-nav:w-0.5',
         className,
       )}
     />
@@ -352,7 +352,7 @@ function StepperTitle({ children, className }: React.ComponentProps<'h3'>) {
 
   return (
     <h3
-      className={cn('text-sm leading-none font-medium', className)}
+      className={cn('text-sm font-medium', className)}
       data-slot="stepper-title"
       data-state={state}
     >

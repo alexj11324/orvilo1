@@ -60,11 +60,11 @@ function NotificationItem({
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-foreground text-xs leading-snug">
+            <p className="text-foreground text-sm">
               <span className="font-medium">{title}</span>
             </p>
           </div>
-          {content && <p className="text-muted-foreground line-clamp-2 text-xs">{content}</p>}
+          {content && <p className="text-muted-foreground line-clamp-2 text-sm">{content}</p>}
           <div className="flex items-center gap-2 pt-0.5">
             <p className="text-muted-foreground text-xs">{formatAbsoluteDate(createdAt)}</p>
           </div>
@@ -153,7 +153,7 @@ function NotificationsPanel({ onNavigate }: { onNavigate: () => void }) {
         </ScrollArea>
       </div>
       <div className="border-border/60 border-t px-2 py-1">
-        <Button className="w-full text-xs" size="sm" variant="ghost" onClick={() => go('/inbox')}>
+        <Button className="w-full" size="normal" variant="ghost" onClick={() => go('/inbox')}>
           {t('reuiShell9.viewAllNotifications')}
         </Button>
       </div>

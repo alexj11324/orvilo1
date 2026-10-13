@@ -11,7 +11,7 @@ import { shinyTextStyles } from '@/styles';
 import { copyToClipboard } from '@/utils/clipboard';
 
 const styles = {
-  cardBody: 'ps-3 pe-3 [padding-block-start:12px]',
+  cardBody: 'ps-3 pe-3 pbs-3',
   container:
     'overflow-hidden justify-between min-w-90 max-w-90 h-34 border border-sidebar-border rounded-(--radius-overlay)',
   footer: 'py-2 ps-3 pe-3 text-xs leading-[inherit] text-foreground-tertiary bg-fill-quaternary',

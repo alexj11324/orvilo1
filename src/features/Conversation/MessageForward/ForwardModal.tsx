@@ -40,7 +40,7 @@ const styles = {
   note: 'bg-transparent dark:bg-transparent disabled:bg-transparent dark:disabled:bg-transparent',
   noteDivider: '[block-size:1px] bg-sidebar-border',
   previewLine: 'truncate text-xs text-muted-foreground',
-  previewMore: '[padding-block-start:2px] text-xs text-foreground-tertiary',
+  previewMore: 'pbs-0.5 text-xs text-foreground-tertiary',
   row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--ant-border-radius-lg) transition-[background-color] duration-100 ease-(--ant-motion-ease-in-out) hover:bg-accent',
   rowSelected: 'bg-fill-quaternary',
 };

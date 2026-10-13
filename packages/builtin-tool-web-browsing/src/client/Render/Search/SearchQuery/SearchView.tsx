@@ -9,7 +9,7 @@ import { shinyTextStyles } from '@/styles';
 import { EngineAvatarGroup } from '../../../components/EngineAvatar';
 
 const styles = {
-  query: '[padding-block:4px] [padding-inline:8px] text-xs leading-[inherit] text-muted-foreground',
+  query: 'py-1 px-2 text-xs leading-[inherit] text-muted-foreground',
 };
 
 interface SearchBarProps {

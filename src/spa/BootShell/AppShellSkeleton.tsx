@@ -32,7 +32,7 @@ const styles = {
   // Bottom status metadata; centering remains visible when motion is stopped.
   hint: 'absolute inset-be-6 inset-s-1/2 text-xs leading-5 whitespace-nowrap [--orvilo-boot-shell-hint-offset-x:-50%] rtl:[--orvilo-boot-shell-hint-offset-x:50%] [transform:translate(var(--orvilo-boot-shell-hint-offset-x),0)]',
   dragRegion: 'pointer-events-auto shrink-0 w-full',
-  root: 'pointer-events-none fixed z-[99999] inset-0 flex flex-col',
+  root: 'pointer-events-none fixed z-99999 inset-0 flex flex-col',
 };
 
 /**

@@ -16,7 +16,7 @@ import { verifyService } from '@/services/verify';
 import { useGoalStore } from '@/store/goal';
 
 const styles = {
-  row: '[padding-block:8px] [&:not(:last-child)]:[border-block-end:1px_dashed_var(--sidebar-border)]',
+  row: 'py-2 [&:not(:last-child)]:[border-block-end:1px_dashed_var(--sidebar-border)]',
   seq: 'flex-none font-mono text-xs leading-[inherit] text-foreground-quaternary',
 };
 

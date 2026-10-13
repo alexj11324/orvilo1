@@ -13,7 +13,7 @@ import type { InviteAgentParams, InviteAgentState } from '../../../types';
 
 const styles = {
   root: 'flex items-center gap-2 overflow-hidden',
-  statusIcon: 'shrink-0 [margin-block-end:-2px]',
+  statusIcon: 'shrink-0 -mbe-0.5',
   title: 'shrink-0 whitespace-nowrap text-muted-foreground',
 };
 

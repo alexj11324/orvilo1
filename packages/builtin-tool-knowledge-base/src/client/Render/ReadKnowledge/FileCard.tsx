@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { FileContentDetail } from '../../../types';
 
 const styles = {
-  cardBody: '[padding-block-start:12px] [padding-block-end:8px] ps-4 pe-4',
+  cardBody: 'pbs-3 pbe-2 ps-4 pe-4',
   container:
     'overflow-hidden min-w-90 max-w-90 border border-sidebar-border rounded-(--radius-overlay)',
   footer: 'py-2 ps-4 pe-4 rounded-(--radius-card) text-center bg-fill-quaternary',

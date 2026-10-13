@@ -13,7 +13,7 @@ export const useStyles = {
   tabTitle: nativeStyles.tabTitle,
   avatarWrapper: 'relative flex flex-none items-center justify-center size-4 leading-0',
   unreadDot:
-    'absolute -inset-be-0.5 -end-0.5 size-2 border-[1.5px] border-background rounded-full bg-info',
+    'absolute -inset-be-0.5 -end-0.5 size-2 border-[length:calc(var(--spacing)_*_3_/_8)] border-background rounded-full bg-info',
   container: `${nativeStyles.container} flex-1 min-w-0`,
   overflowButton:
     'cursor-default shrink-0 justify-center h-8 rounded-(--radius-button) text-xs leading-5 text-muted-foreground hover:text-foreground hover:bg-accent',

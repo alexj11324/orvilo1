@@ -10,7 +10,7 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 
 import type { ExecScriptParams, ExecScriptState } from '../../../types';
 
-const styles = { statusIcon: '[margin-block-end:-2px] ms-1' };
+const styles = { statusIcon: '-mbe-0.5 ms-1' };
 
 export const ExecScriptInspector = memo<BuiltinInspectorProps<ExecScriptParams, ExecScriptState>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading, pluginState }) => {

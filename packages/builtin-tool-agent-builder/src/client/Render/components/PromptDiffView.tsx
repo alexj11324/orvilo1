@@ -50,14 +50,7 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
 
   return (
     <div className={cn('flex', 'flex-col', 'gap-2', 'text-(length:--text-dense)')}>
-      <div
-        className={cn(
-          'flex',
-          'items-center',
-          'gap-1.5',
-          'ms-2.25 [margin-block-end:6px] text-success',
-        )}
-      >
+      <div className={cn('flex', 'items-center', 'gap-1.5', 'ms-2.25 mbe-1.5 text-success')}>
         <CheckCircle size={14} />
         <span className="font-medium">{t(statusKey)}</span>
       </div>
@@ -84,7 +77,7 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
             'flex',
             'flex-col',
             'gap-2',
-            'ms-3 border-s-[3px] border-success bg-accent p-3',
+            'ms-3 border-s-3 border-success bg-accent p-3',
           )}
         >
           <div className="flex items-center gap-1.5">

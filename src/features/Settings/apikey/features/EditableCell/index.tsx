@@ -176,7 +176,11 @@ const EditableCell = memo<EditableCellProps>(
     // Display mode
     return (
       <div className="group relative flex min-h-8 items-center gap-2">
-        <div className="min-w-0 break-all leading-normal">{formatDisplayValue(value)}</div>
+        <div
+          className={type === 'date' ? 'min-w-0 break-all text-xs' : 'min-w-0 break-all text-sm'}
+        >
+          {formatDisplayValue(value)}
+        </div>
         <Button
           aria-label={t('apikey.detail.permissions.edit')}
           className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"

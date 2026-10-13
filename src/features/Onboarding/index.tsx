@@ -248,7 +248,7 @@ function OnboardingSetup() {
     : undefined;
 
   return (
-    <main className="orvilo-entry-surface bg-background text-foreground flex min-h-[var(--onboarding-viewport-height,100svh)] w-full flex-col">
+    <main className="orvilo-entry-surface bg-background text-foreground flex min-h-(--onboarding-viewport-height,100svh) w-full flex-col">
       <OnboardingHeader
         backDisabled={busy}
         canGoBack={stepIndex > 0}

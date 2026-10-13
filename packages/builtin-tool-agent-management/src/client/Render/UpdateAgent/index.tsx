@@ -32,24 +32,24 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
   return (
     <div className="rounded-(--radius-card) bg-fill-quaternary p-3">
       {meta?.title && (
-        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+        <div className="mbe-2 last:[margin-block-end:0]">
+          <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
             Title
           </div>
           <div className="text-(length:--text-dense)">{meta.title}</div>
         </div>
       )}
       {meta?.description && (
-        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+        <div className="mbe-2 last:[margin-block-end:0]">
+          <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
             Description
           </div>
           <div className="text-(length:--text-dense)">{meta.description}</div>
         </div>
       )}
       {config?.systemRole && (
-        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+        <div className="mbe-2 last:[margin-block-end:0]">
+          <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
             System Prompt
           </div>
           <div
@@ -63,8 +63,8 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
         </div>
       )}
       {config?.model && (
-        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+        <div className="mbe-2 last:[margin-block-end:0]">
+          <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
             Model
           </div>
           <div className="text-(length:--text-dense)">{config.model as string}</div>

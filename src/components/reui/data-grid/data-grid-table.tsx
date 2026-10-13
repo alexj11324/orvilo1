@@ -1591,7 +1591,7 @@ function DataGridTableBodyRowCell<TData extends object>({
         // getCellStatus is wired: amber for "dirty", destructive for
         // "invalid".
         props.getCellStatus &&
-          "data-[cell-status=invalid]:after:border-t-destructive data-[cell-status]:relative data-[cell-status]:after:absolute data-[cell-status]:after:end-0 data-[cell-status]:after:top-0 data-[cell-status]:after:size-0 data-[cell-status]:after:border-s-[5px] data-[cell-status]:after:border-t-[5px] data-[cell-status]:after:border-s-transparent data-[cell-status]:after:content-[''] data-[cell-status=dirty]:after:border-t-amber-500",
+          "data-[cell-status=invalid]:after:border-t-destructive data-[cell-status]:relative data-[cell-status]:after:absolute data-[cell-status]:after:end-0 data-[cell-status]:after:top-0 data-[cell-status]:after:size-0 data-[cell-status]:after:border-s-5 data-[cell-status]:after:border-t-5 data-[cell-status]:after:border-s-transparent data-[cell-status]:after:content-[''] data-[cell-status=dirty]:after:border-t-amber-500",
         props.tableLayout?.cellBorder && 'border-e',
         // Mirror of the head cell rule: no floating border against the
         // resize filler strip.

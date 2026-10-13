@@ -11,7 +11,7 @@ import type { TerminalPane } from './store';
 import TerminalView from './TerminalView';
 
 const styles = {
-  close: 'absolute z-1 [inset-block-start:2px] end-0.5 opacity-0 [transition:opacity_0.15s]',
+  close: 'absolute z-1 inset-bs-0.5 end-0.5 opacity-0 [transition:opacity_0.15s]',
   divider:
     "cursor-col-resize relative flex-none after:content-[''] after:absolute after:[inset-block:0] after:[inset-inline-start:calc(50%_-_0.5px)] after:[inline-size:1px] after:bg-sidebar-border after:bg-none after:[transition:background_0.15s] hover:after:bg-primary",
   pane: 'relative overflow-hidden [min-inline-size:0] [transition:opacity_0.15s] data-[inactive-pane]:opacity-70 hover:[&_[data-pane-close]]:opacity-100 focus-within:[&_[data-pane-close]]:opacity-100',

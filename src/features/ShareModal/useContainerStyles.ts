@@ -1,6 +1,6 @@
 export const styles = {
   preview: [
-    'overflow-x-hidden overflow-y-scroll w-full max-w-[var(--preview-max-width,none)] max-h-[70dvh] [margin:var(--preview-margin,0)]',
+    'overflow-x-hidden overflow-y-scroll w-full max-w-(--preview-max-width,none) max-h-[70dvh] [margin:var(--preview-margin,0)]',
     'border border-border rounded-(--radius-card) bg-card',
     String.raw`[&_.react-pdf\_\_Document_*]:pointer-events-none [&_.react-pdf\_\_Page_*]:pointer-events-none`,
     '[&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:bg-transparent',

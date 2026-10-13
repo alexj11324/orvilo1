@@ -19,7 +19,7 @@ import type { UIChatMessage } from './chat';
 import { SemanticSearchChunkSchema } from './rag';
 
 export type CreateMessageRoleType =
-  'user' | 'assistant' | 'tool' | 'task' | 'supervisor' | 'verify' | 'taskCallback';
+  'user' | 'assistant' | 'tool' | 'task' | 'supervisor' | 'taskCallback';
 
 export interface CreateMessageParams extends Partial<
   Omit<UIChatMessage, 'content' | 'role' | 'topicId' | 'chunksList'>

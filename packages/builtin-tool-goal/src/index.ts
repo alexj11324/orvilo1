@@ -1,6 +1,5 @@
 export {
   buildGoalRequirement,
-  type GoalCriterionInput,
   resolveGoalAttemptBudget,
   resolveGoalConcurrency,
   resolveGoalScheduleConfig,

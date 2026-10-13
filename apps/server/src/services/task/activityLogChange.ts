@@ -90,9 +90,6 @@ export const activityLogPropertyChange = (
     case 'description': {
       return { field: 'description' };
     }
-    case 'verify_config': {
-      return { field: 'verify' };
-    }
     case 'title': {
       return { field: 'title', from: text(from), to: text(to) };
     }
@@ -153,29 +150,3 @@ export const activityLogPropertyChange = (
     }
   }
 };
-
-/**
- * Whether saving a task's acceptance policy changed anything a reader would
- * call the acceptance criteria. Saving the form untouched must not put a
- * line in the feed.
- */
-export const acceptancePolicyChanged = (
-  before: { config?: unknown; requirement?: string | null },
-  after: { config?: unknown; requirement?: string | null },
-): boolean =>
-  (before.requirement ?? null) !== (after.requirement ?? null) ||
-  stableJson(before.config ?? {}) !== stableJson(after.config ?? {});
-
-/**
- * JSON with object keys in a fixed order. The stored policy comes back from
- * jsonb, which does not keep the order the client sent, so a plain
- * `JSON.stringify` could call an untouched policy changed.
- */
-const stableJson = (value: unknown): string =>
-  JSON.stringify(value, (_key, nested: unknown) =>
-    nested && typeof nested === 'object' && !Array.isArray(nested)
-      ? Object.fromEntries(
-          Object.entries(nested as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1)),
-        )
-      : nested,
-  );

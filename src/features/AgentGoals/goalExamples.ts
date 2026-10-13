@@ -1,4 +1,4 @@
-import { GOAL_MAX_ROUNDS_RANGE } from '@orvilo/const/verify';
+import { GOAL_MAX_ROUNDS_RANGE } from '@orvilo/const/goal';
 
 /**
  * The seeded examples on the goal empty state.

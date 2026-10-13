@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
-  acceptances,
   agentOperations,
   agents,
   briefs,
@@ -1292,21 +1291,10 @@ describe('TaskModel', () => {
       const model = new TaskModel(serverDB, userId);
       const root = await model.create({ instruction: 'Root goal' });
       const child = await model.create({ instruction: 'Child', parentTaskId: root.id });
-      const grandchild = await model.create({ instruction: 'Grandchild', parentTaskId: child.id });
-      await serverDB.insert(acceptances).values({
-        subjectId: grandchild.id,
-        subjectType: 'task',
-        userId,
-      });
-
+      await model.create({ instruction: 'Grandchild', parentTaskId: child.id });
       await expect(model.deleteSubtree(root.id)).resolves.toBe(3);
       await expect(model.findAllDescendants(root.id)).resolves.toEqual([]);
       await expect(model.findById(root.id)).resolves.toBeNull();
-      const remainingAcceptances = await serverDB
-        .select()
-        .from(acceptances)
-        .where(eq(acceptances.subjectId, grandchild.id));
-      expect(remainingAcceptances).toEqual([]);
     });
   });
 
@@ -2049,22 +2037,6 @@ describe('TaskModel', () => {
       expect(config.model).toBe('gpt-4');
       expect(config.checkpoint).toEqual({ onAgentRequest: true });
     });
-
-    it('should work with updateReviewConfig delegating to updateTaskConfig', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Test' });
-
-      // Set some initial non-review config
-      await model.updateTaskConfig(task.id, { provider: 'anthropic' });
-
-      // Use updateReviewConfig — should preserve other config keys
-      await model.updateReviewConfig(task.id, { enabled: true, maxIterations: 3 });
-
-      const updated = (await model.findById(task.id))!;
-      const config = updated.config as Record<string, any>;
-      expect(config.provider).toBe('anthropic');
-      expect(config.review).toEqual({ enabled: true, maxIterations: 3 });
-    });
   });
 
   describe('topic management', () => {
@@ -2513,24 +2485,6 @@ describe('TaskModel', () => {
         .where(eq(taskActivities.taskId, task.id));
       await model.updateWithLog(task.id, { instruction: 'Draft 4' }, { agentId: 'agt_log_writer' });
       expect(await types()).toHaveLength(5);
-    });
-
-    it('keeps one acceptance criteria row per sitting', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Test' });
-
-      await model.logSessionActivity(task.id, 'verify_config', { userId });
-      await model.logSessionActivity(task.id, 'verify_config', { userId });
-      await model.logSessionActivity(task.id, 'verify_config', { userId });
-      // Not an Issue this scope can write: nothing is recorded.
-      await new TaskModel(serverDB, 'someone-else').logSessionActivity(task.id, 'verify_config', {
-        userId: 'someone-else',
-      });
-
-      const activities = await model.getActivities(task.id);
-      expect(activities.map((a) => [a.type, a.actorUserId, a.payload])).toEqual([
-        ['verify_config', userId, { actorKind: 'user' }],
-      ]);
     });
 
     it('logs a due date being set, changed and cleared', async () => {
@@ -3051,78 +3005,6 @@ describe('TaskModel', () => {
     });
   });
 
-  describe('review rubrics', () => {
-    it('should store EvalBenchmarkRubric format in config', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({
-        config: {
-          review: {
-            enabled: true,
-            maxIterations: 3,
-            rubrics: [
-              {
-                config: { criteria: '技术概念是否准确' },
-                id: 'r1',
-                name: '内容准确性',
-                threshold: 0.8,
-                type: 'llm-rubric',
-                weight: 1,
-              },
-              {
-                config: { value: '```' },
-                id: 'r2',
-                name: '包含代码示例',
-                type: 'contains',
-                weight: 1,
-              },
-            ],
-          },
-        },
-        instruction: 'Test with rubrics',
-      });
-
-      const review = model.getReviewConfig(task);
-      expect(review).toBeDefined();
-      expect(review!.enabled).toBe(true);
-      expect(review!.rubrics).toHaveLength(2);
-      expect(review!.rubrics[0].type).toBe('llm-rubric');
-      expect(review!.rubrics[0].threshold).toBe(0.8);
-      expect(review!.rubrics[1].type).toBe('contains');
-      expect(review!.rubrics[1].config.value).toBe('```');
-    });
-
-    it('should inherit rubrics from parent when creating subtask', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const rubrics = [
-        {
-          config: { criteria: '准确性检查' },
-          id: 'r1',
-          name: '准确性',
-          threshold: 0.8,
-          type: 'llm-rubric',
-          weight: 1,
-        },
-      ];
-
-      const parent = await model.create({
-        config: { review: { enabled: true, rubrics } },
-        instruction: 'Parent with rubrics',
-      });
-
-      const parentConfig = parent.config as Record<string, any>;
-      const child = await model.create({
-        config: parentConfig?.review ? { review: parentConfig.review } : undefined,
-        instruction: 'Child task',
-        parentTaskId: parent.id,
-      });
-
-      const childReview = model.getReviewConfig(child);
-      expect(childReview).toBeDefined();
-      expect(childReview!.rubrics).toHaveLength(1);
-      expect(childReview!.rubrics[0].type).toBe('llm-rubric');
-    });
-  });
-
   describe('findByIds', () => {
     it('should return empty array for empty input', async () => {
       const model = new TaskModel(serverDB, userId);
@@ -3428,177 +3310,24 @@ describe('TaskModel', () => {
     });
   });
 
-  describe('getCheckpointConfig / getReviewConfig fallbacks', () => {
+  describe('getCheckpointConfig fallback', () => {
     it('getCheckpointConfig returns empty object when config has no checkpoint', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Test' });
       expect(model.getCheckpointConfig(task)).toEqual({});
     });
 
-    it('getReviewConfig returns undefined when no review config', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Test' });
-      expect(model.getReviewConfig(task)).toBeUndefined();
-    });
-  });
-
-  describe('verify config', () => {
-    it('updateVerifyConfig writes config.verify and preserves other config keys', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Test' });
-
-      await model.updateTaskConfig(task.id, { provider: 'anthropic' });
-      await model.updateVerifyConfig(task.id, {
-        enabled: true,
-        maxIterations: 3,
-        verifyRubricId: 'rub_1',
-      });
-
-      const updated = (await model.findById(task.id))!;
-      const config = updated.config as Record<string, any>;
-      expect(config.provider).toBe('anthropic');
-      expect(config.verify).toEqual({
-        enabled: true,
-        maxIterations: 3,
-        verifyRubricId: 'rub_1',
-      });
-    });
-
-    it('updateVerifyConfig leaves omitted keys untouched and merges new ones', async () => {
+    it('ignores retired verify gates while preserving explicit checkpoints', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({
-        config: { verify: { enabled: true, verifyRubricId: 'rub_1' } },
-        instruction: 'Test',
+        config: { verify: { enabled: true } },
+        instruction: 'Legacy gate',
       });
-
-      await model.updateVerifyConfig(task.id, { maxIterations: 4 });
-
-      expect(model.getVerifyConfig((await model.findById(task.id))!)).toEqual({
-        enabled: true,
-        maxIterations: 4,
-        verifyRubricId: 'rub_1',
+      await expect(model.resolveTaskReviewRequirement(task)).resolves.toBe(false);
+      const checkpointTask = await model.updateCheckpointConfig(task.id, {
+        topic: { after: true },
       });
-    });
-
-    it('updateVerifyConfig clears a saved key when passed null', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({
-        config: {
-          provider: 'anthropic',
-          verify: { enabled: true, verifyRubricId: 'rub_1' },
-        },
-        instruction: 'Test',
-      });
-
-      // Drop the rubric while keeping the gate enabled.
-      await model.updateVerifyConfig(task.id, { verifyRubricId: null });
-
-      const updated = (await model.findById(task.id))!;
-      const config = updated.config as Record<string, any>;
-      // Sibling config keys survive; cleared keys are gone (not stored as null).
-      expect(config.provider).toBe('anthropic');
-      expect(config.verify).toEqual({ enabled: true });
-      expect('verifyRubricId' in config.verify).toBe(false);
-    });
-
-    it('updateVerifyConfig replaces verifyCriteriaIds wholesale', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({
-        config: { verify: { verifyCriteriaIds: ['c1', 'c2', 'c3'] } },
-        instruction: 'Test',
-      });
-
-      await model.updateVerifyConfig(task.id, { verifyCriteriaIds: ['c4'] });
-
-      expect(model.getVerifyConfig((await model.findById(task.id))!)).toEqual({
-        verifyCriteriaIds: ['c4'],
-      });
-    });
-
-    it('getVerifyConfig reads config.verify', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({
-        config: { verify: { enabled: true, verifyRubricId: 'rub_1' } },
-        instruction: 'Test',
-      });
-      expect(model.getVerifyConfig(task)).toEqual({ enabled: true, verifyRubricId: 'rub_1' });
-    });
-
-    it('getVerifyConfig returns undefined when no verify or review config', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Test' });
-      expect(model.getVerifyConfig(task)).toBeUndefined();
-    });
-
-    it('getVerifyConfig falls back to the legacy review key during migration', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({
-        config: { review: { enabled: true, maxIterations: 5, rubrics: [{ id: 'r1' }] } },
-        instruction: 'Test',
-      });
-      // Only the shared fields carry over; inline rubrics are dropped.
-      expect(model.getVerifyConfig(task)).toEqual({ enabled: true, maxIterations: 5 });
-    });
-
-    it('getVerifyConfig prefers config.verify over the legacy review key', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({
-        config: {
-          review: { enabled: false, maxIterations: 5 },
-          verify: { enabled: true, verifyRubricId: 'rub_1' },
-        },
-        instruction: 'Test',
-      });
-      expect(model.getVerifyConfig(task)).toEqual({ enabled: true, verifyRubricId: 'rub_1' });
-    });
-
-    describe('resolveVerifyConfig inheritance chain', () => {
-      it('uses the task own config when present', async () => {
-        const model = new TaskModel(serverDB, userId);
-        const parent = await model.create({
-          config: { verify: { enabled: true, verifyRubricId: 'parent_rub' } },
-          instruction: 'Parent',
-        });
-        const child = await model.create({
-          config: { verify: { enabled: true, verifyRubricId: 'child_rub' } },
-          instruction: 'Child',
-          parentTaskId: parent.id,
-        });
-
-        const resolved = await model.resolveVerifyConfig(child.id);
-        expect(resolved).toEqual({ enabled: true, verifyRubricId: 'child_rub' });
-      });
-
-      it('falls back to the nearest ancestor with whole-config override', async () => {
-        const model = new TaskModel(serverDB, userId);
-        const grandparent = await model.create({
-          config: { verify: { enabled: true, verifyRubricId: 'gp_rub' } },
-          instruction: 'Grandparent',
-        });
-        const parent = await model.create({
-          instruction: 'Parent (no verify config)',
-          parentTaskId: grandparent.id,
-        });
-        const child = await model.create({
-          instruction: 'Child (no verify config)',
-          parentTaskId: parent.id,
-        });
-
-        // Whole-config override: child adopts the grandparent's config in full.
-        const resolved = await model.resolveVerifyConfig(child.id);
-        expect(resolved).toEqual({ enabled: true, verifyRubricId: 'gp_rub' });
-      });
-
-      it('returns undefined when no task in the chain has a verify config', async () => {
-        const model = new TaskModel(serverDB, userId);
-        const parent = await model.create({ instruction: 'Parent' });
-        const child = await model.create({
-          instruction: 'Child',
-          parentTaskId: parent.id,
-        });
-
-        expect(await model.resolveVerifyConfig(child.id)).toBeUndefined();
-      });
+      await expect(model.resolveTaskReviewRequirement(checkpointTask!)).resolves.toBe(true);
     });
   });
 

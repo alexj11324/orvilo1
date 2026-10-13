@@ -250,7 +250,7 @@ describe('resolveIssueExecution', () => {
 
   describe('after a run succeeded', () => {
     it.each(['in_review', 'in_progress'] as const)(
-      'reads as awaiting acceptance while the Issue is %s, with no action here',
+      'a delivered Issue in %s preserves the status flow, with no manual acceptance',
       (workflowCategory) => {
         expect(
           resolveIssueExecution(
@@ -258,9 +258,9 @@ describe('resolveIssueExecution', () => {
           ),
         ).toEqual({
           actionBlocked: false,
-          badge: 'succeeded',
-          hints: [hint('awaitingAcceptance')],
-          kind: 'awaitingAcceptance',
+          badge: workflowCategory === 'in_review' ? undefined : 'succeeded',
+          hints: [],
+          kind: workflowCategory === 'in_review' ? 'reviewPending' : 'succeeded',
           showFailureReason: false,
         });
       },
@@ -352,7 +352,7 @@ describe('resolveIssueExecution', () => {
 });
 
 describe('canRerunIssue', () => {
-  it('allows re-running a completed Issue and one awaiting acceptance', () => {
+  it('allows re-running a completed Issue and one awaiting review', () => {
     expect(
       canRerunIssue(
         withAgent({ dispatchPhase: 'succeeded', status: 'completed', workflowCategory: 'done' }),

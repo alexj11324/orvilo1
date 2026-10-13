@@ -75,12 +75,11 @@ exact container name closes the launch-before-tree-journal crash seam. This supp
 explicit bounded leased registrations; it does not reinterpret legacy provisioning
 leases as runtime ownership or auto-enable legacy runners.
 
-`CanonicalVerifyCompletion` uses explicitly registered frozen-criterion/receipt
-mappings and invokes existing Verify convergence. Its guard executes inside the
-actual TaskModel execution-contract status CAS transaction, rechecking canonical
-scope, epoch, grant, membership, Verify and receipt identities. Missing mappings
-fail closed. Runtime end_turn has no completion authority. The host exposes this
-reconciliation without accepting runtime-supplied loaders or mappings.
+`CanonicalIssueCompletion` only observes whether the live Issue is Done after
+checking its canonical run, grant, membership and runtime fences. It never
+changes Issue status or manufactures a reviewer verdict from runtime output or
+durable receipts. The host exposes this observation without a frozen Verify plan
+or criterion mappings. See [Issue review](issue-review.md).
 
 2026-09-30 validation: Core 142 tests/14 files; canonical authority 12 actual
 PostgreSQL tests; completion 10 actual PostgreSQL tests; existing Verify28 tests;

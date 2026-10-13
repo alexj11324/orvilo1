@@ -85,7 +85,7 @@ export interface ResourceQueryParams {
   sortType?: SortType;
   /**
    * Origin narrowing driven by the explorer's source filter chips
-   * (all / AI-generated / uploaded / acceptance evidence).
+   * (all / AI-generated / uploaded).
    */
   sourceFilter?: ResourceSourceFilter;
   /**

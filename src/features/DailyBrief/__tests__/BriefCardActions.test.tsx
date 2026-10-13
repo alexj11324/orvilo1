@@ -111,29 +111,6 @@ describe('BriefCardActions', () => {
     );
   });
 
-  it('should leave a taskless acceptance link to the desktop preload interceptor', () => {
-    renderWithRouter(
-      <BriefCardActions
-        briefId="brief-acceptance"
-        briefType="decision"
-        actions={[
-          {
-            // A key with no `brief.action.*` locale entry, so the
-            // server-provided label renders as-is (locale copy wins otherwise).
-            key: 'reviewAcceptance',
-            label: 'Review acceptance',
-            type: 'link',
-            url: '/acceptance/acceptance-1',
-          },
-        ]}
-      />,
-    );
-
-    const link = screen.getByRole('button', { name: 'Review acceptance' });
-    expect(link).not.toHaveAttribute(RENDERER_HANDLED_LINK_ATTR);
-    expect(fireEvent.click(link)).toBe(true);
-  });
-
   it('should render resolve action buttons from actions prop', () => {
     renderWithRouter(
       <BriefCardActions actions={sampleActions} briefId="brief-1" briefType="decision" />,
@@ -145,7 +122,7 @@ describe('BriefCardActions', () => {
     mockResolveBrief.mockResolvedValueOnce(undefined);
     renderWithRouter(
       <BriefCardActions
-        actions={[{ key: 'review', label: 'Review delivery', type: 'link', url: '/acceptance/1' }]}
+        actions={[{ key: 'review', label: 'Review delivery', type: 'link', url: '/task/T-1' }]}
         briefId="brief-goal"
         briefType="decision"
       />,
@@ -308,7 +285,7 @@ describe('BriefCardActions', () => {
             key: 'review',
             label: 'Legacy review label',
             type: 'link',
-            url: '/acceptance/acceptance-1',
+            url: '/task/T-1',
           },
         ]}
       />,
@@ -316,7 +293,7 @@ describe('BriefCardActions', () => {
 
     expect(screen.getByRole('button', { name: 'Review delivery' })).toHaveAttribute(
       'href',
-      '/acceptance/acceptance-1',
+      '/task/T-1',
     );
     expect(screen.queryByText('Legacy review label')).not.toBeInTheDocument();
   });

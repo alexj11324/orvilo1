@@ -16,7 +16,6 @@ import {
 } from '@/server/services/githubRepo';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
-import { runVerifyOnCompletion } from '@/server/services/verify';
 
 import { TaskIntegrationService } from '../index';
 
@@ -37,15 +36,12 @@ const mockTaskTopicModel = {
 const mockRunner = {
   runTask: vi.fn(),
 };
-const mockVerifyRunModel = {
-  findByOperation: vi.fn(),
-};
 const mockWorkspaceService = {
   resolveWorkspaceConfig: vi.fn(),
 };
 const { mockAfter } = vi.hoisted(() => ({ mockAfter: vi.fn() }));
-const { mockTaskServiceUpdateStatus } = vi.hoisted(() => ({
-  mockTaskServiceUpdateStatus: vi.fn(),
+const { mockSettleTaskExecution } = vi.hoisted(() => ({
+  mockSettleTaskExecution: vi.fn(),
 }));
 
 const { mockLeaseModel } = vi.hoisted(() => ({
@@ -122,21 +118,13 @@ vi.mock('@/database/models/taskTopic', () => ({
 vi.mock('@/server/services/taskRunner', () => ({
   TaskRunnerService: vi.fn(),
 }));
-vi.mock('@/server/services/task', () => ({
-  TaskService: vi.fn(function () {
-    return { updateStatus: mockTaskServiceUpdateStatus };
-  }),
+vi.mock('@/server/services/taskSettlement', () => ({
+  settleTaskExecution: mockSettleTaskExecution,
 }));
 vi.mock('@/server/services/taskWorkspace', () => ({
   TaskWorkspaceService: vi.fn(),
 }));
-vi.mock('@/database/models/verifyRun', () => ({
-  VerifyRunModel: vi.fn(function () {
-    return mockVerifyRunModel;
-  }),
-}));
 vi.mock('@/server/utils/scheduleAfterResponse', () => ({ after: mockAfter }));
-vi.mock('@/server/services/verify', () => ({ runVerifyOnCompletion: vi.fn() }));
 
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: {
@@ -257,7 +245,7 @@ describe('TaskIntegrationService', () => {
     mockTaskTopicModel.findByTaskId.mockResolvedValue([asTopic(seedRecord())]);
     mockTaskTopicModel.claimIntegration.mockResolvedValue(true);
     mockTaskTopicModel.releaseIntegration.mockResolvedValue(undefined);
-    mockVerifyRunModel.findByOperation.mockResolvedValue(null);
+
     mockRunner.runTask.mockResolvedValue({ success: true, topicId: 'topic_2' });
   });
 
@@ -508,45 +496,6 @@ describe('TaskIntegrationService', () => {
     );
   });
 
-  it('resumes a confirmed Verify plan after the initial clean merge publishes', async () => {
-    const record = seedRecord();
-    mockTaskModel.findById.mockResolvedValue(baseTask({ instruction: 'ship it' }));
-    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
-    mockTaskTopicModel.findByTaskId.mockResolvedValue([
-      {
-        handoff: { content: 'delivered result' },
-        integration: record,
-        operationId: 'op-original',
-        topicId: 'topic_1',
-      } as TaskTopicItem,
-    ]);
-    mockVerifyRunModel.findByOperation.mockResolvedValue({ planConfirmedAt: new Date() });
-    vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
-      sha: 'abc123',
-      state: 'merged',
-      success: true,
-    });
-
-    const outcome = await service.integrateOnComplete({
-      task: { ...baseTask(), instruction: 'ship it' },
-      taskTopicId: 'topic_1',
-    });
-
-    expect(outcome).toBe('hold');
-    expect(mockAfter).toHaveBeenCalledTimes(1);
-    await mockAfter.mock.calls[0][0]();
-    expect(runVerifyOnCompletion).toHaveBeenCalledWith(
-      expect.anything(),
-      'user-1',
-      {
-        deliverable: 'delivered result',
-        goal: 'ship it',
-        operationId: 'op-original',
-      },
-      'ws-1',
-    );
-  });
-
   it('resumes publishing an already merged candidate after callback recovery', async () => {
     const recovering = seedRecord({
       integratedSha: 'candidate123',
@@ -581,7 +530,6 @@ describe('TaskIntegrationService', () => {
       completionReservationId: 'completion:op-verified',
       task: baseTask(),
       taskTopicId: 'topic_1',
-      verifyOperationId: 'op-verified',
     });
 
     expect(outcome).toBe('hold');
@@ -601,13 +549,13 @@ describe('TaskIntegrationService', () => {
       role: 'integrate',
       runTopicId: 'topic_1',
       state: 'merging',
-      verifyOperationId: 'op-verified',
+
       worktreePath: '/repos/orvilo-integration-main-topic_1',
     });
     expect(mockRunner.runTask.mock.calls[0][0].replaceReservationId).toBe('completion:op-verified');
-    expect(mockRunner.runTask.mock.calls[0][0].skipTaskVerification).toBe(true);
+
     const parentStateWrite = mockTaskTopicModel.updateIntegration.mock.calls.findIndex(
-      ([, , patch]) => patch.attempts === 1 && patch.verifyOperationId === 'op-verified',
+      ([, , patch]) => patch.attempts === 1,
     );
     expect(parentStateWrite).toBeGreaterThanOrEqual(0);
     expect(
@@ -774,49 +722,6 @@ describe('TaskIntegrationService', () => {
       'topic_1',
       expect.objectContaining({ lastError: expect.stringContaining('update'), state: 'blocked' }),
     );
-  });
-
-  it('resumes the original Verify plan only after a corrective merge publishes', async () => {
-    const corrective = seedRecord({
-      attempts: 1,
-      expectedHeadSha: 'task123',
-      integrationWorktreePath: '/repos/orvilo-integration-main-topic_0',
-      role: 'integrate',
-      runTopicId: 'topic_0',
-      state: 'merging',
-      worktreePath: '/repos/orvilo-integration-main-topic_0',
-    });
-    const original = seedRecord({
-      expectedHeadSha: 'task123',
-      integrationOwnerTopicId: 'topic_0',
-      integrationWorktreePath: '/repos/orvilo-integration-main-topic_0',
-      state: 'conflict',
-    });
-    mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(corrective));
-    mockTaskTopicModel.findByTaskId.mockResolvedValue([
-      {
-        handoff: { content: 'delivered result' },
-        integration: original,
-        operationId: 'op-original',
-        topicId: 'topic_0',
-      } as TaskTopicItem,
-      { integration: corrective, topicId: 'topic_1' } as TaskTopicItem,
-    ]);
-    mockVerifyRunModel.findByOperation.mockResolvedValue({ planConfirmedAt: new Date() });
-    vi.mocked(deviceGateway.finalizeGitMerge).mockResolvedValue({
-      sha: 'def456',
-      state: 'integrated',
-      success: true,
-      validatedExpectedHead: true,
-    });
-
-    const outcome = await service.integrateOnComplete({
-      task: { ...baseTask(), instruction: 'ship it' },
-      taskTopicId: 'topic_1',
-    });
-
-    expect(outcome).toBe('hold');
-    expect(mockAfter).toHaveBeenCalledTimes(1);
   });
 
   it('retries a local corrective conflict in its owned worktree without remote review', async () => {
@@ -1916,10 +1821,16 @@ describe('TaskIntegrationService', () => {
       });
 
       expect(result.completed).toEqual(['T-1']);
-      expect(mockTaskServiceUpdateStatus).toHaveBeenCalledWith({
-        id: 'task_1',
-        status: 'completed',
-      });
+      expect(mockSettleTaskExecution).toHaveBeenCalledWith(
+        expect.anything(),
+        'user-1',
+        expect.objectContaining({
+          taskId: 'task_1',
+          outcome: 'succeeded',
+          context: { expectedStatus: task.status, throughTaskService: true },
+        }),
+        'ws-1',
+      );
       // Integrated rows are finished by the sweep itself — no merge retry.
       expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
     });
@@ -2363,7 +2274,6 @@ describe('TaskIntegrationService', () => {
         integratedSha: 'sha-int-up',
         sourceSha: 'sha-head-up',
         topicId: 'tpc_up',
-        verifyOperationId: 'verify-op-up',
       },
     };
     const topicWithReceipt = (record = seedRecord()): TaskTopicItem =>
@@ -2386,7 +2296,6 @@ describe('TaskIntegrationService', () => {
           integratedSha: 'sha-int-up',
           role: 'task',
           state: 'integrated',
-          verifyOperationId: 'verify-op-up',
         },
         seq: 1,
         status: 'completed',

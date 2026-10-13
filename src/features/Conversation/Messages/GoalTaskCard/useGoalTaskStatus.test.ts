@@ -46,11 +46,11 @@ describe('useGoalTaskStatus', () => {
     vi.clearAllMocks();
   });
 
-  it('falls back to the drafted criteria count until the graph resolves', () => {
-    const { result } = renderHook(() => useGoalTaskStatus({ criteriaCount: 3, goalId: 'goal-1' }));
+  it('shows no task progress until the graph resolves', () => {
+    const { result } = renderHook(() => useGoalTaskStatus({ goalId: 'goal-1' }));
 
     expect(mocks.useFetchGoalGraph).toHaveBeenCalledWith('goal-1');
-    expect(result.current.progress).toMatchObject({ phase: 'running', total: 3 });
+    expect(result.current.progress).toMatchObject({ phase: 'running', total: 0 });
     expect(result.current.title).toBeUndefined();
   });
 

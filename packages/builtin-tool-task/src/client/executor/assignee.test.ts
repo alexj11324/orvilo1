@@ -90,8 +90,8 @@ describe('TaskExecutor — human assignee (assigneeUserId)', () => {
     });
     mocks.listReviewerAgents.mockResolvedValue({
       data: [
-        { id: 'agt-reviewer', name: 'OpenCode Reviewer', canVerifyDeliveries: true },
-        { id: 'agt-pi', name: 'Pi Reviewer', canVerifyDeliveries: false },
+        { id: 'agt-reviewer', name: 'OpenCode Reviewer', canReviewIssues: true },
+        { id: 'agt-pi', name: 'Pi Reviewer', canReviewIssues: false },
       ],
     });
     const result = await taskExecutor.viewTask({ identifier: 'T-1' });
@@ -99,12 +99,12 @@ describe('TaskExecutor — human assignee (assigneeUserId)', () => {
     expect(result.content).toContain('agt-reviewer');
     expect(result.content).toContain('Set reviewerAgentId with editTask');
     expect(result.content).toContain(
-      JSON.stringify({ id: 'agt-reviewer', name: 'OpenCode Reviewer', canVerifyDeliveries: true }),
+      JSON.stringify({ id: 'agt-reviewer', name: 'OpenCode Reviewer', canReviewIssues: true }),
     );
     expect(result.content).toContain(
-      JSON.stringify({ id: 'agt-pi', name: 'Pi Reviewer', canVerifyDeliveries: false }),
+      JSON.stringify({ id: 'agt-pi', name: 'Pi Reviewer', canReviewIssues: false }),
     );
-    expect(result.content).toContain('choose canVerifyDeliveries=true when available');
+    expect(result.content).toContain('Choose canReviewIssues=true');
   });
 
   it.each(['agt-reviewer', null])(

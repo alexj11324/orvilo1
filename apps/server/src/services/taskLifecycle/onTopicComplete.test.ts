@@ -17,14 +17,14 @@ const fakeScheduler = {
 const {
   captureRemoteIdentityOnComplete,
   cascadeOnCompletion,
-  deferredVerifyDrive,
+
   integrateOnComplete,
   runTaskMock,
   settleDispatch,
 } = vi.hoisted(() => ({
   captureRemoteIdentityOnComplete: vi.fn().mockResolvedValue(true),
   cascadeOnCompletion: vi.fn().mockResolvedValue({ failed: [], paused: [], started: [] }),
-  deferredVerifyDrive: vi.fn().mockResolvedValue(undefined),
+
   integrateOnComplete: vi.fn().mockResolvedValue('settled'),
   runTaskMock: vi.fn().mockResolvedValue({ success: true }),
   settleDispatch: vi.fn().mockResolvedValue({ currentContract: true, currentGeneration: true }),
@@ -41,8 +41,6 @@ vi.mock('@/database/models/taskDispatch', () => ({
     return { settle: settleDispatch };
   }),
 }));
-
-vi.mock('@/server/services/verify/settle', () => ({ driveTaskFromVerify: deferredVerifyDrive }));
 
 vi.mock('@/server/services/taskIntegration', () => ({
   TaskIntegrationService: vi.fn(function () {
@@ -78,15 +76,6 @@ vi.mock('@/server/services/taskRunner', () => ({
 
 vi.mock('@/server/services/taskScheduler', () => ({
   createTaskSchedulerModule: () => fakeScheduler,
-}));
-
-// onTopicComplete reads the op's verify run to decide whether to "let go" for
-// async Verify-driven completion. Mock it; default = no verify run.
-const verifyFindByOperation = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/database/models/verifyRun', () => ({
-  VerifyRunModel: vi.fn(function () {
-    return { findByOperation: verifyFindByOperation };
-  }),
 }));
 
 // Goal-loop rounds suppress the per-topic brief; onTopicComplete asks the
@@ -146,7 +135,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
   let updateTopicStatus: AnyMock;
   let settleHistoricalRun: AnyMock;
   let createBrief: AnyMock;
-  let getReviewConfig: AnyMock;
+
   // Settlement's resolved review gate — false by default (explicit gates
   // only; the retired default-pause is gone), tests opt into review.
   let reviewRequired: AnyMock;
@@ -165,7 +154,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     notifyCompleted.mockReset().mockResolvedValue(undefined);
     notifyFailed.mockReset().mockResolvedValue(undefined);
     cascadeOnCompletion.mockReset().mockResolvedValue({ failed: [], paused: [], started: [] });
-    deferredVerifyDrive.mockReset().mockResolvedValue(undefined);
+
     captureRemoteIdentityOnComplete.mockReset().mockResolvedValue(true);
     integrateOnComplete.mockReset().mockResolvedValue('settled');
     settleDispatch
@@ -189,9 +178,8 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     updateTopicStatus = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(undefined);
     settleHistoricalRun = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(true);
     createBrief = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(undefined);
-    getReviewConfig = vi.fn<(...args: unknown[]) => unknown>().mockReturnValue(undefined);
+
     reviewRequired = vi.fn<(...args: unknown[]) => unknown>().mockResolvedValue(false);
-    verifyFindByOperation.mockReset().mockResolvedValue(undefined);
 
     const taskModel = (service as any).taskModel;
     taskModel.updateStatus = updateStatus;
@@ -214,7 +202,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     });
     taskModel.findById = findById;
     taskModel.releaseRunReservation = vi.fn().mockResolvedValue(true);
-    taskModel.getReviewConfig = getReviewConfig;
+
     taskModel.getCheckpointConfig = vi.fn().mockReturnValue({});
     // Default checkpoint behavior: pause after topic complete
     taskModel.shouldPauseOnTopicComplete = vi.fn().mockReturnValue(true);
@@ -274,9 +262,9 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     vi.restoreAllMocks();
   });
 
-  it('releases completion for Verify while administrative handoff generation is blocked', async () => {
+  it('releases settlement while administrative handoff generation is blocked', async () => {
     findById.mockResolvedValue(baseTask({ automationMode: null }));
-    verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'planned' });
+
     let release!: () => void;
     const blocked = new Promise<void>((resolve) => {
       release = resolve;
@@ -312,7 +300,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
 
   it('preserves raw output after deferred handoff replaces the summary', async () => {
     findById.mockResolvedValue(baseTask({ automationMode: null }));
-    verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'planned' });
+
     vi.spyOn(AiGenerationService.prototype, 'generateObject').mockResolvedValue({
       summary: 'Analyzed',
     });
@@ -877,32 +865,6 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'scheduled', expect.anything());
     });
 
-    it('keeps a capped schedule task pending until its confirmed Verify run settles', async () => {
-      const task = baseTask({
-        automationMode: 'schedule',
-        config: { schedule: { maxExecutions: 1 } } as any,
-        context: {
-          scheduler: { scheduleStartedAt: new Date('2026-05-01T00:00:00Z').toISOString() },
-        } as any,
-      });
-      findById.mockResolvedValue(task);
-      (service as any).taskTopicModel.countByTask = vi.fn().mockResolvedValue(1);
-      verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'running' });
-
-      await service.onTopicComplete({
-        operationId: 'op-1',
-        reason: 'done',
-        runTrigger: 'schedule',
-        taskId: 'task-1',
-        taskIdentifier: 'TASK-1',
-        topicId: 'topic-1',
-      });
-
-      expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'completed', expect.anything());
-      expect((service as any).taskModel.releaseRunReservation).not.toHaveBeenCalled();
-    });
-
     it('schedule-mode task with no scheduleStartedAt (pre-PR) still parks at "scheduled"', async () => {
       const task = baseTask({
         automationMode: 'schedule',
@@ -939,7 +901,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      // Delivery still requires a reviewer even without a configured verify gate.
+      // Delivery still requires its assigned reviewer.
       expect(updateStatus).toHaveBeenCalledWith(
         'task-1',
         'paused',
@@ -1215,11 +1177,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(synthesize).not.toHaveBeenCalled();
     });
 
-    it('ordinary Issue bypasses the old Verify gate and waits for its reviewer', async () => {
+    it('ordinary Issue waits for its reviewer', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
-      // A confirmed verify run exists for this op → onTopicComplete "lets go".
-      verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date() });
+
       vi.spyOn(service as any, 'synthesizeTopicBrief').mockResolvedValue(undefined);
       vi.spyOn(service as any, 'generateHandoff').mockResolvedValue(undefined);
       const bridge = vi.spyOn(service as any, 'bridgeResultToCreator').mockResolvedValue(undefined);
@@ -1233,7 +1194,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      // A confirmed plan cannot enter review until an Issue reviewer is selected.
+      // Delivery cannot enter review until an Issue reviewer is selected.
       expect(updateStatus).toHaveBeenCalledWith(
         'task-1',
         'paused',
@@ -1242,37 +1203,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
           error: 'Delivery is waiting for a reviewer Agent',
         }),
       );
-      // The creator callback is DEFERRED to the verify settle path, not fired here.
+      // The reviewer verdict owns the creator callback.
       expect(bridge).not.toHaveBeenCalled();
       // Ordinary review has its own cycle; release the finished delivery lease.
       expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalled();
-    });
-
-    it('does not re-arm a verify-bound heartbeat before Verify releases the lease', async () => {
-      const task = baseTask({ automationMode: 'heartbeat', status: 'running' });
-      findById.mockResolvedValue(task);
-      verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'running' });
-
-      await service.onTopicComplete({
-        operationId: 'op-1',
-        reason: 'done',
-        runTrigger: 'heartbeat',
-        taskId: 'task-1',
-        taskIdentifier: 'TASK-1',
-        topicId: 'topic-1',
-      });
-
-      expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
-      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
-      expect((service as any).taskModel.releaseRunReservation).not.toHaveBeenCalled();
-    });
-
-    it('does not re-arm a heartbeat that a user paused while Verify settled', async () => {
-      findById.mockResolvedValue(baseTask({ automationMode: 'heartbeat', status: 'paused' }));
-
-      await service.rearmHeartbeatAfterVerify('task-1');
-
-      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
     });
 
     it('stops lifecycle side effects when a user supersedes the completion lease', async () => {
@@ -1293,36 +1227,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
     });
 
-    it('drives a Verify verdict that settled before the topic callback', async () => {
-      const task = baseTask({ automationMode: 'heartbeat' });
-      findById.mockResolvedValue(task);
-      verifyFindByOperation.mockResolvedValue({
-        planConfirmedAt: new Date(),
-        status: 'passed',
-      });
-      vi.spyOn(service as any, 'synthesizeTopicBrief').mockResolvedValue(undefined);
-      vi.spyOn(service as any, 'generateHandoff').mockResolvedValue(undefined);
-
-      await service.onTopicComplete({
-        operationId: 'op-1',
-        reason: 'done',
-        taskId: 'task-1',
-        taskIdentifier: 'TASK-1',
-        topicId: 'topic-1',
-      });
-
-      expect(deferredVerifyDrive).toHaveBeenCalledWith(
-        expect.anything(),
-        'user-1',
-        'op-1',
-        undefined,
-      );
-    });
-
     it('ordinary Issue defers its creator callback until the reviewer passes', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
-      verifyFindByOperation.mockResolvedValue(undefined); // no verify run
+
       vi.spyOn(service as any, 'synthesizeTopicBrief').mockResolvedValue(undefined);
       vi.spyOn(service as any, 'generateHandoff').mockResolvedValue(undefined);
       const bridge = vi.spyOn(service as any, 'bridgeResultToCreator').mockResolvedValue(undefined);
@@ -1337,32 +1245,6 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       });
 
       expect(bridge).not.toHaveBeenCalled();
-    });
-
-    it('re-drives the original Verify run after a corrective integration settles', async () => {
-      const task = baseTask({ automationMode: null });
-      findById.mockResolvedValue(task);
-      vi.spyOn(service as any, 'generateHandoff').mockResolvedValue(undefined);
-      (service as any).taskTopicModel.findByTopicId.mockResolvedValue({
-        integration: { state: 'integrated', verifyOperationId: 'op-original' },
-        topicId: 'topic-corrective',
-      });
-
-      await service.onTopicComplete({
-        operationId: 'op-corrective',
-        reason: 'done',
-        taskId: 'task-1',
-        taskIdentifier: 'TASK-1',
-        topicId: 'topic-corrective',
-      });
-
-      expect(deferredVerifyDrive).toHaveBeenCalledWith(
-        expect.anything(),
-        'user-1',
-        'op-original',
-        undefined,
-      );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
   });
 

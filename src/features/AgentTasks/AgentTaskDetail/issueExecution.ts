@@ -25,7 +25,6 @@ import { type DispatchNoticeCopy, resolveIssueDispatchNotices } from '../shared/
  */
 
 export type IssueExecutionKind =
-  | 'awaitingAcceptance'
   | 'failed'
   | 'needsAgent'
   | 'notStarted'
@@ -243,7 +242,6 @@ export const resolveIssueExecution = (input: IssueExecutionInput): IssueExecutio
     }
 
     case 'succeeded': {
-      const settled = workflowCategory === 'done' || workflowCategory === 'canceled';
       // A delivery's completed dispatch is stale while the reviewer or assignee
       // owns the next step. The Issue workflow is authoritative in this cycle.
       if (!input.automationMode && input.issueReview) {
@@ -261,9 +259,9 @@ export const resolveIssueExecution = (input: IssueExecutionInput): IssueExecutio
       }
       return {
         actionBlocked: false,
-        badge: execution,
-        hints: settled ? [] : [HINT('awaitingAcceptance')],
-        kind: settled ? 'succeeded' : 'awaitingAcceptance',
+        hints: [],
+        badge: workflowCategory === 'in_review' ? undefined : execution,
+        kind: workflowCategory === 'in_review' ? 'reviewPending' : 'succeeded',
         showFailureReason: false,
       };
     }
@@ -299,7 +297,6 @@ export const showsHeaderRunControl = (input: {
 
 /** Kinds whose wording says more than the projected state's default name. */
 export const EXECUTION_KIND_LABEL_KEYS: Partial<Record<IssueExecutionKind, string>> = {
-  awaitingAcceptance: 'taskDetail.execution.view.awaitingAcceptance',
   needsAgent: 'taskDetail.execution.view.needsAgent',
   reviewPending: 'taskDetail.review.waitingReviewer',
   reworkRequired: 'taskDetail.execution.view.reworkRequired',

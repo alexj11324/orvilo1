@@ -16,7 +16,7 @@ import Title from './Title';
 import { getTaskDetailPageUrl } from './url';
 
 const TaskDetailHeader = memo(() => {
-  const { t } = useTranslation('verify');
+  const { t } = useTranslation('chat');
   const appOrigin = useAppOrigin();
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
   const taskId = useChatStore(chatPortalSelectors.taskDetailId);
@@ -42,7 +42,7 @@ const TaskDetailHeader = memo(() => {
           disabled={!pageUrl}
           icon={ExternalLink}
           size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-          title={t('report.actions.openInBrowser')}
+          title={t('workingPanel.browser.actions.openExternal')}
           onClick={() => {
             if (!pageUrl) return;
             if (isDesktop) {

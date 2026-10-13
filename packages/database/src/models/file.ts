@@ -383,7 +383,7 @@ export class FileModel {
       q ? ilike(files.name, `%${q}%`) : undefined,
       this.ownership(callerAgentVisibility),
       visibility ? eq(files.visibility, visibility) : undefined,
-      // Artifacts owned by another surface (acceptance evidence) stay reachable
+      // Artifacts owned by another surface stay reachable
       // by id, but never appear in a listing. Applied here rather than in
       // `ownership()` so single-row reads and deletes still resolve them.
       or(isNull(files.source), notInArray(files.source, LIBRARY_HIDDEN_FILE_SOURCES)),

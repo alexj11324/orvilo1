@@ -24,5 +24,4 @@ export * from './systemRole';
 export * from './task';
 export * from './toolDiscovery';
 export * from './userMemory';
-export * from './verify';
 export * from './workspaceContext';

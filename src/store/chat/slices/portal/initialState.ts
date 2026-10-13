@@ -10,8 +10,6 @@ export enum ArtifactDisplayMode {
 // ============== Portal View Stack Types ==============
 
 export enum PortalViewType {
-  Acceptance = 'acceptance',
-  AcceptanceCheck = 'acceptanceCheck',
   AgentDetail = 'agentDetail',
   Artifact = 'artifact',
   Document = 'document',
@@ -30,8 +28,6 @@ export enum PortalViewType {
   Topic = 'topic',
   TopicComments = 'topicComments',
   TopicCommentThread = 'topicCommentThread',
-  VerifyReport = 'verifyReport',
-  VerifyResult = 'verifyResult',
 }
 
 export interface PortalFile {
@@ -70,8 +66,6 @@ export type PortalViewData =
   | { type: PortalViewType.Home }
   | { goalId: string; metric: GoalMetricKind; type: PortalViewType.GoalMetric }
   | { goalId: string; nodeId: string; type: PortalViewType.GoalNode }
-  | { acceptanceId: string; type: PortalViewType.Acceptance }
-  | { acceptanceId: string; checkId: string; type: PortalViewType.AcceptanceCheck }
   | { agentId: string; type: PortalViewType.AgentDetail }
   | { artifact: PortalArtifact; type: PortalViewType.Artifact }
   | { agentDocumentId?: string; documentId: string; type: PortalViewType.Document }
@@ -98,9 +92,7 @@ export type PortalViewData =
       topicId: string;
       type: PortalViewType.TopicCommentThread;
     }
-  | { messageId?: string; topicId: string; type: PortalViewType.TopicComments }
-  | { runId: string; type: PortalViewType.VerifyReport }
-  | { checkItemId: string; operationId: string; type: PortalViewType.VerifyResult };
+  | { messageId?: string; topicId: string; type: PortalViewType.TopicComments };
 
 // ============== Portal State ==============
 

@@ -182,7 +182,6 @@ export const expertiseRouter = router({
         /** The chart receives only the snapshot fields it renders. */
         series: snapshots.map((s) => ({
           activeCount: s.activeCount,
-          compiledCount: s.compiledCount,
           /** Controls whether the chart marks this run as human-assisted. */
           hadHumanInLoop: humanByRun.get(s.runIndex) ?? false,
           learnedTotal: s.learnedTotal,

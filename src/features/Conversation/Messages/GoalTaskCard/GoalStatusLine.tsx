@@ -9,7 +9,6 @@ import {
   Clock3Icon,
   LoaderCircleIcon,
   PauseCircleIcon,
-  RefreshCwIcon,
   StampIcon,
 } from 'lucide-react';
 import { memo } from 'react';
@@ -22,10 +21,8 @@ const PHASE_META = {
   canceled: { color: 'var(--foreground-tertiary)', icon: CircleSlashIcon, spin: false },
   error: { color: 'var(--destructive-text)', icon: AlertTriangleIcon, spin: false },
   paused: { color: 'var(--foreground-tertiary)', icon: PauseCircleIcon, spin: false },
-  repairing: { color: 'var(--warning-text)', icon: RefreshCwIcon, spin: true },
   review: { color: 'var(--warning-text)', icon: StampIcon, spin: false },
   running: { color: 'var(--info-text)', icon: LoaderCircleIcon, spin: true },
-  verifying: { color: 'var(--info-text)', icon: LoaderCircleIcon, spin: true },
   waiting: { color: 'var(--muted-foreground)', icon: Clock3Icon, spin: false },
 } as const satisfies Record<
   GoalTaskPhase,
@@ -48,9 +45,9 @@ export interface GoalStatusLineProps {
 }
 
 /**
- * The live Goal status line — phase icon + round budget + acceptance coverage.
+ * The live Goal status line — phase icon + completed tasks.
  * Shared by the running tracker card and the merged task-callback header.
- * Once the goal is achieved the coverage bar retires: "已达成" already implies
+ * Once the goal is achieved the progress bar retires: "已达成" already implies
  * full coverage, so repeating "4/4 项通过" is noise.
  */
 const GoalStatusLine = memo<GoalStatusLineProps>(({ passed, phase, progress, total }) => {

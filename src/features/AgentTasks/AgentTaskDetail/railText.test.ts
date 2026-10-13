@@ -24,18 +24,16 @@ describe('issue rail type scale', () => {
     );
   });
 
-  it.each([
-    'TaskAcceptanceStateRow.tsx',
-    'TaskProjectSection.tsx',
-    'TaskParentBar.tsx',
-    'TaskPrerequisites.tsx',
-  ])('%s sizes every rail Text explicitly — never the 14px default', (file) => {
-    const source = readSource(file);
-    expect(source).toContain('RAIL_VALUE_FONT_SIZE');
-    const texts = source.match(/<Text\b[^>]*>/g) ?? [];
-    const unstyled = texts.filter((tag) => !tag.includes('fontSize'));
-    expect(unstyled).toEqual([]);
-  });
+  it.each(['TaskProjectSection.tsx', 'TaskParentBar.tsx', 'TaskPrerequisites.tsx'])(
+    '%s sizes every rail Text explicitly — never the 14px default',
+    (file) => {
+      const source = readSource(file);
+      expect(source).toContain('RAIL_VALUE_FONT_SIZE');
+      const texts = source.match(/<Text\b[^>]*>/g) ?? [];
+      const unstyled = texts.filter((tag) => !tag.includes('fontSize'));
+      expect(unstyled).toEqual([]);
+    },
+  );
 
   it('keeps the issue title at the DESIGN.md 20px strong heading role', () => {
     const classes = taskStyles.titleInput.split(' ');

@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,7 +8,6 @@ import { GoalModel } from '@/database/models/goal';
 import { GoalGraphModel } from '@/database/models/goalGraph';
 import { TaskModel } from '@/database/models/task';
 import {
-  acceptances,
   agentOperations,
   agents,
   goalEdges,
@@ -91,7 +89,6 @@ afterEach(async () => {
     goalEvents,
     goalNodes,
     goals,
-    acceptances,
     agentOperations,
     taskTopics,
     topics,
@@ -650,7 +647,7 @@ describe('planner precedence', () => {
     const taskModel = new TaskModel(db, userId);
     await taskModel.update(created.taskId!, { totalTopics: 1 });
     await taskModel.updateStatus(created.taskId!, 'paused', {
-      error: 'Delivery did not pass verification.',
+      error: 'Research task failed',
     });
 
     await service().tick(graph.goal.id);
@@ -676,7 +673,7 @@ describe('planner precedence', () => {
     const taskModel = new TaskModel(db, userId);
     await taskModel.update(created.taskId!, { totalTopics: 1 });
     await taskModel.updateStatus(created.taskId!, 'paused', {
-      error: 'Delivery did not pass verification.',
+      error: 'Research task failed',
     });
 
     // Its one turn is handed over, then exits without changing anything.
@@ -697,7 +694,7 @@ describe('planner precedence', () => {
     expect(await service().tick(graph.goal.id)).toMatchObject({ outcome: 'waiting_human' });
     const gated = await service().graph(graph.goal.id);
     expect(gated.decisions).toHaveLength(1);
-    expect(gated.decisions[0].question).toContain('Task attempt budget was exhausted');
+    expect(gated.decisions[0].question).toContain('Research task failed');
     expect(gated.goal.status).not.toBe('paused');
   });
 });
@@ -756,12 +753,12 @@ describe('takeover ordering', () => {
     const taskModel = new TaskModel(db, userId);
     await taskModel.update(created.taskId!, { totalTopics: 1 });
     await taskModel.updateStatus(created.taskId!, 'paused', {
-      error: 'Delivery did not pass verification.',
+      error: 'Research task failed',
     });
     await service().tick(graph.goal.id);
 
     const state = (await model().findById(graph.goal.id))!.config!.managerState!;
-    expect(state.problem).toBe(`${created.taskId}::Task attempt budget was exhausted`);
+    expect(state.problem).toBe(`${created.taskId}::Research task failed`);
     const turn = await ops().findByTopicSourceMessage(
       state.topicId,
       `msg_goal_manager_${state.token}`,
@@ -808,7 +805,7 @@ describe('takeover submissions', () => {
     const taskModel = new TaskModel(db, userId);
     await taskModel.update(created.taskId!, { totalTopics: 1 });
     await taskModel.updateStatus(created.taskId!, 'paused', {
-      error: 'Delivery did not pass verification.',
+      error: 'Research task failed',
     });
     await service().tick(graph.goal.id);
     const state = (await model().findById(graph.goal.id))!.config!.managerState!;
@@ -873,7 +870,7 @@ describe('takeover submissions', () => {
   });
 
   /**
-   * "Task attempt budget was exhausted" is the same sentence for every task that
+   * "Research task failed" is the same sentence for every task that
    * reaches it. Keying the already-answered check on the reason alone made a second
    * task skip its own takeover and inherit the first task's diagnosis in its gate.
    */
@@ -894,7 +891,7 @@ describe('takeover submissions', () => {
     // A different Goal and task reaching the same wording must not be read as the
     // problem that was already answered.
     const second = await stuckGoal('Second research');
-    expect(second.state.problem).toBe(`${second.taskId}::Task attempt budget was exhausted`);
+    expect(second.state.problem).toBe(`${second.taskId}::Research task failed`);
     expect(second.state.problem).not.toBe(first.state.problem);
   });
 
@@ -913,291 +910,5 @@ describe('takeover submissions', () => {
     const gated = await service().graph(goalId);
     expect(gated.decisions).toHaveLength(1);
     expect(gated.decisions[0].question).toContain('Needs a human judge');
-  });
-});
-
-/**
- * Codex review round 4. The acceptance guard was written for uninvited turns
- * ("verification exists, stop planning more work") but sat above the invited
- * branch, so a takeover invited BECAUSE the terminal acceptance failed could never
- * start and the Goal still reached a bare Gate with a main Agent idle.
- */
-describe('takeover on a failed terminal acceptance', () => {
-  const failedAcceptance = async () => {
-    const graph = await service().create({
-      config: {
-        exploration: { instruction: 'Follow the pre-registered branches', maxExperiments: 4 },
-        manager: { maxTurns: 4 },
-        recovery: { maxAttemptsPerTask: 1 },
-      },
-      createdByAgentId: agentId,
-      requirement: 'Return a defensible training recommendation.',
-      tasks: [GOAL_ACCEPTANCE_TASK_TITLE],
-      title: 'Explored research',
-    });
-    const created = await service().tick(graph.goal.id);
-    const taskModel = new TaskModel(db, userId);
-    await taskModel.update(created.taskId!, { totalTopics: 1 });
-    await taskModel.updateStatus(created.taskId!, 'paused', {
-      error: 'Delivery did not pass verification.',
-    });
-    await service().tick(graph.goal.id);
-    return { goalId: graph.goal.id, taskId: created.taskId! };
-  };
-
-  it('hands a failed terminal acceptance to the main Agent', async () => {
-    const { goalId, taskId } = await failedAcceptance();
-    expect((await model().findById(goalId))!.config!.managerState).toMatchObject({
-      problemTaskId: taskId,
-    });
-    expect((await service().graph(goalId)).decisions).toHaveLength(0);
-  });
-
-  /**
-   * A failed acceptance cannot be superseded: the acceptance task is matched by TITLE
-   * regardless of status, so a corrective task returns to that same failed node and
-   * `verify` sets `readyForAcceptance` without producing a fresh run. Refusing keeps
-   * the prompt's offer and the server's answer identical instead of accepting a plan
-   * that strands.
-   */
-  it('accepts only an escalation for a failed acceptance', async () => {
-    const { goalId, taskId } = await failedAcceptance();
-    const state = (await model().findById(goalId))!.config!.managerState!;
-    const turn = await ops().findByTopicSourceMessage(
-      state.topicId,
-      `msg_goal_manager_${state.token}`,
-    );
-    const caller = operationCaller(turn!.id);
-    await expect(
-      caller.submitOperationPlan({
-        id: goalId,
-        operationId: turn!.id,
-        plan: {
-          action: 'tasks',
-          reason: 'The judge read evidence it was never shown',
-          tasks: [{ description: 'Recapture the evidence and redeliver', title: 'Recapture' }],
-        },
-        token: state.token,
-      }),
-    ).rejects.toThrow('can only be escalated');
-    await expect(
-      caller.submitOperationPlan({
-        id: goalId,
-        operationId: turn!.id,
-        plan: { action: 'escalate', reason: 'The judge read evidence it was never shown' },
-        token: state.token,
-      }),
-    ).resolves.toMatchObject({ success: true });
-    expect(
-      (await service().graph(goalId)).nodes.find((node) => node.taskId === taskId)!.status,
-    ).not.toBe('retired');
-  });
-});
-
-/**
- * Codex review round 5, dependency half. A prerequisite only counts as met when it is
- * `resolved`, so retiring a node something depends on leaves the dependent blocked and
- * the Goal lands on `no_frontier` — and the graph has no edge removal, so the
- * dependents cannot be rewired onto the replacement.
- */
-describe('takeover and dependent work', () => {
-  it('leaves stuck work that something depends on for the Gate', async () => {
-    const graph = await service().create({
-      config: {
-        exploration: { instruction: 'Follow the pre-registered branches', maxExperiments: 4 },
-        manager: { maxTurns: 4 },
-        recovery: { maxAttemptsPerTask: 1 },
-      },
-      createdByAgentId: agentId,
-      tasks: ['Measure ranking ability'],
-      title: 'Explored research',
-    });
-    const created = await service().tick(graph.goal.id);
-    const blockedNode = (await service().graph(graph.goal.id)).nodes.find(
-      (node) => node.taskId === created.taskId,
-    )!;
-    const problem = (await service().graph(graph.goal.id)).nodes.find(
-      (node) => node.kind === 'problem',
-    )!;
-    const dependent = await service().addNode(graph.goal.id, {
-      kind: 'task',
-      title: 'Train the head',
-    });
-    await service().addEdge(graph.goal.id, problem.id, dependent!.id, 'decomposes');
-    await service().addEdge(graph.goal.id, dependent!.id, blockedNode.id, 'depends_on');
-    const taskModel = new TaskModel(db, userId);
-    await taskModel.update(created.taskId!, { totalTopics: 1 });
-    await taskModel.updateStatus(created.taskId!, 'paused', {
-      error: 'Delivery did not pass verification.',
-    });
-    await service().tick(graph.goal.id);
-
-    const state = (await model().findById(graph.goal.id))!.config!.managerState!;
-    const turn = await ops().findByTopicSourceMessage(
-      state.topicId,
-      `msg_goal_manager_${state.token}`,
-    );
-    await operationCaller(turn!.id).submitOperationPlan({
-      id: graph.goal.id,
-      operationId: turn!.id,
-      plan: {
-        action: 'tasks',
-        reason: 'Replace the stuck measurement',
-        tasks: [{ description: 'Measure again from the frozen inputs', title: 'Measure again' }],
-      },
-      token: state.token,
-    });
-
-    // Retiring it would strand "Train the head" behind a prerequisite that can never
-    // resolve, so the node keeps its status and the block stays visible to a person.
-    expect(
-      (await service().graph(graph.goal.id)).nodes.find((node) => node.id === blockedNode.id)!
-        .status,
-    ).not.toBe('retired');
-  });
-});
-
-describe('CAID incremental plan patches', () => {
-  type PatchOp =
-    | {
-        dependsOn?: string[];
-        key?: string;
-        op: 'append';
-        task: { title: string; description: string };
-      }
-    | { nodeId: string; op: 'replace'; description?: string; title?: string }
-    | { nodeId: string; op: 'retire' };
-  const patchPlan = (patches: PatchOp[], expectedPlanRevision = 0) => ({
-    action: 'patch' as const,
-    expectedPlanRevision,
-    patches,
-    reason: 'Extend the plan without disturbing running work',
-    strategy: 'caid' as const,
-  });
-
-  /** First turn commits a task; that task fails and the coordinator hands a
-   * takeover turn back to the manager — the graph keeps a contract-bound node. */
-  const takeoverTurn = async () => {
-    const { id, state, op } = await start();
-    await manager().submit(id, state.token, op.id, taskPlan);
-    await ops().recordCompletion(op.id, { status: 'done' });
-    await service().tick(id);
-    const created = await service().tick(id);
-    const taskId = created.taskId!;
-    const topicId = `failed-topic-${++seq}`;
-    const failureId = `failed-op-${seq}`;
-    await db.insert(topics).values({ id: topicId, userId });
-    await ops().recordStart({ operationId: failureId, taskId, topicId });
-    await ops().recordCompletion(failureId, {
-      status: 'error',
-      completionReason: 'error',
-      error: { message: 'fetch failed: ECONNRESET' },
-    });
-    await db.insert(taskTopics).values({
-      userId,
-      taskId,
-      topicId,
-      operationId: failureId,
-      seq: 1,
-      status: 'failed',
-      trigger: 'goal',
-    });
-    await new TaskModel(db, userId).update(taskId, {
-      status: 'failed',
-      error: 'ECONNRESET',
-      totalTopics: 1,
-    });
-    await service().tick(id);
-    const next = (await model().findById(id))!.config!.managerState!;
-    const nextOp = (await ops().findByTopicSourceMessage(
-      next.topicId,
-      `msg_goal_manager_${next.token}`,
-    ))!;
-    const boundNode = (await service().graph(id)).nodes.find((n) => n.kind === 'task')!;
-    return { boundNode, id, next, nextOp, taskId };
-  };
-
-  it('appends nodes on a takeover turn while the bound sibling stays untouched', async () => {
-    const { boundNode, id, next, nextOp } = await takeoverTurn();
-    await manager().submit(id, next.token, nextOp.id, {
-      ...patchPlan([
-        {
-          op: 'append',
-          task: { title: 'Later work', description: 'Do it after the stuck node resolves' },
-          dependsOn: [boundNode.id],
-        },
-      ]),
-    });
-
-    const graph = await service().graph(id);
-    const appended = graph.nodes.find((n) => n.title === 'Later work')!;
-    expect(appended.status).toBe('proposed');
-    expect(
-      graph.edges.some(
-        (e) =>
-          e.kind === 'depends_on' &&
-          e.sourceNodeId === appended.id &&
-          e.targetNodeId === boundNode.id,
-      ),
-    ).toBe(true);
-    expect((await model().findById(id))!.config!.caidPlan!.revision).toBe(1);
-  });
-
-  it('rejects a stale expectedPlanRevision without applying anything', async () => {
-    const { id, state, op } = await start();
-    await expect(
-      manager().submit(id, state.token, op.id, {
-        ...patchPlan([{ op: 'append', task: { title: 'T', description: 'D' } }], 7),
-      }),
-    ).rejects.toThrow('Stale plan revision');
-    expect((await service().graph(id)).nodes.filter((n) => n.kind === 'task')).toHaveLength(0);
-    expect((await model().findById(id))!.config!.caidPlan).toBeUndefined();
-  });
-
-  it('refuses a batch whose dependsOn keys would cycle', async () => {
-    const { id, state, op } = await start();
-    await expect(
-      manager().submit(id, state.token, op.id, {
-        ...patchPlan([
-          { key: 'a', op: 'append', task: { title: 'A', description: 'A' }, dependsOn: ['b'] },
-          { key: 'b', op: 'append', task: { title: 'B', description: 'B' }, dependsOn: ['a'] },
-        ]),
-      }),
-    ).rejects.toThrow('cycle');
-    expect((await service().graph(id)).nodes.filter((n) => n.kind === 'task')).toHaveLength(0);
-  });
-
-  it('refuses replace/retire on nodes bound to a contract', async () => {
-    const { boundNode, id, next, nextOp } = await takeoverTurn();
-    await expect(
-      manager().submit(id, next.token, nextOp.id, {
-        ...patchPlan([{ nodeId: boundNode.id, op: 'retire' }]),
-      }),
-    ).rejects.toThrow('bound to a running contract');
-    await expect(
-      manager().submit(id, next.token, nextOp.id, {
-        ...patchPlan([{ nodeId: boundNode.id, op: 'replace', title: 'Rewrite' }]),
-      }),
-    ).rejects.toThrow('bound to a running contract');
-    expect((await service().graph(id)).nodes.find((n) => n.id === boundNode.id)!.status).not.toBe(
-      'retired',
-    );
-  });
-
-  it('refuses to retire a node a same-batch append depends on', async () => {
-    const { boundNode, id, next, nextOp } = await takeoverTurn();
-    await expect(
-      manager().submit(id, next.token, nextOp.id, {
-        ...patchPlan([
-          {
-            op: 'append',
-            task: { title: 'Dependent', description: 'Needs the bound node' },
-            dependsOn: [boundNode.id],
-          },
-          { nodeId: boundNode.id, op: 'retire' },
-        ]),
-      }),
-    ).rejects.toThrow('has dependents');
-    expect((await service().graph(id)).nodes.find((n) => n.title === 'Dependent')).toBeUndefined();
   });
 });

@@ -26,7 +26,7 @@ const GOAL_STATUSES: GoalStatus[] = [...goalStatuses];
 // The home roll-up only renders goals that are still open: terminal states
 // (achieved / canceled) stay on the server, `review` is included because a
 // converged goal is still awaiting the user's sign-off.
-const HOME_GOAL_STATUSES: GoalStatus[] = ['planning', 'running', 'verifying', 'review'];
+const HOME_GOAL_STATUSES: GoalStatus[] = ['planning', 'running', 'review'];
 const HOME_GOAL_FETCH_LIMIT = 100;
 
 /**
@@ -38,7 +38,7 @@ const HOME_GOAL_FETCH_LIMIT = 100;
  * `review` and `paused` are deliberately out: those wait on a person, and the
  * action that moves them refreshes the snapshot itself.
  */
-const SERVER_ADVANCING_STATUSES = new Set<GoalStatus>(['planning', 'running', 'verifying']);
+const SERVER_ADVANCING_STATUSES = new Set<GoalStatus>(['planning', 'running']);
 
 /** Kept coarse on purpose — this is liveness, not a progress bar. */
 const GOAL_GRAPH_POLL_INTERVAL = 5000;

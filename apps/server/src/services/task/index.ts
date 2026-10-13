@@ -38,7 +38,6 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import { VerifyRunModel } from '@/database/models/verifyRun';
 import {
   resolveWorkflowMove,
   workflowCategoryForLegacyStatus,
@@ -59,11 +58,9 @@ import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorDa
 import { resolveAttachmentMetadata } from '../file/resolveAttachments';
 import { type SubtaskGraphPlan, TaskGraphService } from '../taskGraph';
 import { TaskIntegrationService } from '../taskIntegration';
-import { type ReviewResult, TaskReviewService } from '../taskReview';
 import { TaskRunnerService } from '../taskRunner';
 import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { createTaskSchedulerModule } from '../taskScheduler';
-import { resolveTaskAcceptance } from '../verify/taskAcceptance';
 import {
   resolveReadableActivityContainers,
   withReadableContainerNames,
@@ -456,65 +453,6 @@ export class TaskService {
 
     await this.taskTopicModel.remove(target.taskId, topicId);
     await this.topicModel.delete(topicId);
-  }
-
-  /**
-   * Run the configured review on `content`, persist the result onto the
-   * target topic, and return the review outcome.
-   */
-  async runReview(input: {
-    content?: string;
-    id: string;
-    topicId?: string;
-  }): Promise<ReviewResult> {
-    const task = await this.resolveOrThrow(input.id);
-
-    const reviewConfig = this.taskModel.getReviewConfig(task);
-    if (!reviewConfig?.enabled) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Review is not enabled for this task',
-      });
-    }
-
-    const content = input.content;
-    if (!content) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Content is required for review. Pass --content or run after a topic completes.',
-      });
-    }
-
-    const topicId = input.topicId || task.currentTopicId;
-
-    let iteration = 1;
-    if (topicId) {
-      const topics = await this.taskTopicModel.findByTaskId(task.id);
-      const target = topics.find((t) => t.topicId === topicId);
-      if (target?.reviewIteration) iteration = target.reviewIteration + 1;
-    }
-
-    const reviewService = new TaskReviewService(this.db, this.userId, this.workspaceId);
-    const result = await reviewService.review({
-      content,
-      iteration,
-      judge: reviewConfig.judge,
-      // Rubric judgments bind to the task's own assignee agent.
-      judgeAgentId: task.assigneeAgentId,
-      rubrics: reviewConfig.rubrics,
-      taskName: task.name || task.identifier,
-    });
-
-    if (topicId) {
-      await this.taskTopicModel.updateReview(task.id, topicId, {
-        iteration,
-        passed: result.passed,
-        score: result.overallScore,
-        scores: result.rubricResults,
-      });
-    }
-
-    return result;
   }
 
   /**
@@ -1689,7 +1627,6 @@ export class TaskService {
       comments,
       activityLogs,
       workspace,
-      acceptance,
       taskLabels,
       admitted,
       activeDispatch,
@@ -1702,7 +1639,6 @@ export class TaskService {
       this.taskModel.getComments(task.id).catch(() => []),
       this.taskModel.getActivities(task.id, TASK_DETAIL_ACTIVITY_LIMIT).catch(() => []),
       this.taskModel.getTreePinnedDocuments(task.id).catch(() => emptyWorkspace),
-      resolveTaskAcceptance(this.db, this.userId, task.id, this.workspaceId).catch(() => undefined),
       this.taskLabelModel.listForTask(task.id).catch(() => []),
       isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }),
       new TaskDispatchModel(this.db, this.workspaceId).findActiveByTaskId(task.id),
@@ -1979,13 +1915,6 @@ export class TaskService {
 
     const authorMap = await this.resolveAuthors(agentIds, userIds, issueTaskIds);
 
-    // Every run row answers "and did it pass?" on its own (with counts). Without this the
-    // activity feed lists rounds that all look alike, and the only way to learn
-    // a round's verdict is to leave for the acceptance page.
-    const verifyByOperation = await new VerifyRunModel(this.db, this.userId, this.workspaceId)
-      .findByOperations(topics.map((t) => t.operationId).filter((id): id is string => Boolean(id)))
-      .catch(() => new Map());
-
     // Other Issues named by relation / parent / duplicate rows. One lookup
     // through the model's own read scope, so a row never names an Issue this
     // reader could not open — it reads as "an Issue that is no longer
@@ -2040,7 +1969,6 @@ export class TaskService {
       ...topics.map((t) => {
         const handoff = t.handoff as TaskTopicHandoff | null;
         const topicAgentId = t.agentId ?? t.sourceTaskAssigneeAgentId ?? task.assigneeAgentId;
-        const verifyRun = t.operationId ? verifyByOperation.get(t.operationId) : undefined;
         return {
           author: topicAgentId ? authorMap.get(topicAgentId) : undefined,
           completedAt: toISO(t.completedAt),
@@ -2067,16 +1995,6 @@ export class TaskService {
           // the user started from one the goal coordinator / scheduler opened on its
           // own — they render identically apart from `#seq`.
           trigger: t.trigger ?? null,
-          verify: verifyRun
-            ? {
-                acceptanceId: verifyRun.acceptanceId,
-                passed: verifyRun.passed,
-                roundIndex: verifyRun.roundIndex,
-                runId: verifyRun.id,
-                status: verifyRun.status,
-                total: verifyRun.total,
-              }
-            : null,
           type: 'topic' as const,
         };
       }),
@@ -2276,9 +2194,6 @@ export class TaskService {
       status: heartbeatStatus ?? task.status,
       dispatchPhase: task.dispatchPhase,
       userId: task.assigneeUserId,
-      verify: acceptance
-        ? { ...acceptance.config, requirement: acceptance.requirement }
-        : this.taskModel.getVerifyConfig(task),
       visibility: task.visibility,
       workflowCategory: task.workflowCategory,
       workflowStateId: task.workflowStateId,

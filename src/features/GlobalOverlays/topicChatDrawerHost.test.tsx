@@ -34,9 +34,6 @@ const mocks = vi.hoisted(() => ({
   },
   chatState: {
     dbMessagesMap: {} as Record<string, unknown[]>,
-    // `GlobalOverlays` asks the portal stack whether an acceptance view is open
-    // before it mounts that drawer; an empty stack keeps it out of this tree.
-    portalStack: [] as unknown[],
     replaceMessages: vi.fn(),
   },
   navigate: vi.fn(),

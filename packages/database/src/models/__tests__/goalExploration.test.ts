@@ -22,7 +22,7 @@ afterEach(async () => {
   await db.delete(users);
 });
 
-async function seed(maxExperiments = 3) {
+async function seed(maxExperiments = 3, title = 'Baseline') {
   const goal = await new GoalModel(db, userId).create({
     title: 'Explore candidates',
     subjectType: 'standalone',
@@ -32,7 +32,7 @@ async function seed(maxExperiments = 3) {
   await graphModel.createNode(goal.id, { kind: 'problem', title: 'Find a candidate' });
   const parent = await graphModel.createNode(goal.id, {
     kind: 'task',
-    title: 'Baseline',
+    title,
     status: 'resolved',
   });
   return { goalId: goal.id, parent: parent! };
@@ -265,18 +265,21 @@ describe('GoalExplorationModel', () => {
     expect(await claim(goalId)).toBeUndefined();
   });
 
-  it('parks an exhausted search without claiming achievement', async () => {
-    const { goalId, parent } = await seed(1);
-    const lease = await claim(goalId);
-    expect((await model.apply(goalId, lease!.token, expand(parent.id))).outcome).toBe('limit');
-    const graph = (await graphModel.getGraph(goalId))!;
-    expect(graph.goal.status).toBe('paused');
-    expect(graph.goal.config?.exploration?.checkpoint).toBeUndefined();
-    expect(graph.nodes.filter((n) => n.kind === 'task')).toHaveLength(1);
-    expect(await claim(goalId)).toBeUndefined();
-  });
+  it.each(['Baseline', 'Complete full Goal acceptance'])(
+    'counts ordinary Issues toward the experiment cap regardless of title (%s)',
+    async (title) => {
+      const { goalId, parent } = await seed(1, title);
+      const lease = await claim(goalId);
+      expect((await model.apply(goalId, lease!.token, expand(parent.id))).outcome).toBe('limit');
+      const graph = (await graphModel.getGraph(goalId))!;
+      expect(graph.goal.status).toBe('paused');
+      expect(graph.goal.config?.exploration?.checkpoint).toBeUndefined();
+      expect(graph.nodes.filter((n) => n.kind === 'task')).toHaveLength(1);
+      expect(await claim(goalId)).toBeUndefined();
+    },
+  );
 
-  it('requests independent acceptance at the cap, never directly marks achieved', async () => {
+  it('records exploration completion at the cap without directly marking achieved', async () => {
     const { goalId, parent } = await seed(1);
     const lease = await claim(goalId);
     expect(

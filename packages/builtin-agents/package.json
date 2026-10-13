@@ -24,7 +24,6 @@
     "@orvilo/builtin-tool-notebook": "workspace:*",
     "@orvilo/builtin-tool-task": "workspace:*",
     "@orvilo/builtin-tool-user-interaction": "workspace:*",
-    "@orvilo/builtin-tool-verify": "workspace:*",
     "@orvilo/business-const": "workspace:*",
     "@orvilo/const": "workspace:*"
   },

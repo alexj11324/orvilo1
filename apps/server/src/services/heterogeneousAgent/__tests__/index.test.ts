@@ -7,7 +7,6 @@ import { type IStreamEventManager } from '@/server/modules/AgentExecution/types'
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook, SerializedHook } from '@/server/services/agentExecution/hooks/types';
-import * as verifyService from '@/server/services/verify';
 
 import type { HeterogeneousPersistenceHandler } from '..';
 import {
@@ -634,13 +633,12 @@ describe('HeterogeneousAgentService', () => {
       findById.mockRestore();
     });
 
-    // Verify-lifecycle alignment: heteroFinish must route the terminal transition
+    // Terminal-lifecycle alignment: heteroFinish must route the terminal transition
     // through CompletionLifecycle (the SAME owner the in-process runtime uses), not
-    // a stripped-down funnel. That single funnel is what runs the delivery-checker
-    // gate on success — and the gate bails unless op.model/provider are set, so the
-    // synthetic state MUST carry the model/provider backfilled from the CLI stream.
+    // a stripped-down funnel. Preserve model/provider provenance backfilled
+    // from the CLI stream for downstream completion consumers.
     it('routes the terminal transition through CompletionLifecycle with backfilled model/provider', async () => {
-      const { service } = createService({ operationId: 'op-verify-align' });
+      const { service } = createService({ operationId: 'op-terminal-align' });
 
       const finalizeSpy = vi.spyOn(HeteroTraceRecorder.prototype, 'finalize').mockResolvedValue({
         llmCalls: 3,
@@ -660,20 +658,20 @@ describe('HeterogeneousAgentService', () => {
 
       await service.heteroFinish({
         agentType: 'claude-code',
-        operationId: 'op-verify-align',
+        operationId: 'op-terminal-align',
         result: 'success',
-        topicId: 'topic-verify-align',
+        topicId: 'topic-terminal-align',
       });
 
       expect(dispatchSpy).toHaveBeenCalledTimes(1);
       const [opId, state, reason] = dispatchSpy.mock.calls[0] as [string, any, string];
-      expect(opId).toBe('op-verify-align');
+      expect(opId).toBe('op-terminal-align');
       expect(reason).toBe('done');
-      // model/provider gate the verify run (lifecycle.ts bails when either is absent).
+      // Preserve the executed model/provider on the terminal state.
       expect(state).toMatchObject({ model: 'claude-opus-4-8', provider: 'anthropic' });
       // Trace aggregates flow into the shape persistCompletion reads.
       expect(state.usage?.llm?.tokens?.total).toBe(300);
-      // Synthetic goal + deliverable messages drive the delivery checker.
+      // Synthetic request + deliverable messages preserve completion context.
       expect(state.messages).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ role: 'user' }),
@@ -708,77 +706,6 @@ describe('HeterogeneousAgentService', () => {
         'done',
       );
       completeOperationSpy.mockRestore();
-    });
-
-    // Cross-instance race guard: recordStart's in-memory verify-plan promise lives
-    // on a DIFFERENT CompletionLifecycle (execAgent), so heteroFinish can't await
-    // it. A fast run could reach the gate before the plan persists. heteroFinish
-    // must therefore re-run the idempotent durable instantiation and AWAIT it
-    // before dispatching the gate.
-    it('awaits durable verify-plan instantiation before the completion gate for a task-bound run', async () => {
-      const { service } = createService({ operationId: 'op-race-guard' });
-
-      const findByIdSpy = vi
-        .spyOn(AgentOperationModel.prototype, 'findById')
-        .mockResolvedValue({ parentOperationId: null, taskId: 'task-1' } as any);
-      const instantiateSpy = vi
-        .spyOn(verifyService, 'instantiateVerifyPlanOnStart')
-        .mockResolvedValue();
-      const dispatchSpy = vi
-        .spyOn(CompletionLifecycle.prototype, 'dispatchHooks')
-        .mockResolvedValue();
-
-      await service.heteroFinish({
-        agentType: 'claude-code',
-        operationId: 'op-race-guard',
-        result: 'success',
-        topicId: 'topic-race-guard',
-      });
-
-      expect(instantiateSpy).toHaveBeenCalledTimes(1);
-      // Ensured with the run's own task id (3rd arg is the params object).
-      expect(instantiateSpy.mock.calls[0][2]).toMatchObject({
-        operationId: 'op-race-guard',
-        taskId: 'task-1',
-      });
-      // The durable ensure is awaited BEFORE the gate — otherwise
-      // runVerifyOnCompletion could read an empty plan and skip verify.
-      expect(instantiateSpy.mock.invocationCallOrder[0]).toBeLessThan(
-        dispatchSpy.mock.invocationCallOrder[0],
-      );
-
-      findByIdSpy.mockRestore();
-      instantiateSpy.mockRestore();
-      dispatchSpy.mockRestore();
-    });
-
-    it('skips verify-plan instantiation for a non-task hetero run', async () => {
-      const { service } = createService({ operationId: 'op-no-task' });
-
-      const findByIdSpy = vi
-        .spyOn(AgentOperationModel.prototype, 'findById')
-        .mockResolvedValue({ parentOperationId: null, taskId: null } as any);
-      const instantiateSpy = vi
-        .spyOn(verifyService, 'instantiateVerifyPlanOnStart')
-        .mockResolvedValue();
-      const dispatchSpy = vi
-        .spyOn(CompletionLifecycle.prototype, 'dispatchHooks')
-        .mockResolvedValue();
-
-      await service.heteroFinish({
-        agentType: 'claude-code',
-        operationId: 'op-no-task',
-        result: 'success',
-        topicId: 'topic-no-task',
-      });
-
-      expect(instantiateSpy).not.toHaveBeenCalled();
-      // Still routes through the lifecycle — verify just has nothing to gate on.
-      expect(dispatchSpy).toHaveBeenCalledTimes(1);
-
-      findByIdSpy.mockRestore();
-      instantiateSpy.mockRestore();
-      dispatchSpy.mockRestore();
     });
 
     it('does NOT fire hooks on a cancelled run (the real result fires them)', async () => {

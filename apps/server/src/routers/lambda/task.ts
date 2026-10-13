@@ -1,12 +1,6 @@
 import { TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
-import type {
-  TaskItem,
-  TaskListItem,
-  TaskParticipant,
-  TaskVerifyConfig,
-  TaskWorkflowCategory,
-} from '@orvilo/types';
+import type { TaskItem, TaskListItem, TaskParticipant, TaskWorkflowCategory } from '@orvilo/types';
 import { TASK_ATTENTION_REASONS } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
@@ -71,15 +65,12 @@ import { automationResultWebhookConfigSchema } from '@/server/services/automatio
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
-import { acceptancePolicyChanged } from '@/server/services/task/activityLogChange';
 import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
 import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { runTaskWatchdog } from '@/server/services/taskWatchdog';
-import { AcceptanceService } from '@/server/services/verify/acceptanceService';
-import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
 import {
   extractMentionedUserIds,
@@ -255,14 +246,6 @@ const TASK_WORKFLOW_CATEGORIES = [
   'done',
   'canceled',
 ] as const satisfies readonly TaskWorkflowCategory[];
-
-const taskVerifyConfigPatchSchema = z.object({
-  enabled: z.boolean().nullish(),
-  maxIterations: z.number().min(1).max(10).nullish(),
-  requirement: z.string().nullish(),
-  verifyCriteriaIds: z.array(z.string()).nullish(),
-  verifyRubricId: z.string().nullish(),
-});
 
 // Priority: 0=None, 1=Urgent, 2=High, 3=Normal, 4=Low
 const createSchema = z.object({
@@ -1280,8 +1263,6 @@ export const taskRouter = router({
       });
     }
     try {
-      const parsedVerify = taskVerifyConfigPatchSchema.safeParse(createInput.config?.verify);
-      const { verify: _legacyVerify, ...taskConfig } = createInput.config ?? {};
       // Board `+` presets: a workflow-category target resolves against the
       // team's imported states (exact match → stamp the state; otherwise keep
       // the bare category — the board groups on it regardless). Creating into
@@ -1306,28 +1287,8 @@ export const taskRouter = router({
       const task = await ctx.taskService.createTask({
         ...createInput,
         ...workflowPreset,
-        config: parsedVerify.success ? taskConfig : createInput.config,
         createdByAgentId: creator.agentId ?? undefined,
       });
-      try {
-        if (parsedVerify.success) {
-          const { requirement, ...rawConfig } = parsedVerify.data;
-          const config = Object.fromEntries(
-            Object.entries(rawConfig).filter(([, value]) => value != null),
-          );
-          await new AcceptanceService(
-            ctx.serverDB,
-            ctx.userId,
-            ctx.workspaceId ?? undefined,
-          ).ensureForSubject('task', task.id, {
-            config,
-            requirement: requirement ?? undefined,
-          });
-        }
-      } catch (error) {
-        await ctx.taskModel.delete(task.id).catch(() => {});
-        throw error;
-      }
       // Creating a task already assigned to another member notifies them.
       notifyAssignedBestEffort(ctx, task);
       return { data: task, message: 'Task created', success: true };
@@ -2232,225 +2193,6 @@ export const taskRouter = router({
           cause: error,
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update checkpoint',
-        });
-      }
-    }),
-
-  getReview: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
-    try {
-      const model = ctx.taskModel;
-      const task = await resolveOrThrow(model, input.id);
-      return { data: model.getReviewConfig(task) || null, success: true };
-    } catch (error) {
-      if (error instanceof TRPCError) throw error;
-      console.error('[task:getReview]', error);
-      throw new TRPCError({
-        cause: error,
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to get review config',
-      });
-    }
-  }),
-
-  updateReview: taskProcedureWrite
-    .input(
-      idInput.merge(
-        z.object({
-          review: z.object({
-            autoRetry: z.boolean().default(true),
-            enabled: z.boolean(),
-            judge: z
-              .object({
-                model: z.string().optional(),
-                provider: z.string().optional(),
-              })
-              .default({}),
-            maxIterations: z.number().min(1).max(10).default(3),
-            rubrics: z.array(
-              z.object({
-                config: z.record(z.string(), z.unknown()),
-                extractor: z.record(z.string(), z.unknown()).optional(),
-                id: z.string(),
-                name: z.string(),
-                threshold: z.number().min(0).max(1).optional(),
-                type: z.string(),
-                weight: z.number().default(1),
-              }),
-            ),
-          }),
-        }),
-      ),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const { id, review } = input;
-      try {
-        const model = ctx.taskModel;
-        const resolved = await resolveOrThrow(model, id);
-        const task = await model.updateReviewConfig(resolved.id, review, { invalidateRun: true });
-        if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
-        return {
-          data: model.getReviewConfig(task),
-          message: 'Review config updated',
-          success: true,
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        if (error instanceof TaskDependencyError) {
-          throw new TRPCError({ cause: error, code: error.code, message: error.message });
-        }
-        console.error('[task:updateReview]', error);
-        throw new TRPCError({
-          cause: error,
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to update review config',
-        });
-      }
-    }),
-
-  getVerifyConfig: taskProcedure.input(idInput).query(async ({ input, ctx }) => {
-    try {
-      const model = ctx.taskModel;
-      const task = await resolveOrThrow(model, input.id);
-      const resolved = await resolveTaskAcceptance(
-        ctx.serverDB,
-        ctx.userId,
-        task.id,
-        ctx.workspaceId ?? undefined,
-      );
-      return {
-        data: resolved ? { ...resolved.config, requirement: resolved.requirement } : null,
-        success: true,
-      };
-    } catch (error) {
-      if (error instanceof TRPCError) throw error;
-      console.error('[task:getVerifyConfig]', error);
-      throw new TRPCError({
-        cause: error,
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to get verify config',
-      });
-    }
-  }),
-
-  updateVerifyConfig: taskProcedureWrite
-    .input(
-      idInput.merge(
-        z.object({
-          // `.nullish()` lets callers clear a saved field: `null` removes it
-          // (JSON can't send `undefined`), omission leaves it untouched.
-          verify: taskVerifyConfigPatchSchema,
-        }),
-      ),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const { id, verify } = input;
-      try {
-        const model = ctx.taskModel;
-        const task = await resolveOrThrow(model, id);
-        const acceptanceService = new AcceptanceService(
-          ctx.serverDB,
-          ctx.userId,
-          ctx.workspaceId ?? undefined,
-        );
-        const resolvedAcceptance = await resolveTaskAcceptance(
-          ctx.serverDB,
-          ctx.userId,
-          task.id,
-          ctx.workspaceId ?? undefined,
-        );
-        const acceptance =
-          resolvedAcceptance?.acceptance ??
-          (await acceptanceService.ensureForSubject('task', task.id));
-        const nextConfig = { ...acceptance.config } as Record<string, unknown>;
-        for (const [key, value] of Object.entries(verify)) {
-          if (key === 'requirement') continue;
-          if (value === null) delete nextConfig[key];
-          else if (value !== undefined) nextConfig[key] = value;
-        }
-        const requirement =
-          verify.requirement === undefined ? acceptance.requirement : verify.requirement;
-        const updated = await acceptanceService.acceptanceModel.updatePolicy(acceptance.id, {
-          config: nextConfig,
-          requirement,
-        });
-        if (!updated) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Acceptance policy not found' });
-        }
-        // What an agent's work is accepted against changed: the Issue's feed
-        // says who changed it. Best-effort — the policy is already saved and
-        // must not be reported as failed because its feed line could not be.
-        if (
-          acceptancePolicyChanged(
-            { config: acceptance.config, requirement: acceptance.requirement },
-            { config: nextConfig, requirement },
-          )
-        ) {
-          try {
-            // One row per sitting: the form saves field by field.
-            await model.logSessionActivity(
-              task.id,
-              'verify_config',
-              await resolveActivityActor(ctx),
-            );
-          } catch (error) {
-            console.error('[task:updateVerifyConfig] failed to log activity', error);
-          }
-        }
-        const data: TaskVerifyConfig = {
-          ...(nextConfig as TaskVerifyConfig),
-          requirement: requirement ?? undefined,
-        };
-        return {
-          data,
-          message: 'Verify config updated',
-          success: true,
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        if (error instanceof TaskDependencyError) {
-          throw new TRPCError({ cause: error, code: error.code, message: error.message });
-        }
-        console.error('[task:updateVerifyConfig]', error);
-        throw new TRPCError({
-          cause: error,
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to update verify config',
-        });
-      }
-    }),
-
-  runReview: taskExecutionProcedure
-    .input(
-      idInput.merge(
-        z.object({
-          content: z.string().optional(),
-          topicId: z.string().optional(),
-        }),
-      ),
-    )
-    .mutation(async ({ input, ctx }) => {
-      try {
-        const task = await resolveOrThrow(ctx.taskModel, input.id);
-        await assertTaskExecutionUse(ctx, [task], [task.assigneeAgentId]);
-        const result = await ctx.taskService.runReview(input);
-        return { data: result, success: true };
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        if (error instanceof TaskReviewerRequiredError) {
-          throw new TRPCError({
-            cause: error,
-            code: 'PRECONDITION_FAILED',
-            message: error.message,
-          });
-        }
-        if (error instanceof TaskDependencyError) {
-          throw new TRPCError({ cause: error, code: error.code, message: error.message });
-        }
-        console.error('[task:runReview]', error);
-        throw new TRPCError({
-          cause: error,
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to run review',
         });
       }
     }),

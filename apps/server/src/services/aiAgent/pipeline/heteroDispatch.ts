@@ -178,7 +178,7 @@ export const finalizeHeteroDispatchError = async (
   //     finalizing it the row stays status='running' forever) AND fires the run's
   //     onComplete/onError hooks (task lifecycle → task failed + IM bot callback).
   //     `skipErrorMessageWrite` keeps the bespoke device-specific bubble written
-  //     in step 1; verify is done-only, so it no-ops on this error path.
+  //     in step 1.
   await new CompletionLifecycle(deps.db, deps.userId, deps.workspaceId).completeOperation(
     {
       agentId,
@@ -647,7 +647,7 @@ export interface HeteroDispatchInput {
   runAttachments: { imageList?: Array<{ alt: string; id: string; url: string }> };
   /** Ids of the rows THIS turn just persisted (excluded from recovery history). */
   selfMessageIds: Set<string>;
-  skipTaskVerification?: boolean;
+
   /**
    * Per-tool mount outcomes from `resolveRunToolSurface` — persisted into the
    * operation's metadata so a mounted/unsupported/unauthorized/failed record
@@ -712,7 +712,7 @@ export const dispatchHeteroAgent = async (
     requestTrigger,
     runAttachments,
     selfMessageIds,
-    skipTaskVerification,
+
     topicStartOwnerOperationId,
     userAgent,
     userInterventionConfig,
@@ -766,8 +766,8 @@ export const dispatchHeteroAgent = async (
   // Persist a first-class agent_operations row for the hetero run. The id is
   // generated here (authoritative) and flows through to heteroIngest /
   // heteroFinish unchanged. Without this row the run is invisible to the
-  // operation lifecycle: verify (ensureForOperation), repair (parent chain),
-  // judge (op.model/provider) and tracing all key off it. The durable row is
+  // operation lifecycle: Issue review, repair (parent chain),
+  // judgment provenance (op.model/provider) and tracing all key off it. The durable row is
   // also an authentication prerequisite: every callback
   // re-authorizes its operation token against this exact principal. Do not
   // mint a token or dispatch/spawn when persistence fails.
@@ -811,7 +811,7 @@ export const dispatchHeteroAgent = async (
       heteroAgentType: heteroType,
       // Dispatch-stamped opt-in marker: survives a run that dies before
       // `heteroFinish`, so "enabled but produced nothing" stays
-      // distinguishable from "not enabled" for the verify gate.
+      // distinguishable from "not enabled" in the trace.
       ...(aegisEnabled ? { aegis: { enabled: true } } : {}),
       // Per-tool mount contract for this run — mounted/unsupported/
       // unauthorized/failed with reasons, so a degraded surface is
@@ -844,7 +844,7 @@ export const dispatchHeteroAgent = async (
     operationId,
     parentOperationId,
     provider: heteroType,
-    skipTaskVerification,
+
     taskId: operationTaskId ?? null,
     threadId: appContext?.threadId ?? null,
     topicId,

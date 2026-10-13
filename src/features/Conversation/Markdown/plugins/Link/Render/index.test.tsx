@@ -65,11 +65,9 @@ vi.mock('@/components/ui/popover', async () => {
 let mockShowIcon = true;
 const mockOpenInBrowserTab = vi.fn();
 const mockNavigate = vi.fn();
-const mockOpenAcceptance = vi.fn();
 const mockOpenAgentDetail = vi.fn();
 const mockOpenDocument = vi.fn();
 const mockOpenTaskDetail = vi.fn();
-const mockOpenVerifyReport = vi.fn();
 
 vi.mock('@/business/client/hooks/useWorkspaces', () => ({
   useWorkspaces: () => [{ id: 'ws-1', slug: 'orvilo-team' }],
@@ -111,11 +109,9 @@ vi.mock('@/store/agent', () => ({
 vi.mock('@/store/chat', () => ({
   useChatStore: (selector: (state: unknown) => unknown) =>
     selector({
-      openAcceptance: mockOpenAcceptance,
       openAgentDetail: mockOpenAgentDetail,
       openDocument: mockOpenDocument,
       openTaskDetail: mockOpenTaskDetail,
-      openVerifyReport: mockOpenVerifyReport,
     }),
 }));
 
@@ -227,17 +223,15 @@ describe('Link Render — internal entities', () => {
   it('preserves preview details during dismissal and refreshes them when reopened', () => {
     mockEntityPreview = {
       description: 'Publish external workspace resources',
-      meta: '4/4 passed · 0 exceptions',
-      secondaryMeta: '3 verification rounds',
       title: 'Workspace publishing',
     };
     const { container, getByText } = render(
       <InternalEntityPreview
-        fallbackTitle="Acceptance"
+        fallbackTitle="Document"
         reference={{
-          acceptanceId: 'acceptance-1',
-          pathname: '/acceptance/acceptance-1',
-          type: 'acceptance',
+          documentId: 'docs_document',
+          pathname: '/page/docs_document',
+          type: 'document',
         }}
       >
         <span>Preview trigger</span>
@@ -248,53 +242,51 @@ describe('Link Render — internal entities', () => {
 
     fireEvent.mouseLeave(container.firstElementChild!);
     expect(getByText('Publish external workspace resources')).toBeInTheDocument();
-    expect(getByText('4/4 passed · 0 exceptions')).toBeInTheDocument();
-    expect(getByText('3 verification rounds')).toBeInTheDocument();
 
-    mockEntityPreview = { description: 'Updated requirement', title: 'Updated acceptance' };
+    mockEntityPreview = { description: 'Updated requirement', title: 'Updated document' };
     fireEvent.mouseEnter(container.firstElementChild!);
     expect(getByText('Updated requirement')).toBeInTheDocument();
-    expect(getByText('Updated acceptance')).toBeInTheDocument();
+    expect(getByText('Updated document')).toBeInTheDocument();
   });
 
   it('replaces a pasted URL label with the resolved entity title', () => {
-    // A raw acceptance URL says nothing about what it points to; once the
+    // A raw document URL says nothing about what it points to; once the
     // entity resolves, the link reads as its title.
     mockEntityPreview = { title: 'Gateway 消息队列重建' };
 
     const { container } = renderLink({
-      linkHref: '/acceptance/acceptance-1',
+      linkHref: '/page/docs_document',
       linkKind: 'generic',
-      linkLabel: '/acceptance/acceptance-1',
+      linkLabel: '/page/docs_document',
     });
 
     const anchor = container.querySelector('a')!;
     expect(anchor.textContent).toBe('Gateway 消息队列重建');
-    expect(anchor.getAttribute('href')).toBe('/acceptance/acceptance-1');
+    expect(anchor.getAttribute('href')).toBe('/page/docs_document');
   });
 
   it('keeps the pasted URL while the title has not resolved', () => {
     mockEntityPreview = null;
 
     const { container } = renderLink({
-      linkHref: '/acceptance/acceptance-1',
+      linkHref: '/page/docs_document',
       linkKind: 'generic',
-      linkLabel: '/acceptance/acceptance-1',
+      linkLabel: '/page/docs_document',
     });
 
-    expect(container.querySelector('a')!.textContent).toBe('/acceptance/acceptance-1');
+    expect(container.querySelector('a')!.textContent).toBe('/page/docs_document');
   });
 
   it('never replaces authored link text with the entity title', () => {
     mockEntityPreview = { title: 'Resolved title' };
 
     const { container } = renderLink({
-      linkHref: '/acceptance/acceptance-1',
+      linkHref: '/page/docs_document',
       linkKind: 'generic',
-      linkLabel: 'Acceptance',
+      linkLabel: 'Document',
     });
 
-    expect(container.querySelector('a')!.textContent).toBe('Acceptance');
+    expect(container.querySelector('a')!.textContent).toBe('Document');
   });
 
   it('keeps a URL-shaped authored label — bare means label === href, not "looks like a URL"', () => {
@@ -321,22 +313,6 @@ describe('Link Render — internal entities', () => {
     });
 
     expect(container.querySelector('a')!.textContent).toBe('/orvilo-team/task/T-198');
-  });
-
-  it('opens acceptance links in the conversation portal', () => {
-    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => undefined);
-
-    const { getByRole } = renderLink({
-      linkHref: '/acceptance/acceptance-1',
-      linkKind: 'generic',
-      linkLabel: 'Acceptance',
-    });
-
-    fireEvent.click(getByRole('link', { name: 'Acceptance' }));
-
-    expect(mockOpenAcceptance).toHaveBeenCalledWith('acceptance-1');
-    expect(assign).not.toHaveBeenCalled();
-    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('opens official document links in the conversation portal', () => {
@@ -375,40 +351,6 @@ describe('Link Render — internal entities', () => {
     expect(mockOpenAgentDetail).toHaveBeenCalledWith('agt_1');
   });
 
-  it('keeps a retired personal verify link in-router instead of ejecting into Workbench', () => {
-    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => undefined);
-
-    const { getByRole } = renderLink({
-      linkHref: '/verify/run-1',
-      linkKind: 'generic',
-      linkLabel: 'Verify report',
-    });
-
-    fireEvent.click(getByRole('link', { name: 'Verify report' }));
-
-    // The standalone `/verify/:runId` page was retired with the standalone
-    // platform, so this link must no longer leave the SPA for the Workbench
-    // runtime — and it must not dead-end into a blank page either. It opens in
-    // the portal panel, the same destination a workspace-scoped verify link
-    // already used.
-    expect(assign).not.toHaveBeenCalled();
-    expect(mockOpenVerifyReport).toHaveBeenCalledWith('run-1');
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
-  it('opens a verify link for the active workspace in the report portal', () => {
-    const { getByRole } = renderLink({
-      linkHref: '/orvilo-team/verify/run-1',
-      linkKind: 'generic',
-      linkLabel: 'Orvilo Verify',
-    });
-
-    fireEvent.click(getByRole('link', { name: 'Orvilo Verify' }));
-
-    expect(mockOpenVerifyReport).toHaveBeenCalledWith('run-1');
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
   it('preserves modifier-click browser behavior on web', () => {
     const { getByRole } = renderLink({
       linkHref: '/task/T-198',
@@ -442,15 +384,12 @@ describe('Link Render — internal entities', () => {
 describe('Link Render — desktop preload contract', () => {
   it('marks internal entity links as renderer-handled', () => {
     const { getByRole } = renderLink({
-      linkHref: '/verify/run-1',
+      linkHref: '/task/T-198',
       linkKind: 'generic',
-      linkLabel: 'Verify report',
+      linkLabel: 'Task',
     });
 
-    expect(getByRole('link', { name: 'Verify report' })).toHaveAttribute(
-      RENDERER_HANDLED_LINK_ATTR,
-      'true',
-    );
+    expect(getByRole('link', { name: 'Task' })).toHaveAttribute(RENDERER_HANDLED_LINK_ATTR, 'true');
   });
 
   it('leaves external links unclaimed so the preload opens them in the system browser', () => {
@@ -530,9 +469,9 @@ describe('Link Render — open an external link in the side browser', () => {
     email.unmount();
 
     const internal = renderLink({
-      linkHref: '/verify/run-1',
+      linkHref: '/task/T-198',
       linkKind: 'generic',
-      linkLabel: 'Verify report',
+      linkLabel: 'Task',
     });
     expect(internal.container.querySelector('[data-side-browser]')).toBeNull();
   });

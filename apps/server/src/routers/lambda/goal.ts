@@ -276,16 +276,6 @@ export const goalRouter = router({
           .optional(),
         maxRounds: z.number().int().positive().optional(),
         maxTotalCost: z.number().positive().optional(),
-        /** Structured acceptance criteria — persisted rows that gate the terminal acceptance. */
-        criteria: z
-          .array(
-            z.object({
-              description: z.string().optional(),
-              instruction: z.string().optional(),
-              title: z.string().min(1),
-            }),
-          )
-          .optional(),
         problemDescription: z.string().optional(),
         projectId: z.string().optional(),
         requirement: z.string().optional(),
@@ -450,7 +440,7 @@ export const goalRouter = router({
   /**
    * Delete a goal and, by FK cascade, its whole graph. Anything still running
    * is stopped first; the graph Tasks themselves are deliberately left in place
-   * — they are ordinary tasks with their own history and acceptance.
+   * — they are ordinary Issues with their own history and reviewer comments.
    */
   delete: goalWriteProcedure.input(idInput).mutation(async ({ ctx, input }) => {
     try {
@@ -545,18 +535,6 @@ export const goalRouter = router({
         };
       } catch (error) {
         mapGoalError(error, 'restart');
-      }
-    }),
-
-  /** Rebind which persisted verify criteria gate this goal's terminal acceptance. */
-  setAcceptanceCriteria: goalWriteProcedure
-    .input(idInput.extend({ criteriaIds: z.array(z.string()) }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        await ctx.goalService.setAcceptanceCriteria(input.id, input.criteriaIds);
-        return { success: true };
-      } catch (error) {
-        mapGoalError(error, 'setAcceptanceCriteria');
       }
     }),
 

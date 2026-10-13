@@ -1,5 +1,9 @@
 # Issue 769 verification evidence
 
+> Historical evidence for the earlier engine, superseded by #776 / #777. Current
+> behavior and receipts are in [Issue review](../../issue-review.md) and
+> [the current review evidence](../../issue-review-evidence/96cebb5b1/README.md).
+
 The final behavioral revision is `d32cb6b4b5a7679c56c7880c6a111658f6f622b1`.
 These receipts use the real local Electron application, real OpenCode ACP, and
 an isolated seed-user workspace/database. They do not prove cloud deployment.

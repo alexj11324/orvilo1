@@ -5,10 +5,9 @@ import { cleanup, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditTaskParams, RunTaskParams, SetTaskVerifyParams } from '../../types';
+import type { EditTaskParams, RunTaskParams } from '../../types';
 import EditTaskRender from './EditTask';
 import RunTaskRender from './RunTask';
-import SetTaskVerifyRender from './SetTaskVerify';
 
 interface AgentDisplayMeta {
   avatar?: string;
@@ -122,47 +121,6 @@ describe('EditTaskRender', () => {
     expect(screen.getByText('T-1')).toBeTruthy();
     expect(screen.queryByRole('heading')).toBeNull();
     expect(screen.queryByTestId('assignee-avatar')).toBeNull();
-  });
-});
-
-describe('SetTaskVerifyRender', () => {
-  beforeEach(() => {
-    mocks.agentMetaById = {};
-  });
-  afterEach(() => cleanup());
-
-  const renderVerify = (args: Partial<SetTaskVerifyParams>) =>
-    render(
-      <SetTaskVerifyRender
-        {...renderProps}
-        args={{ identifier: 'T-1', ...args } as SetTaskVerifyParams}
-      />,
-    );
-
-  it('shows the gate-on label and full requirement text', () => {
-    renderVerify({ enabled: true, requirement: 'Ship a complete report' });
-
-    expect(screen.getByText('on')).toBeTruthy();
-    expect(screen.getByText('Ship a complete report')).toBeTruthy();
-  });
-
-  it('shows the gate-off label when disabled', () => {
-    renderVerify({ enabled: false });
-
-    expect(screen.getByText('off')).toBeTruthy();
-  });
-
-  it('renders the requirement as markdown only (no extra fields)', () => {
-    renderVerify({
-      enabled: true,
-      maxIterations: 3,
-      requirement: '## Acceptance',
-    });
-
-    // Body shows the requirement markdown; iterations are not shown.
-    expect(screen.getByRole('heading', { name: 'Acceptance' })).toBeTruthy();
-    expect(screen.queryByTestId('assignee-avatar')).toBeNull();
-    expect(screen.queryByText('3')).toBeNull();
   });
 });
 

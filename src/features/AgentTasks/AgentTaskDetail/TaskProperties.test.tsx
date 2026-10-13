@@ -370,7 +370,7 @@ describe('TaskProperties', () => {
     try {
       render(<TaskProperties />);
       expect(screen.getByText('taskDetail.execution.view.reworkRequired')).toBeTruthy();
-      expect(screen.queryByText('taskDetail.execution.view.awaitingAcceptance')).toBeNull();
+      expect(screen.queryByText('taskDetail.review.waitingReviewer')).toBeNull();
       expect(screen.queryByText('taskDetail.execution.hint.awaitingAcceptance')).toBeNull();
       expect(screen.queryByText('succeeded')).toBeNull();
     } finally {
@@ -379,7 +379,7 @@ describe('TaskProperties', () => {
     }
   });
 
-  it('reads a succeeded run that is not accepted yet differently from Done', () => {
+  it('reads a succeeded run that is awaiting its reviewer differently from Done', () => {
     const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
       'T-1'
     ];
@@ -389,13 +389,13 @@ describe('TaskProperties', () => {
     detail.workflowCategory = 'in_review';
     try {
       const { unmount } = render(<TaskProperties />);
-      expect(screen.getByText('taskDetail.execution.view.awaitingAcceptance')).toBeTruthy();
+      expect(screen.getByText('taskDetail.review.waitingReviewer')).toBeTruthy();
       unmount();
 
       detail.status = 'completed';
       detail.workflowCategory = 'done';
       render(<TaskProperties />);
-      expect(screen.queryByText('taskDetail.execution.view.awaitingAcceptance')).toBeNull();
+      expect(screen.queryByText('taskDetail.review.waitingReviewer')).toBeNull();
       expect(screen.getByText('succeeded')).toBeTruthy();
     } finally {
       delete detail.agentId;

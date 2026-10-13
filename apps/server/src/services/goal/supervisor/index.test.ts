@@ -15,7 +15,6 @@ import { TaskModel } from '@/database/models/task';
 import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
 import { WorkModel } from '@/database/models/work';
 import {
-  acceptances,
   agentOperations,
   agents,
   credentials,
@@ -139,7 +138,6 @@ afterEach(async () => {
   await db.delete(goalEvents);
   await db.delete(goalNodes);
   await db.delete(goals);
-  await db.delete(acceptances);
   await db.delete(agentOperations);
   await db.delete(taskTopics);
   await db.delete(topics);

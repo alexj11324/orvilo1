@@ -17,7 +17,6 @@ export type {
   CreateGoalParams,
   CreateGoalState,
   EditTaskParams,
-  GoalCriterionDraft,
   ListWorkspaceMembersParams,
   ListWorkspaceMembersState,
   SubmitTaskReviewParams,

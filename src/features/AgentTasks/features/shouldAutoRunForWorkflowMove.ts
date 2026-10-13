@@ -3,7 +3,7 @@ import type { TaskWorkflowCategory } from '@orvilo/types';
 /**
  * The only category whose move spawns a builder: In Progress. In Review is
  * deliberate — moving a task into review never starts a run (verification is
- * Verify's job); moving out of review back to In Progress may re-run.
+ * the reviewer Agent's job); moving out of review back to In Progress may re-run.
  */
 const AUTO_RUN_CATEGORIES = new Set<TaskWorkflowCategory>(['in_progress']);
 

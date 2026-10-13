@@ -282,7 +282,7 @@ export class GoalModel {
       .from(goals)
       .where(
         and(
-          inArray(goals.status, ['planning', 'running', 'verifying']),
+          inArray(goals.status, ['planning', 'running']),
           // A graph-less legacy goal has no frontier, so every sweep would
           // tick it only to report `no_progress`. Leave it alone.
           GoalModel.hasGraphSql,

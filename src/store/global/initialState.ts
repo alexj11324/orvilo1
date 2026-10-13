@@ -464,11 +464,6 @@ export interface SystemStatus {
    * Visibility of the chat bottom terminal panel (desktop-only).
    */
   showTerminalPanel?: boolean;
-  /**
-   * Visibility of the Verify workspace left-side report-list panel.
-   * Independent from the nav rail so collapsing the report list does not affect other pages.
-   */
-  showVerifyReportPanel?: boolean;
   showVideoPanel?: boolean;
   showVideoTopicPanel?: boolean;
   /** Visibility of the lightweight chat overview card. Independent from the workspace panel. */
@@ -559,10 +554,6 @@ export interface SystemStatus {
    * number of topics to display per page
    */
   topicPageSize?: number;
-  /**
-   * Width of the Verify workspace left-side report-list panel.
-   */
-  verifyReportPanelWidth: number;
   videoPanelWidth: number;
   videoTopicPanelWidth?: number;
   videoTopicViewMode?: 'grid' | 'list';
@@ -787,7 +778,6 @@ export const INITIAL_STATUS = {
   showSystemRole: false,
   showTaskAgentPanel: false,
   showTerminalPanel: false,
-  showVerifyReportPanel: true,
   showVideoPanel: true,
   showVideoTopicPanel: true,
   sidebarExpandedKeys: [...DEFAULT_HOME_SIDEBAR_EXPANDED_KEYS],
@@ -795,7 +785,6 @@ export const INITIAL_STATUS = {
   terminalPanelHeight: 320,
   tokenDisplayFormatShort: true,
   topicPageSize: 20,
-  verifyReportPanelWidth: 300,
   videoPanelWidth: 320,
   videoTopicViewMode: 'grid' as const,
   videoTopicPanelWidth: 80,

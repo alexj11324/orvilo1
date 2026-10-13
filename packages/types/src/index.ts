@@ -67,14 +67,11 @@ export * from './trash';
 export * from './understanding';
 export * from './user';
 export * from './userMemory';
-export * from './verify';
 export * from './work';
 export * from './workAttention';
 export * as workspaceContractFixtures from './workspaceContract.fixtures';
 // FIXME: I think we need a refactor for the "openai" types
 // it more likes the UI message payload
-export * from './acceptanceComment';
-export * from './acceptanceFlow';
 export * from './agentRuntime';
 export * from './mcpEvents';
 export * from './openai/chat';

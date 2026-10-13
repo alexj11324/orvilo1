@@ -104,7 +104,7 @@ export async function startIssueReview(
       },
       prompt,
       requiredToolIds: [TaskIdentifier],
-      skipTaskVerification: true,
+
       taskId,
       userInterventionConfig: { approvalMode: 'headless' },
     });
@@ -243,7 +243,7 @@ export async function resumeIssueReviewRepair(
       intent: 'repair',
       issueReviewRepairCycleId: review.cycleId,
       parentOperationId: review.deliveryOperationId,
-      skipTaskVerification: true,
+
       taskId,
     });
     if (result.success) await model.completeIssueReviewRepair(taskId, { cycleId: review.cycleId });

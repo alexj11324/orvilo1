@@ -2174,7 +2174,7 @@ export class AgentModel {
     // Reuse creation admission and the removable creator Use grant.
     const newAgent = await this.create({
       // Agency config (heterogeneous provider, execution target, device
-      // binding, sub-agent defaults, verify rubric...). Duplicating must
+      // binding, sub-agent defaults...). Duplicating must
       // preserve it, otherwise a heterogeneous agent is copied as a plain
       // one and its external runtime config is silently lost.
       agencyConfig: runtime.agencyConfig,

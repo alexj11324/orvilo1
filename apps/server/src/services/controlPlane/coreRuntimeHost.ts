@@ -37,8 +37,8 @@ import { TaskExecutionControlModel } from '@/database/models/taskExecutionContro
 import type { OrviloDatabase } from '@/database/type';
 
 import { issueBindingExecution } from '../providerBinding/execution';
-import type { CanonicalCompletionOutcome, CanonicalReceiptMapping } from './canonicalCompletion';
-import { CanonicalVerifyCompletion } from './canonicalCompletion';
+import type { CanonicalCompletionOutcome } from './canonicalCompletion';
+import { CanonicalIssueCompletion } from './canonicalCompletion';
 import type {
   CanonicalRunAuthorityPort,
   CanonicalRunBinding,
@@ -66,8 +66,6 @@ export interface CanonicalCoreHostOptions {
    * (the agent_operations chat-parallel contract). */
   authority?: CanonicalRunAuthorityPort;
   binding: CanonicalRunBinding;
-  /** Loaded from trusted server registration; never accepted as completion request data. */
-  completionMappings?: CanonicalReceiptMapping[];
   /** Private broker-owned control directory, outside the mounted workspace. */
   controlDirectory: string;
   database: OrviloDatabase;
@@ -252,7 +250,6 @@ export class CanonicalCoreRuntimeHost {
       docker: { ...input.docker },
       embedded: input.embedded ? { ...input.embedded } : undefined,
       fileCommitments: structuredClone(input.fileCommitments),
-      completionMappings: structuredClone(input.completionMappings ?? []),
       receiptDirectory: input.receiptDirectory ?? path.join(input.controlDirectory, 'receipts'),
     };
     if (!options.embedded && !options.verifyArtifact)
@@ -726,7 +723,7 @@ export class CanonicalCoreRuntimeHost {
     return this.supervisor.terminate(this.journal.isolation.treeId);
   }
 
-  /** Read every receipt: unmapped ambiguous effects cannot disappear from recovery. */
+  /** Read every receipt: ambiguous effects cannot disappear from recovery. */
   private async loadReceipts(): Promise<DurableReceipt[]> {
     let directories: string[];
     try {
@@ -753,21 +750,19 @@ export class CanonicalCoreRuntimeHost {
   captureRecoverySnapshot(historyContentHash?: string) {
     return new CanonicalSessionSnapshots(this.options.database).capture(this.journal.binding, {
       commitments: [...this.commitments.values()],
-      completionMappings: this.options.completionMappings ?? [],
       loadReceipts: () => this.loadReceipts(),
       historyContentHash,
     });
   }
 
   /** Metadata admission is separate from restarting execution. File receipts have no
-   * safe takeover adapter: incomplete work remains blocked, including unmapped work. */
+   * safe takeover adapter: all incomplete work remains blocked. */
   async inspectRecoverySnapshot(snapshotId: string, historyContentHash?: string) {
     const recovered = await new CanonicalSessionSnapshots(this.options.database).recover(
       this.journal.binding,
       snapshotId,
       {
         commitments: [...this.commitments.values()],
-        completionMappings: this.options.completionMappings ?? [],
         loadReceipts: () => this.loadReceipts(),
         historyContentHash,
       },
@@ -814,19 +809,11 @@ export class CanonicalCoreRuntimeHost {
     };
   }
 
-  /** Explicit trusted completion request. A runtime end_turn never calls this.
-   * Receipt IDs are looked up only inside this host's private durable namespace. */
+  /** Observes the Issue verdict; runtime completion and receipts never write Done. */
   async reconcileCompletion(): Promise<CanonicalCompletionOutcome> {
-    const mappings = this.options.completionMappings;
-    if (!mappings?.length) return { state: 'denied', reason: 'receipt_mapping_unavailable' };
     try {
-      return await new CanonicalVerifyCompletion(this.options.database).reconcile(
+      return await new CanonicalIssueCompletion(this.options.database).reconcile(
         this.journal.binding,
-        {
-          mappings: structuredClone(mappings),
-          loadReceipt: async (id) =>
-            (await this.loadReceipts()).find((receipt) => receipt.id === id),
-        },
       );
     } catch {
       return { state: 'denied', reason: 'trusted_completion_unavailable' };

@@ -6,7 +6,7 @@ an exploration Goal evaluates completed experiments and grows that same graph.
 ```sh
 orvilo goal create 'Compare three candidate explanations' \
   --requirement 'Deliver three independently evaluated explanations and justify the best one.' \
-  --explore 'Start with a baseline. Try one alternative, then derive a third candidate from the baseline. Compare the recorded results before requesting final acceptance.' \
+  --explore 'Start with a baseline. Try one alternative, then derive a third candidate from the baseline. Compare the recorded results before marking planning complete.' \
   --max-experiments 3 --agent <agent-id>
 ```
 
@@ -21,8 +21,8 @@ and schedules a Goal advance. The Goal model then chooses one of three actions:
   wrong thing — a wrong output shape, metric, threshold or evaluation procedure.
   Without it the only move available is a sibling that inherits the same flawed
   instrument, which reproduces the flaw rather than answering the question.
-- `verify`: request the existing independent terminal acceptance Task. The
-  planner cannot declare the Goal achieved.
+- `verify`: mark exploration planning complete. The coordinator finishes only
+  when its Issues are Done and its numeric clauses hold; no terminal Task is created.
 
 These three are the whole vocabulary, and that bounds what exploration can say: it
 can move within the graph, but it cannot express "this goal is mis-framed", "the
@@ -63,8 +63,7 @@ policy, or paused Goal invalidates a late answer. The patch, parent edge, input
 version links and decision event commit together. Existing queued advances and
 sweeps provide wakeups; no browser polling or manual tick is needed to continue.
 
-The cap counts experiment containers, including the baseline, excluding final
-Goal acceptance. At the cap, insufficient evidence pauses the Goal rather than
+The cap counts experiment containers, including the baseline. At the cap, insufficient evidence pauses the Goal rather than
 marking it achieved. Increase the cap with:
 
 ```sh
@@ -74,7 +73,7 @@ orvilo goal set-budget goal_id --max-experiments 6
 A cap-stopped Goal resumes when the limit is raised; an explicitly user-paused
 Goal stays paused. Planner failures pause for explicit resume. Existing cost,
 round, deadline and per-Task recovery budgets continue to apply. Planning calls
-use the configured Goal system model; existing execution spend accounting does
+use the configured Goal Agent over ACP; existing execution spend accounting does
 not include those planning calls.
 
 This MVP supports immediate result feedback and historical text provenance. It
@@ -98,7 +97,7 @@ candidates, not whether experiments exist. A container has no Task binding:
 its contained task nodes keep their execution, attempts and deliveries. Findings
 and recovery decisions join their task's scope. Container status reflects all
 descendant work; pending decisions, empty branches and unanswered subquestions
-prevent early completion. Final Goal acceptance remains independent.
+prevent early completion. Each Issue uses its normal reviewer Agent flow.
 
 The default experimental canvas is one complete compound graph. Experiments start collapsed, retaining historical branches and projected
 cross-boundary links; expanded experiments draw containing

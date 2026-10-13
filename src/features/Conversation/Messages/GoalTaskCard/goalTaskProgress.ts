@@ -1,18 +1,9 @@
 import type { GoalStatus } from '@orvilo/const/goal';
 
 export type GoalTaskPhase =
-  | 'achieved'
-  | 'canceled'
-  | 'error'
-  | 'paused'
-  | 'repairing'
-  | 'review'
-  | 'running'
-  | 'verifying'
-  | 'waiting';
+  'achieved' | 'canceled' | 'error' | 'paused' | 'review' | 'running' | 'waiting';
 
 interface GoalTaskProgressInput {
-  criteriaCount: number;
   /** Decision gates waiting on a human right now — they outrank the goal's own status. */
   pendingDecisions?: number;
   status?: GoalStatus;
@@ -38,9 +29,6 @@ const resolvePhase = (status?: GoalStatus, pendingDecisions = 0): GoalTaskPhase 
     case 'review': {
       return 'review';
     }
-    case 'verifying': {
-      return 'verifying';
-    }
     default: {
       return 'running';
     }
@@ -49,11 +37,10 @@ const resolvePhase = (status?: GoalStatus, pendingDecisions = 0): GoalTaskPhase 
 
 /**
  * Honest Goal progress for the conversation card: lifecycle phase plus how much
- * of the graph's Tasks are closed. The criteria count is only a fallback for a
- * goal whose graph has not been seeded yet.
+ * of the graph's Tasks are closed.
  */
 export const getGoalTaskProgress = (input: GoalTaskProgressInput) => {
-  const total = input.taskTotal || input.criteriaCount;
+  const total = input.taskTotal ?? 0;
   const passed = input.taskDone ?? 0;
 
   return {

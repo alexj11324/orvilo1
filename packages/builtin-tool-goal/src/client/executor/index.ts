@@ -46,11 +46,11 @@ class GoalExecutor extends BaseExecutor<typeof GoalApiName> {
       };
     }
 
-    const criteria = (params.criteria ?? []).filter((item) => item.title?.trim());
-    if (criteria.length === 0) {
+    const criteriaDescription = params.criteriaDescription?.trim();
+    if (!criteriaDescription) {
       return {
         content: 'A goal needs at least one acceptance criterion.',
-        error: { message: 'criteria array is empty', type: 'EmptyCriteria' },
+        error: { message: 'criteriaDescription is required', type: 'EmptyCriteria' },
         success: false,
       };
     }
@@ -69,18 +69,15 @@ class GoalExecutor extends BaseExecutor<typeof GoalApiName> {
         // `maxIterations` caps attempts on one Work; it is deliberately not
         // passed as `maxRounds`, which counts runs across every Work in the
         // graph and would strand later tasks that have not run at all.
-        // Structured criteria persist alongside the prose requirement so the
-        // goal page can edit them and the terminal acceptance runs exactly them.
-        criteria,
         maxTotalCost: params.maxTotalCost ?? undefined,
         // No seed work: the coordinator plans the decomposition on first
         // advance, turning a complex ask into several explorable directions.
         problemDescription: params.instruction,
-        requirement: buildGoalRequirement(params.name, criteria, params.instruction),
+        requirement: buildGoalRequirement(params.name, criteriaDescription, params.instruction),
         title: params.name,
       });
 
-      return await this.reportCreatedGoal(graph, criteria.length, params.name);
+      return await this.reportCreatedGoal(graph, params.name);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create the goal';
       return {
@@ -101,10 +98,9 @@ class GoalExecutor extends BaseExecutor<typeof GoalApiName> {
    */
   private reportCreatedGoal = async (
     graph: GoalGraphSnapshot,
-    criteriaCount: number,
     name: string,
   ): Promise<BuiltinToolResult> => {
-    const created = `Goal "${graph.goal.title}" created with ${criteriaCount} acceptance criteria.`;
+    const created = `Goal "${graph.goal.title}" created.`;
     const tail =
       'Execution continues in its own task; do not perform or reproduce the work in this conversation.';
 

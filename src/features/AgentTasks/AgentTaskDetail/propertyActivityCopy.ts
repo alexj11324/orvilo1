@@ -61,7 +61,6 @@ export type PropertyActivitySentenceKey =
   | 'taskDetail.activities.team.removed'
   | 'taskDetail.activities.team.set'
   | 'taskDetail.activities.title.changed'
-  | 'taskDetail.activities.verify.changed'
   | 'taskDetail.activities.workflow.set';
 
 export interface PropertyActivityCopy {
@@ -123,9 +122,6 @@ export const resolvePropertyActivityCopy = (
     }
     case 'description': {
       return { key: 'taskDetail.activities.description.edited', slots: {} };
-    }
-    case 'verify': {
-      return { key: 'taskDetail.activities.verify.changed', slots: {} };
     }
     case 'title': {
       const side = (value: string | null) =>

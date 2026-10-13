@@ -62,40 +62,35 @@ describe('parseInternalLink', () => {
     });
   });
 
-  it('parses verification report links', () => {
+  it('routes retired verification links to their redirect stubs', () => {
     expect(parseInternalLink(officialAppLink('/verify/run-1'))).toEqual({
       pathname: '/verify/run-1',
-      runId: 'run-1',
-      type: 'verify',
+      type: 'route',
     });
     expect(parseInternalLink('/orvilo-team/verify/run-2', undefined, ['orvilo-team'])).toEqual({
       pathname: '/orvilo-team/verify/run-2',
-      runId: 'run-2',
-      type: 'verify',
+      type: 'route',
       workspaceSlug: 'orvilo-team',
     });
   });
 
-  it('parses acceptance links as dedicated entities', () => {
+  it('routes retired acceptance links to their redirect stubs', () => {
     expect(parseInternalLink(officialAppLink('/acceptance/acceptance-1'))).toEqual({
-      acceptanceId: 'acceptance-1',
       pathname: '/acceptance/acceptance-1',
-      type: 'acceptance',
+      type: 'route',
     });
     expect(
       parseInternalLink('/orvilo-team/acceptance/acceptance-2', undefined, ['orvilo-team']),
     ).toEqual({
-      acceptanceId: 'acceptance-2',
       pathname: '/orvilo-team/acceptance/acceptance-2',
-      type: 'acceptance',
+      type: 'route',
       workspaceSlug: 'orvilo-team',
     });
     // A link to the official site, read from the official app origin: both
     // hosts are official, so the link stays internal across the two origins.
     expect(parseInternalLink(officialSiteLink('/acceptance/acceptance-3'), OFFICIAL_URL)).toEqual({
-      acceptanceId: 'acceptance-3',
       pathname: '/acceptance/acceptance-3',
-      type: 'acceptance',
+      type: 'route',
     });
   });
 
@@ -135,9 +130,8 @@ describe('parseInternalLink', () => {
     expect(
       parseInternalLink(officialSiteLink('/acceptance/acceptance-4'), 'app://renderer'),
     ).toEqual({
-      acceptanceId: 'acceptance-4',
       pathname: '/acceptance/acceptance-4',
-      type: 'acceptance',
+      type: 'route',
     });
   });
 

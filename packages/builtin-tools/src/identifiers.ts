@@ -1,4 +1,3 @@
-import { AcceptanceEvidenceManifest } from '@orvilo/builtin-tool-acceptance-evidence';
 import { OrviloActivatorManifest } from '@orvilo/builtin-tool-activator';
 import { AgentBuilderManifest } from '@orvilo/builtin-tool-agent-builder';
 import { AgentDocumentsManifest } from '@orvilo/builtin-tool-agent-documents';
@@ -26,12 +25,10 @@ import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration'
 import { SkillsManifest } from '@orvilo/builtin-tool-skills';
 import { TopicReferenceManifest } from '@orvilo/builtin-tool-topic-reference';
 import { UserInteractionManifest } from '@orvilo/builtin-tool-user-interaction';
-import { VerifyToolManifest } from '@orvilo/builtin-tool-verify';
 import { WebBrowsingManifest } from '@orvilo/builtin-tool-web-browsing';
 import { WebOnboardingManifest } from '@orvilo/builtin-tool-web-onboarding';
 
 export const builtinToolIdentifiers: string[] = [
-  AcceptanceEvidenceManifest.identifier,
   AgentBuilderManifest.identifier,
   AgentDocumentsManifest.identifier,
   AgentManagementManifest.identifier,
@@ -60,5 +57,4 @@ export const builtinToolIdentifiers: string[] = [
   UserInteractionManifest.identifier,
   OrviloAgentManifest.identifier,
   WebOnboardingManifest.identifier,
-  VerifyToolManifest.identifier,
 ];

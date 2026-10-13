@@ -17,4 +17,3 @@ export * from './taskInstruction';
 export * from './taskIntent';
 export * from './taskTopicHandoff';
 export * from './understanding';
-export * from './verify';

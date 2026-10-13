@@ -35,7 +35,6 @@ export const ExperimentDetail = ({
   const openNode = useChatStore((s) => s.drillIntoGoalNode);
   const openTask = useChatStore((s) => s.openTaskDetail);
   const openResult = useChatStore((s) => s.openTaskResult);
-  const openAcceptance = useChatStore((s) => s.openAcceptance);
   const relations = experimentRelations(graph, view.node.id);
   const inputs = experimentInputs(snapshot, view.node.id);
   return (
@@ -43,13 +42,7 @@ export const ExperimentDetail = ({
       <div className="flex flex-col gap-2.5 p-4" style={{ flexShrink: 0 }}>
         <div className="flex gap-2 flex-wrap">
           <Badge variant="secondary">{t('goalExperiment.number', { number: view.seq })}</Badge>
-          <Badge variant="secondary">
-            {t(
-              view.isVerifying
-                ? 'goalProcess.tag.verifying'
-                : `goalProcess.nodeStatus.${view.node.status}`,
-            )}
-          </Badge>
+          <Badge variant="secondary">{t(`goalProcess.nodeStatus.${view.node.status}`)}</Badge>
         </div>
         <h2 className="text-lg font-semibold">{view.node.title}</h2>
         <div className="flex gap-2 flex-wrap">
@@ -61,11 +54,6 @@ export const ExperimentDetail = ({
           {view.node.taskId && hasReviewableResult(view) && (
             <Button size="sm" onClick={() => openResult(view.node.taskId!)}>
               {t('goalExperiment.delivery')}
-            </Button>
-          )}
-          {view.acceptance && (
-            <Button size="sm" onClick={() => openAcceptance(view.acceptance!.id)}>
-              {t('goalExperiment.acceptance')}
             </Button>
           )}
         </div>

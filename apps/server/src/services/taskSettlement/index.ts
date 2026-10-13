@@ -14,7 +14,7 @@ import { resolveSettlementPlan } from './policy';
 import type { SettlementPlan, SettlementResult, SettleTaskExecutionInput } from './types';
 import { resolveWorkflowTransition, type TaskWorkflowPatch } from './workflowTransition';
 
-export { attentionForVerifyOutcome, deriveTaskAttention } from './attention';
+export { deriveTaskAttention } from './attention';
 export { resolveSettlementPlan, resolveTaskReviewRequirement } from './policy';
 export * from './types';
 export { resolveWorkflowTransition, type TaskWorkflowPatch } from './workflowTransition';
@@ -22,10 +22,9 @@ export { resolveWorkflowTransition, type TaskWorkflowPatch } from './workflowTra
 const TERMINAL_LEGACY_STATUSES = new Set(['canceled', 'completed', 'failed']);
 
 /**
- * The single chokepoint where an execution/verify outcome becomes task state.
+ * The single chokepoint where an execution outcome becomes task state.
  *
- * Given `taskId` + what just happened (`outcome`, or `verifyOutcome` for the
- * verify-driven path), the policy table decides the three canonical layers —
+ * Given `taskId` + what just happened (`outcome`), the policy table decides the three canonical layers —
  * Issue Status (`workflowCategory`/`workflowStateRefId`), execution
  * projection, attention reason — plus the legacy status-transition vocabulary,
  * and applies them atomically through the caller-supplied concurrency guard
@@ -95,7 +94,7 @@ export const settleTaskExecution = async (
   }
 
   const reviewRequired =
-    input.outcome === 'succeeded' && task.automationMode && !context?.verifyBound
+    input.outcome === 'succeeded' && task.automationMode
       ? await taskModel.resolveTaskReviewRequirement(task)
       : false;
 
@@ -105,15 +104,10 @@ export const settleTaskExecution = async (
     reviewRequired,
     runStarted: input.runStarted,
     task,
-    verifyOutcome: input.verifyOutcome,
   });
 
   const deliveredIssue =
-    input.outcome === 'succeeded' &&
-    !task.automationMode &&
-    !context?.blocked &&
-    !unresolvedInput &&
-    !context?.manualAcceptance;
+    input.outcome === 'succeeded' && !task.automationMode && !context?.blocked && !unresolvedInput;
   if (deliveredIssue) {
     plan = {
       ...plan,
@@ -130,11 +124,7 @@ export const settleTaskExecution = async (
     plan = { ...plan, workflowCategory: 'in_progress' };
     input = { ...input, context: { ...context, error: task.error } };
   }
-  const waitingForReviewer =
-    !task.reviewerAgentId &&
-    !context?.manualAcceptance &&
-    (plan.workflowCategory === 'in_review' ||
-      (input.verifyOutcome === 'passed' && !task.automationMode && !unresolvedInput));
+  const waitingForReviewer = !task.reviewerAgentId && plan.workflowCategory === 'in_review';
   if (waitingForReviewer) {
     plan = {
       ...plan,

@@ -24,8 +24,6 @@ import { workspaceMemberRouter } from '@/business/server/lambda-routers/workspac
 import { workspaceUsageRouter } from '@/business/server/lambda-routers/workspaceUsage';
 import { publicProcedure, router } from '@/libs/trpc/lambda';
 
-import { acceptanceRouter } from './acceptance';
-import { acceptanceCommentRouter } from './acceptanceComment';
 import { agentRouter } from './agent';
 import { agentDocumentRouter } from './agentDocument';
 import { agentEvalRouter } from './agentEval';
@@ -106,7 +104,6 @@ import { usageRouter } from './usage';
 import { userRouter } from './user';
 import { userMemoriesRouter } from './userMemories';
 import { userMemoryRouter } from './userMemory';
-import { verifyRouter } from './verify';
 import { webBrowsingRouter } from './webBrowsing';
 import { workRouter } from './work';
 import { workAttentionRouter } from './workAttention';
@@ -115,8 +112,6 @@ import { workspaceUserSettingsRouter } from './workspaceUserSettings';
 export const lambdaRouter = router({
   slackIntegration: slackIntegrationRouter,
   providerBinding: providerBindingRouter,
-  acceptance: acceptanceRouter,
-  acceptanceComment: acceptanceCommentRouter,
   agent: agentRouter,
   agentNotify: agentNotifyRouter,
   agentDocument: agentDocumentRouter,
@@ -200,7 +195,6 @@ export const lambdaRouter = router({
   userMemories: userMemoriesRouter,
   experienceMemory: experienceMemoryRouter,
   userMemory: userMemoryRouter,
-  verify: verifyRouter,
   webBrowsing: webBrowsingRouter,
   work: workRouter,
   workAttention: workAttentionRouter,

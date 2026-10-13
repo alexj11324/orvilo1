@@ -38,21 +38,28 @@ single function that folds a task's dispatch/run rows into the canonical
 
 ## Settlement policy
 
-All transitions between the workflow and execution layers happen exclusively
-through `settleTaskExecution`. Call sites report an outcome; the policy
-decides the new state — call sites never pick a status themselves.
+Execution outcomes are reported to `settleTaskExecution`, which preserves the
+current generation and dispatch fences. Ordinary Issue delivery enters review;
+`services/task/review.ts` records a reviewer verdict and normal comment atomically
+through the current Issue review cycle. See [Issue review](issue-review.md).
 
-| Event                       | Workflow          | Execution         | Attention        | Legacy `tasks.status`                            |
-| --------------------------- | ----------------- | ----------------- | ---------------- | ------------------------------------------------ |
-| run starts                  | → in_progress     | running           | none             | running                                          |
-| run waits for user          | stays in_progress | waiting           | needs_input      | running                                          |
-| execution failed            | stays in_progress | failed            | execution_failed | paused (non-automation) / scheduled (automation) |
-| success, no review required | → done            | succeeded         | none             | completed                                        |
-| success, review required    | → in_review       | succeeded         | review_required  | paused                                           |
-| verify passed               | → done            | succeeded         | none             | completed                                        |
-| verify failed + auto repair | stays in_progress | queued            | needs_changes    | running                                          |
-| verify failed, no repair    | → in_review       | succeeded         | needs_changes    | paused                                           |
-| user cancels issue          | → canceled        | cancel active run | none             | canceled                                         |
+| Event                                  | Issue workflow | Execution / follow-up                                       |
+| -------------------------------------- | -------------- | ----------------------------------------------------------- |
+| Run starts                             | In progress    | Running                                                     |
+| Run waits for user                     | In progress    | Waiting                                                     |
+| Execution fails                        | In progress    | Failed; readable activity                                   |
+| Delivery has no reviewer Agent         | In progress    | Orchestrator names one; delivery waits                      |
+| Delivery has a reviewer Agent          | In review      | Fresh reviewer session                                      |
+| Reviewer passes                        | Done           | Optional normal reviewer comment                            |
+| Reviewer fails                         | In progress    | Reviewer comment and automatic assignee repair              |
+| Reviewer fails three consecutive times | In progress    | Repair stops; one stop comment and owner Inbox notification |
+| Reviewer has no verdict                | In review      | Plain waiting activity; ordinary reconnect/sweep retry      |
+| Person changes status                  | Chosen status  | Current review cycle is fenced from late callbacks          |
+| Person cancels Issue                   | Canceled       | Cancel active run                                           |
+
+Recurring automation keeps its existing scheduled cadence and run-cap policy.
+The legacy status field on API responses is a projection of these canonical
+layers; it does not own Issue status.
 
 Invariants the policy enforces:
 
@@ -62,20 +69,18 @@ Invariants the policy enforces:
 - `failed` execution is **not** `needs_input` attention — a failed run wants
   `execution_failed`; `needs_input` is reserved for waits on the user.
 - `succeeded` execution is **not** Done — completion is a policy decision
-  (review gate, verify gate), not a consequence of the run ending well.
+  (the reviewer verdict or a person's status change), not a consequence of the run ending well.
 
 ### Review requirement
 
-`resolveTaskReviewRequirement` decides whether a successful run parks in
-`in_review` or completes straight to `done`. It returns `true` when any of:
+Ordinary delivered Issues require the reviewer Agent flow. The database requires
+`reviewerAgentId` whenever `workflowCategory` is `in_review`, including custom
+states in that category. Without a reviewer, delivery stays In progress while
+the Orchestrator names one.
 
-- the task's explicit checkpoint requires review (`checkpoint.topic.after`),
-- the owning project's `orchestrationPolicy.requireHumanReview` is `true`,
-- an explicit verify/Aegis gate requires review.
-
-Otherwise `false` — success settles `done` directly. This replaces the old
-default-pause (`shouldPauseOnTopicComplete`, now deprecated), under which
-every successful root task paused for review.
+The retained `resolveTaskReviewRequirement` helper reads checkpoint and project
+policy for automation and other existing callers. It has no Verify/Aegis gate
+or inherited verifier configuration.
 
 ### Fences and idempotency
 
@@ -137,24 +142,25 @@ The client follows the same split:
 - **`TaskExecutionBadge`** renders `deriveTaskExecutionState` read-only —
   it never mutates issue status.
 - **Auto-run**: only a move INTO `in_progress` may spawn a builder
-  (`AUTO_RUN_CATEGORIES`); `in_review` never does — verification is Verify's
-  job.
+  (`AUTO_RUN_CATEGORIES`). Moving into `in_review` starts the reviewer Agent,
+  rather than another assignee run.
 - **Reviewer ownership** keys off workflow `in_review` (the reviewer
   assigned to the issue/review gate), not the legacy `paused` projection.
 
 ## Settlement call sites
 
-Every writer of task outcome state delegates to `settleTaskExecution` — no
-service picks a status itself:
+Execution delivery writers delegate to `settleTaskExecution`. Reviewer verdicts
+use the row-locked Issue review cycle:
 
 - `services/taskLifecycle` — run outcomes (complete / pause / cancel /
   dependency-driven writes) go through the service's `settleOwned` helper,
   which injects `taskId`, `operationId`, and the generation fence. A
   stale-generation skip surfaces as `TaskCompletionSupersededError`.
-- `services/verify/settle` — each verdict settles via `verifyOutcome`
-  (`passed` completes or re-parks scheduled tasks; `failed` drives auto
-  repair or parks in review; `errored` / `review_errored` / `unjudgeable` /
-  `integration_blocked` route to a person via `blocked` attention).
+- `services/task/review` — pass writes Done and the reviewer comment; fail writes
+  In progress and the comment, then resumes the assignee after the reviewer
+  operation finishes. Three failures stop the repair loop and notify the owner.
+- `services/taskIntegration` and `services/taskDeliveryReview` — settled local or
+  merged GitHub delivery uses the same fenced execution settlement and review.
 - `services/taskWatchdog` — unconfirmed cancel settles `outcome_unknown`;
   heartbeat timeout settles `failed`. The legacy projection for a
   heartbeat timeout is now `paused` (execution-failed keeps the issue open);
@@ -165,13 +171,9 @@ service picks a status itself:
   `in_progress` + the resolved state ref; the legacy `running` projection
   is already on the row from `reserveRun`.
 
-Two semantics changed where old behavior conflicted with the table:
-
-- A successful run on a task with no review gate completes to `done`
-  instead of parking at `paused` (default-pause removed).
-- A verify-bound automation task re-arms `scheduled` while its verdict is
-  pending, so heartbeat cadence survives; non-automation tasks hold for the
-  verdict.
+A successful ordinary Issue run cannot complete the Issue by itself. A reviewer
+pass or a person's explicit status change owns Done. Recurring automation retains
+its existing cadence independently of the removed Acceptance / Verify engine.
 
 ## Query and saved-view schema (WorkQuery v2)
 

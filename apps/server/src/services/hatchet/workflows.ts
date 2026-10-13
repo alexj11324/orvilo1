@@ -41,8 +41,6 @@ export const HATCHET_WORKFLOW_PATHS = [
   '/api/workflows/linear-sync/execute',
   '/api/workflows/task/on-creator-complete',
   '/api/workflows/task/on-topic-complete',
-  '/api/workflows/verify/on-evidence-complete',
-  '/api/workflows/verify/on-verifier-complete',
 ] as const;
 
 export type HatchetWorkflowPath = (typeof HATCHET_WORKFLOW_PATHS)[number];

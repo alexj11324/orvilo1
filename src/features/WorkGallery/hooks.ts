@@ -16,7 +16,7 @@ const WORK_GALLERY_PAGE_SIZE = 30;
  * Cursor-paginated, infinite-scrolling Work summaries scoped to the active
  * workspace (or personal space). `galleryKey` selects the filter (a Work type,
  * a skill provider, or the combined `all` view). Changing it collapses back to
- * the first page. Mirrors `useVerifyReportSummariesInfinite`.
+ * the first page.
  */
 export const useWorkspaceWorksInfinite = (galleryKey: WorkGalleryKey) => {
   const workspaceId = useActiveWorkspaceId();

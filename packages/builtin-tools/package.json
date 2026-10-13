@@ -22,7 +22,6 @@
   "dependencies": {
     "@icons-pack/react-simple-icons": "^13.13.0",
     "@lobehub/icons": "^5.11.0",
-    "@orvilo/builtin-tool-acceptance-evidence": "workspace:*",
     "@orvilo/builtin-tool-activator": "workspace:*",
     "@orvilo/builtin-tool-agent-builder": "workspace:*",
     "@orvilo/builtin-tool-agent-documents": "workspace:*",
@@ -49,7 +48,6 @@
     "@orvilo/builtin-tool-task": "workspace:*",
     "@orvilo/builtin-tool-topic-reference": "workspace:*",
     "@orvilo/builtin-tool-user-interaction": "workspace:*",
-    "@orvilo/builtin-tool-verify": "workspace:*",
     "@orvilo/builtin-tool-web-browsing": "workspace:*",
     "@orvilo/builtin-tool-web-onboarding": "workspace:*",
     "@orvilo/const": "workspace:*"

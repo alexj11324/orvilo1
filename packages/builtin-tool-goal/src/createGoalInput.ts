@@ -5,12 +5,6 @@
  */
 import type { GoalSchedulePolicy } from '@orvilo/types';
 
-export interface GoalCriterionInput {
-  description?: string;
-  instruction?: string;
-  title: string;
-}
-
 /**
  * Attempts one Work gets before the coordinator opens a decision gate.
  *
@@ -53,38 +47,10 @@ export const resolveGoalScheduleConfig = (
   return { deadline: parsed.toISOString() };
 };
 
-/**
- * The goal's acceptance requirement. The Goal Graph models "what counts as
- * done" as one authoritative text, which the coordinator folds into every
- * Work's acceptance contract — so the drafted criteria are rendered into it
- * rather than persisted as separate verify criteria rows.
- *
- * The text doubles as the goal page's editable "what counts as done" document,
- * which renders markdown — so the composition is structured markdown, not bare
- * lines: criterion titles bold, the how-to-judge note on its own sub-line.
- */
+/** Compose the reviewed scope and acceptance criteria into the editable description. */
 export const buildGoalRequirement = (
   name: string,
-  criteria: GoalCriterionInput[],
+  criteriaDescription: string,
   instruction?: string,
-): string => {
-  const list = criteria
-    .map((item, index) =>
-      [
-        `${index + 1}. **${item.title}**`,
-        item.description ? ` — ${item.description}` : '',
-        // Hard break (trailing two spaces) + indented continuation keeps the
-        // judge note inside the SAME list item — a nested bullet would steal
-        // the next ordinal from the editor's list numbering (1/3/5).
-        item.instruction ? `  \n   *How to judge:* ${item.instruction}` : '',
-      ].join(''),
-    )
-    .join('\n');
-  return [
-    `## ${name}`,
-    instruction ? `**Scope:** ${instruction}` : undefined,
-    `**Acceptance criteria** — every one must be satisfied with concrete evidence:\n\n${list}`,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
-};
+): string =>
+  [...new Set([`## ${name}`, instruction, criteriaDescription].filter(Boolean))].join('\n\n');

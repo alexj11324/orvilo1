@@ -1,14 +1,9 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { PortalViewType } from '@/store/chat/slices/portal/initialState';
-
 interface RenderOverlaysOptions {
-  portalViewType?: PortalViewType | null;
   topicDrawerTopicId?: string;
 }
-
-const stub = (testId: string) => ({ default: () => <div data-testid={testId} /> });
 
 const useSyncRecents = vi.fn();
 
@@ -21,15 +16,11 @@ const topicDrawerProps: Record<string, unknown>[] = [];
  * to be mounted on every route — so when Home stops being the app shell, these
  * assertions are what proves the behaviour moved rather than disappeared.
  */
-const renderOverlays = async ({
-  portalViewType = null,
-  topicDrawerTopicId,
-}: RenderOverlaysOptions = {}) => {
+const renderOverlays = async ({ topicDrawerTopicId }: RenderOverlaysOptions = {}) => {
   vi.resetModules();
   topicDrawerProps.length = 0;
 
   vi.doMock('@/hooks/useSyncRecents', () => ({ useSyncRecents }));
-  vi.doMock('./AcceptancePortalDrawer', () => stub('acceptance-portal-drawer'));
   vi.doMock('@/features/AgentTasks/AgentTaskDetail/TopicChatDrawer', () => ({
     default: (props: Record<string, unknown>) => {
       topicDrawerProps.push(props);
@@ -37,14 +28,8 @@ const renderOverlays = async ({
       return <div data-testid="topic-chat-drawer" />;
     },
   }));
-  vi.doMock('@/store/chat', () => ({
-    useChatStore: (selector: (state: unknown) => unknown) => selector({}),
-  }));
-  vi.doMock('@/store/chat/selectors', () => ({
-    chatPortalSelectors: { currentViewType: () => portalViewType },
-  }));
   vi.doMock('@/store/task', () => ({
-    useTaskStore: (selector: (state: unknown) => unknown) => selector({}),
+    useTaskStore: vi.fn((selector: (state: unknown) => unknown) => selector({})),
   }));
   vi.doMock('@/store/task/selectors', () => ({
     taskDetailSelectors: { activeTopicDrawerTopicId: () => topicDrawerTopicId },
@@ -59,10 +44,7 @@ afterEach(() => {
   cleanup();
   useSyncRecents.mockClear();
   vi.doUnmock('@/hooks/useSyncRecents');
-  vi.doUnmock('./AcceptancePortalDrawer');
   vi.doUnmock('@/features/AgentTasks/AgentTaskDetail/TopicChatDrawer');
-  vi.doUnmock('@/store/chat');
-  vi.doUnmock('@/store/chat/selectors');
   vi.doUnmock('@/store/task');
   vi.doUnmock('@/store/task/selectors');
 });
@@ -72,18 +54,6 @@ describe('GlobalOverlays', () => {
     await renderOverlays();
 
     await waitFor(() => expect(useSyncRecents).toHaveBeenCalled());
-  });
-
-  it('loads the acceptance drawer only after an acceptance portal opens', async () => {
-    await renderOverlays({ portalViewType: PortalViewType.Acceptance });
-
-    expect(await screen.findByTestId('acceptance-portal-drawer')).toBeInTheDocument();
-  });
-
-  it('does not load the acceptance drawer for unrelated portal views', async () => {
-    await renderOverlays({ portalViewType: PortalViewType.TaskDetail });
-
-    expect(screen.queryByTestId('acceptance-portal-drawer')).not.toBeInTheDocument();
   });
 
   it('loads the run drawer only once a topic has been opened', async () => {

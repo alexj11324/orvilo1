@@ -28,7 +28,6 @@ vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
 }));
 vi.mock('./buildTaskPrompt', () => ({
   buildTaskPrompt: vi.fn().mockResolvedValue({
-    acceptanceEnabled: false,
     fileIds: [],
     prompt: 'do the thing',
   }),
@@ -83,7 +82,7 @@ const setupHappyPath = (task: TaskItem, execResult: unknown) => {
   vi.spyOn(TaskModel.prototype, 'getCheckpointConfig').mockReturnValue({
     onAgentRequest: false,
   } as never);
-  vi.spyOn(TaskModel.prototype, 'getReviewConfig').mockReturnValue(undefined);
+
   vi.spyOn(TaskTopicModel.prototype, 'startRun').mockResolvedValue(undefined as never);
   vi.spyOn(TaskDispatchService.prototype, 'prepare').mockResolvedValue({
     dispatch: { generation: 1, id: 'dsp-1' } as never,

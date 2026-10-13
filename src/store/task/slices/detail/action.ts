@@ -41,7 +41,6 @@ type DeletedTask = NonNullable<Awaited<ReturnType<typeof taskService.delete>>['d
 
 // config / heartbeatInterval / heartbeatTimeout are not exposed here:
 // - checkpoint goes through configSlice.updateCheckpoint
-// - review goes through configSlice.updateReview
 // - heartbeat config will get a dedicated action once the upstream task scheduler infra is complete
 export interface TaskUpdatePayload {
   /** Kanban drop anchors — the cards framing the drop slot, id or identifier. */

@@ -243,3 +243,13 @@ describe('task completion', () => {
     expect(execBuiltinTool).not.toHaveBeenCalled();
   });
 });
+
+describe('task command surface', () => {
+  it('does not expose the retired LLM judge review configuration', () => {
+    const program = new Command();
+    registerTaskCommand(program);
+    const task = program.commands.find((command) => command.name() === 'task');
+    expect(task).toBeDefined();
+    expect(task!.commands.map((command) => command.name())).not.toContain('review');
+  });
+});

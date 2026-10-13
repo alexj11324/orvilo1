@@ -139,9 +139,6 @@ describe('resolvePropertyActivityCopy', () => {
     expect(resolvePropertyActivityCopy({ field: 'description' })?.key).toBe(
       'taskDetail.activities.description.edited',
     );
-    expect(resolvePropertyActivityCopy({ field: 'verify' })?.key).toBe(
-      'taskDetail.activities.verify.changed',
-    );
     expect(resolvePropertyActivityCopy({ field: 'title', from: null, to: 'New' })).toEqual({
       key: 'taskDetail.activities.title.changed',
       slots: {

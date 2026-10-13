@@ -103,17 +103,6 @@ export class TaskConfigSliceActionImpl {
     if (activeTaskId) await internal_refreshTaskDetail(activeTaskId);
   };
 
-  runReview = async (id: string, params?: { content?: string; topicId?: string }) => {
-    try {
-      const result = await taskService.runReview(id, params);
-      await this.#get().internal_refreshTaskDetail(id);
-      return result;
-    } catch (error) {
-      console.error('[TaskStore] Failed to run review:', error);
-      throw error;
-    }
-  };
-
   updateCheckpoint = async (id: string, checkpoint: CheckpointConfig): Promise<void> => {
     this.#get().internal_dispatchTaskDetail({
       id,
@@ -127,35 +116,6 @@ export class TaskConfigSliceActionImpl {
     } catch (error) {
       console.error('[TaskStore] Failed to update checkpoint:', error);
       await this.#get().internal_refreshTaskDetail(id);
-    }
-  };
-
-  updateReview = async (
-    id: string,
-    review: Parameters<typeof taskService.updateReview>[0]['review'],
-  ): Promise<void> => {
-    try {
-      await taskService.updateReview({ id, review });
-      await this.#get().internal_refreshTaskDetail(id);
-    } catch (error) {
-      console.error('[TaskStore] Failed to update review:', error);
-      await this.#get().internal_refreshTaskDetail(id);
-    }
-  };
-
-  updateVerifyConfig = async (
-    id: string,
-    verify: Parameters<typeof taskService.updateVerifyConfig>[0]['verify'],
-  ): Promise<void> => {
-    try {
-      await taskService.updateVerifyConfig({ id, verify });
-      await this.#get().internal_refreshTaskDetail(id);
-    } catch (error) {
-      console.error('[TaskStore] Failed to update verify config:', error);
-      await this.#get().internal_refreshTaskDetail(id);
-      // Rethrow so multi-step callers (e.g. acceptance removal) can abort
-      // instead of proceeding as if the config write landed.
-      throw error;
     }
   };
 

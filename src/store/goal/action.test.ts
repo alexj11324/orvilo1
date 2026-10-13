@@ -33,7 +33,7 @@ describe('GoalAction', () => {
       return options.refreshInterval({ goal: { status } });
     };
 
-    it.each(['planning', 'running', 'verifying'])(
+    it.each(['planning', 'running'])(
       'keeps re-reading a %s goal the server is still advancing',
       (status) => {
         // The goal advances from server events now; without this the page would
@@ -131,7 +131,7 @@ describe('GoalAction', () => {
 
     expect(goalService.list).toHaveBeenCalledWith(
       expect.objectContaining({
-        statuses: ['planning', 'running', 'verifying', 'review'],
+        statuses: ['planning', 'running', 'review'],
       }),
     );
     expect(goalService.list).toHaveBeenCalledWith(

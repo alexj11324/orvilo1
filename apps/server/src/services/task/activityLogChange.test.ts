@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  acceptancePolicyChanged,
   activityLogPropertyChange,
   collectActivityIssueIds,
   type ReadableIssueRefs,
@@ -120,9 +119,6 @@ describe('activityLogPropertyChange', () => {
     expect(activityLogPropertyChange({ payload: {}, type: 'description' }, issues)).toEqual({
       field: 'description',
     });
-    expect(activityLogPropertyChange({ payload: null, type: 'verify_config' }, issues)).toEqual({
-      field: 'verify',
-    });
   });
 
   it('leaves the assignee slots and unknown kinds to their own handling', () => {
@@ -145,41 +141,5 @@ describe('collectActivityIssueIds', () => {
         { payload: { fromId: 'state_1', toId: 'state_2' }, type: 'workflow_state' },
       ]),
     ).toEqual(['task_a', 'task_b']);
-  });
-});
-
-describe('acceptancePolicyChanged', () => {
-  it('is false when the policy is saved untouched', () => {
-    expect(
-      acceptancePolicyChanged(
-        { config: { enabled: true, maxIterations: 3 }, requirement: 'Ship it' },
-        { config: { enabled: true, maxIterations: 3 }, requirement: 'Ship it' },
-      ),
-    ).toBe(false);
-    expect(acceptancePolicyChanged({ config: null }, { config: {}, requirement: undefined })).toBe(
-      false,
-    );
-  });
-
-  it('ignores the order keys come back in, at any depth', () => {
-    expect(
-      acceptancePolicyChanged(
-        { config: { enabled: true, rubric: { a: 1, b: [{ x: 1, y: 2 }] } } },
-        { config: { rubric: { b: [{ y: 2, x: 1 }], a: 1 }, enabled: true } },
-      ),
-    ).toBe(false);
-    // Array order is meaning, not storage.
-    expect(
-      acceptancePolicyChanged({ config: { steps: [1, 2] } }, { config: { steps: [2, 1] } }),
-    ).toBe(true);
-  });
-
-  it('is true when the requirement or any setting changed', () => {
-    expect(
-      acceptancePolicyChanged({ config: {}, requirement: 'A' }, { config: {}, requirement: 'B' }),
-    ).toBe(true);
-    expect(
-      acceptancePolicyChanged({ config: { enabled: true } }, { config: { enabled: false } }),
-    ).toBe(true);
   });
 });

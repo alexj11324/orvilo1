@@ -5,12 +5,7 @@ import type {
   GoalTickBranch,
   GoalTickOutcome,
 } from '@orvilo/agent-tracing';
-import {
-  GOAL_ACCEPTANCE_TASK_TITLE,
-  LEASE_EXPIRED_ERROR,
-  VERIFICATION_ERRORED_ERROR,
-  VERIFICATION_FAILED_ERROR,
-} from '@orvilo/const/goal';
+import { LEASE_EXPIRED_ERROR } from '@orvilo/const/goal';
 import type {
   GoalGraphNode,
   GoalGraphSnapshot,
@@ -19,10 +14,8 @@ import type {
 } from '@orvilo/types';
 import { toMetricScale } from '@orvilo/types';
 
-export { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
-
 /** Reason strings the recovery paths key off, written by the settle path. */
-export { LEASE_EXPIRED_ERROR, VERIFICATION_ERRORED_ERROR, VERIFICATION_FAILED_ERROR };
+export { LEASE_EXPIRED_ERROR };
 
 export const TERMINAL_NODE_STATUSES = new Set(['resolved', 'rejected', 'retired']);
 
@@ -95,11 +88,7 @@ export const needsBudget = (task?: TaskItem | null, status?: string | null): boo
   // A failure the coordinator can retry spends money too.
   const resolved = status ?? task.status;
   if (resolved === 'paused') {
-    return (
-      task.error === LEASE_EXPIRED_ERROR ||
-      task.error === VERIFICATION_FAILED_ERROR ||
-      task.error === VERIFICATION_ERRORED_ERROR
-    );
+    return task.error === LEASE_EXPIRED_ERROR;
   }
   return !['completed', 'failed', 'canceled', 'running', 'scheduled'].includes(resolved);
 };
@@ -451,15 +440,13 @@ const decideWithoutFrontier = (
   }
 
   // Exploration consumes real completed results before deciding whether to
-  // extend the graph or hand the deliverable to the ordinary acceptance gate.
+  // extend the graph or finish the workflow after its Issues reach Done.
   if (
     graph.goal.config?.exploration &&
     !(
       graph.goal.config.exploration.checkpoint?.readyForAcceptance &&
-      taskNodes.every(
-        (node) =>
-          node.title === GOAL_ACCEPTANCE_TASK_TITLE ||
-          graph.goal.config!.exploration!.checkpoint!.reviewedNodeIds?.includes(node.id),
+      taskNodes.every((node) =>
+        graph.goal.config!.exploration!.checkpoint!.reviewedNodeIds?.includes(node.id),
       )
     )
   ) {
@@ -471,11 +458,8 @@ const decideWithoutFrontier = (
     };
   }
 
-  // Measured clauses gate the delivery contract, and are checked before it:
-  // an unmet number is not something a verifier can talk its way past, so
-  // creating (or re-running) the acceptance Task against it would only spend
-  // tokens to restate the gap. `no_progress` leaves the goal running — the
-  // next observation is what moves it, not another attempt.
+  // Measured clauses must also hold before the workflow finishes. A new Issue
+  // cannot replace a missing measurement; the next observation can advance it.
   if (metricCriteria && !metricCriteria.allMet) {
     const unmet = metricCriteria.criteria.filter((criterion) => !criterion.met);
     return {
@@ -488,31 +472,7 @@ const decideWithoutFrontier = (
     };
   }
 
-  const acceptanceTask = taskNodes.find((node) => node.title === GOAL_ACCEPTANCE_TASK_TITLE);
-
-  if (graph.goal.requirement && !acceptanceTask) {
-    return {
-      ...base,
-      branch: 'terminal_acceptance',
-      message: 'Every Task finished; the Goal-level acceptance contract is next',
-      outcome: 'advanced',
-    };
-  }
-  if (graph.goal.requirement && acceptanceTask?.status !== 'resolved') {
-    return {
-      ...base,
-      branch: 'terminal_acceptance',
-      focusNodeId: acceptanceTask?.id,
-      message: 'Goal-level acceptance did not pass',
-      outcome: 'no_progress',
-    };
-  }
-  return {
-    ...base,
-    branch: 'terminal_acceptance',
-    message: 'Goal-level acceptance passed',
-    outcome: 'achieved',
-  };
+  return { ...base, branch: 'goal_completed', message: 'Every Issue is done', outcome: 'achieved' };
 };
 
 const decideForTask = (
@@ -543,13 +503,7 @@ const decideForTask = (
   }
 
   if (status === 'failed' || status === 'canceled' || (status === 'paused' && task.error)) {
-    if (
-      budget?.deadlinePassed &&
-      status === 'paused' &&
-      (task.error === LEASE_EXPIRED_ERROR ||
-        task.error === VERIFICATION_FAILED_ERROR ||
-        task.error === VERIFICATION_ERRORED_ERROR)
-    ) {
+    if (budget?.deadlinePassed && status === 'paused' && task.error === LEASE_EXPIRED_ERROR) {
       return {
         ...base,
         branch: 'budget_exhausted',
@@ -563,25 +517,6 @@ const decideForTask = (
         ...base,
         branch: 'recover_lease',
         message: `Task ${task.identifier} outlived its operation lease`,
-        outcome: 'waiting_external',
-      };
-    }
-    // A verifier that could not run never evaluated the delivery, so it is an
-    // infrastructure failure rather than a verdict. It recovers the same way a
-    // rejection does; without a branch it fell through to the human gate, which
-    // stopped the goal on a failure nobody needed to judge.
-    if (
-      status === 'paused' &&
-      (task.error === VERIFICATION_FAILED_ERROR || task.error === VERIFICATION_ERRORED_ERROR)
-    ) {
-      if (!capacity) return 'needs-capacity';
-      return {
-        ...base,
-        branch: 'recover_verification',
-        message:
-          task.error === VERIFICATION_ERRORED_ERROR
-            ? `Verification could not run for Task ${task.identifier}`
-            : `Task ${task.identifier} did not pass verification`,
         outcome: 'waiting_external',
       };
     }

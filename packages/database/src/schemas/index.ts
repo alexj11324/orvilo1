@@ -1,5 +1,3 @@
-export * from './acceptanceComment';
-export * from './acceptanceFlow';
 export * from './actionApproval';
 export * from './agent';
 export * from './agentCronJob';
@@ -85,7 +83,6 @@ export * from './topicComment';
 export * from './trash';
 export * from './user';
 export * from './userMemories';
-export * from './verify';
 export * from './work';
 export * from './workAttention';
 export * from './workspace';

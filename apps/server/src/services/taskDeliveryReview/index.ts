@@ -250,16 +250,48 @@ const clearVerificationPollStages = async (params: {
     : record;
 };
 
+const settleMergedDelivery = async (params: {
+  db: OrviloDatabase;
+  ownerId: string;
+  row: NonNullable<ReturnType<typeof activeDeliveryRow>>;
+  task: TaskItem;
+  workspaceId?: string;
+}): Promise<void> => {
+  const { db, ownerId, row, task, workspaceId } = params;
+  const current = await new TaskModel(db, ownerId, workspaceId).findById(task.id);
+  if (
+    !current ||
+    current.executionGeneration !== row.executionGeneration ||
+    !['paused', 'running'].includes(current.status)
+  )
+    return;
+  const { settleTaskExecution } = await import('../taskSettlement');
+  await settleTaskExecution(
+    db,
+    ownerId,
+    {
+      taskId: task.id,
+      operationId: row.operationId ?? undefined,
+      executionGeneration: row.executionGeneration ?? undefined,
+      dispatchFence: row.dispatchFence ?? undefined,
+      outcome: 'succeeded',
+      context: { expectedStatus: current.status },
+    },
+    workspaceId,
+  );
+};
+
 const markDeliveryMerged = async (params: {
   db: OrviloDatabase;
   ownerId: string;
   record: TaskTopicIntegration;
+  row: NonNullable<ReturnType<typeof activeDeliveryRow>>;
   snapshot: RemotePrReviewSnapshot;
   task: TaskItem;
   topicModel: TaskTopicModel;
   workspaceId?: string;
 }): Promise<void> => {
-  const { db, ownerId, record, snapshot, task, topicModel, workspaceId } = params;
+  const { db, ownerId, record, row: deliveryRow, snapshot, task, topicModel, workspaceId } = params;
   if (
     !snapshot.merged ||
     !snapshot.mergedAt ||
@@ -299,10 +331,7 @@ const markDeliveryMerged = async (params: {
   }
   if (updated === 0) throw new Error('No matching delivery row remains for merge confirmation');
 
-  await new TaskService(db, ownerId, workspaceId).updateStatus({
-    id: task.id,
-    status: 'completed',
-  });
+  await settleMergedDelivery({ db, ownerId, row: deliveryRow, task, workspaceId });
 };
 
 const buildCorrectivePrompt = (params: {
@@ -395,7 +424,7 @@ const dispatchCorrective = async (params: {
       state: 'merging',
     },
     parentOperationId: row.operationId ?? undefined,
-    skipTaskVerification: true,
+
     taskId: task.id,
     workspaceOverride,
   });
@@ -517,10 +546,7 @@ export const runTaskDeliveryReviewSweep = async (
       // PR belongs to the current execution generation before letting it
       // through, so a stale row cannot complete a rerun task.
       if (record.state === 'integrated') {
-        await new TaskService(db, ownerId, workspaceId).updateStatus({
-          id: task.id,
-          status: 'completed',
-        });
+        await settleMergedDelivery({ db, ownerId, row, task, workspaceId });
         result.merged.push(task.identifier);
         continue;
       }
@@ -679,6 +705,7 @@ export const runTaskDeliveryReviewSweep = async (
 
       if (snapshot.merged) {
         await markDeliveryMerged({
+          row,
           db,
           ownerId,
           record: { ...deliveryRecord, prNumber },
@@ -798,6 +825,7 @@ export const runTaskDeliveryReviewSweep = async (
       });
       if (decision.merged) {
         await markDeliveryMerged({
+          row,
           db,
           ownerId,
           record: { ...deliveryRecord, prNumber: decision.number },
@@ -950,6 +978,7 @@ export const runTaskDeliveryReviewSweep = async (
       });
 
       await markDeliveryMerged({
+        row,
         db,
         ownerId,
         record: { ...deliveryRecord, expectedHeadSha: snapshot.headSha, prNumber: snapshot.number },

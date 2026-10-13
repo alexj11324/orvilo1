@@ -1,7 +1,7 @@
 # ACP Judgment Closure (R08)
 
 The in-process Lobe agent loop is retired. All retained machine judgments —
-planning, Verify judges, reflection, routing classifiers — run as explicitly
+planning, reflection, routing classifiers — run as explicitly
 authorized ACP operations. Deployment-level provider credentials
 (`{PROVIDER}_API_KEY` / `{PROVIDER}_PROXY_URL` via
 `initModelRuntimeFromDeploymentConfig`) are **never** an automatic fallback for
@@ -64,7 +64,7 @@ exception table below, and `apps/server/src/acpJudgmentGuards.test.ts`.
    (`ACP_JUDGMENT_RUN_FAILED`, carries `operationId`/`status`/`cancelResult`);
    a schema mismatch on a `done` run → `AcpJudgmentValidationError`
    (`ACP_JUDGMENT_SCHEMA_MISMATCH`, carries `issues`/`operationId`) — the
-   payload never reaches the consumer's planning/acceptance write.
+   payload never reaches the consumer's planning write.
 5. **Trace**: every run — success or failure — writes an
    `llm_generation_tracing` row stamped with `metadata.operationId`, the
    operation's model/provider/cost/tokens, and `trigger: 'acp_judgment'`;
@@ -80,15 +80,9 @@ Judgment consumers (all `kind: 'judgment'`; binding → purpose):
 
 | Consumer                                                             | File                                      | Binding                                             | Purpose                                                           |
 | -------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
-| Verify llm-item judge                                                | `services/verify/executor.ts`             | Issue `reviewerAgentId`                             | `verify.judge`                                                    |
-| Verify narrative report                                              | `services/verify/reporter.ts`             | Issue `reviewerAgentId`                             | `verify.report`                                                   |
-| Review predictor                                                     | `services/verify/reviewPredictor.ts`      | Issue `reviewerAgentId`                             | `verify.reviewPredict`                                            |
-| Criteria/plan generator                                              | `services/verify/planGenerator.ts`        | Issue `reviewerAgentId`                             | `verify.planGen`                                                  |
-| Goal criteria draft                                                  | `services/goal/criteriaGenerator.ts`      | selected Agent `agentId`                            | `goal.criteriaDraft`                                              |
-| Goal decompose                                                       | `services/goal/criteriaGenerator.ts`      | goal `agentId`                                      | `goal.decompose`                                                  |
+| Goal decompose                                                       | `services/goal/decompositionPlanner.ts`   | goal `agentId`                                      | `goal.decompose`                                                  |
 | Goal exploration planner                                             | `services/goal/explorationPlanner.ts`     | goal `agentId`                                      | `goal.explore`                                                    |
 | Task intent/instruction                                              | `services/task/intent.ts`                 | selected Agent / configured Orchestrator            | `task.intent` / `task.instruction`                                |
-| Task review judge                                                    | `services/taskReview/index.ts`            | `judgeAgentId` (task assignee)                      | `task.review`                                                     |
 | Task lifecycle (handoff/brief)                                       | `services/taskLifecycle/index.ts`         | `task.assigneeAgentId`                              | `task.handoff` / `task.briefJudge` / `task.brief`                 |
 | Linear coordinator planning                                          | `services/linearSync/coordinator.ts`      | `project.coordinatorAgentId`                        | `linearSync.coordinatorPlan`                                      |
 | Follow-up extraction                                                 | `services/followUpAction/index.ts`        | `topic.agentId`                                     | `followUp.extract`                                                |
@@ -106,11 +100,10 @@ Judgment consumers (all `kind: 'judgment'`; binding → purpose):
 
 ### Surfacing the no-binding block
 
-- Routers (`verify.ts`, `task.ts`, `aiChat.ts` via TRPC error mapping,
-  `acceptance.ts`) translate `ACP_JUDGMENT_NO_BINDING` → `PRECONDITION_FAILED`.
-- The verify executor marks llm check items `status: 'failed'`,
-  `verdict: 'uncertain'` — a blocked judgment gates delivery instead of
-  degrading to `errored`.
+- Task and chat routers translate `ACP_JUDGMENT_NO_BINDING` into a readable
+  `PRECONDITION_FAILED` error. Issue review uses one ordinary reviewer operation
+  and `submitTaskReview`; a missing verdict stays In review with its activity
+  line. See [Issue review](issue-review.md).
 - `taskLifecycle` persists a brief decision with `reason:
 'acp_judgment_no_binding'`; goal/followUp callers rethrow to their callers.
 - Agent-signal pipelines let it propagate as an explicit executor failure.

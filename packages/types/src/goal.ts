@@ -1,6 +1,5 @@
 import type { InitialGoalOverviewContext } from './stepContext';
 import type { TaskTopicIntegration } from './task';
-import type { AcceptanceStatus } from './verify';
 import type { WorkType } from './work';
 
 // ============================================
@@ -13,10 +12,10 @@ import type { WorkType } from './work';
  * (`review`) and the terminal `achieved` outcome.
  *
  * Kept in sync with `goalStatuses` in `@orvilo/const/goal` (type-tested
- * there), mirroring the AcceptanceStatus convention.
+ * there).
  */
 export type GoalStatus =
-  'planning' | 'running' | 'verifying' | 'review' | 'paused' | 'achieved' | 'failed' | 'canceled';
+  'planning' | 'running' | 'review' | 'paused' | 'achieved' | 'failed' | 'canceled';
 
 /**
  * The execution carrier a goal is optionally bound to. Goals are standalone
@@ -50,12 +49,6 @@ export interface GoalSchedulePolicy {
   deadline?: string | null;
 }
 
-/**
- * The goal's structured acceptance standard. The drafted criteria persist as
- * `verify_criteria` rows (viewable and editable on the goal page); this block
- * records their ids so the terminal Goal-acceptance Task verifies against
- * exactly these checks instead of re-deriving them from the requirement prose.
- */
 /** Comparison a measured value must satisfy. */
 export type GoalMetricComparison = 'gte' | 'lte' | 'gt' | 'lt' | 'eq';
 
@@ -86,13 +79,7 @@ export interface GoalMetricCriterion {
 export const MAX_GOAL_METRIC_CRITERIA = 20;
 
 export interface GoalAcceptancePolicy {
-  criteriaIds?: string[];
-  /**
-   * Measured clauses that gate acceptance. Every one must hold before the
-   * Goal-level delivery acceptance is even attempted: an unmet number is not
-   * something a verifier can talk its way past, and running the acceptance
-   * agent against it would only spend tokens to restate the gap.
-   */
+  /** Numeric clauses that must hold before a Goal can finish. */
   metrics?: GoalMetricCriterion[];
 }
 
@@ -473,38 +460,13 @@ export interface GoalGraphWorkVersionDisplay {
   workId: string;
 }
 
-/** Where a task node's own verification stands, for a reader scanning the goal. */
-export interface GoalNodeAcceptance {
-  id: string;
-  status: AcceptanceStatus;
-}
-
-/**
- * A task node's newest-run integration record, lifted onto the graph so a
- * reader sees "the run finished but the branch is still merging / died on a
- * conflict" without opening the task. `topicId` addresses the run row it
- * belongs to — retry and PR links point at it, not at the node.
- */
 export interface GoalNodeIntegration extends TaskTopicIntegration {
   topicId: string;
 }
 
 export interface GoalGraphSnapshot {
-  /**
-   * Verification state per task node, keyed by node id. Every dispatched task
-   * gets its own Acceptance, but the goal used to show only the standard it was
-   * judged against and never the judgment — so the page could say a task
-   * finished without saying whether it held up.
-   */
-  acceptances?: Record<string, GoalNodeAcceptance>;
   decisions: GoalGraphDecision[];
-  /**
-   * When an active task node's newest run delivered, present only while that
-   * node is waiting on verification to settle. A verify-bound task holds its
-   * node `active` with an already-`completed` topic, which contributes no
-   * heartbeat — without this the client reads the wait as lost.
-   */
-  deliveredAt?: Record<string, Date>;
+
   edges: GoalGraphEdge[];
   events: GoalGraphEvent[];
   goal: GoalItem;

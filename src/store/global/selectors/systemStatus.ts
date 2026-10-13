@@ -411,7 +411,6 @@ const showTaskAgentPanel = (s: GlobalState) => s.status.showTaskAgentPanel;
 const showTerminalPanel = (s: GlobalState) => s.status.showTerminalPanel;
 const terminalPanelHeight = (s: GlobalState) => s.status.terminalPanelHeight || 320;
 const showFilePanel = (s: GlobalState) => s.status.showFilePanel;
-const showVerifyReportPanel = (s: GlobalState) => s.status.showVerifyReportPanel ?? true;
 const hidePWAInstaller = (s: GlobalState) => s.status.hidePWAInstaller;
 const isShowCredit = (s: GlobalState) => s.status.isShowCredit;
 const language = (s: GlobalState) => s.status.language || 'auto';
@@ -441,7 +440,6 @@ const teamProjectsViewOptions = (s: GlobalState) => s.status.teamProjectsViewOpt
 const agentListExpandedGroupKeys = (s: GlobalState) => s.status.agentListExpandedGroupKeys ?? [];
 const agentListSidebarSectionCollapsed = (s: GlobalState) =>
   s.status.agentListSidebarSectionCollapsed ?? false;
-const verifyReportPanelWidth = (s: GlobalState) => s.status.verifyReportPanelWidth || 300;
 const wideScreen = (s: GlobalState) => !s.status.noWideScreen;
 const chatInputHeight = (s: GlobalState) => s.status.chatInputHeight || 64;
 const expandInputActionbar = (s: GlobalState) => s.status.expandInputActionbar;
@@ -565,10 +563,8 @@ export const systemStatusSelectors = {
   showSystemRole,
   showTaskAgentPanel,
   showTerminalPanel,
-  showVerifyReportPanel,
   systemStatus,
   terminalPanelHeight,
-  verifyReportPanelWidth,
   tokenDisplayFormatShort,
   collapsedTopicGroupKeys,
   topicPageSize,

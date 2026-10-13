@@ -17,7 +17,6 @@ import {
   FolderKanban,
   GitPullRequest,
   Link2,
-  ListChecks,
   ListTree,
   MessageCircle,
   Milestone,
@@ -303,9 +302,6 @@ const propertyIcon = (change: TaskDetailPropertyChange): StatusVisual['icon'] =>
     case 'description':
     case 'title': {
       return Pencil;
-    }
-    case 'verify': {
-      return ListChecks;
     }
     case 'dueDate': {
       return CalendarDays;

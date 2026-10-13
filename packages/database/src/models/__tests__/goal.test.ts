@@ -351,8 +351,6 @@ describe('GoalModel', () => {
       expect(running?.startedAt).toBeInstanceOf(Date);
 
       // A later transition keeps the original startedAt.
-      const verifying = await goalModel.updateStatus(id, 'verifying');
-      expect(verifying?.startedAt).toEqual(running?.startedAt);
     });
 
     it('stamps completedAt on terminal states and clears it on re-open', async () => {
@@ -404,7 +402,6 @@ describe('planning leases', () => {
 
   it.each([
     null,
-    { acceptance: { criteriaIds: ['updated-criterion'] } },
     { acceptance: { metrics: [{ key: 'followers', target: 1000 }] } },
     { schedule: { deadline: null } },
   ])(

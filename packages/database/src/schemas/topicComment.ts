@@ -159,7 +159,7 @@ export const topicComments = pgTable(
     // Write-time guard for the "anchored ⇒ preview" invariant: a
     // message-anchored comment must carry its server-side snapshot, or the
     // comment loses all context once the (hard-deleted, hook-less) message
-    // goes away. Same shape as verify_runs_acceptance_requires_round.
+    // goes away.
     check(
       'topic_comments_anchored_requires_preview',
       sql`${t.messageId} IS NULL OR ${t.anchorPreview} IS NOT NULL`,

@@ -181,7 +181,7 @@ describe('replayGoalAgainstCurrentCoordinator', () => {
    * would be reported as a match — the one failure mode a regression harness
    * must not have.
    */
-  const measured = (branch: 'measured_acceptance' | 'terminal_acceptance'): GoalTrajectory => ({
+  const measured = (branch: 'measured_acceptance' | 'goal_completed'): GoalTrajectory => ({
     ...trajectory,
     advances: [
       {
@@ -215,9 +215,9 @@ describe('replayGoalAgainstCurrentCoordinator', () => {
     // A trajectory whose terminal tick was recorded as the plain delivery
     // contract must not replay as an unmet gate, and vice versa.
     expect(
-      replayGoalAgainstCurrentCoordinator(measured('terminal_acceptance')).divergences,
+      replayGoalAgainstCurrentCoordinator(measured('goal_completed')).divergences,
     ).toMatchObject([
-      { field: 'branch', recorded: 'terminal_acceptance', replayed: 'measured_acceptance' },
+      { field: 'branch', recorded: 'goal_completed', replayed: 'measured_acceptance' },
     ]);
   });
 });

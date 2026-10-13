@@ -2,26 +2,16 @@
 
 import { useEditor } from '@lobehub/editor/react';
 import { resolveGoalAttemptBudget, resolveGoalConcurrency } from '@orvilo/builtin-tool-goal';
-import type { CreateGoalParams, GoalCriterionDraft } from '@orvilo/builtin-tool-task';
-import { DEFAULT_GOAL_MAX_ROUNDS } from '@orvilo/const/verify';
+import type { CreateGoalParams } from '@orvilo/builtin-tool-task';
+import { DEFAULT_GOAL_MAX_ROUNDS } from '@orvilo/const/goal';
 import { cn } from 'cn';
-import {
-  ArrowLeft,
-  Paperclip,
-  Pencil,
-  PencilLine,
-  Plus,
-  ShieldCheck,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { ArrowLeft, Paperclip, PencilLine, X } from 'lucide-react';
 import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import GeneratingBorder from '@/components/GeneratingBorder';
 import { useModalContext } from '@/components/Modal';
-import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import {
   NumberField,
   NumberFieldDecrement,
@@ -32,23 +22,15 @@ import {
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  CriterionList,
-  CriterionRequiredChip,
-  CriterionRow,
-  openCriterionEditModal,
-} from '@/features/Acceptance';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { pickAndInsertAttachments } from '@/features/EditorCanvas/editorAttachments';
 import { usePermission } from '@/hooks/usePermission';
 import { goalService } from '@/services/goal';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
-import { shinyTextStyles } from '@/styles';
 
 import presentation from './CreateGoalContent.module.css';
 import { buildGoalCreateInput, buildReviewedGoalContent } from './goalConfig';
-import { createFallbackGoalCriterion, generateGoalCriteria } from './goalCriteria';
 import { deriveGoalTitle } from './goalTitle';
 
 const styles = {
@@ -56,12 +38,7 @@ const styles = {
   body: 'overflow-y-auto min-h-0 max-h-[min(70vh,calc(var(--spacing)*170))] pbs-2 pbe-6 px-4',
   close:
     'absolute inset-bs-3.5 inset-e-3.5 pointer-coarse:inset-bs-[calc(var(--spacing)*1.75)] pointer-coarse:inset-e-[calc(var(--spacing)*1.75)]',
-  criteriaList: 'overflow-y-auto max-h-80',
   footer: 'py-2 px-4 border-bs border-divider',
-  generatingStatus: 'min-h-9 py-1.5 text-muted-foreground',
-  generatingTextItem: 'flex items-center h-5.5 text-sm leading-5.5 font-medium whitespace-nowrap',
-  generatingTextTrack: presentation.generatingTextTrack,
-  generatingTextViewport: 'overflow-hidden h-5.5',
   head: 'relative pbs-4 pbe-2 px-4',
   inputShell: 'overflow-hidden min-h-52 bg-popover',
   instructionEditor: 'min-h-9 pbs-0 pbe-1 px-3',
@@ -69,14 +46,6 @@ const styles = {
   sectionHint: 'text-muted-foreground',
   title: 'w-full py-1 pe-10 border-0 bg-transparent text-xl leading-7 font-semibold',
   titleStatic: 'pbs-1 pbe-2 pe-10 text-xl leading-7 font-semibold text-foreground',
-};
-
-const GENERATION_ESTIMATE_SECONDS = 90;
-
-export const formatGoalGenerationRemainingTime = (seconds: number) => {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return `${minutes}:${rest.toString().padStart(2, '0')}`;
 };
 
 export interface CreateGoalContentProps {
@@ -109,28 +78,17 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
 
   const [isCreating, setIsCreating] = useState(false);
 
-  const [step, setStep] = useState<'describe' | 'preparing' | 'review'>('describe');
+  const [step, setStep] = useState<'describe' | 'review'>('describe');
   const [plan, setPlan] = useState<CreateGoalParams>({
-    criteria: [],
+    criteriaDescription: initialRequirement ?? '',
     instruction: initialRequirement ?? initialTitle ?? '',
     maxIterations: initialRoundBudget ?? DEFAULT_GOAL_MAX_ROUNDS,
     maxTotalCost: null,
     name: initialTitle ?? '',
   });
-  const [remainingSeconds, setRemainingSeconds] = useState(GENERATION_ESTIMATE_SECONDS);
 
   const editor = useEditor();
   const instructionRef = useRef(plan.instruction);
-
-  useEffect(() => {
-    if (step !== 'preparing') return;
-    setRemainingSeconds(GENERATION_ESTIMATE_SECONDS);
-    const timer = window.setInterval(
-      () => setRemainingSeconds((value) => Math.max(0, value - 1)),
-      1000,
-    );
-    return () => window.clearInterval(timer);
-  }, [step]);
 
   const handleContentChange = useCallback(() => {
     if (!canCreate || !editor) return;
@@ -152,92 +110,25 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
       name,
     }));
     instructionRef.current = instruction;
-    setStep('preparing');
-    try {
-      const generated = await generateGoalCriteria({
-        agentId,
-        context: name ? `Goal: ${name}` : undefined,
-        goal: instruction,
-      });
-      instructionRef.current = generated.instruction;
-      setPlan((current) => ({
-        ...current,
-        criteria: generated.criteria,
-        instruction: generated.instruction,
-        name: generated.title,
-      }));
-      setStep('review');
-    } catch (error) {
-      console.error('[CreateGoalContent] generate failed:', error);
-      setPlan((current) => ({
-        ...current,
-        criteria: [createFallbackGoalCriterion(instruction)],
-        instruction,
-        name: instruction,
-      }));
-      setStep('review');
-      toast.warning(t('createGoal.generateFailed'));
-    }
-  }, [agentId, canCreate, plan.instruction, plan.name, t]);
+    setStep('review');
+  }, [canCreate, plan.instruction, plan.name]);
 
   const handleCreateBlank = useCallback(() => {
     if (!canCreate) return;
     const instruction = instructionRef.current.trim() || plan.instruction.trim();
     setPlan((current) => ({
       ...current,
-      criteria:
-        current.criteria.length > 0
-          ? current.criteria
-          : [{ onFail: 'auto_repair', required: true, title: '', verifierType: 'agent' }],
       instruction,
     }));
     instructionRef.current = instruction;
     setStep('review');
   }, [canCreate, plan.instruction]);
 
-  const updateCriterion = useCallback((index: number, value: GoalCriterionDraft) => {
-    setPlan((current) => ({
-      ...current,
-      criteria: current.criteria.map((criterion, criterionIndex) =>
-        criterionIndex === index ? value : criterion,
-      ),
-    }));
-  }, []);
-
-  const removeCriterion = useCallback((index: number) => {
-    setPlan((current) => ({
-      ...current,
-      criteria: current.criteria.filter((_, criterionIndex) => criterionIndex !== index),
-    }));
-  }, []);
-
-  const addCriterion = useCallback(() => {
-    openCriterionEditModal({
-      criterion: { onFail: 'auto_repair', required: true, title: '', verifierType: 'agent' },
-      isNew: true,
-      onSubmit: (criterion) =>
-        setPlan((current) => ({ ...current, criteria: [...current.criteria, criterion] })),
-    });
-  }, []);
-
-  const editCriterion = useCallback(
-    (index: number) => {
-      const criterion = plan.criteria[index];
-      if (!criterion) return;
-      openCriterionEditModal({
-        criterion,
-        onSubmit: (next) => updateCriterion(index, next),
-      });
-    },
-    [plan.criteria, updateCriterion],
-  );
-
   const handleSubmit = useCallback(async () => {
     if (!canCreate) return;
     const instruction =
       instructionRef.current.trim() || plan.instruction.trim() || plan.name.trim();
-    const reviewedCriteria = plan.criteria.filter((criterion) => criterion.title.trim());
-    if (!instruction || reviewedCriteria.length === 0) return;
+    if (!instruction) return;
 
     const title = plan.name.trim() || instruction;
     const budget = buildGoalCreateInput({
@@ -257,13 +148,6 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
         // `maxIterations` is the per-Task attempt budget above; it is not the
         // graph-wide round cap, which counts runs across every Task and would
         // strand the fourth task of a goal whose limit is three attempts.
-        // Structured criteria persist alongside the prose requirement: the goal
-        // page shows/edits them and the terminal acceptance is gated on them.
-        criteria: reviewedCriteria.map(({ description, instruction: how, title: name }) => ({
-          description,
-          instruction: how,
-          title: name,
-        })),
         maxTotalCost: budget.maxTotalCost ?? undefined,
         // No seed tasks: the coordinator plans the decomposition on first
         // advance, turning a complex ask into several explorable directions.
@@ -290,13 +174,6 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
   const handlePrimaryAction =
     step === 'describe' ? handleNext : step === 'review' ? handleSubmit : undefined;
   const handleSubmitRef = useRef(handlePrimaryAction);
-  const generatingMessages = [
-    t('createGoal.generating'),
-    t('createGoal.generatingInstruction'),
-    t('createGoal.generatingCriteria'),
-    t('createGoal.generatingReview'),
-    t('createGoal.generating'),
-  ];
   useEffect(() => {
     handleSubmitRef.current = handlePrimaryAction;
   }, [handlePrimaryAction]);
@@ -346,10 +223,10 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
           )}
           {step !== 'review' && (
             <>
-              <GeneratingBorder className={styles.inputShell} generating={step === 'preparing'}>
+              <GeneratingBorder className={styles.inputShell}>
                 <EditorCanvas
                   contentClassName={presentation.editorDescribe}
-                  disabled={!canCreate || step === 'preparing'}
+                  disabled={!canCreate}
                   editor={editor}
                   editorData={{ content: plan.instruction }}
                   entityId={'create-goal-description'}
@@ -358,40 +235,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                   onContentChange={handleContentChange}
                 />
               </GeneratingBorder>
-              {step === 'preparing' ? (
-                <div
-                  className={`flex items-center gap-2.5 justify-between ${styles.generatingStatus}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <NeuralNetworkLoading size={16} />
-                    <div
-                      aria-label={t('createGoal.generating')}
-                      className={styles.generatingTextViewport}
-                      role={'status'}
-                    >
-                      <div aria-hidden className={styles.generatingTextTrack}>
-                        {generatingMessages.map((message, index) => (
-                          <div
-                            className={`${styles.generatingTextItem} ${shinyTextStyles.shinyText}`}
-                            key={index}
-                          >
-                            {message}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {remainingSeconds > 0
-                      ? t('createGoal.generatingCountdown', {
-                          time: formatGoalGenerationRemainingTime(remainingSeconds),
-                        })
-                      : t('createGoal.generatingAlmostDone')}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-muted-foreground">{t('createGoal.describeHint')}</div>
-              )}
+              <div className="text-muted-foreground">{t('createGoal.describeHint')}</div>
             </>
           )}
         </div>
@@ -424,81 +268,6 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 onContentChange={handleContentChange}
               />
             </div>
-          </div>
-
-          <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
-            <div className="flex items-center gap-2 justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="text-foreground-tertiary" size={16} />
-                <div className="text-sm leading-5.5 font-semibold">
-                  {t('createGoal.criteriaTitle')}
-                </div>
-                <div className={cn('text-xs', styles.sectionHint)}>
-                  {t('createGoal.criteriaHint')}
-                </div>
-              </div>
-              <span className="inline-flex flex-none pointer-coarse:py-[calc(var(--spacing)*1.75)]">
-                <Button
-                  className="relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
-                  size="compact"
-                  variant="ghost"
-                  onClick={addCriterion}
-                >
-                  <Plus data-icon="inline-start" />
-                  {t('createGoal.addCriterion')}
-                </Button>
-              </span>
-            </div>
-            {/* Draft rows keep the C{seq} anchor but no status icon — the pending
-                circle belongs to the post-creation check list, not to authoring. */}
-            <CriterionList className={styles.criteriaList}>
-              {plan.criteria.map((criterion, index) => (
-                <CriterionRow
-                  key={index}
-                  seq={index + 1}
-                  title={criterion.title || t('createGoal.criterionPlaceholder')}
-                  actions={
-                    <>
-                      <span className="inline-flex flex-none pointer-coarse:p-[calc(var(--spacing)*1.75)]">
-                        <ActionIcon
-                          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
-                          icon={Pencil}
-                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                          title={t('edit', { ns: 'common' })}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            editCriterion(index);
-                          }}
-                        />
-                      </span>
-                      <span className="inline-flex flex-none pointer-coarse:p-[calc(var(--spacing)*1.75)]">
-                        <ActionIcon
-                          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
-                          icon={Trash2}
-                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                          title={t('createGoal.removeCriterion')}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            removeCriterion(index);
-                          }}
-                        />
-                      </span>
-                    </>
-                  }
-                  onOpen={() => editCriterion(index)}
-                >
-                  <CriterionRequiredChip
-                    required={criterion.required ?? true}
-                    onToggle={() =>
-                      updateCriterion(index, {
-                        ...criterion,
-                        required: !(criterion.required ?? true),
-                      })
-                    }
-                  />
-                </CriterionRow>
-              ))}
-            </CriterionList>
           </div>
 
           <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
@@ -626,26 +395,20 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
           <span className="inline-flex flex-none pointer-coarse:py-[calc(var(--spacing)*1.25)]">
             <Button
               className="relative pointer-coarse:min-w-11 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-px pointer-coarse:after:-inset-y-[calc(var(--spacing)*1.25)] pointer-coarse:after:content-['']"
-              loading={isCreating || step === 'preparing'}
+              loading={isCreating}
               size="normal"
               title={canCreate ? undefined : reason}
               variant="outline"
               disabled={
                 !canCreate ||
                 isCreating ||
-                step === 'preparing' ||
                 (step === 'describe'
                   ? !plan.instruction.trim()
-                  : !plan.name.trim() ||
-                    plan.criteria.every((criterion) => !criterion.title.trim()))
+                  : !plan.name.trim() || !plan.instruction.trim())
               }
               onClick={step === 'describe' ? handleNext : handleSubmit}
             >
-              {step === 'preparing'
-                ? t('createGoal.preparing')
-                : step === 'describe'
-                  ? t('createGoal.next')
-                  : t('createGoal.submit')}
+              {step === 'describe' ? t('createGoal.next') : t('createGoal.submit')}
             </Button>
           </span>
         </div>

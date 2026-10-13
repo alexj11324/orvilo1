@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 import { TaskIdentifier as TaskSkillIdentifier } from '@orvilo/builtin-skills';
-import { AcceptanceEvidenceIdentifier } from '@orvilo/builtin-tool-acceptance-evidence';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task';
 import { INBOX_SESSION_ID } from '@orvilo/const';
@@ -116,8 +115,7 @@ export interface RunTaskParams {
    */
   replanApprovalId?: string;
   requestedBy?: string;
-  /** Internal corrective runs stay bound to the original task Verify plan. */
-  skipTaskVerification?: boolean;
+
   /**
    * Pin the exact contract this repair/replan descends from — names the
    * delivery being repaired instead of inferring it from the latest seq.
@@ -223,7 +221,7 @@ export class TaskRunnerService {
       replanApprovalId,
       requestedBy = this.userId,
       sourceContractId,
-      skipTaskVerification,
+
       trigger = 'manual',
       workspaceOverride,
     } = params;
@@ -814,7 +812,7 @@ export class TaskRunnerService {
         },
         this.workspaceId,
       );
-      // Frozen contract content for `continue`/`repair`: instruction, verify
+      // Frozen contract content for `continue`/`repair`: instruction, dependencies
       // gate and dependency receipts re-render from the immutable source
       // contract, so editing the Task mid-flight can never silently rewrite
       // an in-flight or repaired attempt. Only an authorized replan rebuilds
@@ -827,10 +825,8 @@ export class TaskRunnerService {
             ? priorContract?.content
             : undefined);
       const {
-        acceptanceEnabled,
         contractContent,
         fileIds: attachmentFileIds,
-        goalLoop,
         prompt: basePrompt,
       } = await buildTaskPrompt(
         task,
@@ -845,7 +841,7 @@ export class TaskRunnerService {
         extraPrompt,
         {
           contractContent: inheritedContractContent,
-          skipTaskVerification,
+
           ...(runIntent === 'fresh_occurrence'
             ? {
                 occurrence: preparedDispatch!.dispatch.automationOccurrence ?? undefined,
@@ -938,7 +934,6 @@ export class TaskRunnerService {
       };
 
       const checkpoint = this.taskModel.getCheckpointConfig(task);
-      const reviewConfig = this.taskModel.getReviewConfig(task);
       // Default mode is 'auto' — brief synthesis happens programmatically in
       // TaskLifecycleService.synthesizeTopicBrief. 'agent' is an explicit
       // escape hatch that re-mounts the legacy createBrief tool surface.
@@ -956,15 +951,9 @@ export class TaskRunnerService {
       // Mount BriefIdentifier (createBrief + requestCheckpoint) only in the
       // legacy 'agent' path; in 'auto' the agent must not also call
       // createBrief or we'd double up.
-      if (briefMode === 'agent' && !reviewConfig?.enabled && checkpoint.onAgentRequest !== false) {
+      if (briefMode === 'agent' && checkpoint.onAgentRequest !== false) {
         pluginIds.push(BriefIdentifier);
       }
-      // The Acceptance runs inside the Task, so the builder needs listCriteria +
-      // submitEvidence for the whole run — not only in the post-run evidence
-      // turn, which mounts this tool exclusively and therefore can only ever
-      // restate text it already wrote.
-      if (acceptanceEnabled) pluginIds.push(AcceptanceEvidenceIdentifier);
-
       const initialWorkingDirectory =
         workspaceOverride?.workingDirectory ?? provisioned?.workingDirectory;
       const initialWorkingDirectoryConfig =
@@ -988,11 +977,6 @@ export class TaskRunnerService {
           changedFields.push('instruction');
         }
         if (
-          JSON.stringify(priorContract?.content?.verify) !== JSON.stringify(contractContent.verify)
-        ) {
-          changedFields.push('verify');
-        }
-        if (
           JSON.stringify(priorContract?.content?.dependencies) !==
           JSON.stringify(contractContent.dependencies)
         ) {
@@ -1005,7 +989,6 @@ export class TaskRunnerService {
       // continuations and corrective runs rebind to this persisted row rather
       // than re-deriving constraints from mutable task config.
       const executionContract = buildTaskExecutionContract(task, {
-        acceptanceEnabled,
         content: contractContent,
         contractId: randomUUID(),
         contractRevision: (priorContract?.revision ?? 0) + 1,
@@ -1016,7 +999,6 @@ export class TaskRunnerService {
             ? (preparedDispatch!.dispatch.automationOccurrence ?? undefined)
             : priorContract?.occurrence,
         environment: environmentSnapshot,
-        goalLoop,
         grantId: delegation?.grantId,
         integration: runIntegration,
         intent: runIntent,
@@ -1064,7 +1046,7 @@ export class TaskRunnerService {
         // dispatch instead of executing without them. Sourced from the
         // persisted contract so admission and the contract cannot diverge.
         requiredToolIds: executionContract.tools,
-        skipTaskVerification,
+
         beforeOperationStart: async ({ operationId, topicId }) => {
           await this.db.transaction(async (tx) => {
             const dispatch = new TaskDispatchService(tx, this.workspaceId);
@@ -1581,7 +1563,7 @@ export class TaskRunnerService {
 
   /**
    * Verify a settlement claim's real association (SA05-B): behaviour flags
-   * like `workspaceOverride`/`skipTaskVerification` are hints, never
+   * like `workspaceOverride` are hints, never
    * evidence — `internal` origin requires a live reservation token, a
    * same-task integration row the seed corrects, or a same-task topic that
    * owns the parent operation. Returns the verified grant (plus the source

@@ -20,8 +20,8 @@ commands. It submits a JSON file through `orvilo goal plan <goal-id> --token <tu
 
 - `tasks`: reason and 1–10 objects with title/description. All existing work must
   first be settled. The coordinator creates and runs ordinary Tasks.
-- `verify`: reason; requests the ordinary independent final acceptance Task.
-  This does not mark the Goal achieved.
+- `verify`: reason; marks planning complete. The coordinator finishes only when
+  the Issues are Done and numeric clauses hold; this creates no terminal Task.
 - `retry`: reason (checkpoint-aware recovery instruction), taskId and exact
   failedOperationId. Only the existing confirmed transport-failure policy permits
   retry, with Task attempt limits and Goal budget checks.
@@ -66,21 +66,9 @@ rather than advertising a move that will be refused.
 A `tasks` or `verify` plan from a takeover turn also RETIRES the node it inherited,
 because accepting a plan is not the same as the Goal moving: a nonterminal blocked
 node is reached by the next tick's frontier before the corrective node, which routes
-straight back to the Gate, and terminal verification cannot start while it is
+straight back to the Gate, and the workflow cannot finish while it is
 unfinished. Retiring is the same move the human Gate offers under "Retire task",
 scoped to the single node the turn was invited about and attributed to the Agent.
-
-The terminal acceptance node is excluded from that retirement.
-`decideWithoutFrontier` finds the acceptance task by TITLE regardless of status, so
-retiring it parks the Goal on `no_progress` with neither a Gate nor a verdict;
-failing the Goal belongs to the Gate's own `retire` answer, which is coupled to that
-option rather than to the node's status. A takeover invited for a FAILED terminal
-acceptance does start — the acceptance guard is uninvited-only — but it is accepted
-only as an `escalate`: a corrective task returns to the same failed node and `verify`
-sets `readyForAcceptance` without producing a fresh run, so both would strand.
-Refusing at submit keeps the prompt's offer and the server's answer identical, and
-the prompt names the limit so a turn is not spent discovering it. Letting corrective
-work supersede a failed acceptance is a lifecycle change, not a validation one.
 
 Retirement is also refused when something `depends_on` the stuck node: a prerequisite
 counts as met only when it is `resolved`, and the graph has no edge removal, so the

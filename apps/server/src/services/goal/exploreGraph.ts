@@ -1,5 +1,4 @@
 import type { GoalAdvanceEffect } from '@orvilo/agent-tracing';
-import { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
 import type { GoalGraphSnapshot, GoalTickResult } from '@orvilo/types';
 import {
   experimentOwner,
@@ -55,7 +54,6 @@ export async function exploreGraph(params: {
             (node) =>
               node.kind === 'experiment' ||
               (node.kind === 'task' &&
-                node.title !== GOAL_ACCEPTANCE_TASK_TITLE &&
                 !experimentOwner(graph, node.id) &&
                 !isProtocolRevision(graph, node.id)),
           )

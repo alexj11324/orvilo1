@@ -85,7 +85,6 @@ export default {
   'FileManager.sort.dateAdded': 'Date Added',
   'FileManager.sort.name': 'Name',
   'FileManager.sort.size': 'Size',
-  'FileManager.source.acceptance': 'Acceptance',
   'FileManager.source.all': 'All',
   'FileManager.source.generated': 'AI Generated',
   'FileManager.source.uploaded': 'Uploaded',

@@ -9,11 +9,9 @@ vi.mock('@/services/task', () => ({
   taskService: {
     markBriefRead: vi.fn(),
     resolveBrief: vi.fn(),
-    runReview: vi.fn(),
     update: vi.fn(),
     updateCheckpoint: vi.fn(),
     updateConfig: vi.fn(),
-    updateReview: vi.fn(),
   },
 }));
 
@@ -56,44 +54,6 @@ describe('TaskConfigSliceAction', () => {
       await useTaskStore.getState().updateCheckpoint('T-1', { onAgentRequest: true });
 
       expect(mutate).toHaveBeenCalledWith(['task:detail', 'T-1']);
-    });
-  });
-
-  describe('updateReview', () => {
-    it('should call service and refresh detail', async () => {
-      const { mutate } = await import('@/libs/swr');
-      vi.mocked(taskService.updateReview).mockResolvedValue({ success: true } as any);
-
-      const review = { enabled: true, rubrics: [] };
-      await useTaskStore.getState().updateReview('T-1', review as any);
-
-      expect(taskService.updateReview).toHaveBeenCalledWith({ id: 'T-1', review });
-      expect(mutate).toHaveBeenCalledWith(['task:detail', 'T-1']);
-    });
-  });
-
-  describe('runReview', () => {
-    it('should call service and refresh detail', async () => {
-      const { mutate } = await import('@/libs/swr');
-      const mockResult = { overallScore: 85, passed: true };
-      vi.mocked(taskService.runReview).mockResolvedValue({
-        data: mockResult,
-        success: true,
-      } as any);
-
-      const result = await useTaskStore.getState().runReview('T-1', { content: 'Test output' });
-
-      expect(taskService.runReview).toHaveBeenCalledWith('T-1', { content: 'Test output' });
-      expect(mutate).toHaveBeenCalledWith(['task:detail', 'T-1']);
-      expect(result).toEqual({ data: mockResult, success: true });
-    });
-
-    it('should throw on error', async () => {
-      vi.mocked(taskService.runReview).mockRejectedValue(new Error('review failed'));
-
-      await expect(useTaskStore.getState().runReview('T-1', { content: 'Test' })).rejects.toThrow(
-        'review failed',
-      );
     });
   });
 

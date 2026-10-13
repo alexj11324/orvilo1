@@ -1,4 +1,3 @@
-import { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
 import type { GoalGraphDecision } from '@orvilo/types';
 
 import type { GoalNodeView } from './goalGraphViewModel';
@@ -11,7 +10,7 @@ import type { GoalNodeView } from './goalGraphViewModel';
  * not recognize renders verbatim.
  */
 
-export type CoordinatorGateKind = 'goalAcceptance' | 'recoverTask';
+export type CoordinatorGateKind = 'recoverTask';
 
 export interface LocalizedCopyRef {
   key: string;
@@ -26,7 +25,6 @@ export const coordinatorGateKind = (
 ): CoordinatorGateKind | undefined => {
   const ids = idsOf(decision);
   if (ids.has('retry') && ids.has('retire')) return 'recoverTask';
-  if (ids.has('retry') && ids.has('fail')) return 'goalAcceptance';
   return undefined;
 };
 
@@ -37,13 +35,11 @@ export const viewGateKind = (view: GoalNodeView): CoordinatorGateKind | undefine
 export const gateTitleKey = (kind: CoordinatorGateKind): string => `goalProcess.gate.title.${kind}`;
 
 /**
- * Locale key for a coordinator-authored fixed node title (gate nodes and the
- * terminal Goal-acceptance Task), or undefined for user/agent-authored nodes.
+ * Locale key for a coordinator-authored gate title, or undefined for
+ * user/agent-authored nodes.
  */
 export const coordinatorNodeTitleKey = (view: GoalNodeView): string | undefined => {
   const { node } = view;
-  if (node.kind === 'task' && node.title === GOAL_ACCEPTANCE_TASK_TITLE)
-    return 'goalProcess.node.terminalAcceptance';
   if (node.kind === 'decision') {
     const kind = viewGateKind(view);
     if (kind) return gateTitleKey(kind);
@@ -52,10 +48,7 @@ export const coordinatorNodeTitleKey = (view: GoalNodeView): string | undefined 
 };
 
 /** Strip the coordinator question template down to its dynamic reason half. */
-const QUESTION_TAILS = [
-  /\.?\s*Retry or retire this task node\?$/,
-  /\.?\s*Retry Goal acceptance or fail this Goal\?$/,
-];
+const QUESTION_TAILS = [/\.?\s*Retry or retire this task node\?$/];
 
 export const coordinatorGateReason = (question?: string | null): string | undefined => {
   if (!question) return undefined;
@@ -74,19 +67,6 @@ const REASON_PATTERNS: Array<{
   param?: string;
   pattern: RegExp;
 }> = [
-  {
-    key: 'goalProcess.gate.reason.verifyInternalError',
-    pattern: /^Verification could not run \(internal error\); the delivery was not evaluated\.?$/,
-  },
-  {
-    key: 'goalProcess.gate.reason.verifyFailed',
-    param: 'id',
-    pattern: /^Task (\S+) did not pass verification$/,
-  },
-  {
-    key: 'goalProcess.gate.reason.goalAcceptanceFailed',
-    pattern: /^Goal-level acceptance did not pass$/,
-  },
   {
     key: 'goalProcess.gate.reason.attemptBudgetExhausted',
     pattern: /^Task attempt budget was exhausted( after an operation was abandoned)?$/,

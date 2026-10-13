@@ -55,7 +55,7 @@ export const TASK_ATTENTION_REASONS = [
 ] as const;
 export type TaskAttentionReason = (typeof TASK_ATTENTION_REASONS)[number];
 
-/** Outcome of a run/verify event handed to the settlement policy. */
+/** Outcome of a run event handed to the settlement policy. */
 export const EXECUTION_OUTCOMES = [
   'succeeded',
   'failed',
@@ -73,9 +73,9 @@ export type ExecutionOutcome = (typeof EXECUTION_OUTCOMES)[number];
  * - `keep_open` — issue stays in progress; `attention` carries the reason, if
  *   any (waiting, failed, blocked, …).
  * - `retry` — another attempt is queued (e.g. auto-repair after a failed
- *   verify).
- * - `hold` — no state change: another owner still drives the task (verify
- *   bound, integration gate, stale callback).
+ *   review).
+ * - `hold` — no state change: another owner still drives the task (review
+ *   pending, integration gate, stale callback).
  */
 export type SettlementDecision =
   | { type: 'complete' }

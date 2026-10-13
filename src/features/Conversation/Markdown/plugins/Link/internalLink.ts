@@ -25,7 +25,6 @@ const SPA_ROUTE_ROOTS = new Set([
 ]);
 
 export type InternalLinkReference =
-  | { acceptanceId: string; pathname: string; type: 'acceptance'; workspaceSlug?: string }
   | { agentId: string; pathname: string; type: 'agent'; workspaceSlug?: string }
   | {
       agentId?: string;
@@ -35,7 +34,6 @@ export type InternalLinkReference =
       workspaceSlug?: string;
     }
   | { pathname: string; type: 'route'; workspaceSlug?: string }
-  | { pathname: string; runId: string; type: 'verify'; workspaceSlug?: string }
   | {
       agentId?: string;
       pathname: string;
@@ -126,15 +124,6 @@ export const parseInternalLink = (
 
   const { segments, workspaceSlug } = route;
 
-  if (segments[0] === 'acceptance' && segments[1]) {
-    return {
-      acceptanceId: segments[1],
-      pathname,
-      type: 'acceptance',
-      ...(workspaceSlug ? { workspaceSlug } : {}),
-    };
-  }
-
   if (segments[0] === 'page' && segments[1]) {
     return {
       documentId: getIdFromIdentifier(segments[1], 'docs'),
@@ -149,15 +138,6 @@ export const parseInternalLink = (
       pathname,
       taskId: segments[1],
       type: 'task',
-      ...(workspaceSlug ? { workspaceSlug } : {}),
-    };
-  }
-
-  if (segments[0] === 'verify' && segments[1]) {
-    return {
-      pathname,
-      runId: segments[1],
-      type: 'verify',
       ...(workspaceSlug ? { workspaceSlug } : {}),
     };
   }

@@ -821,12 +821,6 @@ export const sharedMainAreaChildren: RouteObject[] = [
       'Desktop > Task Workspace > Layout',
       { preloadId: 'tasks' },
     ),
-    // This one wrapper carries `/tasks`, `/inbox`, `/my-work`, `/views`,
-    // `/teams`, `/task/*` and `/goal/*`, and
-    // every one of them mounts the portal column (`TaskWorkspaceLayout` renders
-    // `AgentTaskManager` or `MobilePortal`). Declaring it once here is what lets
-    // the acceptance drawer know it would be a second host; see `RouteMeta`.
-    handle: { meta: routeMeta({ portalColumn: true }) },
   },
 
   // Automations routes — recurring agent runs, one level above the task list
@@ -881,15 +875,8 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
     path: 'apps',
   },
 
-  // Retired standalone Acceptance / Verify platform. Every acceptance is now an
-  // object under the task (or run) that owns it, and the `/acceptance/*` and
-  // `/verify/*` roots no longer resolve to a product surface — the former
-  // check/report pages are the task panel now. They are registered explicitly
-  // rather than left to the catch-all for one reason: a retired root must stay
-  // a reserved word. Without an entry here `/:workspaceSlug` would claim
-  // `acceptance` / `verify` and parse the stored link's next segment as a
-  // workspace path. Both land on the task board, which is where the acceptance
-  // they were looking for is reachable from.
+  // Retired roots stay reserved so `/:workspaceSlug` cannot parse a stored
+  // Acceptance / Verify link as a workspace. Both redirect to the Issue board.
   {
     element: redirectElement('/tasks'),
     path: 'acceptance/*',

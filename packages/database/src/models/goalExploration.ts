@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-import { GOAL_ACCEPTANCE_TASK_TITLE, GOAL_COORDINATOR_ACTOR_ID } from '@orvilo/const/goal';
+import { GOAL_COORDINATOR_ACTOR_ID } from '@orvilo/const/goal';
 import type { GoalExplorationDecision, GoalGraphSnapshot } from '@orvilo/types';
 import {
   experimentOwner,
@@ -135,7 +135,6 @@ export class GoalExplorationModel {
           // read back as a new experiment: that would spend a slot and let the
           // planner revise it as a fresh target with an empty correction budget.
           (node.kind === 'task' &&
-            node.title !== GOAL_ACCEPTANCE_TASK_TITLE &&
             !experimentOwner(graph, node.id) &&
             !isProtocolRevision(graph, node.id)),
       );
@@ -158,11 +157,7 @@ export class GoalExplorationModel {
             },
           })
           .where(eq(goals.id, goalId));
-        await this.recordDecision(
-          tx,
-          goalId,
-          `Exploration requests final acceptance: ${decision.reason}`,
-        );
+        await this.recordDecision(tx, goalId, `Exploration complete: ${decision.reason}`);
         return { outcome: 'verify' as const };
       }
       if (decision.action === 'revise') {

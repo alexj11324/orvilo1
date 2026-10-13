@@ -370,7 +370,7 @@ describe('TaskDispatchModel', () => {
         dispatchId: first.dispatch.id,
         owner,
         fence: lease.fence,
-        content: { instruction, verify: { enabled: false } },
+        content: { instruction },
         fileIds: ['report-input'],
       });
     const frozen = await freeze('event-owner', 'Report only');

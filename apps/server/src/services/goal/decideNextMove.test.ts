@@ -1,7 +1,3 @@
-import {
-  ACCEPTANCE_REVIEW_ERRORED_ERROR,
-  VERIFICATION_UNJUDGEABLE_ERROR,
-} from '@orvilo/const/goal';
 import type { GoalGraphNode, GoalGraphSnapshot, TaskItem } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
@@ -9,13 +5,9 @@ import {
   compareMetric,
   decideNextMove,
   frontierNeedsBudget,
-  GOAL_ACCEPTANCE_TASK_TITLE,
-  LEASE_EXPIRED_ERROR,
   needsBudget,
   needsMetricCriteria,
   selectFrontier,
-  VERIFICATION_ERRORED_ERROR,
-  VERIFICATION_FAILED_ERROR,
 } from './decideNextMove';
 
 const node = (id: string, overrides: Partial<GoalGraphNode> = {}): GoalGraphNode =>
@@ -218,53 +210,6 @@ describe('decideNextMove', () => {
       ).toBe('consume_completed');
     });
 
-    it('separates the two recoverable failures from the ones that need a person', () => {
-      expect(
-        decide(snapshot, {
-          frontierTask: task({ error: LEASE_EXPIRED_ERROR, status: 'paused' }),
-        }).branch,
-      ).toBe('recover_lease');
-
-      expect(
-        decide(snapshot, {
-          frontierTask: task({ error: VERIFICATION_FAILED_ERROR, status: 'paused' }),
-        }).branch,
-      ).toBe('recover_verification');
-
-      // A verifier that crashed never judged the delivery, so it recovers like a
-      // rejection instead of stopping the goal on a verdict nobody reached.
-      expect(
-        decide(snapshot, {
-          frontierTask: task({ error: VERIFICATION_ERRORED_ERROR, status: 'paused' }),
-        }),
-      ).toMatchObject({
-        branch: 'recover_verification',
-        message: 'Verification could not run for Task T-1',
-      });
-
-      expect(
-        decide(snapshot, { frontierTask: task({ error: 'Device offline', status: 'failed' }) }),
-      ).toMatchObject({ branch: 'failure_decision', message: 'Device offline' });
-
-      // A criterion the review cannot settle by reading is NOT recoverable: the
-      // builder would re-deliver the same artifacts against the same unprovable
-      // check, so this one belongs to a person on the first occurrence.
-      expect(
-        decide(snapshot, {
-          frontierTask: task({ error: VERIFICATION_UNJUDGEABLE_ERROR, status: 'paused' }),
-        }),
-      ).toMatchObject({ branch: 'failure_decision', outcome: 'waiting_human' });
-
-      // A review that still could not run after its own retry is a reviewer
-      // problem. Another builder attempt would re-deliver into the same broken
-      // review and spend the attempt budget, so it goes to a person.
-      expect(
-        decide(snapshot, {
-          frontierTask: task({ error: ACCEPTANCE_REVIEW_ERRORED_ERROR, status: 'paused' }),
-        }),
-      ).toMatchObject({ branch: 'failure_decision', outcome: 'waiting_human' });
-    });
-
     it('treats a plain pause as waiting on a person and a run as waiting on the world', () => {
       expect(decide(snapshot, { frontierTask: task({ status: 'paused' }) })).toMatchObject({
         branch: 'task_paused',
@@ -363,46 +308,16 @@ describe('decideNextMove', () => {
       });
     });
 
-    it('moves to the terminal acceptance contract once every Task is done', () => {
+    it('achieves the Goal with a requirement when every Issue is done', () => {
       const snapshot = graph({
         goal: { ...graph().goal, requirement: 'Prove it' },
         nodes: [node('a', { status: 'resolved' })],
       });
 
       expect(decide(snapshot)).toMatchObject({
-        branch: 'terminal_acceptance',
-        outcome: 'advanced',
+        branch: 'goal_completed',
+        outcome: 'achieved',
       });
-    });
-
-    it('holds the goal open while its acceptance Task has not passed', () => {
-      const snapshot = graph({
-        goal: { ...graph().goal, requirement: 'Prove it' },
-        nodes: [
-          node('a', { status: 'resolved' }),
-          node('acc', { status: 'retired', title: GOAL_ACCEPTANCE_TASK_TITLE }),
-        ],
-      });
-
-      expect(decide(snapshot)).toMatchObject({
-        branch: 'terminal_acceptance',
-        focusNodeId: 'acc',
-        outcome: 'no_progress',
-      });
-    });
-
-    it('achieves the goal when acceptance resolved, or when there is no requirement', () => {
-      const withAcceptance = graph({
-        goal: { ...graph().goal, requirement: 'Prove it' },
-        nodes: [
-          node('a', { status: 'resolved' }),
-          node('acc', { status: 'resolved', title: GOAL_ACCEPTANCE_TASK_TITLE }),
-        ],
-      });
-      expect(decide(withAcceptance).outcome).toBe('achieved');
-
-      const withoutRequirement = graph({ nodes: [node('a', { status: 'resolved' })] });
-      expect(decide(withoutRequirement).outcome).toBe('achieved');
     });
   });
 });
@@ -533,16 +448,6 @@ describe('frontierNeedsBudget', () => {
     expect(withTasks(snapshot, [task({ id: 'task_1', status: 'completed' })])).toBe(false);
   });
 
-  it('is true for a retryable failure, which spends money too', () => {
-    const snapshot = graph({ nodes: [node('a', { taskId: 'task_1' })] });
-
-    expect(
-      withTasks(snapshot, [
-        task({ error: VERIFICATION_FAILED_ERROR, id: 'task_1', status: 'paused' }),
-      ]),
-    ).toBe(true);
-  });
-
   it('ignores blocked candidates', () => {
     const snapshot = graph({
       edges: [
@@ -640,7 +545,7 @@ describe('measured acceptance', () => {
           ],
         },
       }),
-    ).toMatchObject({ branch: 'terminal_acceptance', outcome: 'advanced' });
+    ).toMatchObject({ branch: 'goal_completed', outcome: 'achieved' });
   });
 });
 
@@ -665,7 +570,7 @@ describe('exploration terminal phase', () => {
       readyForAcceptance: true,
       reviewedNodeIds: ['baseline'],
     };
-    expect(decide(snapshot).branch).toBe('terminal_acceptance');
+    expect(decide(snapshot).branch).toBe('goal_completed');
     snapshot.nodes.push(node('new-result', { status: 'resolved' }));
     expect(decide(snapshot).branch).toBe('explore_graph');
   });

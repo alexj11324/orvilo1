@@ -176,9 +176,6 @@ const rw = (read: ApiKeyScope | null, write: ApiKeyScope | null): TrpcNamespaceS
  */
 export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule> = {
   accountDeletion: 'blocked',
-  acceptance: 'blocked',
-  // the discussion on an acceptance follows the acceptance itself
-  acceptanceComment: 'blocked',
   agent: rw('agent:read', 'agent:write'),
   agentDocument: rw('knowledge:read', 'knowledge:write'),
   agentEval: 'blocked',
@@ -317,7 +314,6 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   user: rw('user:read', 'user:write'),
   userMemories: rw('user:read', 'user:write'),
   userMemory: rw('user:read', 'user:write'),
-  verify: 'blocked',
   waitlist: 'blocked',
   webBrowsing: { any: 'model:invoke' },
   work: rw('agent:read', 'agent:write'),

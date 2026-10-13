@@ -1,4 +1,3 @@
-import type { TaskRunPromptGoalLoop } from '@orvilo/prompts';
 import type {
   AutomationOccurrenceSnapshot,
   TaskExecutionContract,
@@ -9,7 +8,6 @@ import type {
 } from '@orvilo/types';
 
 export interface BuildTaskExecutionContractInput {
-  acceptanceEnabled: boolean;
   /**
    * The frozen policy content the prompt was rendered from — carried verbatim
    * so the contract is the prompt's provenance, not a parallel snapshot.
@@ -28,7 +26,6 @@ export interface BuildTaskExecutionContractInput {
     taskRevision: number;
   };
   environment: TaskExecutionEnvironmentSnapshot;
-  goalLoop?: TaskRunPromptGoalLoop;
   grantId?: string;
   integration?: {
     baseBranch?: string;
@@ -51,7 +48,7 @@ export interface BuildTaskExecutionContractInput {
 }
 
 /**
- * Pure assembler: freezes the versions, environment, tools, acceptance gate
+ * Pure assembler: freezes the versions, environment, tools
  * and budget a task run was dispatched under into a `TaskExecutionContract`.
  * The contract is persisted on the run row so retries/continuations bind to
  * the same prohibitions instead of re-deriving them from mutable task config.
@@ -61,15 +58,14 @@ export function buildTaskExecutionContract(
   input: BuildTaskExecutionContractInput,
 ): TaskExecutionContract {
   const contract: TaskExecutionContract = {
-    acceptance: { enabled: input.acceptanceEnabled },
     ...(input.occurrence ? { occurrence: input.occurrence } : {}),
     ...(input.content ? { content: input.content } : {}),
     ...(input.contractId ? { contractId: input.contractId } : {}),
     ...(input.contractRevision != null ? { revision: input.contractRevision } : {}),
     ...(input.sourceContractId ? { sourceContractId: input.sourceContractId } : {}),
     budget: {
-      maxRounds: input.goalLoop?.maxRounds ?? null,
-      round: input.goalLoop?.round ?? (task.totalTopics || 0) + 1,
+      maxRounds: null,
+      round: (task.totalTopics || 0) + 1,
     },
     environment: input.environment,
     schemaVersion: 1,

@@ -9,33 +9,15 @@ export const GoalManifest: BuiltinToolManifest = {
   api: [
     {
       description:
-        'Create and immediately start a long-horizon goal with an editable acceptance plan. Use this only when the user explicitly starts their request with /goal. The call pauses for confirmation; after approval it creates the goal, records the acceptance criteria as its requirement, and advances its coordinator once — which dispatches the first task with its own verifier. Once it succeeds, do not execute or reproduce the work in the current conversation; the live result card is the progress and result entry point.',
+        'Create and immediately start a long-horizon goal with an editable acceptance plan. Use this only when the user explicitly starts their request with /goal. The call pauses for confirmation; after approval it creates the goal, records the acceptance criteria as its requirement, and advances its coordinator once — which dispatches ordinary Issues reviewed by their configured reviewer Agent. Once it succeeds, do not execute or reproduce the work in the current conversation; the live result card is the progress and result entry point.',
       humanIntervention: 'always',
       name: GoalApiName.createGoal,
       parameters: {
         additionalProperties: false,
         properties: {
-          criteria: {
-            description:
-              'Concrete acceptance criteria derived from every explicit user requirement.',
-            items: {
-              additionalProperties: false,
-              properties: {
-                description: { type: 'string' },
-                instruction: {
-                  description: 'Detailed judging instruction. Omit for program checks.',
-                  type: 'string',
-                },
-                onFail: { enum: ['auto_repair', 'manual'], type: 'string' },
-                required: { type: 'boolean' },
-                title: { type: 'string' },
-                verifierConfig: { type: 'object' },
-                verifierType: { enum: ['agent', 'llm', 'program'], type: 'string' },
-              },
-              required: ['title'],
-              type: 'object',
-            },
-            type: 'array',
+          criteriaDescription: {
+            description: 'Editable acceptance criteria in normal description text.',
+            type: 'string',
           },
           deadline: {
             description:
@@ -59,7 +41,7 @@ export const GoalManifest: BuiltinToolManifest = {
           },
           name: { description: 'Short goal title.', type: 'string' },
         },
-        required: ['name', 'instruction', 'criteria'],
+        required: ['name', 'instruction', 'criteriaDescription'],
         type: 'object',
       },
       renderDisplayControl: 'expand',

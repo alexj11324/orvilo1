@@ -14,10 +14,10 @@
   `pushedSourceRef === sha`；远端路径要求 `verifyRemoteMerge` 按
   冻结的 head/base SHA + PR number 重新确认（`landRemoteMerge` /
   `markDeliveryMerged`）。
-- `task completed`：仅当 integration settle/hold 裁决后由生命周期 /
-  `driveTaskFromVerify` /review sweep 落 `completed` ——
-  `activeDeliveryRow` 要求 `executionGeneration` 匹配，旧代次证据不结算新
-  run。依赖解锁消费 task 的终态，因此只有 `integrated` 能放行下游。
+- `Issue done`：交付完成后由 reviewer Agent 审核，只有通过审核或人手动
+  修改 Issue 状态才进入 `done`。集成回执仍要求 `executionGeneration` 匹配；
+  旧代次证据不能结算新 run。依赖解锁消费 Issue 的 `done` 状态。
+  当前审核流程见 [Issue review](issue-review.md)。
 
 ## 同 repo/ref 串行（本次新增）
 
@@ -47,7 +47,7 @@
   后才落 `integrated` 并完成 task。
 - CI： `classifyChecks` 按 app+name 取最新 run，merge head 与 headSha 必须
   一致；全部 skipped 视为 pending（`No delivery CI check executed
-successfully`），review decision REVIEW\_REQUIRED/CHANGES\_REQUESTED 也进
+successfully`），review decision REVIEW_REQUIRED/CHANGES_REQUESTED 也进
   pending；合并边界二次 `getPullRequestReviewSnapshot` 重新裁决，merge 用
   `expectedHeadSha` 防 TOCTOU，合并后再确认 `confirmed.merged`。
 - 合并冲突 / CI 失败 /review 意见 → `dispatchCorrective`（`role:'integrate'`

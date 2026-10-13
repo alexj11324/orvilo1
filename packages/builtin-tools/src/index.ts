@@ -1,4 +1,3 @@
-import { AcceptanceEvidenceManifest } from '@orvilo/builtin-tool-acceptance-evidence';
 import { OrviloActivatorManifest } from '@orvilo/builtin-tool-activator';
 import { AgentBuilderManifest } from '@orvilo/builtin-tool-agent-builder';
 import { AgentDocumentsManifest } from '@orvilo/builtin-tool-agent-documents';
@@ -32,7 +31,6 @@ import { resolveSkillsManifest, SkillsManifest } from '@orvilo/builtin-tool-skil
 import { TaskManifest } from '@orvilo/builtin-tool-task';
 import { TopicReferenceManifest } from '@orvilo/builtin-tool-topic-reference';
 import { UserInteractionManifest } from '@orvilo/builtin-tool-user-interaction';
-import { VerifyToolManifest } from '@orvilo/builtin-tool-verify';
 import { WebBrowsingManifest } from '@orvilo/builtin-tool-web-browsing';
 import { WebOnboardingManifest } from '@orvilo/builtin-tool-web-onboarding';
 import { isDesktop, RECOMMENDED_SKILLS, RecommendedSkillType } from '@orvilo/const';
@@ -203,8 +201,6 @@ export const runtimeManagedToolIds = [
 export const AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS = new Set<string>([
   CalculatorManifest.identifier,
   WebBrowsingManifest.identifier,
-  VerifyToolManifest.identifier,
-  AcceptanceEvidenceManifest.identifier,
   OrviloAgentManifest.identifier,
   // `orvilo-cloud-sandbox`: allowed because a share-visitor run gets its own
   // fresh per-topic sandbox session, not the creator's. The `orvilo` CLI JWT
@@ -250,20 +246,6 @@ export const AGENT_SHARE_NO_DATA_GRANT_BUILTIN_IDENTIFIERS = new Set<string>([
 ]);
 
 const builtinToolRegistry: OrviloBuiltinTool[] = [
-  {
-    discoverable: false,
-    hidden: true,
-    identifier: AcceptanceEvidenceManifest.identifier,
-    manifest: AcceptanceEvidenceManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
-    identifier: VerifyToolManifest.identifier,
-    manifest: VerifyToolManifest,
-    type: 'builtin',
-  },
   {
     discoverable: false,
     hidden: true,

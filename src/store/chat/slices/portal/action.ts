@@ -614,14 +614,6 @@ export class ChatPortalActionImpl {
     return buffer;
   };
 
-  openAcceptance = (acceptanceId: string): void => {
-    this.#get().pushPortalView({ acceptanceId, type: PortalViewType.Acceptance });
-  };
-
-  openAcceptanceCheck = (acceptanceId: string, checkId: string): void => {
-    this.#get().pushPortalView({ acceptanceId, checkId, type: PortalViewType.AcceptanceCheck });
-  };
-
   openMessageDetail = (messageId: string): void => {
     this.#get().pushPortalView({ messageId, type: PortalViewType.MessageDetail });
   };
@@ -701,14 +693,6 @@ export class ChatPortalActionImpl {
     if (getCurrentViewType(portalStack) === PortalViewType.Topic) {
       this.#get().popPortalView();
     }
-  };
-
-  openVerifyResult = (operationId: string, checkItemId: string): void => {
-    this.#get().pushPortalView({ checkItemId, operationId, type: PortalViewType.VerifyResult });
-  };
-
-  openVerifyReport = (runId: string): void => {
-    this.#get().pushPortalView({ runId, type: PortalViewType.VerifyReport });
   };
 
   popPortalView = (): void => {

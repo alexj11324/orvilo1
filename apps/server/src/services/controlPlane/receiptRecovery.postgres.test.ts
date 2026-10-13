@@ -295,37 +295,6 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
       topicId: setup.binding.topicId,
       status: 'running',
     });
-    const [criterion] = await db
-      .insert(schema.verifyCriteria)
-      .values({
-        userId: setup.binding.userId,
-        workspaceId: setup.binding.workspaceId,
-        title: 'durable file criterion',
-        verifierType: 'program',
-      })
-      .returning();
-    const [verify] = await db
-      .insert(schema.verifyRuns)
-      .values({
-        operationId: setup.binding.operationId,
-        userId: setup.binding.userId,
-        workspaceId: setup.binding.workspaceId,
-        status: 'planned',
-        planConfirmedAt: new Date(),
-        plan: [
-          {
-            id: 'check',
-            index: 0,
-            title: 'durable file criterion',
-            required: true,
-            onFail: 'manual',
-            sourceCriterionId: criterion.id,
-            verifierType: 'program',
-            verifierConfig: {},
-          },
-        ],
-      })
-      .returning();
     const row = (
       await pool.query<{ receipt: DurableReceipt }>(
         "SELECT receipt FROM action_receipts WHERE receipt->>'idempotencyKey'=$1",
@@ -339,14 +308,6 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
     const receiptDirectory = path.join(privateRoot, 'receipts');
     const files = new FileDurableReceiptStore(receiptDirectory);
     await files.reserve('a'.repeat(64), receipt);
-    const mappings = [
-      {
-        checkItemId: 'check',
-        sourceCriterionId: criterion.id,
-        receiptId: receipt.id,
-        requestDigest: receipt.requestDigest,
-      },
-    ];
     const options = {
       binding: setup.binding,
       database: db,
@@ -354,7 +315,6 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
       outputDirectory: path.join(privateRoot, 'output'),
       receiptDirectory,
       fileCommitments: [setup.commitment],
-      completionMappings: mappings,
       docker: {
         supervisorId: 'snapshot-no-launch',
         workspace,
@@ -372,11 +332,8 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
       options,
       receipt,
       files,
-      verify,
-      mappings,
       evidence: {
         commitments: [setup.commitment],
-        completionMappings: mappings,
         loadReceipts: async () => [receipt],
       },
       cleanup: async () => {
@@ -456,53 +413,78 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
     }
   }, 45_000);
 
-  it.each(['decision', 'dependency', 'deleted', 'mapping'] as const)(
-    'invalidates saved authority after %s changes',
-    async (change) => {
-      const setup = await snapshotFixture();
-      try {
-        const service = new CanonicalSessionSnapshots(db);
-        const captured = await service.capture(setup.binding, setup.evidence);
-        if (!captured.ok) throw new Error(captured.error.message);
-        if (change === 'decision')
-          await db
-            .update(schema.verifyRuns)
-            .set({ decisionDetail: { comment: 'new authoritative review' } })
-            .where(eq(schema.verifyRuns.id, setup.verify.id));
-        if (change === 'deleted')
-          await db
-            .update(schema.tasks)
-            .set({ isDeleted: true, deletedAt: new Date() })
-            .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
-        if (change === 'dependency') {
-          const [prerequisite] = await db
-            .insert(schema.tasks)
-            .values({
-              workspaceId: setup.binding.workspaceId,
-              createdByUserId: setup.binding.userId,
-              identifier: 'RECOVERY-PREREQ',
-              seq: 2,
-              instruction: 'new dependency',
-              status: 'done',
-            })
-            .returning();
-          await db.insert(schema.taskDependencies).values({
-            taskId: fixtureTaskId(setup.binding),
-            dependsOnId: prerequisite.id,
-            workspaceId: setup.binding.workspaceId,
-            userId: setup.binding.userId,
-          });
-        }
-        const evidence =
-          change === 'mapping' ? { ...setup.evidence, completionMappings: [] } : setup.evidence;
-        expect(await service.recover(setup.binding, captured.value.id, evidence)).toMatchObject({
-          ok: false,
-        });
-      } finally {
-        await setup.cleanup();
+  it.each([
+    'review',
+    'description',
+    'reviewer',
+    'workflow',
+    'dependency',
+    'deleted',
+    'receipt',
+  ] as const)('invalidates saved authority after %s changes', async (change) => {
+    const setup = await snapshotFixture();
+    try {
+      const service = new CanonicalSessionSnapshots(db);
+      const captured = await service.capture(setup.binding, setup.evidence);
+      if (!captured.ok) throw new Error(captured.error.message);
+      if (change === 'review')
+        await db
+          .update(schema.tasks)
+          .set({ config: { issueReview: { state: 'submitted' } } })
+          .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
+      if (change === 'description')
+        await db
+          .update(schema.tasks)
+          .set({ instruction: 'updated Issue description' })
+          .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
+      if (change === 'reviewer') {
+        const [issue] = await db
+          .select()
+          .from(schema.tasks)
+          .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
+        await db
+          .update(schema.tasks)
+          .set({ reviewerAgentId: issue.assigneeAgentId })
+          .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
       }
-    },
-  );
+      if (change === 'workflow')
+        await db
+          .update(schema.tasks)
+          .set({ workflowCategory: 'done' })
+          .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
+      if (change === 'deleted')
+        await db
+          .update(schema.tasks)
+          .set({ isDeleted: true, deletedAt: new Date() })
+          .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
+      if (change === 'dependency') {
+        const [prerequisite] = await db
+          .insert(schema.tasks)
+          .values({
+            workspaceId: setup.binding.workspaceId,
+            createdByUserId: setup.binding.userId,
+            identifier: 'RECOVERY-PREREQ',
+            seq: 2,
+            instruction: 'new dependency',
+            status: 'done',
+          })
+          .returning();
+        await db.insert(schema.taskDependencies).values({
+          taskId: fixtureTaskId(setup.binding),
+          dependsOnId: prerequisite.id,
+          workspaceId: setup.binding.workspaceId,
+          userId: setup.binding.userId,
+        });
+      }
+      const evidence =
+        change === 'receipt' ? { ...setup.evidence, loadReceipts: async () => [] } : setup.evidence;
+      expect(await service.recover(setup.binding, captured.value.id, evidence)).toMatchObject({
+        ok: false,
+      });
+    } finally {
+      await setup.cleanup();
+    }
+  });
   it.each(['missing', 'unknown'] as const)(
     'rejects a persisted snapshot with %s schema version',
     async (version) => {

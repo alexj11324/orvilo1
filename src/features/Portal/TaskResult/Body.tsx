@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
-import TaskAcceptance from '@/features/AgentTasks/AgentTaskDetail/TaskAcceptance';
 import TaskActivities from '@/features/AgentTasks/AgentTaskDetail/TaskActivities';
 import TaskArtifacts from '@/features/AgentTasks/AgentTaskDetail/TaskArtifacts';
 import TaskDetailSkeleton from '@/features/AgentTasks/AgentTaskDetail/TaskDetailSkeleton';
@@ -60,12 +59,7 @@ const Body = memo(() => {
         <TaskDetailSkeleton chrome={'body'} />
       ) : (
         <>
-          {/* Report, then the verdict on it, then the artifacts it produced.
-              The acceptance used to sit last, so on any report longer than a
-              screen the checks — the reason to trust what you just read — were
-              off the bottom of the panel and read as missing. */}
           <TaskActivities variant={'result'} />
-          <TaskAcceptance variant={'result'} />
           <TaskArtifacts />
         </>
       )}

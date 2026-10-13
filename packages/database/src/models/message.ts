@@ -2644,22 +2644,6 @@ export class MessageModel {
     });
 
   /**
-   * Resolve the `role='verify'` delivery-checker card for an Agent Run (created
-   * with `metadata.verifyOperationId = operationId`). Used by auto-repair to
-   * persist the failure feedback onto the card it belongs to.
-   */
-  findVerifyMessageByOperationId = async (operationId: string) => {
-    return this.db.query.messages.findFirst({
-      where: and(
-        eq(messages.userId, this.userId),
-        eq(messages.role, 'verify'),
-        sql`${messages.metadata}->>'verifyOperationId' = ${operationId}`,
-      ),
-      orderBy: [desc(messages.createdAt)],
-    });
-  };
-
-  /**
    * Resolve the newest assistant row an Agent Run produced, by the creation
    * provenance `call_llm` stamps on every assistant row it creates or reuses
    * (`metadata.operationId`). Scoped by `topicId` so the JSONB predicate runs
@@ -3970,8 +3954,7 @@ export class MessageModel {
    *    now for an op still finalizing). The primary path for in-process runs.
    * 2. Heterogeneous match — the message carries
    *    `metadata.heterogeneousToolStateOperationId === operationId` directly,
-   *    which a CLI-backed run stamps regardless of when the row lands. Mirrors
-   *    the jsonb predicate in {@link findVerifyMessageByOperationId}.
+   *    which a CLI-backed run stamps regardless of when the row lands.
    *
    * TRADE-OFF (v1): the time window is racy — two operations running
    * concurrently in the SAME topic+thread can bleed each other's tool calls into

@@ -26,7 +26,6 @@ export {
   EditTaskRender,
   RunTaskRender,
   RunTasksRender,
-  SetTaskVerifyRender,
   TaskRenders,
 } from './Render';
 

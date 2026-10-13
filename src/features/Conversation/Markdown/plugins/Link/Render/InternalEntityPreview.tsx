@@ -1,16 +1,7 @@
 'use client';
 import { Freeze } from '@lobehub/ui';
-import type { VerifyCodingScope } from '@orvilo/types';
-import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
-import type { TFunction } from 'i18next';
-import {
-  BadgeCheckIcon,
-  BotIcon,
-  CheckCircleIcon,
-  CheckSquareIcon,
-  FileTextIcon,
-} from 'lucide-react';
+import { BotIcon, CheckSquareIcon, FileTextIcon } from 'lucide-react';
 import { createElement, memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,7 +12,6 @@ import { useClientDataSWR } from '@/libs/swr';
 import { agentService } from '@/services/agent';
 import { documentService } from '@/services/document';
 import { taskService } from '@/services/task';
-import { verifyService } from '@/services/verify';
 
 import type { InternalLinkReference } from '../internalLink';
 
@@ -37,45 +27,8 @@ interface PreviewData {
   avatar?: string | null;
   backgroundColor?: string | null;
   description?: string | null;
-  meta?: string | null;
-  secondaryMeta?: string | null;
   title?: string | null;
 }
-
-const getVerifyStatusLabel = (status: string | null | undefined, t: TFunction<'chat'>) => {
-  switch (status) {
-    case 'delivered': {
-      return t('internalLink.preview.verifyStatus.delivered');
-    }
-    case 'errored': {
-      return t('internalLink.preview.verifyStatus.errored');
-    }
-    case 'failed': {
-      return t('internalLink.preview.verifyStatus.failed');
-    }
-    case 'passed': {
-      return t('internalLink.preview.verifyStatus.passed');
-    }
-    case 'planned': {
-      return t('internalLink.preview.verifyStatus.planned');
-    }
-    case 'repairing': {
-      return t('internalLink.preview.verifyStatus.repairing');
-    }
-    case 'uncertain': {
-      return t('internalLink.preview.verifyStatus.uncertain');
-    }
-    case 'unverified': {
-      return t('internalLink.preview.verifyStatus.unverified');
-    }
-    case 'verifying': {
-      return t('internalLink.preview.verifyStatus.verifying');
-    }
-    default: {
-      return null;
-    }
-  }
-};
 
 /**
  * One cache entry per entity, shared between the hover preview and the eager
@@ -89,31 +42,8 @@ export const internalEntityPreviewKey = (reference: InternalLinkReference) => [
 
 export const getPreviewData = async (
   reference: InternalLinkReference,
-  t: TFunction<'chat'>,
 ): Promise<PreviewData | null> => {
   switch (reference.type) {
-    case 'acceptance': {
-      const bundle = await verifyService.getAcceptanceBundle(reference.acceptanceId);
-      if (!bundle) return null;
-
-      const passed = bundle.checks.filter((check) => check.state === 'passed').length;
-      const exceptions = bundle.checks.filter(
-        (check) => check.state === 'failed' || check.state === 'uncertain',
-      ).length;
-
-      return {
-        description: bundle.acceptance.requirement || bundle.latestReport?.summary,
-        meta: t('internalLink.preview.acceptanceCounts', {
-          exceptions,
-          passed,
-          total: bundle.checks.length,
-        }),
-        secondaryMeta: t('internalLink.preview.acceptanceRounds', {
-          count: bundle.rounds.length,
-        }),
-        title: bundle.subject.title || bundle.subject.id,
-      };
-    }
     case 'agent': {
       return agentService.getAgentConfigById(reference.agentId);
     }
@@ -136,37 +66,6 @@ export const getPreviewData = async (
           }
         : null;
     }
-    case 'verify': {
-      const bundle = await verifyService.getReportBundle(reference.runId);
-      if (!bundle) return null;
-
-      const { report, run } = bundle;
-      const status = report?.verdict ?? run.status;
-      const counts = report
-        ? t('internalLink.preview.verifyCounts', {
-            failed: report.failedChecks ?? 0,
-            passed: report.passedChecks ?? 0,
-            uncertain: report.uncertainChecks ?? 0,
-          })
-        : null;
-      // Branch/commit chips only exist on a coding scope (a run with no
-      // scenario predates the column and is coding); testedAt is shared.
-      const codingScope =
-        (run.scenario ?? 'coding') === 'coding' ? (run.context as VerifyCodingScope | null) : null;
-      const testedAt = (run.context as { testedAt?: string } | null)?.testedAt;
-      const scope = [
-        codingScope?.branch,
-        codingScope?.commit?.slice(0, 10),
-        testedAt ? formatAbsoluteDateTime(testedAt) : null,
-      ].filter(Boolean);
-
-      return {
-        description: report?.summary,
-        meta: [getVerifyStatusLabel(status, t), counts].filter(Boolean).join(' · '),
-        secondaryMeta: scope.join(' · '),
-        title: run.title,
-      };
-    }
     case 'route': {
       return null;
     }
@@ -184,20 +83,16 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
     const [open, setOpen] = useState(false);
     const { data, isLoading } = useClientDataSWR(
       open ? internalEntityPreviewKey(reference) : null,
-      () => getPreviewData(reference, t),
+      () => getPreviewData(reference),
       { revalidateOnFocus: false },
     );
 
     const icon =
-      reference.type === 'acceptance'
-        ? BadgeCheckIcon
-        : reference.type === 'agent'
-          ? BotIcon
-          : reference.type === 'task'
-            ? CheckSquareIcon
-            : reference.type === 'verify'
-              ? CheckCircleIcon
-              : FileTextIcon;
+      reference.type === 'agent'
+        ? BotIcon
+        : reference.type === 'task'
+          ? CheckSquareIcon
+          : FileTextIcon;
     const typeLabel = t(`internalLink.preview.${reference.type}`);
 
     const content = isLoading ? (
@@ -224,10 +119,6 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
         </div>
         {data?.description && (
           <div className={cn('text-sm', styles.description)}>{data.description}</div>
-        )}
-        {data?.meta && <div className="text-xs leading-5 text-muted-foreground">{data.meta}</div>}
-        {data?.secondaryMeta && (
-          <div className="text-xs leading-5 text-muted-foreground">{data.secondaryMeta}</div>
         )}
       </div>
     );

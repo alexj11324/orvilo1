@@ -16,7 +16,6 @@ export const TRACING_SCENARIOS = {
   ExpertiseDomainDraft: 'expertise_domain_draft',
   ExpertiseTopicIngestion: 'expertise_topic_ingestion',
   FollowUp: 'follow_up',
-  GoalCriteriaGen: 'goal_criteria_gen',
   GoalDecompose: 'goal_decompose',
   GoalExplore: 'goal_explore',
   HistorySummary: 'history_summary',

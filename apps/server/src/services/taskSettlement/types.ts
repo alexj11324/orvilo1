@@ -11,22 +11,7 @@ import type {
 
 import type { OrviloDatabase } from '@/database/type';
 
-/**
- * Terminal verify verdicts the settlement policy accepts. Mirrors the outcome
- * chain computed inside `driveTaskFromVerify` — the run status itself
- * (`passed`/`failed`/`errored`) plus the downgrades applied on top of it
- * (goal review, aegis evidence gate, workspace integration).
- */
-export type VerifySettlementOutcome =
-  | 'passed'
-  | 'failed'
-  | 'errored'
-  | 'review_errored'
-  | 'unjudgeable'
-  | 'aegis_evidence_required'
-  | 'integration_blocked';
-
-/** Execution-contract expectation reused from the verify/dispatch CAS writes. */
+/** Execution-contract expectation reused from the dispatch CAS writes. */
 export interface SettlementExpectedContract {
   assigneeAgentId: string | null;
   executionGeneration: number;
@@ -38,7 +23,7 @@ export interface SettlementExpectedContract {
 
 /**
  * Caller-side knowledge the policy cannot read off the task row: what the
- * caller just observed (verify bound, fuse state), and which concurrency
+ * caller just observed (fuse state), and which concurrency
  * guard the apply step must use.
  */
 export interface SettlementContext {
@@ -48,7 +33,7 @@ export interface SettlementContext {
   beforeMutation?: (tx: OrviloDatabase) => Promise<boolean>;
   /**
    * The delivery is gated on something outside execution (remote identity
-   * capture, verify-state read, workspace integration, upstream dependency
+   * capture, workspace integration, upstream dependency
    * change). Routes the task to a human instead of settling normally.
    */
   blocked?: boolean;
@@ -66,15 +51,11 @@ export interface SettlementContext {
   expectedStatus?: string;
   /** Whether the user canceled the issue itself (not just the run). */
   issueCancel?: boolean;
-  /** Trusted Verify settlement: the Issue member explicitly accepted this delivery. */
-  manualAcceptance?: boolean;
   /** A manual "run now" on an automation task — not an automation-health signal. */
   manualAutomationRun?: boolean;
 
   /** Post-commit hook forwarded to the task-service write. */
   onStatusCommitted?: () => void;
-  /** A verify failure spawned a repair run instead of settling. */
-  repairSpawned?: boolean;
   // ── Write guards — the settle applies through exactly one. ──
   /** Active `completion:*`/run reservation the caller claimed. */
   reservationId?: string;
@@ -90,8 +71,6 @@ export interface SettlementContext {
   throughTaskService?: boolean;
   /** The current run still has a question without producer-acknowledged input. */
   unresolvedInput?: boolean;
-  /** A confirmed verify plan owns this run's delivery acceptance. */
-  verifyBound?: boolean;
 }
 
 export interface SettleTaskExecutionInput {
@@ -107,8 +86,6 @@ export interface SettleTaskExecutionInput {
   /** Run-start settle: stamp the running projection + In Progress workflow. */
   runStarted?: boolean;
   taskId: string;
-  /** Terminal verify verdict when the settle is verify-driven. */
-  verifyOutcome?: VerifySettlementOutcome;
 }
 
 /** The full plan the policy produced — the same shape apply consumes. */

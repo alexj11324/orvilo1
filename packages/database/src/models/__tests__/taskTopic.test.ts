@@ -1193,37 +1193,6 @@ describe('TaskTopicModel', () => {
     });
   });
 
-  describe('updateReview', () => {
-    it('should store review results', async () => {
-      const taskModel = new TaskModel(serverDB, userId);
-      const topicModel = new TaskTopicModel(serverDB, userId);
-      const task = await taskModel.create({ instruction: 'Test' });
-      await createTopic('tpc_review');
-
-      await topicModel.add(task.id, 'tpc_review', { seq: 1 });
-      await topicModel.updateReview(task.id, 'tpc_review', {
-        iteration: 1,
-        passed: true,
-        score: 85,
-        scores: [
-          { passed: true, reason: 'Good accuracy', rubricId: 'r1', score: 0.88 },
-          { passed: true, reason: 'Code found', rubricId: 'r2', score: 1 },
-        ],
-      });
-
-      const topics = await topicModel.findByTaskId(task.id);
-      expect(topics[0].reviewPassed).toBe(1);
-      expect(topics[0].reviewScore).toBe(85);
-      expect(topics[0].reviewIteration).toBe(1);
-      expect(topics[0].reviewedAt).toBeDefined();
-
-      const scores = topics[0].reviewScores as any[];
-      expect(scores).toHaveLength(2);
-      expect(scores[0].rubricId).toBe('r1');
-      expect(scores[1].score).toBe(1);
-    });
-  });
-
   describe('findByTopicId', () => {
     it('returns the taskTopic row matching the topicId', async () => {
       const taskModel = new TaskModel(serverDB, userId);
@@ -1293,13 +1262,6 @@ describe('TaskTopicModel', () => {
       await topicModel.add(task.id, 'tpc_d1', { operationId: 'op_d1', seq: 1 });
       await topicModel.add(task.id, 'tpc_d2', { operationId: 'op_d2', seq: 2 });
       await topicModel.updateStatus(task.id, 'tpc_d1', 'completed');
-      await topicModel.updateReview(task.id, 'tpc_d1', {
-        iteration: 2,
-        passed: true,
-        score: 90,
-        scores: [{ rubricId: 'r1', score: 1 }],
-      });
-
       const rows = await topicModel.findWithDetails(task.id);
       expect(rows).toHaveLength(2);
       // seq desc ordering
@@ -1310,9 +1272,6 @@ describe('TaskTopicModel', () => {
       expect(d1.title).toBe('First');
       expect(d1.operationId).toBe('op_d1');
       expect(d1.status).toBe('completed');
-      expect(d1.reviewIteration).toBe(2);
-      expect(d1.reviewPassed).toBe(1);
-      expect(d1.reviewScore).toBe(90);
       expect(d1.createdAt).toBeInstanceOf(Date);
 
       const d2 = rows.find((r) => r.id === 'tpc_d2')!;

@@ -45,11 +45,11 @@ const settingsUpdateResult: Awaited<ReturnType<typeof userService.updateUserSett
   rowCount: 1,
   rows: [],
 };
-const deferred = () => {
+const deferred = <Value,>(value: Value) => {
   let resolve!: () => void;
   let reject!: (error: Error) => void;
-  const promise = new Promise<typeof settingsUpdateResult>((yes, no) => {
-    resolve = () => yes(settingsUpdateResult);
+  const promise = new Promise<Value>((yes, no) => {
+    resolve = () => yes(value);
     reject = no;
   });
   return { promise, reject, resolve };
@@ -227,8 +227,8 @@ describe('ModelAssignmentsForm owned autosave', () => {
   });
 
   it('keeps the latest group saved after an older request fails without rolling back its edits', async () => {
-    const older = deferred();
-    const newer = deferred();
+    const older = deferred(settingsUpdateResult);
+    const newer = deferred(settingsUpdateResult);
     vi.mocked(userService.updateUserSettings)
       .mockImplementationOnce(() => older.promise)
       .mockImplementationOnce(() => newer.promise);
@@ -360,7 +360,7 @@ describe('ModelAssignmentsForm owned autosave', () => {
   });
 
   it('blocks a late picker fallback callback after permission is revoked', async () => {
-    const enable = deferred();
+    const enable = deferred<void>(undefined);
     useUserStore.setState({
       settings: {
         systemAgent: {

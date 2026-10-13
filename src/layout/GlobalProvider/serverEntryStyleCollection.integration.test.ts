@@ -5,7 +5,7 @@ import '../../../apps/auth/app/virtual-modules.d.ts';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { ColorSwatches, MaskShadow, ThemeProvider } from '@lobehub/ui';
+import { MaskShadow, ThemeProvider } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { createElement } from 'react';
 import type { EntryContext } from 'react-router';
@@ -48,14 +48,20 @@ function StyledMarker() {
     createElement(
       AntdStyleLayer,
       null,
-      createElement(ColorSwatches, {
-        colors: [{ color: renderState.primary, title: 'actual retained SDK color' }],
-        enableColorPicker: true,
-        texts: {
-          custom: 'actual retained SDK color picker',
-          presets: 'actual retained SDK preset colors',
+      createElement(
+        ThemeProvider,
+        {
+          appId: 'nested-layered-sdk-app',
+          appearance: 'light',
+          enableCustomFonts: false,
+          enableGlobalStyle: false,
+          theme: {
+            cssVar: { key: 'nested-layered-sdk-fixture' },
+            token: { colorPrimary: renderState.primary },
+          },
         },
-      }),
+        'actual retained layered SDK app',
+      ),
     ),
   );
 }
@@ -172,6 +178,8 @@ describe('actual SSR entries and real Share/Workbench shells retain style output
       expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8');
       expect(response.headers.get('x-fixture-original')).toBe('preserved');
       expect(html).toContain('actual server style consumer');
+      expect(html).toContain('actual retained layered SDK app');
+      expect(html).toContain('ant-app');
       expect(head).toContain('data-emotion=');
       expect(head).toContain(`.${className}`);
       expect(head).toContain('padding-inline-start:17px');
@@ -182,7 +190,7 @@ describe('actual SSR entries and real Share/Workbench shells retain style output
       expect(head).toContain('data-rc-order="prepend"');
       expect(head).toContain('--ant-color-primary');
       expect(head).toContain(renderState.primary);
-      // This belongs to the real nested picker fixture; Share/Workbench shells
+      // This belongs to the real nested SDK app fixture; Share/Workbench shells
       // retain their own existing layer semantics.
       expect(head).toContain('@layer antd');
       if (uncoveredHeader) expect(Number(response.headers.get(uncoveredHeader))).toBeGreaterThan(0);

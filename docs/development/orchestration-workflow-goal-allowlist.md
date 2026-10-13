@@ -8,7 +8,7 @@ Reproduce:
 git grep -n -i goal -- apps/server apps/cli packages
 ```
 
-The scan matches 219 files. Historical migrations keep their original checksums. #0212 and storage upgrades reference legacy data names. Frontend client/locales remain with the user. Third-party objective contracts keep their exact upstream names.
+The scan matches 220 files. Historical migrations keep their original checksums. #0212 and storage upgrades reference legacy data names. Frontend client/locales remain with the user. Third-party objective contracts keep their exact upstream names.
 
 | File                                                                                                      | Reason                                                                                                                    |
 | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -227,6 +227,7 @@ The scan matches 219 files. Historical migrations keep their original checksums.
 | `packages/prime-harness/src/rlmHost.ts`                                                                   | Upstream Prime goal/initialGoal/includeGoals objective protocol; retain exact third-party fields.                         |
 | `packages/prime-harness/src/runner.ts`                                                                    | Upstream Prime goal/initialGoal/includeGoals objective protocol; retain exact third-party fields.                         |
 | `packages/prime-harness/src/vendor.d.ts`                                                                  | Upstream Prime goal/initialGoal/includeGoals objective protocol; retain exact third-party fields.                         |
+| `packages/prompts/src/prompts/agentGroup/groupContext.ts`                                                 | Ordinary English group objectives, not orchestration entities; preserved with its snapshot.                               |
 | `packages/prompts/src/prompts/agentGroup/__snapshots__/index.test.ts.snap`                                | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
 | `packages/types/src/agent/acpExecution.ts`                                                                | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
 | `packages/types/src/agent/aegis.ts`                                                                       | Third-party Aegis goalClosure/objective contract; not the orchestration entity.                                           |

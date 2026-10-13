@@ -89,9 +89,7 @@ export interface McpToolResult {
  * the host's own invocation identity (e.g. `claudecode/toolUseId` for Claude
  * Code), which handlers use as the stable toolCallId (SA04-A).
  */
-export interface McpExtraToolCallExtra {
-  _meta?: Record<string, unknown>;
-}
+export type McpExtraToolCallExtra = Pick<AskUserToolExtra, '_meta' | 'sendNotification'>;
 
 /**
  * An additional tool the producer mounts on this MCP server next to
@@ -434,6 +432,7 @@ export class OrviloBuiltinMcpServer {
         try {
           return await tool.handler(operationId, (args ?? {}) as Record<string, unknown>, {
             _meta: extra._meta,
+            ...(extra.sendNotification ? { sendNotification: extra.sendNotification } : {}),
           });
         } catch (error) {
           return errorResult(String((error as Error)?.message ?? error));

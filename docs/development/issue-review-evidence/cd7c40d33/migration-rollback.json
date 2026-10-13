@@ -1,0 +1,125 @@
+{
+  "at": "2026-10-13T18:48:11.864Z",
+  "constraints": [
+    {
+      "conname": "tasks_in_review_reviewer_required",
+      "definition": "CHECK (((workflow_category <> 'in_review'::text) OR (reviewer_agent_id IS NOT NULL)))"
+    },
+    {
+      "conname": "tasks_reviewer_agent_id_agents_id_fk",
+      "definition": "FOREIGN KEY (reviewer_agent_id) REFERENCES agents(id) ON DELETE SET NULL"
+    }
+  ],
+  "database": "orvilo_issue769_qa",
+  "elapsedMs": 112.65762499999994,
+  "foreignKeys": [
+    {
+      "conname": "expertise_hits_evidence_id_verify_evidence_id_fk",
+      "source": "expertise_hits",
+      "target": "verify_evidence"
+    },
+    {
+      "conname": "expertise_lessons_compiled_criterion_id_verify_criteria_id_fk",
+      "source": "expertise_lessons",
+      "target": "verify_criteria"
+    }
+  ],
+  "inventory": [
+    {
+      "table": "acceptance_comments",
+      "rows": 0,
+      "bytes": 73728
+    },
+    {
+      "table": "acceptance_flow_edges",
+      "rows": 0,
+      "bytes": 32768
+    },
+    {
+      "table": "acceptance_flow_nodes",
+      "rows": 0,
+      "bytes": 49152
+    },
+    {
+      "table": "acceptance_flows",
+      "rows": 0,
+      "bytes": 24576
+    },
+    {
+      "table": "acceptances",
+      "rows": 16,
+      "bytes": 155648
+    },
+    {
+      "table": "verify_check_results",
+      "rows": 25,
+      "bytes": 393216
+    },
+    {
+      "table": "verify_criteria",
+      "rows": 3,
+      "bytes": 98304
+    },
+    {
+      "table": "verify_evidence",
+      "rows": 27,
+      "bytes": 147456
+    },
+    {
+      "table": "verify_reports",
+      "rows": 0,
+      "bytes": 49152
+    },
+    {
+      "table": "verify_review_predictions",
+      "rows": 0,
+      "bytes": 57344
+    },
+    {
+      "table": "verify_rubric_criteria",
+      "rows": 0,
+      "bytes": 40960
+    },
+    {
+      "table": "verify_rubrics",
+      "rows": 0,
+      "bytes": 32768
+    },
+    {
+      "table": "verify_runs",
+      "rows": 40,
+      "bytes": 253952
+    }
+  ],
+  "migration": "0212_remove_acceptance_engine.sql",
+  "migrationSha256": "4ae7e7edcd365b0fbc323b723a1114f61d4af8d5a331414d11f97bc0243055c0",
+  "obsoleteColumns": [],
+  "preservedAfter": {
+    "tasks": 21,
+    "comments": 9,
+    "agents": 7
+  },
+  "preservedBefore": {
+    "tasks": 21,
+    "comments": 9,
+    "agents": 7
+  },
+  "replayVerified": true,
+  "restoredTables": [
+    "acceptance_comments",
+    "acceptance_flow_edges",
+    "acceptance_flow_nodes",
+    "acceptance_flows",
+    "acceptances",
+    "verify_check_results",
+    "verify_criteria",
+    "verify_evidence",
+    "verify_reports",
+    "verify_review_predictions",
+    "verify_rubric_criteria",
+    "verify_rubrics",
+    "verify_runs"
+  ],
+  "rolledBack": true,
+  "sourceBase": "45c182cedcfcbe5fab2f3e83fa0545391536fcf0"
+}

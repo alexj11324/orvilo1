@@ -65,3 +65,6 @@ Use the real local Electron app and two saved OpenCode Agents on
 sequence, offline waiting and reconnect, and the three-failure stop. Attach
 screenshots or transcripts to the PR with the tested source revision. Local
 evidence does not prove a cloud deployment.
+
+[The post-removal Electron and migration receipt](./issue-review-evidence/cd7c40d33/README.md)
+records the source revision, automatic review loop and its observed delays.

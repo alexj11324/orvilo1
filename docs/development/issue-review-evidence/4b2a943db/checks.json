@@ -1,0 +1,34 @@
+{
+  "desktopLockfile": {
+    "command": "npm exec --yes --package=@pnpm/exe@12.4.1 -- pnpm install --lockfile-only --frozen-lockfile --ignore-scripts --offline",
+    "result": "passed",
+    "pnpmVersion": "12.4.1"
+  },
+  "electron": {
+    "issue": "T-22",
+    "statusAfterRestart": "Done",
+    "acceptanceEntryAbsent": true,
+    "newReviewLoopExecuted": false,
+    "reusedReviewLoopSourceCommit": "cd7c40d3350758ad851cda85291602c703fd71e6"
+  },
+  "files": {
+    ".github/workflows/ui-alignment.yml": "60b4688ec97a214630e7371c513d9be77f354a2b1e08e6b0e6b8709f6227a7cb",
+    "tests/ui-alignment/vite.config.ts": "f8053cfd5908a21e58d4e35ffaa5bb12842d30041672410922fc13aad16a257b",
+    "tests/ui-alignment/design.vite.config.ts": "b3127453823c829906761d7ad16dff9f8ea35a65e0e0a7c0b8fdda3f43881f58",
+    "tests/ui-alignment/playwright.config.ts": "fbeadc6c27b792da047a5d0885f71e184ad33c7fad8095410b33232b755ba2ff"
+  },
+  "note": "Tests ran on the four-file working diff, committed unchanged as sourceCommit. The Electron renderer and backend started on 9627a3e8359488f03607438002a563c4f98f935b; subsequent commits only change this test harness and the desktop lockfile.",
+  "remoteCi": "pending",
+  "sourceCommit": "4b2a943dbe344b044128a19f278cf45b806a0e90",
+  "testExecutionBaseCommit": "66092bbffd8de94c6d2de2302d84cf003f78fbb5",
+  "uiMatrix": {
+    "passed": 35,
+    "failed": 0,
+    "duration": "1.4 minutes",
+    "standaloneShareMs": 549,
+    "standaloneWorkbenchMs": 411,
+    "assertionsUnchanged": true,
+    "timeoutsUnchanged": true,
+    "retries": 0
+  }
+}

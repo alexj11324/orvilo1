@@ -1,0 +1,351 @@
+{
+  "afterHead": "e68c5d662f0089553b2a6577eef6ea4737b0123b",
+  "before004": {
+    "rawResultRemainsFAIL": true,
+    "checks": 296,
+    "failures": 44,
+    "actualTinySquareFailures": 32,
+    "actualModuleMissingFailures": 8,
+    "crossPositionCircleRasterFailuresSuperseded": 4,
+    "reportSHA256": "f15a575b5202a5b18ead354ce5f99236dfd39f635168309af5b8f1e087e1a770"
+  },
+  "beforeHead": "f7a97a528489e5e4d6e85431365ded85568346fb",
+  "circleBefore006": {
+    "scope": "avatar-circle-callers",
+    "checks": 80,
+    "PASS": 80,
+    "FAIL": 0,
+    "reportSHA256": "a2d0fa25415c4135fe5a745c37590068a68e73193a8f4af6e0d543ad83d7ee33"
+  },
+  "fixtureReferencesAreControlledPublicPropsAndSameDOMPhase": true,
+  "fullAfter007": {
+    "scope": "avatar-boundary",
+    "checks": 336,
+    "PASS": 336,
+    "FAIL": 0,
+    "reportSHA256": "55eab4c47e0ef92f67a7cd60128fcfc550d28007e21a1f947700ba5e8c918ca4",
+    "executionSHA256": "bd5ebcd173a60a4d41e0da866e1795fb81c693d2a9acab5332db9a5b764d0955",
+    "knownOwnedClosed": true,
+    "OOM": 0
+  },
+  "noOriginal136Rerun": true,
+  "originalSource47New24BudgetsStillExhausted": true,
+  "pixelToleranceOrFilters": false,
+  "prior496ProductInstructionOwnersUnchanged": [
+    {
+      "path": ".agents/skills/react/SKILL.md",
+      "gitTreeEntry": "100755 blob 61e2c5db4753f541228b0f9b1ea834cf4079c1de\t.agents/skills/react/SKILL.md"
+    },
+    {
+      "path": "apps/share/src/features/topic/SharedMessageList.tsx",
+      "gitTreeEntry": "100755 blob 8396d7df86c5b273109b4471ac546a3a5ab15ff6\tapps/share/src/features/topic/SharedMessageList.tsx"
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx",
+      "gitTreeEntry": "100755 blob e6c28053f087801f08095d22fc1b5002fa8697aa\tpackages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx"
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx",
+      "gitTreeEntry": "100755 blob 09f469d4377e8762827696718f0ce190c9e88bc2\tpackages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx"
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/components/FileItem.tsx",
+      "gitTreeEntry": "100755 blob 1562f161942de07602ba7e8d88e706146639850d\tpackages/builtin-tool-local-system/src/client/components/FileItem.tsx"
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx",
+      "gitTreeEntry": "100755 blob 3ca33f95c1fd63904c13191017051e7b1d3b4140\tpackages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx"
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx",
+      "gitTreeEntry": "100755 blob 4deef5fff873290d581f09b0d234bc4bfeb2a1e0\tpackages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx"
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Render/EditTask/index.tsx",
+      "gitTreeEntry": "100755 blob 36bedbb1750dc8676dbd10ee9f8f8191b09001a1\tpackages/builtin-tool-task/src/client/Render/EditTask/index.tsx"
+    },
+    {
+      "path": "packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx",
+      "gitTreeEntry": "100755 blob 8401803fec1016dff562d93a2b74b7379d4c3921\tpackages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx"
+    },
+    {
+      "path": "packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx",
+      "gitTreeEntry": "100755 blob 246330c40f00639bb659bb46849b82e52ab9ae13\tpackages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx"
+    },
+    {
+      "path": "packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx",
+      "gitTreeEntry": "100755 blob d23cf732a32a6375624f8c819a834d972490b030\tpackages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx"
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx",
+      "gitTreeEntry": "100755 blob 30d417c41bfdc655783f67ea9992e840019d8c9e\tpackages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx"
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx",
+      "gitTreeEntry": "100755 blob 1ea6d0fad1d5e935895c89a68b8d28105cd7e26b\tpackages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx"
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx",
+      "gitTreeEntry": "100755 blob 62462a1c358bf51aa8329deb3c6ea8221326cf9b\tpackages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx"
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx",
+      "gitTreeEntry": "100755 blob e12eb42c1ee26334b0e1eb4232ffa60ceff7ee8d\tpackages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx"
+    },
+    {
+      "path": "packages/shared-tool-ui/src/components/FileChangeStats/index.tsx",
+      "gitTreeEntry": "100755 blob e6b14b8002df4768a1d0950632b36ebf557ad6b7\tpackages/shared-tool-ui/src/components/FileChangeStats/index.tsx"
+    },
+    {
+      "path": "src/app/globals.css",
+      "gitTreeEntry": "100644 blob 598b4d0d6a4be36061e0b32589cd5ca8cabc30bb\tsrc/app/globals.css"
+    },
+    {
+      "path": "src/business/client/features/ShareShell/index.tsx",
+      "gitTreeEntry": "100755 blob 8a025975bac01c104ee890d5312108f653f21f59\tsrc/business/client/features/ShareShell/index.tsx"
+    },
+    {
+      "path": "src/components/AgentRuntimeIcon.tsx",
+      "gitTreeEntry": "100644 blob 69949f80a717cde88abb674f9d8a29e65b7c62ae\tsrc/components/AgentRuntimeIcon.tsx"
+    },
+    {
+      "path": "src/components/ListSkeleton/index.tsx",
+      "gitTreeEntry": "100755 blob a9c8a428b592249d5495ff425e2298cbe6536a7b\tsrc/components/ListSkeleton/index.tsx"
+    },
+    {
+      "path": "src/components/Select/index.tsx",
+      "gitTreeEntry": "100644 blob 6dde3aad2d3892e62c90a7787166710b17e45fa7\tsrc/components/Select/index.tsx"
+    },
+    {
+      "path": "src/components/reui/autocomplete.tsx",
+      "gitTreeEntry": "100644 blob c00cdb4c133163dec3c20296efbc18300ba06ce7\tsrc/components/reui/autocomplete.tsx"
+    },
+    {
+      "path": "src/components/reui/code-block/code-block.tsx",
+      "gitTreeEntry": "100644 blob c59f5505142928a9d875da7f094aca281fcb10ab\tsrc/components/reui/code-block/code-block.tsx"
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-cell-selection.tsx",
+      "gitTreeEntry": "100644 blob fe1a75ccce0a0ea37cbfec4b5c2ffb14f9d11317\tsrc/components/reui/data-grid/data-grid-cell-selection.tsx"
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-column-header.tsx",
+      "gitTreeEntry": "100644 blob 5cd5493953012fccda2f4b3425705902af782bb0\tsrc/components/reui/data-grid/data-grid-column-header.tsx"
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-table.tsx",
+      "gitTreeEntry": "100644 blob f8d2876bc07783e280cfe98e1c6f7814d6082abe\tsrc/components/reui/data-grid/data-grid-table.tsx"
+    },
+    {
+      "path": "src/components/reui/number-field.module.css",
+      "gitTreeEntry": "100644 blob 19c5ef96c4578835d2a80cd71262f964a96acd88\tsrc/components/reui/number-field.module.css"
+    },
+    {
+      "path": "src/components/reui/number-field.tsx",
+      "gitTreeEntry": "100644 blob e227e902d778a6fff626b1c076299e90ecfb2b97\tsrc/components/reui/number-field.tsx"
+    },
+    {
+      "path": "src/components/ui/accordion.tsx",
+      "gitTreeEntry": "100644 blob 37079d79973d6f0e798b1ce43e97f9bae325da74\tsrc/components/ui/accordion.tsx"
+    },
+    {
+      "path": "src/components/ui/button-group.tsx",
+      "gitTreeEntry": "100644 blob a6d1afca60e2c732cf03182b5e141bde5a3ba646\tsrc/components/ui/button-group.tsx"
+    },
+    {
+      "path": "src/components/ui/code-block.tsx",
+      "gitTreeEntry": "100644 blob c59f5505142928a9d875da7f094aca281fcb10ab\tsrc/components/ui/code-block.tsx"
+    },
+    {
+      "path": "src/components/ui/combobox.tsx",
+      "gitTreeEntry": "100644 blob bb5ab67b33ad47ac859546fca8c9bbeaef57b62c\tsrc/components/ui/combobox.tsx"
+    },
+    {
+      "path": "src/components/ui/empty.tsx",
+      "gitTreeEntry": "100644 blob e2fccdd9e0836d2b4b220606c2400c94be8819d1\tsrc/components/ui/empty.tsx"
+    },
+    {
+      "path": "src/components/ui/field.tsx",
+      "gitTreeEntry": "100644 blob a764f26aa3679221260c0d2ead466646df7dfc83\tsrc/components/ui/field.tsx"
+    },
+    {
+      "path": "src/components/ui/item.tsx",
+      "gitTreeEntry": "100644 blob cbde28092ea3f157b1b8e256a9558cac00034b21\tsrc/components/ui/item.tsx"
+    },
+    {
+      "path": "src/components/ui/label.tsx",
+      "gitTreeEntry": "100644 blob a5e96a5e4f0bb8b0271909bfd81796643bb3ec8e\tsrc/components/ui/label.tsx"
+    },
+    {
+      "path": "src/components/ui/tabs.tsx",
+      "gitTreeEntry": "100644 blob 59e3f67c231f3b239484a2282c92793e4ea44f6c\tsrc/components/ui/tabs.tsx"
+    },
+    {
+      "path": "src/components/ui/textarea.tsx",
+      "gitTreeEntry": "100644 blob e88f44705f9be2e50a79b27b71db2a52c48a6267\tsrc/components/ui/textarea.tsx"
+    },
+    {
+      "path": "src/components/ui/toggle-group.tsx",
+      "gitTreeEntry": "100644 blob 2208be9026a61cc615da634dfc921c3aa4d1ba1e\tsrc/components/ui/toggle-group.tsx"
+    },
+    {
+      "path": "src/components/ui/toggle.tsx",
+      "gitTreeEntry": "100644 blob 4b407a4480c6781ed6ad72cea4c825784d594616\tsrc/components/ui/toggle.tsx"
+    },
+    {
+      "path": "src/features/AgentGoals/GoalDetailPage.tsx",
+      "gitTreeEntry": "100755 blob 328b96c09271e7aaea40c28b86d2892339376ff0\tsrc/features/AgentGoals/GoalDetailPage.tsx"
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/Graph/index.tsx",
+      "gitTreeEntry": "100755 blob 81220ed5b3fb4234c87ca56463a3f452d3312d44\tsrc/features/AgentGoals/ProcessControl/Graph/index.tsx"
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/shared.tsx",
+      "gitTreeEntry": "100755 blob aadba0e81c1bd193526eecad1b537bc03fa6ca2d\tsrc/features/AgentGoals/ProcessControl/shared.tsx"
+    },
+    {
+      "path": "src/features/AgentHome/AgentInfo.tsx",
+      "gitTreeEntry": "100755 blob 665db60648ed4be7a5d0ab8197806d8598c80923\tsrc/features/AgentHome/AgentInfo.tsx"
+    },
+    {
+      "path": "src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx",
+      "gitTreeEntry": "100755 blob 9b8942bdd7d3efd80f3f17e5a21aaf8f52cdfc8b\tsrc/features/AgentQuotaCalendar/QuotaCalendarModal.tsx"
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts",
+      "gitTreeEntry": "100644 blob 251429d1397f174a50770f7253b86e0458f95c3d\tsrc/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts"
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx",
+      "gitTreeEntry": "100755 blob 2e8d48f26a0bf94d65dad7a73fa99fd68c6e32b4\tsrc/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx"
+    },
+    {
+      "path": "src/features/AgentUsage/UsageTrendChart.tsx",
+      "gitTreeEntry": "100755 blob 4ecdd649f166f2d23386960edce1c1cb936bb1ca\tsrc/features/AgentUsage/UsageTrendChart.tsx"
+    },
+    {
+      "path": "src/features/AgentViewAll/AgentViewAllPage.tsx",
+      "gitTreeEntry": "100755 blob c239bca26b827510768bbe997eb5b7e6196b8992\tsrc/features/AgentViewAll/AgentViewAllPage.tsx"
+    },
+    {
+      "path": "src/features/Auth/MarketAuthCallback/index.tsx",
+      "gitTreeEntry": "100755 blob dd1a7f0226379557b0b67db44e068ecd93c3cf48\tsrc/features/Auth/MarketAuthCallback/index.tsx"
+    },
+    {
+      "path": "src/features/Auth/OAuthCallback/Social.tsx",
+      "gitTreeEntry": "100755 blob 8564a4333bb69e3a13514aa6bf6ef6bf00b1a125\tsrc/features/Auth/OAuthCallback/Social.tsx"
+    },
+    {
+      "path": "src/features/Auth/OAuthCallback/Success.tsx",
+      "gitTreeEntry": "100755 blob a8e85c9525f32bee25fa55811f8b6271168ab547\tsrc/features/Auth/OAuthCallback/Success.tsx"
+    },
+    {
+      "path": "src/features/Auth/OAuthConsent/ClientError.tsx",
+      "gitTreeEntry": "100755 blob 67ac409006649293a82e2c84804e8b04896b5bef\tsrc/features/Auth/OAuthConsent/ClientError.tsx"
+    },
+    {
+      "path": "src/features/Auth/OAuthDevice/DeviceSuccess.tsx",
+      "gitTreeEntry": "100755 blob 81bb8051c900f6e9bf49b6a2f9407502c6bbcc9b\tsrc/features/Auth/OAuthDevice/DeviceSuccess.tsx"
+    },
+    {
+      "path": "src/features/Automations/AutomationRunsPage.tsx",
+      "gitTreeEntry": "100644 blob 37ac5308048820d08a8dc94ff1de26ab381c3ded\tsrc/features/Automations/AutomationRunsPage.tsx"
+    },
+    {
+      "path": "src/features/Automations/AutomationTriggerDraft.tsx",
+      "gitTreeEntry": "100644 blob 6d8984a63aa3f0a4afb38d16772945f0b06d9976\tsrc/features/Automations/AutomationTriggerDraft.tsx"
+    },
+    {
+      "path": "src/features/DailyBrief/BriefCardSkeleton.tsx",
+      "gitTreeEntry": "100755 blob f8042d26dd5425d074c44b99929a565f2c5c4359\tsrc/features/DailyBrief/BriefCardSkeleton.tsx"
+    },
+    {
+      "path": "src/features/FileViewer/NotSupport/index.tsx",
+      "gitTreeEntry": "100755 blob 42ae2434cae6a5590a1784140b1062bd3cc3d040\tsrc/features/FileViewer/NotSupport/index.tsx"
+    },
+    {
+      "path": "src/features/GroupAvatar/GroupAvatar.module.css",
+      "gitTreeEntry": "100644 blob bdbdbfea1997cf4d08307ac63fb7d49576e3ba92\tsrc/features/GroupAvatar/GroupAvatar.module.css"
+    },
+    {
+      "path": "src/features/GroupAvatar/index.tsx",
+      "gitTreeEntry": "100755 blob 0ce0b5bffe7e4cf81fe0e10e104ed51457bde5fa\tsrc/features/GroupAvatar/index.tsx"
+    },
+    {
+      "path": "src/features/HomeInbox/index.tsx",
+      "gitTreeEntry": "100755 blob 5383ed76a213e130949f694c88c0c4b8f8b157ed\tsrc/features/HomeInbox/index.tsx"
+    },
+    {
+      "path": "src/features/MCP/MCPDetail/Loading.tsx",
+      "gitTreeEntry": "100755 blob e9e8199ebe50b1f21098b771866f813c5f11cf7e\tsrc/features/MCP/MCPDetail/Loading.tsx"
+    },
+    {
+      "path": "src/features/Members/MembersPage.tsx",
+      "gitTreeEntry": "100644 blob 2129f7b8373ec3e5b720e2b75bc3b1ddf3c84db3\tsrc/features/Members/MembersPage.tsx"
+    },
+    {
+      "path": "src/features/Portal/LocalFile/Body.tsx",
+      "gitTreeEntry": "100755 blob 29c1fe5248d1c3351af966d80ad43548d5ed8060\tsrc/features/Portal/LocalFile/Body.tsx"
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/SheetGrid.tsx",
+      "gitTreeEntry": "100755 blob 40ac8dc2fd658f7495dd05370916c23f5e567407\tsrc/features/Portal/LocalFile/xlsx/SheetGrid.tsx"
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/XlsxPane.tsx",
+      "gitTreeEntry": "100755 blob cc9d830427206c0e3ee9688689850c5c25cfc618\tsrc/features/Portal/LocalFile/xlsx/XlsxPane.tsx"
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/styles.ts",
+      "gitTreeEntry": "100755 blob 86c1ab49b63c074bb2de67d67535fb8436971543\tsrc/features/Portal/LocalFile/xlsx/styles.ts"
+    },
+    {
+      "path": "src/features/Projects/FilterMenu/FilterMenuPopover.tsx",
+      "gitTreeEntry": "100644 blob 570179b0af43dd160388a1a8f9f2595db83d0e9e\tsrc/features/Projects/FilterMenu/FilterMenuPopover.tsx"
+    },
+    {
+      "path": "src/features/Projects/Layout/ProjectIssueProgress.tsx",
+      "gitTreeEntry": "100644 blob 70bb660cd74ab9ee0526e6b60a831ff712b7fef7\tsrc/features/Projects/Layout/ProjectIssueProgress.tsx"
+    },
+    {
+      "path": "src/features/ReUIShell/WorkspaceSwitcher.tsx",
+      "gitTreeEntry": "100644 blob d8c1908f3c5a97dc832e34a3027f31eda40a2e9e\tsrc/features/ReUIShell/WorkspaceSwitcher.tsx"
+    },
+    {
+      "path": "src/features/Reviews/ReviewPullRequestPage.tsx",
+      "gitTreeEntry": "100644 blob ebdc750fc3fd77d0fd454f109f62014790d7031b\tsrc/features/Reviews/ReviewPullRequestPage.tsx"
+    },
+    {
+      "path": "src/features/SelfLearning/ExperienceList/index.tsx",
+      "gitTreeEntry": "100755 blob c08ad510aafb2ffb6c9e3885d5fcc0cd923ca4f7\tsrc/features/SelfLearning/ExperienceList/index.tsx"
+    },
+    {
+      "path": "src/features/SelfLearning/LessonDetail/index.tsx",
+      "gitTreeEntry": "100755 blob a2c9677aa0f64ddc7fd950f49ce0b4fa09125f25\tsrc/features/SelfLearning/LessonDetail/index.tsx"
+    },
+    {
+      "path": "src/features/WorkSurface/WorkSurface.module.css",
+      "gitTreeEntry": "100644 blob 40e8e5994c115de504ce6e9e1bb253120b06c3d8\tsrc/features/WorkSurface/WorkSurface.module.css"
+    },
+    {
+      "path": "src/features/WorkSurface/WorkSurface.tsx",
+      "gitTreeEntry": "100644 blob f7664d1793230a92ec29b305bc9ea0f8e8c60642\tsrc/features/WorkSurface/WorkSurface.tsx"
+    },
+    {
+      "path": "src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx",
+      "gitTreeEntry": "100755 blob 98aa43275313f340c62de29c942665a1739e7c53\tsrc/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx"
+    },
+    {
+      "path": "src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx",
+      "gitTreeEntry": "100755 blob ec6f14a439392ef3594249d67c8cab769059708b\tsrc/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx"
+    },
+    {
+      "path": "src/styles/roleClassForms.test.ts",
+      "gitTreeEntry": "100644 blob 25988bd9f0fda2174a0209b3bf105c0be5e43aea\tsrc/styles/roleClassForms.test.ts"
+    }
+  ],
+  "schema": "avatar-current-e68-scoped-regression-and-prior-evidence-composition",
+  "v3Andv5FullAvatarWitnessByteIdenticalExceptReplacedCircleComparator": true,
+  "wholeGoalStillHOLD": true
+}

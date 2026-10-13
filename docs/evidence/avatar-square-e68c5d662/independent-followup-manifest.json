@@ -1,0 +1,23 @@
+{
+  "archiveSHA256": "7af217f64c3fae7dd72f73bf7b6d74dc766d8631601a6348082292602ac64c5b",
+  "furtherAutomaticReviewRounds": 0,
+  "oldBudgetsUnchanged": true,
+  "rawFiles": [
+    {
+      "path": "budget-receipt.md",
+      "sha256": "946dbbbe827fd911ca8ff02a8ffb0b1f9aec4717f423a54961434875b154adbb",
+      "bytes": 1809
+    },
+    {
+      "path": "review.md",
+      "sha256": "67e26f166dadbd76ede1f0fc46de7c850634d69a457d553aee61d4c14dc1f55e",
+      "bytes": 9323
+    },
+    {
+      "path": "source-evidence-sha-receipt.json",
+      "sha256": "1fbd23b207655a7f86c055df96e67867f97f17ad7019e1c096ef2fae978a1e91",
+      "bytes": 49898
+    }
+  ],
+  "scope": "one unique external P2 followup"
+}

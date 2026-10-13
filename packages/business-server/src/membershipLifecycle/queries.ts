@@ -287,9 +287,8 @@ export const countMemberBoundDevices = async (
 };
 
 /**
- * Hand the departing member's open assignee tasks to `toUserId`. Reviewer
- * assignments are deliberately untouched — `removeMember` clears them
- * per-field and the contract only transfers assignee responsibility.
+ * Hand the departing member's open assignee tasks to `toUserId`.
+ * Agent reviewer assignments stay with their existing Agents.
  */
 export const reassignOpenAssignedTasks = async (
   db: OrviloDatabase,
@@ -303,7 +302,7 @@ export const reassignOpenAssignedTasks = async (
       policyRevision: sql`${tasks.policyRevision} + 1`,
       updatedAt: new Date(),
     })
-    .where(openTaskWhere(params.workspaceId, params.fromUserId, 'assignee'))
+    .where(openTaskWhere(params.workspaceId, params.fromUserId))
     .returning();
 
   await recordBulkTaskMutation(db, moved, {

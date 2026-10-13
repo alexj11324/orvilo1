@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { watchdog } from './watchdog';
 
+vi.mock('@/server/services/aiAgent/deviceQueue', () => ({
+  sweepQueuedDeviceOperations: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/server/services/automationResultDelivery', () => ({
   AutomationResultDeliveryService: { recoverDue: vi.fn(async () => 0) },
 }));

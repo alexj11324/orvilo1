@@ -217,11 +217,11 @@ describe('runAcpJudgment', () => {
       taskId: 'task-9',
       title: '[judgment] verify.judge',
       trigger: 'acp_judgment',
+      skipTaskVerification: true,
       userInterventionConfig: { approvalMode: 'headless' },
     });
     // A task-scoped administrative judgment must not recursively verify itself.
     expect(execArgs.appContext).toMatchObject({
-      skipTaskVerification: true,
       judgment: {
         attempt: 2,
         budget: { maxSteps: 4, maxWaitMs: 180_000 },

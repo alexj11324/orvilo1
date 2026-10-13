@@ -623,8 +623,8 @@ describe('AgentService', () => {
     it('should fall back to the builtin avatar when a builtin agent row has none', async () => {
       const mockAgent = {
         avatar: null,
-        id: 'agent-task',
-        slug: 'task-agent',
+        id: 'agent-builder',
+        slug: 'agent-builder',
         title: '任务助手',
       };
 
@@ -638,9 +638,9 @@ describe('AgentService', () => {
       (parseAgentConfig as any).mockReturnValue({});
 
       const newService = new AgentService(mockDb, mockUserId);
-      const result = await newService.getAgentConfigById('agent-task');
+      const result = await newService.getAgentConfigById('agent-builder');
 
-      expect(result?.avatar).toBe(BUILTIN_AGENTS['task-agent']?.avatar);
+      expect(result?.avatar).toBe(BUILTIN_AGENTS['agent-builder']?.avatar);
       expect(result?.title).toBe('任务助手');
     });
 

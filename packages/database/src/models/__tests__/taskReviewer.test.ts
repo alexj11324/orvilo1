@@ -62,7 +62,10 @@ describe('Issue reviewer Agent invariant', () => {
         workflowCategory: 'in_review',
       }),
     ).rejects.toThrow('TASK_REVIEWER_REQUIRED');
-    await model.update(issue.id, { runReservationId: 'review-reservation' });
+    await db
+      .update(tasks)
+      .set({ runReservationId: 'review-reservation' })
+      .where(eq(tasks.id, issue.id));
     await expect(
       model.updateStatusIfReservation(issue.id, 'review-reservation', 'backlog', 'paused', {
         workflowCategory: 'in_review',

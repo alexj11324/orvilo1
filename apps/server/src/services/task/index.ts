@@ -2203,6 +2203,7 @@ export class TaskService {
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,
+      parkedReason: task.parkedReason,
       priority: task.priority,
       projectId: task.projectId,
       schedule:

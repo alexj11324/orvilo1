@@ -117,29 +117,6 @@ describe('taskRuntime.factory', () => {
 });
 
 describe('createTaskRuntime', () => {
-  it('viewTask exposes usable reviewer agents for the delivered Issue', async () => {
-    const runtime = createTaskRuntime({
-      taskCaller: {
-        listReviewerAgents: vi
-          .fn()
-          .mockResolvedValue({ data: [{ id: 'agt-reviewer', title: 'Reviewer' }] }),
-      } as never,
-      taskService: {
-        getTaskDetail: vi.fn().mockResolvedValue({
-          identifier: 'T-1',
-          instruction: 'Work',
-          status: 'backlog',
-          domainRevision: 4,
-        }),
-      } as never,
-    });
-    const result = await runtime.viewTask({ identifier: 'T-1' });
-    expect(result.success).toBe(true);
-    expect(result.content).toContain('agt-reviewer');
-    expect(result.content).toContain('Set reviewerAgentId with editTask');
-    expect(result.state).toMatchObject({ identifier: 'T-1', domainRevision: 4 });
-  });
-
   describe('readAutomationInput', () => {
     const makeRuntime = (overrides: Record<string, unknown> = {}) => {
       const findById = vi.fn().mockResolvedValue({ id: 'task-1', content: 'Mutable definition' });

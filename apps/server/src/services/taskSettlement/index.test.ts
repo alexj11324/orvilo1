@@ -254,6 +254,63 @@ describe('settleTaskExecution', () => {
     );
   });
 
+  it('an automatic pass with the live reviewer cleared waits for Orchestrator assignment', async () => {
+    mocks.findById.mockResolvedValue(runningTask({ reviewerAgentId: null }));
+    const result = await settle({ verifyOutcome: 'passed' });
+    expect(result).toMatchObject({
+      applied: true,
+      workflowCategory: 'in_progress',
+      attention: 'review_required',
+      decision: { type: 'review' },
+    });
+    expect(mocks.updateStatus).toHaveBeenCalledWith(
+      'task-1',
+      'paused',
+      expect.objectContaining({ error: 'Delivery is waiting for a reviewer Agent' }),
+    );
+    expect(mocks.requestReviewerAssignment).toHaveBeenCalled();
+  });
+  it('an automatic pass preserves unanswered input instead of requesting reviewer assignment', async () => {
+    mocks.findById.mockResolvedValue(runningTask({ reviewerAgentId: null }));
+    mocks.hasUnresolvedInput.mockResolvedValue(true);
+    const result = await settle({ verifyOutcome: 'passed' });
+    expect(result).toMatchObject({
+      applied: true,
+      workflowCategory: 'in_progress',
+      attention: 'needs_input',
+    });
+    expect(mocks.updateStatus).toHaveBeenCalledWith(
+      'task-1',
+      'paused',
+      expect.objectContaining({ parkedReason: 'needs_input' }),
+    );
+    expect(mocks.requestReviewerAssignment).not.toHaveBeenCalled();
+  });
+  it('manual acceptance completes a delivery without a reviewer and never asks the Orchestrator', async () => {
+    mocks.findById.mockResolvedValue(
+      runningTask({
+        reviewerAgentId: null,
+        parkedReason: 'review_required',
+        error: 'Delivery is waiting for a reviewer Agent',
+      }),
+    );
+    const result = await settle({
+      verifyOutcome: 'passed',
+      context: { manualAcceptance: true, error: null },
+    });
+    expect(result).toMatchObject({
+      applied: true,
+      workflowCategory: 'done',
+      attention: 'none',
+      decision: { type: 'complete' },
+    });
+    expect(mocks.updateStatus).toHaveBeenCalledWith(
+      'task-1',
+      'completed',
+      expect.objectContaining({ workflowCategory: 'done', error: null }),
+    );
+    expect(mocks.requestReviewerAssignment).not.toHaveBeenCalled();
+  });
   it('verify passed → done/succeeded/none', async () => {
     const result = await settle({ verifyOutcome: 'passed' });
 

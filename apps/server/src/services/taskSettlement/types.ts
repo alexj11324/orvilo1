@@ -64,6 +64,8 @@ export interface SettlementContext {
   expectedStatus?: string;
   /** Whether the user canceled the issue itself (not just the run). */
   issueCancel?: boolean;
+  /** Trusted Verify settlement: the Issue member explicitly accepted this delivery. */
+  manualAcceptance?: boolean;
   /** A manual "run now" on an automation task — not an automation-health signal. */
   manualAutomationRun?: boolean;
 

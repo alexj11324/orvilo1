@@ -111,6 +111,7 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 }));
 vi.mock('@/libs/swr', () => ({
   mutate: vi.fn(),
+  useClientDataSWRWithSync: () => ({ data: undefined }),
   useClientDataSWR: (key: unknown[] | null) => ({
     data: {
       data:

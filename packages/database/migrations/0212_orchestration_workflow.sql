@@ -72,8 +72,9 @@ BEGIN
     renamed := value #>> '{}';
     IF (renamed IN ('goal', 'goals', 'goal_paused', 'goal_terminal', 'goal_status') AND parent_key IN ('subjectType', 'entityType', 'trigger', 'kind', 'resourceType', 'outcome', 'type'))
       OR (renamed IN ('createGoal', 'inspectGoal', 'getGoalContext') AND parent_key IN ('apiName', 'name', 'api'))
-      OR renamed LIKE 'orvilo-goal%' OR renamed LIKE '@orvilo/builtin-tool-goal%'
-      OR renamed LIKE 'goal.%' THEN
+      OR ((renamed LIKE 'orvilo-goal%' OR renamed LIKE '@orvilo/builtin-tool-goal%')
+        AND parent_key IN ('identifier', 'name', 'toolName', 'pluginId', 'toolId', 'toolIdentifier', 'plugins', 'tools', 'requiredTools', 'requiredToolIds', 'exclusivePluginIds', 'selectedToolIds', 'additionalPluginIds'))
+      OR (renamed LIKE 'goal.%' AND parent_key IN ('purpose', 'generationPurpose', 'planningPurpose')) THEN
       renamed := replace(replace(renamed, 'builtin-tool-goal', 'builtin-tool-orchestration-workflow'),
         'orvilo-goal', 'orvilo-orchestration-workflow');
       renamed := replace(renamed, 'goal_', 'orchestration_workflow_');
@@ -102,8 +103,8 @@ BEGIN
         ('event_outbox', 'payload'), ('trash_items', 'meta')
       )
   LOOP
-    EXECUTE format('UPDATE public.%I SET %I = pg_temp.rename_orchestration_workflow_json(%I)
-      WHERE %I::text ~ ''[gG][oO][aA][lL]''', r.table_name, r.column_name, r.column_name, r.column_name);
+    EXECUTE format('UPDATE public.%I SET %I = pg_temp.rename_orchestration_workflow_json(%I, %L)
+      WHERE %I::text ~ ''[gG][oO][aA][lL]''', r.table_name, r.column_name, r.column_name, r.column_name, r.column_name);
   END LOOP;
   FOR r IN SELECT table_name, column_name, character_maximum_length FROM information_schema.columns
     WHERE table_schema = 'public' AND data_type IN ('text', 'character varying')

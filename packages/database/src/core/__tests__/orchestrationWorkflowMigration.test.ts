@@ -26,7 +26,7 @@ describe('orchestration workflow in-place migration', () => {
         CREATE TABLE tasks (id text PRIMARY KEY, name text, error text);
         CREATE TABLE task_topics (id text PRIMARY KEY, trigger text);
         CREATE TABLE message_plugins (id text PRIMARY KEY, identifier text, api_name text);
-        INSERT INTO goals VALUES ('goal_original', 'Keep this objective', '{"goalId":"goal_original","notes":"goal is an objective","tools":["orvilo-goal"],"api":"startOrchestrationWorkflow"}', null, now());
+        INSERT INTO goals VALUES ('goal_original', 'Keep this objective', '{"goalId":"goal_original","notes":"goal is an objective","artifactPath":"goal.md","literal":"orvilo-goal","purpose":"goal.criteria.draft","tools":["orvilo-goal"],"api":"startOrchestrationWorkflow"}', null, now());
         INSERT INTO goal_nodes VALUES ('node_original', 'goal_original', 'Keep this Issue');
         INSERT INTO goal_traces VALUES ('trace_original', 'goal_original', '{"s3Key":"goal-traces/goal_original.json.zst"}');
         INSERT INTO verify_runs VALUES ('run_original', 'Keep this objective', '{"goalReview":{"status":"passed"},"goalClosure":"done","harnessInit":{"goal":{"objective":"keep this goal"},"includeGoals":true,"initialGoal":{"objective":"keep"}}}');
@@ -51,6 +51,9 @@ describe('orchestration workflow in-place migration', () => {
         config: {
           orchestrationWorkflowId: 'goal_original',
           notes: 'goal is an objective',
+          artifactPath: 'goal.md',
+          literal: 'orvilo-goal',
+          purpose: 'orchestrationWorkflow.criteria.draft',
           tools: ['orvilo-orchestration-workflow'],
           api: 'startOrchestrationWorkflow',
         },

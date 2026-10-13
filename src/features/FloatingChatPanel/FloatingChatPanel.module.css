@@ -1,0 +1,28 @@
+/* The inline sheet is continuous with its input surface, not a detached overlay.
+   Public className has to outrank one-class unlayered vendor radius/shadow rules. */
+.sheetSeamless.sheetSeamless {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  transition-duration: var(--orvilo-motion-mid);
+  transition-timing-function: var(--orvilo-motion-ease-out);
+}
+
+:global(::view-transition-group(floating-chat-panel-input)),
+:global(::view-transition-old(floating-chat-panel-input)),
+:global(::view-transition-new(floating-chat-panel-input)) {
+  animation-duration: var(--orvilo-motion-mid);
+  animation-timing-function: var(--orvilo-motion-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheetSeamless.sheetSeamless {
+    transition: none;
+  }
+
+  :global(::view-transition-group(floating-chat-panel-input)),
+  :global(::view-transition-old(floating-chat-panel-input)),
+  :global(::view-transition-new(floating-chat-panel-input)) {
+    animation: none;
+  }
+}

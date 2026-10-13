@@ -2,7 +2,6 @@
 
 import { UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import type { TaskStatus } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,30 +12,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { STATUS_META } from './taskStatusMeta';
 
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    padding: 16px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  content: css`
-    padding-block: 20px 16px;
-    padding-inline: 20px;
-  `,
-  list: css`
-    max-height: 280px;
-    margin-block-start: 8px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-  `,
-  row: css`
-    padding-block: 6px;
-    padding-inline: 12px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-}));
+const styles = {
+  actions: 'p-4 border-bs border-divider',
+  content: 'pbs-5 pbe-4 px-5 text-sm leading-5.5',
+  list: 'max-h-70 mbs-2 border border-divider rounded-(--radius-card)',
+  row: 'py-1.5 px-3 [&:not(:last-child)]:border-be [&:not(:last-child)]:border-divider',
+};
 
 interface TaskStatusCascadeModalContentProps {
   onApply: (includeSubtasks: boolean) => Promise<void>;
@@ -116,8 +97,8 @@ const TaskStatusCascadeModalContent = ({
   return (
     <div className="flex flex-col">
       <div className={`flex flex-col gap-2 ${styles.content}`}>
-        <h3 className="font-semibold">{t('taskDetail.statusCascade.title')}</h3>
-        <div style={{ color: cssVar.colorTextSecondary }}>
+        <h3 className="text-base leading-6 font-semibold">{t('taskDetail.statusCascade.title')}</h3>
+        <div className="text-sm leading-5.5 text-muted-foreground">
           {t('taskDetail.statusCascade.description', {
             count: subtasks.length,
             status: t(`taskDetail.status.${targetStatus}`),
@@ -135,7 +116,7 @@ const TaskStatusCascadeModalContent = ({
                 <div className="flex flex-col flex-1">
                   <div className="truncate block">{task.name || task.identifier}</div>
                 </div>
-                <div style={{ color: cssVar.colorTextTertiary }}>
+                <div className="text-xs leading-5 text-muted-foreground">
                   {t(`taskDetail.status.${status ?? 'backlog'}`, { defaultValue: meta.label })}
                 </div>
               </div>
@@ -143,15 +124,16 @@ const TaskStatusCascadeModalContent = ({
           })}
         </ScrollArea>
       </div>
-      <div className={`flex items-center justify-between gap-2 ${styles.actions}`}>
-        <Button disabled={!!loadingAction} size="lg" onClick={handleCancel}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${styles.actions}`}>
+        <Button disabled={!!loadingAction} size="lg" variant="ghost" onClick={handleCancel}>
           {t('taskDetail.statusCascade.cancel')}
         </Button>
-        <div className="flex gap-2">
+        <div className="ms-auto flex flex-wrap justify-end gap-2">
           <Button
             disabled={!!loadingAction}
             loading={loadingAction === 'parent'}
             size="lg"
+            variant="outline"
             onClick={() => void handleApply(false)}
           >
             {t('taskDetail.statusCascade.parentOnly')}

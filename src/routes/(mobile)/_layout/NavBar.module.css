@@ -1,0 +1,4 @@
+.container {
+  --mobile-nav-height: calc(var(--spacing) * 12 + env(safe-area-inset-bottom));
+  --mobile-nav-safe-area-bottom: env(safe-area-inset-bottom);
+}

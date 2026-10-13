@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { BotIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -23,13 +22,9 @@ import { LayersEnum } from '@/types/userMemory';
 
 import PreferenceDropdown from './PreferenceDropdown';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  suggestionsTitle: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  suggestionsTitle: 'text-sm font-medium text-muted-foreground',
+};
 
 const PreferenceRightPanel = memo(() => {
   const { t } = useTranslation('memory');
@@ -68,7 +63,7 @@ const PreferenceRightPanel = memo(() => {
       )}
 
       {preference.suggestions && (
-        <div className="flex flex-col gap-2 p-4" style={{ background: cssVar.colorFillSecondary }}>
+        <div className="flex flex-col gap-2 p-4 bg-selected">
           <div className={cn('flex items-center gap-1.5', styles.suggestionsTitle)}>
             <BotIcon size={16} />
             <span>{t('preference.suggestions')}</span>

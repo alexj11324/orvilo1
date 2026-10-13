@@ -50,8 +50,8 @@ describe('issue rail type scale', () => {
 
   it('keeps the description at 15px/450 rather than the editor default', () => {
     const source = readSource('TaskInstruction.tsx');
-    expect(source).toContain('fontSize: 15');
-    expect(source).toContain('fontWeight: 450');
+    expect(source).toMatch(/['"]?fontSize['"]?: 15/);
+    expect(source).toMatch(/['"]?fontWeight['"]?: 450/);
   });
 });
 

@@ -12,7 +12,7 @@ import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 import { openProjectLinkModal } from './ProjectLinkModal';
 
 const styles = {
-  link: 'inline-flex h-7 max-w-60 items-center gap-1.5 rounded-(--radius-input) px-1.5 text-sm leading-5.5 text-foreground no-underline hover:bg-accent group-focus-visible/project-resource:bg-accent [&_span]:truncate',
+  link: 'inline-flex h-8 max-w-60 items-center gap-1.5 rounded-(--radius-button) px-1.5 text-sm leading-5.5 text-foreground no-underline hover:bg-accent group-focus-visible/project-resource:bg-accent [&_span]:truncate [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
 };
 
 export function ProjectLinks({ projectId }: { projectId: string; ownerId: string | null }) {
@@ -35,14 +35,14 @@ export function ProjectLinks({ projectId }: { projectId: string; ownerId: string
       {links.map((link) => (
         <div className="flex flex-row items-center gap-0" key={link.id}>
           <a
-            className="group/project-resource inline-flex min-w-0 rounded-(--radius-input) focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+            className="group/project-resource inline-flex min-w-0 rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
             href={link.url}
             rel="noopener noreferrer"
             target="_blank"
             title={link.title || link.url}
           >
             <span className={styles.link}>
-              <Link2Icon size={14} />
+              <Link2Icon size={16} />
               <span>{link.title || link.url}</span>
             </span>
           </a>
@@ -71,7 +71,8 @@ export function ProjectLinks({ projectId }: { projectId: string; ownerId: string
             >
               <Button
                 aria-label={t('resources.link.actions', { title: link.title || link.url })}
-                size="icon-sm"
+                className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                size="icon"
                 variant="ghost"
               >
                 {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
@@ -91,7 +92,13 @@ export function ProjectLinks({ projectId }: { projectId: string; ownerId: string
             },
           ]}
         >
-          <Button aria-label={t('overview.resourcesAdd')} size="sm" variant="ghost">
+          <Button
+            multiline
+            aria-label={t('overview.resourcesAdd')}
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 max-w-full [overflow-wrap:anywhere]"
+            size="compact"
+            variant="ghost"
+          >
             {createElement(links.length ? PlusIcon : Link2Icon, {
               'size': 16,
               'aria-hidden': true,

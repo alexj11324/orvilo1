@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type SaveStatus } from '@/types/saveState';
 
@@ -10,6 +10,11 @@ export interface SaveStateHandle {
   /** Run a save task, driving `status` through saving → saved / failed. */
   save: (task: () => Promise<void>) => Promise<void>;
   status: SaveStatus;
+}
+
+export interface SaveStateOptions {
+  /** Only the latest request may report status/time; dispose pending UI work on unmount. */
+  latestRequestOnly?: boolean;
 }
 
 /**
@@ -28,26 +33,47 @@ export interface SaveStateHandle {
  * callers don't produce unhandled rejections; use the store-level `runMutation`
  * when a caller needs the error to propagate (e.g. keep a modal open).
  */
-export const useSaveState = (): SaveStateHandle => {
+export const useSaveState = ({
+  latestRequestOnly = false,
+}: SaveStateOptions = {}): SaveStateHandle => {
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   // Keep the latest save task so `retry` re-runs exactly what failed.
   const lastTaskRef = useRef<(() => Promise<void>) | null>(null);
+  const requestRef = useRef(0);
+  const activeRef = useRef(true);
 
-  const save = useCallback(async (task: () => Promise<void>) => {
-    lastTaskRef.current = task;
-    setStatus('saving');
-    try {
-      await task();
-      setStatus('saved');
-      setLastSavedAt(new Date());
-    } catch (error) {
-      // Never collapse to `idle` on failure — that is the exact bug this
-      // primitive exists to kill (a lost edit masquerading as "Latest").
-      setStatus('failed');
-      console.error('[useSaveState] save failed:', error);
-    }
+  useEffect(() => {
+    activeRef.current = true;
+    return () => {
+      activeRef.current = false;
+      requestRef.current += 1;
+    };
   }, []);
+
+  const save = useCallback(
+    async (task: () => Promise<void>) => {
+      if (latestRequestOnly && !activeRef.current) return;
+      const request = ++requestRef.current;
+      const canReport = () =>
+        !latestRequestOnly || (activeRef.current && requestRef.current === request);
+      lastTaskRef.current = task;
+      setStatus('saving');
+      try {
+        await task();
+        if (canReport()) {
+          setStatus('saved');
+          setLastSavedAt(new Date());
+        }
+      } catch (error) {
+        // Never collapse to `idle` on failure — that is the exact bug this
+        // primitive exists to kill (a lost edit masquerading as "Latest").
+        if (canReport()) setStatus('failed');
+        console.error('[useSaveState] save failed:', error);
+      }
+    },
+    [latestRequestOnly],
+  );
 
   const retry = useCallback(async () => {
     const task = lastTaskRef.current;

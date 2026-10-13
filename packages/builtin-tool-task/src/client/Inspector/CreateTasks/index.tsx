@@ -11,10 +11,10 @@ import type { CreateTasksParams, CreateTasksState } from '../../../types';
 
 const styles = {
   countBadge:
-    'shrink-0 rounded-[999px] bg-success-wash px-2 py-px text-xs font-medium text-success',
+    'shrink-0 rounded-(--radius-chip) bg-success-wash px-2 py-px text-xs font-medium text-success-text',
   moreBadge: 'shrink-0 text-xs text-foreground-tertiary',
   previewChip:
-    'inline-flex min-w-0 max-w-70 shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-xs text-foreground',
+    'inline-flex min-w-0 max-w-70 shrink items-center truncate rounded-(--radius-chip) bg-accent px-2 py-px text-xs text-foreground',
   separator: 'shrink-0 text-foreground-quaternary',
 };
 
@@ -40,7 +40,7 @@ export const CreateTasksInspector = memo<
   }
 
   return (
-    <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
+    <div className={cn(inspectorTextStyles.root, 'flex-wrap gap-1.5')}>
       <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-task.apiName.createTasks')}
       </span>

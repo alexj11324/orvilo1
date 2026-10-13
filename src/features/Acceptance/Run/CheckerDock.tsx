@@ -41,12 +41,13 @@ const styles = {
   chevron: 'flex-none text-foreground-quaternary',
   clickable:
     'cursor-pointer transition-[background] duration-150 ease-(--ant-motion-ease-out) hover:bg-fill-quaternary',
-  desc: 'mt-0.75 text-xs leading-[1.45] text-foreground-tertiary',
-  dock: 'overflow-hidden rounded-[16px] border border-border bg-popover',
+  desc: 'mt-0.75 text-xs leading-5 text-foreground-tertiary',
+  dock: 'overflow-hidden rounded-(--radius-card) border border-border bg-popover',
   head: 'flex cursor-pointer items-center justify-between gap-3 px-3 py-2.75',
-  inputPanel: 'mt-2.5 rounded-[12px] border border-sidebar-border bg-fill-quaternary p-2.5',
+  inputPanel:
+    'mt-2.5 rounded-(--radius-card) border border-sidebar-border bg-fill-quaternary p-2.5',
   sub: 'truncate text-xs text-foreground-tertiary',
-  title: 'text-(length:--text-dense) font-bold text-foreground',
+  title: 'text-sm font-semibold text-foreground',
 };
 
 const statusIcon = (
@@ -54,13 +55,13 @@ const statusIcon = (
 ): { color: string; icon: typeof CheckCircle2; spin: boolean } => {
   switch (status) {
     case 'passed': {
-      return { color: 'var(--success)', icon: CheckCircle2, spin: false };
+      return { color: 'var(--success-text)', icon: CheckCircle2, spin: false };
     }
     case 'running': {
-      return { color: 'var(--info)', icon: LoaderCircle, spin: true };
+      return { color: 'var(--info-text)', icon: LoaderCircle, spin: true };
     }
     case 'failed': {
-      return { color: 'var(--destructive)', icon: XCircle, spin: false };
+      return { color: 'var(--destructive-text)', icon: XCircle, spin: false };
     }
     case 'skipped': {
       return { color: 'var(--ant-color-text-quaternary)', icon: CircleAlert, spin: false };
@@ -153,7 +154,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
         {result?.status === 'running' ? (
           <RingLoadingIcon
             size={16}
-            style={{ color: 'var(--warning)' }}
+            style={{ color: 'var(--warning-text)' }}
             ringColor={
               isDarkMode
                 ? 'var(--ant-color-warning-border)'
@@ -190,15 +191,16 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
           />
           <ActionIcon
             aria-label={t('delete', { ns: 'common' })}
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             icon={Trash2}
-            size="small"
+            size={{ blockSize: 32, size: 16 }}
             onClick={() => setDraftItems(draftItems.filter((_, i) => i !== index))}
           />
         </div>
       ))}
       <Button
-        className="w-full border-dashed"
-        size="sm"
+        className="w-full border-dashed [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+        size="normal"
         variant="outline"
         onClick={() =>
           setDraftItems([
@@ -221,10 +223,20 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
         {t('editor.add')}
       </Button>
       <div className="flex gap-2">
-        <Button loading={busy} size="sm" variant="default" onClick={saveEdit}>
+        <Button
+          className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+          loading={busy}
+          size="normal"
+          variant="default"
+          onClick={saveEdit}
+        >
           {t('editor.save')}
         </Button>
-        <Button size="sm" onClick={() => setEditing(false)}>
+        <Button
+          className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+          size="normal"
+          onClick={() => setEditing(false)}
+        >
           {t('editor.cancel')}
         </Button>
       </div>
@@ -235,13 +247,27 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
     if (phase === 'draft')
       return (
         <div className="flex gap-2" style={{ flexWrap: 'wrap', marginTop: 12 }}>
-          <Button loading={busy} size="sm" variant="default" onClick={onConfirm}>
+          <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+            loading={busy}
+            size="normal"
+            variant="default"
+            onClick={onConfirm}
+          >
             {t('dock.confirm')}
           </Button>
-          <Button size="sm" onClick={startEdit}>
+          <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+            size="normal"
+            onClick={startEdit}
+          >
             {t('dock.edit')}
           </Button>
-          <Button size="sm" onClick={onSkip}>
+          <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+            size="normal"
+            onClick={onSkip}
+          >
             {t('dock.skip')}
           </Button>
         </div>
@@ -289,7 +315,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
         onClick={() => setExpanded((v) => !v)}
       >
         <div className="flex items-center gap-2.5" style={{ minWidth: 0 }}>
-          {createElement(headIcon, { size: 18 })}
+          {createElement(headIcon, { size: 16 })}
           <div className="flex flex-col" style={{ minWidth: 0 }}>
             <div className="flex items-center gap-2">
               <span className={styles.title}>{t('dock.title')}</span>

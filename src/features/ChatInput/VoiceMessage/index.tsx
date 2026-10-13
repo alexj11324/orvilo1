@@ -1,12 +1,14 @@
 'use client';
 
 import { type VoiceMessageRecording } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { ArrowUp, type LucideProps, RotateCcw, X } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+
 import { ChatInputAction } from '../ActionBar/components/ChatInputAction';
+import { ActionBarContext, useActionBarContext } from '../ActionBar/context';
 import { useAgentId } from '../hooks/useAgentId';
 import { useEffectiveModel } from '../hooks/useEffectiveModel';
 import { SimpleTooltip } from '../SimpleTooltip';
@@ -47,397 +49,44 @@ const VoiceMessageIcon = ({
 
 VoiceMessageIcon.displayName = 'VoiceMessageIcon';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  bar: css`
-    width: 4px;
-    min-height: 4px;
-    border-radius: 9999px;
-
-    background: ${cssVar.colorPrimary};
-
-    transition: height 80ms linear;
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  cancelButton: css`
-    cursor: default;
-
-    position: relative;
-
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: 0;
-    border-radius: 9999px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillSecondary};
-
-    transition:
-      color 120ms ease,
-      background 120ms ease,
-      transform 120ms ease;
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: 2px;
-    }
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFill};
-    }
-
-    &:active {
-      transform: scale(0.96);
-    }
-
-    @media (width <= 600px) {
-      &::after {
-        content: '';
-        position: absolute;
-        inset: -6px;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  container: css`
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    width: min(300px, calc(100vw - 112px));
-    min-width: min(220px, calc(100vw - 112px));
-    height: 32px;
-    padding-inline: 2px;
-
-    animation: voice-message-enter 160ms ease-out;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-
-    @keyframes voice-message-enter {
-      from {
-        transform: translateX(8px);
-        opacity: 0;
-      }
-
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-  `,
-  error: css`
-    position: absolute;
-    z-index: 1;
-    inset-block-start: 50%;
-    inset-inline: 12px 44px;
-    transform: translateY(-50%);
-
-    overflow: hidden;
-
-    font-size: ${cssVar.fontSizeSM};
-    line-height: 1.3;
-    color: ${cssVar.colorError};
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  pill: css`
-    position: relative;
-
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-    height: 100%;
-    border-radius: 9999px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progress: css`
-    position: absolute;
-    z-index: 3;
-    inset-block-end: 0;
-    inset-inline: 6px;
-
-    overflow: hidden;
-
-    height: 2px;
-    border-radius: 1px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressValue: css`
-    height: 100%;
-    border-radius: inherit;
-
-    opacity: 0.72;
-    background: ${cssVar.colorBgContainer};
-
-    transition: width 120ms linear;
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  sendArrow: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 50%;
-    inset-inline-end: 2px;
-    transform: translateY(-50%);
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-
-    opacity: 1;
-
-    transition:
-      opacity 100ms ease,
-      transform 160ms ease;
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  sendButton: css`
-    cursor: default;
-
-    position: absolute;
-    z-index: 2;
-    inset: 0;
-
-    overflow: hidden;
-
-    width: 100%;
-    padding: 0;
-    border: 0;
-    border-radius: inherit;
-
-    color: ${cssVar.colorBgContainer};
-
-    background: transparent;
-
-    &::before {
-      content: '';
-
-      position: absolute;
-      z-index: 0;
-      inset: 0;
-
-      border-radius: inherit;
-
-      background: ${cssVar.colorPrimary};
-      clip-path: circle(14px at calc(100% - 16px) 50%);
-
-      transition: clip-path 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-
-    &[data-error='true']::before {
-      background: ${cssVar.colorError};
-    }
-
-    &[data-expanded='true'] {
-      cursor: wait;
-      color: ${cssVar.colorTextSecondary};
-      background: ${cssVar.colorBgContainer};
-    }
-
-    &[data-expanded='true']::before {
-      background: ${cssVar.colorFill};
-    }
-
-    &[data-hover-expanded='true']::before,
-    &:focus-visible::before,
-    &[data-expanded='true']::before {
-      clip-path: circle(150% at calc(100% - 16px) 50%);
-    }
-
-    &[data-hover-expanded='true'] > span:first-child,
-    &:focus-visible > span:first-child,
-    &[data-expanded='true'] > span:first-child {
-      transform: translateY(0);
-      opacity: 1;
-    }
-
-    &[data-expanded='true'] > span:first-child {
-      gap: 8px;
-      padding-inline: 14px;
-      font-size: ${cssVar.fontSizeSM};
-      font-weight: normal;
-    }
-
-    &[data-hover-expanded='true'] > span:last-child,
-    &:focus-visible > span:last-child,
-    &[data-expanded='true'] > span:last-child {
-      transform: translateY(-50%) translateX(6px);
-      opacity: 0;
-    }
-
-    &[data-expanded='true'] > span:first-child > span:last-child {
-      display: none;
-    }
-
-    &[data-expanded='true'] > span:first-child > span:nth-child(2) {
-      display: none;
-    }
-
-    &[data-expanded='true'] > span:first-child > span:first-child > i {
-      animation: voice-message-busy-dot 900ms ease-in-out infinite;
-    }
-
-    &[data-expanded='true'] > span:first-child > span:first-child > i:nth-child(2) {
-      animation-delay: 120ms;
-    }
-
-    &[data-expanded='true'] > span:first-child > span:first-child > i:nth-child(3) {
-      animation-delay: 240ms;
-    }
-
-    &[data-expanded='true'] > span:first-child > span:first-child > i:last-child {
-      display: none;
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -3px;
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-    }
-
-    &:disabled::before {
-      opacity: 0.45;
-    }
-
-    &[data-expanded='true']:disabled {
-      cursor: wait;
-    }
-
-    &[data-expanded='true']:disabled::before {
-      opacity: 1;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      &::before {
-        transition: none;
-      }
-
-      &[data-expanded='true'] > span:first-child > span:first-child > i {
-        animation: none;
-      }
-    }
-
-    @keyframes voice-message-busy-dot {
-      0%,
-      60%,
-      100% {
-        transform: scale(0.72);
-        opacity: 0.38;
-      }
-
-      30% {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-  `,
-  sendDots: css`
-    display: inline-flex;
-    gap: 3px;
-    align-items: center;
-
-    > i {
-      width: 3px;
-      height: 3px;
-      border-radius: 9999px;
-      background: currentcolor;
-    }
-  `,
-  sendLabel: css`
-    position: absolute;
-    z-index: 2;
-    inset: 0;
-    transform: translateY(4px);
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-
-    min-width: 0;
-    padding-inline: 10px;
-
-    font-size: ${cssVar.fontSize};
-    font-weight: ${cssVar.fontWeightStrong};
-    white-space: nowrap;
-
-    opacity: 0;
-
-    transition:
-      opacity 100ms ease,
-      transform 160ms ease;
-
-    @media (prefers-reduced-motion: reduce) {
-      transition: none;
-    }
-  `,
-  sendText: css`
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  waveform: css`
-    pointer-events: none;
-
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    justify-content: center;
-  `,
-  visuallyHidden: css`
-    position: absolute;
-
-    overflow: hidden;
-
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    border: 0;
-
-    white-space: nowrap;
-
-    clip: rect(0, 0, 0, 0);
-    clip-path: inset(50%);
-  `,
-}));
-
+const styles = {
+  // Meter interpolation follows useVoiceMessageRecorder's current 80ms sample cadence.
+  bar: 'w-1 min-h-1 rounded-full bg-primary transition-[height] duration-[80ms] ease-linear motion-reduce:transition-none',
+  // Allocate the full coarse-pointer hit area; keep compact action paint and sizing at 32px.
+  actionSlot: 'inline-flex size-8 flex-none items-center justify-center pointer-coarse:size-11',
+  action:
+    "relative active:not-aria-[haspopup]:translate-y-0 pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']",
+  cancelButton:
+    "group/voice-cancel relative cursor-default border-0 bg-transparent p-0 text-muted-foreground hover:bg-transparent hover:text-muted-foreground active:not-aria-[haspopup]:translate-y-0 focus-visible:border-transparent focus-visible:ring-0 focus-visible:shadow-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:outline-offset-2 pointer-coarse:after:absolute pointer-coarse:after:-inset-1.5 pointer-coarse:after:content-['']",
+  cancelPaint:
+    'pointer-events-none inline-flex size-8 items-center justify-center rounded-(--radius-button) bg-selected transition-[color,background-color,transform] duration-(--orvilo-motion-mid) ease-in-out group-hover/voice-cancel:bg-(--ant-color-fill) group-hover/voice-cancel:text-foreground group-active/voice-cancel:scale-[0.96] motion-reduce:transition-none',
+  container:
+    'flex h-8 pointer-coarse:h-11 w-[min(300px,calc(100vw_-_112px))] min-w-[min(220px,calc(100vw_-_112px))] flex-none items-center gap-1.5 px-0.5 animate-[orvilo-voice-message-enter_var(--orvilo-motion-mid)_ease-out] motion-reduce:animate-none',
+  error:
+    'absolute z-1 [inset-block-start:50%] [inset-inline:--spacing(3)_--spacing(11)] [transform:translateY(-50%)] overflow-hidden text-xs text-destructive-text text-center text-ellipsis whitespace-nowrap',
+  pill: 'relative flex h-full min-w-0 flex-1 items-center',
+  pillPaint:
+    'pointer-events-none absolute inset-0 overflow-hidden rounded-full bg-selected pointer-coarse:inset-bs-1.5 pointer-coarse:inset-be-1.5',
+  progress:
+    'absolute z-3 [inset-block-end:0] [inset-inline:--spacing(1.5)] h-0.5 overflow-hidden rounded-full bg-selected',
+  progressValue:
+    'h-full rounded-[inherit] bg-card opacity-[0.72] transition-[width] duration-(--orvilo-motion-mid) ease-linear motion-reduce:transition-none',
+  sendArrow:
+    'absolute z-2 [inset-block-start:50%] [inset-inline-end:--spacing(0.5)] [transform:translateY(-50%)] inline-flex size-7 items-center justify-center opacity-100 transition-[opacity,transform] duration-(--orvilo-motion-mid) ease-in-out group-data-[hover-expanded=true]/voice-send:[transform:translateY(-50%)_translateX(--spacing(1.5))] group-focus-visible/voice-send:[transform:translateY(-50%)_translateX(--spacing(1.5))] group-data-[expanded=true]/voice-send:[transform:translateY(-50%)_translateX(--spacing(1.5))] group-data-[hover-expanded=true]/voice-send:opacity-0 group-focus-visible/voice-send:opacity-0 group-data-[expanded=true]/voice-send:opacity-0 motion-reduce:transition-none',
+  sendButton:
+    "group/voice-send relative z-2 w-full cursor-default rounded-full border-0 bg-transparent p-0 text-primary-foreground hover:bg-transparent hover:text-primary-foreground active:not-aria-[haspopup]:translate-y-0 [&[data-error=true]:not([data-expanded=true])]:text-destructive-on-fill [&[data-error=true]:not([data-expanded=true])]:hover:text-destructive-on-fill data-[expanded=true]:cursor-wait data-[expanded=true]:text-muted-foreground data-[expanded=true]:hover:text-muted-foreground focus-visible:border-transparent focus-visible:ring-0 focus-visible:shadow-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary focus-visible:-outline-offset-3 disabled:cursor-not-allowed disabled:opacity-100 [&[data-expanded=true]:disabled]:cursor-wait pointer-coarse:after:absolute pointer-coarse:after:inset-s-0 pointer-coarse:after:inset-e-0 pointer-coarse:after:-inset-bs-1.5 pointer-coarse:after:-inset-be-1.5 pointer-coarse:after:content-['']",
+  sendPaint:
+    "pointer-events-none absolute inset-0 overflow-hidden rounded-full before:absolute before:inset-0 before:z-0 before:rounded-[inherit] before:bg-primary before:[clip-path:circle(14px_at_calc(100%_-_16px)_50%)] before:transition-[clip-path] before:duration-(--orvilo-motion-mid) before:ease-[cubic-bezier(0.2,0.8,0.2,1)] before:content-[''] group-[[data-error=true]:not([data-expanded=true])]/voice-send:before:bg-destructive group-data-[expanded=true]/voice-send:bg-card group-data-[expanded=true]/voice-send:before:bg-(--ant-color-fill) group-data-[hover-expanded=true]/voice-send:before:[clip-path:circle(150%_at_calc(100%_-_16px)_50%)] group-focus-visible/voice-send:before:[clip-path:circle(150%_at_calc(100%_-_16px)_50%)] group-data-[expanded=true]/voice-send:before:[clip-path:circle(150%_at_calc(100%_-_16px)_50%)] group-disabled/voice-send:before:opacity-[0.45] group-[[data-expanded=true]:disabled]/voice-send:before:opacity-100 motion-reduce:before:transition-none",
+  sendSlot: 'flex w-full items-center [&>span]:w-full',
+  sendDots:
+    'inline-flex items-center gap-0.75 [&>i]:size-0.75 [&>i]:rounded-full [&>i]:bg-current group-data-[expanded=true]/voice-send:[&:last-child]:hidden group-data-[expanded=true]/voice-send:[&:first-child>i]:animate-[orvilo-voice-message-busy-dot_900ms_ease-in-out_infinite] group-data-[expanded=true]/voice-send:[&:first-child>i:nth-child(2)]:[animation-delay:120ms] group-data-[expanded=true]/voice-send:[&:first-child>i:nth-child(3)]:[animation-delay:240ms] group-data-[expanded=true]/voice-send:[&:first-child>i:last-child]:hidden motion-reduce:[&>i]:animate-none',
+  sendLabel:
+    'absolute inset-0 z-2 [transform:translateY(--spacing(1))] flex min-w-0 items-center justify-center gap-2 px-2.5 text-sm font-semibold whitespace-nowrap opacity-0 transition-[opacity,transform] duration-(--orvilo-motion-mid) ease-in-out group-data-[hover-expanded=true]/voice-send:[transform:translateY(0)] group-focus-visible/voice-send:[transform:translateY(0)] group-data-[expanded=true]/voice-send:[transform:translateY(0)] group-data-[hover-expanded=true]/voice-send:opacity-100 group-focus-visible/voice-send:opacity-100 group-data-[expanded=true]/voice-send:opacity-100 group-data-[expanded=true]/voice-send:px-3.5 group-data-[expanded=true]/voice-send:text-xs group-data-[expanded=true]/voice-send:font-normal motion-reduce:transition-none',
+  sendText:
+    'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap group-data-[expanded=true]/voice-send:hidden',
+  waveform: 'pointer-events-none absolute inset-0 z-1 flex items-center justify-center gap-1',
+  visuallyHidden: 'sr-only [clip-path:inset(50%)]',
+};
 export interface VoiceMessageControlProps {
   actionLabel: string;
   actionText?: string;
@@ -459,7 +108,7 @@ export interface VoiceMessageControlProps {
 const SendDots = () => (
   <span aria-hidden className={styles.sendDots}>
     {Array.from({ length: 4 }, (_, index) => (
-      <i key={index} />
+      <i className="motion-reduce:animate-none" key={index} />
     ))}
   </span>
 );
@@ -496,75 +145,89 @@ export const VoiceMessageControl = memo<VoiceMessageControlProps>(
         <span aria-live="polite" className={styles.visuallyHidden}>
           {statusAnnouncement}
         </span>
-        <button
-          aria-label={cancelLabel}
-          className={styles.cancelButton}
-          data-testid="voice-message-cancel"
-          type="button"
-          onClick={onCancel}
-        >
-          <span className="anticon" role="img">
-            <X fill={'transparent'} height={17} size={17} width={17} />
-          </span>
-        </button>
+        <span className={styles.actionSlot}>
+          <Button
+            aria-label={cancelLabel}
+            className={styles.cancelButton}
+            data-testid="voice-message-cancel"
+            size="icon"
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+          >
+            <span className={styles.cancelPaint}>
+              <span className="anticon" role="img">
+                <X fill={'transparent'} height={16} size={16} width={16} />
+              </span>
+            </span>
+          </Button>
+        </span>
 
         <div className={styles.pill} data-testid="voice-message-pill">
-          <span className={styles.visuallyHidden}>{durationLabel}</span>
+          <div className={styles.pillPaint}>
+            <span className={styles.visuallyHidden}>{durationLabel}</span>
 
-          {errorText ? (
-            <span className={styles.error} title={errorText}>
-              {errorText}
-            </span>
-          ) : (
-            <div aria-hidden className={styles.waveform}>
-              {waveform.map((level, index) => (
-                <span
-                  className={styles.bar}
-                  key={index}
-                  style={{ height: `${Math.max(4, Math.round(level * 18))}px` }}
-                />
-              ))}
-            </div>
-          )}
-
-          <SimpleTooltip title={tooltip}>
-            <button
-              aria-label={actionLabel}
-              className={styles.sendButton}
-              data-error={isRetry}
-              data-expanded={expanded}
-              data-hover-expanded={isHoverExpanded}
-              data-testid={isRetry ? 'voice-message-retry' : 'voice-message-send'}
-              disabled={sendDisabled}
-              ref={sendButtonRef}
-              type="button"
-              onClick={onAction}
-              onPointerEnter={(event) => handlePointerEnter(event.pointerType)}
-              onPointerLeave={(event) => handlePointerLeave(event.pointerType)}
-            >
-              <span className={styles.sendLabel}>
-                <SendDots />
-                <span className={styles.sendText}>{actionText}</span>
-                <SendDots />
+            {errorText ? (
+              <span className={styles.error} title={errorText}>
+                {errorText}
               </span>
-              <span className={styles.sendArrow}>
-                <span className="anticon" role="img">
-                  {createElement(isRetry ? RotateCcw : ArrowUp, {
-                    size: 18,
-                    width: 18,
-                    height: 18,
-                    fill: 'transparent',
-                  })}
+            ) : (
+              <div aria-hidden className={styles.waveform}>
+                {waveform.map((level, index) => (
+                  <span
+                    className={styles.bar}
+                    key={index}
+                    style={{ height: `${Math.max(4, Math.round(level * 18))}px` }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {progress !== undefined && (
+              <div aria-hidden className={styles.progress}>
+                <div className={styles.progressValue} style={{ width: `${progress}%` }} />
+              </div>
+            )}
+          </div>
+
+          <div className={styles.sendSlot}>
+            <SimpleTooltip title={tooltip}>
+              <Button
+                aria-label={actionLabel}
+                className={styles.sendButton}
+                data-error={isRetry}
+                data-expanded={expanded}
+                data-hover-expanded={isHoverExpanded}
+                data-testid={isRetry ? 'voice-message-retry' : 'voice-message-send'}
+                disabled={sendDisabled}
+                ref={sendButtonRef}
+                size="compact"
+                type="button"
+                variant="ghost"
+                onClick={onAction}
+                onPointerEnter={(event) => handlePointerEnter(event.pointerType)}
+                onPointerLeave={(event) => handlePointerLeave(event.pointerType)}
+              >
+                <span className={styles.sendPaint}>
+                  <span className={styles.sendLabel}>
+                    <SendDots />
+                    <span className={styles.sendText}>{actionText}</span>
+                    <SendDots />
+                  </span>
+                  <span className={styles.sendArrow}>
+                    <span className="anticon" role="img">
+                      {createElement(isRetry ? RotateCcw : ArrowUp, {
+                        size: 16,
+                        width: 16,
+                        height: 16,
+                        fill: 'transparent',
+                      })}
+                    </span>
+                  </span>
                 </span>
-              </span>
-            </button>
-          </SimpleTooltip>
-
-          {progress !== undefined && (
-            <div aria-hidden className={styles.progress}>
-              <div className={styles.progressValue} style={{ width: `${progress}%` }} />
-            </div>
-          )}
+              </Button>
+            </SimpleTooltip>
+          </div>
         </div>
       </div>
     );
@@ -574,6 +237,12 @@ export const VoiceMessageControl = memo<VoiceMessageControlProps>(
 VoiceMessageControl.displayName = 'VoiceMessageControl';
 
 const VoiceMessage = memo(() => {
+  const actionBarContext = useActionBarContext();
+  // Scope compact work sizing to these audio actions without changing permission behavior.
+  const audioActionContext = {
+    ...actionBarContext,
+    actionSize: { blockSize: 32, size: 16 },
+  };
   const { t } = useTranslation('chat');
   const agentId = useAgentId();
   const { model, provider } = useEffectiveModel(agentId);
@@ -685,25 +354,37 @@ const VoiceMessage = memo(() => {
       ? t('voiceMessage.otherAudioModeActive')
       : t('voiceMessage.replyInProgress');
 
-    return canStart ? (
-      <ChatInputAction
-        aria-label={t('voiceMessage.action')}
-        data-testid="voice-message-action"
-        icon={<VoiceMessageIcon />}
-        title={t('voiceMessage.action')}
-        onClick={handleStart}
-      />
-    ) : (
-      <SimpleTooltip title={disabledReason}>
-        <ChatInputAction
-          disabled
-          aria-label={t('voiceMessage.action')}
-          data-testid="voice-message-action"
-          icon={<VoiceMessageIcon />}
-          showTooltip={false}
-          title={t('voiceMessage.action')}
-        />
-      </SimpleTooltip>
+    return (
+      <ActionBarContext value={audioActionContext}>
+        {canStart ? (
+          <span className={styles.actionSlot}>
+            <ChatInputAction
+              aria-label={t('voiceMessage.action')}
+              className={styles.action}
+              data-testid="voice-message-action"
+              icon={<VoiceMessageIcon size={16} />}
+              style={{ borderRadius: 'var(--radius-button)' }}
+              title={t('voiceMessage.action')}
+              onClick={handleStart}
+            />
+          </span>
+        ) : (
+          <SimpleTooltip title={disabledReason}>
+            <span className={styles.actionSlot}>
+              <ChatInputAction
+                disabled
+                aria-label={t('voiceMessage.action')}
+                className={styles.action}
+                data-testid="voice-message-action"
+                icon={<VoiceMessageIcon size={16} />}
+                showTooltip={false}
+                style={{ borderRadius: 'var(--radius-button)' }}
+                title={t('voiceMessage.action')}
+              />
+            </span>
+          </SimpleTooltip>
+        )}
+      </ActionBarContext>
     );
   }
 

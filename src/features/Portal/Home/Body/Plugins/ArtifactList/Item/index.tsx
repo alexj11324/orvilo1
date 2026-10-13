@@ -1,6 +1,5 @@
 import { type ChatPluginPayload } from '@orvilo/types';
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CircuitBoard } from 'lucide-react';
 import { memo } from 'react';
@@ -48,17 +47,15 @@ const ArtifactItem = memo<ArtifactItemProps>(({ payload, messageId, identifier =
               <Badge variant="secondary">{payload?.apiName}</Badge>
             </div>
             <div>
-              <div className="truncate min-w-0 text-muted-foreground" style={{ fontSize: 12 }}>
-                {args}
-              </div>
+              <div className="truncate min-w-0 text-xs text-muted-foreground">{args}</div>
             </div>
           </div>
         </div>
         <div className="flex flex-col">
           {isToolHasUI && (
-            <div className={cx(styles.tag, styles.tagBlue)} style={{ cursor: 'pointer' }} title="">
+            <div className={cx(styles.tag, styles.tagBlue, 'cursor-pointer')} title="">
               <span className="anticon" role="img">
-                <CircuitBoard fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                <CircuitBoard fill={'transparent'} height={16} size={16} width={16} />
               </span>
             </div>
           )}

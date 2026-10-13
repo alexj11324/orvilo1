@@ -1,6 +1,6 @@
 import { type ImageProps } from '@lobehub/ui';
 import { Image } from '@lobehub/ui';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { Trash } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';

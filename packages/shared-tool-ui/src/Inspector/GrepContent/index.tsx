@@ -10,7 +10,7 @@ import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
 const styles = {
   separator: 'mx-0.5 text-foreground-quaternary',
-  tag: 'rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-[12px] text-foreground',
+  tag: 'rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-foreground',
   tagsList: 'inline-flex min-w-0 shrink items-center gap-1 whitespace-nowrap ms-1.5',
 };
 
@@ -89,7 +89,7 @@ export const createGrepContentInspector = ({
               <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
             ) : (
               <span
-                className="text-[12px]"
+                className="text-xs"
                 style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
               >
                 ({t(noResultsKey as any)})

@@ -15,9 +15,9 @@
 export const ANTD_STYLE_LAYER = 'antd-style';
 
 /**
- * The single switch. Read by the runtime patch (`antdStyleLayer.ts`) and by the
- * Vite build-time precompile (`plugins/vite/staticStylesPrecompile.ts`), which
- * bypasses `cache.insert` and therefore needs the same layering baked in.
+ * The deferred build-time experiment switch. The disabled renderer initializer
+ * was retired; changing this alone does not enable runtime layering. The Vite
+ * precompiler and explicit experiment helpers remain OFF/opt-in respectively.
  */
 // Keep untouched Emotion consumers' precedence until the separate global rollout is accepted.
 // Runtime and precompiled styles must use the same cascade during the rollout.

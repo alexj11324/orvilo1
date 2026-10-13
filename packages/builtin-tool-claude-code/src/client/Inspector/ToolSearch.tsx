@@ -15,7 +15,7 @@ import { ClaudeCodeApiName, type ToolSearchArgs } from '../../types';
 const SELECT_PREFIX = 'select:';
 
 const styles = {
-  tag: 'py-0.5 px-2.5 rounded-[999px] font-mono text-xs text-foreground bg-accent',
+  tag: 'py-0.5 px-2.5 rounded-(--radius-chip) font-mono text-xs text-foreground bg-accent',
   tagsList: 'inline-flex shrink gap-1 items-center min-w-0 ms-1.5 whitespace-nowrap',
 };
 
@@ -56,7 +56,7 @@ export const ToolSearchInspector = memo<BuiltinInspectorProps<ToolSearchArgs>>(
 
     if (parsed?.names) {
       return (
-        <div className={inspectorTextStyles.root} style={{ alignItems: 'baseline' }}>
+        <div className={cn(inspectorTextStyles.root, 'items-baseline')}>
           <span className={cn(isShiny && shinyTextStyles.shinyText)}>{label}:</span>
           <span className={styles.tagsList}>
             {parsed.names.map((name, index) => (

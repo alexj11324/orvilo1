@@ -40,10 +40,8 @@ const RenameProjectContent = ({ project }: RenameProjectContentProps) => {
 
   return (
     <>
-      <div className="flex flex-col" style={{ gap: 6, padding: 16 }}>
-        <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-          {t('rename.nameLabel')}
-        </span>
+      <div className="flex flex-col gap-1.5 p-4">
+        <span className="text-sm font-medium">{t('rename.nameLabel')}</span>
         <Input
           autoFocus
           maxLength={255}

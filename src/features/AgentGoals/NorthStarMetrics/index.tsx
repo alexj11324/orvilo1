@@ -28,10 +28,10 @@ import Sparkline from './Sparkline';
  */
 
 const styles = {
-  card: 'flex-1 min-w-59 max-w-85 py-2.5 px-3.5 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card',
-  metValue: 'text-success',
-  stale: 'text-warning',
-  track: 'overflow-hidden h-1 rounded-[2px] bg-selected',
+  card: 'flex-1 min-w-59 max-w-85 py-2.5 px-3.5 border border-sidebar-border rounded-(--radius-card) bg-card',
+  metValue: 'text-success-text',
+  stale: 'text-warning-text',
+  track: 'overflow-hidden h-1 rounded-full bg-selected',
 };
 
 const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string }>(
@@ -50,7 +50,7 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
           <div className="flex items-center gap-1">
             {card.met && (
               <Badge size="sm" variant="success">
-                <Check size={11} /> {t('goalProcess.northStar.met')}
+                <Check className="size-4" size={16} /> {t('goalProcess.northStar.met')}
               </Badge>
             )}
             {/* Recording stays available after the target is met: the world
@@ -61,11 +61,12 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
                 <TooltipTrigger
                   render={
                     <Button
+                      className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                       size="sm"
                       variant="ghost"
                       onClick={() => openRecordObservationModal(goalId, card.key, card.label)}
                     >
-                      <Plus size={13} />
+                      <Plus className="size-4" size={16} />
                     </Button>
                   }
                 />
@@ -76,7 +77,7 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
         </div>
         <div className="flex items-center gap-2 justify-between">
           <div className="flex items-baseline gap-1.5">
-            <div className={cn('text-xl font-bold', card.met ? styles.metValue : '')}>
+            <div className={cn('text-xl font-semibold', card.met ? styles.metValue : '')}>
               {formatMetricValue(card.current)}
             </div>
             <div className="text-xs text-muted-foreground">
@@ -88,10 +89,9 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
         </div>
         <div className={styles.track}>
           <div
+            className="h-full rounded-full"
             style={{
               background: card.met ? 'var(--success)' : 'var(--info)',
-              borderRadius: 2,
-              height: '100%',
               width: `${card.percent}%`,
             }}
           />
@@ -135,11 +135,14 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
     return (
       <div className="flex items-center gap-3" style={{ paddingBlock: 4 }}>
         <Target color={'var(--ant-color-text-quaternary)'} size={16} />
-        <div className="text-(length:--text-dense) text-muted-foreground">
-          {t('goalProcess.northStar.emptyHint')}
-        </div>
+        <div className="text-sm text-muted-foreground">{t('goalProcess.northStar.emptyHint')}</div>
         {canEdit && (
-          <Button size="sm" variant="ghost" onClick={() => openDeclareMetricModal(goalId)}>
+          <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+            size="sm"
+            variant="ghost"
+            onClick={() => openDeclareMetricModal(goalId)}
+          >
             {t('goalProcess.northStar.declare.title')}
           </Button>
         )}
@@ -178,12 +181,13 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
           <TooltipTrigger
             render={
               <Button
+                className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                 size="compact"
                 style={{ alignSelf: 'center' }}
                 variant="ghost"
                 onClick={() => openDeclareMetricModal(goalId)}
               >
-                <Plus size={14} />
+                <Plus className="size-4" size={16} />
               </Button>
             }
           />

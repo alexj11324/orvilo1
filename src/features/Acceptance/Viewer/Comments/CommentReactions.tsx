@@ -1,5 +1,4 @@
 'use client';
-// #691: Preserve the existing 17px reaction-glyph geometry pending a design-scale choice; no matching role is approved.
 
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -22,17 +21,16 @@ const QUICK_REACTIONS = ['👍', '👎', '😄', '🎉', '😕', '❤️', '🚀
 
 const styles = {
   bar: 'pt-2.5',
-  chip: 'inline-flex h-6 cursor-pointer items-center gap-1.25 rounded-[999px] border border-sidebar-border bg-fill-quaternary px-2 py-0 text-(length:--text-dense) leading-none hover:border-border',
-  chipMine:
-    'border-info-border bg-[color-mix(in_srgb,var(--info)_10%,transparent)] text-(--ant-color-info-text)',
+  chip: 'inline-flex h-7 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center gap-1.25 rounded-full border border-sidebar-border bg-fill-quaternary px-2 py-0 text-sm leading-none hover:border-border',
+  chipMine: 'border-info-border bg-info-subtle text-info-text',
   count: 'text-xs text-muted-foreground',
   emojiButton:
-    'flex size-7.5 cursor-pointer items-center justify-center rounded-(--ant-border-radius) text-[17px] hover:bg-selected',
+    'flex size-8 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-(--radius-button) text-base hover:bg-selected',
   moreButton:
-    'flex size-7.5 cursor-pointer items-center justify-center rounded-(--ant-border-radius) text-foreground-tertiary hover:bg-selected hover:text-foreground',
+    'flex size-8 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-(--radius-button) text-foreground-tertiary hover:bg-selected hover:text-foreground',
   // Always discoverable; the open picker keeps the same emphasis as hover.
   trigger:
-    'inline-flex size-6 cursor-pointer items-center justify-center rounded-[999px] border border-sidebar-border text-foreground-tertiary transition-[color] duration-(--ant-motion-duration-fast) ease-[ease] hover:bg-fill-quaternary hover:text-foreground data-[open]:bg-fill-quaternary data-[open]:text-foreground',
+    'inline-flex size-7 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-full border border-sidebar-border text-foreground-tertiary transition-[color] duration-(--ant-motion-duration-fast) ease-[ease] hover:bg-fill-quaternary hover:text-foreground data-[open]:bg-fill-quaternary data-[open]:text-foreground',
 };
 
 interface CommentReactionsProps {
@@ -97,7 +95,7 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
         className={cn(styles.moreButton, CLICKABLE_FOCUS_RING)}
         onClick={() => setFull(true)}
       >
-        <PlusIcon size={15} />
+        <PlusIcon size={16} />
       </div>
     </div>
   );
@@ -123,7 +121,7 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
                 title={t('acceptance.comments.addReaction')}
                 {...(open ? { 'data-open': '' } : {})}
               >
-                <SmilePlus size={13} />
+                <SmilePlus size={16} />
               </span>
             }
           />

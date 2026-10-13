@@ -84,8 +84,9 @@ export const HelpDocLink = ({ id }: { id: string }) => {
 
   return (
     <Button
+      className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
       render={<a href={urlJoin(BASE_PROVIDER_DOC_URL, id)} rel="noreferrer" target="_blank" />}
-      size="sm"
+      size="normal"
       variant="ghost"
     >
       {t('providerModels.config.helpDoc')}
@@ -141,7 +142,7 @@ export const ProviderHeaderActions = ({
             <Tooltip>
               <TooltipTrigger
                 aria-label={t('providerModels.config.builtinNotice')}
-                className="inline-flex rounded-sm text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="inline-flex rounded-(--radius-input) text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                 render={<span tabIndex={0} />}
               >
                 <InfoIcon className="size-4" />

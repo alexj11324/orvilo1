@@ -1,0 +1,7 @@
+/* Actual shared shiny secondaryTone has specificity 0,3,0 and is unlayered.
+   This owned deletion-state text keeps the preceding inline-color authority
+   without !important, SDK/vendor selectors, a layer change or a second palette.
+   The sweep/gradient and both actual motion gates remain with their producer. */
+.destructiveText.destructiveText.destructiveText.destructiveText {
+  color: var(--destructive-text);
+}

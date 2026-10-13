@@ -1,5 +1,4 @@
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { BoltIcon, RotateCwIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -84,7 +83,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
                     onErrorClick?.('chunking');
                   }}
                 >
-                  <RotateCwIcon className="size-3.5" size={14} />
+                  <RotateCwIcon className="size-4" size={16} />
                 </span>
               </Badge>
             </TooltipTrigger>

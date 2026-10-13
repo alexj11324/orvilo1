@@ -1,16 +1,20 @@
 import { Flexbox, Tooltip, TooltipGroup } from '@lobehub/ui';
 import { Button, Select, type SelectProps, Switch, Text, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { clsx } from 'cn';
 import { type ReactNode } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
-import { ModelItemRender, ProviderItemRender, TAG_CLASSNAME } from '@/components/ModelSelect';
+import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
 import { ModelIcon } from '@/components/OrviloIcons';
 import { Badge } from '@/components/reui/badge';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
 
+import nativeStyles from './ModelSelect.module.css';
 import { resolveEnableTargetProviderId, resolveStaleModelState } from './resolveStaleModelState';
 
 /**
@@ -38,29 +42,7 @@ const ITEM_INDICATOR_CLASSNAME = 'orvilo-model-select-item-indicator';
  */
 const STALE_ACTION_VALUE = '__orvilo_model_select_stale_action__';
 
-const styles = createStaticStyles(({ css }) => ({
-  popup: css`
-    width: max(360px, var(--anchor-width));
-
-    /* Stale status is a local Badge now; its utility styles do not require
-       priority over a retained unlayered Tag rule. */
-    .${STALE_TAG_CLASSNAME} {
-      display: none;
-    }
-
-    .${STALE_OPTION_CLASSNAME} .${ITEM_INDICATOR_CLASSNAME} {
-      display: none;
-    }
-  `,
-  select: css`
-    /* The base-ui Select applies className to the trigger root while the popup is
-     * portaled away, so scoping directly under this class hides the popup-only
-     * ability tags from the closed trigger without touching the list. */
-    .${TAG_CLASSNAME} {
-      display: none;
-    }
-  `,
-}));
+const styles = { popup: nativeStyles.popup, select: nativeStyles.select };
 
 interface ModelOption {
   abilities?: Record<string, boolean>;
@@ -117,6 +99,10 @@ const ModelSelect = memo<ModelSelectProps>(
     providerIds,
   }) => {
     const { t } = useTranslation('components');
+    const enableSwitchId = useId();
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+    const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+    const disableMotion = animationMode === 'disabled' || prefersReducedMotion;
     const [enabling, setEnabling] = useState(false);
     const fullEnabledList = useAiInfraStore((s) =>
       modelType === 'embedding'
@@ -256,7 +242,7 @@ const ModelSelect = memo<ModelSelectProps>(
       // the hint stay out of it: a <button> inside the trigger <button> is invalid
       // HTML. They live on `popupLabel`, which only `optionRender` reads.
       const renderStaleLabel = (withPopupExtras: boolean) => (
-        <Flexbox gap={4} style={{ width: '100%' }}>
+        <Flexbox className="w-full" gap={4}>
           <Flexbox horizontal align={'center'} gap={8}>
             <ModelIcon model={value.model} size={20} />
             <Text ellipsis fontSize={14} lineHeight={'22px'}>
@@ -272,12 +258,12 @@ const ModelSelect = memo<ModelSelectProps>(
             </Tooltip>
             {withPopupExtras && status === 'notEnabled' && (
               <>
-                <span style={{ flex: 1 }} />
+                <span className="flex-1" />
                 {/* The wrapper re-enables pointer events (the disabled option row
                  * suppresses them) and stops propagation so toggling never counts
                  * as selecting the row. */}
                 <span
-                  style={{ flex: 'none', pointerEvents: 'auto' }}
+                  className="pointer-events-auto flex-none"
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -287,9 +273,12 @@ const ModelSelect = memo<ModelSelectProps>(
                     e.preventDefault();
                   }}
                 >
+                  <label className="sr-only" htmlFor={enableSwitchId}>
+                    {t('ModelSelect.staleModel.notEnabled.action')}
+                  </label>
                   <Switch
-                    aria-label={t('ModelSelect.staleModel.notEnabled.action')}
                     checked={false}
+                    id={enableSwitchId}
                     loading={enabling}
                     size={'small'}
                     onChange={() => {
@@ -331,7 +320,10 @@ const ModelSelect = memo<ModelSelectProps>(
               <Flexbox horizontal>
                 {/* Visual-only button: the sentinel option row owns the click (via
                  * onChange), so pointer events are disabled to keep one hit target. */}
-                <Button size={'small'} style={{ pointerEvents: 'none' }}>
+                <Button
+                  className={`pointer-events-none transition-orvilo-model-remedy ${nativeStyles.remedy}`}
+                  size={'middle'}
+                >
                   {actionLabel}
                 </Button>
               </Flexbox>
@@ -347,25 +339,39 @@ const ModelSelect = memo<ModelSelectProps>(
         },
         ...(options ?? []),
       ] as SelectProps['options'];
-    }, [enabling, handleEnable, options, staleState, t, value]);
+    }, [enableSwitchId, enabling, handleEnable, options, staleState, t, value]);
 
     return (
       <TooltipGroup>
         <Select
           allowClear={allowClear}
-          className={styles.select}
-          classNames={{ itemIndicator: ITEM_INDICATOR_CLASSNAME }}
           defaultValue={value ? `${value.provider}/${value.model}` : null}
           disabled={disabled}
           labelRender={labelRender}
           loading={loading || enabling}
           options={finalOptions}
           placeholder={placeholder}
-          popupClassName={styles.popup}
           popupMatchSelectWidth={popupWidth === undefined ? false : popupWidth}
           size={size}
           value={value ? `${value.provider}/${value.model}` : null}
           variant={variant}
+          className={clsx(
+            'transition-orvilo-model-select',
+            styles.select,
+            disableMotion && nativeStyles.motionDisabled,
+            size === 'small'
+              ? nativeStyles.property
+              : size === 'large'
+                ? nativeStyles.large
+                : nativeStyles.normal,
+          )}
+          classNames={{
+            itemIndicator: ITEM_INDICATOR_CLASSNAME,
+            clear: `transition-orvilo-model-select-clear ${nativeStyles.clear}`,
+            icon: `transition-orvilo-model-select-icon ${nativeStyles.icon}`,
+            item: nativeStyles.item,
+            groupLabel: nativeStyles.groupLabel,
+          }}
           optionRender={(option) => {
             const stale = option as unknown as { __stale?: boolean; popupLabel?: ReactNode };
             if (stale.__stale) return stale.popupLabel ?? option.label;
@@ -378,8 +384,12 @@ const ModelSelect = memo<ModelSelectProps>(
               />
             );
           }}
+          popupClassName={clsx(
+            'transition-orvilo-model-select-popup',
+            styles.popup,
+            disableMotion && nativeStyles.motionDisabled,
+          )}
           style={{
-            minWidth: 200,
             width: initialWidth ? 'initial' : undefined,
             ...style,
           }}

@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import type { RunTasksItemResult, RunTasksParams, RunTasksState } from '../../../types';
 
 const styles = {
-  failedBadge: 'shrink-0 rounded-[999px] bg-destructive-wash px-2 py-px text-xs text-destructive',
+  failedBadge:
+    'shrink-0 rounded-(--radius-chip) bg-destructive-wash px-2 py-px text-xs text-destructive',
   header: 'flex items-center gap-2 px-3 py-2 [border-block-end:1px_solid_var(--sidebar-border)]',
   headerCount: 'text-(length:--text-dense) font-medium text-foreground',
   identifier:
@@ -66,8 +67,8 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
               <div className={styles.taskBody}>
                 <div className={styles.row}>
                   <span className={styles.identifier}>{row.identifier}</span>
-                  {success && <Check size={14} style={{ color: 'var(--success)' }} />}
-                  {failedRow && <X size={14} style={{ color: 'var(--destructive)' }} />}
+                  {success && <Check size={16} style={{ color: 'var(--success)' }} />}
+                  {failedRow && <X size={16} style={{ color: 'var(--destructive)' }} />}
                 </div>
                 {result?.topicId && <span className={styles.meta}>topic {result.topicId}</span>}
                 {failedRow && (

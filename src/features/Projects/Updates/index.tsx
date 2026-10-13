@@ -42,7 +42,7 @@ const UPDATE_ACTIONS_CLASS = 'project-update-actions';
 
 const styles = {
   collapsed:
-    'flex w-full cursor-text items-center gap-2 rounded-(--radius-card) border border-border bg-transparent px-3 py-2 text-start text-sm leading-5.5 text-muted-foreground hover:border-primary-border',
+    'flex min-h-9 w-full cursor-text items-center gap-2 rounded-(--radius-button) border border-border bg-transparent px-3 py-1.5 text-start text-sm leading-5.5 text-muted-foreground hover:border-primary-border [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
   collapsedEmpty:
     'box-border h-9 min-h-9 min-w-9 w-auto cursor-pointer justify-center rounded-(--radius-button) border-transparent ps-2.5 pe-3 py-0 text-sm leading-5.5 font-medium whitespace-nowrap',
   emptyContainer:
@@ -203,7 +203,7 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
             .join(' ')}
           onClick={() => (onExpand ? onExpand() : setExpanded(true))}
         >
-          <CircleDotIcon className="opacity-50" size={14} />
+          <CircleDotIcon className="opacity-50" size={16} />
           <span
             className={cn('text-sm leading-5.5 text-muted-foreground', emptyState && 'font-medium')}
           >
@@ -259,7 +259,11 @@ const ScopedProjectUpdateComposer = memo<ProjectUpdateComposerProps & { draftKey
                   onClick: () => setHealth(state),
                 }))}
               >
-                <Button size="sm" variant="outline">
+                <Button
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                  size="compact"
+                  variant="outline"
+                >
                   <ProjectHealthIcon health={health} size={16} />
                   {t(`overview.health.${health}`, { defaultValue: health })}
                 </Button>
@@ -449,7 +453,12 @@ export const ProjectUpdateRow = memo<{
                 ]}
                 onOpenChange={setMenuOpen}
               >
-                <Button aria-label={t('overview.updateMenu')} size="icon-sm" variant="ghost">
+                <Button
+                  aria-label={t('overview.updateMenu')}
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                  size="icon"
+                  variant="ghost"
+                >
                   {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
                 </Button>
               </DropdownMenu>

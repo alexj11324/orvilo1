@@ -29,9 +29,9 @@ export interface RoundReview {
 }
 
 const styles = {
-  countBadge: 'py-px px-1.75 rounded-[99px] text-xs tabular-nums text-muted-foreground bg-accent',
+  countBadge: 'py-px px-1.75 rounded-full text-xs tabular-nums text-muted-foreground bg-accent',
   round:
-    'py-2.5 px-3 border border-sidebar-border rounded-(--ant-border-radius) transition-[box-shadow,border-color] duration-200 ease-[ease]',
+    'py-2.5 px-3 border border-sidebar-border rounded-(--radius-card) transition-[box-shadow,border-color] duration-200 ease-[ease]',
   roundActive: 'border-primary shadow-[0_0_0_2px_var(--ant-color-primary-bg)]',
   roundClickable:
     'cursor-pointer [&_.acceptance-round-open-hint]:opacity-0 [&_.acceptance-round-open-hint]:transition-opacity [&_.acceptance-round-open-hint]:duration-200 [&_.acceptance-round-open-hint]:ease-[ease] hover:border-border hover:bg-fill-quaternary [&:hover_.acceptance-round-open-hint]:opacity-100',
@@ -40,9 +40,9 @@ const styles = {
 /** Only the still-running states keep a machine indicator; a settled round is
     reframed as an ACCEPTANCE state (已验收 / 待验收), not a verification verdict. */
 const RUNNING_META: Record<string, { color: string; icon: typeof CheckCircle2 }> = {
-  errored: { color: 'var(--warning)', icon: CircleAlert },
-  repairing: { color: 'var(--warning)', icon: RefreshCw },
-  verifying: { color: 'var(--info)', icon: Loader2 },
+  errored: { color: 'var(--warning-text)', icon: CircleAlert },
+  repairing: { color: 'var(--warning-text)', icon: RefreshCw },
+  verifying: { color: 'var(--info-text)', icon: Loader2 },
 };
 
 /** Is the round still executing (so it has no settled result to accept yet)? */
@@ -81,15 +81,14 @@ const LedgerPanel = memo<LedgerPanelProps>(
       <div className="flex flex-col gap-3" style={{ padding: 16 }}>
         <div className="flex items-center gap-2">
           <FileClock color={'var(--muted-foreground)'} size={16} />
-          <div className="font-semibold" style={{ fontSize: 13 }}>
-            {t('acceptance.ledger.title')}
-          </div>
+          <div className="text-sm font-semibold">{t('acceptance.ledger.title')}</div>
           <span className={styles.countBadge}>{rounds.length}</span>
           <div className="flex flex-col flex-1" />
           {!hideCollapse && (
             <ActionIcon
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
               icon={PanelRightClose}
-              size={'small'}
+              size={{ blockSize: 32, size: 16 }}
               title={t('acceptance.ledger.collapse')}
               onClick={onCollapse}
             />
@@ -113,9 +112,9 @@ const LedgerPanel = memo<LedgerPanelProps>(
           const stateColor = runningMeta
             ? runningMeta.color
             : rejected
-              ? 'var(--destructive)'
+              ? 'var(--destructive-text)'
               : allAccepted
-                ? 'var(--success)'
+                ? 'var(--success-text)'
                 : 'var(--ant-color-text-tertiary)';
           const stateIcon = runningMeta
             ? runningMeta.icon
@@ -160,7 +159,7 @@ const LedgerPanel = memo<LedgerPanelProps>(
               onClick={openable ? () => onOpenReport(round) : undefined}
             >
               <div className="flex items-center gap-2">
-                <div className="font-semibold" style={{ fontSize: 13 }}>
+                <div className="text-sm font-semibold">
                   {t('acceptance.round', { round: round.run.roundIndex })}
                 </div>
                 {round.run.roundIndex === latestIndex && (
@@ -168,11 +167,8 @@ const LedgerPanel = memo<LedgerPanelProps>(
                     {t('acceptance.ledger.latest')}
                   </div>
                 )}
-                <div
-                  className="flex items-center gap-1"
-                  style={{ color: stateColor, fontSize: 12 }}
-                >
-                  {createElement(stateIcon, { className: 'animate-spin', size: 13 })}
+                <div className="flex items-center gap-1 text-xs" style={{ color: stateColor }}>
+                  {createElement(stateIcon, { className: 'animate-spin', size: 16 })}
                   {stateLabel}
                 </div>
                 <div className="flex flex-col flex-1" />
@@ -183,14 +179,12 @@ const LedgerPanel = memo<LedgerPanelProps>(
                   <ChevronRight
                     className="'acceptance-round-open-hint'"
                     color={'var(--ant-color-text-tertiary)'}
-                    size={14}
+                    size={16}
                   />
                 )}
               </div>
               {round.run.title && (
-                <div className="text-xs text-muted-foreground" style={{ lineHeight: 1.5 }}>
-                  {round.run.title}
-                </div>
+                <div className="text-xs text-muted-foreground leading-5">{round.run.title}</div>
               )}
               {stats && <div className="text-xs text-muted-foreground">{stats}</div>}
             </div>

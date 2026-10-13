@@ -28,7 +28,7 @@ const Layout = memo(({ children, mobile }: ProviderMenuProps) => {
       aria-label={t('menu.searchProviders')}
       className={cn(
         'flex flex-col bg-background',
-        !mobile && 'w-66 min-w-66 overflow-y-auto border-r border-border',
+        !mobile && 'w-66 min-w-66 overflow-y-auto border-e border-divider',
       )}
     >
       <div className="sticky top-0 z-10 flex gap-2 bg-background px-3 pt-3 pb-2">
@@ -36,6 +36,7 @@ const Layout = memo(({ children, mobile }: ProviderMenuProps) => {
           className="flex-1"
           placeholder={t('menu.searchProviders')}
           value={providerSearchKeyword}
+          visualSize="compact"
           onChange={(e) => {
             useAiInfraStore.setState({ providerSearchKeyword: e.target.value });
           }}

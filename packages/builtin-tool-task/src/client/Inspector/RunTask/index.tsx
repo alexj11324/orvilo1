@@ -12,9 +12,9 @@ import type { RunTaskParams, RunTaskState } from '../../../types';
 
 const styles = {
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
   promptChip:
-    'inline-flex min-w-0 max-w-60 shrink items-center truncate rounded-[999px] bg-accent px-2 py-0.5 text-xs text-foreground',
+    'inline-flex min-w-0 max-w-60 shrink items-center truncate rounded-(--radius-chip) bg-accent px-2 py-0.5 text-xs text-foreground',
   separator: 'shrink-0 text-foreground-quaternary',
 };
 
@@ -28,20 +28,16 @@ export const RunTaskInspector = memo<BuiltinInspectorProps<RunTaskParams, RunTas
     const prompt = params.prompt;
 
     return (
-      <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
-        <Play size={12} style={{ color: 'var(--warning)' }} />
+      <div className={cn(inspectorTextStyles.root, 'flex-wrap gap-1')}>
+        <Play className="text-warning-text" size={12} />
         <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.runTask')}
         </span>
-        {identifier && (
-          <span className={styles.identifierChip} style={{ marginInlineStart: 4 }}>
-            {identifier}
-          </span>
-        )}
+        {identifier && <span className={cn(styles.identifierChip, 'ms-1')}>{identifier}</span>}
         {continueTopicId && (
           <>
             <span className={styles.separator}>·</span>
-            <span style={{ color: 'var(--ant-color-text-tertiary)', fontSize: 12 }}>
+            <span className="text-xs text-foreground-tertiary">
               {t('builtins.orvilo-task.run.continueTopic')}
             </span>
           </>

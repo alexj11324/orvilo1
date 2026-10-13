@@ -1,11 +1,11 @@
 'use client';
 
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useFormControlContext } from '@/components/FormControlContext';
 import { Button } from '@/components/ui/button';
 import { formatIntergerNumber } from '@/utils/format';
 
@@ -69,6 +69,7 @@ const TablePagination = memo<TablePaginationProps>(
     total,
   }) => {
     const { t } = useTranslation('spend');
+    const { disabled } = useFormControlContext();
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const page = Math.min(current, totalPages);
@@ -105,7 +106,7 @@ const TablePagination = memo<TablePaginationProps>(
           />
           <Button
             aria-label={t('table.pagination.prev')}
-            disabled={page <= 1}
+            disabled={disabled || page <= 1}
             size="icon"
             variant="ghost"
             onClick={() => goTo(page - 1)}
@@ -131,7 +132,7 @@ const TablePagination = memo<TablePaginationProps>(
           )}
           <Button
             aria-label={t('table.pagination.next')}
-            disabled={page >= totalPages}
+            disabled={disabled || page >= totalPages}
             size="icon"
             variant="ghost"
             onClick={() => goTo(page + 1)}

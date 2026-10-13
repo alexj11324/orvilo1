@@ -1,0 +1,378 @@
+@reference "../../../../app/globals.css";
+
+.canvas {
+  position: relative;
+  width: 100%;
+  height: calc(var(--spacing) * 140);
+  
+  :global(.react-flow__attribution) {
+    display: none;
+  }
+  
+  :global(.react-flow__edge-path) {
+    stroke: var(--border);
+    stroke-width: 1.25;
+  }
+  
+  /* Provenance links can cross cards, but must not intercept their actions. */
+  :global(.react-flow__edge),
+  :global(.react-flow__edge) * {
+    pointer-events: none;
+  }
+  
+  :global(.react-flow__edge):global(.goal-dep) :global(.react-flow__edge-path) {
+    stroke-dasharray: 5 4;
+  }
+  
+  :global(.react-flow__edge):global(.goal-hot) :global(.react-flow__edge-path) {
+    stroke: var(--primary);
+    stroke-width: 1.75;
+  }
+  
+  :global(.react-flow__edge-textbg) {
+    fill: var(--background);
+  }
+  
+  :global(.react-flow__edge-text) {
+    @apply text-xs;
+    fill: var(--foreground-tertiary);
+  }
+  
+  :global(.react-flow__controls-button) {
+    border-color: var(--divider);
+    background: var(--card);
+    fill: var(--muted-foreground);
+  
+    &:hover {
+      background: var(--accent);
+    }
+  }
+    
+}
+
+.full {
+  height: 100%;
+    
+}
+
+.legend {
+  @apply text-sm leading-5.5;
+  color: var(--foreground-tertiary);
+    
+}
+
+.legendItem {
+  cursor: pointer;
+  user-select: none;
+  
+  &:hover {
+    color: var(--foreground);
+  }
+    
+}
+
+.legendOff {
+  text-decoration: line-through;
+}
+
+
+.float {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: calc(var(--spacing) * 4);
+  
+  display: flex;
+  gap: calc(var(--spacing) * 3);
+  align-items: center;
+  
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3.5);
+  border: calc(var(--spacing) * 0.25) solid var(--divider);
+  border-radius: var(--radius-overlay);
+  
+  background: var(--card);
+  box-shadow: var(--shadow-raised);
+    
+}
+
+.navigation {
+  max-width: calc(100% - calc(var(--spacing) * 8));
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 3);
+  border: calc(var(--spacing) * 0.25) solid var(--divider);
+  border-radius: var(--radius-overlay);
+  
+  background: var(--card);
+  box-shadow: var(--shadow-raised);
+    
+}
+
+.floatRight {
+  inset-inline-end: calc(var(--spacing) * 4);
+    
+}
+
+.overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  
+  display: flex;
+  flex-direction: row;
+  
+  background: var(--background);
+    
+}
+
+.overlayMain {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+    
+}
+
+.card {
+  box-sizing: border-box;
+  width: 100%;
+  border: calc(var(--spacing) * 0.25) solid var(--divider);
+  border-radius: var(--radius-card);
+  
+  background: var(--card);
+  
+  transition:
+    opacity var(--orvilo-motion-mid),
+    border-color var(--orvilo-motion-fast);
+    
+}
+
+.chipText {
+  @apply text-xs leading-5;
+  
+  white-space: nowrap;
+    
+}
+
+.dim {
+  border-style: dashed;
+}
+
+.statusRow {
+  display: flex;
+  gap: calc(var(--spacing) * 2.5);
+  align-items: center;
+  
+  padding-block: calc(var(--spacing) * 2.5) 0;
+  padding-inline: calc(var(--spacing) * 3);
+  
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  
+  /* The row owns the card's top padding; keep the head snug beneath it. */
+  & + div {
+    padding-block-start: calc(var(--spacing) * 1.5);
+  }
+    
+}
+
+.gate {
+  border-color: var(--warning-border);
+  background: var(--warning-wash);
+    
+}
+
+.ghost {
+  border-style: dashed;
+    
+}
+
+.ghostBar {
+  height: calc(var(--spacing) * 2);
+  border-radius: calc(var(--spacing) * 1);
+  background: var(--selected);
+  animation: goalGhostPulse 1.6s ease-in-out infinite;
+  
+  
+  
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+    
+}
+
+.glyph {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  
+  width: calc(var(--spacing) * 7.5);
+  height: calc(var(--spacing) * 7.5);
+  border-radius: var(--radius-card);
+    
+}
+
+.handle {
+  width: calc(var(--spacing) * 0.25);
+  min-width: 0;
+  height: calc(var(--spacing) * 0.25);
+  min-height: 0;
+  border: none;
+  
+  opacity: 0;
+    
+}
+
+.head {
+  display: flex;
+  gap: calc(var(--spacing) * 2.5);
+  align-items: flex-start;
+  
+  padding-block: calc(var(--spacing) * 2.5);
+  padding-inline: calc(var(--spacing) * 3);
+    
+}
+
+.human {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
+  border-radius: 50%;
+  
+  
+  font-weight: 600;
+  color: var(--foreground-tertiary);
+  
+  background: var(--accent);
+    
+}
+
+.metric {
+  display: flex;
+  gap: calc(var(--spacing) * 1);
+  align-items: center;
+    
+}
+
+.metrics {
+  display: flex;
+  gap: calc(var(--spacing) * 3);
+  align-items: center;
+  
+  padding-block: calc(var(--spacing) * 1.5);
+  padding-inline: calc(var(--spacing) * 3);
+  border-block-start: calc(var(--spacing) * 0.25) dashed var(--divider);
+  
+  font-family: var(--font-mono);
+  @apply text-xs leading-5;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground-tertiary);
+    
+}
+
+.stale {
+  border-color: var(--destructive-border);
+    
+}
+
+.subtitle {
+  overflow: hidden;
+  
+  @apply text-xs leading-5;
+  color: var(--foreground-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+    
+}
+
+.title {
+  @apply text-sm leading-5.5;
+  font-weight: 500;
+  
+    
+}
+
+.selected {
+  border-color: var(--primary-border);
+    
+}
+
+@keyframes goalGhostPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+
+/* Public ReactFlow Controls selectors: compact32/glyph16, with allocated
+   coarse44 hit rectangles so adjacent vertical controls cannot overlap. */
+.canvas :global(.react-flow__controls) {
+  gap: calc(var(--spacing) * 1);
+  padding: calc(var(--spacing) * 1);
+}
+
+.canvas :global(.react-flow__controls-button) {
+  box-sizing: border-box;
+  border-radius: var(--radius-button);
+  inline-size: calc(var(--spacing) * 8);
+  block-size: calc(var(--spacing) * 8);
+  padding: 0;
+}
+
+.canvas :global(.react-flow__controls-button) svg {
+  inline-size: calc(var(--spacing) * 4);
+  block-size: calc(var(--spacing) * 4);
+  max-inline-size: calc(var(--spacing) * 4);
+  max-block-size: calc(var(--spacing) * 4);
+}
+
+.motionDisabled :global(.react-flow__edge.animated) path {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas :global(.react-flow__edge.animated) path {
+    animation: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .canvas :global(.react-flow__controls) {
+    gap: calc(var(--spacing) * 3);
+    padding: calc(var(--spacing) * 1.5);
+  }
+
+  .canvas :global(.react-flow__controls-button) {
+    position: relative;
+
+    &::after {
+      position: absolute;
+      inset: calc(var(--spacing) * -1.5);
+      content: '';
+    }
+  }
+}
+
+
+.compactAction {
+  position: relative;
+
+  @media (pointer: coarse) {
+    margin: calc(var(--spacing) * 1.5);
+
+    &::after {
+      position: absolute;
+      inset: calc(var(--spacing) * -1.5);
+      content: '';
+    }
+  }
+}

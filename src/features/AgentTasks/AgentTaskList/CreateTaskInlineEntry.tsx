@@ -373,6 +373,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
               <div className="flex flex-col items-start gap-0.5">
                 <div>{result.name || draft.name}</div>
                 <Button
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                   size="sm"
                   style={{ paddingInline: 0 }}
                   variant="ghost"
@@ -584,8 +585,9 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
       >
         {!isReviewing && (
           <ActionIcon
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             icon={ChevronUp}
-            size={'small'}
+            size={{ blockSize: 32, size: 16 }}
             style={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }}
             title={t('createTask.collapse')}
             onClick={handleCollapse}
@@ -641,8 +643,8 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         >
           <div className="flex flex-wrap items-center gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
-              <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-muted">
-                <TaskPriorityTag disableDropdown priority={priority} size={14} />
+              <div className="flex h-7 cursor-pointer [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 items-center gap-1.5 rounded-(--radius-input) px-2 py-0.75 transition-colors hover:bg-muted">
+                <TaskPriorityTag disableDropdown priority={priority} size={16} />
                 <div className="text-xs">
                   {priority === 0
                     ? t('taskDetail.priority.none')
@@ -655,7 +657,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
 
             {activeWorkspaceId && (
               <AssigneeMemberSelector currentUserId={assigneeUserId} onChange={handleMemberChange}>
-                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-muted">
+                <div className="flex h-7 cursor-pointer [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 items-center gap-1.5 rounded-(--radius-input) px-2 py-0.75 transition-colors hover:bg-muted">
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
@@ -663,7 +665,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                     </>
                   ) : (
                     <>
-                      <UnassignedAssigneeIcon kind={'human'} size={14} />
+                      <UnassignedAssigneeIcon kind={'human'} size={16} />
                       <div
                         className="text-xs"
                         style={{ color: 'var(--ant-color-text-description)' }}
@@ -677,13 +679,13 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             )}
 
             {lockAssignee ? (
-              <div className="flex h-6 items-center gap-1.5 rounded-md px-2 py-0.75">
+              <div className="flex h-6 items-center gap-1.5 rounded-(--radius-input) px-2 py-0.75">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
                 <div className="text-xs">{assigneeMeta?.title}</div>
               </div>
             ) : (
               <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
-                <div className="flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-2 py-0.75 transition-colors hover:bg-muted">
+                <div className="flex h-7 cursor-pointer [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 items-center gap-1.5 rounded-(--radius-input) px-2 py-0.75 transition-colors hover:bg-muted">
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
@@ -691,7 +693,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                     </>
                   ) : (
                     <>
-                      <UnassignedAssigneeIcon kind={'agent'} size={14} />
+                      <UnassignedAssigneeIcon kind={'agent'} size={16} />
                       <div
                         className="text-xs"
                         style={{ color: 'var(--ant-color-text-description)' }}
@@ -705,8 +707,9 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
             )}
 
             <ActionIcon
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
               icon={Paperclip}
-              size={'small'}
+              size={{ blockSize: 32, size: 16 }}
               title={t('upload.action.tooltip')}
               onClick={handleAttach}
             />
@@ -719,9 +722,9 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   reading also matches what is happening: the button has handed the
                   draft off and is no longer the thing to press. */}
               <Button
-                className="rounded-full"
+                className="rounded-(--radius-button) [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                 loading={isCreating || isAnalyzing}
-                size="sm"
+                size="normal"
                 title={canCreateTask ? undefined : reason}
                 variant={isAnalyzing ? 'outline' : 'default'}
                 disabled={
@@ -748,8 +751,9 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                 <DropdownMenuTrigger
                   render={
                     <ActionIcon
+                      className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                       icon={ChevronDown}
-                      size={'small'}
+                      size={{ blockSize: 32, size: 16 }}
                       title={t('taskIntent.moreCreateOptions')}
                       disabled={
                         !canCreateTask ||

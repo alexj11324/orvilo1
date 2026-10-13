@@ -1,0 +1,33 @@
+@layer components {
+  .card:hover :global(.actions),
+  .card:focus-within :global(.actions),
+  .card:hover :global(.checkbox),
+  .card:focus-within :global(.checkbox),
+  .card:hover :global(.dropdown),
+  .card:focus-within :global(.dropdown),
+  .card:hover :global(.floatingChunkBadge),
+  .card:focus-within :global(.floatingChunkBadge),
+  .selected :global(.checkbox) {
+    /* Closed descendant state must override its own opacity-0 utility. */
+    opacity: 1 !important;
+  }
+
+  .dragOver {
+    border-color: var(--foreground) !important;
+    color: var(--popover) !important;
+    background-color: var(--foreground) !important;
+  }
+
+  .dragOver * {
+    color: var(--popover) !important;
+  }
+
+  @media (hover: none) {
+    .card :global(.actions),
+    .card :global(.checkbox),
+    .card :global(.dropdown),
+    .card :global(.floatingChunkBadge) {
+      opacity: 1 !important;
+    }
+  }
+}

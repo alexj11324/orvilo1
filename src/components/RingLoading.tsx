@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { type CSSProperties, type SVGProps } from 'react';
 import { useMediaQuery } from 'react-responsive';
 

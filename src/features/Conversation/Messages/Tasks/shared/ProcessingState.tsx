@@ -16,11 +16,11 @@ import { formatElapsedTime, formatToolName } from './utils';
 const styles = {
   activityRow: 'flex items-center gap-2 py-2',
   footer: '[padding-block-start:8px] [border-block-start:1px_solid_var(--sidebar-border)]',
-  progress: 'relative mx-2 my-3 h-0.75 overflow-hidden rounded-[2px] bg-selected',
-  progressBar: 'absolute h-full rounded-[2px] [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,var(--primary),var(--primary-hover))] transition-[width] duration-500 ease-out',
-  progressCompact: 'relative h-0.75 overflow-hidden rounded-[2px] bg-selected',
+  progress: 'relative mx-2 my-3 h-0.75 overflow-hidden rounded-full bg-selected',
+  progressBar: 'absolute h-full rounded-full [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,var(--primary),var(--primary-hover))] transition-[width] duration-500 ease-out',
+  progressCompact: 'relative h-0.75 overflow-hidden rounded-full bg-selected',
   progressShimmer: 'absolute size-full [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,transparent,var(--ant-color-primary-bg-hover),transparent)] animate-[text-shiny-sweep-transform_2s_ease_infinite] motion-reduce:hidden',
-  separator: 'size-0.75 rounded-[50%] bg-foreground-quaternary',
+  separator: 'size-0.75 rounded-full bg-foreground-quaternary',
 };
 
 export type ProcessingStateVariant = 'detail' | 'compact';
@@ -137,7 +137,7 @@ const ProcessingState = memo<ProcessingStateProps>(
           {currentActivity && (
             <div className={styles.activityRow}>
               <div className="flex items-center gap-1">
-                <NeuralNetworkLoading size={14} />
+                <NeuralNetworkLoading size={16} />
                 <span className='text-xs text-muted-foreground'>
                   {renderActivityText()}
                 </span>
@@ -163,7 +163,7 @@ const ProcessingState = memo<ProcessingStateProps>(
               {/* Elapsed Time */}
               {startedAt && (
                 <span className='text-xs text-muted-foreground'>
-                  <Timer size={12} />
+                  <Timer size={16} />
                   <span className="text-xs text-muted-foreground font-medium">
                     {formatElapsedTime(elapsedTime)}
                   </span>
@@ -174,7 +174,7 @@ const ProcessingState = memo<ProcessingStateProps>(
               {/* Steps */}
               {totalSteps !== undefined && totalSteps > 0 && (
                 <span className='text-xs text-muted-foreground'>
-                  <Footprints size={12} />
+                  <Footprints size={16} />
                   <span className="text-xs text-muted-foreground font-medium">
                     {totalSteps}
                   </span>
@@ -188,7 +188,7 @@ const ProcessingState = memo<ProcessingStateProps>(
                     <div className={styles.separator} />
                   )}
                   <span className='text-xs text-muted-foreground'>
-                    <Wrench size={12} />
+                    <Wrench size={16} />
                     <span className="text-xs text-muted-foreground font-medium">
                       {totalToolCalls}
                     </span>
@@ -208,7 +208,7 @@ const ProcessingState = memo<ProcessingStateProps>(
         {/* Current Activity */}
         {currentActivity && (
           <div className="flex items-center gap-2">
-            <NeuralNetworkLoading size={14} />
+            <NeuralNetworkLoading size={16} />
             <span className='truncate text-xs text-muted-foreground' style={{  whiteSpace: 'nowrap'  }}>
               {renderActivityText()}
             </span>
@@ -229,7 +229,7 @@ const ProcessingState = memo<ProcessingStateProps>(
             <div className="flex items-center gap-2">
               {startedAt && (
                 <span className='text-xs text-muted-foreground'>
-                  <Timer size={12} />
+                  <Timer size={16} />
                   <span className="text-xs text-muted-foreground font-medium">
                     {formatElapsedTime(elapsedTime)}
                   </span>
@@ -241,7 +241,7 @@ const ProcessingState = memo<ProcessingStateProps>(
             <div className="flex items-center gap-3">
               {totalSteps !== undefined && totalSteps > 0 && (
                 <span className='text-xs text-muted-foreground'>
-                  <Footprints size={12} />
+                  <Footprints size={16} />
                   <span className="text-xs text-muted-foreground font-medium">
                     {totalSteps}
                   </span>
@@ -254,7 +254,7 @@ const ProcessingState = memo<ProcessingStateProps>(
                     <div className={styles.separator} />
                   )}
                   <span className='text-xs text-muted-foreground'>
-                    <Wrench size={12} />
+                    <Wrench size={16} />
                     <span className="text-xs text-muted-foreground font-medium">
                       {totalToolCalls}
                     </span>

@@ -1,5 +1,4 @@
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { BoltIcon, RotateCwIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,11 +29,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
           <div className={'flex'}>
             <Tooltip>
               <TooltipTrigger render={<span />}>
-                <Badge
-                  className={cx('chunk-tag', className)}
-                  style={{ cursor: 'pointer' }}
-                  variant="info"
-                >
+                <Badge className={cx('chunk-tag cursor-pointer', className)} variant="info">
                   {createElement(BoltIcon, { size: 16 })}
                   {chunkCount}
                 </Badge>
@@ -67,7 +62,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
                     onErrorClick?.('embedding');
                   }}
                 >
-                  <RotateCwIcon className="size-3.5" size={14} />
+                  <RotateCwIcon className="size-4" size={16} />
                 </span>
               </Badge>
             </TooltipTrigger>
@@ -94,8 +89,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
             <Tooltip>
               <TooltipTrigger render={<span />}>
                 <Badge
-                  className={cx('chunk-tag', className)}
-                  style={{ cursor: 'pointer' }}
+                  className={cx('chunk-tag cursor-pointer', className)}
                   variant="info"
                   onClick={() => {
                     onClick?.(AsyncTaskStatus.Success);

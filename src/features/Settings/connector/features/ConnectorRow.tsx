@@ -29,16 +29,16 @@ const ConnectorRow = memo<ConnectorRowProps>(
   ({ action, active, icon, muted, onSelect, tag, title }) => (
     <div
       className={cn(
-        'relative flex h-7 min-w-0 items-center gap-2 rounded-md px-1 hover:bg-accent/60',
+        'relative flex min-h-8 min-w-0 items-center gap-2 rounded-(--radius-button) px-1 hover:bg-accent/60 [@media(pointer:coarse)]:min-h-11',
         active && 'bg-accent',
       )}
     >
       <Button
         aria-current={active ? 'true' : undefined}
-        size="sm"
+        size="compact"
         variant="ghost"
         className={cn(
-          'h-full min-w-0 flex-1 justify-start gap-2 rounded-(--radius-button) px-0 text-left font-medium hover:bg-transparent',
+          'min-w-0 flex-1 justify-start gap-2 rounded-(--radius-button) px-0 text-left font-medium hover:bg-transparent [@media(pointer:coarse)]:min-h-11',
           'after:absolute after:inset-0 after:rounded-(--radius-button) after:content-[""]',
         )}
         onClick={onSelect}
@@ -47,7 +47,7 @@ const ConnectorRow = memo<ConnectorRowProps>(
         <span
           title={title}
           className={cn(
-            'flex-1 truncate text-(length:--text-dense) font-medium',
+            'flex-1 truncate text-sm leading-5.5 font-medium',
             active
               ? 'text-foreground'
               : muted

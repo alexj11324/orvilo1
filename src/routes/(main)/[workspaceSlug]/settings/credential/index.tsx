@@ -1,7 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
 import { Plus, UserRoundIcon, UsersIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,18 +22,11 @@ const personalCredsApi: CredsApi = {
   query: lambdaQuery.creds,
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-    width: 100%;
-    padding-block: 4px;
-    padding-inline: 16px;
-  `,
-  desc: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  container:
+    'flex w-full flex-col overflow-hidden rounded-(--radius-card) border border-border px-4 py-1',
+  desc: 'text-sm leading-5.5 text-muted-foreground',
+};
 
 type CredsScope = 'personal' | 'workspace';
 
@@ -146,7 +137,7 @@ const WorkspaceCredsSetting = () => {
               <Tooltip>
                 <TooltipTrigger
                   render={
-                    <span style={{ display: 'inline-flex' }}>
+                    <span className="inline-flex">
                       <span>{createButton}</span>
                     </span>
                   }
@@ -165,10 +156,7 @@ const WorkspaceCredsSetting = () => {
             ? t('creds.workspaceSection.desc')
             : t('creds.personalSection.desc')}
         </div>
-        <div
-          className={cn('flex flex-col', styles.container)}
-          style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
-        >
+        <div className={styles.container}>
           {scope === 'workspace' ? (
             <CredsApiProvider value={workspaceCredsApi}>
               <CredsList />

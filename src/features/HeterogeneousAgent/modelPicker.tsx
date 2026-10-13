@@ -1,8 +1,9 @@
 import type { ServerDefaultHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import { createStaticStyles } from 'antd-style';
 import type { OrviloDefaultAiModelListItem } from 'model-bank';
 
-import { ModelItemRender, TAG_CLASSNAME } from '@/components/ModelSelect';
+import { ModelItemRender } from '@/components/ModelSelect';
+
+import nativeStyles from './modelPicker.module.css';
 
 export const MODEL_PICKER_STYLE = { minWidth: 200, width: 'initial' } as const;
 
@@ -19,22 +20,10 @@ export const resolveServerDefaultAgentModels = (
   agentType: ServerDefaultHeterogeneousAgentType | undefined,
 ): ServerDefaultModel[] => (agentType ? (models?.[agentType] ?? []) : []);
 
-export const modelPickerStyles = createStaticStyles(({ css }) => ({
-  compactLabel: css`
-    overflow: hidden;
-
-    min-width: 0;
-    max-width: 100%;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  picker: css`
-    .${TAG_CLASSNAME} {
-      display: none;
-    }
-  `,
-}));
+export const modelPickerStyles = {
+  compactLabel: nativeStyles.compactLabel,
+  picker: nativeStyles.picker,
+};
 
 export const resolveServerDefaultModelMeta = (
   model: string,

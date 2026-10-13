@@ -1,7 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import type { DragEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -19,22 +18,14 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { knowledgeBaseSelectors, useKnowledgeBaseStore } from '@/store/library';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
+import nativeStyles from './LibraryHead.module.css';
 import type { LibraryMenuEntry } from './libraryMenuItems';
 import { buildLibraryMenuItems } from './libraryMenuItems';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  dropZoneActive: css`
-    color: ${cssVar.colorBgElevated} !important;
-    background-color: ${cssVar.colorText} !important;
-
-    * {
-      color: ${cssVar.colorBgElevated} !important;
-    }
-  `,
-  menuIcon: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  dropZoneActive: nativeStyles.dropZoneActive,
+  menuIcon: 'text-foreground-tertiary',
+};
 
 /**
  * Quickly switch between libraries
@@ -96,11 +87,10 @@ const Head = memo<{ id: string }>(({ id }) => {
       item: {
         icon: (
           <div
-            className={cx('flex flex-col items-center justify-center w-4', styles.menuIcon)}
-            style={{ minWidth: 16 }}
+            className={cx('flex min-w-4 flex-col items-center justify-center w-4', styles.menuIcon)}
           >
             <LibraryStatusIcon
-              size={14}
+              size={16}
               visibility={library.visibility}
               memberRestricted={
                 (library as typeof library & { memberRestricted?: boolean }).memberRestricted
@@ -111,7 +101,7 @@ const Head = memo<{ id: string }>(({ id }) => {
         key: library.id,
         label: library.name,
         onClick: () => handleLibrarySwitch(library.id),
-        className: library.id === id ? 'bg-(--ant-control-item-bg-active)' : undefined,
+        className: library.id === id ? 'bg-selected' : undefined,
       },
       visibility: library.visibility,
     }));
@@ -128,9 +118,11 @@ const Head = memo<{ id: string }>(({ id }) => {
       data-drop-target-id="root"
       data-is-folder="true"
       data-root-drop="true"
-      style={{ minWidth: 32, overflow: 'hidden', cursor: 'pointer' }}
       className={cn(
-        cx('flex flex-row items-center gap-2 p-0.5', isDropZoneActive && styles.dropZoneActive),
+        cx(
+          'flex min-w-8 cursor-pointer flex-row items-center gap-2 overflow-hidden p-0.5',
+          isDropZoneActive && styles.dropZoneActive,
+        ),
         CLICKABLE_FOCUS_RING,
       )}
       onClick={handleClick}
@@ -138,31 +130,30 @@ const Head = memo<{ id: string }>(({ id }) => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex flex-col items-center justify-center w-8" style={{ minWidth: 32 }}>
+      <div className="flex min-w-8 flex-col items-center justify-center w-8">
         <LibraryStatusIcon
+          color={isDropZoneActive ? 'var(--invert-foreground)' : undefined}
           memberRestricted={activeLibrary?.memberRestricted}
-          size={18}
+          size={16}
           visibility={activeLibrary?.visibility}
         />
       </div>
       {!name ? (
-        <Skeleton className="h-4" style={{ width: 80 }} />
+        <Skeleton className="h-4 w-20" />
       ) : (
         <DropdownMenu items={menuItems} placement="bottomRight">
           <div
-            className="flex flex-col items-center justify-center gap-1"
-            style={{ cursor: 'pointer', flex: 1, overflow: 'hidden' }}
+            className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="truncate min-w-0 font-medium" style={{ flex: 1 }}>
-              {name}
-            </div>
+            <div className="min-w-0 flex-1 truncate text-sm leading-5.5 font-medium">{name}</div>
             <ActionIcon
               aria-label={t('switch')}
+              className={nativeStyles.compactAction}
               icon={ChevronsUpDownIcon}
-              style={{ width: 24 }}
               size={{
-                blockSize: 28,
+                blockSize: 32,
+                borderRadius: 'var(--radius-button)',
                 size: 16,
               }}
             />

@@ -60,7 +60,8 @@ const ProjectIssuesControls = memo<ProjectIssuesControlsProps>(
             saved-view builder with this project's scope plus applied filters. */}
         <Button
           aria-label={tCommon('savedViews.newView')}
-          size="icon-sm"
+          className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+          size="icon"
           title={tCommon('savedViews.newView')}
           variant="ghost"
           onClick={onNewView}
@@ -74,10 +75,13 @@ const ProjectIssuesControls = memo<ProjectIssuesControlsProps>(
           <Button
             aria-label={detailsOpen ? t('taskList.details.close') : t('taskList.details.open')}
             aria-pressed={detailsOpen}
-            className={cn(detailsOpen && 'bg-muted', undefined)}
-            size="icon-sm"
+            size="icon"
             title={detailsOpen ? t('taskList.details.close') : t('taskList.details.open')}
             variant="ghost"
+            className={cn(
+              detailsOpen && 'bg-muted',
+              '[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
+            )}
             onClick={onToggleDetails}
           >
             {createElement(detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon, {

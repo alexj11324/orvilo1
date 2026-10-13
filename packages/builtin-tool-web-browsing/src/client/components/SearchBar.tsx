@@ -78,7 +78,7 @@ const SearchBar = memo<SearchBarProps>(
 
     return (
       <>
-        <div className="flex flex-row items-center flex-1 gap-2 h-8 justify-between">
+        <div className="flex flex-row items-center flex-1 gap-2 min-h-9 justify-between">
           {tooltip ? (
             <SimpleTooltip title={t('search.searchBar.tooltip')}>{searchComponent}</SimpleTooltip>
           ) : (

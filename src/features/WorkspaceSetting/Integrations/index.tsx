@@ -28,7 +28,7 @@ type OAuthErrorKey =
 const slackLogo = COMPOSIO_APP_TYPES.find((app) => app.identifier === 'slack')?.icon;
 
 const SlackMark = () => (
-  <div className="flex size-12 flex-none items-center justify-center rounded-lg border border-border bg-background">
+  <div className="flex size-12 flex-none items-center justify-center rounded-(--radius-card) border border-border bg-background">
     <img alt="" className="size-7" src={typeof slackLogo === 'string' ? slackLogo : undefined} />
   </div>
 );
@@ -167,7 +167,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
             </div>
             {connected ? (
               <Badge variant="success-light">
-                <Check size={14} />
+                <Check size={16} />
                 {t('integrations.connected')}
               </Badge>
             ) : (
@@ -274,6 +274,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                 </div>
                 {data.personalConnection ? (
                   <Button
+                    className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                     disabled={disabled}
                     loading={pending === 'personal'}
                     size="lg"
@@ -288,6 +289,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                   </Button>
                 ) : (
                   <Button
+                    className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                     disabled={!connected || disabled}
                     loading={oauthMode === 'personal'}
                     size="lg"
@@ -350,8 +352,9 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                     </p>
                   </div>
                   <Button
+                    className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                     disabled={!connected || !data.canManage || disabled}
-                    size="sm"
+                    size="normal"
                     variant="outline"
                     onClick={() =>
                       openSlackBindingForm({ workspaceId: workspaceId!, onSaved: () => mutate() })
@@ -381,8 +384,9 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                         </div>
                         <div className="flex justify-end gap-2">
                           <Button
+                            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                             disabled={!data.canManage || disabled}
-                            size="sm"
+                            size="normal"
                             variant="outline"
                             onClick={() =>
                               openSlackBindingForm({
@@ -392,13 +396,14 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                               })
                             }
                           >
-                            <Pencil size={14} />
+                            <Pencil size={16} />
                             {t('integrations.edit')}
                           </Button>
                           <Button
+                            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                             disabled={!data.canManage || disabled}
                             loading={pending === binding.id}
-                            size="sm"
+                            size="normal"
                             variant="destructive"
                             onClick={() => {
                               void runWrite(binding.id, () =>
@@ -406,7 +411,7 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                               ).catch((error) => console.error(error));
                             }}
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                             {t('integrations.delete')}
                           </Button>
                         </div>

@@ -17,7 +17,7 @@ const styles = {
   question: 'text-sm font-normal leading-[1.5] text-foreground [overflow-wrap:anywhere]',
   questionContent: 'min-w-0',
   recommendedBadge:
-    'shrink-0 [padding-block:1px] [padding-inline:8px] rounded-[999px] text-[11px] leading-4.5 text-muted-foreground bg-selected',
+    'shrink-0 [padding-block:1px] [padding-inline:8px] rounded-(--radius-chip) text-xs leading-5 text-muted-foreground bg-selected',
   titleRow: 'flex flex-wrap gap-2 items-baseline',
   unanswered: 'text-sm leading-[1.5] text-foreground-quaternary',
 };

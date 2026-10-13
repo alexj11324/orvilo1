@@ -190,7 +190,7 @@ const AddFilterPopover = memo<AddFilterPopoverProps>(
                 selected.includes(priority),
                 () =>
                   applyFilter({ type: 'priority', values: toggleListValue(selected, priority) }),
-                { icon: <PriorityIcon priority={priority} size={14} /> },
+                { icon: <PriorityIcon priority={priority} size={16} /> },
               ),
             ),
           };

@@ -22,15 +22,17 @@ export function WorkspaceAvatar({
   workspace: WorkspaceAvatarOption;
 }) {
   return (
-    <Avatar className={cn('shrink-0 rounded-md after:rounded-md', className)}>
+    <Avatar
+      className={cn('shrink-0 rounded-(--radius-chip) after:rounded-(--radius-chip)', className)}
+    >
       {isImageAvatar(workspace.avatar) && (
         <AvatarImage
           alt={workspace.name}
-          className="rounded-md"
+          className="rounded-(--radius-chip)"
           src={workspace.avatar ?? undefined}
         />
       )}
-      <AvatarFallback className="rounded-md border border-border bg-background text-sm font-medium text-foreground">
+      <AvatarFallback className="rounded-(--radius-chip) border border-border bg-background text-sm font-medium text-foreground">
         {workspace.avatar && !isImageAvatar(workspace.avatar)
           ? workspace.avatar
           : workspace.name.charAt(0).toUpperCase()}

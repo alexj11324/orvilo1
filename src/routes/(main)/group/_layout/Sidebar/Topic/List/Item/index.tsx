@@ -1,6 +1,5 @@
 import { GROUP_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
-import { cssVar, useTheme } from 'antd-style';
 import { HashIcon, MessageSquareDashed } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -27,6 +26,7 @@ import { operationSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
+import { useResolvedMotionValues } from '@/styles/themeRoles';
 
 import ThreadList from '../../TopicListContent/ThreadList';
 import Actions from './Actions';
@@ -66,7 +66,7 @@ interface TopicItemProps {
 
 const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, userId }) => {
   const { t } = useTranslation('topic');
-  const { isDarkMode, motion, motionDurationMid } = useTheme();
+  const { enabled: motionEnabled, durationMid: motionDurationMid } = useResolvedMotionValues();
   const unreadTransitionDuration = motionDurationMid.endsWith('ms')
     ? Number.parseFloat(motionDurationMid) / 1000
     : Number.parseFloat(motionDurationMid);
@@ -79,11 +79,9 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     () => true,
   );
-  const shouldAnimateUnread = motion !== false && !prefersReducedMotion;
+  const shouldAnimateUnread = motionEnabled && !prefersReducedMotion;
   // Same live-running ring as the agent sidebar topic rows (see List/Item there).
-  const loadingRingColor = isDarkMode
-    ? cssVar.colorWarningBorder
-    : `color-mix(in srgb, ${cssVar.colorWarning} 45%, transparent)`;
+  const loadingRingColor = 'var(--topic-running-ring)';
   const toggleMobileTopic = useGlobalStore((s) => s.toggleMobileTopic);
   const [activeGroupId, switchTopic] = useAgentGroupStore((s) => [s.activeGroupId, s.switchTopic]);
   const addTab = useElectronStore((s) => s.addTab);
@@ -229,7 +227,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
       <NavItem
         active={active}
         slots={{ titlePrefix: draftPrefix }}
-        titleColor={cssVar.colorText}
+        titleColor="var(--foreground)"
         icon={
           isLoading ? (
             <RingLoadingIcon className="text-warning-text" ringColor={loadingRingColor} size={16} />
@@ -302,7 +300,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
         extra={<TopicMigrationIndicator groupId={activeGroupId} topicId={id} />}
         href={!editing ? href : undefined}
         title={title === '...' ? <DotsLoading gap={3} size={4} /> : title}
-        titleColor={cssVar.colorText}
+        titleColor="var(--foreground)"
         icon={
           // Workspace mode: the creator's round avatar is the primary visual;
           // the row's own status icon shrinks into a bottom-right corner

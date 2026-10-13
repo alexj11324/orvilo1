@@ -17,7 +17,7 @@ import { type AgentArgs, ClaudeCodeApiName } from '../../types';
 import { resolveCCSubagentType } from '../subagentTypes';
 
 const styles = {
-  chip: 'overflow-hidden inline-flex shrink items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
+  chip: 'overflow-hidden inline-flex shrink items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-(--radius-chip) bg-accent',
   chipText: 'overflow-hidden min-w-0 text-xs text-foreground text-ellipsis whitespace-nowrap',
   icon: 'shrink-0 mx-1.5 text-foreground-description',
   label: 'shrink-0 text-foreground',

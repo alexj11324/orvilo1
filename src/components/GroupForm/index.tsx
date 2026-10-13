@@ -982,59 +982,68 @@ const FormGroupItems = ({
   itemClassName?: string;
   itemMinWidth?: string | number;
   itemVariant?: FormVariant;
-}) => (
-  <>
-    {items.map((item, index) => {
-      if (item.hidden) return null;
-      const {
-        avatar,
-        children,
-        desc,
-        divider,
-        hidden: _hidden,
-        label,
-        minWidth,
-        tag,
-        variant,
-        ...binding
-      } = item;
-      const hasBinding = 'name' in binding || 'valuePropName' in binding;
-      return (
-        <div
-          className={clsx('flex flex-col', variantClassName[variant ?? itemVariant])}
-          data-slot="form-item"
-          key={binding.name === undefined ? index : JSON.stringify(binding.name)}
-        >
-          <div className="flex min-h-11 flex-row items-center justify-between gap-4 py-2">
+}) => {
+  const context = use(FormContext);
+  const isVertical = context?.props.layout === 'vertical';
+  return (
+    <>
+      {items.map((item, index) => {
+        if (item.hidden) return null;
+        const {
+          avatar,
+          children,
+          desc,
+          divider,
+          hidden: _hidden,
+          label,
+          minWidth,
+          tag,
+          variant,
+          ...binding
+        } = item;
+        const hasBinding = 'name' in binding || 'valuePropName' in binding;
+        return (
+          <div
+            className={clsx('flex flex-col', variantClassName[variant ?? itemVariant])}
+            data-slot="form-item"
+            key={binding.name === undefined ? index : JSON.stringify(binding.name)}
+          >
             <div
-              className="flex min-w-0 flex-col gap-0.5"
-              style={
-                (minWidth ?? itemMinWidth) !== undefined
-                  ? { minWidth: minWidth ?? itemMinWidth }
-                  : undefined
-              }
+              className={clsx(
+                'flex min-h-11 gap-4 py-2',
+                isVertical ? 'flex-col items-stretch' : 'flex-row items-center justify-between',
+              )}
             >
-              <div className="flex flex-row items-center gap-2">
-                {avatar}
-                <span className="text-sm font-medium">{label}</span>
-                {tag}
+              <div
+                className="flex min-w-0 flex-col gap-0.5"
+                style={
+                  (minWidth ?? itemMinWidth) !== undefined
+                    ? { minWidth: minWidth ?? itemMinWidth }
+                    : undefined
+                }
+              >
+                <div className="flex flex-row items-center gap-2">
+                  {avatar}
+                  <span className="text-sm font-medium">{label}</span>
+                  {tag}
+                </div>
+                {desc ? <div className="text-sm text-foreground-description">{desc}</div> : null}
               </div>
-              {desc ? <div className="text-sm text-foreground-description">{desc}</div> : null}
+              {hasBinding || typeof children === 'function' ? (
+                <Item className={clsx('mb-0', itemClassName)} {...binding}>
+                  {children}
+                </Item>
+              ) : (
+                children
+              )}
             </div>
-            {hasBinding || typeof children === 'function' ? (
-              <Item className={clsx('mb-0', itemClassName)} {...binding}>
-                {children}
-              </Item>
-            ) : (
-              children
-            )}
+            {divider ? <Separator /> : null}
           </div>
-          {divider ? <Separator /> : null}
-        </div>
-      );
-    })}
-  </>
-);
+        );
+      })}
+    </>
+  );
+};
 
 export const FormGroup = ({
   children,

@@ -21,10 +21,10 @@ const styles = {
   stageRow: 'flex flex-1 gap-4 min-h-0',
   notes: 'overflow-y-auto flex flex-none flex-col gap-3 w-80 min-w-0',
   thumb:
-    'cursor-pointer overflow-hidden w-18 h-12 border-2 border-transparent rounded-(--ant-border-radius) [&_img]:block [&_img]:w-full [&_img]:h-full [&_img]:object-cover',
+    'cursor-pointer overflow-hidden w-18 h-12 border-2 border-transparent rounded-(--radius-card) [&_img]:block [&_img]:w-full [&_img]:h-full [&_img]:object-cover',
   thumbActive: 'border-primary',
   zoomBar:
-    'absolute z-5 bottom-4 start-1/2 -translate-x-1/2 flex gap-1 items-center py-1 px-2 border border-sidebar-border rounded-[99px] bg-popover shadow-(--shadow-popover)',
+    'absolute z-5 bottom-4 start-1/2 -translate-x-1/2 flex gap-1 items-center py-1 px-2 border border-sidebar-border rounded-full bg-popover shadow-(--shadow-popover)',
   zoomLabel: 'min-w-11 text-xs tabular-nums text-muted-foreground text-center',
 };
 
@@ -97,17 +97,19 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
               />
               <div className={styles.zoomBar}>
                 <ActionIcon
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                   disabled={zoom <= ZOOM_STEPS[0]}
                   icon={ZoomOut}
-                  size={'small'}
+                  size={{ blockSize: 32, size: 16 }}
                   title={t('acceptance.review.zoomOut')}
                   onClick={() => model.stepZoom(-1)}
                 />
                 <span className={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
                 <ActionIcon
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                   disabled={zoom >= ZOOM_STEPS.at(-1)!}
                   icon={ZoomIn}
-                  size={'small'}
+                  size={{ blockSize: 32, size: 16 }}
                   title={t('acceptance.review.zoomIn')}
                   onClick={() => model.stepZoom(1)}
                 />
@@ -138,7 +140,7 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
       )}
       <div className={styles.footer}>
         {failed && (
-          <div className="text-destructive" role={'alert'}>
+          <div className="text-destructive-text" role={'alert'}>
             {t('acceptance.review.submitFailed')}
           </div>
         )}
@@ -166,10 +168,16 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                 onRemove={model.removeAttachment}
               />
             </div>
-            <Button disabled={loading} size="lg" onClick={close}>
+            <Button
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+              disabled={loading}
+              size="lg"
+              onClick={close}
+            >
               {t('acceptance.actions.cancel')}
             </Button>
             <Button
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
               disabled={!canSubmit}
               loading={loading}
               size="lg"

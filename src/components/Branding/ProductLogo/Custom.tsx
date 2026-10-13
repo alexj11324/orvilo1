@@ -1,7 +1,6 @@
 import { type IconType } from '@lobehub/icons';
 import { type LobeChatProps } from '@lobehub/ui/brand';
 import { BRANDING_LOGO_URL, BRANDING_NAME } from '@orvilo/business-const';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { type HTMLAttributes, type ReactNode } from 'react';
 import { memo } from 'react';
@@ -108,7 +107,7 @@ const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, ty
   return (
     <div className={cn('flex items-center', className)} style={{ flex: 'none' }}>
       {logoComponent}
-      <Divider size={extraSize} style={{ color: cssVar.colorFill }} />
+      <Divider className="flex-none leading-none text-divider" size={extraSize} />
       <div className="whitespace-nowrap font-normal" style={{ fontSize: extraSize }}>
         {extra}
       </div>

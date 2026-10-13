@@ -3,7 +3,7 @@ import { eq, type SQL } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { taskDispatches, tasks, users } from '../../schemas';
+import { agents, taskDispatches, tasks, users } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import {
@@ -56,11 +56,13 @@ const setStaleStatus = async (id: string, status: string) => {
 };
 
 beforeEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }]);
 });
 
 afterEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
 });
 
@@ -116,7 +118,9 @@ describe('task execution SQL projection (tasks.status retired)', () => {
 
   it('keeps an explicit workflowCategory over the transition default', async () => {
     const model = new TaskModel(serverDB, userId);
-    const task = await model.create({ instruction: 'Explicit wins' });
+    const reviewerAgentId = 'task-exec-sql-reviewer';
+    await serverDB.insert(agents).values({ id: reviewerAgentId, slug: reviewerAgentId, userId });
+    const task = await model.create({ instruction: 'Explicit wins', reviewerAgentId });
 
     await model.updateStatus(task.id, 'completed', { workflowCategory: 'in_review' });
 

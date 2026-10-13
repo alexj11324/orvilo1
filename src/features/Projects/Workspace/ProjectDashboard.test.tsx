@@ -42,8 +42,13 @@ const mocks = vi.hoisted(() => ({
   }[],
   addProjectMember: vi.fn(),
   removeProjectMember: vi.fn(),
-  goalSWR: { data: undefined as unknown, error: undefined, isLoading: false, mutate: vi.fn() },
-  goals: [] as { goal: { id: string; status: string; title: string } }[],
+  goalSWR: {
+    data: undefined as unknown,
+    error: undefined,
+    isLoading: false,
+    mutate: vi.fn(),
+  },
+  goals: [] as { orchestrationWorkflow: { id: string; status: string; title: string } }[],
   navigate: vi.fn(),
   projectMembersQuery: vi.fn(() => ({
     data: [],
@@ -629,7 +634,9 @@ describe('project membership editing', () => {
 
 describe('project sidebar sections', () => {
   it('uses issue workflow counts, not the independent goal completion percentage', () => {
-    mocks.goals = [{ goal: { id: 'goal_1', status: 'achieved', title: 'Unrelated goal' } }];
+    mocks.goals = [
+      { orchestrationWorkflow: { id: 'goal_1', status: 'achieved', title: 'Unrelated goal' } },
+    ];
     render(<ProjectSidePanel projectId="apollo" />);
     expect(screen.getByText('overview.progress.scope').nextElementSibling).toHaveTextContent('0');
     expect(screen.getByText('overview.progress.started').nextElementSibling).toHaveTextContent('0');

@@ -51,7 +51,11 @@ const checkItem: VerifyCheckItem = {
   verifierType: 'agent',
 };
 
-const runnerArgs = { checkItem, goal: 'ship the toolbar', operationId: 'parent-op-1' };
+const runnerArgs = {
+  checkItem,
+  orchestrationWorkflow: 'ship the toolbar',
+  operationId: 'parent-op-1',
+};
 const db = {} as any;
 
 const baseParams = {

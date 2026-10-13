@@ -672,10 +672,10 @@ describe('buildTaskRunPrompt', () => {
     expect(taskSection).toContain('🤖 agent');
   });
 
-  it('renders the goal loop section with reject comment, failed checks and CLI hint', () => {
+  it('renders the orchestration workflow loop section with reject comment, failed checks and CLI hint', () => {
     const result = buildTaskRunPrompt(
       {
-        goalLoop: {
+        orchestrationWorkflowLoop: {
           failedChecks: [
             { title: 'LCP < 2s', why: 'measured 2.8s — preload hero image' },
             { title: 'Lighthouse ≥ 90' },
@@ -694,7 +694,7 @@ describe('buildTaskRunPrompt', () => {
       NOW,
     );
 
-    expect(result).toContain('Goal loop — round 2 of 3');
+    expect(result).toContain('Orchestration workflow loop — round 2 of 3');
     // Reject comment outranks the failed checks.
     expect(result.indexOf('真机 LCP 还是 2.4s')).toBeLessThan(result.indexOf('LCP < 2s'));
     expect(result).toContain('1. LCP < 2s — measured 2.8s — preload hero image');
@@ -707,7 +707,7 @@ describe('buildTaskRunPrompt', () => {
     (rejectComment) => {
       const result = buildTaskRunPrompt(
         {
-          goalLoop: {
+          orchestrationWorkflowLoop: {
             automaticReviewFeedback: 'Add the missing total row.',
             rejectComment,
             round: 2,
@@ -734,16 +734,16 @@ describe('buildTaskRunPrompt', () => {
     },
   );
 
-  it('omits the round budget suffix for uncapped goals', () => {
+  it('omits the round budget suffix for uncapped orchestration workflows', () => {
     const result = buildTaskRunPrompt(
       {
-        goalLoop: { maxRounds: null, round: 5 },
+        orchestrationWorkflowLoop: { maxRounds: null, round: 5 },
         task: { ...baseTask, identifier: 'TASK-1', instruction: '写书', name: '写一本书' },
       },
       NOW,
     );
 
-    expect(result).toContain('Goal loop — round 5:');
+    expect(result).toContain('Orchestration workflow loop — round 5:');
     expect(result).not.toContain('round 5 of');
   });
 

@@ -4,17 +4,17 @@ import {
   VERIFICATION_ERRORED_ERROR,
   VERIFICATION_FAILED_ERROR,
   VERIFICATION_UNJUDGEABLE_ERROR,
-} from '@orvilo/const/goal';
+} from '@orvilo/const/orchestrationWorkflow';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { GoalModel } from '@/database/models/goal';
+import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
-import { scheduleGoalAdvance } from '@/server/services/goal/scheduler';
+import { scheduleOrchestrationWorkflowAdvance } from '@/server/services/orchestrationWorkflow/scheduler';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
@@ -24,7 +24,7 @@ import {
 } from '@/server/services/taskSettlement';
 
 import { evaluateAegisEvidenceRequirement } from './aegisEvidence';
-import { reviewGoalDelivery } from './goalReview';
+import { reviewOrchestrationWorkflowDelivery } from './orchestrationWorkflowReview';
 import { maybeAutoRepair } from './repairService';
 import { VerifyReporterService } from './reporter';
 import { VerifyStatusService } from './statusService';
@@ -76,8 +76,8 @@ export const recomputeRepairAncestors = async (
 
 interface ReportContext {
   deliverable: string;
-  goal: string;
   modelConfig: { model: string; provider: string };
+  orchestrationWorkflow: string;
   /** Preferred ACP binding for the report-narrative judgment. */
   verifierAgentId?: string;
 }
@@ -314,17 +314,23 @@ export const driveTaskFromVerify = async (
     // `errored` result here is the reviewer's problem, and another builder
     // attempt would only re-deliver into the same broken review.
     if (!(await renewTaskDrive())) return;
-    const goalReview =
+    const orchestrationWorkflowReview =
       run.status === 'passed'
-        ? await reviewGoalDelivery(db, userId, taskOperation.taskId, operationId, workspaceId)
+        ? await reviewOrchestrationWorkflowDelivery(
+            db,
+            userId,
+            taskOperation.taskId,
+            operationId,
+            workspaceId,
+          )
         : undefined;
     if (!(await renewTaskDrive())) return;
     let outcome =
-      goalReview?.status === 'rejected'
+      orchestrationWorkflowReview?.status === 'rejected'
         ? 'failed'
-        : goalReview?.status === 'errored'
+        : orchestrationWorkflowReview?.status === 'errored'
           ? 'review_errored'
-          : goalReview?.status === 'unjudgeable'
+          : orchestrationWorkflowReview?.status === 'unjudgeable'
             ? 'unjudgeable'
             : run.status;
 
@@ -390,9 +396,9 @@ export const driveTaskFromVerify = async (
     }
 
     if (outcome === 'passed') {
-      // Verify and, for Goal tasks, Acceptance review must pass before completing
+      // Verify and, for OrchestrationWorkflow tasks, Acceptance review must pass before completing
       // the task and cascading (checkpoint / sibling
-      // rollup / downstream unlock). A Goal Graph Task is an ordinary task
+      // rollup / downstream unlock). A OrchestrationWorkflow Graph Task is an ordinary task
       // here — the coordinator reads its completed status on the next tick and
       // synthesizes the finding from it.
       //
@@ -462,9 +468,9 @@ export const driveTaskFromVerify = async (
       const isErrored =
         outcome === 'errored' || outcome === 'review_errored' || outcome === 'integration_blocked';
 
-      // Every summary is a contract string, not copy: the Goal coordinator
-      // matches on them to decide whether a paused Goal Task starts another
-      // attempt or opens a decision gate. They live in `@orvilo/const/goal`
+      // Every summary is a contract string, not copy: the OrchestrationWorkflow coordinator
+      // matches on them to decide whether a paused OrchestrationWorkflow Task starts another
+      // attempt or opens a decision gate. They live in `@orvilo/conststartOrchestrationWorkflow`
       // so the writer and the reader cannot drift apart.
       const pauseSummary =
         outcome === 'unjudgeable'
@@ -605,22 +611,32 @@ export const driveTaskFromVerify = async (
       );
     }
 
-    // A Goal Task settling is the event the coordinator waits on: it
+    // A OrchestrationWorkflow Task settling is the event the coordinator waits on: it
     // decides whether to synthesize a finding, start another attempt, or open a
-    // decision gate. Queue the advance so the goal keeps moving on its own —
-    // this is the server-side driver for long-horizon goals, and without it a
-    // goal only progresses while some client keeps ticking it.
+    // decision gate. Queue the advance so the orchestration workflow keeps moving on its own —
+    // this is the server-side driver for long-horizon orchestration workflows, and without it a
+    // orchestration workflow only progresses while some client keeps ticking it.
     try {
       if (!(await renewTaskDrive())) return;
-      const goal = await new GoalModel(db, userId, workspaceId).findByGraphTask(
-        taskOperation.taskId,
-      );
-      if (goal) {
-        await scheduleGoalAdvance({ goalId: goal.id, trigger: 'settle', userId, workspaceId });
-        log('verify-settle → queued goal advance for %s', goal.id);
+      const orchestrationWorkflow = await new OrchestrationWorkflowModel(
+        db,
+        userId,
+        workspaceId,
+      ).findByGraphTask(taskOperation.taskId);
+      if (orchestrationWorkflow) {
+        await scheduleOrchestrationWorkflowAdvance({
+          orchestrationWorkflowId: orchestrationWorkflow.id,
+          trigger: 'settle',
+          userId,
+          workspaceId,
+        });
+        log(
+          'verify-settle → queued orchestration workflow advance for %s',
+          orchestrationWorkflow.id,
+        );
       }
     } catch (error) {
-      log('verify-settle goal advance dispatch failed (non-fatal): %O', error);
+      log('verify-settle orchestration workflow advance dispatch failed (non-fatal): %O', error);
     }
 
     if (completionReservationId) {

@@ -14,7 +14,7 @@ export const MEMORY_CATEGORIES = [
   'travel',
   'relationships',
   'hobbies',
-  'goals',
+  'orchestrationWorkflows',
 ] as const;
 
 /**

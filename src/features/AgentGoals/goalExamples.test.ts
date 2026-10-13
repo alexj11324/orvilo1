@@ -1,4 +1,4 @@
-import { GOAL_MAX_ROUNDS_RANGE } from '@orvilo/const/verify';
+import { ORCHESTRATION_WORKFLOW_MAX_ROUNDS_RANGE } from '@orvilo/const/verify';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -23,8 +23,8 @@ describe('goalExamples', () => {
     // example would not be the goal the user actually got.
     for (const key of GOAL_EXAMPLE_KEYS) {
       const budget = GOAL_EXAMPLE_ROUND_BUDGETS[key];
-      expect(budget).toBeGreaterThanOrEqual(GOAL_MAX_ROUNDS_RANGE.min);
-      expect(budget).toBeLessThanOrEqual(GOAL_MAX_ROUNDS_RANGE.max);
+      expect(budget).toBeGreaterThanOrEqual(ORCHESTRATION_WORKFLOW_MAX_ROUNDS_RANGE.min);
+      expect(budget).toBeLessThanOrEqual(ORCHESTRATION_WORKFLOW_MAX_ROUNDS_RANGE.max);
     }
   });
 });

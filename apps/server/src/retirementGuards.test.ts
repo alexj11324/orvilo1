@@ -163,7 +163,7 @@ describe('parity — retained capability registrations stay', () => {
     'aiAgent',
     'aiChat',
     'connector',
-    'goal',
+    'orchestrationWorkflow',
     'task',
     'topic',
     'verify',

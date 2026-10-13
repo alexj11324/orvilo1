@@ -1,6 +1,6 @@
 'use client';
 
-import type { GoalStatus } from '@orvilo/const/goal';
+import type { OrchestrationWorkflowStatus } from '@orvilo/const/orchestrationWorkflow';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import type { TFunction } from 'i18next';
 import {
@@ -20,7 +20,10 @@ import { useTranslation } from 'react-i18next';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 
-import type { CreateGoalParams, CreateGoalState } from '../../../types';
+import type {
+  CreateOrchestrationWorkflowParams,
+  CreateOrchestrationWorkflowState,
+} from '../../../types';
 import { TaskResultCard } from '../shared';
 
 const formatElapsed = (milliseconds: number) => {
@@ -90,7 +93,10 @@ const phaseLabel = (t: TFunction<'plugin'>, phase: PhaseKey): string => {
  * row is the same record the goal page reads, so the conversation can never
  * disagree with it.
  */
-const resolvePhase = (status: GoalStatus | undefined, pendingDecisions: number): PhaseKey => {
+const resolvePhase = (
+  status: OrchestrationWorkflowStatus | undefined,
+  pendingDecisions: number,
+): PhaseKey => {
   if (pendingDecisions > 0) return 'awaitingDecision';
   switch (status) {
     case 'achieved': {
@@ -119,78 +125,80 @@ const resolvePhase = (status: GoalStatus | undefined, pendingDecisions: number):
   }
 };
 
-const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalState>>(
-  ({ args, pluginState }) => {
-    const { t } = useTranslation('plugin');
-    const navigate = useWorkspaceAwareNavigate();
-    const goalId = pluginState?.goalId;
-    const [now, setNow] = useState(() => Date.now());
+const CreateGoalRender = memo<
+  BuiltinRenderProps<CreateOrchestrationWorkflowParams, CreateOrchestrationWorkflowState>
+>(({ args, pluginState }) => {
+  const { t } = useTranslation('plugin');
+  const navigate = useWorkspaceAwareNavigate();
+  const orchestrationWorkflowId = pluginState?.orchestrationWorkflowId;
+  const [now, setNow] = useState(() => Date.now());
 
-    const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
-    useFetchGoalGraph(goalId);
-    const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
-    const pendingDecisions =
-      snapshot?.decisions.filter((decision) => decision.status === 'pending').length ?? 0;
-    const phase = resolvePhase(snapshot?.goal.status, pendingDecisions);
-    const meta = PHASE_META[phase];
+  const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
+  useFetchGoalGraph(orchestrationWorkflowId);
+  const snapshot = useGoalStore(goalSelectors.goalGraph(orchestrationWorkflowId));
+  const pendingDecisions =
+    snapshot?.decisions.filter((decision) => decision.status === 'pending').length ?? 0;
+  const phase = resolvePhase(snapshot?.orchestrationWorkflow.status, pendingDecisions);
+  const meta = PHASE_META[phase];
 
-    // Ticks the elapsed clock only. Refreshing the graph is `useFetchGoalGraph`'s
-    // job and it already polls while the goal is one the server can move — doing
-    // it here too meant every mounted card pulled the whole snapshot once a
-    // second, and a card whose fetch had failed read as unsettled and never
-    // stopped asking.
-    useEffect(() => {
-      if (meta.settled) return;
-      const timer = window.setInterval(() => setNow(Date.now()), 1000);
-      return () => window.clearInterval(timer);
-    }, [meta.settled]);
+  // Ticks the elapsed clock only. Refreshing the graph is `useFetchGoalGraph`'s
+  // job and it already polls while the goal is one the server can move — doing
+  // it here too meant every mounted card pulled the whole snapshot once a
+  // second, and a card whose fetch had failed read as unsettled and never
+  // stopped asking.
+  useEffect(() => {
+    if (meta.settled) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [meta.settled]);
 
-    if (!pluginState?.success || !goalId) return null;
+  if (!pluginState?.success || !orchestrationWorkflowId) return null;
 
-    const agentId = snapshot?.goal.agentId;
-    const openGoal = agentId ? () => navigate(`/agent/${agentId}/goal/${goalId}`) : undefined;
+  const agentId = snapshot?.orchestrationWorkflow.agentId;
+  const openGoal = agentId
+    ? () => navigate(`/agent/${agentId}/goal/${orchestrationWorkflowId}`)
+    : undefined;
 
-    return (
-      <TaskResultCard
-        icon={Target}
-        iconColor={'var(--muted-foreground)'}
-        title={snapshot?.goal.title ?? pluginState.name ?? args?.name}
+  return (
+    <TaskResultCard
+      icon={Target}
+      iconColor={'var(--muted-foreground)'}
+      title={snapshot?.orchestrationWorkflow.title ?? pluginState.name ?? args?.name}
+    >
+      <div
+        className="flex items-center gap-2"
+        style={{ ...(openGoal ? { cursor: 'pointer' } : undefined) }}
+        onClick={openGoal}
       >
-        <div
-          className="flex items-center gap-2"
-          style={{ ...(openGoal ? { cursor: 'pointer' } : undefined) }}
-          onClick={openGoal}
-        >
-          {createElement(meta.icon, {
-            className:
-              phase === 'running' || phase === 'verifying' || phase === 'repairing'
-                ? 'animate-spin'
-                : undefined,
-            size: 15,
-            style: { color: meta.color },
-          })}
-          <div className="flex flex-col flex-1 gap-0.5">
-            <div className="flex items-center justify-between">
-              <div className="text-(length:--text-dense)">{phaseLabel(t, phase)}</div>
-              {!meta.settled && (
-                <div className="font-mono rounded bg-muted px-1 text-xs text-muted-foreground">
-                  {formatElapsed(now - new Date(pluginState.startedAt ?? Date.now()).getTime())}
-                </div>
-              )}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {meta.settled
-                ? t('builtins.orvilo-task.goal.settledHint')
-                : t('builtins.orvilo-task.goal.runningHint', {
-                    count: args?.criteria?.length ?? 0,
-                  })}
-            </div>
+        {createElement(meta.icon, {
+          className:
+            phase === 'running' || phase === 'verifying' || phase === 'repairing'
+              ? 'animate-spin'
+              : undefined,
+          size: 15,
+          style: { color: meta.color },
+        })}
+        <div className="flex flex-col flex-1 gap-0.5">
+          <div className="flex items-center justify-between">
+            <div className="text-(length:--text-dense)">{phaseLabel(t, phase)}</div>
+            {!meta.settled && (
+              <div className="font-mono rounded bg-muted px-1 text-xs text-muted-foreground">
+                {formatElapsed(now - new Date(pluginState.startedAt ?? Date.now()).getTime())}
+              </div>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {meta.settled
+              ? t('builtins.orvilo-task.goal.settledHint')
+              : t('builtins.orvilo-task.goal.runningHint', {
+                  count: args?.criteria?.length ?? 0,
+                })}
           </div>
         </div>
-      </TaskResultCard>
-    );
-  },
-);
+      </div>
+    </TaskResultCard>
+  );
+});
 
 CreateGoalRender.displayName = 'CreateGoalRender';
 

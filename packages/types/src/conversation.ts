@@ -248,10 +248,10 @@ export interface ConversationContext {
    */
   topicShareId?: string;
   /**
-   * Goal detail page the user is currently viewing. When set, streamingExecutor
-   * builds `RuntimeInitialContext.goalOverview` from the goal store snapshot.
+   * OrchestrationWorkflow detail page the user is currently viewing. When set, streamingExecutor
+   * builds `RuntimeInitialContext.orchestrationWorkflowOverview` from the orchestration workflow store snapshot.
    */
-  viewedGoal?: { goalId: string };
+  viewedOrchestrationWorkflow?: { orchestrationWorkflowId: string };
   /**
    * Task Manager page the user is currently viewing. When set, streamingExecutor
    * builds `RuntimeInitialContext.taskManager` from the task store.

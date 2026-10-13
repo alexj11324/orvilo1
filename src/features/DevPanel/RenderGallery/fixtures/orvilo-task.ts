@@ -33,9 +33,9 @@ const goalArgs = {
 };
 
 export default defineFixtures({
-  identifier: 'orvilo-goal',
+  identifier: 'orvilo-orchestration-workflow',
   fixtures: {
-    createGoal: variants([
+    startOrchestrationWorkflow: variants([
       {
         args: goalArgs,
         description: '完整的可编辑目标计划，用于 Intervention 状态。',

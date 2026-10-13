@@ -20,7 +20,7 @@
   `dispatchHeteroAgent` 写入 `agent_operations.metadata.toolSurface`，trace 可查。
 - **必需工具失败禁止执行**：`exclusivePluginIds`（必需面）若声明了内置工具
   而无一挂载成功，`resolveRunToolSurface` 直接抛错 —— 如验收证据收集
-  （`orvilo-acceptance-evidence`）、goal supervisor 这类「没有该工具
+  （`orvilo-acceptance-evidence`）、orchestration workflow supervisor 这类「没有该工具
   这次运行就无意义」的调用方不再降级跑空。
 - `disableTools` 整面关闭时 outcomes 为空数组（没产出任何请求处理）。
 - secret 不出边界：outcome 只含 identifier / 状态 / 原因，不携带凭据。

@@ -3,15 +3,15 @@ import {
   ACCEPTANCE_REVIEW_ERRORED_ERROR,
   AEGIS_EVIDENCE_REQUIRED_ERROR,
   VERIFICATION_UNJUDGEABLE_ERROR,
-} from '@orvilo/const/goal';
+} from '@orvilo/const/orchestrationWorkflow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { scheduleGoalAdvance } from '@/server/services/goal/scheduler';
+import { scheduleOrchestrationWorkflowAdvance } from '@/server/services/orchestrationWorkflow/scheduler';
 
-import { reviewGoalDelivery } from '../goalReview';
+import { reviewOrchestrationWorkflowDelivery } from '../orchestrationWorkflowReview';
 import { driveTaskFromVerify, finalizeVerifyRun } from '../settle';
 
-vi.mock('../goalReview', () => ({ reviewGoalDelivery: vi.fn() }));
+vi.mock('../orchestrationWorkflowReview', () => ({ reviewOrchestrationWorkflowDelivery: vi.fn() }));
 
 vi.mock('../repairService', () => ({
   maybeAutoRepair: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('../reporter', () => ({
 
 const {
   dispatchIsCurrentContract,
-  goalFindByTask,
+  orchestrationWorkflowFindByTask,
   runFindByOperation,
   runClaimTaskDrive,
   runCompleteTaskDrive,
@@ -52,7 +52,7 @@ const {
   topicFindByTopicId,
 } = vi.hoisted(() => ({
   dispatchIsCurrentContract: vi.fn(),
-  goalFindByTask: vi.fn(),
+  orchestrationWorkflowFindByTask: vi.fn(),
   briefCreate: vi.fn(),
   briefModelConstruct: vi.fn(),
   deliverMock: vi.fn(),
@@ -164,14 +164,14 @@ vi.mock('@/server/services/taskLifecycle', () => ({
 const db = {} as any;
 
 describe('driveTaskFromVerify', () => {
-  it('automatically sends a Goal delivery back when Acceptance review rejects a Verify pass', async () => {
+  it('automatically sends an Orchestration workflow delivery back when Acceptance review rejects a Verify pass', async () => {
     runFindByOperation.mockResolvedValue({
       id: 'run-1',
       acceptanceId: 'acceptance-1',
       status: 'passed',
     });
-    goalFindByTask.mockResolvedValue({ id: 'goal-1' });
-    vi.mocked(reviewGoalDelivery).mockResolvedValueOnce({
+    orchestrationWorkflowFindByTask.mockResolvedValue({ id: 'orchestration-workflow-1' });
+    vi.mocked(reviewOrchestrationWorkflowDelivery).mockResolvedValueOnce({
       status: 'rejected',
       feedback: 'Fix the table',
       predictionIds: ['p1'],
@@ -185,8 +185,11 @@ describe('driveTaskFromVerify', () => {
       expect.objectContaining({ error: 'Delivery did not pass verification.' }),
     );
     expect(deliverMock).toHaveBeenCalledWith(expect.objectContaining({ reason: 'error' }));
-    expect(scheduleGoalAdvance).toHaveBeenCalledWith(
-      expect.objectContaining({ goalId: 'goal-1', trigger: 'settle' }),
+    expect(scheduleOrchestrationWorkflowAdvance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orchestrationWorkflowId: 'orchestration-workflow-1',
+        trigger: 'settle',
+      }),
     );
   });
 
@@ -194,17 +197,17 @@ describe('driveTaskFromVerify', () => {
    * Regression: an undecidable criterion paused the Task with the "did not pass"
    * contract string, which the coordinator routes to another attempt. The
    * builder re-delivered the same artifacts against the same criterion twice and
-   * the attempt budget ran out. This string has no recovery branch, so the Goal
+   * the attempt budget ran out. This string has no recovery branch, so the OrchestrationWorkflow
    * stops on a person instead.
    */
-  it('parks an undecidable Goal delivery on a person instead of another attempt', async () => {
+  it('parks an undecidable Orchestration workflow delivery on a person instead of another attempt', async () => {
     runFindByOperation.mockResolvedValue({
       id: 'run-1',
       acceptanceId: 'acceptance-1',
       status: 'passed',
     });
-    goalFindByTask.mockResolvedValue({ id: 'goal-1' });
-    vi.mocked(reviewGoalDelivery).mockResolvedValueOnce({
+    orchestrationWorkflowFindByTask.mockResolvedValue({ id: 'orchestration-workflow-1' });
+    vi.mocked(reviewOrchestrationWorkflowDelivery).mockResolvedValueOnce({
       status: 'unjudgeable',
       feedback: 'The check asks the reviewer to rerun the scripts.',
       predictionIds: ['p1'],
@@ -238,7 +241,7 @@ describe('driveTaskFromVerify', () => {
       acceptanceId: 'acceptance-1',
       status: 'passed',
     });
-    vi.mocked(reviewGoalDelivery).mockResolvedValue({
+    vi.mocked(reviewOrchestrationWorkflowDelivery).mockResolvedValue({
       status: 'errored',
       feedback: 'Error while downloading file. Upstream status code: 407.',
       predictionIds: [],
@@ -248,7 +251,7 @@ describe('driveTaskFromVerify', () => {
 
     // The review retries its own errored checks; the settle path must not rerun
     // the whole review, which would re-ask checks that already rejected.
-    expect(reviewGoalDelivery).toHaveBeenCalledTimes(1);
+    expect(reviewOrchestrationWorkflowDelivery).toHaveBeenCalledTimes(1);
     expect(serviceUpdateStatus).not.toHaveBeenCalled();
     expect(taskUpdateStatusForExecutionContract).toHaveBeenCalledWith(
       'task-1',
@@ -268,13 +271,13 @@ describe('driveTaskFromVerify', () => {
     });
     runClaimTaskDrive.mockResolvedValue(false);
     await driveTaskFromVerify(db, 'u1', 'op-1');
-    expect(reviewGoalDelivery).not.toHaveBeenCalled();
+    expect(reviewOrchestrationWorkflowDelivery).not.toHaveBeenCalled();
   });
 
   beforeEach(() => {
-    vi.mocked(reviewGoalDelivery).mockReset();
-    vi.mocked(scheduleGoalAdvance).mockClear();
-    goalFindByTask.mockReset();
+    vi.mocked(reviewOrchestrationWorkflowDelivery).mockReset();
+    vi.mocked(scheduleOrchestrationWorkflowAdvance).mockClear();
+    orchestrationWorkflowFindByTask.mockReset();
     [
       runClaimTaskDrive,
       dispatchIsCurrentContract,
@@ -860,7 +863,7 @@ describe('driveTaskFromVerify', () => {
             {
               content: JSON.stringify({
                 confidence: 'C',
-                goalClosure: 'done',
+                orchestrationWorkflowClosure: 'done',
                 schema: 'orvilo.aegis-closeout.v0',
               }),
               path: '.aegis/closeout.json',
@@ -894,8 +897,10 @@ describe('driveTaskFromVerify', () => {
             {
               content: JSON.stringify({
                 confidence: 'B',
-                evidence: [{ action: 'edits', covered: 'goal', result: 'verified' }],
-                goalClosure: 'done',
+                evidence: [
+                  { action: 'edits', covered: 'orchestrationWorkflow', result: 'verified' },
+                ],
+                orchestrationWorkflowClosure: 'done',
                 schema: 'orvilo.aegis-closeout.v0',
               }),
               path: '.aegis/closeout.json',
@@ -919,9 +924,11 @@ describe('driveTaskFromVerify', () => {
   });
 });
 
-vi.mock('@/server/services/goal/scheduler', () => ({ scheduleGoalAdvance: vi.fn() }));
-vi.mock('@/database/models/goal', () => ({
-  GoalModel: vi.fn(function () {
-    return { findByGraphTask: goalFindByTask };
+vi.mock('@/server/services/orchestrationWorkflow/scheduler', () => ({
+  scheduleOrchestrationWorkflowAdvance: vi.fn(),
+}));
+vi.mock('@/database/models/orchestrationWorkflow', () => ({
+  OrchestrationWorkflowModel: vi.fn(function () {
+    return { findByGraphTask: orchestrationWorkflowFindByTask };
   }),
 }));

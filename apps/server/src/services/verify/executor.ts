@@ -50,7 +50,7 @@ export interface VerifierAgentRunner {
     checkItem: VerifyCheckItem;
     /** Evidence the builder captured for this item — input to the verifier's judgment. */
     evidence?: JudgeEvidence[];
-    goal: string;
+    orchestrationWorkflow: string;
     operationId: string;
   }): Promise<{ verifierOperationId: string } | null>;
 }
@@ -60,9 +60,9 @@ export interface ExecuteVerifyParams {
   batchLlm?: boolean;
   /** The run's final output / artifacts, judged against the criteria. */
   deliverable: string;
-  goal: string;
   modelConfig: { model: string; provider: string };
   operationId: string;
+  orchestrationWorkflow: string;
   /** Runs agent checks and program checks without a native runner as verifier sub-agents. */
   runVerifierAgent?: VerifierAgentRunner;
   /**
@@ -382,7 +382,7 @@ export class VerifyExecutorService {
       const spawned = await params.runVerifierAgent({
         checkItem: item,
         evidence,
-        goal: params.goal,
+        orchestrationWorkflow: params.orchestrationWorkflow,
         operationId: params.operationId,
       });
 
@@ -454,7 +454,7 @@ export class VerifyExecutorService {
     );
     const chain = chainVerifyJudge({
       deliverable: params.deliverable,
-      goal: params.goal,
+      orchestrationWorkflow: params.orchestrationWorkflow,
       items: promptItems,
       mode: 'batch',
     });
@@ -533,7 +533,7 @@ export class VerifyExecutorService {
       : evidenceByItem.get(item.id);
     const chain = chainVerifyJudge({
       deliverable: params.deliverable,
-      goal: params.goal,
+      orchestrationWorkflow: params.orchestrationWorkflow,
       items: [
         {
           evidence: hydratedEvidence,

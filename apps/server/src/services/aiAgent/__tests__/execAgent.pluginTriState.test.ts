@@ -40,6 +40,7 @@ vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn(),
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       queryAgents: vi.fn().mockResolvedValue([]),
     };
   }),
@@ -190,11 +191,11 @@ describe('AiAgentService.execAgent - three-state plugin config (pinned/auto/disa
 
     await service.execAgent({
       agentId: 'agent-1',
-      exclusivePluginIds: ['orvilo-goal'],
+      exclusivePluginIds: ['orvilo-orchestration-workflow-supervisor'],
       prompt: 'Submit evidence',
     } as any);
 
-    expect(builtinSpecIds()).toEqual(['orvilo-goal']);
+    expect(builtinSpecIds()).toEqual(['orvilo-orchestration-workflow-supervisor']);
   });
 
   it('mounts nothing for non-builtin identifiers regardless of mode', async () => {

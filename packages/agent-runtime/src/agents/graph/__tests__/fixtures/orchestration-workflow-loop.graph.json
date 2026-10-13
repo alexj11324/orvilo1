@@ -1,0 +1,192 @@
+{
+  "description": "Plan, execute, and verify a request until the verifier marks it complete.",
+  "edges": [
+    {
+      "from": "__root__",
+      "to": "plan",
+      "instruction": "Read and search only. Convert the user request into concrete orchestration workflow requirements. Do not modify files.",
+      "input": {
+        "fields": [
+          {
+            "from": "__root__",
+            "field": "query"
+          }
+        ]
+      },
+      "output": {
+        "instruction": "Extract the planned orchestration workflows.",
+        "fields": [
+          {
+            "field": "orchestrationWorkflows"
+          }
+        ]
+      }
+    },
+    {
+      "from": "plan",
+      "to": "work",
+      "instruction": "Complete the planned orchestration workflows. Work through the provided orchestration workflows and summarize what changed.",
+      "input": {
+        "fields": [
+          {
+            "from": "plan",
+            "field": "orchestrationWorkflows"
+          }
+        ]
+      },
+      "output": {
+        "instruction": "Extract a concise work summary.",
+        "fields": [
+          {
+            "field": "summary"
+          }
+        ]
+      }
+    },
+    {
+      "from": "work",
+      "to": "verify",
+      "instruction": "Verify whether the work satisfies the planned orchestration workflows. Return fin=true only when all orchestration workflows are complete.",
+      "input": {
+        "fields": [
+          {
+            "from": "plan",
+            "field": "orchestrationWorkflows"
+          },
+          {
+            "from": "work",
+            "field": "summary"
+          }
+        ]
+      },
+      "output": {
+        "instruction": "Extract the verification review.",
+        "fields": [
+          {
+            "field": "review"
+          }
+        ]
+      }
+    },
+    {
+      "from": "verify",
+      "to": "work",
+      "condition": {
+        "type": "object",
+        "properties": {
+          "review": {
+            "type": "object",
+            "properties": {
+              "fin": {
+                "const": false
+              }
+            },
+            "required": ["fin"]
+          }
+        },
+        "required": ["review"]
+      },
+      "instruction": "Continue working on the unfinished orchestration workflows from the verifier review. Focus only on review.unfinish.",
+      "input": {
+        "fields": [
+          {
+            "from": "verify",
+            "field": "review"
+          },
+          {
+            "from": "work",
+            "field": "summary"
+          }
+        ]
+      },
+      "output": {
+        "instruction": "Extract the updated work summary.",
+        "fields": [
+          {
+            "field": "summary"
+          }
+        ]
+      },
+      "maxTraversals": 3
+    }
+  ],
+  "fields": {
+    "query": {
+      "desc": "Original user request.",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "orchestrationWorkflows": {
+      "desc": "Concrete orchestration workflows planned from the user request.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "desc": {
+              "type": "string"
+            }
+          },
+          "required": ["name", "desc"]
+        }
+      }
+    },
+    "summary": {
+      "desc": "Worker summary describing completed work and remaining risk.",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "review": {
+      "desc": "Verifier decision and unfinished orchestration workflows.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fin": {
+            "type": "boolean"
+          },
+          "unfinish": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "desc": {
+                  "type": "string"
+                }
+              },
+              "required": ["name", "desc"]
+            }
+          }
+        },
+        "required": ["fin", "unfinish"]
+      }
+    }
+  },
+  "maxInstructionCount": 64,
+  "name": "orchestration-workflow-loop",
+  "nodes": {
+    "plan": {
+      "type": "agent",
+      "allowedToolApiNames": ["read", "search"],
+      "maxAgentSteps": 8
+    },
+    "work": {
+      "type": "agent",
+      "maxAgentSteps": 24
+    },
+    "verify": {
+      "type": "llm"
+    }
+  },
+  "terminal": "verify"
+}

@@ -232,12 +232,6 @@ export interface RuntimeInitialContext {
    */
   activeTopicDocument?: RuntimeActiveTopicDocumentContext;
   /**
-   * Goal progress overview, built from the goal detail page the user is
-   * currently viewing. Injected into the last user message so the LLM can
-   * answer progress questions about the goal without extra tool calls.
-   */
-  goalOverview?: InitialGoalOverviewContext;
-  /**
    * Ad-hoc tool manifests injected by callers for the current request.
    * Merged into the tool resolution output without passing through ToolsEngine.
    * Deduplication: manifests whose identifier already appears in enabledToolIds are skipped.
@@ -249,6 +243,12 @@ export interface RuntimeInitialContext {
    * supervisor and can delegate to the mentioned agents via callAgent.
    */
   mentionedAgents?: RuntimeMentionedAgent[];
+  /**
+   * OrchestrationWorkflow progress overview, built from the orchestration workflow detail page the user is
+   * currently viewing. Injected into the last user message so the LLM can
+   * answer progress questions about the orchestration workflow without extra tool calls.
+   */
+  orchestrationWorkflowOverview?: InitialOrchestrationWorkflowOverviewContext;
   /**
    * Initial Page Editor context
    * Contains markdown content and metadata captured at operation start
@@ -277,7 +277,7 @@ export interface InitialTaskManagerContext {
   contextPrompt: string;
 }
 
-export interface GoalOverviewTaskItem {
+export interface OrchestrationWorkflowOverviewTaskItem {
   /** 1-based attempt count so far, when known. */
   attempts?: number;
   /** 1-based Task number as shown in the UI (#1, #2 …). */
@@ -286,22 +286,22 @@ export interface GoalOverviewTaskItem {
   title: string;
 }
 
-export interface GoalOverviewDecision {
+export interface OrchestrationWorkflowOverviewDecision {
   question: string;
 }
 
 /**
- * Structured snapshot of the goal the user is viewing. Producers (goal page /
+ * Structured snapshot of the orchestration workflow the user is viewing. Producers (orchestration workflow page /
  * server pipeline) pass the data; the context-engine injector owns turning it
  * into prompt text, so wording changes never touch the transports.
  */
-export interface InitialGoalOverviewContext {
+export interface InitialOrchestrationWorkflowOverviewContext {
   findings: string[];
-  goal: {
+  orchestrationWorkflow: {
     requirement?: string | null;
     status: string;
     title: string;
   };
-  pendingDecisions: GoalOverviewDecision[];
-  tasks: GoalOverviewTaskItem[];
+  pendingDecisions: OrchestrationWorkflowOverviewDecision[];
+  tasks: OrchestrationWorkflowOverviewTaskItem[];
 }

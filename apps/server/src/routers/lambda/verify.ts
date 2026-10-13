@@ -42,7 +42,7 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
 import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { FileService } from '@/server/services/file';
-import { GoalCriteriaGeneratorService } from '@/server/services/goal/criteriaGenerator';
+import { OrchestrationWorkflowCriteriaGeneratorService } from '@/server/services/orchestrationWorkflow/criteriaGenerator';
 import {
   AcceptanceService,
   createEvidenceFileResolver,
@@ -214,12 +214,12 @@ const withScenarioContext = <T extends { context?: unknown; scenario?: VerifyRun
 const runMetadataSchema = z.record(z.string(), z.unknown());
 
 const updateRunInputSchema = verifyRunIdInputSchema.extend({
-  // Every field optional — a re-ingest may refresh only the context/goal while
+  // Every field optional — a re-ingest may refresh only the contextstartOrchestrationWorkflow while
   // keeping the original title, so nothing here is required.
   value: withScenarioContext(
     z.object({
       context: z.unknown().optional(),
-      goal: z.string().optional(),
+      orchestrationWorkflow: z.string().optional(),
       metadata: runMetadataSchema.optional(),
       plan: z.array(checkItemSchema).optional(),
       scenario: scenarioSchema.optional(),
@@ -265,7 +265,7 @@ const verifyProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
       executorService: new VerifyExecutorService(ctx.serverDB, ctx.userId, workspaceId),
       tracingModel: new LlmGenerationTracingModel(ctx.serverDB, ctx.userId, workspaceId),
       feedbackService: new VerifyFeedbackService(ctx.serverDB, ctx.userId, workspaceId),
-      goalCriteriaGenerator: new GoalCriteriaGeneratorService(
+      orchestrationWorkflowCriteriaGenerator: new OrchestrationWorkflowCriteriaGeneratorService(
         ctx.serverDB,
         ctx.userId,
         workspaceId,
@@ -355,7 +355,7 @@ export const verifyRouter = router({
     .mutation(async ({ ctx, input }) => ctx.criterionModel.forkRubricCriteria(input.ids)),
 
   /**
-   * Resolve a specific criteria id list (e.g. the ones bound to a goal), in
+   * Resolve a specific criteria id list (e.g. the ones bound to a orchestration workflow), in
    * input order. Each row carries `instruction` resolved from its linked
    * document — the judge rule must be inspectable and editable where the
    * criteria are shown, not an invisible value edits would silently replace.
@@ -512,7 +512,7 @@ export const verifyRouter = router({
       z.object({
         context: z.string().optional(),
         enableAiGeneration: z.boolean().optional(),
-        goal: z.string(),
+        orchestrationWorkflow: z.string(),
         maxAiCriteria: z.number().optional(),
         modelConfig: modelConfigSchema.optional(),
         operationId: z.string(),
@@ -530,14 +530,14 @@ export const verifyRouter = router({
 
   /**
    * Config-time: turn a one-sentence acceptance requirement into proposed
-   * criteria for the user to review/edit. Traced (TRACING_SCENARIOS.GoalCriteriaGen),
+   * criteria for the user to review/edit. Traced (TRACING_SCENARIOS.OrchestrationWorkflowCriteriaGen),
    * returns drafts only — nothing persisted, no operation needed.
    */
   generateCriteria: verifyWriteProcedure
     .input(
       z.object({
         context: z.string().optional(),
-        goal: z.string().min(1),
+        orchestrationWorkflow: z.string().min(1),
         maxCriteria: z.number().int().min(1).max(8).optional(),
         modelConfig: modelConfigSchema,
       }),
@@ -574,19 +574,19 @@ export const verifyRouter = router({
       }
     }),
 
-  /** Draft the standing acceptance contract for the create-goal flow. */
-  generateGoalCriteria: verifyWriteProcedure
+  /** Draft the standing acceptance contract for the create-orchestration workflow flow. */
+  generateOrchestrationWorkflowCriteria: verifyWriteProcedure
     .input(
       z.object({
         agentId: z.string().min(1).optional(),
         context: z.string().optional(),
-        goal: z.string().min(1),
+        orchestrationWorkflow: z.string().min(1),
         maxCriteria: z.number().int().min(1).max(8).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        return await ctx.goalCriteriaGenerator.generate(input);
+        return await ctx.orchestrationWorkflowCriteriaGenerator.generate(input);
       } catch (error) {
         // Missing ACP judgment binding is a precondition, not a 500: the user
         // must bind a judgment agent (or the operator must set one) first.
@@ -614,19 +614,19 @@ export const verifyRouter = router({
       }
     }),
 
-  /** Draft the generated goal title, instruction, and standing acceptance contract. */
-  generateGoalPlan: verifyWriteProcedure
+  /** Draft the generated orchestration workflow title, instruction, and standing acceptance contract. */
+  generateOrchestrationWorkflowPlan: verifyWriteProcedure
     .input(
       z.object({
         agentId: z.string().min(1).optional(),
         context: z.string().optional(),
-        goal: z.string().min(1),
+        orchestrationWorkflow: z.string().min(1),
         maxCriteria: z.number().int().min(1).max(8).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        return await ctx.goalCriteriaGenerator.generatePlan(input);
+        return await ctx.orchestrationWorkflowCriteriaGenerator.generatePlan(input);
       } catch (error) {
         // Missing ACP judgment binding is a precondition, not a 500: the user
         // must bind a judgment agent (or the operator must set one) first.
@@ -727,7 +727,7 @@ export const verifyRouter = router({
       z.object({
         batchLlm: z.boolean().optional(),
         deliverable: z.string(),
-        goal: z.string(),
+        orchestrationWorkflow: z.string(),
         modelConfig: modelConfigSchema,
         operationId: z.string(),
       }),
@@ -751,7 +751,7 @@ export const verifyRouter = router({
         {
           report: {
             deliverable: input.deliverable,
-            goal: input.goal,
+            orchestrationWorkflow: input.orchestrationWorkflow,
             modelConfig: input.modelConfig,
           },
         },
@@ -787,7 +787,7 @@ export const verifyRouter = router({
         z.object({
           // The active scenario's context, rendered as the report's scope header.
           context: z.unknown().optional(),
-          goal: z.string().optional(),
+          orchestrationWorkflow: z.string().optional(),
           metadata: runMetadataSchema.optional(),
           operationId: z.string().optional(),
           // The checks the run set out to make, authored before it ran. Kept next
@@ -802,7 +802,7 @@ export const verifyRouter = router({
     .mutation(async ({ ctx, input }) =>
       ctx.runModel.create({
         context: input.context,
-        goal: input.goal,
+        orchestrationWorkflow: input.orchestrationWorkflow,
         metadata: input.metadata,
         operationId: input.operationId,
         plan: input.plan,
@@ -887,7 +887,7 @@ export const verifyRouter = router({
       run.id,
       omitUndefined({
         context: input.value.context,
-        goal: input.value.goal,
+        orchestrationWorkflow: input.value.orchestrationWorkflow,
         metadata: input.value.metadata,
         plan: input.value.plan,
         scenario: input.value.scenario,
@@ -1168,7 +1168,7 @@ export const verifyRouter = router({
     .input(
       z.object({
         deliverable: z.string(),
-        goal: z.string(),
+        orchestrationWorkflow: z.string(),
         modelConfig: modelConfigSchema,
         verifyRunId: z.string(),
       }),
@@ -1178,7 +1178,7 @@ export const verifyRouter = router({
       assertWorkspaceRowManageable(ctx, run.userId, 'verify run');
       return ctx.reporterService.generateReport({
         deliverable: input.deliverable,
-        goal: input.goal,
+        orchestrationWorkflow: input.orchestrationWorkflow,
         modelConfig: input.modelConfig,
         verifyRunId: run.id,
       });

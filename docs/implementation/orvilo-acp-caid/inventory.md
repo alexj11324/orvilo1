@@ -163,7 +163,7 @@
 
 ## Q. CAID 复用锚点（存在性已核对，P11–P16 复用不新建）
 
-`services/goal/**`（manager/supervisor/policy/advanceGoal/decideNextMove/explorationPlanner）、`taskRunner/**`（buildTaskPrompt/idempotency/scheduleTick/heartbeatTick/cascade/delegation）、`taskDispatch/index.ts`+`models/taskDispatch.ts`、`taskIntegration/index.ts`、`taskWorkspace/index.ts`、`taskLifecycle/**`、`taskDispatchRecovery`、`verify/**`（67 文件门控）、`hatchet/workflowTasks.ts`。
+`services/orchestrationWorkflow/**`（manager/supervisor/policy/advanceOrchestration workflow/decideNextMove/explorationPlanner）、`taskRunner/**`（buildTaskPrompt/idempotency/scheduleTick/heartbeatTick/cascade/delegation）、`taskDispatch/index.ts`+`models/taskDispatch.ts`、`taskIntegration/index.ts`、`taskWorkspace/index.ts`、`taskLifecycle/**`、`taskDispatchRecovery`、`verify/**`（67 文件门控）、`hatchet/workflowTasks.ts`。
 
 **禁止**：新建 `workflow_tasks` 平行真相、绕开 `TaskDispatchModel` 的第二派发器、内存 Promise.all 式异步。
 

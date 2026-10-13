@@ -59,7 +59,7 @@ The completion contract the contract text requires from the agent:
 {
   "schema": "orvilo.aegis-closeout.v0",
   "confidence": "A | B | C", // A = evidence + regression; B = bounded residual; C = partial
-  "goalClosure": "done | blocked | needs-verification | scope-exceeded",
+  "orchestrationWorkflowClosure": "done | blocked | needs-verification | scope-exceeded",
   "summary": "what was delivered and how it was verified",
   "evidence": [
     { "action": "...", "result": "...", "covered": "...", "uncovered": "...", "residual": "..." },
@@ -91,9 +91,9 @@ Two consumers in `apps/server/src/services/verify/`:
   gate consulted by `driveTaskFromVerify` (settle.ts). When a run **passed**
   verify on an Aegis-enabled operation but the closeout is missing,
   unparseable, reports `confidence: 'C'`, or reports
-  `goalClosure !== 'done'`, the outcome downgrades to
+  `orchestrationWorkflowClosure !== 'done'`, the outcome downgrades to
   `aegis_evidence_required` and the task pauses with
-  `AEGIS_EVIDENCE_REQUIRED_ERROR` — which deliberately has no Goal recovery
+  `AEGIS_EVIDENCE_REQUIRED_ERROR` — which deliberately has no Orchestration workflow recovery
   branch, so it lands on the human decision gate.
 
 The semantics, precisely: Aegis can **withhold auto-accept**, never pass or

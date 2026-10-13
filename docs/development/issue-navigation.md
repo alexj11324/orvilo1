@@ -18,24 +18,24 @@ Issues · Inbox · My issues · Agent · Groups · Drafts · Workspace · Favori
 
 The sidebar and its header expose no creation control.
 
-| Removed entry point                                                   | Where creation lives now                   |
-| --------------------------------------------------------------------- | ------------------------------------------ |
-| Header new-issue icon, sidebar `+` row                                | Issues board (page-owned Create Issue)     |
-| Sidebar Agent create button and Agent/Group/category create menus     | Agents page                                |
-| Agent sidebar New topic row and per-project new-topic actions         | Command palette "new conversation"         |
-| Desktop File menu New Agent / New Group items (macOS, Windows, Linux) | Agents page and Groups page                |
-| Command palette new Agent / group chat / goal, slash-menu goal action | Owning pages                               |
-| Settings → Agents "New Agent" button                                  | Agents page                                |
-| Resource sidebar new-library and new-folder shortcuts                 | Library page                               |
-| Chat input "create Agent" entries                                     | Select an existing Agent; create in Agents |
+| Removed entry point                                                                                       | Where creation lives now                   |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Header new-issue icon, sidebar `+` row                                                                    | Issues board (page-owned Create Issue)     |
+| Sidebar Agent create button and Agent/Group/category create menus                                         | Agents page                                |
+| Agent sidebar New topic row and per-project new-topic actions                                             | Command palette "new conversation"         |
+| Desktop File menu New Agent / New Group items (macOS, Windows, Linux)                                     | Agents page and Groups page                |
+| Command palette new Agent / group chat / orchestration workflow, slash-menu orchestration workflow action | Owning pages                               |
+| Settings → Agents "New Agent" button                                                                      | Agents page                                |
+| Resource sidebar new-library and new-folder shortcuts                                                     | Library page                               |
+| Chat input "create Agent" entries                                                                         | Select an existing Agent; create in Agents |
 
 The Create Issue hotkey still works: it navigates to `/tasks` first and then opens the same page-owned modal.
 
 `/group` with no groups keeps one action, **New group chat**, which opens the existing group chat modal directly. The "generate from a description" shortcut went away together with the builder-driven `sendAsGroup` store action.
 
-## Goals
+## Orchestration workflows
 
-Application-owned goal creation is hidden from every UI entry point: the create row, the command palette, the inline Issue composer's "switch to goal" action, the Goals page header and empty state, and the slash-action menu. Native ACP goal capabilities, the goal services and persisted goal records are untouched; the Goals page still lists records and its empty state says that goals created by an Agent appear there.
+Application-owned orchestration workflow creation is hidden from every UI entry point: the create row, the command palette, the inline Issue composer's "switch to orchestration workflow" action, the Orchestration workflows page header and empty state, and the slash-action menu. Native ACP orchestration workflow capabilities, the orchestration workflow services and persisted orchestration workflow records are untouched; the Orchestration workflows page still lists records and its empty state says that orchestration workflows created by an Agent appear there.
 
 ## Hotkeys
 

@@ -5,17 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestDB } from '@/database/core/getTestDB';
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { BriefModel } from '@/database/models/brief';
-import { GoalModel } from '@/database/models/goal';
-import { GoalGraphModel } from '@/database/models/goalGraph';
+import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
+import { OrchestrationWorkflowGraphModel } from '@/database/models/orchestrationWorkflowGraph';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import {
   acceptances,
-  goalEdges,
-  goalEvents,
-  goalNodes,
-  goals,
+  orchestrationWorkflowEdges,
+  orchestrationWorkflowEvents,
+  orchestrationWorkflowNodes,
+  orchestrationWorkflows,
   taskDependencies,
   taskDispatches,
   tasks,
@@ -28,10 +28,10 @@ import {
 
 import { buildTaskPrompt } from './buildTaskPrompt';
 
-const workspaceId = 'goal-work-prompt-test-workspace';
+const workspaceId = 'orchestration-workflow-work-prompt-test-workspace';
 
 const db = await getTestDB();
-const userId = 'goal-work-prompt-test-user';
+const userId = 'orchestration-workflow-work-prompt-test-user';
 
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
@@ -50,10 +50,10 @@ beforeEach(async () => {
 afterEach(async () => {
   vi.restoreAllMocks();
   await db.delete(acceptances);
-  await db.delete(goalEdges);
-  await db.delete(goalEvents);
-  await db.delete(goalNodes);
-  await db.delete(goals);
+  await db.delete(orchestrationWorkflowEdges);
+  await db.delete(orchestrationWorkflowEvents);
+  await db.delete(orchestrationWorkflowNodes);
+  await db.delete(orchestrationWorkflows);
   await db.delete(taskDependencies);
   await db.delete(taskDispatches);
   await db.delete(taskTopics);
@@ -63,25 +63,25 @@ afterEach(async () => {
   await db.delete(workspaces);
 });
 
-describe('buildTaskPrompt Goal loop context', () => {
-  it('uses the per-Task attempt budget for a Goal Graph Task', async () => {
+describe('buildTaskPrompt Orchestration workflow loop context', () => {
+  it('uses the per-Task attempt budget for an Orchestration workflow Graph Task', async () => {
     const taskModel = new TaskModel(db, userId);
     const task = await taskModel.create({
       instruction: 'Close the remaining acceptance gap.',
     });
     await taskModel.update(task.id, { totalTopics: 1 });
-    const goal = await new GoalModel(db, userId).create({
+    const orchestrationWorkflow = await new OrchestrationWorkflowModel(db, userId).create({
       config: { recovery: { maxAttemptsPerTask: 2 } },
       maxRounds: 20,
       subjectType: 'standalone',
       title: 'Graph-managed work budget',
     });
-    const graphModel = new GoalGraphModel(db, userId);
-    const taskNode = await graphModel.createNode(goal.id, {
+    const graphModel = new OrchestrationWorkflowGraphModel(db, userId);
+    const taskNode = await graphModel.createNode(orchestrationWorkflow.id, {
       kind: 'task',
       title: 'Close acceptance gap',
     });
-    await graphModel.bindTask(goal.id, taskNode!.id, task.id);
+    await graphModel.bindTask(orchestrationWorkflow.id, taskNode!.id, task.id);
     const acceptance = await new AcceptanceModel(db, userId).create({
       subjectType: 'task',
       subjectId: task.id,
@@ -90,7 +90,7 @@ describe('buildTaskPrompt Goal loop context', () => {
       acceptanceId: acceptance.id,
       roundIndex: 1,
       metadata: {
-        goalReview: {
+        orchestrationWorkflowReview: {
           status: 'rejected',
           predictionIds: ['prediction-1'],
           feedback:
@@ -112,7 +112,7 @@ describe('buildTaskPrompt Goal loop context', () => {
     expect(result.prompt).toContain('Review feedback on the last delivery');
     expect(result.prompt).not.toContain('User feedback on the last delivery');
     expect(result.prompt).toContain('Restore the table and submit fresh evidence.');
-    expect(result.prompt).toContain('Goal loop — round 2 of 2');
+    expect(result.prompt).toContain('Orchestration workflow loop — round 2 of 2');
     expect(result.prompt).not.toContain('round 2 of 20');
   });
 });

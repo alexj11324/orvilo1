@@ -21,8 +21,6 @@ export {
   ExpertiseContextInjector,
 } from './ExpertiseContextInjector';
 export { ForceFinishSummaryInjector } from './ForceFinishSummaryInjector';
-export type { GoalContextSyntheticInjectorConfig } from './GoalContextSyntheticInjector';
-export { GoalContextSyntheticInjector } from './GoalContextSyntheticInjector';
 export { GroupAgentBuilderContextInjector } from './GroupAgentBuilderContextInjector';
 export { GroupContextInjector } from './GroupContextInjector';
 export { HistorySummaryProvider } from './HistorySummary';
@@ -32,6 +30,8 @@ export { ModelInfoProvider } from './ModelInfoProvider';
 export { OnboardingActionHintInjector } from './OnboardingActionHintInjector';
 export { OnboardingContextInjector } from './OnboardingContextInjector';
 export { OnboardingSyntheticStateInjector } from './OnboardingSyntheticStateInjector';
+export type { OrchestrationWorkflowContextSyntheticInjectorConfig } from './OrchestrationWorkflowContextSyntheticInjector';
+export { OrchestrationWorkflowContextSyntheticInjector } from './OrchestrationWorkflowContextSyntheticInjector';
 export { PageEditorContextInjector } from './PageEditorContextInjector';
 export { PageSelectionsInjector } from './PageSelectionsInjector';
 export { PlanInjector } from './PlanInjector';

@@ -76,7 +76,7 @@ describe('generateDraftPlan — holistic fallback', () => {
   it('synthesizes one agent-type holistic check from the requirement when no criteria', async () => {
     const svc = new VerifyPlanGeneratorService(db, 'user-1');
     await svc.generateDraftPlan({
-      goal: 'do the thing',
+      orchestrationWorkflow: 'do the thing',
       holisticFallback: true,
       operationId: 'op-1',
       requirement: 'The UI shows the new badge',
@@ -92,10 +92,10 @@ describe('generateDraftPlan — holistic fallback', () => {
     });
   });
 
-  it('falls back to the goal when no requirement', async () => {
+  it('falls back to the orchestration workflow when no requirement', async () => {
     const svc = new VerifyPlanGeneratorService(db, 'user-1');
     await svc.generateDraftPlan({
-      goal: 'fix the bug',
+      orchestrationWorkflow: 'fix the bug',
       holisticFallback: true,
       operationId: 'op-1',
     });
@@ -104,7 +104,11 @@ describe('generateDraftPlan — holistic fallback', () => {
 
   it('does NOT synthesize when holisticFallback is off — empty plan stays empty', async () => {
     const svc = new VerifyPlanGeneratorService(db, 'user-1');
-    await svc.generateDraftPlan({ goal: 'x', holisticFallback: false, operationId: 'op-1' });
+    await svc.generateDraftPlan({
+      orchestrationWorkflow: 'x',
+      holisticFallback: false,
+      operationId: 'op-1',
+    });
     expect(lastPlan()).toHaveLength(0);
   });
 
@@ -123,7 +127,7 @@ describe('generateDraftPlan — holistic fallback', () => {
     ]);
     const svc = new VerifyPlanGeneratorService(db, 'user-1');
     await svc.generateDraftPlan({
-      goal: 'x',
+      orchestrationWorkflow: 'x',
       holisticFallback: true,
       operationId: 'op-1',
       verifyRubricId: 'rub-1',
@@ -151,7 +155,7 @@ describe('generateDraftPlan — holistic fallback', () => {
     ]);
 
     await new VerifyPlanGeneratorService(db, 'user-1').generateDraftPlan({
-      goal: 'x',
+      orchestrationWorkflow: 'x',
       operationId: 'op-1',
       verifyRubricId: 'rub-1',
     });
@@ -167,7 +171,7 @@ describe('generateCriteria tracing', () => {
     generateObjectMock.mockResolvedValue({ criteria: [] });
 
     await new VerifyPlanGeneratorService(db, 'user-1').generateCriteria({
-      goal: 'Ship the feature',
+      orchestrationWorkflow: 'Ship the feature',
       modelConfig: { model: 'test-model', provider: 'test-provider' },
     });
 

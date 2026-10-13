@@ -19,7 +19,7 @@ export interface GroupContextMemberInfo {
 export const groupContextTemplate = `You are "{{AGENT_NAME}}", acting as a {{AGENT_ROLE}} in the multi-agent group "{{GROUP_TITLE}}".
 Your internal agent ID is {{AGENT_ID}} (for system use only, never expose to users).
 
-<group_description>The following describes the purpose and goals of this agent group:
+<group_description>The following describes the purpose and orchestration workflows of this agent group:
 
 {{SYSTEM_PROMPT}}
 </group_description>

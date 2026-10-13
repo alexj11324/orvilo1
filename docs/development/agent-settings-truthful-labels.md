@@ -4,7 +4,7 @@ Front-end copy fixes found by the execution-chain settings audit. No server, sch
 
 ## Changed
 
-- Service model `systemAgent.goal`: "Goal Creation" -> "Planning & acceptance" (zh-CN 规划与验收), with a description row. The model resolved by `resolveGoalModelConfig` drives acceptance-criteria drafting (`services/goal/criteriaGenerator.ts`), exploration planning (`services/goal/explorationPlanner.ts`), task intent analysis (`services/task/intent.ts`), and is the last fallback reviewer in `services/verify/goalReviewModelConfig.ts`.
+- Service model `systemAgent.orchestration workflow`: "Orchestration workflow Creation" -> "Planning & acceptance" (zh-CN 规划与验收), with a description row. The model resolved by `resolveOrchestrationWorkflowModelConfig` drives acceptance-criteria drafting (`services/orchestrationWorkflow/criteriaGenerator.ts`), exploration planning (`services/orchestrationWorkflow/explorationPlanner.ts`), task intent analysis (`services/task/intent.ts`), and is the last fallback reviewer in `services/verify/orchestrationWorkflowReviewModelConfig.ts`.
 - Agent detail, read-only "Agent" row -> "Runtime" (zh-CN 运行时); the unused duplicate `legacyLabel` key is removed.
 - Access policies: "Model" / "Device switching" -> "Member model switching" / "Member device switching" (zh-CN 成员切换模型 / 成员切换设备). The options are "Can switch / Locked", so the label names the policy being chosen.
 - The "Advanced" fold is gone. The diagnostics link is not on the settings page either: it led to usage statistics, which do not help configure an Agent. The Agent profile page still shows it.
@@ -18,7 +18,7 @@ Front-end copy fixes found by the execution-chain settings audit. No server, sch
 
 ## Backend follow-ups
 
-- Make "planning & acceptance" follow the assigned agent's model: `resolveGoalModelConfig` (`apps/server/src/services/goal/modelConfig.ts`) takes only `(db, userId)` and reads `systemAgent.goal`. Its callers (`criteriaGenerator` x2, `explorationPlanner`, `task/intent` x2) would need an agent/task id and to resolve through `AgentModel.getAgentModelConfig` first, as `resolveGoalReviewModelConfig` already does.
+- Make "planning & acceptance" follow the assigned agent's model: `resolveOrchestrationWorkflowModelConfig` (`apps/server/src/services/orchestrationWorkflow/modelConfig.ts`) takes only `(db, userId)` and reads `systemAgent.orchestration workflow`. Its callers (`criteriaGenerator` x2, `explorationPlanner`, `task/intent` x2) would need an agent/task id and to resolve through `AgentModel.getAgentModelConfig` first, as `resolveOrchestrationWorkflowReviewModelConfig` already does.
 - Make "agent self-evolution" (`systemAgent.expertise`) do the same: the resolver is `resolveExpertiseModelConfig` (`services/expertise/modelConfig.ts`), called from `services/expertise/ingestion.ts:275` and `domain.ts:89`; both would need the owning agent id and a per-agent model lookup before the global row.
 
 ## Model names come from the CLI

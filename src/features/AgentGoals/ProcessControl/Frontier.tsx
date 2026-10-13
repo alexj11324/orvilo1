@@ -1,6 +1,6 @@
 'use client';
 
-import type { AcceptanceStatus, GoalDecisionOption } from '@orvilo/types';
+import type { AcceptanceStatus, OrchestrationWorkflowDecisionOption } from '@orvilo/types';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { createElement, Fragment, memo, useState } from 'react';
@@ -71,7 +71,7 @@ interface FrontierProps {
 /** Server option ids are stable; their labels are English strings from the coordinator. */
 const useOptionLabel = () => {
   const { t } = useTranslation('chat');
-  return (option: GoalDecisionOption) => {
+  return (option: OrchestrationWorkflowDecisionOption) => {
     switch (option.id) {
       case 'fail': {
         return t('goalProcess.gate.option.fail');
@@ -445,7 +445,7 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelec
   const numbers = new Map(
     graph.nodes.filter((view) => view.seq !== undefined).map((view) => [view.node.id, view.seq!]),
   );
-  const achieved = graph.goal.status === 'achieved';
+  const achieved = graph.orchestrationWorkflow.status === 'achieved';
 
   return (
     <div className="flex flex-col gap-2">

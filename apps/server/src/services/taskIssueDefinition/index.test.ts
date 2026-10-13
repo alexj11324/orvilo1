@@ -343,7 +343,7 @@ describe('TaskIssueDefinitionService', () => {
     await seedPrimeRuntime(db, { userId, workspaceId });
     const source = await model.create({
       name: 'Large issue',
-      instruction: 'Project goal',
+      instruction: 'Project orchestration workflow',
       workflowCategory: 'todo',
     });
     const child = await model.create({
@@ -359,7 +359,13 @@ describe('TaskIssueDefinitionService', () => {
       issueName: 'Converted from issue',
     });
     expect(await db.select().from(projects).where(eq(projects.id, result.projectId))).toMatchObject(
-      [{ name: 'Converted project', description: 'Project goal', status: 'backlog' }],
+      [
+        {
+          name: 'Converted project',
+          description: 'Project orchestration workflow',
+          status: 'backlog',
+        },
+      ],
     );
     expect(await model.findByIds([source.id, child.id])).toEqual(
       expect.arrayContaining([

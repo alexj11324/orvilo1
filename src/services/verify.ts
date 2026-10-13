@@ -26,7 +26,9 @@ import type {
 import { lambdaClient } from '@/libs/trpc/client';
 
 /** Criterion row plus the judge instruction resolved from its linked document. */
-export type GoalCriterionWithInstruction = VerifyCriterionItem & { instruction?: string };
+export type GoalCriterionWithInstruction = VerifyCriterionItem & {
+  instruction?: string;
+};
 
 export type AcceptanceBundle = Awaited<ReturnType<typeof lambdaClient.acceptance.getBundle.query>>;
 export type AcceptanceBySubject = Awaited<
@@ -148,10 +150,10 @@ export interface VerifyReportSummaryPage {
 export interface GenerateDraftPlanInput {
   context?: string;
   enableAiGeneration?: boolean;
-  goal: string;
   maxAiCriteria?: number;
   modelConfig?: { model: string; provider: string };
   operationId: string;
+  orchestrationWorkflow: string;
   verifyCriteriaIds?: string[];
   verifyRubricId?: string | null;
 }
@@ -181,7 +183,12 @@ export class VerifyService {
     subjectType: AcceptanceSubjectType,
     subjectId: string,
     requirement: string,
-  ) => lambdaClient.acceptance.saveGoal.mutate({ requirement, subjectId, subjectType });
+  ) =>
+    lambdaClient.acceptance.saveOrchestrationWorkflow.mutate({
+      requirement,
+      subjectId,
+      subjectType,
+    });
 
   acceptDelivery = (id: string, comment?: string) =>
     lambdaClient.acceptance.accept.mutate({ comment, id });
@@ -331,7 +338,7 @@ export class VerifyService {
   executeVerify = (input: {
     batchLlm?: boolean;
     deliverable: string;
-    goal: string;
+    orchestrationWorkflow: string;
     modelConfig: { model: string; provider: string };
     operationId: string;
   }): Promise<VerifyCheckResultItem[]> =>
@@ -344,33 +351,35 @@ export class VerifyService {
   /** Turn a one-sentence requirement into proposed criteria (traced; not persisted). */
   generateCriteria = (input: {
     context?: string;
-    goal: string;
+    orchestrationWorkflow: string;
     maxCriteria?: number;
     modelConfig: { model: string; provider: string };
   }): Promise<VerifyCriterionDraft[]> =>
     lambdaClient.verify.generateCriteria.mutate(input) as Promise<VerifyCriterionDraft[]>;
 
   /** Draft the standing acceptance criteria used by the create-goal review step. */
-  generateGoalCriteria = (input: {
+  generateOrchestrationWorkflowCriteria = (input: {
     /** The agent chosen for the goal; ACP users get no draft without it. */
     agentId?: string;
     context?: string;
-    goal: string;
+    orchestrationWorkflow: string;
     maxCriteria?: number;
   }): Promise<VerifyCriterionDraft[]> =>
-    lambdaClient.verify.generateGoalCriteria.mutate(input) as Promise<VerifyCriterionDraft[]>;
+    lambdaClient.verify.generateOrchestrationWorkflowCriteria.mutate(input) as Promise<
+      VerifyCriterionDraft[]
+    >;
 
   /** Draft the title, instruction, and criteria used by the create-goal review step. */
-  generateGoalPlan = (input: {
+  generateOrchestrationWorkflowPlan = (input: {
     /** The agent chosen for the goal; ACP users get no draft without it. */
     agentId?: string;
     context?: string;
-    goal: string;
+    orchestrationWorkflow: string;
     maxCriteria?: number;
   }): Promise<
     { criteria: VerifyCriterionDraft[]; instruction: string; title: string } | undefined
   > =>
-    lambdaClient.verify.generateGoalPlan.mutate(input) as Promise<
+    lambdaClient.verify.generateOrchestrationWorkflowPlan.mutate(input) as Promise<
       { criteria: VerifyCriterionDraft[]; instruction: string; title: string } | undefined
     >;
 

@@ -105,7 +105,7 @@ Updated | row menu`, grouped Built-in / Mine / Shared with counts. Rows
   to stay out of the row's click-to-open path.
 - Project routes (`/project/*`) no longer swap the workspace nav panel:
   `resolveNavPanelKey` maps them to `home`, and `Projects/Layout` renders
-  the project section nav (home/tasks/resources/goals + project switcher +
+  the project section nav (home/tasks/resources/orchestration workflows + project switcher +
   favorite) as a fixed 208px in-page rail. The rail reuses `SideBarLayout`
   with an explicit `scrollKey="project"` so its scroll memory never
   collides with the workspace panel's (both would otherwise bucket under
@@ -141,8 +141,8 @@ inputDigest}` → one `operationId`. After an unknown result the next attempt
 ## v6 polish — Linear tab set, activity feed, attention grouping
 
 - Project tabs are exactly `Overview | Activity | Issues` (`TabsBar`):
-  goals/resources render as Overview sections and keep deep links under
-  `/project/:id/{goals,resources}`.
+  orchestration workflows/resources render as Overview sections and keep deep links under
+  `/project/:id/{orchestration workflows,resources}`.
 - `/project/:id/activity` streams `task_activities` for the project
   (`TaskModel.getProjectActivities`, `project.activityFeed`) — keyset
   pagination via `cursor`, parent tasks filtered through `TaskModel.ownership()`
@@ -152,7 +152,7 @@ inputDigest}` → one `operationId`. After an unknown result the next attempt
   `Projects/Layout` (`ProjectSidePanel`) so it persists across all three
   tabs — conversation/library sub-pages opt out via `PANEL_SECTIONS`, and
   below 960px the panel unmounts entirely (`usePanelViewport`) instead of
-  CSS-hiding a still-querying tree. Member/goal APIs take `project.id`
+  CSS-hiding a still-querying tree. Member/orchestration workflow APIs take `project.id`
   resolved from the detail record — the route param is often the slug.
 - `taskListViewMode` stays unset (`undefined`) until the user chooses;
   `AgentTasksPage` resolves the unset case to `list` inside a project

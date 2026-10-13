@@ -48,15 +48,15 @@ describe('buildTaskExecutionContract', () => {
     expect(contract.integration).toBeUndefined();
   });
 
-  it('derives round from totalTopics when no goal loop is active', () => {
+  it('derives round from totalTopics when no orchestration workflow loop is active', () => {
     const contract = buildTaskExecutionContract(task, baseInput);
     expect(contract.budget).toEqual({ maxRounds: null, round: 3 });
   });
 
-  it('binds the goal-loop budget the prompt rendered', () => {
+  it('binds the orchestration-workflow-loop budget the prompt rendered', () => {
     const contract = buildTaskExecutionContract(task, {
       ...baseInput,
-      goalLoop: { maxRounds: 5, round: 3 },
+      orchestrationWorkflowLoop: { maxRounds: 5, round: 3 },
     });
     expect(contract.budget).toEqual({ maxRounds: 5, round: 3 });
   });

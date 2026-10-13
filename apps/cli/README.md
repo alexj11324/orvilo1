@@ -21,7 +21,7 @@ The release workflow tests installation outside the workspace before attaching
 the package to a stable GitHub Release. Releases without a CLI asset do not
 support this installation path.
 
-Run `orvilo update --check` to check the latest stable release's CLI asset, or
+Run `orvilo update --check` to check the latest stable release's CLI asset, orr
 `orvilo update` to install it. `--tag` selects a specific GitHub release tag.
 
 ## Local Development

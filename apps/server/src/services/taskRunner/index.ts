@@ -405,7 +405,7 @@ export class TaskRunnerService {
           // trigger is a new orchestrated writer and must pass the gate.
           origin: internalSettlement
             ? 'internal'
-            : trigger === 'orchestrator' || trigger === 'goal'
+            : trigger === 'orchestrator' || trigger === 'orchestrationWorkflow'
               ? 'caid'
               : 'external',
           planRevision,
@@ -803,7 +803,7 @@ export class TaskRunnerService {
         acceptanceEnabled,
         contractContent,
         fileIds: attachmentFileIds,
-        goalLoop,
+        orchestrationWorkflowLoop,
         prompt: basePrompt,
       } = await buildTaskPrompt(
         task,
@@ -1017,7 +1017,7 @@ export class TaskRunnerService {
             ? (preparedDispatch!.dispatch.automationOccurrence ?? undefined)
             : priorContract?.occurrence,
         environment: environmentSnapshot,
-        goalLoop,
+        orchestrationWorkflowLoop,
         grantId: delegation?.grantId,
         integration: runIntegration,
         intent: runIntent,
@@ -1276,7 +1276,7 @@ export class TaskRunnerService {
         // than a throw (`startOperation`, `heteroDispatch`): the assistant
         // bubble already carries the error and the run's lifecycle hooks have
         // fired. Booking that dead operation as a running topic would leave
-        // the Task looking in flight — a goal coordinator would even record a
+        // the Task looking in flight — a orchestration workflow coordinator would even record a
         // `started_run` for it — with nothing left to ever settle it. Keep the
         // attempt visible as a failed run, then fail the kickoff like any other.
         await registerDispatchedAttempt();
@@ -1548,7 +1548,7 @@ export class TaskRunnerService {
           continue;
         }
         if (error instanceof TRPCError && error.cause instanceof TaskDispatchWaitingError) {
-          // The admission gate (or project/goal policy) held this dispatch —
+          // The admission gate (or projectstartOrchestrationWorkflow policy) held this dispatch —
           // the intent is persisted as `waiting`, the task stays claimable,
           // and nothing may be marked paused/failed for a policy hold.
           continue;

@@ -109,7 +109,7 @@ describe('VerifyExecutorService', () => {
 
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'story',
-      goal: 'write a story',
+      orchestrationWorkflow: 'write a story',
       modelConfig: { model: 'model', provider: 'provider' },
       operationId: 'builder-op-1',
       runVerifierAgent,
@@ -150,7 +150,7 @@ describe('VerifyExecutorService', () => {
 
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'document link',
-      goal: 'verify document',
+      orchestrationWorkflow: 'verify document',
       modelConfig: { model: 'model', provider: 'provider' },
       operationId: 'builder-op-doc',
       runVerifierAgent,
@@ -200,7 +200,7 @@ describe('VerifyExecutorService', () => {
 
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'stored transcript',
-      goal: 'verify the complete CLI output',
+      orchestrationWorkflow: 'verify the complete CLI output',
       modelConfig: { model: 'model', provider: 'provider' },
       operationId: 'builder-op-text',
       runVerifierAgent,
@@ -255,7 +255,7 @@ describe('VerifyExecutorService', () => {
 
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'supplier report',
-      goal: 'find supplier quotes',
+      orchestrationWorkflow: 'find supplier quotes',
       modelConfig: { model: 'model', provider: 'provider' },
       operationId: 'builder-op-doc',
     });
@@ -291,7 +291,7 @@ describe('VerifyExecutorService', () => {
 
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'done',
-      goal: 'ship',
+      orchestrationWorkflow: 'ship',
       modelConfig: { model: 'model', provider: 'provider' },
       operationId: 'op-1',
     });
@@ -340,7 +340,7 @@ describe('VerifyExecutorService', () => {
 
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'done',
-      goal: 'ship',
+      orchestrationWorkflow: 'ship',
       modelConfig: { model: 'vision-model', provider: 'provider' },
       operationId: 'op-1',
     });

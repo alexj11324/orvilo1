@@ -130,7 +130,7 @@ devices still listed.
 ## Agent sidebar nav
 
 `src/features/AgentSidebar/Header/Nav.tsx` carries the lobehub nav rows —
-新话题 / 搜索 / 助理档案 /self-learning+goals (labs-gated) / 任务 — with the
+新话题 / 搜索 / 助理档案 /self-learning+orchestration workflows (labs-gated) / 任务 — with the
 permission gate (`hideProfile` = not editable, or access not yet resolved, or
 no resource/content edit rights) restored. The profile entry pushes
 `/agent/:aid/profile`, whose route owns the Settings→Agents exile redirect

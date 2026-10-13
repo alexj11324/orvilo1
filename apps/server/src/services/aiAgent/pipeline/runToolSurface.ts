@@ -1,6 +1,7 @@
 import { builtinSkills } from '@orvilo/builtin-skills';
 import { AuvIdentifier } from '@orvilo/builtin-tool-auv';
 import { LocalSystemIdentifier } from '@orvilo/builtin-tool-local-system';
+import { OrchestrationWorkflowIdentifier } from '@orvilo/builtin-tool-orchestration-workflow';
 import { SELF_FEEDBACK_INTENT_IDENTIFIER } from '@orvilo/builtin-tool-self-iteration';
 import {
   builtinTools,
@@ -90,6 +91,8 @@ interface ResolveRunToolSurfaceInput {
   enableAgentMode?: boolean;
   exclusivePluginIds?: string[];
   externalTools?: Record<string, ExternalToolSurfaceEntry>;
+  /** Only a conversation with this scope's Orchestrator may start orchestration work. */
+  isOrchestratorConversation?: boolean;
   /**
    * Tool identifiers this run cannot start without — task-tool requirements,
    * exclusive surfaces and evidence tools all land here. Every id must resolve
@@ -189,6 +192,13 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
           ...(selectedToolIds ?? []),
         ]),
       ];
+  if (
+    input.isOrchestratorConversation &&
+    !allowed &&
+    !requested.includes(OrchestrationWorkflowIdentifier)
+  ) {
+    requested.push(OrchestrationWorkflowIdentifier);
+  }
 
   const disabled = new Set(getDisabledPluginIds(agentPlugins));
   const chatGate = enableAgentMode === false ? new Set(chatModeAllowedToolIds) : undefined;
@@ -200,6 +210,10 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
 
   for (const identifier of requested) {
     try {
+      if (identifier === OrchestrationWorkflowIdentifier && !input.isOrchestratorConversation) {
+        push({ identifier, kind: 'tool', reason: 'orchestrator-required', status: 'unauthorized' });
+        continue;
+      }
       if (disabled.has(identifier)) {
         push({
           identifier,

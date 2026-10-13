@@ -20,14 +20,14 @@
 **原则：CAID-only 灰度**。旧执行体系已不可执行（无回退目标），灰度只控制「新 CAID 编排面」的暴露。
 
 1. **阶段 0 — 金丝雀环境**：在内部 / 预览环境部署固定 SHA；用真实 ACP harness 跑验收矩阵 §2–§5 必需场景。
-2. **阶段 1 — CAID 限量**：允许 CAID Goal 创建；监控 dispatch/operation 错误率、verify 队列深度、integration 序列化冲突率。
+2. **阶段 1 — CAID 限量**：允许 CAID Orchestration workflow 创建；监控 dispatch/operation 错误率、verify 队列深度、integration 序列化冲突率。
 3. **阶段 2 — 全量**：矩阵全绿 + 灰度期无 P0 缺陷后放开。
 
 **失败处置（不清空、不回滚旧体系）**：
 
-- 停止新调度：暂停受影响 Goal（人类暂停语义 P16：`goal.pause`/stop fences，Manager/scheduler 无法推翻），或对 Goal 创建入口做权限收敛。
+- 停止新调度：暂停受影响 Orchestration workflow（人类暂停语义 P16：`orchestrationWorkflow.pause`/stop fences，Manager/scheduler 无法推翻），或对 Orchestration workflow 创建入口做权限收敛。
 - 已运行生命周期与交付保留：P10 的 server-persisted bridge（callback/result 落库）+ P16 bounded poll 保证已派发任务继续可结算 / 交付 —— 关调度不清空在途工作。
-- 已知限制：当前没有「CAID 调度总开关」feature flag；停止新调度走 goal 级 pause + 部署回滚（见 §3）。如灰度需求长期存在，另开工作项加 `caid_dispatch` flag（FeatureFlag schema 已支持 per-user 灰度）。
+- 已知限制：当前没有「CAID 调度总开关」feature flag；停止新调度走 orchestration workflow 级 pause + 部署回滚（见 §3）。如灰度需求长期存在，另开工作项加 `caid_dispatch` flag（FeatureFlag schema 已支持 per-user 灰度）。
 
 ## 3. 回滚
 
@@ -48,9 +48,9 @@
 
 **本机基线执行（2026-09-19，见 acceptance.md 各行证据列）**：
 
-- 栈：`postgres@17` (Homebrew) + Redis 8 + s3rver :29000 + Next :37620 + Vite :26570；pg\_search 迁移（0090/0093）按 marker 规则跳过 —— FTS 能力缺席，不覆盖依赖搜索的行。
+- 栈：`postgres@17` (Homebrew) + Redis 8 + s3rver :29000 + Next :37620 + Vite :26570；pg_search 迁移（0090/0093）按 marker 规则跳过 —— FTS 能力缺席，不覆盖依赖搜索的行。
 - 身份：seeded `agent-testing@orvilo.aspectlylabs.com`（better-auth session）/ `sk-ov-agenttesting0001`。
-- 关键 transcript：退役 OpenAPI 路径 404；退役 quota procedures `No procedure found`；`listAccounts`/`getWindows`/`getLatestReadings`/`listSnapshots` 存活；`startExecution` 对不存在 op 显式报错；`goal.create`→graph 持久化→`goal.advance`=`waiting_external`（非阻塞交棒）；dispatched operation 以 `No bound device for hetero agent` 显式落 error —— 无静默执行、无隐藏回退。
+- 关键 transcript：退役 OpenAPI 路径 404；退役 quota procedures `No procedure found`；`listAccounts`/`getWindows`/`getLatestReadings`/`listSnapshots` 存活；`startExecution` 对不存在 op 显式报错；`orchestrationWorkflow.create`→graph 持久化→`orchestrationWorkflow.advance`=`waiting_external`（非阻塞交棒）；dispatched operation 以 `No bound device for hetero agent` 显式落 error —— 无静默执行、无隐藏回退。
 
 ## 5. 剩余 BLOCKED 环境清单（Q0 前必须补齐）
 

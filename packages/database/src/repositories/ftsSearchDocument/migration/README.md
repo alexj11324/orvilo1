@@ -12,7 +12,7 @@ complete physical definitions only for entities that change.
 - `../mappings.ts` combines current physical definitions and policy for existing consumers.
 
 For a new mapping, add the next numbered directory with a meaningful name, increment each affected
-entity's `schemaVersion`, register the batch and update its current pointers. Retain historical fields
+entity's `schemaVersion`, register the batch and update its current pointers. Retain historical fieldss
 even when the current Zod schema removes them. Analysis is still global: changing it requires a new
 version for every current entity. Current mapping fields plus explicitly retained source properties
 in `../policy.ts` must match the current Zod schema exactly, without overlap. Retain source fields

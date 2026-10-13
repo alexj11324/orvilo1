@@ -364,7 +364,7 @@ export class VerifyRunModel {
         .update(verifyRuns)
         .set({
           context: target.context ?? source.context,
-          goal: target.goal ?? source.goal,
+          orchestrationWorkflow: target.orchestrationWorkflow ?? source.orchestrationWorkflow,
           metadata: { ...target.metadata, ...source.metadata },
           operationId: target.operationId ?? source.operationId,
           plan,
@@ -457,7 +457,7 @@ export class VerifyRunModel {
    */
   ensureForOperation = async (
     operationId: string,
-    defaults?: Partial<Pick<NewVerifyRun, 'goal' | 'title'>>,
+    defaults?: Partial<Pick<NewVerifyRun, 'orchestrationWorkflow' | 'title'>>,
   ): Promise<VerifyRunItem> => {
     const existing = await this.findByOperation(operationId);
     if (existing) return existing;
@@ -769,7 +769,10 @@ export class VerifyRunModel {
   update = async (
     runId: string,
     value: Partial<
-      Pick<NewVerifyRun, 'context' | 'goal' | 'metadata' | 'plan' | 'scenario' | 'title'>
+      Pick<
+        NewVerifyRun,
+        'context' | 'orchestrationWorkflow' | 'metadata' | 'plan' | 'scenario' | 'title'
+      >
     >,
   ): Promise<VerifyRunItem | undefined> => {
     const [run] = await this.db

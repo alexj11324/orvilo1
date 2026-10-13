@@ -59,7 +59,7 @@ Notes:
   `conversationLifecycle` for prompt assembly.
 - `webapi/tts/openai` — uses `createBizOpenAI` deployment credentials, not the
   per-user BYOK path (out of scope).
-- `packages/agent-tracing/src/goal/replay.ts` (`replayGoalTrajectory`) — separate
+- `packages/agent-tracing/src/orchestrationWorkflow/replay.ts` (`replayOrchestrationWorkflowTrajectory`) — separate
   domain module unrelated to the deleted transport.
 - `src/proxy.test.ts` `/webapi/chat` entry — asserts the path prefix does NOT
   match the SPA proxy; still true and harmless.

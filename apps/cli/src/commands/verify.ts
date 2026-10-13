@@ -249,7 +249,10 @@ export function registerVerifyCommand(program: Command) {
   plan
     .command('generate <operationId>')
     .description('Generate a draft check plan for a run')
-    .requiredOption('--goal <goal>', "The run's task/instruction the plan must satisfy")
+    .requiredOption(
+      '--orchestration workflow <orchestration workflow>',
+      "The run's task/instruction the plan must satisfy",
+    )
     .option('--rubric <id>', 'Mounted rubric id')
     .option('--criteria <ids>', 'Ad-hoc criterion ids (comma-separated)')
     .option('--ai', 'Let the LLM propose additional criteria')
@@ -265,7 +268,7 @@ export function registerVerifyCommand(program: Command) {
           ai?: boolean;
           context?: string;
           criteria?: string;
-          goal: string;
+          orchestrationWorkflow: string;
           json?: boolean | string;
           maxAi?: string;
           model?: string;
@@ -281,7 +284,7 @@ export function registerVerifyCommand(program: Command) {
         const items = await client.verify.generateDraftPlan.mutate({
           context: options.context,
           enableAiGeneration: options.ai,
-          goal: options.goal,
+          orchestrationWorkflow: options.orchestrationWorkflow,
           maxAiCriteria: options.maxAi ? Number.parseInt(options.maxAi, 10) : undefined,
           modelConfig:
             options.model && options.provider
@@ -363,7 +366,7 @@ export function registerVerifyCommand(program: Command) {
   verify
     .command('execute <operationId>')
     .description('Execute the confirmed plan against a deliverable (LLM judge)')
-    .requiredOption('--goal <goal>', "The run's task")
+    .requiredOption('--orchestration workflow <orchestration workflow>', "The run's task")
     .requiredOption('--deliverable <text>', 'The output to judge')
     .requiredOption('--model <model>', 'Judge model')
     .requiredOption('--provider <provider>', 'Judge provider')
@@ -375,7 +378,7 @@ export function registerVerifyCommand(program: Command) {
         options: {
           batch?: boolean;
           deliverable: string;
-          goal: string;
+          orchestrationWorkflow: string;
           json?: boolean | string;
           model: string;
           provider: string;
@@ -385,7 +388,7 @@ export function registerVerifyCommand(program: Command) {
         const results = await client.verify.executeVerify.mutate({
           batchLlm: options.batch,
           deliverable: options.deliverable,
-          goal: options.goal,
+          orchestrationWorkflow: options.orchestrationWorkflow,
           modelConfig: { model: options.model, provider: options.provider },
           operationId,
         });

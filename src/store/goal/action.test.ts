@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
-import { goalService } from '@/services/goal';
+import { orchestrationWorkflowService } from '@/services/goal';
 
 import { useGoalStore } from './index';
 
 vi.mock('@/libs/swr', () => ({ mutate: vi.fn(), useClientDataSWR: vi.fn() }));
 vi.mock('@/services/goal', () => ({
-  goalService: { delete: vi.fn(), list: vi.fn() },
+  orchestrationWorkflowService: { delete: vi.fn(), list: vi.fn() },
 }));
 
 beforeEach(() => {
@@ -28,9 +28,9 @@ describe('GoalAction', () => {
     const refreshIntervalFor = (status: string) => {
       useGoalStore.getState().useFetchGoalGraph('goal-1');
       const options = vi.mocked(useClientDataSWR).mock.calls.at(-1)?.[2] as {
-        refreshInterval: (graph?: { goal: { status: string } }) => number;
+        refreshInterval: (graph?: { orchestrationWorkflow: { status: string } }) => number;
       };
-      return options.refreshInterval({ goal: { status } });
+      return options.refreshInterval({ orchestrationWorkflow: { status } });
     };
 
     it.each(['planning', 'running', 'verifying'])(
@@ -78,7 +78,9 @@ describe('GoalAction', () => {
     const [, fetcher] = vi.mocked(useClientDataSWR).mock.calls[0];
 
     void (fetcher as () => unknown)();
-    expect(goalService.list).toHaveBeenCalledWith(expect.objectContaining({ agentId: 'agent-1' }));
+    expect(orchestrationWorkflowService.list).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'agent-1' }),
+    );
   });
 
   it('uses the complete goal workspace with a project-scoped query and cache', () => {
@@ -88,7 +90,7 @@ describe('GoalAction', () => {
     expect(key).toEqual(['task:sidebarGroups', 'project:project-1:goals-page']);
     expect(fetcher).toBeTypeOf('function');
     void (fetcher as () => unknown)();
-    expect(goalService.list).toHaveBeenCalledWith(
+    expect(orchestrationWorkflowService.list).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'project-1' }),
     );
 
@@ -129,12 +131,12 @@ describe('GoalAction', () => {
 
     fetcher();
 
-    expect(goalService.list).toHaveBeenCalledWith(
+    expect(orchestrationWorkflowService.list).toHaveBeenCalledWith(
       expect.objectContaining({
         statuses: ['planning', 'running', 'verifying', 'review'],
       }),
     );
-    expect(goalService.list).toHaveBeenCalledWith(
+    expect(orchestrationWorkflowService.list).toHaveBeenCalledWith(
       expect.not.objectContaining({
         statuses: expect.arrayContaining(['paused', 'failed', 'achieved', 'canceled']),
       }),
@@ -162,15 +164,20 @@ describe('GoalAction', () => {
   it('deletes a goal through the goal endpoint and removes it from local state', async () => {
     useGoalStore.getState().useFetchGoals('agent-1');
     const options = vi.mocked(useClientDataSWR).mock.calls[0][2] as {
-      onSuccess: (value: { goals: Array<{ goal: { id: string } }> }) => void;
+      onSuccess: (value: { goals: Array<{ orchestrationWorkflow: { id: string } }> }) => void;
     };
-    options.onSuccess({ goals: [{ goal: { id: 'goal-1' } }, { goal: { id: 'goal-2' } }] });
+    options.onSuccess({
+      goals: [
+        { orchestrationWorkflow: { id: 'goal-1' } },
+        { orchestrationWorkflow: { id: 'goal-2' } },
+      ],
+    });
 
     await useGoalStore.getState().deleteGoal('agent-1', 'goal-1');
 
-    expect(goalService.delete).toHaveBeenCalledWith('goal-1');
+    expect(orchestrationWorkflowService.delete).toHaveBeenCalledWith('goal-1');
     expect(useGoalStore.getState().goalListByAgentId['agent-1']).toEqual([
-      { goal: { id: 'goal-2' } },
+      { orchestrationWorkflow: { id: 'goal-2' } },
     ]);
   });
 });

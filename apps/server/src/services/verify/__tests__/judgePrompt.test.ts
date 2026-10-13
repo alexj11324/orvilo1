@@ -9,7 +9,7 @@ describe('buildJudgePrompt evidence injection', () => {
   it('inlines text evidence and references stored artifacts under the criterion', () => {
     const { messages } = chainVerifyJudge({
       deliverable: 'done',
-      goal: 'ship it',
+      orchestrationWorkflow: 'ship it',
       items: [
         {
           evidence: [
@@ -35,7 +35,7 @@ describe('buildJudgePrompt evidence injection', () => {
   it('omits the evidence block when an item has none', () => {
     const { messages } = chainVerifyJudge({
       deliverable: 'done',
-      goal: 'ship it',
+      orchestrationWorkflow: 'ship it',
       items: [{ id: 'item-1', title: 'No evidence needed' }],
       mode: 'single',
     });

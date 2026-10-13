@@ -4157,7 +4157,7 @@ export class MessageModel {
    * Resolve the tool result message id for a toolCallId — the stable identifier
    * the model emitted for the call. Lets server-side services push async state
    * onto a tool card when all they hold is the call id recorded at creation
-   * time (e.g. the goal loop updating the `createGoal` card via
+   * time (e.g. the orchestration workflow engine updating the `startOrchestrationWorkflow` card via
    * `task.context.origin.toolCallId`).
    */
   findToolMessageIdByToolCallId = async (

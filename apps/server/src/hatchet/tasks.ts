@@ -4,20 +4,20 @@ import {
   type InputType,
   type JsonObject,
 } from '@hatchet-dev/typescript-sdk/v1/index.js';
-import type { GoalAdvanceTrigger } from '@orvilo/agent-tracing';
+import type { OrchestrationWorkflowAdvanceTrigger } from '@orvilo/agent-tracing';
 import type { Context as HonoContext } from 'hono';
 import { z } from 'zod';
 
 import { runScheduleNightlyReview } from '@/server/router-hono/workflows/agent-signal/handlers/scheduleNightlyReview';
-import { runGoalSweep } from '@/server/router-hono/workflows/goal/handlers/sweep';
 import { sweep as linearSyncSweepHandler } from '@/server/router-hono/workflows/linear-sync/handlers/sweep';
+import { runOrchestrationWorkflowSweep } from '@/server/router-hono/workflows/orchestrationWorkflow/handlers/sweep';
 import { runScheduleDispatch } from '@/server/router-hono/workflows/task/handlers/scheduleDispatch';
 import { scheduledTopicDispatch } from '@/server/router-hono/workflows/task/handlers/scheduledTopicDispatch';
 import { watchdog } from '@/server/router-hono/workflows/task/handlers/watchdog';
 import { sweep as verifySweepHandler } from '@/server/router-hono/workflows/verify/handlers/sweep';
-import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import { runMcpEventInboxSweep } from '@/server/services/mcpEvents/runtime';
+import { advanceOrchestrationWorkflow } from '@/server/services/orchestrationWorkflow/advanceOrchestrationWorkflow';
 import {
   runSlackIntegrationEvent,
   slackEventInput,
@@ -28,9 +28,9 @@ import { runHeartbeatTick } from '@/server/services/taskRunner/heartbeatTick';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
 import { TASK_WATCHDOG_CRON } from '@/server/services/taskWatchdogSchedule';
 
-interface GoalAdvanceInput {
-  goalId: string;
-  trigger?: GoalAdvanceTrigger;
+interface OrchestrationWorkflowAdvanceInput {
+  orchestrationWorkflowId: string;
+  trigger?: OrchestrationWorkflowAdvanceTrigger;
   userId: string;
   workspaceId?: string;
 }
@@ -41,8 +41,8 @@ interface TaskHeartbeatInput {
   userId: string;
 }
 
-const goalAdvanceInput = z.object({
-  goalId: z.string().min(1),
+const orchestrationWorkflowAdvanceInput = z.object({
+  orchestrationWorkflowId: z.string().min(1),
   trigger: z.string().optional(),
   userId: z.string().min(1),
   workspaceId: z.string().optional(),
@@ -94,20 +94,20 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     retries: 3,
   });
 
-  const goalAdvance = hatchet.task({
-    name: HATCHET_TASK_NAMES.goalAdvance,
+  const orchestrationWorkflowAdvance = hatchet.task({
+    name: HATCHET_TASK_NAMES.orchestrationWorkflowAdvance,
     backoff: { factor: 2, maxSeconds: 300 },
     concurrency: {
-      expression: 'input.goalId',
+      expression: 'input.orchestrationWorkflowId',
       limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
       maxRuns: 1,
     },
     executionTimeout: '15m',
-    fn: async (input: GoalAdvanceInput & InputType) => {
-      await advanceGoal(input);
+    fn: async (input: OrchestrationWorkflowAdvanceInput & InputType) => {
+      await advanceOrchestrationWorkflow(input);
       return { success: true };
     },
-    inputValidator: goalAdvanceInput,
+    inputValidator: orchestrationWorkflowAdvanceInput,
     retries: 5,
   });
 
@@ -186,10 +186,10 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     retries: 3,
   });
 
-  const goalSweep = hatchet.task({
-    name: HATCHET_TASK_NAMES.goalSweep,
+  const orchestrationWorkflowSweep = hatchet.task({
+    name: HATCHET_TASK_NAMES.orchestrationWorkflowSweep,
     executionTimeout: '15m',
-    fn: async () => runGoalSweep(),
+    fn: async () => runOrchestrationWorkflowSweep(),
     onCrons: ['*/5 * * * *'],
     retries: 3,
   });
@@ -218,8 +218,8 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
 
   return [
     agentSignalNightlySchedule,
-    goalAdvance,
-    goalSweep,
+    orchestrationWorkflowAdvance,
+    orchestrationWorkflowSweep,
     linearSyncSweep,
     mcpEventInboxSweep,
     slackIntegrationEvent,

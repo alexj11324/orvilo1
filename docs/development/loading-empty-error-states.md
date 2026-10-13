@@ -8,7 +8,7 @@ shared components.
 - Everywhere else use `@/components/ui/spinner`; use skeletons shaped like the loaded rows for known
   shapes (same grid, same row height). See the `react` skill "Loader selection" and `ux` feedback 4.1.
 - A panel must never render `null` while loading, failing or missing its data. Follow
-  `Portal/TaskDetail/Body.tsx`; portal bodies backed by the Goal store or verify state use
+  `Portal/TaskDetail/Body.tsx`; portal bodies backed by the Orchestration workflow store or verify state use
   `Portal/components/PortalBodyState.tsx`.
 - Empty states use `@/components/SimpleEmpty` (`Portal/SimpleEmpty` re-exports it).
 

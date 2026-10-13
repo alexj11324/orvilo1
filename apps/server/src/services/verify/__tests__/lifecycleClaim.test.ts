@@ -95,7 +95,7 @@ vi.mock('../taskAcceptance', () => ({
 }));
 
 const db = {} as any;
-const params = { deliverable: 'done', goal: 'ship it', operationId: 'op-1' };
+const params = { deliverable: 'done', orchestrationWorkflow: 'ship it', operationId: 'op-1' };
 
 const confirmedRun = {
   id: 'run-1',

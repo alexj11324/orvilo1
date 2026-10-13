@@ -66,7 +66,7 @@ Three separate columns with separate field specs (`packages/types/src/workAttent
 
 - Project `visibility` private/public is a real column + field spec (`workAttention.ts:351,428-433`); favorites are `NavigationFavorite` rows with read-gated titles (`workAttention.ts:676-685`).
 - `MilestoneChip` reads only the project-detail cache and renders nothing when detail isn't loaded (`List/MilestoneChip.tsx`); issue rows render milestones only for resolved references.
-- Project labels exist (`listLabels`, validated per-workspace on write, `project.ts:565,761-782`). **Scope note**: tasks have no label field — issue labels are absent rather than faked (worth stating in the report as a known non-goal).
+- Project labels exist (`listLabels`, validated per-workspace on write, `project.ts:565,761-782`). **Scope note**: tasks have no label field — issue labels are absent rather than faked (worth stating in the report as a known non-orchestration workflow).
 
 ## 8. Triage — ✅ Correct; snooze honestly disabled
 

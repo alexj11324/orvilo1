@@ -1,4 +1,4 @@
-import { isGoalPrompt } from '@orvilo/builtin-tool-goal';
+import { isGoalPrompt } from '@orvilo/builtin-tool-orchestration-workflow';
 import { AGENT_SKILLS_IDENTIFIER_PREFIX } from '@orvilo/const';
 import { describe, expect, it } from 'vitest';
 

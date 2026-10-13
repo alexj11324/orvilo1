@@ -1,4 +1,4 @@
-import type { GoalGraphSnapshot } from '@orvilo/types';
+import type { OrchestrationWorkflowGraphSnapshot } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,8 +11,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/store/goal', () => ({
   goalSelectors: {
-    goalGraph: (goalId?: string | null) => (state: { goalGraphById: Record<string, unknown> }) =>
-      goalId ? state.goalGraphById[goalId] : undefined,
+    goalGraph:
+      (orchestrationWorkflowId?: string | null) =>
+      (state: { goalGraphById: Record<string, unknown> }) =>
+        orchestrationWorkflowId ? state.goalGraphById[orchestrationWorkflowId] : undefined,
   },
   useGoalStore: (selector: (state: unknown) => unknown) =>
     selector({
@@ -23,12 +25,12 @@ vi.mock('@/store/goal', () => ({
 
 const node = (id: string, kind: string, status: string) => ({ id, kind, status });
 
-const snapshot = (overrides: Partial<GoalGraphSnapshot> = {}) =>
+const snapshot = (overrides: Partial<OrchestrationWorkflowGraphSnapshot> = {}) =>
   ({
     decisions: [],
     edges: [],
     events: [],
-    goal: {
+    orchestrationWorkflow: {
       agentId: 'agt-1',
       id: 'goal-1',
       startedAt: new Date('2026-08-14T08:00:00.000Z'),
@@ -38,7 +40,7 @@ const snapshot = (overrides: Partial<GoalGraphSnapshot> = {}) =>
     nodes: [],
     workVersions: [],
     ...overrides,
-  }) as unknown as GoalGraphSnapshot;
+  }) as unknown as OrchestrationWorkflowGraphSnapshot;
 
 describe('useGoalTaskStatus', () => {
   beforeEach(() => {
@@ -47,7 +49,9 @@ describe('useGoalTaskStatus', () => {
   });
 
   it('falls back to the drafted criteria count until the graph resolves', () => {
-    const { result } = renderHook(() => useGoalTaskStatus({ criteriaCount: 3, goalId: 'goal-1' }));
+    const { result } = renderHook(() =>
+      useGoalTaskStatus({ criteriaCount: 3, orchestrationWorkflowId: 'goal-1' }),
+    );
 
     expect(mocks.useFetchGoalGraph).toHaveBeenCalledWith('goal-1');
     expect(result.current.progress).toMatchObject({ phase: 'running', total: 3 });
@@ -64,7 +68,7 @@ describe('useGoalTaskStatus', () => {
       ] as never,
     });
 
-    const { result } = renderHook(() => useGoalTaskStatus({ goalId: 'goal-1' }));
+    const { result } = renderHook(() => useGoalTaskStatus({ orchestrationWorkflowId: 'goal-1' }));
 
     expect(result.current.progress).toMatchObject({ passed: 2, total: 3 });
     expect(result.current.agentId).toBe('agt-1');
@@ -77,7 +81,7 @@ describe('useGoalTaskStatus', () => {
       nodes: [node('w1', 'task', 'active')] as never,
     });
 
-    const { result } = renderHook(() => useGoalTaskStatus({ goalId: 'goal-1' }));
+    const { result } = renderHook(() => useGoalTaskStatus({ orchestrationWorkflowId: 'goal-1' }));
 
     expect(result.current.progress.phase).toBe('waiting');
   });

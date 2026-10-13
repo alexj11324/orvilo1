@@ -20,7 +20,7 @@ const log = debug('orvilo-server:verify-agent-verifier');
  * `checkItemId` injected here — it does not write to the DB directly.
  *
  * `evidence` is what the builder self-captured during the run: the
- * verifier judges against the run goal AND this evidence — it's the verifier's
+ * verifier judges against the run orchestration workflow AND this evidence — it's the verifier's
  * primary Data, not a competing verdict.
  */
 /**
@@ -67,7 +67,7 @@ export const createVerifierAgentRunner = (params: {
   } = params;
   if (!topicId) return undefined;
 
-  return async ({ checkItem, evidence, goal, operationId }) => {
+  return async ({ checkItem, evidence, orchestrationWorkflow, operationId }) => {
     // The detailed instruction is the criterion's rule body, stored in a document.
     const instruction =
       checkItem.definition || checkItem.resourceSnapshot
@@ -153,7 +153,7 @@ export const createVerifierAgentRunner = (params: {
       checkItem,
       deliverable,
       evidence,
-      goal,
+      orchestrationWorkflow,
       instruction,
     });
 

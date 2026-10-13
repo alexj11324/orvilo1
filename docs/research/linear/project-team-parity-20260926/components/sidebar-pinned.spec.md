@@ -30,7 +30,7 @@ No new color, shadow, icon or typography is needed.
 - Calls to `toggleLeftPanel(false)` or toggle without arguments cannot close
   it. The central state owner must enforce the invariant.
 - `Mod+[` does not close it; remove the advertised shortcut/action.
-- Narrow viewport, Portal/Goal routes, and Electron titlebar controls cannot
+- Narrow viewport, Portal/Orchestration workflow routes, and Electron titlebar controls cannot
   collapse it. Remove or neutralize the associated global collapse controls.
 - Width resize within the existing 240–400px bounds still works and persists.
 - Workspace/team/favorite accordion expansion remains user-controlled and
@@ -43,7 +43,7 @@ No new color, shadow, icon or typography is needed.
 feeds it to the main panel, auto-collapses below 960px, and exposes an expand
 callback. `src/features/NavPanel/ToggleLeftPanelButton.tsx` is reused in the
 sidebar, header, and Electron titlebar. `Mod+[` is registered in
-`src/hooks/useHotkeys/globalScope.ts`. Portal and Goal pages also write false.
+`src/hooks/useHotkeys/globalScope.ts`. Portal and Orchestration workflow pages also write false.
 Per-team state uses `sidebarCollapsedKeys` and is unrelated.
 
 ## Verification

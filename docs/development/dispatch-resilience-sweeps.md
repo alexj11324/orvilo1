@@ -17,7 +17,7 @@ only sees the post-sweep steady state.
   older than 5 min with a null/expired lease. These pin the task's single
   active slot while nobody owns them.
 - `findWaitingResumeCandidates`: `waiting` rows with the same staleness,
-  excluding reasons that only an external event can lift (`goal_*`,
+  excluding reasons that only an external event can lift (`orchestration_workflow_*`,
   `superseded_*`, `settlement_*`, `planning_resume_instruction_missing`) and
   triggers a sweep cannot replay (`event:*`, `orchestrator:planning:*` — the
   planning sweep owns those).
@@ -27,7 +27,7 @@ only sees the post-sweep steady state.
   re-driven through
   `TaskRunnerService.runTask` with the row's **stored** `idempotencyKey` and
   the trigger parsed from `requestedBy`. `runTask`'s `existing` path resumes
-  waiting rows or re-enters provisioning for stranded starts; goal/paused
+  waiting rows or re-enters provisioning for stranded starts; orchestration workflow/paused
   gates re-evaluate inside `request`.
 - Bounds: `recoveryAttempts >= 20` or an un-re-drivable trigger →
   `requestStop` (fenced `cancel_requested`, drained by the bounded

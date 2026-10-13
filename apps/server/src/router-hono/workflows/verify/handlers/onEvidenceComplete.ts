@@ -5,7 +5,7 @@ import { runVerifyAfterEvidenceSubmission } from '@/server/services/verify/lifec
 
 interface OnEvidenceCompletePayload {
   deliverable: string;
-  goal: string;
+  orchestrationWorkflow: string;
   parentOperationId: string;
   userId: string;
   workspaceId?: string;
@@ -21,7 +21,11 @@ export async function onEvidenceComplete(c: Context) {
   await runVerifyAfterEvidenceSubmission(
     db,
     body.userId,
-    { deliverable: body.deliverable, goal: body.goal ?? '', operationId: body.parentOperationId },
+    {
+      deliverable: body.deliverable,
+      orchestrationWorkflow: body.orchestrationWorkflow ?? '',
+      operationId: body.parentOperationId,
+    },
     body.workspaceId,
   );
   return c.json({ success: true });

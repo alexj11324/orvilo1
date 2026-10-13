@@ -27,7 +27,7 @@ const styles = {
 const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
   ({ args, onArgsChange, registerBeforeApprove }) => {
     const { t } = useTranslation('tool');
-    const [goal, setGoal] = useState(args?.goal || '');
+    const [orchestrationWorkflow, setGoal] = useState(args?.orchestrationWorkflow || '');
     const [description, setDescription] = useState(args?.description || '');
 
     const editor = useEditor();
@@ -56,13 +56,13 @@ const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
       const changes: CreatePlanParams = {
         context: context || undefined,
         description,
-        goal,
+        orchestrationWorkflow,
       };
 
       // Always submit current state when approving
       await onArgsChange?.(changes);
       pendingChangesRef.current = null;
-    }, [onArgsChange, goal, description, getContext]);
+    }, [onArgsChange, orchestrationWorkflow, description, getContext]);
 
     // Register before approve callback
     useEffect(() => {
@@ -75,7 +75,7 @@ const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
         pendingChangesRef.current = {
           context: getContext() || undefined,
           description,
-          goal: value,
+          orchestrationWorkflow: value,
         };
       },
       [description, getContext],
@@ -87,19 +87,19 @@ const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
         pendingChangesRef.current = {
           context: getContext() || undefined,
           description: value,
-          goal,
+          orchestrationWorkflow,
         };
       },
-      [goal, getContext],
+      [orchestrationWorkflow, getContext],
     );
 
     const handleContentChange = useCallback(() => {
       pendingChangesRef.current = {
         context: getContext() || undefined,
         description,
-        goal,
+        orchestrationWorkflow,
       };
-    }, [description, goal, getContext]);
+    }, [description, orchestrationWorkflow, getContext]);
 
     // Focus editor when pressing Enter in description
     const handleDescriptionKeyDown = useCallback(
@@ -137,7 +137,7 @@ const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
           className={styles.title}
           placeholder={t('orvilo-agent.createPlan.goal.placeholder')}
           style={{ padding: 0, resize: 'none' }}
-          value={goal}
+          value={orchestrationWorkflow}
           onChange={(e) => handleGoalChange(e.target.value)}
           onKeyDown={handleGoalKeyDown}
         />

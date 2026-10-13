@@ -80,7 +80,7 @@ describe('retired acceptance procedures', () => {
       'reviewChecks',
       'reviewFlowStep',
       'saveChecklist',
-      'saveGoal',
+      'saveOrchestrationWorkflow',
       'updateStatus',
     ]);
   });

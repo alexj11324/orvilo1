@@ -23,12 +23,12 @@ Use native SendButton PromptInputSubmit adapter for permissions/Stop. Existing
 ContextContainer already native Attachments and receives upload state.
 Retain ComposerBeam if straightforward, radius must match actual native group.
 Orbs activity supplied by page/message paths; do not restore operation ticker or
-four-square tool icon. Parameter edit/approval/queue/goal capabilities retained.
+four-square tool icon. Parameter edit/approval/queue/orchestration workflow capabilities retained.
 
 Wire dedicated renderer only for useChatbotSurface() true in
 src/features/Conversation/ChatInput/index.tsx. Keep provider/send/draft hooks intact.
 Remove WideScreenContainer cap and negative margin for this surface; inline queue,
-todo/goal rows in normal layout flow instead of overlay above composer. Footer
+todo/orchestration workflow rows in normal layout flow instead of overlay above composer. Footer
 padding is owned by new page root (root agent); your adapter should not add another
 16px horizontal gutter. Other conversation/editor surfaces unchanged.
 Own: Composer.tsx, Conversation/ChatInput/index.tsx, plus minimal dedicated helper

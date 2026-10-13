@@ -84,7 +84,7 @@ describe('startEvidenceSubmission', () => {
     await startEvidenceSubmission({
       db: {} as any,
       deliverable: 'artifact summary',
-      goal: 'ship model',
+      orchestrationWorkflow: 'ship model',
       operation,
       plan: [
         {
@@ -116,7 +116,7 @@ describe('startEvidenceSubmission', () => {
     expect(call.userInterventionConfig).toEqual({ approvalMode: 'headless' });
     expect(call.hooks[0].webhook.body).toMatchObject({
       deliverable: 'artifact summary',
-      goal: 'ship model',
+      orchestrationWorkflow: 'ship model',
       parentOperationId: 'work-op',
       userId: 'user-1',
     });
@@ -127,7 +127,7 @@ describe('startEvidenceSubmission', () => {
       startEvidenceSubmission({
         db: {} as any,
         deliverable: '',
-        goal: '',
+        orchestrationWorkflow: '',
         operation: { id: 'work-op' } as any,
         plan: [],
         userId: 'user-1',

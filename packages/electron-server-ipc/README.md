@@ -1,10 +1,10 @@
 # @orvilo/electron-server-ipc
 
-IPC (Inter-Process Communication) module between Orvilo's Electron application and server, providing reliable cross-process communication capabilities.
+IPC (Inter-Process Communication) module between Orvilo's Electron application and server, providing reliable cross-process communication capabilities..
 
 ## 📝 Introduction
 
-`@orvilo/electron-server-ipc` is a core component of Orvilo's desktop application, responsible for handling communication between the Electron main process and Next.js server. It provides a simple yet robust API for passing data and executing remote method calls across different processes.
+`@orvilo/electron-server-ipc` is a core component of Orvilo's desktop application, responsible for handling communication between the Electron main process and Next.js server. It provides a simple yet robust API for passing data and executing remote method calls across different processes..
 
 ## 🛠️ Core Features
 
@@ -17,7 +17,7 @@ IPC (Inter-Process Communication) module between Orvilo's Electron application a
 
 ### IPC Server (ElectronIPCServer)
 
-Responsible for listening to client requests and responding, typically runs in Electron's main process:
+Responsible for listening to client requests and responding, typically runs in Electron's main process::
 
 ```typescript
 import { ElectronIPCEventHandler, ElectronIPCServer } from '@orvilo/electron-server-ipc';

@@ -313,7 +313,7 @@ export interface ClearTodosState {
  * Plans define the strategic direction (what and why), not actionable steps
  *
  * Field mapping to Document:
- * - goal -> document.title
+ * - orchestration workflow -> document.title
  * - description -> document.description
  * - context -> document.content
  */
@@ -322,8 +322,8 @@ export interface CreatePlanParams {
   context?: string;
   /** Brief summary of the plan (maps to document.description) */
   description: string;
-  /** The main goal or objective to achieve (maps to document.title) */
-  goal: string;
+  /** The main orchestration workflow or objective to achieve (maps to document.title) */
+  orchestrationWorkflow: string;
 }
 
 export interface UpdatePlanParams {
@@ -333,8 +333,8 @@ export interface UpdatePlanParams {
   context?: string;
   /** Updated description (maps to document.description) */
   description?: string;
-  /** Updated goal (maps to document.title) */
-  goal?: string;
+  /** Updated orchestration workflow (maps to document.title) */
+  orchestrationWorkflow?: string;
   /** Plan ID to update */
   planId: string;
 }
@@ -343,10 +343,10 @@ export interface UpdatePlanParams {
 
 /**
  * A high-level plan document
- * Contains goal and context, but no steps (steps are managed via Todos)
+ * Contains orchestration workflow and context, but no steps (steps are managed via Todos)
  *
  * Field mapping to Document:
- * - goal -> document.title
+ * - orchestration workflow -> document.title
  * - description -> document.description
  * - context -> document.content
  */
@@ -359,10 +359,10 @@ export interface Plan {
   createdAt: string;
   /** Brief summary of the plan (maps to document.description) */
   description: string;
-  /** The main goal or objective (maps to document.title) */
-  goal: string;
   /** Unique plan identifier */
   id: string;
+  /** The main orchestration workflow or objective (maps to document.title) */
+  orchestrationWorkflow: string;
   /** Last update timestamp */
   updatedAt: string;
 }

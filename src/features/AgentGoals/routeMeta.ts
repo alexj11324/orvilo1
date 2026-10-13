@@ -14,16 +14,17 @@ export const goalsRouteMeta = routeMeta({
 });
 
 const GoalDynamicMeta = ({ onResolve, params }: DynamicRouteMetaProps) => {
-  const goalId = params.goalId ?? '';
+  const orchestrationWorkflowId = params.goalId ?? '';
   const title = useGoalStore((s) => {
-    const snapshot = goalSelectors.goalGraph(goalId)(s);
-    if (snapshot?.goal.title) return snapshot.goal.title;
+    const snapshot = goalSelectors.goalGraph(orchestrationWorkflowId)(s);
+    if (snapshot?.orchestrationWorkflow.title) return snapshot.orchestrationWorkflow.title;
     // Before the detail page fetches the graph, the agent's goal list (already
     // loaded when the tab was opened from the goals rail) may know the title.
     if (!params.aid) return undefined;
     return goalSelectors
       .goalList(params.aid)(s)
-      .find((item) => item.goal.id === goalId)?.goal.title;
+      .find((item) => item.orchestrationWorkflow.id === orchestrationWorkflowId)
+      ?.orchestrationWorkflow.title;
   });
 
   usePublishDynamicRouteMeta({ title: title || undefined }, onResolve);

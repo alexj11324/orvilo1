@@ -201,19 +201,19 @@ export interface PlanPromptInput {
   context?: string;
   /** Already-mounted criteria titles, so the AI proposes complementary ones. */
   existingTitles?: string[];
-  goal: string;
   maxCriteria: number;
+  orchestrationWorkflow: string;
 }
 
 export const chainVerifyPlan = ({
-  goal,
+  orchestrationWorkflow,
   context,
   existingTitles,
   maxCriteria,
 }: PlanPromptInput) => {
   const system = [
     'You are a delivery checker planner for an autonomous agent run.',
-    'Given the run goal, propose a concise set of verification criteria — each a single pass/fail standard that determines whether the delivered work satisfies the user’s explicit requirements.',
+    'Given the run orchestration workflow, propose a concise set of verification criteria — each a single pass/fail standard that determines whether the delivered work satisfies the user’s explicit requirements.',
     'Guidelines:',
     `- Propose at most ${maxCriteria} criteria. Fewer, sharper criteria are better than many vague ones.`,
     '- Every criterion must be an outcome the USER can judge — what the delivery does, shows, or produces. Never propose the repo’s own programmatic gates as criteria: unit / integration / regression tests, test suites, coverage, type-checks, lint, or a clean build. Those are preconditions of shipping, not acceptance items, and they are dropped before the acceptance page renders.',
@@ -228,7 +228,7 @@ export const chainVerifyPlan = ({
   ].join('\n');
 
   const user = [
-    `## Run goal\n${goal}`,
+    `## Run orchestration workflow\n${orchestrationWorkflow}`,
     context ? `\n## Context\n${context}` : '',
     existingTitles?.length
       ? `\n## Already-mounted criteria (do not duplicate)\n${existingTitles.map((t) => `- ${t}`).join('\n')}`
@@ -265,7 +265,6 @@ export interface JudgeEvidence {
 export interface JudgePromptInput {
   /** The artifacts / agent output to judge against. */
   deliverable: string;
-  goal: string;
   /** Each item carries its resolved judging instruction + any captured evidence. */
   items: (Pick<VerifyCheckItem, 'id' | 'title'> & {
     evidence?: JudgeEvidence[];
@@ -273,6 +272,7 @@ export interface JudgePromptInput {
   })[];
   /** Single mode judges one item; batch mode judges all `items`. */
   mode: 'single' | 'batch';
+  orchestrationWorkflow: string;
 }
 
 export const describeEvidence = (evidence: JudgeEvidence[] | undefined): string => {
@@ -296,7 +296,12 @@ const describeItem = (item: JudgePromptInput['items'][number]) => {
   return `${item.title}${instruction}${describeEvidence(item.evidence)}`;
 };
 
-export const chainVerifyJudge = ({ goal, deliverable, items, mode }: JudgePromptInput) => {
+export const chainVerifyJudge = ({
+  orchestrationWorkflow,
+  deliverable,
+  items,
+  mode,
+}: JudgePromptInput) => {
   const system = [
     'You are a rigorous delivery checker. Judge whether the deliverable satisfies each criterion using the Toulmin argument model.',
     'For every criterion output:',
@@ -320,7 +325,7 @@ export const chainVerifyJudge = ({ goal, deliverable, items, mode }: JudgePrompt
       : describeItem(items[0]);
 
   const user = [
-    `## Run goal\n${goal}`,
+    `## Run orchestration workflow\n${orchestrationWorkflow}`,
     `\n## Criteria\n${criteriaBlock}`,
     `\n## Deliverable\n${deliverable}`,
   ].join('\n');
@@ -359,8 +364,8 @@ export interface ReportPromptItem {
 
 export interface ReportPromptInput {
   deliverable: string;
-  goal: string;
   items: ReportPromptItem[];
+  orchestrationWorkflow: string;
   /** Pre-computed rollup so the narrative never contradicts the numbers. */
   stats: { failed: number; passed: number; total: number; uncertain: number };
   verdict: string;
@@ -372,7 +377,7 @@ export interface ReportPromptInput {
  * re-deriving (and possibly contradicting) them.
  */
 export const chainVerifyReport = ({
-  goal,
+  orchestrationWorkflow,
   deliverable,
   items,
   stats,
@@ -381,7 +386,7 @@ export const chainVerifyReport = ({
   const system = [
     'You are writing a delivery-verification report for the user who owns this task.',
     'The overall verdict and the pass/fail/uncertain counts are already decided and given to you — never contradict or recompute them.',
-    'Write in the language of the run goal.',
+    'Write in the language of the run orchestration workflow.',
     'Produce two fields:',
     '- summary: 3-5 sentences for a chat notification — the verdict, what was checked, and the single most important finding.',
     '- content: a full Markdown report. Use a per-criterion section with its verdict, the reasoning, the evidence that backs it, and a concrete next step for anything failed or uncertain. Reference captured artifacts where they support a claim.',
@@ -400,7 +405,7 @@ export const chainVerifyReport = ({
     .join('\n\n');
 
   const user = [
-    `## Run goal\n${goal}`,
+    `## Run orchestration workflow\n${orchestrationWorkflow}`,
     `\n## Overall verdict\n${verdict} — ${stats.passed}/${stats.total} passed, ${stats.failed} failed, ${stats.uncertain} uncertain`,
     `\n## Per-criterion results\n${itemBlock}`,
     `\n## Deliverable\n${deliverable}`,

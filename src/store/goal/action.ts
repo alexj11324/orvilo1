@@ -1,15 +1,21 @@
-import { type GoalStatus, goalStatuses } from '@orvilo/const/goal';
-import type { GoalMetricCriterion, GoalTickResult } from '@orvilo/types';
+import {
+  type OrchestrationWorkflowStatus,
+  orchestrationWorkflowStatuses,
+} from '@orvilo/const/orchestrationWorkflow';
+import type {
+  OrchestrationWorkflowMetricCriterion,
+  OrchestrationWorkflowTickResult,
+} from '@orvilo/types';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { goalKeys, taskKeys } from '@/libs/swr/keys';
-import { goalService } from '@/services/goal';
+import { orchestrationWorkflowService } from '@/services/goal';
 import { metricService } from '@/services/metric';
 import type { StoreSetter } from '@/store/types';
 
 import type { GoalListFilter, GoalState, GoalViewMode } from './initialState';
 
-const GOAL_STATUSES: GoalStatus[] = [...goalStatuses];
+const GOAL_STATUSES: OrchestrationWorkflowStatus[] = [...orchestrationWorkflowStatuses];
 
 /**
  * The home roll-up only ever renders goals that are still open, so it asks for
@@ -26,7 +32,12 @@ const GOAL_STATUSES: GoalStatus[] = [...goalStatuses];
 // The home roll-up only renders goals that are still open: terminal states
 // (achieved / canceled) stay on the server, `review` is included because a
 // converged goal is still awaiting the user's sign-off.
-const HOME_GOAL_STATUSES: GoalStatus[] = ['planning', 'running', 'verifying', 'review'];
+const HOME_GOAL_STATUSES: OrchestrationWorkflowStatus[] = [
+  'planning',
+  'running',
+  'verifying',
+  'review',
+];
 const HOME_GOAL_FETCH_LIMIT = 100;
 
 /**
@@ -38,7 +49,11 @@ const HOME_GOAL_FETCH_LIMIT = 100;
  * `review` and `paused` are deliberately out: those wait on a person, and the
  * action that moves them refreshes the snapshot itself.
  */
-const SERVER_ADVANCING_STATUSES = new Set<GoalStatus>(['planning', 'running', 'verifying']);
+const SERVER_ADVANCING_STATUSES = new Set<OrchestrationWorkflowStatus>([
+  'planning',
+  'running',
+  'verifying',
+]);
 
 /** Kept coarse on purpose — this is liveness, not a progress bar. */
 const GOAL_GRAPH_POLL_INTERVAL = 5000;
@@ -64,17 +79,19 @@ export class GoalActionImpl {
    */
   deleteGoal = async (
     agentId: string | undefined,
-    goalId: string,
+    orchestrationWorkflowId: string,
     scopeId?: string,
   ): Promise<void> => {
-    await goalService.delete(goalId);
+    await orchestrationWorkflowService.delete(orchestrationWorkflowId);
     if (agentId) {
       const current = this.#get().goalListByAgentId[agentId] ?? [];
       this.#set(
         ({ goalListByAgentId }) => ({
           goalListByAgentId: {
             ...goalListByAgentId,
-            [agentId]: current.filter(({ goal }) => goal.id !== goalId),
+            [agentId]: current.filter(
+              ({ orchestrationWorkflow }) => orchestrationWorkflow.id !== orchestrationWorkflowId,
+            ),
           },
         }),
         false,
@@ -92,29 +109,29 @@ export class GoalActionImpl {
    * the next tick — so the caller decides whether to follow up with `tickGoal`.
    */
   decideGoal = async (
-    goalId: string,
+    orchestrationWorkflowId: string,
     params: { decisionId: string; optionId: string; resolution?: string },
   ): Promise<void> => {
-    await goalService.decide({ id: goalId, ...params });
-    await this.refreshGoalGraph(goalId);
+    await orchestrationWorkflowService.decide({ id: orchestrationWorkflowId, ...params });
+    await this.refreshGoalGraph(orchestrationWorkflowId);
   };
 
-  pauseGoal = async (goalId: string): Promise<void> => {
-    await goalService.pause(goalId);
-    await this.refreshGoalGraph(goalId);
+  pauseGoal = async (orchestrationWorkflowId: string): Promise<void> => {
+    await orchestrationWorkflowService.pause(orchestrationWorkflowId);
+    await this.refreshGoalGraph(orchestrationWorkflowId);
   };
 
-  refreshGoalGraph = async (goalId: string): Promise<void> => {
-    await mutate(goalKeys.graph(goalId));
+  refreshGoalGraph = async (orchestrationWorkflowId: string): Promise<void> => {
+    await mutate(goalKeys.graph(orchestrationWorkflowId));
   };
 
-  resumeGoal = async (goalId: string): Promise<void> => {
-    await goalService.resume(goalId);
-    await this.refreshGoalGraph(goalId);
+  resumeGoal = async (orchestrationWorkflowId: string): Promise<void> => {
+    await orchestrationWorkflowService.resume(orchestrationWorkflowId);
+    await this.refreshGoalGraph(orchestrationWorkflowId);
   };
 
   setGoalBudget = async (
-    goalId: string,
+    orchestrationWorkflowId: string,
     budget: {
       deadline?: string | null;
       maxConcurrentTasks?: number | null;
@@ -122,13 +139,16 @@ export class GoalActionImpl {
       maxTotalCost?: number | null;
     },
   ): Promise<void> => {
-    await goalService.setBudget({ id: goalId, ...budget });
-    await this.refreshGoalGraph(goalId);
+    await orchestrationWorkflowService.setBudget({ id: orchestrationWorkflowId, ...budget });
+    await this.refreshGoalGraph(orchestrationWorkflowId);
   };
 
-  updateGoalRequirement = async (goalId: string, requirement: string): Promise<void> => {
-    await goalService.updateRequirement(goalId, requirement);
-    await this.refreshGoalGraph(goalId);
+  updateGoalRequirement = async (
+    orchestrationWorkflowId: string,
+    requirement: string,
+  ): Promise<void> => {
+    await orchestrationWorkflowService.updateRequirement(orchestrationWorkflowId, requirement);
+    await this.refreshGoalGraph(orchestrationWorkflowId);
   };
 
   /**
@@ -136,42 +156,55 @@ export class GoalActionImpl {
    * own afterwards as its Work Tasks settle, so this is a nudge rather than the
    * loop the surface used to hold open.
    */
-  advanceGoal = async (goalId: string): Promise<GoalTickResult> => {
-    const result = await goalService.advance(goalId);
-    await this.refreshGoalGraph(goalId);
+  advanceOrchestrationWorkflow = async (
+    orchestrationWorkflowId: string,
+  ): Promise<OrchestrationWorkflowTickResult> => {
+    const result = await orchestrationWorkflowService.advance(orchestrationWorkflowId);
+    await this.refreshGoalGraph(orchestrationWorkflowId);
     return result;
   };
 
   /** Exactly one coordinator step, for a caller that wants to inspect a single move. */
-  tickGoal = async (goalId: string): Promise<GoalTickResult> => {
-    const result = await goalService.tick(goalId);
-    await this.refreshGoalGraph(goalId);
+  tickGoal = async (orchestrationWorkflowId: string): Promise<OrchestrationWorkflowTickResult> => {
+    const result = await orchestrationWorkflowService.tick(orchestrationWorkflowId);
+    await this.refreshGoalGraph(orchestrationWorkflowId);
     return result;
   };
 
   /** The Goal Graph snapshot behind the process-control surface. */
-  useFetchGoalGraph = (goalId?: string | null) =>
-    useClientDataSWR(goalId ? goalKeys.graph(goalId) : null, () => goalService.getGraph(goalId!), {
-      onSuccess: (graph) => {
-        this.#set(
-          ({ goalGraphById }) => ({ goalGraphById: { ...goalGraphById, [goalId!]: graph } }),
-          false,
-          'useFetchGoalGraph/success',
-        );
+  useFetchGoalGraph = (orchestrationWorkflowId?: string | null) =>
+    useClientDataSWR(
+      orchestrationWorkflowId ? goalKeys.graph(orchestrationWorkflowId) : null,
+      () => orchestrationWorkflowService.getGraph(orchestrationWorkflowId!),
+      {
+        onSuccess: (graph) => {
+          this.#set(
+            ({ goalGraphById }) => ({
+              goalGraphById: {
+                ...goalGraphById,
+                [orchestrationWorkflowId!]: graph,
+              },
+            }),
+            false,
+            'useFetchGoalGraph/success',
+          );
+        },
+        refreshInterval: (graph) =>
+          graph && SERVER_ADVANCING_STATUSES.has(graph.orchestrationWorkflow.status)
+            ? GOAL_GRAPH_POLL_INTERVAL
+            : 0,
+        revalidateOnFocus: true,
       },
-      refreshInterval: (graph) =>
-        graph && SERVER_ADVANCING_STATUSES.has(graph.goal.status) ? GOAL_GRAPH_POLL_INTERVAL : 0,
-      revalidateOnFocus: true,
-    });
+    );
 
   /**
    * North-star data of the goal detail header. Polls on the same cadence logic
    * as the graph: while the server is advancing, a probe Work or an agent
    * `recordObservation` can land a fresh point at any time.
    */
-  useFetchGoalMetricSeries = (goalId?: string | null) =>
+  useFetchGoalMetricSeries = (orchestrationWorkflowId?: string | null) =>
     useClientDataSWR(
-      goalId ? goalKeys.metricSeries(goalId) : null,
+      orchestrationWorkflowId ? goalKeys.metricSeries(orchestrationWorkflowId) : null,
       // Only the declared keys are fetched — the same goal can accumulate any
       // number of other sampled series, and none of them can affect this view.
       // Keys are read at fetch time; the declare path revalidates this cache
@@ -179,25 +212,29 @@ export class GoalActionImpl {
       // fetched against fresh criteria.
       () =>
         metricService.listSeriesWithPoints(
-          'goal',
-          goalId!,
-          (this.#get().goalGraphById[goalId!]?.goal.config?.acceptance?.metrics ?? []).map(
-            (criterion) => criterion.key,
-          ),
+          'orchestrationWorkflow',
+          orchestrationWorkflowId!,
+          (
+            this.#get().goalGraphById[orchestrationWorkflowId!]?.orchestrationWorkflow.config
+              ?.acceptance?.metrics ?? []
+          ).map((criterion) => criterion.key),
         ),
       {
         onSuccess: (series) => {
           this.#set(
             ({ goalMetricSeriesById }) => ({
-              goalMetricSeriesById: { ...goalMetricSeriesById, [goalId!]: series },
+              goalMetricSeriesById: {
+                ...goalMetricSeriesById,
+                [orchestrationWorkflowId!]: series,
+              },
             }),
             false,
             'useFetchGoalMetricSeries/success',
           );
         },
         refreshInterval: () => {
-          const graph = this.#get().goalGraphById[goalId!];
-          return graph && SERVER_ADVANCING_STATUSES.has(graph.goal.status)
+          const graph = this.#get().goalGraphById[orchestrationWorkflowId!];
+          return graph && SERVER_ADVANCING_STATUSES.has(graph.orchestrationWorkflow.status)
             ? GOAL_GRAPH_POLL_INTERVAL
             : 0;
         },
@@ -205,18 +242,25 @@ export class GoalActionImpl {
       },
     );
 
-  refreshGoalMetricSeries = async (goalId: string): Promise<void> => {
-    await mutate(goalKeys.metricSeries(goalId));
+  refreshGoalMetricSeries = async (orchestrationWorkflowId: string): Promise<void> => {
+    await mutate(goalKeys.metricSeries(orchestrationWorkflowId));
   };
 
   /** Append one clause to the goal's measured acceptance and refresh both reads. */
-  declareGoalMetric = async (goalId: string, criterion: GoalMetricCriterion): Promise<void> => {
+  declareGoalMetric = async (
+    orchestrationWorkflowId: string,
+    criterion: OrchestrationWorkflowMetricCriterion,
+  ): Promise<void> => {
     // Merged on the server against its current list — a replacement array
     // built from this client's snapshot would silently drop whatever a
     // concurrent editor or agent declared since the snapshot was read.
-    await goalService.setMetricCriteria(goalId, [criterion], 'merge');
-    await this.refreshGoalGraph(goalId);
-    await this.refreshGoalMetricSeries(goalId);
+    await orchestrationWorkflowService.setMetricCriteria(
+      orchestrationWorkflowId,
+      [criterion],
+      'merge',
+    );
+    await this.refreshGoalGraph(orchestrationWorkflowId);
+    await this.refreshGoalMetricSeries(orchestrationWorkflowId);
   };
 
   /**
@@ -225,17 +269,19 @@ export class GoalActionImpl {
    * already reopened.
    */
   recordGoalObservation = async (
-    goalId: string,
+    orchestrationWorkflowId: string,
     observation: { key: string; title?: string; value: number },
   ): Promise<void> => {
-    await goalService.recordObservation(goalId, observation);
-    await this.refreshGoalMetricSeries(goalId);
-    await this.refreshGoalGraph(goalId);
+    await orchestrationWorkflowService.recordObservation(orchestrationWorkflowId, observation);
+    await this.refreshGoalMetricSeries(orchestrationWorkflowId);
+    await this.refreshGoalGraph(orchestrationWorkflowId);
   };
 
   loadMoreGoals = (): void => {
     this.#set(
-      ({ goalListVisibleLimit }) => ({ goalListVisibleLimit: goalListVisibleLimit + 10 }),
+      ({ goalListVisibleLimit }) => ({
+        goalListVisibleLimit: goalListVisibleLimit + 10,
+      }),
       false,
       'loadMoreGoals',
     );
@@ -263,19 +309,19 @@ export class GoalActionImpl {
     return useClientDataSWR(
       scopeId ? taskKeys.sidebarGroups(`${scopeId}:goals-page`) : null,
       () =>
-        goalService.list({
+        orchestrationWorkflowService.list({
           agentId,
           limit: 100,
           projectId,
           statuses: GOAL_STATUSES,
         }),
       {
-        onSuccess: ({ goals }) => {
+        onSuccess: ({ orchestrationWorkflows }) => {
           this.#set(
             ({ goalListByAgentId, goalListInitializedAgentIds }) => ({
               goalListByAgentId: {
                 ...goalListByAgentId,
-                [scopeId!]: goals,
+                [scopeId!]: orchestrationWorkflows,
               },
               goalListInitializedAgentIds: goalListInitializedAgentIds.includes(scopeId!)
                 ? goalListInitializedAgentIds
@@ -299,15 +345,18 @@ export class GoalActionImpl {
     useClientDataSWR(
       enabled ? taskKeys.homeGoals(scope) : null,
       () =>
-        goalService.list({
+        orchestrationWorkflowService.list({
           limit: HOME_GOAL_FETCH_LIMIT,
           statuses: HOME_GOAL_STATUSES,
         }),
       {
-        onSuccess: ({ goals }) => {
+        onSuccess: ({ orchestrationWorkflows }) => {
           this.#set(
             ({ homeGoalsByScope, homeGoalsInitializedScopes }) => ({
-              homeGoalsByScope: { ...homeGoalsByScope, [scope]: goals },
+              homeGoalsByScope: {
+                ...homeGoalsByScope,
+                [scope]: orchestrationWorkflows,
+              },
               homeGoalsInitializedScopes: homeGoalsInitializedScopes.includes(scope)
                 ? homeGoalsInitializedScopes
                 : [...homeGoalsInitializedScopes, scope],

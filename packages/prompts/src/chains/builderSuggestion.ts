@@ -105,7 +105,7 @@ Output a JSON object conforming to the supplied schema.
 
 Guidelines:
 - Return exactly 3 suggestions. Every one must be a concrete configuration action for THIS specific group — never generic small-talk or end-user chat topics.
-- Prioritise GAPS in the current setup described below: e.g. missing a needed role -> suggest adding that member; overlapping members -> suggest consolidating; unclear workflow -> suggest optimising collaboration; no group goal/prompt -> suggest defining it; no reviewer -> suggest adding one.
+- Prioritise GAPS in the current setup described below: e.g. missing a needed role -> suggest adding that member; overlapping members -> suggest consolidating; unclear workflow -> suggest optimising collaboration; no group orchestration workflow/prompt -> suggest defining it; no reviewer -> suggest adding one.
 - "title" is the short chip label (1-40 chars, no trailing punctuation).
 - "prompt" is the full message sent to the builder on click (1-200 chars), phrased in the user's voice as a request, e.g. "Add a member responsible for reviewing the group's output".
 - Tailor the wording to the group's name/description and existing members when given; stay specific, not boilerplate.

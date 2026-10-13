@@ -1031,7 +1031,30 @@ export class AiAgentService {
       userId: this.userId,
       workspaceId: this.workspaceId,
     });
+    const orchestratorAgentId =
+      (trigger === undefined || trigger === RequestTrigger.Chat) &&
+      !operationTaskId &&
+      !parentOperationId &&
+      !exclusivePluginIds
+        ? await this.agentModel.getOrchestratorSourceAgentId().catch((error) => {
+            if (error instanceof TRPCError && error.message === 'ORCHESTRATOR_SETUP_REQUIRED')
+              return undefined;
+            throw error;
+          })
+        : undefined;
+    if (
+      orchestratorAgentId === resolvedAgentId &&
+      !canRunGroupSupervisorRuntime({ type: turn.heteroType })
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'ORCHESTRATOR_RUNTIME_UNSUPPORTED',
+      });
+    }
     const toolSurface = resolveRunToolSurface({
+      isOrchestratorConversation: Boolean(
+        orchestratorAgentId && resolvedAgentId === orchestratorAgentId,
+      ),
       additionalPluginIds,
       agentPlugins: agentConfig.plugins,
       disableLocalSystem,

@@ -4,7 +4,7 @@ import type { OpenAIChatMessage } from '@orvilo/types';
 export const TASK_INTENT_PROMPT_VERSION = 'v1';
 
 /** How the user's request is best carried out. */
-export const TASK_INTENT_KINDS = ['task', 'goal'] as const;
+export const TASK_INTENT_KINDS = ['task', 'orchestrationWorkflow'] as const;
 
 /** How sure the model is that it can hand the brief to an executor as-is. */
 export const TASK_INTENT_CONFIDENCES = ['high', 'medium', 'low'] as const;
@@ -80,7 +80,7 @@ export const chainTaskIntent = ({
         '- title: a short, specific task name in the imperative. Never a truncation of the request, never a restatement of the whole sentence.',
         '- summary: one sentence, addressed to the user, stating the outcome you understood they want. This is what they check before approving.',
         '- refinedInstruction: the request rewritten as a complete brief for an autonomous executor. Preserve every URL, identifier, file path, number, threshold, and named constraint from the original exactly. Never add scope, deliverables, or quality bars the user did not ask for.',
-        '- kind: "goal" when the request is a standing outcome pursued over many autonomous rounds against a durable acceptance bar (keep something at a level, drive a metric, iterate until reviewed and accepted). "task" when a single execution can deliver it. When in doubt, "task" — a goal commits the user to a budget of autonomous rounds.',
+        '- kind: "orchestration workflow" when the request is a standing outcome pursued over many autonomous rounds against a durable acceptance bar (keep something at a level, drive a metric, iterate until reviewed and accepted). "task" when a single execution can deliver it. When in doubt, "task" — an orchestration workflow commits the user to a budget of autonomous rounds.',
         "- kindReason: one sentence justifying the kind, in the user's language.",
         '- confidence: "high" ONLY when the request already names a concrete deliverable AND a concrete target to act on. A short request that names an intent without a deliverable ("improve the homepage", "clean up the feedback", "make it faster") is never high — you cannot tell what would be handed back.',
         '- confidence: "medium" when the deliverable or the target is implied but recoverable from the wording; "low" when the request could reasonably produce materially different deliverables.',

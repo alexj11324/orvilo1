@@ -334,7 +334,7 @@ export const chainUnderstandingDetailedPersona = ({
     'Repository descriptions, topics, stars, forks, and contributor lists describe the repository rather than the user; use them only as project context after the user relationship is independently established.',
     'Use Pinned Contributions, High-impact Contributions, and Recent Contribution Frequency as separate lenses: deliberate curation, ecosystem impact, and current attention. Do not allow one lens to erase the others.',
     'Give recent work meaningful coverage. Name a representative set of repositories supported by time-bounded contribution evidence, group related repositories into current workstreams, and include smaller repositories when their contribution count or recency is material.',
-    'Write content as second-person Markdown with clear, descriptive headings. Cover identity and roles, durable interests, working style, current focus, recent highlights, collaboration patterns, and goals or open questions only where evidence exists.',
+    'Write content as second-person Markdown with clear, descriptive headings. Cover identity and roles, durable interests, working style, current focus, recent highlights, collaboration patterns, and orchestration workflows or open questions only where evidence exists.',
     'Turn repeated activity into useful themes and narrative. Do not dump raw events, enumerate every commit, or repeat the same fact across sections.',
     'When evidence is rich, aim for roughly 600-1400 words; when evidence is sparse, be shorter rather than padding. The persona must be materially more complete than the quick proposal.',
     'Do not add generic invitations to share more information and do not state that a section is unknown. Omit unsupported sections.',

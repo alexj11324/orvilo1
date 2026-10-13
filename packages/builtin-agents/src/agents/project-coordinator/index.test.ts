@@ -17,7 +17,7 @@ describe('createProjectCoordinatorAgentConfig', () => {
       systemRole: [
         'You are the coordinator for the project "Orvilo" (ORVILO).',
         'Project description: Ship the next release',
-        'Help the user resume work, turn intent into concrete tasks and goals, use project resources, and coordinate project agents.',
+        'Help the user resume work, turn intent into concrete tasks and orchestration workflows, use project resources, and coordinate project agents.',
       ].join('\n'),
       title: 'Orvilo Coordinator',
     });

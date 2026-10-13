@@ -1,5 +1,5 @@
-import { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
-import type { GoalGraphDecision } from '@orvilo/types';
+import { ORCHESTRATION_WORKFLOW_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/orchestrationWorkflow';
+import type { OrchestrationWorkflowGraphDecision } from '@orvilo/types';
 
 import type { GoalNodeView } from './goalGraphViewModel';
 
@@ -18,11 +18,11 @@ export interface LocalizedCopyRef {
   params?: Record<string, string>;
 }
 
-const idsOf = (decision?: GoalGraphDecision | null): Set<string> =>
+const idsOf = (decision?: OrchestrationWorkflowGraphDecision | null): Set<string> =>
   new Set((decision?.options ?? []).map((option) => option.id));
 
 export const coordinatorGateKind = (
-  decision?: GoalGraphDecision | null,
+  decision?: OrchestrationWorkflowGraphDecision | null,
 ): CoordinatorGateKind | undefined => {
   const ids = idsOf(decision);
   if (ids.has('retry') && ids.has('retire')) return 'recoverTask';
@@ -42,7 +42,7 @@ export const gateTitleKey = (kind: CoordinatorGateKind): string => `goalProcess.
  */
 export const coordinatorNodeTitleKey = (view: GoalNodeView): string | undefined => {
   const { node } = view;
-  if (node.kind === 'task' && node.title === GOAL_ACCEPTANCE_TASK_TITLE)
+  if (node.kind === 'task' && node.title === ORCHESTRATION_WORKFLOW_ACCEPTANCE_TASK_TITLE)
     return 'goalProcess.node.terminalAcceptance';
   if (node.kind === 'decision') {
     const kind = viewGateKind(view);

@@ -13,7 +13,7 @@ import { oneLineEllipsis } from '@/styles';
 const Title = memo(() => {
   const { t } = useTranslation('chat');
   const view = useChatStore(chatPortalSelectors.goalNodeView);
-  const snapshot = useGoalStore(goalSelectors.goalGraph(view?.goalId ?? ''));
+  const snapshot = useGoalStore(goalSelectors.goalGraph(view?.orchestrationWorkflowId ?? ''));
   const node = useMemo(() => {
     if (!snapshot || !view) return undefined;
     const graph = buildGoalGraphView(snapshot);

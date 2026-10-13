@@ -1,11 +1,11 @@
-import { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
+import { ORCHESTRATION_WORKFLOW_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/orchestrationWorkflow';
 import type {
-  GoalGraphDecision,
-  GoalGraphEdge,
-  GoalGraphEvent,
-  GoalGraphNode,
-  GoalGraphSnapshot,
-  GoalItem,
+  OrchestrationWorkflowGraphDecision,
+  OrchestrationWorkflowGraphEdge,
+  OrchestrationWorkflowGraphEvent,
+  OrchestrationWorkflowGraphNode,
+  OrchestrationWorkflowGraphSnapshot,
+  OrchestrationWorkflowItem,
 } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
@@ -22,7 +22,9 @@ const T0 = new Date('2026-08-01T00:00:00Z');
 const at = (minutes: number) => new Date(T0.getTime() + minutes * 60_000);
 const NOW = at(120).getTime();
 
-const goal = (overrides: Partial<GoalItem> = {}): GoalItem => ({
+const orchestrationWorkflow = (
+  overrides: Partial<OrchestrationWorkflowItem> = {},
+): OrchestrationWorkflowItem => ({
   agentId: 'agt',
   completedAt: null,
   config: { recovery: { operationLeaseTimeoutMs: 15 * 60_000 } },
@@ -43,13 +45,16 @@ const goal = (overrides: Partial<GoalItem> = {}): GoalItem => ({
   ...overrides,
 });
 
-const node = (id: string, overrides: Partial<GoalGraphNode> = {}): GoalGraphNode => ({
+const node = (
+  id: string,
+  overrides: Partial<OrchestrationWorkflowGraphNode> = {},
+): OrchestrationWorkflowGraphNode => ({
   confidence: null,
   createdAt: at(1),
   createdByAgentId: null,
   createdByUserId: null,
   description: null,
-  goalId: 'goal-1',
+  orchestrationWorkflowId: 'goal-1',
   id,
   kind: 'task',
   priority: 0,
@@ -61,9 +66,13 @@ const node = (id: string, overrides: Partial<GoalGraphNode> = {}): GoalGraphNode
   ...overrides,
 });
 
-const edge = (source: string, target: string, kind: GoalGraphEdge['kind']): GoalGraphEdge => ({
+const edge = (
+  source: string,
+  target: string,
+  kind: OrchestrationWorkflowGraphEdge['kind'],
+): OrchestrationWorkflowGraphEdge => ({
   createdAt: at(1),
-  goalId: 'goal-1',
+  orchestrationWorkflowId: 'goal-1',
   id: `${source}-${target}-${kind}`,
   kind,
   sourceNodeId: source,
@@ -72,28 +81,30 @@ const edge = (source: string, target: string, kind: GoalGraphEdge['kind']): Goal
 
 const event = (
   entityId: string,
-  eventType: GoalGraphEvent['eventType'],
+  eventType: OrchestrationWorkflowGraphEvent['eventType'],
   minutes: number,
   reason?: string,
-): GoalGraphEvent => ({
+): OrchestrationWorkflowGraphEvent => ({
   actorId: 'user-1',
   actorType: 'agent',
   createdAt: at(minutes),
   entityId,
   entityType: 'node',
   eventType,
-  goalId: 'goal-1',
+  orchestrationWorkflowId: 'goal-1',
   id: `${entityId}-${eventType}-${minutes}`,
   operationId: null,
   reason: reason ?? null,
   taskId: null,
 });
 
-const snapshot = (partial: Partial<GoalGraphSnapshot>): GoalGraphSnapshot => ({
+const snapshot = (
+  partial: Partial<OrchestrationWorkflowGraphSnapshot>,
+): OrchestrationWorkflowGraphSnapshot => ({
   decisions: [],
   edges: [],
   events: [],
-  goal: goal(),
+  orchestrationWorkflow: orchestrationWorkflow(),
   nodes: [],
   workVersions: [],
   ...partial,
@@ -285,7 +296,7 @@ describe('buildGoalGraphView', () => {
   });
 
   it('surfaces a pending gate and hides the waiting task it was opened for', () => {
-    const decision: GoalGraphDecision = {
+    const decision: OrchestrationWorkflowGraphDecision = {
       authority: 'user',
       canceledAt: null,
       createdAt: at(50),
@@ -738,12 +749,14 @@ describe('experiment navigation', () => {
   it('keeps historical branching separate from dependencies and excludes terminal acceptance', () => {
     const view = buildGoalGraphView(
       snapshot({
-        goal: goal({ config: { exploration: { instruction: 'Compare', maxExperiments: 3 } } }),
+        orchestrationWorkflow: orchestrationWorkflow({
+          config: { exploration: { instruction: 'Compare', maxExperiments: 3 } },
+        }),
         nodes: [
           node('first', { kind: 'experiment' }),
           node('second', { kind: 'experiment' }),
           node('third', { kind: 'experiment' }),
-          node('acceptance', { title: GOAL_ACCEPTANCE_TASK_TITLE }),
+          node('acceptance', { title: ORCHESTRATION_WORKFLOW_ACCEPTANCE_TASK_TITLE }),
         ],
         edges: [
           edge('second', 'first', 'derived_from'),

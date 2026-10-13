@@ -25,7 +25,7 @@ const prefixes = {
   evalTestCases: 'case',
   expertiseDomains: 'epd',
   files: 'file',
-  goals: 'goal',
+  orchestrationWorkflows: 'orchestrationWorkflow',
   knowledgeBases: 'kb',
   memory: 'mem',
   messageGroups: 'mg',

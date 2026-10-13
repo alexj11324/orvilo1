@@ -283,7 +283,7 @@ describe('SettingsAction', () => {
       const { result } = renderHook(() => useUserStore());
       const systemAgentSettings: PartialDeep<UserSettings> = {
         systemAgent: {
-          goal: {
+          orchestrationWorkflow: {
             model: 'testmodel',
             provider: 'provider',
           },
@@ -308,7 +308,7 @@ describe('SettingsAction', () => {
     it('should persist system agent model and provider together when provider matches default', async () => {
       const { result } = renderHook(() => useUserStore());
       const model = 'ag/gemini-3.1-pro-high';
-      const provider = DEFAULT_SETTINGS.systemAgent.goal.provider;
+      const provider = DEFAULT_SETTINGS.systemAgent.orchestrationWorkflow.provider;
 
       await act(async () => {
         await result.current.updateSystemAgent('goal', { model, provider });
@@ -317,7 +317,7 @@ describe('SettingsAction', () => {
       expect(userService.updateUserSettings).toHaveBeenLastCalledWith(
         {
           systemAgent: {
-            goal: {
+            orchestrationWorkflow: {
               model,
               provider,
             },

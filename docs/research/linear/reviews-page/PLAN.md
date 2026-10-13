@@ -34,7 +34,7 @@ No sidebar, Inbox, My issues, Project, shared WorkSurface, service, or locale ow
 
 Failure conditions are a blank dead column, a detail route that unmounts the queue on wide screens, an action/footer lost by embedding, a row that cannot be keyboard-opened, a stale tab on Back, or a narrow layout showing both panes squeezed together.
 
-## Bounded non-goals and remaining evidence
+## Bounded non-orchestration workflows and remaining evidence
 
 - Linear's Add filter and Display options controls are inventoried in `BEHAVIORS.md`. Orvilo's queue API exposes tab and cursor only, so this slice does not add inert menus.
 - Linear-specific group semantics such as `Ready to merge` and `Created by you` are not inferred from Orvilo's smaller queue response.

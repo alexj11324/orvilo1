@@ -65,9 +65,9 @@ export const resolveVerificationDeliverable = async (
 export interface RunVerifyOnCompletionParams {
   /** The run's final output / artifacts, judged against the plan. */
   deliverable: string;
-  /** The user's task the run had to satisfy. */
-  goal: string;
   operationId: string;
+  /** The user's task the run had to satisfy. */
+  orchestrationWorkflow: string;
 }
 
 /**
@@ -207,7 +207,7 @@ const executeVerifyLifecycle = async (
             await startEvidenceSubmission({
               db,
               deliverable: aegisDeliverable,
-              goal: params.goal,
+              orchestrationWorkflow: params.orchestrationWorkflow,
               operation: op,
               plan: run.plan,
               userId,
@@ -263,12 +263,13 @@ const executeVerifyLifecycle = async (
       op.taskId,
       workspaceId,
     );
-    const verificationGoal = params.goal || run.goal || '';
+    const verificationOrchestrationWorkflow =
+      params.orchestrationWorkflow || run.orchestrationWorkflow || '';
 
     const executor = new VerifyExecutorService(db, userId, workspaceId);
     await executor.execute({
       deliverable: resolvedDeliverable,
-      goal: verificationGoal,
+      orchestrationWorkflow: verificationOrchestrationWorkflow,
       modelConfig,
       operationId: params.operationId,
       // `agent`-type checks run as the task-pinned verify agent (or the builtin
@@ -301,7 +302,7 @@ const executeVerifyLifecycle = async (
       {
         report: {
           deliverable: resolvedDeliverable,
-          goal: verificationGoal,
+          orchestrationWorkflow: verificationOrchestrationWorkflow,
           modelConfig,
           verifierAgentId,
         },

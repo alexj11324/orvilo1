@@ -11,7 +11,9 @@ import { resolveAppUrlBuilder } from './task/url';
 const statusValues = PROJECT_STATUSES.join(', ');
 
 export function registerProjectCommand(program: Command) {
-  const project = program.command('project').description('Manage goal-oriented projects');
+  const project = program
+    .command('project')
+    .description('Manage orchestration-workflow-oriented projects');
 
   project
     .command('list')

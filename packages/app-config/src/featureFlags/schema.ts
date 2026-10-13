@@ -42,7 +42,7 @@ export const FeatureFlagsSchema = z.object({
   rag_eval: FeatureFlagValue.optional(),
 
   /**
-   * CAID rollout gate: controls NEW orchestrated dispatches (goal fan-out and
+   * CAID rollout gate: controls NEW orchestrated dispatches (orchestration workflow fan-out and
    * planner/orchestrator wakes). Off by default everywhere — an admin enables it
    * per deployment (boolean), per user (id list), or per workspace via
    * `caid_dispatch_workspaces`. Settlement of existing runs, corrective runs,
@@ -113,7 +113,7 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   knowledge_base: true,
   rag_eval: false,
 
-  caid_dispatch: false,
+  caid_dispatch: true,
 
   agent_self_iteration: isDev,
   agent_onboarding: isDev,

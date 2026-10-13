@@ -1,6 +1,6 @@
 import debug from 'debug';
 
-import { GoalModel } from '@/database/models/goal';
+import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import { TaskModel } from '@/database/models/task';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
@@ -72,12 +72,15 @@ export const instantiateVerifyPlanOnStart = async (
     // Idempotent: a plan already exists for this run (re-fire, or agent/UI-built).
     if (existing?.plan?.length) return;
 
-    const goal = task?.instruction ?? task?.name ?? '';
+    const orchestrationWorkflow = task?.instruction ?? task?.name ?? '';
 
-    // Goal retries re-verify the same acceptance checks, including supplementary
+    // OrchestrationWorkflow retries re-verify the same acceptance checks, including supplementary
     // checks submitted with the delivery. Generating new ids would leave the
     // rejected evidence in the union forever instead of superseding it.
-    if (holistic && (await new GoalModel(db, userId, workspaceId).findByGraphTask(params.taskId))) {
+    if (
+      holistic &&
+      (await new OrchestrationWorkflowModel(db, userId, workspaceId).findByGraphTask(params.taskId))
+    ) {
       const service = new AcceptanceService(db, userId, workspaceId);
       const { results, runs } = await service.loadRounds(acceptance.id);
       const previousPlan = buildAcceptanceCheckUnion(
@@ -99,7 +102,7 @@ export const instantiateVerifyPlanOnStart = async (
     }
 
     const planGenerator = new VerifyPlanGeneratorService(db, userId, workspaceId);
-    // Undecomposed acceptance (goal-dispatched Task, one-sentence requirement):
+    // Undecomposed acceptance (orchestration workflow-dispatched Task, one-sentence requirement):
     // spend one generation call splitting the requirement into named criteria,
     // so the checklist reads as distinguishable items instead of one generic
     // "Task delivery acceptance" row.
@@ -116,7 +119,7 @@ export const instantiateVerifyPlanOnStart = async (
       context: requirement,
       // Configured rubric/criteria ARE the plan — no AI proposal on that path.
       enableAiGeneration: holistic,
-      goal,
+      orchestrationWorkflow,
       // Still fall back to the single agent-type holistic check when the
       // generation fails or returns nothing, so verify runs either way.
       holisticFallback: holistic,

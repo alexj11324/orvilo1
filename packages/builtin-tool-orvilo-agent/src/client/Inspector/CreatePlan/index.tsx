@@ -13,9 +13,9 @@ export const CreatePlanInspector = memo<BuiltinInspectorProps<CreatePlanParams, 
   ({ args, partialArgs, isArgumentsStreaming }) => {
     const { t } = useTranslation('plugin');
 
-    const goal = args?.goal || partialArgs?.goal;
+    const orchestrationWorkflow = args?.orchestrationWorkflow || partialArgs?.orchestrationWorkflow;
 
-    if (isArgumentsStreaming && !goal) {
+    if (isArgumentsStreaming && !orchestrationWorkflow) {
       return (
         <div className={inspectorTextStyles.root}>
           <span className={shinyTextStyles.shinyText}>
@@ -29,12 +29,12 @@ export const CreatePlanInspector = memo<BuiltinInspectorProps<CreatePlanParams, 
       <div
         className={cx(inspectorTextStyles.root, isArgumentsStreaming && shinyTextStyles.shinyText)}
       >
-        {goal ? (
+        {orchestrationWorkflow ? (
           <Trans
-            components={{ goal: <span className={highlightTextStyles.primary} /> }}
+            components={{ orchestrationWorkflow: <span className={highlightTextStyles.primary} /> }}
             i18nKey="builtins.orvilo-agent.apiName.createPlan.result"
             ns="plugin"
-            values={{ goal }}
+            values={{ orchestrationWorkflow }}
           />
         ) : (
           <span>{t('builtins.orvilo-agent.apiName.createPlan')}</span>

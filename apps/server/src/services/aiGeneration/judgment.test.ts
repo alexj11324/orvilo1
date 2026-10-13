@@ -1161,7 +1161,7 @@ describe('planning tool submissions (#623)', () => {
       input: JUDGMENT_INPUT,
       judgment: {
         binding: { agentId: 'agent-1' },
-        purpose: 'goal.criteriaDraft',
+        purpose: 'orchestrationWorkflow.criteriaDraft',
         outputMode: 'tool',
       },
     });
@@ -1172,7 +1172,7 @@ describe('planning tool submissions (#623)', () => {
         appContext: expect.objectContaining({
           judgment: expect.objectContaining({ outputMode: 'tool' }),
         }),
-        prompt: expect.stringContaining('orvilo goal submit-draft'),
+        prompt: expect.stringContaining('orvilo orchestration-workflow submit-draft'),
       }),
     );
   });
@@ -1183,7 +1183,7 @@ describe('planning tool submissions (#623)', () => {
         input: JUDGMENT_INPUT,
         judgment: {
           binding: { agentId: 'agent-1' },
-          purpose: 'goal.criteriaDraft',
+          purpose: 'orchestrationWorkflow.criteriaDraft',
           outputMode: 'tool',
         },
       }),

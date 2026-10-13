@@ -15,7 +15,10 @@ describe('resolveTaskAcceptanceGoal', () => {
 
   it('falls back to the description and then the task name', () => {
     expect(
-      resolveTaskAcceptanceGoal({ description: '  Export a readable PDF. ', name: 'Export PDF' }),
+      resolveTaskAcceptanceGoal({
+        description: '  Export a readable PDF. ',
+        name: 'Export PDF',
+      }),
     ).toBe('Export a readable PDF.');
     expect(resolveTaskAcceptanceGoal({ name: '  Export PDF  ' })).toBe('Export PDF');
   });

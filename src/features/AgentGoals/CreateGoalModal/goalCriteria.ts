@@ -1,4 +1,4 @@
-import type { GoalCriterionDraft } from '@orvilo/builtin-tool-task';
+import type { OrchestrationWorkflowCriterionDraft } from '@orvilo/builtin-tool-task';
 
 import type { VerifyCriterionDraft } from '@/services/verify';
 import { verifyService } from '@/services/verify';
@@ -7,38 +7,42 @@ interface GenerateGoalCriteriaParams {
   /** The agent the goal is being created for, when the opener supplied one. */
   agentId?: string;
   context?: string;
-  goal: string;
+  orchestrationWorkflow: string;
 }
 
 export interface GeneratedGoalPlan {
-  criteria: GoalCriterionDraft[];
+  criteria: OrchestrationWorkflowCriterionDraft[];
   instruction: string;
   title: string;
 }
 
-export const withGoalCriterionDefaults = (draft: VerifyCriterionDraft): GoalCriterionDraft => ({
+export const withGoalCriterionDefaults = (
+  draft: VerifyCriterionDraft,
+): OrchestrationWorkflowCriterionDraft => ({
   ...draft,
   onFail: draft.onFail ?? 'auto_repair',
   required: draft.required ?? true,
   verifierType: draft.verifierType ?? 'agent',
 });
 
-export const createFallbackGoalCriterion = (goal: string): GoalCriterionDraft => ({
+export const createFallbackGoalCriterion = (
+  orchestrationWorkflow: string,
+): OrchestrationWorkflowCriterionDraft => ({
   onFail: 'auto_repair',
   required: true,
-  title: goal,
+  title: orchestrationWorkflow,
   verifierType: 'agent',
 });
 
-export const generateGoalCriteria = async ({
+export const generateOrchestrationWorkflowCriteria = async ({
   agentId,
   context,
-  goal,
+  orchestrationWorkflow,
 }: GenerateGoalCriteriaParams): Promise<GeneratedGoalPlan> => {
-  const generated = await verifyService.generateGoalPlan({
+  const generated = await verifyService.generateOrchestrationWorkflowPlan({
     agentId,
     context,
-    goal,
+    orchestrationWorkflow,
     maxCriteria: 8,
   });
 
@@ -47,6 +51,6 @@ export const generateGoalCriteria = async ({
   return {
     ...generated,
     criteria: generated.criteria.map(withGoalCriterionDefaults),
-    instruction: generated.instruction.trim() || goal.trim(),
+    instruction: generated.instruction.trim() || orchestrationWorkflow.trim(),
   };
 };

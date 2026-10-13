@@ -873,7 +873,9 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
             )}
             <h1 className="m-0 text-2xl font-semibold">{run.title || t('report.titleFallback')}</h1>
 
-            {!isCodingReport && run.goal && <div className={cn(styles.summary)}>{run.goal}</div>}
+            {!isCodingReport && run.orchestrationWorkflow && (
+              <div className={cn(styles.summary)}>{run.orchestrationWorkflow}</div>
+            )}
             {report?.summary && <div className={cn(styles.summary)}>{report.summary}</div>}
 
             {isCodingReport && (

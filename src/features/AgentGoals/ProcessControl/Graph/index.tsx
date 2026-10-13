@@ -2,8 +2,8 @@
 
 import '@xyflow/react/dist/style.css';
 
-import type { GoalGraphEdge } from '@orvilo/types';
-import { experimentMembers } from '@orvilo/utils/goalGraph';
+import type { OrchestrationWorkflowGraphEdge } from '@orvilo/types';
+import { experimentMembers } from '@orvilo/utils/orchestrationWorkflowGraph';
 import {
   Background,
   BackgroundVariant,
@@ -139,7 +139,7 @@ const useSubtitle = () => {
 const useEdgeLabel = () => {
   const { t } = useTranslation('chat');
   return useCallback(
-    (kind: GoalGraphEdge['kind']): string | undefined => {
+    (kind: OrchestrationWorkflowGraphEdge['kind']): string | undefined => {
       switch (kind) {
         case 'answers': {
           return t('goalExperiment.answers');
@@ -588,7 +588,7 @@ Canvas.displayName = 'GoalGraphCanvas';
 
 const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) => {
   const { t } = useTranslation('chat');
-  const navigation = useExplorationNavigation(props.graph.goal.id, {
+  const navigation = useExplorationNavigation(props.graph.orchestrationWorkflow.id, {
     nodes: props.graph.nodes.map((item) => item.node),
     edges: props.graph.edges,
   });
@@ -791,7 +791,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
                 </div>
               }
               onEnter={navigation.enter}
-              onInspect={(id) => openNode(props.graph.goal.id, id)}
+              onInspect={(id) => openNode(props.graph.orchestrationWorkflow.id, id)}
               onSelect={selectNode}
             />
           </ReactFlowProvider>
@@ -843,7 +843,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
           planning={scopeId ? false : props.planning}
           view={scopeId ? 'all' : view}
           onEnter={navigation.enter}
-          onInspect={(id) => openNode(props.graph.goal.id, id)}
+          onInspect={(id) => openNode(props.graph.orchestrationWorkflow.id, id)}
           onSelect={selectNode}
         />
       </ReactFlowProvider>

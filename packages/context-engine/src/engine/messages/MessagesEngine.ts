@@ -41,7 +41,6 @@ import {
   EvalContextSystemInjector,
   ExpertiseContextInjector,
   ForceFinishSummaryInjector,
-  GoalContextSyntheticInjector,
   GroupAgentBuilderContextInjector,
   GroupContextInjector,
   HistorySummaryProvider,
@@ -51,6 +50,7 @@ import {
   OnboardingActionHintInjector,
   OnboardingContextInjector,
   OnboardingSyntheticStateInjector,
+  OrchestrationWorkflowContextSyntheticInjector,
   PageEditorContextInjector,
   PageSelectionsInjector,
   PlanInjector,
@@ -460,12 +460,12 @@ export class MessagesEngine {
       // Inject high-churn runtime guidance at the tail to preserve stable prefix caching
       // =============================================
 
-      // Goal progress overview (goal detail page conversation) — a synthetic
+      // OrchestrationWorkflow progress overview (orchestration workflow detail page conversation) — a synthetic
       // getGoalContext tool pair after the last user message: environment
       // state arrives as machine-provided tool output, not as user words.
-      new GoalContextSyntheticInjector({
-        enabled: !!initialContext?.goalOverview,
-        overview: initialContext?.goalOverview,
+      new OrchestrationWorkflowContextSyntheticInjector({
+        enabled: !!initialContext?.orchestrationWorkflowOverview,
+        overview: initialContext?.orchestrationWorkflowOverview,
       }),
       // Onboarding synthetic state (fake getOnboardingState tool call pair to drive action loop)
       new OnboardingSyntheticStateInjector({

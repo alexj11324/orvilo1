@@ -38,10 +38,10 @@ vi.mock('@/database/models/metric', () => ({
   }),
 }));
 
-const mockGoalFindById = vi.fn();
-vi.mock('@/database/models/goal', () => ({
-  GoalModel: vi.fn(function () {
-    return { findById: mockGoalFindById };
+const mockOrchestrationWorkflowFindById = vi.fn();
+vi.mock('@/database/models/orchestrationWorkflow', () => ({
+  OrchestrationWorkflowModel: vi.fn(function () {
+    return { findById: mockOrchestrationWorkflowFindById };
   }),
 }));
 vi.mock('@/database/models/agent', () => ({
@@ -66,14 +66,19 @@ describe('metricRouter', () => {
   const ctx: any = { serverDB: {}, userId: 'user-1', workspaceId: 'ws-1' };
   const caller = metricRouter.createCaller(ctx);
 
-  const visibleSeries = { id: 'mtr_1', subjectId: 'goal_1', subjectType: 'goal', userId: 'user-1' };
+  const visibleSeries = {
+    id: 'mtr_1',
+    subjectId: 'orchestration_workflow_1',
+    subjectType: 'orchestrationWorkflow',
+    userId: 'user-1',
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     // A metric is exactly as visible as its subject, so every by-id path
     // resolves the series and then re-checks the subject.
     mockModel.findById.mockResolvedValue(visibleSeries);
-    mockGoalFindById.mockResolvedValue({ id: 'goal_1' });
+    mockOrchestrationWorkflowFindById.mockResolvedValue({ id: 'orchestration_workflow_1' });
   });
 
   describe('addPoint', () => {
@@ -134,19 +139,27 @@ describe('metricRouter', () => {
 
   describe('upsertSeries', () => {
     it('rejects a subject the caller cannot see before touching the slot', async () => {
-      mockGoalFindById.mockResolvedValue(undefined);
+      mockOrchestrationWorkflowFindById.mockResolvedValue(undefined);
 
       await expect(
-        caller.upsertSeries({ key: 'k', subjectId: 'goal_foreign', subjectType: 'goal' }),
+        caller.upsertSeries({
+          key: 'k',
+          subjectId: 'orchestration_workflow_foreign',
+          subjectType: 'orchestrationWorkflow',
+        }),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
       expect(mockModel.ensure).not.toHaveBeenCalled();
     });
 
     it('maps a foreign-owned slot to CONFLICT', async () => {
-      mockGoalFindById.mockResolvedValue({ id: 'goal_1' });
+      mockOrchestrationWorkflowFindById.mockResolvedValue({ id: 'orchestration_workflow_1' });
       mockModel.ensure.mockResolvedValue(undefined);
       await expect(
-        caller.upsertSeries({ key: 'k', subjectId: 'goal_1', subjectType: 'goal' }),
+        caller.upsertSeries({
+          key: 'k',
+          subjectId: 'orchestration_workflow_1',
+          subjectType: 'orchestrationWorkflow',
+        }),
       ).rejects.toMatchObject({ code: 'CONFLICT' });
     });
   });
@@ -159,14 +172,25 @@ describe('metricRouter', () => {
       ['getSeries', () => caller.getSeries({ id: 'mtr_1' })],
       ['listPoints', () => caller.listPoints({ id: 'mtr_1' })],
       ['addPoint', () => caller.addPoint({ id: 'mtr_1', value: 1 })],
-      ['listSeries', () => caller.listSeries({ subjectId: 'goal_1', subjectType: 'goal' })],
+      [
+        'listSeries',
+        () =>
+          caller.listSeries({
+            subjectId: 'orchestration_workflow_1',
+            subjectType: 'orchestrationWorkflow',
+          }),
+      ],
       [
         'listSeriesWithPoints',
         () =>
-          caller.listSeriesWithPoints({ keys: ['k'], subjectId: 'goal_1', subjectType: 'goal' }),
+          caller.listSeriesWithPoints({
+            keys: ['k'],
+            subjectId: 'orchestration_workflow_1',
+            subjectType: 'orchestrationWorkflow',
+          }),
       ],
     ])('%s refuses a series whose subject the caller cannot see', async (_name, run) => {
-      mockGoalFindById.mockResolvedValue(undefined);
+      mockOrchestrationWorkflowFindById.mockResolvedValue(undefined);
 
       await expect(run()).rejects.toMatchObject({ code: 'NOT_FOUND' });
       expect(mockModel.findBySubject).not.toHaveBeenCalled();
@@ -190,11 +214,15 @@ describe('metricRouter', () => {
 
       const result = await caller.listSeriesWithPoints({
         keys: ['followers'],
-        subjectId: 'goal_1',
-        subjectType: 'goal',
+        subjectId: 'orchestration_workflow_1',
+        subjectType: 'orchestrationWorkflow',
       });
 
-      expect(mockModel.findByKeys).toHaveBeenCalledWith('goal', 'goal_1', ['followers']);
+      expect(mockModel.findByKeys).toHaveBeenCalledWith(
+        'orchestrationWorkflow',
+        'orchestration_workflow_1',
+        ['followers'],
+      );
       expect(result.data).toEqual([
         expect.objectContaining({
           firstPoint: expect.objectContaining({ value: 1200 }),
@@ -206,7 +234,11 @@ describe('metricRouter', () => {
 
     it('rejects an empty key list instead of scanning every series', async () => {
       await expect(
-        caller.listSeriesWithPoints({ keys: [], subjectId: 'goal_1', subjectType: 'goal' }),
+        caller.listSeriesWithPoints({
+          keys: [],
+          subjectId: 'orchestration_workflow_1',
+          subjectType: 'orchestrationWorkflow',
+        }),
       ).rejects.toThrow();
       expect(mockModel.findByKeys).not.toHaveBeenCalled();
     });

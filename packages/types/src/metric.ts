@@ -4,11 +4,12 @@
 
 /**
  * What a metric can be mounted on. Deliberately open-ended: the table stores a
- * polymorphic `subjectType` / `subjectId` pair with no FK (mirroring `goals`),
- * so new subject kinds are a type-only change. Goals are the first consumer;
+ * polymorphic `subjectType` / `subjectId` pair with no FK (mirroring `orchestration workflows`),
+ * so new subject kinds are a type-only change. OrchestrationWorkflows are the first consumer;
  * the metrics layer itself never special-cases any of these.
  */
-export type MetricSubjectType = 'goal' | 'task' | 'agent' | 'project' | 'workspace';
+export type MetricSubjectType =
+  'orchestrationWorkflow' | 'task' | 'agent' | 'project' | 'workspace';
 
 /**
  * Decimal places `metric_points.value` keeps — the column is `numeric(20, 6)`.
@@ -40,7 +41,7 @@ export type MetricKind = 'gauge' | 'counter';
 /** How a data point entered the system. */
 export type MetricPointSourceType = 'probe' | 'manual' | 'api';
 
-/** Who recorded a data point — mirrors the goal_events actor convention. */
+/** Who recorded a data point — mirrors the orchestration_workflow_events actor convention. */
 export type MetricActorType = 'user' | 'agent' | 'system';
 
 /**
@@ -49,7 +50,7 @@ export type MetricActorType = 'user' | 'agent' | 'system';
  */
 export interface MetricConfig {
   /**
-   * Which way is progress. Lets the UI color a trend and lets goal criteria
+   * Which way is progress. Lets the UI color a trend and lets orchestration workflow criteria
    * evaluation read "current vs target" without per-metric special cases.
    */
   direction?: 'higher_is_better' | 'lower_is_better';

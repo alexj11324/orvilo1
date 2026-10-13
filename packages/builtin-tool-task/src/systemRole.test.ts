@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { systemPrompt } from './systemRole';
 
 describe('systemPrompt', () => {
-  it('does not instruct the task tool to run the goal workflow', () => {
-    expect(systemPrompt).not.toContain('**createGoal**');
+  it('does not instruct the task tool to run the orchestration workflow workflow', () => {
+    expect(systemPrompt).not.toContain('**startOrchestrationWorkflow**');
   });
 
   it('teaches member assignment: resolve ids via listWorkspaceMembers, coexisting assignees', () => {

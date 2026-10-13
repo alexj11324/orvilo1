@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentModel } from '@/database/models/agent';
-import { GoalModel } from '@/database/models/goal';
 import { MetricModel } from '@/database/models/metric';
+import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import type { OrviloDatabase } from '@/database/type';
@@ -31,7 +31,7 @@ const metricWriteProcedure = metricProcedure.use(withScopedPermission('agent:upd
 const idInput = z.object({ id: z.string() });
 const subjectInput = z.object({
   subjectId: z.string(),
-  subjectType: z.enum(['goal', 'task', 'agent', 'project', 'workspace']),
+  subjectType: z.enum(['orchestrationWorkflow', 'task', 'agent', 'project', 'workspace']),
 });
 const configSchema = z.object({
   direction: z.enum(['higher_is_better', 'lower_is_better']).optional(),
@@ -94,8 +94,8 @@ const assertSubjectVisible = async (
       case 'agent': {
         return new AgentModel(db, ctx.userId, workspaceId).existsById(subjectId);
       }
-      case 'goal': {
-        return new GoalModel(db, ctx.userId, workspaceId).findById(subjectId);
+      case 'orchestrationWorkflow': {
+        return new OrchestrationWorkflowModel(db, ctx.userId, workspaceId).findById(subjectId);
       }
       case 'project': {
         return new ProjectModel(db, ctx.userId, workspaceId).findById(subjectId);

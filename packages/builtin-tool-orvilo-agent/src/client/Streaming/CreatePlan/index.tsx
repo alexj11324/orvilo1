@@ -17,16 +17,16 @@ const styles = {
 };
 
 export const CreatePlanStreaming = memo<BuiltinStreamingProps<CreatePlanParams>>(({ args }) => {
-  const { goal, description, context } = args || {};
+  const { orchestrationWorkflow, description, context } = args || {};
 
-  if (!goal) return null;
+  if (!orchestrationWorkflow) return null;
 
   return (
     <div className={cn('flex', 'flex-col', 'gap-2', styles.container)}>
       {/* Header */}
       <div className={styles.header}>
         <ListChecksIcon size={18} />
-        <div className={`truncate ${styles.title}`}>{goal}</div>
+        <div className={`truncate ${styles.title}`}>{orchestrationWorkflow}</div>
       </div>
 
       {/* Description */}

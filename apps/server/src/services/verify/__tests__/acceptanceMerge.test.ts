@@ -255,7 +255,7 @@ describe('mergeAcceptanceRounds', () => {
     expect(mocks.resultUpdate).not.toHaveBeenCalled();
   });
 
-  it('carries the standing checklist over, deduped by name, and adopts a missing goal', async () => {
+  it('carries the standing checklist over, deduped by name, and adopts a missing orchestration workflow', async () => {
     const source = acceptance(SOURCE_ID, {
       config: {
         checklist: [
@@ -295,10 +295,10 @@ describe('mergeAcceptanceRounds', () => {
     expect(mocks.acceptanceDelete).not.toHaveBeenCalled();
   });
 
-  it('keeps the target goal when it already has one', async () => {
+  it('keeps the target orchestration workflow when it already has one', async () => {
     await mergeWith(
-      acceptance(SOURCE_ID, { requirement: 'source goal' }),
-      acceptance(TARGET_ID, { requirement: 'target goal' }),
+      acceptance(SOURCE_ID, { requirement: 'source orchestration workflow' }),
+      acceptance(TARGET_ID, { requirement: 'target orchestration workflow' }),
     );
 
     expect(mocks.acceptanceUpdate).not.toHaveBeenCalled();

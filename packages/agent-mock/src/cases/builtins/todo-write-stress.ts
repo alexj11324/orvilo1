@@ -42,7 +42,7 @@ const updateTodos = (
 
 /** orvilo-agent / createPlan */
 const createPlan = (
-  goal: string,
+  orchestrationWorkflow: string,
   description: string,
   context: string,
   planId: string,
@@ -51,11 +51,11 @@ const createPlan = (
   toolStep({
     identifier: 'orvilo-agent',
     apiName: 'createPlan',
-    arguments: JSON.stringify({ goal, description, context }),
+    arguments: JSON.stringify({ orchestrationWorkflow, description, context }),
     result: {
       plan: {
         id: planId,
-        goal,
+        orchestrationWorkflow,
         description,
         context,
         completed: false,
@@ -69,7 +69,12 @@ const createPlan = (
 /** orvilo-agent / updatePlan */
 const updatePlan = (
   planId: string,
-  set: { goal?: string; description?: string; context?: string; completed?: boolean },
+  set: {
+    orchestrationWorkflow?: string;
+    description?: string;
+    context?: string;
+    completed?: boolean;
+  },
   durationMs = 60,
 ) =>
   toolStep({
@@ -79,7 +84,7 @@ const updatePlan = (
     result: {
       plan: {
         id: planId,
-        goal: set.goal ?? 'Updated plan',
+        orchestrationWorkflow: set.orchestrationWorkflow ?? 'Updated plan',
         description: set.description ?? '',
         context: set.context ?? '',
         completed: set.completed ?? false,

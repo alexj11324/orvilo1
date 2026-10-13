@@ -83,7 +83,7 @@ Query construction guidance:
 <memory_layer_definitions>
 - **Activity Layer** — time-bound events and interactions. Include narrative, feelings/feedback, start/end times with timezone when present, and associations (people, objects, locations).
 - **Identity Layer** — enduring facts about people and their relationships: roles, demographics, background, priorities, and relational context.
-- **Context Layer** — ongoing situations such as projects, goals, partnerships, or environments. Capture actors (associatedSubjects), resources (associatedObjects), currentStatus, timelines, and impact/urgency assessments.
+- **Context Layer** — ongoing situations such as projects, orchestration workflows, partnerships, or environments. Capture actors (associatedSubjects), resources (associatedObjects), currentStatus, timelines, and impact/urgency assessments.
 - **Preference Layer** — durable directives that guide future assistant behaviour (communication style, workflow choices, priority rules). Exclude single-use task instructions or purely implementation details.
 - **Experience Layer** — lessons, insights, and transferable know-how. Preserve the Situation → Reasoning → Action → Outcome narrative and note confidence when available.
 </memory_layer_definitions>

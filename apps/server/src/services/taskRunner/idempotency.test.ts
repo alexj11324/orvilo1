@@ -3,23 +3,23 @@ import { describe, expect, it } from 'vitest';
 import { taskRunIdempotencyKey } from './idempotency';
 
 describe('taskRunIdempotencyKey', () => {
-  it('keeps a goal attempt stable while distinguishing the next durable generation', () => {
+  it('keeps an orchestration workflow attempt stable while distinguishing the next durable generation', () => {
     const input = {
       executionGeneration: 3,
-      goalId: 'goal-1',
+      orchestrationWorkflowId: 'orchestration-workflow-1',
       taskId: 'task-1',
       taskRevision: 7,
     };
 
-    expect(taskRunIdempotencyKey.goalTaskAttempt(input)).toBe(
-      'goal:goal-1:task:task-1:generation:4:revision:7',
+    expect(taskRunIdempotencyKey.orchestrationWorkflowTaskAttempt(input)).toBe(
+      'orchestrationWorkflow:orchestration-workflow-1:task:task-1:generation:4:revision:7',
     );
-    expect(taskRunIdempotencyKey.goalTaskAttempt(input)).toBe(
-      taskRunIdempotencyKey.goalTaskAttempt({ ...input }),
+    expect(taskRunIdempotencyKey.orchestrationWorkflowTaskAttempt(input)).toBe(
+      taskRunIdempotencyKey.orchestrationWorkflowTaskAttempt({ ...input }),
     );
-    expect(taskRunIdempotencyKey.goalTaskAttempt({ ...input, executionGeneration: 4 })).not.toBe(
-      taskRunIdempotencyKey.goalTaskAttempt(input),
-    );
+    expect(
+      taskRunIdempotencyKey.orchestrationWorkflowTaskAttempt({ ...input, executionGeneration: 4 }),
+    ).not.toBe(taskRunIdempotencyKey.orchestrationWorkflowTaskAttempt(input));
   });
 
   it('uses durable event identities for cascade, steer, integration and onboarding retries', () => {

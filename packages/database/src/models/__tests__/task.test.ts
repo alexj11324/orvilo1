@@ -1280,7 +1280,7 @@ describe('TaskModel', () => {
 
     it('should aggregate run cost and duration for the returned task batch', async () => {
       const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Measured goal' });
+      const task = await model.create({ instruction: 'Measured orchestration workflow' });
       const startedAt = new Date('2026-08-06T10:00:00.000Z');
 
       await serverDB.insert(topics).values([
@@ -1303,7 +1303,7 @@ describe('TaskModel', () => {
       ]);
 
       const [group] = await model.groupList({
-        groups: [{ key: 'goals', statuses: ['backlog'] }],
+        groups: [{ key: 'orchestrationWorkflows', statuses: ['backlog'] }],
       });
       const measuredTask = group.tasks.find(({ id }) => id === task.id);
 
@@ -1311,15 +1311,15 @@ describe('TaskModel', () => {
       expect(measuredTask?.totalRunDuration).toBe(240_000);
     });
 
-    it('should aggregate descendant run metrics into the root goal', async () => {
+    it('should aggregate descendant run metrics into the root orchestration workflow', async () => {
       const model = new TaskModel(serverDB, userId);
-      const root = await model.create({ instruction: 'Root goal' });
+      const root = await model.create({ instruction: 'Root orchestration workflow' });
       const child = await model.create({ instruction: 'Delegated work', parentTaskId: root.id });
       const startedAt = new Date('2026-08-06T10:00:00.000Z');
 
       await serverDB.insert(topics).values({
         completedAt: new Date('2026-08-06T10:02:00.000Z'),
-        id: 'descendant-goal-run',
+        id: 'descendant-orchestration-workflow-run',
         totalCost: 0.05,
         userId,
       });
@@ -1327,12 +1327,12 @@ describe('TaskModel', () => {
         createdAt: startedAt,
         seq: 1,
         taskId: child.id,
-        topicId: 'descendant-goal-run',
+        topicId: 'descendant-orchestration-workflow-run',
         userId,
       });
 
       const [group] = await model.groupList({
-        groups: [{ key: 'goals', statuses: ['backlog'] }],
+        groups: [{ key: 'orchestrationWorkflows', statuses: ['backlog'] }],
         parentTaskId: null,
       });
       const measuredRoot = group.tasks.find(({ id }) => id === root.id);
@@ -1361,7 +1361,7 @@ describe('TaskModel', () => {
   describe('deleteSubtree', () => {
     it('should delete the root and all descendants without leaving orphan tasks', async () => {
       const model = new TaskModel(serverDB, userId);
-      const root = await model.create({ instruction: 'Root goal' });
+      const root = await model.create({ instruction: 'Root orchestration workflow' });
       const child = await model.create({ instruction: 'Child', parentTaskId: root.id });
       const grandchild = await model.create({ instruction: 'Grandchild', parentTaskId: child.id });
       await serverDB.insert(acceptances).values({
@@ -2495,7 +2495,7 @@ describe('TaskModel', () => {
       expect(await model.getActivities(task.id)).toHaveLength(0);
     });
 
-    // Goal supervision asks who authored the latest status change. Other
+    // OrchestrationWorkflow supervision asks who authored the latest status change. Other
     // kinds of row must not be able to push that row out of its lookup.
     it('finds the latest row of a kind however many other rows came after it', async () => {
       const model = new TaskModel(serverDB, userId);

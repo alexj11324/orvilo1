@@ -41,7 +41,7 @@ messengerInstallation,agentBotProvider,systemBotProvider}.ts` and their
 `packages/openapi/src/services/model.service.ts` no longer queries the dropped
 `ai_models` table. `GET /api/v1/models` + `GET /api/v1/models/:provider` now
 read `AiInfraRepos` built from `getServerGlobalConfig().aiProvider` (the same
-`enabled ?? false` normalization as `goalReviewModelConfig`), then filter
+`enabled ?? false` normalization as `orchestrationWorkflowReviewModelConfig`), then filter
 keyword/provider/type/enabled in memory and paginate. This matches the route's
 documented "deployment-owned model catalog" contract.
 

@@ -1,4 +1,4 @@
-import type { GoalGraphEdge } from '@orvilo/types';
+import type { OrchestrationWorkflowGraphEdge } from '@orvilo/types';
 
 import type { LayoutBox } from './layout';
 
@@ -9,7 +9,7 @@ export interface Point {
 
 /** Historical continuation reads baseline → new experiment, matching its layout rank. */
 export const edgeDirection = (
-  edge: Pick<GoalGraphEdge, 'kind' | 'sourceNodeId' | 'targetNodeId'>,
+  edge: Pick<OrchestrationWorkflowGraphEdge, 'kind' | 'sourceNodeId' | 'targetNodeId'>,
 ): [string, string] =>
   ['depends_on', 'answers', 'derived_from'].includes(edge.kind)
     ? [edge.targetNodeId, edge.sourceNodeId]

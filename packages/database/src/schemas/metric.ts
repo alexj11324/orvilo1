@@ -23,11 +23,11 @@ import { workspaces } from './workspace';
 // - `metric_points` — append-only (t, v) observations. Strictly numeric on
 //   purpose: charts need SQL-side bucketing and aggregation, which a JSONB
 //   value would forfeit. Non-numeric observations are events, not metrics —
-//   they belong to the consumer's own domain (e.g. Goal Graph observation
+//   they belong to the consumer's own domain (e.g. OrchestrationWorkflow Graph observation
 //   nodes), not here.
 //
-// The subject link is polymorphic with no FK, mirroring `goals.subjectType`:
-// the same two tables serve goal criteria, agent cost curves, or workspace
+// The subject link is polymorphic with no FK, mirroring `orchestration workflows.subjectType`:
+// the same two tables serve orchestration workflow criteria, agent cost curves, or workspace
 // dashboards without knowing any of those domains. Existence and ownership of
 // the subject are validated by the service that binds it.
 export const metrics = pgTable(
@@ -93,7 +93,7 @@ export const metricPoints = pgTable(
       .notNull(),
 
     // ── Ownership (denormalized so buildWorkspaceWhere works without a join,
-    // matching taskTopics / goal_events) ──
+    // matching taskTopics / orchestration_workflow_events) ──
     userId: text('user_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
@@ -108,7 +108,7 @@ export const metricPoints = pgTable(
      */
     observedAt: timestamptz('observed_at').notNull(),
 
-    // ── Provenance (mirrors the goal_events actor convention) ──
+    // ── Provenance (mirrors the orchestration_workflow_events actor convention) ──
     actorType: text('actor_type').$type<MetricActorType>().notNull(),
     actorId: text('actor_id'),
     /** The agent run that sampled this point — join key into agent-tracing. */

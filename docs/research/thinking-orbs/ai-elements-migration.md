@@ -43,7 +43,7 @@ missing shared primitives, shared shimmer and theme foundation.
   specialized tool renderers, approval ownership, argument edit/reject/approve,
   keyboard and retry/error paths. Confirmation presentation is not authorization.
 - Planning specialist: plan.tsx, task.tsx; Conversation/TodoProgress,
-  ChatInput/VerifyTray/GoalTray, Messages/Tasks and GroupTasks. Replace matching
+  ChatInput/VerifyTray/Orchestration workflowTray, Messages/Tasks and GroupTasks. Replace matching
   shells with actual Plan/Task pieces and preserve all persisted task state,
   edit actions, links, client/server task differences, lab gating.
 - Root: Markdown/ReUI CodeBlock integration, attachments.tsx and file/context

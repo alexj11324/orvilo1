@@ -302,7 +302,7 @@ export const agentNotifyRouter = router({
           // equivalent terminal funnel). Only needed for successful completion
           // (verify is done-only). Each step is self-guarded so a failure degrades instead
           // of aborting the terminal funnel.
-          let goal: unknown = '';
+          let orchestrationWorkflow: unknown = '';
           if (completionReason === 'done') {
             // Guarantee the task's verify plan is DURABLY persisted before the gate
             // (completeOperation → runVerifyOnCompletion) reads it. The start-side
@@ -330,14 +330,14 @@ export const agentNotifyRouter = router({
             } catch (err) {
               log('notify: ensure verify plan failed (non-fatal): %O', err);
             }
-            // Resolve the run goal (first user turn) — the verify gate judges the
+            // Resolve the run orchestration workflow (first user turn) — the verify gate judges the
             // deliverable against it. Wrapped in try/catch (not just a promise
-            // `.catch`) so a throwing/absent query degrades to an empty goal.
+            // `.catch`) so a throwing/absent query degrades to an empty orchestration workflow.
             try {
               const history = await ctx.messageModel.query({ pageSize: 50, topicId });
-              goal = history.find((m) => m.role === 'user')?.content ?? '';
+              orchestrationWorkflow = history.find((m) => m.role === 'user')?.content ?? '';
             } catch (err) {
-              log('notify: failed to resolve verify goal (non-fatal): %O', err);
+              log('notify: failed to resolve verify orchestration workflow (non-fatal): %O', err);
             }
           }
           if (!terminalRetry) {
@@ -351,7 +351,7 @@ export const agentNotifyRouter = router({
                 assistantMessageId: writtenMessageId,
                 deliverable: lastAssistantContent,
                 error: terminalError ?? undefined,
-                goal,
+                orchestrationWorkflow,
                 operationId: remoteOperationId,
                 orchestrationRole: terminalOperation?.orchestrationRole,
                 serializedHooks,

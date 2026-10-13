@@ -12,7 +12,7 @@ import { resolveOwnedSystemAgentModelConfig } from './ownedModelConfig';
 export const resolveLightweightJudgment = async (
   db: OrviloDatabase,
   userId: string,
-  key: 'goal' | 'expertise',
+  key: 'orchestrationWorkflow' | 'expertise',
   agentId?: string | null,
   workspaceId?: string,
 ) => {
@@ -34,7 +34,10 @@ export const resolveLightweightJudgment = async (
     binding: builtinOwner
       ? { agentId: builtinOwner }
       : {
-          slug: key === 'goal' ? BUILTIN_AGENT_SLUGS.taskAgent : BUILTIN_AGENT_SLUGS.selfReflection,
+          slug:
+            key === 'orchestrationWorkflow'
+              ? BUILTIN_AGENT_SLUGS.taskAgent
+              : BUILTIN_AGENT_SLUGS.selfReflection,
         },
   };
 };

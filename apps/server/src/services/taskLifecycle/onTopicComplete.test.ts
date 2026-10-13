@@ -82,12 +82,12 @@ vi.mock('@/database/models/verifyRun', () => ({
   }),
 }));
 
-// Goal-loop rounds suppress the per-topic brief; onTopicComplete asks the
-// goals table whether this task carries a goal. Default = plain task.
-const goalFindByGraphTask = vi.fn().mockResolvedValue(undefined);
-vi.mock('@/database/models/goal', () => ({
-  GoalModel: vi.fn(function () {
-    return { findByGraphTask: goalFindByGraphTask };
+// OrchestrationWorkflow-loop rounds suppress the per-topic brief; onTopicComplete asks the
+// orchestration workflows table whether this task carries a orchestration workflow. Default = plain task.
+const orchestrationWorkflowFindByGraphTask = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/database/models/orchestrationWorkflow', () => ({
+  OrchestrationWorkflowModel: vi.fn(function () {
+    return { findByGraphTask: orchestrationWorkflowFindByGraphTask };
   }),
 }));
 
@@ -1076,7 +1076,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
 
-    it('goal-owned root task completes instead of remaining running', async () => {
+    it('orchestration-workflow-owned root task completes instead of remaining running', async () => {
       const task = baseTask({ automationMode: null, parentTaskId: null });
       findById.mockResolvedValue(task);
       (service as any).taskModel.shouldPauseOnTopicComplete = vi.fn().mockReturnValue(false);
@@ -1084,7 +1084,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       await service.onTopicComplete({
         operationId: 'op-1',
         reason: 'done',
-        runTrigger: 'goal',
+        runTrigger: 'orchestrationWorkflow',
         taskId: 'task-1',
         taskIdentifier: 'TASK-1',
         topicId: 'topic-1',

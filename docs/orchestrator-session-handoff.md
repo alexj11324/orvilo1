@@ -82,14 +82,14 @@ requestedDeviceId: config.deviceId }).kind === 'sandbox'`。
 
 ## 评审 findings 处理情况（独立 light review 已完成）
 
-| #                                                | 结论     | 处理                                                                                                                                                                   |
-| ------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1a `runsInSandbox` 与 dispatch 分叉（P1）        | 真实     | 已修：改用 `resolveExecutionPlan` 复现 + allowlist 门控，含回归测试                                                                                                    |
-| 1b 非 hetero assignee 拿到无法兑现的契约         | 真实     | 已修：非 claude-code/codex 直接 false                                                                                                                                  |
-| 2 `getAgentConfig().catch` 吞错（P2）            | 真实     | 已修：删掉 catch，not-found 本来就是 null                                                                                                                              |
-| 3 sandboxRunner 私有 `repoToLocalDir`（P2）      | 真实     | 已修：sanitize 并进共享 helper，删私有副本                                                                                                                             |
-| 4 unverifiable 烧 attempt + 忽略 CRED\_KEY（P2） | 部分采纳 | 已修：`check.error` 落 `lastError`；verify/provision 都吃 `GITHUB_CRED_KEY`。没做 "unknown 不烧 attempt"——integrator run 本身会独立验证，attempts 上限本来就是为了兜底 |
-| 5 `landRemoteMerge` 只回写一跳（P2）             | 真实     | 已修：按 branch 扇出（同 device 路径 publishAndCleanup 的做法）                                                                                                        |
+| #                                               | 结论     | 处理                                                                                                                                                                   |
+| ----------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1a `runsInSandbox` 与 dispatch 分叉（P1）       | 真实     | 已修：改用 `resolveExecutionPlan` 复现 + allowlist 门控，含回归测试                                                                                                    |
+| 1b 非 hetero assignee 拿到无法兑现的契约        | 真实     | 已修：非 claude-code/codex 直接 false                                                                                                                                  |
+| 2 `getAgentConfig().catch` 吞错（P2）           | 真实     | 已修：删掉 catch，not-found 本来就是 null                                                                                                                              |
+| 3 sandboxRunner 私有 `repoToLocalDir`（P2）     | 真实     | 已修：sanitize 并进共享 helper，删私有副本                                                                                                                             |
+| 4 unverifiable 烧 attempt + 忽略 CRED_KEY（P2） | 部分采纳 | 已修：`check.error` 落 `lastError`；verify/provision 都吃 `GITHUB_CRED_KEY`。没做 "unknown 不烧 attempt"——integrator run 本身会独立验证，attempts 上限本来就是为了兜底 |
+| 5 `landRemoteMerge` 只回写一跳（P2）            | 真实     | 已修：按 branch 扇出（同 device 路径 publishAndCleanup 的做法）                                                                                                        |
 
 ## 待办（按优先级）
 
@@ -108,7 +108,7 @@ requestedDeviceId: config.deviceId }).kind === 'sandbox'`。
    commit SHA（`AGENTS.md` → Verification Evidence）。
 3. **D2 视觉检查**：RTL 测试已补（`RunIntegrationTag.test.tsx`，9 用例），
    但 chip 在 TopicCard / 抽屉上的实际渲染没看过截图。
-4. Phase E（下一个大块，见 plan 文档 non-goals 外沿）：
+4. Phase E（下一个大块，见 plan 文档 non-orchestration workflows 外沿）：
    - blocked 之后共享 integration worktree 里的 stale open merge 清理
      （需要 abort RPC 或 per-task integration worktree）
    - 重算计划 / 再分配在 integrate 之后已经走了现有 cascade—— 不用动

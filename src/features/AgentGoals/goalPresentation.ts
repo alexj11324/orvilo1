@@ -1,5 +1,9 @@
-import type { GoalStatus } from '@orvilo/const/goal';
-import type { GoalConfig, GoalSpend, TaskStatus } from '@orvilo/types';
+import type { OrchestrationWorkflowStatus } from '@orvilo/const/orchestrationWorkflow';
+import type {
+  OrchestrationWorkflowConfig,
+  OrchestrationWorkflowSpend,
+  TaskStatus,
+} from '@orvilo/types';
 
 /** Goal lifecycle state → i18n status key (goal list vocabulary). */
 const goalStatusKeyMap = {
@@ -11,11 +15,12 @@ const goalStatusKeyMap = {
   review: 'goalList.status.review',
   running: 'goalList.status.running',
   verifying: 'goalList.status.verifying',
-} as const satisfies Record<GoalStatus, string>;
+} as const satisfies Record<OrchestrationWorkflowStatus, string>;
 
-export type GoalStatusKey = (typeof goalStatusKeyMap)[GoalStatus];
+export type GoalStatusKey = (typeof goalStatusKeyMap)[OrchestrationWorkflowStatus];
 
-export const goalStatusKey = (status: GoalStatus): GoalStatusKey => goalStatusKeyMap[status];
+export const goalStatusKey = (status: OrchestrationWorkflowStatus): GoalStatusKey =>
+  goalStatusKeyMap[status];
 
 /** `1h 23m` / `4m` — locale-neutral compact span for header metrics and drill-downs. */
 export const formatSpan = (ms: number): string => {
@@ -26,7 +31,7 @@ export const formatSpan = (ms: number): string => {
 };
 
 /** Goal lifecycle state → the execution-status vocabulary the shared glyphs use. */
-export const goalStatusToTaskStatus = (goalStatus: GoalStatus): TaskStatus => {
+export const goalStatusToTaskStatus = (goalStatus: OrchestrationWorkflowStatus): TaskStatus => {
   switch (goalStatus) {
     case 'achieved': {
       return 'completed';
@@ -68,21 +73,23 @@ export type GoalBudgetSummary =
   | { kind: 'uncapped'; spent: number };
 
 export const summarizeGoalBudget = (
-  goal: { maxRounds: number | null; maxTotalCost: number | null },
-  spend?: Pick<GoalSpend, 'runs' | 'totalCost'>,
+  orchestrationWorkflow: { maxRounds: number | null; maxTotalCost: number | null },
+  spend?: Pick<OrchestrationWorkflowSpend, 'runs' | 'totalCost'>,
 ): GoalBudgetSummary => {
   // An unfetched spend is 0 rather than unknown: the graph read that carries
   // the budget carries the spend with it, so the pair is never half-loaded.
   const { runs = 0, totalCost = 0 } = spend ?? {};
 
-  if (goal.maxTotalCost !== null) return { cap: goal.maxTotalCost, kind: 'cost', spent: totalCost };
-  if (goal.maxRounds !== null) return { cap: goal.maxRounds, kind: 'rounds', runs };
+  if (orchestrationWorkflow.maxTotalCost !== null)
+    return { cap: orchestrationWorkflow.maxTotalCost, kind: 'cost', spent: totalCost };
+  if (orchestrationWorkflow.maxRounds !== null)
+    return { cap: orchestrationWorkflow.maxRounds, kind: 'rounds', runs };
   return { kind: 'uncapped', spent: totalCost };
 };
 
 /** The planner's persistent conversation belongs to the creator, not the task assignee. */
 export const goalManagerConversation = (
-  config: GoalConfig | null | undefined,
+  config: OrchestrationWorkflowConfig | null | undefined,
 ): { agentId: string; topicId: string } | undefined => {
   const agentId = config?.manager?.agentId;
   const topicId = config?.managerState?.topicId;

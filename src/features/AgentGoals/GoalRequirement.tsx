@@ -21,11 +21,11 @@ const REQUIREMENT_MAX_HEIGHT = 320;
 const SAVE_DEBOUNCE_MS = 600;
 
 interface GoalRequirementProps {
-  goalId: string;
+  orchestrationWorkflowId: string;
   requirement: string;
 }
 
-const GoalRequirement = memo<GoalRequirementProps>(({ goalId, requirement }) => {
+const GoalRequirement = memo<GoalRequirementProps>(({ orchestrationWorkflowId, requirement }) => {
   const { t } = useTranslation('chat');
   const { allowed: canEdit } = usePermission('create_content');
   const updateGoalRequirement = useGoalStore((s) => s.updateGoalRequirement);
@@ -36,13 +36,16 @@ const GoalRequirement = memo<GoalRequirementProps>(({ goalId, requirement }) => 
   // The graph polls while the goal runs; reloading the mounted editor from
   // every snapshot would eat live input. Freeze the document at the first
   // value seen per goal — the editor itself is the source of truth afterwards.
-  const initialRef = useRef({ goalId, requirement });
-  if (initialRef.current.goalId !== goalId) {
-    initialRef.current = { goalId, requirement };
+  const initialRef = useRef({ orchestrationWorkflowId, requirement });
+  if (initialRef.current.orchestrationWorkflowId !== orchestrationWorkflowId) {
+    initialRef.current = { orchestrationWorkflowId, requirement };
     setExpanded(false);
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const editorData = useMemo(() => ({ content: initialRef.current.requirement }), [goalId]);
+
+  const editorData = useMemo(
+    () => ({ content: initialRef.current.requirement }),
+    [orchestrationWorkflowId],
+  );
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const lastSavedRef = useRef(requirement);
@@ -64,7 +67,7 @@ const GoalRequirement = memo<GoalRequirementProps>(({ goalId, requirement }) => 
     // The marker advances only on success: a transiently failed save stays
     // different from `lastSavedRef`, so the next edit (or the unmount flush)
     // retries the same content instead of silently considering it saved.
-    updateGoalRequirement(goalId, markdown)
+    updateGoalRequirement(orchestrationWorkflowId, markdown)
       .then(() => {
         lastSavedRef.current = markdown;
       })
@@ -72,7 +75,7 @@ const GoalRequirement = memo<GoalRequirementProps>(({ goalId, requirement }) => 
         console.error('[GoalRequirement] Failed to save:', error);
         toast.error(t('goalProcess.requirementSaveFailed'));
       });
-  }, [canEdit, editor, goalId, t, updateGoalRequirement]);
+  }, [canEdit, editor, orchestrationWorkflowId, t, updateGoalRequirement]);
 
   // The unmount cleanup runs with the closure of a stale render; the ref keeps
   // it flushing the *current* document instead of an early one.
@@ -122,7 +125,7 @@ const GoalRequirement = memo<GoalRequirementProps>(({ goalId, requirement }) => 
             disabled={!canEdit}
             editor={editor}
             editorData={editorData}
-            entityId={goalId}
+            entityId={orchestrationWorkflowId}
             placeholder={t('goalProcess.requirementPlaceholder')}
             style={{ fontSize: 14 }}
             onContentChange={handleContentChange}

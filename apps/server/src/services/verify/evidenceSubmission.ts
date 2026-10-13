@@ -62,13 +62,13 @@ export const recordHeterogeneousDeliverableEvidence = async (params: {
 export const startEvidenceSubmission = async (params: {
   db: OrviloDatabase;
   deliverable: string;
-  goal: string;
+  orchestrationWorkflow: string;
   operation: AgentOperationItem;
   plan: VerifyCheckItem[];
   userId: string;
   workspaceId?: string;
 }): Promise<string> => {
-  const { db, deliverable, goal, operation, plan, userId, workspaceId } = params;
+  const { db, deliverable, orchestrationWorkflow, operation, plan, userId, workspaceId } = params;
   if (!operation.agentId || !operation.topicId) {
     throw new Error('Task operation has no builder agent or topic for evidence submission');
   }
@@ -84,7 +84,7 @@ export const startEvidenceSubmission = async (params: {
           userId,
           {
             deliverable,
-            goal,
+            orchestrationWorkflow,
             operationId: parentOperationId,
           },
           workspaceId,
@@ -95,7 +95,7 @@ export const startEvidenceSubmission = async (params: {
       webhook: {
         body: {
           deliverable,
-          goal,
+          orchestrationWorkflow,
           parentOperationId,
           userId,
           ...(workspaceId ? { workspaceId } : {}),

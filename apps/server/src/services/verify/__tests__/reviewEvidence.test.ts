@@ -17,7 +17,7 @@ const row = (id: string, length: number, description?: string) => ({
 /**
  * Regression: first-fit over capture order let one attachment starve the rest.
  *
- * The real case was a Goal delivery whose reproducibility check carried four
+ * The real case was a OrchestrationWorkflow delivery whose reproducibility check carried four
  * rows — 31,853 chars of script source, a 4,307-char rerun log, a 52,226-char
  * score dump and a 1,319-char summary. Spending the budget in arrival order
  * consumed it before the summary, which was dropped silently, and the reviewer

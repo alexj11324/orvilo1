@@ -265,7 +265,7 @@
     "input_token_price_per_m": 5800,
     "output_token_price_per_m": 7800,
     "title": "lzlv_70b",
-    "description": "A Mythomax/MLewd_13B-style merge of selected 70B models. A multi-model merge of several LLaMA2 70B finetunes for roleplaying and creative work. The goal was to create a model that combines creativity with intelligence for an enhanced experience.",
+    "description": "A Mythomax/MLewd_13B-style merge of selected 70B models. A multi-model merge of several LLaMA2 70B finetunes for roleplaying and creative work. The orchestrationWorkflow was to create a model that combines creativity with intelligence for an enhanced experience.",
     "tags": [],
     "context_size": 4096,
     "status": 1,

@@ -23,7 +23,11 @@ afterEach(async () => {
 });
 
 const seed = (key = 'twitter.followers') =>
-  model.ensure({ key, subjectId: 'goal_metric_test', subjectType: 'goal' });
+  model.ensure({
+    key,
+    subjectId: 'orchestration_workflow_metric_test',
+    subjectType: 'orchestrationWorkflow',
+  });
 
 describe('MetricModel', () => {
   describe('ensure', () => {
@@ -31,8 +35,8 @@ describe('MetricModel', () => {
       const first = await seed();
       const again = await model.ensure({
         key: 'twitter.followers',
-        subjectId: 'goal_metric_test',
-        subjectType: 'goal',
+        subjectId: 'orchestration_workflow_metric_test',
+        subjectType: 'orchestrationWorkflow',
         // Racing probe passes a different title — ensure must not overwrite.
         title: 'Should not stick',
       });
@@ -46,8 +50,8 @@ describe('MetricModel', () => {
       await seed();
       const stolen = await otherModel.ensure({
         key: 'twitter.followers',
-        subjectId: 'goal_metric_test',
-        subjectType: 'goal',
+        subjectId: 'orchestration_workflow_metric_test',
+        subjectType: 'orchestrationWorkflow',
       });
       expect(stolen).toBeUndefined();
     });
@@ -58,9 +62,17 @@ describe('MetricModel', () => {
       await seed('b.metric');
       await seed('a.metric');
 
-      const listed = await model.findBySubject('goal', 'goal_metric_test');
+      const listed = await model.findBySubject(
+        'orchestrationWorkflow',
+        'orchestration_workflow_metric_test',
+      );
       expect(listed.map((s) => s.key)).toEqual(['a.metric', 'b.metric']);
-      expect(await otherModel.findBySubject('goal', 'goal_metric_test')).toEqual([]);
+      expect(
+        await otherModel.findBySubject(
+          'orchestrationWorkflow',
+          'orchestration_workflow_metric_test',
+        ),
+      ).toEqual([]);
     });
 
     it('updates definition fields under ownership only', async () => {
@@ -130,19 +142,25 @@ describe('MetricModel', () => {
       await seed('declared.two');
       await seed('sampled.noise');
 
-      const found = await model.findByKeys('goal', 'goal_metric_test', [
-        'declared.one',
-        'declared.two',
-        'never.created',
-      ]);
+      const found = await model.findByKeys(
+        'orchestrationWorkflow',
+        'orchestration_workflow_metric_test',
+        ['declared.one', 'declared.two', 'never.created'],
+      );
 
       expect(found.map((item) => item.key)).toEqual(['declared.one', 'declared.two']);
-      expect(await model.findByKeys('goal', 'goal_metric_test', [])).toEqual([]);
+      expect(
+        await model.findByKeys('orchestrationWorkflow', 'orchestration_workflow_metric_test', []),
+      ).toEqual([]);
     });
 
     it('scopes to the owner', async () => {
       await seed('declared.one');
-      expect(await otherModel.findByKeys('goal', 'goal_metric_test', ['declared.one'])).toEqual([]);
+      expect(
+        await otherModel.findByKeys('orchestrationWorkflow', 'orchestration_workflow_metric_test', [
+          'declared.one',
+        ]),
+      ).toEqual([]);
     });
   });
 
@@ -215,8 +233,8 @@ describe('MetricModel', () => {
       const series = (await model.ensure({
         key: `series.${kind}`,
         kind,
-        subjectId: 'goal_metric_test',
-        subjectType: 'goal',
+        subjectId: 'orchestration_workflow_metric_test',
+        subjectType: 'orchestrationWorkflow',
       }))!;
       // Two samples on Sep 1, one on Sep 2.
       for (const [at, value] of [

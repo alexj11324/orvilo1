@@ -342,8 +342,14 @@ export const isAutomationRunsKey = (key: unknown): boolean =>
  * identifier) because that is what every `goal.*` procedure takes.
  */
 export const goalKeys = {
-  graph: def('goal:graph', (goalId: string) => ['goal:graph', goalId]),
-  metricSeries: def('goal:metricSeries', (goalId: string) => ['goal:metricSeries', goalId]),
+  graph: def('goal:graph', (orchestrationWorkflowId: string) => [
+    'goal:graph',
+    orchestrationWorkflowId,
+  ]),
+  metricSeries: def('goal:metricSeries', (orchestrationWorkflowId: string) => [
+    'goal:metricSeries',
+    orchestrationWorkflowId,
+  ]),
 };
 
 export const taskKeys = {
@@ -1278,7 +1284,7 @@ export const swrKeys = {
   file: fileKeys,
   fork: forkKeys,
   gateway: gatewayKeys,
-  goal: goalKeys,
+  orchestrationWorkflow: goalKeys,
   global: globalKeys,
   group: groupKeys,
   home: homeKeys,

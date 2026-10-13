@@ -34,7 +34,7 @@
 - Task entity | none | ListTodo vs ListChecks | medium
 - Saved view | none | LayoutList vs Bookmark vs Layers2 | low-med
 - Team entity | TeamIdentity + UsersIcon | Layers for Teams section vs UsersIcon | low
-- Goal | TargetIcon | FlagIcon in GoalsRailCard:114 | low-med
+- Orchestration workflow | TargetIcon | FlagIcon in Orchestration workflowsRailCard:114 | low-med
 - Inbox | InboxIcon | shared w/ triage subnav | low
 
 ## Overload register (same icon, different meanings)
@@ -65,6 +65,6 @@
 | StatusGlyph:17 stale comment                                                                                                                                               | fix to Clock+purple                                                                                                       |
 | prStateVisual preset strings                                                                                                                                               | cssVar + translate at call site                                                                                           |
 | ArrowLeftRight vs ArrowRightLeft                                                                                                                                           | pick one direction                                                                                                        |
-| GoalsRailCard FlagIcon                                                                                                                                                     | TargetIcon / GOAL\_ENTITY\_ICON                                                                                           |
+| Orchestration workflowsRailCard FlagIcon                                                                                                                                   | TargetIcon / ORCHESTRATION_WORKFLOW_ENTITY_ICON                                                                           |
 
 **Severity rollup:** high = project-status `active` split, project-entity 5 glyphs · medium = workflow dual maps, triage spread, notification locality, unassigned fallbacks, task/view entity glyphs · low = rest.

@@ -1,8 +1,10 @@
-import type { GoalGraphEdge, GoalGraphNode } from '@orvilo/types';
+import type { OrchestrationWorkflowGraphEdge, OrchestrationWorkflowGraphNode } from '@orvilo/types';
 
 import type { GoalGraphNodeKind } from '../../Experiments/model';
 
-type LayoutNode = Omit<GoalGraphNode, 'kind'> & { kind: GoalGraphNodeKind };
+type LayoutNode = Omit<OrchestrationWorkflowGraphNode, 'kind'> & {
+  kind: GoalGraphNodeKind;
+};
 
 /**
  * Layered DAG layout for the exploration graph.
@@ -32,7 +34,10 @@ const RANK_GAP = 56;
 const COLUMN_GAP = 32;
 
 /** The fields layout actually reads — lets callers pass synthetic bridge edges. */
-export type LayoutEdge = Pick<GoalGraphEdge, 'kind' | 'sourceNodeId' | 'targetNodeId'>;
+export type LayoutEdge = Pick<
+  OrchestrationWorkflowGraphEdge,
+  'kind' | 'sourceNodeId' | 'targetNodeId'
+>;
 
 /**
  * Which way an edge points on screen. `supports` / `contradicts` link a finding

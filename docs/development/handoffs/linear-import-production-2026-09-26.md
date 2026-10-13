@@ -2,7 +2,7 @@
 
 Snapshot: 2026-09-27 03:03 UTC (2026-09-26 in New York). This document is part of [PR #296](https://github.com/alexj11324/orvilo1/pull/296). Recheck the PR head, CI, review threads, `canary`, and production before acting; every status below is a point-in-time observation.
 
-## User goal and decision still needed
+## User orchestration workflow and decision still needed
 
 The user requested a Plane-style Linear importer on Orvilo `canary`, with OAuth, deployment, and an actual public-site test. They explicitly authorized importing the Linear `orvilo (ORV)` team into the production Orvilo project `Orvilo Linear Parity (OLP)`. The first real import found that all 148 source issues already had live-sync links to existing Orvilo tasks. Only 46 linked tasks are in OLP; the other 102 are elsewhere. The user has **not yet answered the follow-up choice** between making 102 additional one-time copies in OLP and preserving the current task locations. The implementation in PR #296 takes the copy path. Confirm that specific choice with the user before merging or running the replay in production.
 

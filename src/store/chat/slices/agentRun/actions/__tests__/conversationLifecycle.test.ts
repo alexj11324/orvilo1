@@ -3857,7 +3857,7 @@ describe('ConversationLifecycle actions', () => {
     });
 
     describe('page scope documentId injection', () => {
-      it('enables the task tool for a /goal gateway turn', async () => {
+      it('does not inject an orchestration workflow tool for a legacy slash command', async () => {
         const { result } = renderHook(() => useChatStore());
         const executeGatewayAgentSpy = vi.fn().mockResolvedValue({
           assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
@@ -3880,7 +3880,7 @@ describe('ConversationLifecycle actions', () => {
         });
 
         expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
-          expect.objectContaining({ selectedToolIds: ['orvilo-goal'] }),
+          expect.not.objectContaining({ selectedToolIds: ['orvilo-orchestration-workflow'] }),
         );
       });
 

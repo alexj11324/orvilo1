@@ -208,6 +208,39 @@ const baseInput = {
 };
 
 describe('execAcpBuiltinTool', () => {
+  it('blocks a CLI orchestration proposal until the human approves its complete arguments', async () => {
+    const input = {
+      ...baseInput,
+      identifier: 'orvilo-orchestration-workflow',
+      apiName: 'startOrchestrationWorkflow',
+      args: {
+        name: 'Ship it',
+        instruction: 'Deliver two files',
+        criteria: [{ title: 'Both exist' }],
+      },
+    };
+    const op = {
+      ...baseOp,
+      taskId: null,
+      metadata: { ...baseOp.metadata, builtinTools: { [input.identifier]: [input.apiName] } },
+    };
+    mockConsumeApprovalReceipt.mockResolvedValue(false);
+    mockGetReceiptPayload.mockResolvedValue(undefined);
+    const result = await execAcpBuiltinTool(buildDeps({ op }), input);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('acp_tool_approval_pending');
+    expect(mockExecute).not.toHaveBeenCalled();
+    expect(mockUpsertReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: expect.objectContaining({
+          payload: expect.objectContaining({
+            kind: 'builtin_tool',
+            argsHash: sha256Hex(stableStringify(input.args)),
+          }),
+        }),
+      }),
+    );
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mockExecute.mockResolvedValue({ content: 'done', success: true });

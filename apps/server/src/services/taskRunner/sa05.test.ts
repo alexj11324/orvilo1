@@ -28,8 +28,8 @@ import type * as TaskPromptModule from './buildTaskPrompt';
 import { buildTaskPrompt } from './buildTaskPrompt';
 import { TaskRunnerService } from './index';
 
-vi.mock('@/database/models/goal', () => ({
-  GoalModel: class {
+vi.mock('@/database/models/orchestrationWorkflow', () => ({
+  OrchestrationWorkflowModel: class {
     findByGraphTask = async () => undefined;
   },
 }));

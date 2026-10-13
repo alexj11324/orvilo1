@@ -40,6 +40,7 @@ import type { Command } from 'commander';
 
 import { createLambdaClient, getTrpcClient } from '../api/client';
 import { resolveServerUrl } from '../settings';
+import { buildAcpToolApprovalQuestion } from '../utils/acpToolApproval';
 import {
   persistChildResultInboxRecord,
   resolvePersistentToolCallId,
@@ -636,7 +637,6 @@ const exec = async (options: ExecOptions): Promise<void> => {
           if (!askBridge) {
             return { cancelReason: 'session_ended' as const, cancelled: true };
           }
-          const argsPreview = JSON.stringify(args);
           return askBridge.pending(
             {
               arguments: {
@@ -648,9 +648,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
                       { id: 'approve', label: 'Approve' },
                       { id: 'deny', label: 'Deny' },
                     ],
-                    question:
-                      `Allow tool "${identifier}.${apiName}" to run?\n\n` +
-                      (argsPreview.length > 2000 ? `${argsPreview.slice(0, 2000)}…` : argsPreview),
+                    question: buildAcpToolApprovalQuestion(identifier, apiName, args),
                   },
                 ],
               },

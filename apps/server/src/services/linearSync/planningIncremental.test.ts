@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
-import { GoalModel } from '@/database/models/goal';
-import { GoalGraphModel } from '@/database/models/goalGraph';
 import { LinearSyncModel } from '@/database/models/linearSync';
+import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
+import { OrchestrationWorkflowGraphModel } from '@/database/models/orchestrationWorkflowGraph';
 import { ProjectModel } from '@/database/models/project';
 import {
   projects,
@@ -247,20 +247,31 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
     ).toHaveLength(1);
   });
 
-  it('C04 leaves a Goal-owned Task to the Goal coordinator', async () => {
+  it('C04 leaves an Orchestration workflow-owned Task to the Orchestration workflow coordinator', async () => {
     const project = await createProject();
     const task = await createTask(project.id);
-    const goal = await new GoalModel(db, userId, workspaceId).create({
+    const orchestrationWorkflow = await new OrchestrationWorkflowModel(
+      db,
+      userId,
+      workspaceId,
+    ).create({
       projectId: project.id,
       subjectType: 'standalone',
-      title: 'Goal-owned work',
+      title: 'Orchestration workflow-owned work',
     });
-    const node = await new GoalGraphModel(db, userId, workspaceId).createNode(goal.id, {
-      kind: 'task',
-      title: 'Goal task',
-    });
-    if (!node) throw new Error('Goal task node was not created');
-    await new GoalGraphModel(db, userId, workspaceId).bindTask(goal.id, node.id, task.id);
+    const node = await new OrchestrationWorkflowGraphModel(db, userId, workspaceId).createNode(
+      orchestrationWorkflow.id,
+      {
+        kind: 'task',
+        title: 'Orchestration workflow task',
+      },
+    );
+    if (!node) throw new Error('Orchestration workflow task node was not created');
+    await new OrchestrationWorkflowGraphModel(db, userId, workspaceId).bindTask(
+      orchestrationWorkflow.id,
+      node.id,
+      task.id,
+    );
     await recordEvent({ projectId: project.id, taskId: task.id });
     await new LinearPlanningWorker(db, workspaceId).processPending(async () => ({
       actions: [
@@ -271,7 +282,7 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
           taskId: task.id,
         },
       ],
-      explanation: 'Attempt to mutate Goal-owned work.',
+      explanation: 'Attempt to mutate Orchestration workflow-owned work.',
       requiresApproval: false,
     }));
     const { revision } = await latestRevisionForProject(project.id);
@@ -289,7 +300,7 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
           .from(taskPlanningRevisions)
           .where(eq(taskPlanningRevisions.id, revision.id))
       )[0].error,
-    ).toContain('Goal');
+    ).toContain('OrchestrationWorkflow');
   });
 
   it('C06 coalesces burst events and requeues changes that arrive during planning', async () => {
@@ -497,7 +508,7 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
     expect((await latestRevisionForProject(project.id)).revision.status).toBe('applied');
   });
 
-  it('C14 leaves the existing Goal path alone when project replanning is disabled', async () => {
+  it('C14 leaves the existing Orchestration workflow path alone when project replanning is disabled', async () => {
     const project = await createProject();
     const linear = new LinearSyncModel(db, workspaceId);
     const installation = await linear.upsertOAuthInstallation({
@@ -518,17 +529,28 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
       settings: { replanningEnabled: false },
     });
     const task = await createTask(project.id);
-    const goal = await new GoalModel(db, userId, workspaceId).create({
+    const orchestrationWorkflow = await new OrchestrationWorkflowModel(
+      db,
+      userId,
+      workspaceId,
+    ).create({
       projectId: project.id,
       subjectType: 'standalone',
-      title: 'Existing Goal flow',
+      title: 'Existing Orchestration workflow flow',
     });
-    const node = await new GoalGraphModel(db, userId, workspaceId).createNode(goal.id, {
-      kind: 'task',
-      title: 'Existing Goal task',
-    });
-    if (!node) throw new Error('Goal task node was not created');
-    await new GoalGraphModel(db, userId, workspaceId).bindTask(goal.id, node.id, task.id);
+    const node = await new OrchestrationWorkflowGraphModel(db, userId, workspaceId).createNode(
+      orchestrationWorkflow.id,
+      {
+        kind: 'task',
+        title: 'Existing Orchestration workflow task',
+      },
+    );
+    if (!node) throw new Error('Orchestration workflow task node was not created');
+    await new OrchestrationWorkflowGraphModel(db, userId, workspaceId).bindTask(
+      orchestrationWorkflow.id,
+      node.id,
+      task.id,
+    );
     await recordEvent({ projectId: project.id, taskId: task.id });
 
     const planner = vi.fn<TaskPlanningPlanner>(async () => noopProposal());
@@ -543,8 +565,12 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
       actions: [{ action: 'noop' }],
       requiresApproval: false,
     });
-    expect((await new GoalGraphModel(db, userId, workspaceId).getGraph(goal.id))?.nodes).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: node.id, taskId: task.id })]),
-    );
+    expect(
+      (
+        await new OrchestrationWorkflowGraphModel(db, userId, workspaceId).getGraph(
+          orchestrationWorkflow.id,
+        )
+      )?.nodes,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ id: node.id, taskId: task.id })]));
   });
 });

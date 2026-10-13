@@ -23,8 +23,8 @@ const log = debug('orvilo-server:verify-reporter');
 
 export interface GenerateReportParams {
   deliverable: string;
-  goal: string;
   modelConfig: { model: string; provider: string };
+  orchestrationWorkflow: string;
   /**
    * Preferred ACP binding for the narrative judgment (task-pinned verifier).
    * Falls back to the builtin verify agent slug, then the env binding.
@@ -62,7 +62,8 @@ export class VerifyReporterService {
   }
 
   async generateReport(params: GenerateReportParams) {
-    const { verifyRunId, goal, deliverable, modelConfig, verifierAgentId } = params;
+    const { verifyRunId, orchestrationWorkflow, deliverable, modelConfig, verifierAgentId } =
+      params;
 
     const results = await this.resultModel.listByRun(verifyRunId);
     if (results.length === 0) {
@@ -93,7 +94,7 @@ export class VerifyReporterService {
 
     const chain = chainVerifyReport({
       deliverable,
-      goal,
+      orchestrationWorkflow,
       items: results.map((r) => ({
         confidence: r.confidence,
         evidence: evidenceByItem.get(r.checkItemId),

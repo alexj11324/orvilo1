@@ -117,18 +117,18 @@ export interface OperationCompletionInput {
   deliverable?: string;
   /** Terminal error payload (error path only). */
   error?: unknown;
-  /**
-   * The user goal (first user turn) — the verify gate judges against it. Typed
-   * `unknown` because message content is polymorphic (string or multimodal part
-   * array); `dispatchHooks` normalizes it to text the same way it does the
-   * in-process path's user turn.
-   */
-  goal?: unknown;
   /** Executed model — the verify gate keys off `op.model`, so hetero backfills it. */
   model?: string | null;
   operationId: string;
   /** Group orchestration role; members must not trigger user-facing completion recalls. */
   orchestrationRole?: 'member' | 'supervisor';
+  /**
+   * The user orchestration workflow (first user turn) — the verify gate judges against it. Typed
+   * `unknown` because message content is polymorphic (string or multimodal part
+   * array); `dispatchHooks` normalizes it to text the same way it does the
+   * in-process path's user turn.
+   */
+  orchestrationWorkflow?: unknown;
   /** Executed provider — see {@link OperationCompletionInput.model}. */
   provider?: string | null;
   /** Serialized webhook hooks (queue mode); ignored in local in-memory mode. */
@@ -667,7 +667,7 @@ export class CompletionLifecycle {
   /**
    * Expand a normalized {@link OperationCompletionInput} into the runtime `state`
    * shape `dispatchHooks` consumes. The SINGLE place that mirrors the runtime
-   * state for non-in-process paths — goal/deliverable become the user/assistant
+   * state for non-in-process paths — orchestration workflow/deliverable become the user/assistant
    * turns the gate reads, model/provider backfill the op row, hooks ride on
    * `host.hooks`. Replaces the per-caller hand-rolled synthetic state that
    * previously drifted (e.g. a verify field added here was missed by heteroFinish).
@@ -677,7 +677,7 @@ export class CompletionLifecycle {
       cost: input.cost ?? { total: null },
       error: input.error ?? undefined,
       messages: [
-        { content: input.goal ?? '', role: 'user' },
+        { content: input.orchestrationWorkflow ?? '', role: 'user' },
         { content: input.deliverable ?? '', role: 'assistant' },
       ],
       host: { hooks: input.serializedHooks },
@@ -977,7 +977,7 @@ export class CompletionLifecycle {
 
         const messages: any[] = Array.isArray(state?.messages) ? state.messages : [];
         const firstUserMessage = messages.find((m) => m?.role === 'user');
-        const goal = firstUserMessage
+        const orchestrationWorkflow = firstUserMessage
           ? (extractTextFromMessageContent(firstUserMessage.content) ?? '')
           : '';
         // Surface the delivery-checker card first (a role='verify' message that
@@ -1003,7 +1003,7 @@ export class CompletionLifecycle {
             runOrigin.userId || this.userId,
             {
               deliverable: event.lastAssistantContent ?? '',
-              goal,
+              orchestrationWorkflow,
               operationId,
             },
             this.workspaceId,

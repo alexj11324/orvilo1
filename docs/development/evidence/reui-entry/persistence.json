@@ -7,7 +7,7 @@
     "finished_at": "2026-09-21T20:30:30.931Z",
     "setup": {
       "role": "design",
-      "goals": ["roadmaps", "sprints"],
+      "orchestrationWorkflows": ["roadmaps", "sprints"],
       "teamSize": "solo",
       "workspaceName": "Orvilo UI Review",
       "workspaceSlug": "orvilo-ui-review-20260921",

@@ -159,7 +159,7 @@ device'}`。denied-sender（`!canUseDevice`）与 sandboxFallback/share-visitor
   `executionTarget: 'sandbox'`（同 canary 对 heteroFiles 的改法）。
 - **语义收窄（PR body 需标注）**：`memory.enabled` 只剩后台提取闸门；
   orvilo-agent 媒体缺口自动注入已退役（host 自带工具面）；pinned-skill body
-  不再 inline（lazy skills runtime）；SELF\_FEEDBACK\_INTENT 改为 caller-pinned
+  不再 inline（lazy skills runtime）；SELF_FEEDBACK_INTENT 改为 caller-pinned
   - `!disableSelfFeedbackIntentTool` 挂载（workflows/agentSignal/run.ts:530）。
 - **`autoStart` 已失效**：`InternalExecAgentParams.autoStart` 仍在签名里但不再
   透传 dispatch input——ACP dispatch 即启动，"先建行后启动" 的契约没了。测试断言
@@ -188,19 +188,19 @@ test.ts` 删除（callAgent park/resume 生命周期已退役，deferred 编排�
   （createMockResponsesStream/waitForOperationComplete）只服务这两个文件，
   一并删。
 - **lint:circular 修复（`7a84fecf`）**：`aiAgent → runToolSurface → serverRuntimes
-→ services/goal → … → aiAgent` 新环 + canary 既有 3 环（taskRunner↔
-  taskLifecycle↔taskIntegration、goal scheduler 内环、expertiseHistory index↔run）
+→ services/orchestration workflow → … → aiAgent` 新环 + canary 既有 3 环（taskRunner↔
+  taskLifecycle↔taskIntegration、orchestration workflow scheduler 内环、expertiseHistory index↔run）
   全部打破。`serverRuntimes/index.ts` 改为**按 identifier 的惰性 loader map**
   （`hasServerRuntime`/`getServerRuntimeIdentifiers` 保持同步纯查表；仅
   `getServerRuntime` 真正按需 import 单个模块 —— 唯一调用方 builtin.ts 已 await）。
   drift 守卫：`serverRuntimes/__tests__/registry.test.ts` 断言 loader keys ==
   各模块 registration.identifier。`expertiseHistory/run.ts` 直调
   `triggerHatchetWorkflow('/api/workflows/expertise-history/topic')`（与原
-  `triggerTopic` 等价）；`taskLifecycle`/`goal scheduler local` 用 `await import`
+  `triggerTopic` 等价）；`taskLifecycle`/`orchestration workflow scheduler local` 用 `await import`
   破边。注意：canary 上这 3 个环本就存在 → canary push 的 Test Database 可能
   也一直红（duplicate-skip 掩盖了 PR 检查）。
 - **#82 已由上游解决**：PR #98（`7525f524`，已并入 canary）在 test.yml 内联实现
-  了 poll-and-mirror 修法（GH\_TOKEN + GATE\_MIRROR\_TIMEOUT:2700 + head SHA），#82
+  了 poll-and-mirror 修法（GH_TOKEN + GATE_MIRROR_TIMEOUT:2700 + head SHA），#82
   以 `3f172b9a` squash 合入。/tmp/orvilo-qgate 里那个 `72f5da0a` disposition-job
   重写是冗余提交，留在已合并分支上不开 PR。
 
@@ -211,10 +211,10 @@ test.ts` 删除（callAgent park/resume 生命周期已退役，deferred 编排�
   `dispatchHeteroAgent`。调用方清单：routers/lambda/aiAgent.ts
   （execAgent/execAgents/agentTasks/composer 桥）、agentNotify.ts（notify/resume
   唤醒）、approvalResume.ts（审批 resume）、shareChat.ts（visitor 拒跑）、
-  verify/{agentVerifier,repairService,evidenceSubmission}、goal/supervisor、
+  verify/{agentVerifier,repairService,evidenceSubmission}、orchestration workflow/supervisor、
   taskResultBridge、bot/AgentBridgeService + messenger、agentEvalRun、
   task/index.ts、agentSignal workflows —— 无一绕过门面。
-- **工具面验证**：goalSupervisor /skillManagement/agentSignal {Review,
+- **工具面验证**：orchestrationWorkflowSupervisor /skillManagement/agentSignal {Review,
   Reflection,SkillManagement,FeedbackIntent} / AcceptanceEvidence 等
   server-run builtin 全部注册于 `toolExecution/serverRuntimes`，ACP 下经
   `builtinToolSpecs` 序列化下发宿主、回打 `heteroExecBuiltinTool` 执行；
@@ -230,7 +230,7 @@ test.ts` 删除（callAgent park/resume 生命周期已退役，deferred 编排�
 - **callback 唤醒路径**：`webhooks/{subagent,group-member,thread-run,
 bot}-callback` 经 Hatchet workflow task → `invokeHonoHandler`。ACP 子 op
   settle 仍经 CompletionLifecycle.onComplete 触发（锚点消息回填 + 用量归属
-  保留）；父 resume CAS 对 ACP 父必然 miss（非 waiting\_for\_async\_tool）→
+  保留）；父 resume CAS 对 ACP 父必然 miss（非 waiting_for_async_tool）→
   verify watchdog 有限次重试后耗尽，无害但可在 P70d 一并清理。
 - **cron**：gatewayCron /agentSignalNightlySchedule/memory cron 跑自己的
   workflow，不经 agentStep。

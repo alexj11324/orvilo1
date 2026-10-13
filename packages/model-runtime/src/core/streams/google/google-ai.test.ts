@@ -1447,7 +1447,7 @@ describe('GoogleGenerativeAIStream', () => {
                     functionCall: {
                       name: 'orvilo-agent____createPlan',
                       args: {
-                        goal: 'Fix Linear API Argument Validation Error',
+                        orchestrationWorkflow: 'Fix Linear API Argument Validation Error',
                         description: 'Investigate the Linear API error.',
                         context: 'The user is encountering a validation error.',
                       },
@@ -1554,7 +1554,7 @@ describe('GoogleGenerativeAIStream', () => {
           // First tool call (createPlan)
           'id: chat_test',
           'event: tool_calls',
-          `data: [{"function":{"arguments":"{\\"goal\\":\\"Fix Linear API Argument Validation Error\\",\\"description\\":\\"Investigate the Linear API error.\\",\\"context\\":\\"The user is encountering a validation error.\\"}","name":"orvilo-agent____createPlan"},"id":"orvilo-agent____createPlan_0_tool_id_1","index":0,"thoughtSignature":"${scopedThoughtSignature('EoIYCv8XAXLI2nx+C18votz5l0A...')}","type":"function"}]\n`,
+          `data: [{"function":{"arguments":"{\\"orchestration workflow\\":\\"Fix Linear API Argument Validation Error\\",\\"description\\":\\"Investigate the Linear API error.\\",\\"context\\":\\"The user is encountering a validation error.\\"}","name":"orvilo-agent____createPlan"},"id":"orvilo-agent____createPlan_0_tool_id_1","index":0,"thoughtSignature":"${scopedThoughtSignature('EoIYCv8XAXLI2nx+C18votz5l0A...')}","type":"function"}]\n`,
 
           // Second tool call (createTodos) - should be a SEPARATE event with index:0
           'id: chat_test',
@@ -1946,7 +1946,7 @@ describe('GoogleGenerativeAIStream', () => {
               content: {
                 parts: [
                   {
-                    text: '**Developing Visual Representation**\n\nI\'m now iterating on the visual representation. The "command center" metaphor is proving useful. I\'m focusing on the interplay of the core components: the central engine coordinates perception, memory, planning, and action, with tools and plugins as extensions. The goal is to clearly show the flow of information through the system, from input to output, using visual cues. The aesthetic aims for a futuristic, tech-inspired look with glowing lines and circuit board elements, using a palette of blues, purples, and oranges.\n\n\n',
+                    text: '**Developing Visual Representation**\n\nI\'m now iterating on the visual representation. The "command center" metaphor is proving useful. I\'m focusing on the interplay of the core components: the central engine coordinates perception, memory, planning, and action, with tools and plugins as extensions. The orchestration workflow is to clearly show the flow of information through the system, from input to output, using visual cues. The aesthetic aims for a futuristic, tech-inspired look with glowing lines and circuit board elements, using a palette of blues, purples, and oranges.\n\n\n',
                     thought: true,
                   },
                 ],
@@ -2115,7 +2115,7 @@ describe('GoogleGenerativeAIStream', () => {
           // Second reasoning text
           'id: chat_1',
           'event: reasoning_part',
-          'data: {"content":"**Developing Visual Representation**\\n\\nI\'m now iterating on the visual representation. The \\"command center\\" metaphor is proving useful. I\'m focusing on the interplay of the core components: the central engine coordinates perception, memory, planning, and action, with tools and plugins as extensions. The goal is to clearly show the flow of information through the system, from input to output, using visual cues. The aesthetic aims for a futuristic, tech-inspired look with glowing lines and circuit board elements, using a palette of blues, purples, and oranges.\\n\\n\\n","inReasoning":true,"partType":"text"}\n',
+          'data: {"content":"**Developing Visual Representation**\\n\\nI\'m now iterating on the visual representation. The \\"command center\\" metaphor is proving useful. I\'m focusing on the interplay of the core components: the central engine coordinates perception, memory, planning, and action, with tools and plugins as extensions. The orchestration workflow is to clearly show the flow of information through the system, from input to output, using visual cues. The aesthetic aims for a futuristic, tech-inspired look with glowing lines and circuit board elements, using a palette of blues, purples, and oranges.\\n\\n\\n","inReasoning":true,"partType":"text"}\n',
 
           // Third reasoning text
           'id: chat_1',

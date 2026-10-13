@@ -43,8 +43,10 @@ describe('buildGoalCreateInput', () => {
   it('falls back to the instruction when no requirement was drafted', () => {
     expect(buildGoalCreateInput({ instruction: '  ship it  ' }).requirement).toBe('ship it');
     expect(
-      buildGoalCreateInput({ instruction: 'ship it', requirement: '  all links resolve  ' })
-        .requirement,
+      buildGoalCreateInput({
+        instruction: 'ship it',
+        requirement: '  all links resolve  ',
+      }).requirement,
     ).toBe('all links resolve');
   });
 });

@@ -24,7 +24,7 @@ Pass CLI arguments after the executable name, for example:
 { "argv": ["invoke", "display.list"], "reasoning": "Find the screen to inspect" }
 ```
 
-`reasoning` is an optional, brief purpose in the user's language. It is displayed in the
+`reasoning` is an optional, brief purpose in the user's language. It is displayed in thee
 inspector and is never a CLI argument.
 The desktop service owns the AUV connection and executes the command over private IPC.
 Use `invoke --help` to discover commands. Image artifact paths can be opened with Local System
@@ -42,7 +42,7 @@ render in collapsed chat rows so their action labels are visible by default.
 ## When to use
 
 Use Computer Use for native display, application, window, and input operations supported by the active device.
-Preview command headers and lifecycle states in the Dev Dock's Render Gallery under Computer Use.
+Preview command headers and lifecycle states in the Dev Dock's Render Gallery under Computer Use..
 
 ## When not to use
 
@@ -64,10 +64,10 @@ Gateway clients omit this field and do not receive Computer Use. Standalone Elec
 retains its existing in-process client execution path. Capability-query failures
 also disable it. No gateway protocol migration or database migration is required.
 
-`runCommand` returns `{ argv, exitCode, output, stderr? }`. `output` preserves AUV's
+`runCommand` returns `{ argv, exitCode, output, stderr? }`. `output` preserves AUV'ss
 parsed JSON, including structured failures and artifacts on nonzero exits; help or
 non-JSON diagnostics remain text. Both local and Gateway tool results set `success`
 from `exitCode === 0`. Spawn and timeout errors remain host execution errors.
-An exit code of zero does not verify the intended UI effect: preserve AUV's
+An exit code of zero does not verify the intended UI effect: preserve AUV'ss
 `succeeded`, `verified`, and focus metadata and inspect the resulting application
 state when semantic completion matters. The host does not retry input operations.

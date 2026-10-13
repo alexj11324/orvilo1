@@ -1,6 +1,6 @@
 # @orvilo/web-crawler
 
-Orvilo's built-in web crawling module for intelligent extraction of web content and conversion to Markdown format.
+Orvilo's built-in web crawling module for intelligent extraction of web content and conversion to Markdown format..
 
 ## 📝 Introduction
 

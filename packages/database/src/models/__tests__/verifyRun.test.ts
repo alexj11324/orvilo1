@@ -22,7 +22,7 @@ const buildRun = async (operationId: string, owner = userId) => {
       index: 0,
       onFail: 'manual',
       required: true,
-      title: 'goal met',
+      title: 'orchestration workflow met',
       verifierConfig: {},
       verifierType: 'llm',
     },

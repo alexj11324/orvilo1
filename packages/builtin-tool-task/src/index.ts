@@ -14,11 +14,11 @@ export {
 export { TaskIdentifier, TaskManifest } from './manifest';
 export { systemPrompt } from './systemRole';
 export type {
-  CreateGoalParams,
-  CreateGoalState,
+  CreateOrchestrationWorkflowParams,
+  CreateOrchestrationWorkflowState,
   EditTaskParams,
-  GoalCriterionDraft,
   ListWorkspaceMembersParams,
   ListWorkspaceMembersState,
+  OrchestrationWorkflowCriterionDraft,
 } from './types';
 export { TaskApiName } from './types';

@@ -1,7 +1,7 @@
 # CAID Dispatch Admission (rollout gate)
 
 `caid_dispatch` is the server-side rollout gate for **new** CAID orchestrated
-dispatches — goal frontier fan-out (`trigger: 'goal'`) and planner/orchestrator
+dispatches — orchestration workflow frontier fan-out (`trigger: 'orchestration workflow'`) and planner/orchestrator
 wakes (`trigger: 'orchestrator'`). It exists so a deployment can cut over to
 orchestration deliberately instead of landing it implicitly with the code.
 
@@ -21,11 +21,11 @@ and cannot re-enable retired execution paths.
 
 ## Gated entries
 
-| Entrypoint                                   | Behavior when off                                              |
-| -------------------------------------------- | -------------------------------------------------------------- |
-| Goal fan-out (`GoalService.dispatchWork`)    | Node stays untouched — `waiting_external`, no claim, no error. |
-| Planning run-intents (`linearSync/planning`) | `requested` dispatch rows stay durable for the watchdog sweep. |
-| `taskDispatchStart` sweep                    | Returns `waiting` / `caid_dispatch_disabled`, row untouched.   |
+| Entrypoint                                                                    | Behavior when off                                              |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Orchestration workflow fan-out (`Orchestration workflowService.dispatchWork`) | Node stays untouched — `waiting_external`, no claim, no error. |
+| Planning run-intents (`linearSync/planning`)                                  | `requested` dispatch rows stay durable for the watchdog sweep. |
+| `taskDispatchStart` sweep                                                     | Returns `waiting` / `caid_dispatch_disabled`, row untouched.   |
 
 ## Explicitly unaffected (settlement must keep working)
 
@@ -46,4 +46,4 @@ and cannot re-enable retired execution paths.
 The gate is env/runtime-config only — no schema or persisted-shape change, so a
 code rollback needs no data migration: older code simply ignores the flag and
 dispatches unconditionally. Rows created while the gate was on are ordinary
-dispatch/goal rows readable by any earlier version.
+dispatch/orchestration workflow rows readable by any earlier version.

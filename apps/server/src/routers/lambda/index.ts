@@ -61,7 +61,6 @@ import { exporterRouter } from './exporter';
 import { fileRouter } from './file';
 import { followUpActionRouter } from './followUpAction';
 import { githubOAuthRouter } from './githubOAuth';
-import { goalRouter } from './goal';
 import { homeRouter } from './home';
 import { importerRouter } from './importer';
 import { knowledgeRouter } from './knowledge';
@@ -76,6 +75,7 @@ import { metricRouter } from './metric';
 import { notebookRouter } from './notebook';
 import { notificationRouter } from './notification';
 import { oauthDeviceFlowRouter } from './oauthDeviceFlow';
+import { orchestrationWorkflowRouter } from './orchestrationWorkflow';
 import { pluginRouter } from './plugin';
 import { projectRouter } from './project';
 import { providerBindingRouter } from './providerBinding';
@@ -150,7 +150,7 @@ export const lambdaRouter = router({
   exporter: exporterRouter,
   file: fileRouter,
   followUpAction: followUpActionRouter,
-  goal: goalRouter,
+  orchestrationWorkflow: orchestrationWorkflowRouter,
   githubOAuth: githubOAuthRouter,
   group: agentGroupRouter,
   healthcheck: publicProcedure.query(() => "i'm live!"),

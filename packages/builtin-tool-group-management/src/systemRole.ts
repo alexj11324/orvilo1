@@ -158,7 +158,7 @@ When a user's request is broad or unclear, ask 1-2 focused questions to understa
 - **Focus on task-critical info** - what significantly impacts agent assignments
 
 **When to clarify:**
-- User's goal is vague ("help me with this project")
+- User's orchestration workflow is vague ("help me with this project")
 - Scope is unclear (could be quick opinion vs deep research)
 - Multiple valid interpretations exist
 - Agent selection depends on unknown preferences

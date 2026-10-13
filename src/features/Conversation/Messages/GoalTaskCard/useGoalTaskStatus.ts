@@ -9,30 +9,30 @@ import { getGoalTaskProgress } from './goalTaskProgress';
  */
 export const useGoalTaskStatus = ({
   criteriaCount = 0,
-  goalId,
+  orchestrationWorkflowId,
 }: {
   criteriaCount?: number;
-  goalId?: string;
+  orchestrationWorkflowId?: string;
 }) => {
   const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
-  useFetchGoalGraph(goalId);
-  const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
+  useFetchGoalGraph(orchestrationWorkflowId);
+  const snapshot = useGoalStore(goalSelectors.goalGraph(orchestrationWorkflowId));
 
   const taskNodes = snapshot?.nodes.filter((node) => node.kind === 'task') ?? [];
 
   return {
-    agentId: snapshot?.goal.agentId ?? undefined,
+    agentId: snapshot?.orchestrationWorkflow.agentId ?? undefined,
     progress: getGoalTaskProgress({
       criteriaCount,
       pendingDecisions:
         snapshot?.decisions.filter((decision) => decision.status === 'pending').length ?? 0,
-      status: snapshot?.goal.status,
+      status: snapshot?.orchestrationWorkflow.status,
       taskDone: taskNodes.filter((node) =>
         ['rejected', 'resolved', 'retired'].includes(node.status),
       ).length,
       taskTotal: taskNodes.length,
     }),
-    startedAt: snapshot?.goal.startedAt ?? undefined,
-    title: snapshot?.goal.title,
+    startedAt: snapshot?.orchestrationWorkflow.startedAt ?? undefined,
+    title: snapshot?.orchestrationWorkflow.title,
   };
 };

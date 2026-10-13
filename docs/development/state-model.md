@@ -159,7 +159,7 @@ service picks a status itself:
   heartbeat timeout settles `failed`. The legacy projection for a
   heartbeat timeout is now `paused` (execution-failed keeps the issue open);
   it no longer writes `failed`.
-- `services/goal` — the lease-expired reclaim inside the reclaim transaction
+- `services/orchestration workflow` — the lease-expired reclaim inside the reclaim transaction
   settles `outcome_unknown` on the task.
 - `services/taskRunner` — run start settles `runStarted`, stamping
   `in_progress` + the resolved state ref; the legacy `running` projection

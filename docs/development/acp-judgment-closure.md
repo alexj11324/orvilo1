@@ -29,7 +29,7 @@ exception table below, and `apps/server/src/acpJudgmentGuards.test.ts`.
 ## The ACP judgment contract (`runAcpJudgment`)
 
 1. **Binding** (`AcpJudgmentBinding`): `{ agentId? }` pins a user agent;
-   `{ slug? }` names a builtin (BUILTIN\_AGENT\_SLUGS). Resolution order:
+   `{ slug? }` names a builtin (BUILTIN_AGENT_SLUGS). Resolution order:
    `agentId` exists → `slug` resolves → `ACP_JUDGMENT_AGENT_ID` env (agent id
    or builtin slug) unless `allowEnvFallback: false` → `undefined`. `undefined`
    → `AcpJudgmentBindingError`. A pinned `agentId` that no longer exists is a
@@ -78,31 +78,31 @@ exception table below, and `apps/server/src/acpJudgmentGuards.test.ts`.
 
 Judgment consumers (all `kind: 'judgment'`; binding → purpose):
 
-| Consumer                                                             | File                                      | Binding                                             | Purpose                                                           |
-| -------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
-| Verify llm-item judge                                                | `services/verify/executor.ts`             | `verifierAgentId` → `verify-agent` slug             | `verify.judge`                                                    |
-| Verify narrative report                                              | `services/verify/reporter.ts`             | `verifierAgentId` → `verify-agent`                  | `verify.report`                                                   |
-| Review predictor                                                     | `services/verify/reviewPredictor.ts`      | `judgmentAgentId` → `verify-agent`                  | `verify.reviewPredict`                                            |
-| Criteria/plan generator                                              | `services/verify/planGenerator.ts`        | `verifierAgentId` → `verify-agent`                  | `verify.planGen`                                                  |
-| Goal criteria draft                                                  | `services/goal/criteriaGenerator.ts`      | `agentId` → `verify-agent`                          | `goal.criteriaDraft`                                              |
-| Goal decompose                                                       | `services/goal/criteriaGenerator.ts`      | goal `agentId`                                      | `goal.decompose`                                                  |
-| Goal exploration planner                                             | `services/goal/explorationPlanner.ts`     | goal `agentId`                                      | `goal.explore`                                                    |
-| Task intent/instruction                                              | `services/task/intent.ts`                 | `taskAgent` slug                                    | `task.intent` / `task.instruction`                                |
-| Task review judge                                                    | `services/taskReview/index.ts`            | `judgeAgentId` (task assignee)                      | `task.review`                                                     |
-| Task lifecycle (handoff/brief)                                       | `services/taskLifecycle/index.ts`         | `task.assigneeAgentId`                              | `task.handoff` / `task.briefJudge` / `task.brief`                 |
-| Linear coordinator planning                                          | `services/linearSync/coordinator.ts`      | `project.coordinatorAgentId`                        | `linearSync.coordinatorPlan`                                      |
-| Follow-up extraction                                                 | `services/followUpAction/index.ts`        | `topic.agentId`                                     | `followUp.extract`                                                |
-| Task recommendation writer                                           | `services/taskRecommendation/writer.ts`   | `writerAgent.id`                                    | `onboarding.taskRecommendation`                                   |
-| Understanding writer                                                 | `services/understanding/service.ts`       | `writerAgent.id`                                    | `understanding.detailedPersona` / `understanding.personaAnalysis` |
-| Topic title / skill meta                                             | `services/systemAgent/index.ts`           | `topic.agentId` / `params.agentId`                  | `topic.title` / `skill.meta`                                      |
-| Topic auto-summary                                                   | `services/topicAutoSummary/index.ts`      | `topic.agentId`                                     | `topic.autoSummary`                                               |
-| Expertise domain draft                                               | `services/expertise/domain.ts`            | `input.agentId`                                     | `expertise.domainDraft`                                           |
-| Expertise topic ingestion                                            | `services/expertise/ingestion.ts`         | `input.agentId`                                     | `expertise.topicIngestion`                                        |
-| Signal satisfaction judge                                            | `agentSignal/.../feedbackSatisfaction.ts` | `signal.payload.agentId`                            | `agentSignal.feedbackSatisfaction`                                |
-| Signal domain router                                                 | `agentSignal/.../feedbackDomainAgent.ts`  | `signal.payload.agentId`                            | `agentSignal.feedbackDomain`                                      |
-| Skill-intent classifier                                              | `agentSignal/.../skillIntent.ts`          | `signal.payload.agentId`                            | `agentSignal.skillIntent`                                         |
-| Memory-write decision                                                | `agentSignal/.../actions/userMemory.ts`   | `action.payload.agentId`                            | `agentSignal.memoryWriteDecision`                                 |
-| outputJSON (builder suggestions, input completion, group supervisor) | `routers/lambda/aiChat.ts`                | `tracing.agentId` → `tracing.topicId`'s agent → env | `outputJSON.<scenario>`                                           |
+| Consumer                                                             | File                                                   | Binding                                             | Purpose                                                           |
+| -------------------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- | ----------------------------------------------------------------- |
+| Verify llm-item judge                                                | `services/verify/executor.ts`                          | `verifierAgentId` → `verify-agent` slug             | `verify.judge`                                                    |
+| Verify narrative report                                              | `services/verify/reporter.ts`                          | `verifierAgentId` → `verify-agent`                  | `verify.report`                                                   |
+| Review predictor                                                     | `services/verify/reviewPredictor.ts`                   | `judgmentAgentId` → `verify-agent`                  | `verify.reviewPredict`                                            |
+| Criteria/plan generator                                              | `services/verify/planGenerator.ts`                     | `verifierAgentId` → `verify-agent`                  | `verify.planGen`                                                  |
+| Orchestration workflow criteria draft                                | `services/orchestrationWorkflow/criteriaGenerator.ts`  | `agentId` → `verify-agent`                          | `orchestrationWorkflow.criteriaDraft`                             |
+| Orchestration workflow decompose                                     | `services/orchestrationWorkflow/criteriaGenerator.ts`  | orchestration workflow `agentId`                    | `orchestrationWorkflow.decompose`                                 |
+| Orchestration workflow exploration planner                           | `services/orchestrationWorkflow/explorationPlanner.ts` | orchestration workflow `agentId`                    | `orchestrationWorkflow.explore`                                   |
+| Task intent/instruction                                              | `services/task/intent.ts`                              | `taskAgent` slug                                    | `task.intent` / `task.instruction`                                |
+| Task review judge                                                    | `services/taskReview/index.ts`                         | `judgeAgentId` (task assignee)                      | `task.review`                                                     |
+| Task lifecycle (handoff/brief)                                       | `services/taskLifecycle/index.ts`                      | `task.assigneeAgentId`                              | `task.handoff` / `task.briefJudge` / `task.brief`                 |
+| Linear coordinator planning                                          | `services/linearSync/coordinator.ts`                   | `project.coordinatorAgentId`                        | `linearSync.coordinatorPlan`                                      |
+| Follow-up extraction                                                 | `services/followUpAction/index.ts`                     | `topic.agentId`                                     | `followUp.extract`                                                |
+| Task recommendation writer                                           | `services/taskRecommendation/writer.ts`                | `writerAgent.id`                                    | `onboarding.taskRecommendation`                                   |
+| Understanding writer                                                 | `services/understanding/service.ts`                    | `writerAgent.id`                                    | `understanding.detailedPersona` / `understanding.personaAnalysis` |
+| Topic title / skill meta                                             | `services/systemAgent/index.ts`                        | `topic.agentId` / `params.agentId`                  | `topic.title` / `skill.meta`                                      |
+| Topic auto-summary                                                   | `services/topicAutoSummary/index.ts`                   | `topic.agentId`                                     | `topic.autoSummary`                                               |
+| Expertise domain draft                                               | `services/expertise/domain.ts`                         | `input.agentId`                                     | `expertise.domainDraft`                                           |
+| Expertise topic ingestion                                            | `services/expertise/ingestion.ts`                      | `input.agentId`                                     | `expertise.topicIngestion`                                        |
+| Signal satisfaction judge                                            | `agentSignal/.../feedbackSatisfaction.ts`              | `signal.payload.agentId`                            | `agentSignal.feedbackSatisfaction`                                |
+| Signal domain router                                                 | `agentSignal/.../feedbackDomainAgent.ts`               | `signal.payload.agentId`                            | `agentSignal.feedbackDomain`                                      |
+| Skill-intent classifier                                              | `agentSignal/.../skillIntent.ts`                       | `signal.payload.agentId`                            | `agentSignal.skillIntent`                                         |
+| Memory-write decision                                                | `agentSignal/.../actions/userMemory.ts`                | `action.payload.agentId`                            | `agentSignal.memoryWriteDecision`                                 |
+| outputJSON (builder suggestions, input completion, group supervisor) | `routers/lambda/aiChat.ts`                             | `tracing.agentId` → `tracing.topicId`'s agent → env | `outputJSON.<scenario>`                                           |
 
 ### Surfacing the no-binding block
 
@@ -112,7 +112,7 @@ Judgment consumers (all `kind: 'judgment'`; binding → purpose):
   `verdict: 'uncertain'` — a blocked judgment gates delivery instead of
   degrading to `errored`.
 - `taskLifecycle` persists a brief decision with `reason:
-'acp_judgment_no_binding'`; goal/followUp callers rethrow to their callers.
+'acp_judgment_no_binding'`; orchestration workflow/followUp callers rethrow to their callers.
 - Agent-signal pipelines let it propagate as an explicit executor failure.
 
 ## Non-agent exceptions (kind: 'basic' / direct deployment runtime)

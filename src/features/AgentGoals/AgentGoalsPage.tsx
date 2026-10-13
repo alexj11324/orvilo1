@@ -1,6 +1,6 @@
 'use client';
 
-import type { GoalStatus } from '@orvilo/const/goal';
+import type { OrchestrationWorkflowStatus } from '@orvilo/const/orchestrationWorkflow';
 import { LayoutGridIcon, ListIcon, RefreshCwIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,7 @@ import { goalSelectors, useGoalStore } from '@/store/goal';
 
 import { GoalCardItem } from './GoalCardItem';
 import GoalEmptyState from './GoalEmptyState';
-import { GoalListItem } from './GoalListItem';
+import { OrchestrationWorkflowListItem } from './GoalListItem';
 
 const styles = {
   countBadge:
@@ -30,7 +30,11 @@ const styles = {
 };
 
 /** Goals whose loop has stopped for good — hidden by the default "open" filter. */
-const TERMINAL_GOAL_STATUSES = new Set<GoalStatus>(['achieved', 'failed', 'canceled']);
+const TERMINAL_ORCHESTRATION_WORKFLOW_STATUSES = new Set<OrchestrationWorkflowStatus>([
+  'achieved',
+  'failed',
+  'canceled',
+]);
 
 interface AgentGoalsPageProps {
   agentId?: string;
@@ -52,17 +56,23 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
   const loadMoreGoals = useGoalStore((s) => s.loadMoreGoals);
   const { error, isLoading } = useFetchGoals(agentId, projectId);
   const summary = useMemo(() => {
-    const delivered = goals.filter(({ goal }) => goal.status === 'review').length;
+    const delivered = goals.filter(
+      ({ orchestrationWorkflow }) => orchestrationWorkflow.status === 'review',
+    ).length;
 
     return { delivered, pursuing: goals.length - delivered, total: goals.length };
   }, [goals]);
   const filteredGoals = useMemo(() => {
     if (filter === 'all') return goals;
 
-    return goals.filter(({ goal }) => !TERMINAL_GOAL_STATUSES.has(goal.status));
+    return goals.filter(
+      ({ orchestrationWorkflow }) =>
+        !TERMINAL_ORCHESTRATION_WORKFLOW_STATUSES.has(orchestrationWorkflow.status),
+    );
   }, [filter, goals]);
   const visibleGoalCount = filteredGoals.length;
-  const GoalItem = viewMode === 'list' ? GoalListItem : GoalCardItem;
+  const OrchestrationWorkflowItem =
+    viewMode === 'list' ? OrchestrationWorkflowListItem : GoalCardItem;
 
   return (
     <div className="flex flex-col flex-1 h-full">
@@ -186,7 +196,11 @@ const AgentGoalsPage = memo<AgentGoalsPageProps>(({ agentId, projectId }) => {
                   filteredGoals
                     .slice(0, visibleLimit)
                     .map((item) => (
-                      <GoalItem goal={item} key={item.goal.id} projectId={projectId} />
+                      <OrchestrationWorkflowItem
+                        key={item.orchestrationWorkflow.id}
+                        orchestrationWorkflow={item}
+                        projectId={projectId}
+                      />
                     ))
                 )}
               </div>

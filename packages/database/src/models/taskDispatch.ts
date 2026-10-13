@@ -33,9 +33,9 @@ import {
 } from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
-import { goals } from '../schemas/goal';
-import { goalNodes } from '../schemas/goalGraph';
 import { mcpEventInbox, mcpEventTriggerRuns } from '../schemas/mcpEvents';
+import { orchestrationWorkflows } from '../schemas/orchestrationWorkflow';
+import { orchestrationWorkflowNodes } from '../schemas/orchestrationWorkflowGraph';
 import { projectAgents, projects } from '../schemas/project';
 import type { TaskDispatchItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
@@ -99,13 +99,18 @@ const resumeCandidates = (
   rows.flatMap((row) => (row.userId === null ? [] : [{ ...row, userId: row.userId }]));
 
 /**
- * Goal statuses that fence automated dispatch for a goal-owned Task. Pausing,
- * canceling or finishing a goal is the stop boundary for every not-yet-running
+ * OrchestrationWorkflow statuses that fence automated dispatch for a orchestration workflow-owned Task. Pausing,
+ * canceling or finishing a orchestration workflow is the stop boundary for every not-yet-running
  * dispatch behind its nodes: nothing queued may execute while the stop stands.
- * 'planning'/'verifying'/'review' keep dispatching — a goal still driving its
+ * 'planning'/'verifying'/'review' keep dispatching — a orchestration workflow still driving its
  * plan or its acceptance needs its own recovery/corrective runs.
  */
-const GOAL_DISPATCH_BLOCKED_STATUSES = ['paused', 'canceled', 'failed', 'achieved'] as const;
+const ORCHESTRATION_WORKFLOW_DISPATCH_BLOCKED_STATUSES = [
+  'paused',
+  'canceled',
+  'failed',
+  'achieved',
+] as const;
 
 export const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchItem) =>
   task.assigneeAgentId === dispatch.agentId ||
@@ -252,7 +257,7 @@ export interface TaskPlanningDispatchCandidate {
  * start that never reached provisioning (`requested`/`claimed`) or a parked
  * `waiting` row whose recorded reason a re-evaluation can clear. The resume
  * service re-drives these through the same `request()` path so contract,
- * policy and goal re-checks decide whether the row resumes or re-parks.
+ * policy and orchestration workflow re-checks decide whether the row resumes or re-parks.
  */
 export interface TaskDispatchResumeCandidate {
   agentId: string | null;
@@ -448,33 +453,38 @@ export class TaskDispatchModel {
   }
 
   /**
-   * Automated dispatch on a Task owned by a stopped goal must not proceed:
-   * pausing/canceling the goal is the stop-intent boundary, and a queued
+   * Automated dispatch on a Task owned by a stopped orchestration workflow must not proceed:
+   * pausing/canceling the orchestration workflow is the stop-intent boundary, and a queued
    * dispatch resuming through a stray trigger would restart paid work the user
-   * already stopped. Returns `goal_<status>` when a blocking owner exists —
+   * already stopped. Returns `orchestration_workflow_<status>` when a blocking owner exists —
    * the reason doubles as the durable `waitingReason`, resumable by the next
-   * request once the goal runs again. A 'manual' trigger is the user's own act
+   * request once the orchestration workflow runs again. A 'manual' trigger is the user's own act
    * on the Task and bypasses this gate, the same way it bypasses project
    * policy.
    */
-  private async goalDispatchWaitingReason(
+  private async orchestrationWorkflowDispatchWaitingReason(
     db: OrviloDatabase,
     task: TaskItem,
     trigger: TaskRunTrigger,
   ): Promise<string | null> {
     if (trigger === 'manual') return null;
     const [blocked] = await db
-      .select({ status: goals.status })
-      .from(goalNodes)
-      .innerJoin(goals, eq(goalNodes.goalId, goals.id))
+      .select({ status: orchestrationWorkflows.status })
+      .from(orchestrationWorkflowNodes)
+      .innerJoin(
+        orchestrationWorkflows,
+        eq(orchestrationWorkflowNodes.orchestrationWorkflowId, orchestrationWorkflows.id),
+      )
       .where(
         and(
-          eq(goalNodes.taskId, task.id),
-          inArray(goals.status, [...GOAL_DISPATCH_BLOCKED_STATUSES]),
+          eq(orchestrationWorkflowNodes.taskId, task.id),
+          inArray(orchestrationWorkflows.status, [
+            ...ORCHESTRATION_WORKFLOW_DISPATCH_BLOCKED_STATUSES,
+          ]),
         ),
       )
       .limit(1);
-    return blocked ? `goal_${blocked.status}` : null;
+    return blocked ? `orchestration_workflow_${blocked.status}` : null;
   }
 
   /**
@@ -564,7 +574,7 @@ export class TaskDispatchModel {
    * Discover parked `waiting` dispatches whose recorded reason a
    * re-evaluation may clear — capacity/budget ceilings, a newly assigned
    * agent, a resumed admission flag, a retryable prepare failure. Reasons
-   * owned by another sweep (`goal_*`), event intents without stored evidence,
+   * owned by another sweep (`orchestration_workflow_*`), event intents without stored evidence,
    * planner intents, and terminal-coded waits are skipped.
    */
   static async findWaitingResumeCandidates(
@@ -593,7 +603,7 @@ export class TaskDispatchModel {
           or(
             isNull(taskDispatches.waitingReason),
             and(
-              notLike(taskDispatches.waitingReason, 'goal_%'),
+              notLike(taskDispatches.waitingReason, 'orchestration_workflow_%'),
               notLike(taskDispatches.waitingReason, 'superseded_%'),
               notLike(taskDispatches.waitingReason, 'settlement_%'),
               ne(taskDispatches.waitingReason, 'planning_resume_instruction_missing'),
@@ -764,7 +774,7 @@ export class TaskDispatchModel {
   /**
    * Fence every active dispatch behind a set of tasks in one statement —
    * the bulk counterpart of `requestStop` for ownership-detach paths (agent
-   * ownership transfer, goal reassignment) that clear an assignee out from
+   * ownership transfer, orchestration workflow reassignment) that clear an assignee out from
    * under live executions. The watchdog's cancellation sweep then performs
    * the per-row interrupt + settle so the remote writers are provably dead,
    * not just fenced in the database.
@@ -861,7 +871,7 @@ export class TaskDispatchModel {
         if (
           existing.phase === 'waiting' &&
           input.trigger !== 'manual' &&
-          input.trigger !== 'goal' &&
+          input.trigger !== 'orchestrationWorkflow' &&
           task.projectId
         ) {
           resumedWaitingReason = await this.projectDispatchWaitingReason(
@@ -882,15 +892,16 @@ export class TaskDispatchModel {
             return { dispatch: waiting ?? existing, state: 'existing' as const, task };
           }
         }
-        // A goal stop fences queued dispatches too: when project policy passes
+        // A orchestration workflow stop fences queued dispatches too: when project policy passes
         // (or does not apply), a waiting row still must not resume while an
-        // owning goal is paused/canceled/done.
+        // owning orchestration workflow is paused/canceled/done.
         if (!resumedWaitingReason && existing.phase === 'waiting' && input.trigger !== 'manual') {
-          const goalWaitingReason = await this.goalDispatchWaitingReason(tx, task, input.trigger);
-          if (goalWaitingReason) {
+          const orchestrationWorkflowWaitingReason =
+            await this.orchestrationWorkflowDispatchWaitingReason(tx, task, input.trigger);
+          if (orchestrationWorkflowWaitingReason) {
             const [waiting] = await tx
               .update(taskDispatches)
-              .set({ waitingReason: goalWaitingReason })
+              .set({ waitingReason: orchestrationWorkflowWaitingReason })
               .where(and(eq(taskDispatches.id, existing.id), eq(taskDispatches.phase, 'waiting')))
               .returning();
             return { dispatch: waiting ?? existing, state: 'existing' as const, task };
@@ -900,7 +911,7 @@ export class TaskDispatchModel {
           existing.phase === 'waiting' &&
           task.assigneeAgentId &&
           (existing.waitingReason === 'no_eligible_agent' ||
-            existing.waitingReason === 'goal_paused' ||
+            existing.waitingReason === 'orchestration_workflow_paused' ||
             // `caid_dispatch_disabled` resumes optimistically — the service
             // layer re-checks the admission flag after request() returns and
             // re-parks the row if rollout is still off.
@@ -968,7 +979,14 @@ export class TaskDispatchModel {
       ) {
         const requestedTrigger = active.requestedBy.split(':', 1)[0];
         const activeTrigger = (
-          ['event', 'goal', 'heartbeat', 'manual', 'orchestrator', 'schedule'] as const
+          [
+            'event',
+            'orchestrationWorkflow',
+            'heartbeat',
+            'manual',
+            'orchestrator',
+            'schedule',
+          ] as const
         ).includes(requestedTrigger as TaskRunTrigger)
           ? (requestedTrigger as TaskRunTrigger)
           : input.trigger;
@@ -980,7 +998,7 @@ export class TaskDispatchModel {
         );
         const waitingReason =
           policyWaitingReason ??
-          (await this.goalDispatchWaitingReason(tx, task, activeTrigger)) ??
+          (await this.orchestrationWorkflowDispatchWaitingReason(tx, task, activeTrigger)) ??
           (task.assigneeAgentId ? null : 'no_eligible_agent');
         if (waitingReason) {
           const [waiting] = await tx
@@ -1079,7 +1097,7 @@ export class TaskDispatchModel {
 
       const waitingReason =
         (await this.projectDispatchWaitingReason(tx, task, input.trigger)) ??
-        (await this.goalDispatchWaitingReason(tx, task, input.trigger));
+        (await this.orchestrationWorkflowDispatchWaitingReason(tx, task, input.trigger));
       const generation = task.executionGeneration + 1;
       const [dispatch] = await tx
         .insert(taskDispatches)
@@ -1203,22 +1221,23 @@ export class TaskDispatchModel {
         return null;
       }
 
-      // A goal stop between request and claim parks the dispatch back to
+      // A orchestration workflow stop between request and claim parks the dispatch back to
       // 'waiting' rather than canceling it — the next request resumes the same
-      // durable intent once the goal runs again.
-      const goalWaitingReason = await this.goalDispatchWaitingReason(
-        tx,
-        task,
-        dispatch.requestedBy.split(':', 1)[0] as TaskRunTrigger,
-      );
-      if (goalWaitingReason) {
+      // durable intent once the orchestration workflow runs again.
+      const orchestrationWorkflowWaitingReason =
+        await this.orchestrationWorkflowDispatchWaitingReason(
+          tx,
+          task,
+          dispatch.requestedBy.split(':', 1)[0] as TaskRunTrigger,
+        );
+      if (orchestrationWorkflowWaitingReason) {
         await tx
           .update(taskDispatches)
           .set({
             leaseExpiresAt: null,
             leaseOwner: null,
             phase: 'waiting',
-            waitingReason: goalWaitingReason,
+            waitingReason: orchestrationWorkflowWaitingReason,
           })
           .where(eq(taskDispatches.id, dispatch.id));
         return null;
@@ -1449,18 +1468,22 @@ export class TaskDispatchModel {
           (currentContract && task && automatedTrigger
             ? await this.projectDispatchWaitingReason(tx, task, automatedTrigger, dispatch.id)
             : null);
-        const goalWaitingReason =
+        const orchestrationWorkflowWaitingReason =
           currentContract && task && requestedTrigger !== 'manual'
-            ? await this.goalDispatchWaitingReason(tx, task, requestedTrigger as TaskRunTrigger)
+            ? await this.orchestrationWorkflowDispatchWaitingReason(
+                tx,
+                task,
+                requestedTrigger as TaskRunTrigger,
+              )
             : null;
-        if (goalWaitingReason) {
+        if (orchestrationWorkflowWaitingReason) {
           await tx
             .update(taskDispatches)
             .set({
               leaseExpiresAt: null,
               leaseOwner: null,
               phase: 'waiting',
-              waitingReason: goalWaitingReason,
+              waitingReason: orchestrationWorkflowWaitingReason,
             })
             .where(
               and(
@@ -1516,7 +1539,7 @@ export class TaskDispatchModel {
         if (input.phase === 'dispatched') {
           const persistedOrigin: TaskDispatchOrigin =
             dispatch.origin ??
-            (requestedTrigger === 'goal' || requestedTrigger === 'orchestrator'
+            (requestedTrigger === 'orchestrationWorkflow' || requestedTrigger === 'orchestrator'
               ? 'caid'
               : 'external');
           if (

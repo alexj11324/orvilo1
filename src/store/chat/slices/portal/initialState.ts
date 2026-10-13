@@ -68,8 +68,16 @@ export type GoalMetricKind =
 
 export type PortalViewData =
   | { type: PortalViewType.Home }
-  | { goalId: string; metric: GoalMetricKind; type: PortalViewType.GoalMetric }
-  | { goalId: string; nodeId: string; type: PortalViewType.GoalNode }
+  | {
+      orchestrationWorkflowId: string;
+      metric: GoalMetricKind;
+      type: PortalViewType.GoalMetric;
+    }
+  | {
+      orchestrationWorkflowId: string;
+      nodeId: string;
+      type: PortalViewType.GoalNode;
+    }
   | { acceptanceId: string; type: PortalViewType.Acceptance }
   | { acceptanceId: string; checkId: string; type: PortalViewType.AcceptanceCheck }
   | { agentId: string; type: PortalViewType.AgentDetail }

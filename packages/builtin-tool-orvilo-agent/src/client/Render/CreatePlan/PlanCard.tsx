@@ -44,7 +44,7 @@ const PlanCard = memo<PlanCardProps>(({ plan }) => {
         onClick={handleHeaderClick}
       >
         <ListChecksIcon size={18} />
-        <div className="truncate text-base font-medium">{plan.goal}</div>
+        <div className="truncate text-base font-medium">{plan.orchestrationWorkflow}</div>
       </div>
 
       {/* Description */}

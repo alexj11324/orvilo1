@@ -11,13 +11,19 @@ import {
 describe('resolveGoalDispatchNotice', () => {
   it('explains that new dispatches are held while admission is disabled', () => {
     expect(
-      resolveGoalDispatchNotice({ goalStatus: 'running', orchestrationAdmission: 'disabled' }),
+      resolveGoalDispatchNotice({
+        goalStatus: 'running',
+        orchestrationAdmission: 'disabled',
+      }),
     ).toEqual({ key: GOAL_DISPATCH_HELD_KEY });
   });
 
   it('stays silent when admission is enabled or the payload predates the field', () => {
     expect(
-      resolveGoalDispatchNotice({ goalStatus: 'running', orchestrationAdmission: 'enabled' }),
+      resolveGoalDispatchNotice({
+        goalStatus: 'running',
+        orchestrationAdmission: 'enabled',
+      }),
     ).toBeUndefined();
     expect(resolveGoalDispatchNotice({ goalStatus: 'running' })).toBeUndefined();
   });
@@ -26,7 +32,10 @@ describe('resolveGoalDispatchNotice', () => {
     'stays silent on a %s goal, which has nothing left to dispatch',
     (goalStatus) => {
       expect(
-        resolveGoalDispatchNotice({ goalStatus, orchestrationAdmission: 'disabled' }),
+        resolveGoalDispatchNotice({
+          goalStatus,
+          orchestrationAdmission: 'disabled',
+        }),
       ).toBeUndefined();
     },
   );

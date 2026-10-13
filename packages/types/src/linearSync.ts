@@ -47,7 +47,7 @@ export type LinearSyncOutboxStatus =
   | 'sending';
 
 /** Scope of a persisted planning cursor. */
-export type TaskPlanningScopeType = 'goal' | 'project' | 'team' | 'workspace';
+export type TaskPlanningScopeType = 'orchestrationWorkflow' | 'project' | 'team' | 'workspace';
 
 export type TaskPlanningScopeStatus = 'failed' | 'idle' | 'queued' | 'running';
 

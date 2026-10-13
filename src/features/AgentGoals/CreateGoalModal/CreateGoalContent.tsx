@@ -1,9 +1,15 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { resolveGoalAttemptBudget, resolveGoalConcurrency } from '@orvilo/builtin-tool-goal';
-import type { CreateGoalParams, GoalCriterionDraft } from '@orvilo/builtin-tool-task';
-import { DEFAULT_GOAL_MAX_ROUNDS } from '@orvilo/const/verify';
+import {
+  resolveOrchestrationWorkflowAttemptBudget,
+  resolveOrchestrationWorkflowConcurrency,
+} from '@orvilo/builtin-tool-orchestration-workflow';
+import type {
+  CreateOrchestrationWorkflowParams,
+  OrchestrationWorkflowCriterionDraft,
+} from '@orvilo/builtin-tool-task';
+import { DEFAULT_ORCHESTRATION_WORKFLOW_MAX_ROUNDS } from '@orvilo/const/verify';
 import { cn } from 'cn';
 import {
   ArrowLeft,
@@ -41,14 +47,14 @@ import {
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { pickAndInsertAttachments } from '@/features/EditorCanvas/editorAttachments';
 import { usePermission } from '@/hooks/usePermission';
-import { goalService } from '@/services/goal';
+import { orchestrationWorkflowService } from '@/services/goal';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { shinyTextStyles } from '@/styles';
 
 import presentation from './CreateGoalContent.module.css';
 import { buildGoalCreateInput, buildReviewedGoalContent } from './goalConfig';
-import { createFallbackGoalCriterion, generateGoalCriteria } from './goalCriteria';
+import { createFallbackGoalCriterion, generateOrchestrationWorkflowCriteria } from './goalCriteria';
 import { deriveGoalTitle } from './goalTitle';
 
 const styles = {
@@ -87,7 +93,10 @@ export interface CreateGoalContentProps {
   initialRequirement?: string;
   initialRoundBudget?: number;
   initialTitle?: string;
-  onCreated?: (goal: { agentId?: string; goalId: string }) => void;
+  onCreated?: (orchestrationWorkflow: {
+    agentId?: string;
+    orchestrationWorkflowId: string;
+  }) => void;
   projectId?: string;
 }
 
@@ -110,10 +119,10 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
   const [isCreating, setIsCreating] = useState(false);
 
   const [step, setStep] = useState<'describe' | 'preparing' | 'review'>('describe');
-  const [plan, setPlan] = useState<CreateGoalParams>({
+  const [plan, setPlan] = useState<CreateOrchestrationWorkflowParams>({
     criteria: [],
     instruction: initialRequirement ?? initialTitle ?? '',
-    maxIterations: initialRoundBudget ?? DEFAULT_GOAL_MAX_ROUNDS,
+    maxIterations: initialRoundBudget ?? DEFAULT_ORCHESTRATION_WORKFLOW_MAX_ROUNDS,
     maxTotalCost: null,
     name: initialTitle ?? '',
   });
@@ -154,10 +163,10 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
     instructionRef.current = instruction;
     setStep('preparing');
     try {
-      const generated = await generateGoalCriteria({
+      const generated = await generateOrchestrationWorkflowCriteria({
         agentId,
         context: name ? `Goal: ${name}` : undefined,
-        goal: instruction,
+        orchestrationWorkflow: instruction,
       });
       instructionRef.current = generated.instruction;
       setPlan((current) => ({
@@ -195,14 +204,17 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
     setStep('review');
   }, [canCreate, plan.instruction]);
 
-  const updateCriterion = useCallback((index: number, value: GoalCriterionDraft) => {
-    setPlan((current) => ({
-      ...current,
-      criteria: current.criteria.map((criterion, criterionIndex) =>
-        criterionIndex === index ? value : criterion,
-      ),
-    }));
-  }, []);
+  const updateCriterion = useCallback(
+    (index: number, value: OrchestrationWorkflowCriterionDraft) => {
+      setPlan((current) => ({
+        ...current,
+        criteria: current.criteria.map((criterion, criterionIndex) =>
+          criterionIndex === index ? value : criterion,
+        ),
+      }));
+    },
+    [],
+  );
 
   const removeCriterion = useCallback((index: number) => {
     setPlan((current) => ({
@@ -247,12 +259,14 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
 
     setIsCreating(true);
     try {
-      const maxConcurrentTasks = resolveGoalConcurrency(plan.maxConcurrentTasks);
-      const graph = await goalService.create({
+      const maxConcurrentTasks = resolveOrchestrationWorkflowConcurrency(plan.maxConcurrentTasks);
+      const graph = await orchestrationWorkflowService.create({
         agentId,
         config: {
           ...(maxConcurrentTasks !== undefined ? { maxConcurrentTasks } : {}),
-          recovery: { maxAttemptsPerTask: resolveGoalAttemptBudget(plan.maxIterations) },
+          recovery: {
+            maxAttemptsPerTask: resolveOrchestrationWorkflowAttemptBudget(plan.maxIterations),
+          },
         },
         // `maxIterations` is the per-Task attempt budget above; it is not the
         // graph-wide round cap, which counts runs across every Task and would
@@ -276,9 +290,12 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
       // the host may freeze before firing. This request-bound advance is the
       // durable fallback — fired and forgotten so the modal still closes
       // immediately; the server dedupes a raced decomposition.
-      void goalService.advance(graph.goal.id).catch(() => {});
+      void orchestrationWorkflowService.advance(graph.orchestrationWorkflow.id).catch(() => {});
       close();
-      onCreated?.({ agentId: graph.goal.agentId ?? undefined, goalId: graph.goal.id });
+      onCreated?.({
+        agentId: graph.orchestrationWorkflow.agentId ?? undefined,
+        orchestrationWorkflowId: graph.orchestrationWorkflow.id,
+      });
     } catch (error) {
       console.error('[CreateGoalContent] create failed:', error);
       toast.error(t('createGoal.createFailed'));

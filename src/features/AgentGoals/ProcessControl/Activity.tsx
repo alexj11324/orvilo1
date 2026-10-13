@@ -88,130 +88,132 @@ const RunningClock = memo<{ startedAt?: Date }>(({ startedAt }) => {
 
 RunningClock.displayName = 'GoalActivityRunningClock';
 
-const ActivityRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView }>(
-  ({ onSelect, view }) => {
-    const { t } = useTranslation('chat');
-    const summarize = useSummary();
-    const [open, setOpen] = useState(false);
-    const { text, title } = useActivityTime(lastTouch(view));
-    const hasDetail = view.attempts.length > 0 || view.findings.length > 0;
-    const coordinatorTitleKey = coordinatorNodeTitleKey(view);
+const ActivityRow = memo<{
+  onSelect: (nodeId: string) => void;
+  view: GoalNodeView;
+}>(({ onSelect, view }) => {
+  const { t } = useTranslation('chat');
+  const summarize = useSummary();
+  const [open, setOpen] = useState(false);
+  const { text, title } = useActivityTime(lastTouch(view));
+  const hasDetail = view.attempts.length > 0 || view.findings.length > 0;
+  const coordinatorTitleKey = coordinatorNodeTitleKey(view);
 
-    return (
-      <div className="flex flex-col gap-0">
-        <div
-          className={`flex items-center gap-2 ${styles.row}`}
-          onClick={() => (hasDetail ? setOpen(!open) : onSelect(view.node.id))}
-        >
-          <ChevronRight
-            className={cn(styles.arrow, open && styles.arrowOpen)}
-            size={14}
-            style={{ opacity: hasDetail ? 1 : 0 }}
-          />
-          <KindDot kind={view.node.kind} />
-          <div className="truncate min-w-0 font-medium" style={{ flexShrink: 1, minWidth: 0 }}>
-            {coordinatorTitleKey ? t(coordinatorTitleKey as any) : view.node.title}
-          </div>
-          <div
-            className="truncate min-w-0 text-sm text-muted-foreground"
-            style={{ flexShrink: 1, minWidth: 0 }}
-          >
-            {summarize(view)}
-          </div>
-          {view.startedAt && <RunningClock startedAt={view.startedAt} />}
-          <div
-            className={cn('text-xs text-muted-foreground', cn(styles.time, styles.mono))}
-            title={title}
-          >
-            {text}
-          </div>
+  return (
+    <div className="flex flex-col gap-0">
+      <div
+        className={`flex items-center gap-2 ${styles.row}`}
+        onClick={() => (hasDetail ? setOpen(!open) : onSelect(view.node.id))}
+      >
+        <ChevronRight
+          className={cn(styles.arrow, open && styles.arrowOpen)}
+          size={14}
+          style={{ opacity: hasDetail ? 1 : 0 }}
+        />
+        <KindDot kind={view.node.kind} />
+        <div className="truncate min-w-0 font-medium" style={{ flexShrink: 1, minWidth: 0 }}>
+          {coordinatorTitleKey ? t(coordinatorTitleKey as any) : view.node.title}
         </div>
-        {open && (
-          <div className={`flex flex-col gap-2.5 ${styles.body}`}>
-            {view.attempts.length > 0 && (
-              <div className="flex flex-col gap-0">
-                {view.attempts.map((attempt) => (
-                  <div className={`flex flex-col gap-0.5 ${styles.attempt}`} key={attempt.index}>
-                    <div className="flex items-center gap-2">
-                      <div className="text-xs font-semibold" style={{ flex: 'none' }}>
-                        {t('goalProcess.attempts.nth', { index: attempt.index })}
-                      </div>
-                      <div
-                        style={{ flex: 'none' }}
-                        className={cn(
-                          'text-xs',
-                          attempt.outcome === 'passed'
-                            ? 'text-success'
-                            : attempt.outcome === 'failed'
-                              ? 'text-destructive'
-                              : 'text-muted-foreground',
-                        )}
-                      >
-                        {t(`goalProcess.attempts.${attempt.outcome}` as const)}
-                      </div>
-                    </div>
-                    {attempt.reason && (
-                      <div className="text-xs text-muted-foreground">{attempt.reason}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            {view.findings.map((finding) => (
-              <div
-                className="flex items-center gap-1.5"
-                key={finding.id}
-                style={{ cursor: 'pointer' }}
-                onClick={() => onSelect(finding.id)}
-              >
-                <KindDot kind={'finding'} />
-                <div className="text-(length:--text-dense)">
-                  {t('goalProcess.activity.finding', { title: finding.title })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <div
+          className="truncate min-w-0 text-sm text-muted-foreground"
+          style={{ flexShrink: 1, minWidth: 0 }}
+        >
+          {summarize(view)}
+        </div>
+        {view.startedAt && <RunningClock startedAt={view.startedAt} />}
+        <div
+          className={cn('text-xs text-muted-foreground', cn(styles.time, styles.mono))}
+          title={title}
+        >
+          {text}
+        </div>
       </div>
-    );
-  },
-);
+      {open && (
+        <div className={`flex flex-col gap-2.5 ${styles.body}`}>
+          {view.attempts.length > 0 && (
+            <div className="flex flex-col gap-0">
+              {view.attempts.map((attempt) => (
+                <div className={`flex flex-col gap-0.5 ${styles.attempt}`} key={attempt.index}>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs font-semibold" style={{ flex: 'none' }}>
+                      {t('goalProcess.attempts.nth', { index: attempt.index })}
+                    </div>
+                    <div
+                      style={{ flex: 'none' }}
+                      className={cn(
+                        'text-xs',
+                        attempt.outcome === 'passed'
+                          ? 'text-success'
+                          : attempt.outcome === 'failed'
+                            ? 'text-destructive'
+                            : 'text-muted-foreground',
+                      )}
+                    >
+                      {t(`goalProcess.attempts.${attempt.outcome}` as const)}
+                    </div>
+                  </div>
+                  {attempt.reason && (
+                    <div className="text-xs text-muted-foreground">{attempt.reason}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {view.findings.map((finding) => (
+            <div
+              className="flex items-center gap-1.5"
+              key={finding.id}
+              style={{ cursor: 'pointer' }}
+              onClick={() => onSelect(finding.id)}
+            >
+              <KindDot kind={'finding'} />
+              <div className="text-(length:--text-dense)">
+                {t('goalProcess.activity.finding', { title: finding.title })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
 
 ActivityRow.displayName = 'GoalActivityRow';
 
-const Activity = memo<{ graph: GoalGraphView; onSelect: (nodeId: string) => void }>(
-  ({ graph, onSelect }) => {
-    const { t } = useTranslation('chat');
-    const rows = graph.nodes
-      .filter(
-        (view) =>
-          (view.node.kind === 'task' &&
-            (view.attempts.length > 0 || view.node.status !== 'proposed')) ||
-          (view.node.kind === 'decision' && view.node.status !== 'proposed'),
-      )
-      .sort((a, b) => lastTouch(b).getTime() - lastTouch(a).getTime());
+const Activity = memo<{
+  graph: GoalGraphView;
+  onSelect: (nodeId: string) => void;
+}>(({ graph, onSelect }) => {
+  const { t } = useTranslation('chat');
+  const rows = graph.nodes
+    .filter(
+      (view) =>
+        (view.node.kind === 'task' &&
+          (view.attempts.length > 0 || view.node.status !== 'proposed')) ||
+        (view.node.kind === 'decision' && view.node.status !== 'proposed'),
+    )
+    .sort((a, b) => lastTouch(b).getTime() - lastTouch(a).getTime());
 
-    if (rows.length === 0)
-      return (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant={'icon'}>
-              <BotMessageSquare />
-            </EmptyMedia>
-            <EmptyDescription>{t('goalProcess.activity.empty')}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      );
-
+  if (rows.length === 0)
     return (
-      <div className="flex flex-col gap-0.5">
-        {rows.map((view) => (
-          <ActivityRow key={view.node.id} view={view} onSelect={onSelect} />
-        ))}
-      </div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant={'icon'}>
+            <BotMessageSquare />
+          </EmptyMedia>
+          <EmptyDescription>{t('goalProcess.activity.empty')}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
-  },
-);
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {rows.map((view) => (
+        <ActivityRow key={view.node.id} view={view} onSelect={onSelect} />
+      ))}
+    </div>
+  );
+});
 
 Activity.displayName = 'GoalActivity';
 

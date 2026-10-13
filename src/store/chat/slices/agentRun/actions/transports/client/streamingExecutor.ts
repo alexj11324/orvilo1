@@ -24,7 +24,7 @@ import {
 import { type ToolsEngine } from '@orvilo/context-engine';
 import { buildTaskDetailPrompt, buildTaskListPrompt } from '@orvilo/prompts';
 import {
-  buildGoalOverviewContext,
+  buildOrchestrationWorkflowOverviewContext,
   type ConversationContext,
   type MessageMetadata,
   type OrviloAgentChatConfig,
@@ -456,16 +456,20 @@ export class StreamingExecutorActionImpl {
       }
     }
 
-    const viewedGoal = operation?.context.viewedGoal;
-    if (viewedGoal) {
+    const viewedOrchestrationWorkflow = operation?.context.viewedOrchestrationWorkflow;
+    if (viewedOrchestrationWorkflow) {
       try {
-        const snapshot = getGoalStoreState().goalGraphById[viewedGoal.goalId];
+        const snapshot =
+          getGoalStoreState().goalGraphById[viewedOrchestrationWorkflow.orchestrationWorkflowId];
         if (snapshot) {
           runtimeInitialContext = {
             ...runtimeInitialContext,
-            goalOverview: buildGoalOverviewContext(snapshot),
+            orchestrationWorkflowOverview: buildOrchestrationWorkflowOverviewContext(snapshot),
           };
-          log('[internal_createAgentState] injected goal overview context (%s)', viewedGoal.goalId);
+          log(
+            '[internal_createAgentState] injected goal overview context (%s)',
+            viewedOrchestrationWorkflow.orchestrationWorkflowId,
+          );
         }
       } catch (error) {
         log('[internal_createAgentState] Failed to build goal overview context: %o', error);

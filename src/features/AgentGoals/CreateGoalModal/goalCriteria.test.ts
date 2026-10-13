@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { verifyService } from '@/services/verify';
 
-import { createFallbackGoalCriterion, generateGoalCriteria } from './goalCriteria';
+import { createFallbackGoalCriterion, generateOrchestrationWorkflowCriteria } from './goalCriteria';
 
 describe('generateGoalCriteria', () => {
   beforeEach(() => {
@@ -20,14 +20,14 @@ describe('generateGoalCriteria', () => {
       title: 'Publish benchmark paper',
     });
 
-    const result = await generateGoalCriteria({
+    const result = await generateOrchestrationWorkflowCriteria({
       context: 'Goal: Publish an ICLR paper',
-      goal: 'Complete an RSI benchmark paper in three months',
+      orchestrationWorkflow: 'Complete an RSI benchmark paper in three months',
     });
 
     expect(generateCriteria).toHaveBeenCalledWith({
       context: 'Goal: Publish an ICLR paper',
-      goal: 'Complete an RSI benchmark paper in three months',
+      orchestrationWorkflow: 'Complete an RSI benchmark paper in three months',
       maxCriteria: 8,
     });
     expect(result).toEqual({
@@ -58,12 +58,15 @@ describe('generateGoalCriteria', () => {
       title: 'Publish benchmark paper',
     });
 
-    await generateGoalCriteria({ agentId: 'agent-acp', goal: 'Write the paper' });
+    await generateOrchestrationWorkflowCriteria({
+      agentId: 'agent-acp',
+      orchestrationWorkflow: 'Write the paper',
+    });
 
     expect(generatePlan).toHaveBeenCalledWith({
       agentId: 'agent-acp',
       context: undefined,
-      goal: 'Write the paper',
+      orchestrationWorkflow: 'Write the paper',
       maxCriteria: 8,
     });
     expect(generatePlan.mock.calls[0][0].agentId).toBe('agent-acp');
@@ -77,8 +80,8 @@ describe('generateGoalCriteria', () => {
     });
 
     await expect(
-      generateGoalCriteria({
-        goal: 'Ship the project',
+      generateOrchestrationWorkflowCriteria({
+        orchestrationWorkflow: 'Ship the project',
       }),
     ).rejects.toThrow('No goal plan was generated.');
   });
@@ -89,10 +92,10 @@ describe('generateGoalCriteria', () => {
       instruction: 'Implement a reproducible self-improvement training loop.',
       title: 'Reproduce self-improvement training',
     });
-    const goal =
+    const orchestrationWorkflow =
       'Reproduce https://ornith.ai/ornith_1_5.html with a three-round budget and export results.';
 
-    const result = await generateGoalCriteria({ goal });
+    const result = await generateOrchestrationWorkflowCriteria({ orchestrationWorkflow });
 
     expect(result.instruction).toBe('Implement a reproducible self-improvement training loop.');
   });

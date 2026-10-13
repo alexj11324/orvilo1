@@ -129,9 +129,9 @@ const getGraphNodeSection = (instruction: AgentInstruction | AgentInstruction[],
 const getGraphNodeContextText = (instruction: AgentInstruction | AgentInstruction[]) =>
   JSON.stringify(getGraphNodeContext(instruction));
 
-const loadGoalLoopGraph = (): AgentGraph => {
+const loadOrchestrationWorkflowLoopGraph = (): AgentGraph => {
   const graph = JSON.parse(
-    readFileSync(path.join(TEST_DIR, 'fixtures/goal-loop.graph.json'), 'utf8'),
+    readFileSync(path.join(TEST_DIR, 'fixtures/orchestration-workflow-loop.graph.json'), 'utf8'),
   );
   const result = AgentGraphSchema.safeParse(graph);
 
@@ -146,12 +146,12 @@ const parseGraph = (graph: unknown) => AgentGraphSchema.safeParse(graph);
 
 describe('GraphAgent', () => {
   describe('schema', () => {
-    it('should accept the goal-loop fixture', () => {
-      expect(parseGraph(loadGoalLoopGraph()).success).toBe(true);
+    it('should accept the orchestration-workflow-loop fixture', () => {
+      expect(parseGraph(loadOrchestrationWorkflowLoopGraph()).success).toBe(true);
     });
 
     it('should require exactly one root edge', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         edges: graph.edges.filter((edge) => edge.from !== AGENT_GRAPH_ROOT_NODE_ID),
@@ -169,7 +169,7 @@ describe('GraphAgent', () => {
     });
 
     it('should reject edge endpoints that do not reference graph nodes', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         edges: [
@@ -198,7 +198,7 @@ describe('GraphAgent', () => {
     });
 
     it('should require edge field refs to point at registered graph fields', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         edges: graph.edges.map((edge) =>
@@ -224,7 +224,7 @@ describe('GraphAgent', () => {
     });
 
     it('should reject duplicate default edges from the same source', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const planEdge = graph.edges.find((edge) => edge.from === 'plan');
       const result = parseGraph({
         ...graph,
@@ -248,7 +248,7 @@ describe('GraphAgent', () => {
     });
 
     it('should require condition to be a JSON schema object', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         edges: graph.edges.map((edge) =>
@@ -272,13 +272,13 @@ describe('GraphAgent', () => {
     });
 
     it('should reject invalid field JSON schemas', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         fields: {
           ...graph.fields,
-          goals: {
-            ...graph.fields.goals,
+          orchestrationWorkflows: {
+            ...graph.fields.orchestrationWorkflows,
             schema: {
               type: 1,
             },
@@ -291,26 +291,26 @@ describe('GraphAgent', () => {
         expect.arrayContaining([
           expect.objectContaining({
             message: expect.stringContaining(
-              'Graph field "goals" schema must be a valid JSON Schema',
+              'Graph field "orchestrationWorkflows" schema must be a valid JSON Schema',
             ),
-            path: ['fields', 'goals', 'schema'],
+            path: ['fields', 'orchestrationWorkflows', 'schema'],
           }),
         ]),
       );
     });
 
     it('should reject descriptions inside field JSON schemas', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         fields: {
           ...graph.fields,
-          goals: {
-            ...graph.fields.goals,
+          orchestrationWorkflows: {
+            ...graph.fields.orchestrationWorkflows,
             schema: {
-              ...graph.fields.goals.schema,
+              ...graph.fields.orchestrationWorkflows.schema,
               items: {
-                ...(graph.fields.goals.schema.items as Record<string, unknown>),
+                ...(graph.fields.orchestrationWorkflows.schema.items as Record<string, unknown>),
                 properties: {
                   desc: {
                     description: 'Do not put prompt wording inside JSON Schema.',
@@ -331,21 +331,29 @@ describe('GraphAgent', () => {
         expect.arrayContaining([
           expect.objectContaining({
             message:
-              'Graph field "goals" schema must not contain "description"; field schemas are only for validation. Use the graph field desc or edge field desc instead.',
-            path: ['fields', 'goals', 'schema', 'items', 'properties', 'desc', 'description'],
+              'Graph field "orchestrationWorkflows" schema must not contain "description"; field schemas are only for validation. Use the graph field desc or edge field desc instead.',
+            path: [
+              'fields',
+              'orchestrationWorkflows',
+              'schema',
+              'items',
+              'properties',
+              'desc',
+              'description',
+            ],
           }),
         ]),
       );
     });
 
     it('should allow description as a schema property name', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         fields: {
           ...graph.fields,
-          goals: {
-            ...graph.fields.goals,
+          orchestrationWorkflows: {
+            ...graph.fields.orchestrationWorkflows,
             schema: {
               type: 'object',
               properties: {
@@ -363,7 +371,7 @@ describe('GraphAgent', () => {
     });
 
     it('should reject invalid condition JSON schemas before runtime routing', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         edges: graph.edges.map((edge) =>
@@ -390,7 +398,7 @@ describe('GraphAgent', () => {
     });
 
     it('should reject terminal nodes that do not exist', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         terminal: 'missing-terminal',
@@ -408,7 +416,7 @@ describe('GraphAgent', () => {
     });
 
     it('should reject input fields whose source node does not exist', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         edges: graph.edges.map((edge) =>
@@ -435,7 +443,7 @@ describe('GraphAgent', () => {
     });
 
     it('should reject duplicate input and output fields on the same edge', () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const result = parseGraph({
         ...graph,
         edges: graph.edges.map((edge) =>
@@ -444,8 +452,8 @@ describe('GraphAgent', () => {
                 ...edge,
                 input: {
                   fields: [
-                    { field: 'goals', from: 'plan' },
-                    { field: 'goals', from: 'plan' },
+                    { field: 'orchestrationWorkflows', from: 'plan' },
+                    { field: 'orchestrationWorkflows', from: 'plan' },
                   ],
                 },
                 output: {
@@ -460,7 +468,7 @@ describe('GraphAgent', () => {
       expect(result.error?.issues).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            message: 'Edge input field "goals" is duplicated',
+            message: 'Edge input field "orchestrationWorkflows" is duplicated',
           }),
           expect.objectContaining({
             message: 'Edge output field "summary" is duplicated',
@@ -474,10 +482,10 @@ describe('GraphAgent', () => {
     it('should attach node context and entry guidance without the legacy node envelope', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
-      const messages = [{ content: '/goal inspect graph context', role: 'user' as const }];
+      const messages = [{ content: 'inspect graph context', role: 'user' as const }];
       const state = createMockState({ messages });
 
       const instruction = await agent.runner(createContext('init'), state);
@@ -507,41 +515,43 @@ describe('GraphAgent', () => {
         'search',
       ]);
       expect(getGraphNodeSection(instruction, 'task_instruction')).toContain(
-        'Convert the user /goal request into concrete goals.',
+        'Convert the user request into concrete orchestration workflow requirements.',
       );
     });
 
     it('should attach node instruction, upstream field value, field description, and deliverable target', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal verify prompt contract', role: 'user' }],
+        messages: [{ content: 'verify prompt contract', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
 
-      const goals = [
+      const orchestrationWorkflows = [
         {
           desc: 'Ensure prompt contains values and field semantics.',
           name: 'close prompt loop',
         },
       ];
       const workInstruction = await agent.runner(
-        createLlmResultContext(JSON.stringify({ goals })),
+        createLlmResultContext(JSON.stringify({ orchestrationWorkflows })),
         state,
       );
       const serializedContext = getGraphNodeContextText(workInstruction);
 
       expect(getGraphNodeSection(workInstruction, 'task_instruction')).toBe(
-        'Complete the planned goals. Work through the provided goals and summarize what changed.',
+        'Complete the planned orchestration workflows. Work through the provided orchestration workflows and summarize what changed.',
       );
       expect(getGraphNodeSection(workInstruction, 'allowed_tool_api_names')).toBeUndefined();
       expect(serializedContext).toContain('close prompt loop');
       expect(serializedContext).toContain('Ensure prompt contains values and field semantics.');
-      expect(serializedContext).toContain('Concrete goals planned from the user request.');
+      expect(serializedContext).toContain(
+        'Concrete orchestration workflows planned from the user request.',
+      );
       expect(serializedContext).toContain('summary');
       expect(serializedContext).toContain(
         'Worker summary describing completed work and remaining risk.',
@@ -552,22 +562,22 @@ describe('GraphAgent', () => {
     it('should render multi-source input context and verifier output contract', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal verify multi-source prompt', role: 'user' }],
+        messages: [{ content: 'verify multi-source prompt', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
 
-      const goals = [
+      const orchestrationWorkflows = [
         {
           desc: 'Render upstream plan fields and worker result together.',
           name: 'join context',
         },
       ];
-      await agent.runner(createLlmResultContext(JSON.stringify({ goals })), state);
+      await agent.runner(createLlmResultContext(JSON.stringify({ orchestrationWorkflows })), state);
 
       const summary = 'The worker joined context from plan and work.';
       const verifyInstruction = await agent.runner(
@@ -577,9 +587,11 @@ describe('GraphAgent', () => {
       const serializedContext = getGraphNodeContextText(verifyInstruction);
 
       expect(getGraphNodeSection(verifyInstruction, 'task_instruction')).toBe(
-        'Verify whether the work satisfies the planned goals. Return fin=true only when all goals are complete.',
+        'Verify whether the work satisfies the planned orchestration workflows. Return fin=true only when all orchestration workflows are complete.',
       );
-      expect(serializedContext).toContain('Concrete goals planned from the user request.');
+      expect(serializedContext).toContain(
+        'Concrete orchestration workflows planned from the user request.',
+      );
       expect(serializedContext).toContain(
         'Render upstream plan fields and worker result together.',
       );
@@ -588,17 +600,19 @@ describe('GraphAgent', () => {
       );
       expect(serializedContext).toContain(summary);
       expect(serializedContext).toContain('review');
-      expect(serializedContext).toContain('Verifier decision and unfinished goals.');
+      expect(serializedContext).toContain(
+        'Verifier decision and unfinished orchestration workflows.',
+      );
     });
 
     it('should render extraction instruction, format instruction, schema, and previous error', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal verify extraction prompt', role: 'user' }],
+        messages: [{ content: 'verify extraction prompt', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
@@ -612,26 +626,26 @@ describe('GraphAgent', () => {
       expect(prompt).toContain('<extraction_task>');
       expect(prompt).toContain('<format_instruction>');
       expect(prompt).not.toContain('<output_format>');
-      expect(prompt).toContain('Extract the planned goals.');
+      expect(prompt).toContain('Extract the planned orchestration workflows.');
       expect(prompt).toContain('markdown fenced code block tagged json');
       expect(prompt).toContain('<output_schema>');
-      expect(prompt).toContain('Concrete goals planned from the user request.');
+      expect(prompt).toContain('Concrete orchestration workflows planned from the user request.');
       expect(prompt).toContain('<previous_error>');
       expect(prompt).toContain('The node output is not valid JSON.');
       expect(expectCallLlm(extractionInstruction).payload.additionalContexts).toBeUndefined();
     });
 
     it('should render raw fallback context once when declared input fields are missing', async () => {
-      const goalLoopGraph = loadGoalLoopGraph();
+      const orchestrationWorkflowLoopGraph = loadOrchestrationWorkflowLoopGraph();
       const graph: AgentGraph = {
-        ...goalLoopGraph,
-        edges: goalLoopGraph.edges.map((edge) =>
+        ...orchestrationWorkflowLoopGraph,
+        edges: orchestrationWorkflowLoopGraph.edges.map((edge) =>
           edge.from === 'plan'
             ? {
                 ...edge,
                 input: {
                   fields: [
-                    { field: 'goals', from: 'plan' },
+                    { field: 'orchestrationWorkflows', from: 'plan' },
                     { field: 'summary', from: 'plan' },
                   ],
                 },
@@ -645,7 +659,7 @@ describe('GraphAgent', () => {
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal verify raw fallback prompt', role: 'user' }],
+        messages: [{ content: 'verify raw fallback prompt', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
@@ -671,7 +685,7 @@ describe('GraphAgent', () => {
     });
 
     it('should derive normal guidance cadence from existing node runtime steps', async () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
         graph: {
@@ -685,7 +699,7 @@ describe('GraphAgent', () => {
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal inspect cadence', role: 'user' }],
+        messages: [{ content: 'inspect cadence', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
@@ -715,7 +729,7 @@ describe('GraphAgent', () => {
     });
 
     it('should use four-step guidance cadence near a finite node budget', async () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
         graph: {
@@ -729,7 +743,7 @@ describe('GraphAgent', () => {
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal inspect near budget cadence', role: 'user' }],
+        messages: [{ content: 'inspect near budget cadence', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
@@ -759,12 +773,12 @@ describe('GraphAgent', () => {
     it('should emit guidance immediately after compression', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         modelRuntimeConfig: { model: 'gpt-4', provider: 'openai' },
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal rebuild after compression', role: 'user' }],
+        messages: [{ content: 'rebuild after compression', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
@@ -787,8 +801,8 @@ describe('GraphAgent', () => {
   });
 
   describe('e2e', () => {
-    it('should keep the goal-loop fixture aligned with the graph schema', () => {
-      const graph = loadGoalLoopGraph();
+    it('should keep the orchestration-workflow-loop fixture aligned with the graph schema', () => {
+      const graph = loadOrchestrationWorkflowLoopGraph();
 
       expect(graph.terminal).toBe('verify');
       expect(graph.nodes).toMatchObject({
@@ -811,14 +825,14 @@ describe('GraphAgent', () => {
       );
     });
 
-    it('should execute the /goal plan-work-verify loop with mocked llm outputs', async () => {
+    it('should execute the plan-work-verify loop with mocked llm outputs', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal refactor graph agent runtime', role: 'user' }],
+        messages: [{ content: 'refactor graph agent runtime', role: 'user' }],
       });
 
       const planInstruction = await agent.runner(createContext('init'), state);
@@ -829,22 +843,23 @@ describe('GraphAgent', () => {
       const planTools = planCall.payload.tools as Array<{ function: { name: string } }> | undefined;
       expect(planTools?.map((tool) => tool.function.name)).toEqual([readToolName, searchToolName]);
       expect(getGraphStore(state)?.[AGENT_GRAPH_ROOT_NODE_ID]).toEqual({
-        query: '/goal refactor graph agent runtime',
+        query: 'refactor graph agent runtime',
       });
-      expect(getGraphNodeContextText(planInstruction)).toContain(
-        '/goal refactor graph agent runtime',
-      );
+      expect(getGraphNodeContextText(planInstruction)).toContain('refactor graph agent runtime');
 
-      const goals = [
-        { desc: 'Define the graph schema for goal loops.', name: 'design schema' },
+      const orchestrationWorkflows = [
+        {
+          desc: 'Define the graph schema for orchestration workflow loops.',
+          name: 'design schema',
+        },
         { desc: 'Cover the plan-work-verify loop with tests.', name: 'add tests' },
       ];
       const workInstruction = await agent.runner(
-        createLlmResultContext(`\`\`\`json\n${JSON.stringify({ goals })}\n\`\`\``),
+        createLlmResultContext(`\`\`\`json\n${JSON.stringify({ orchestrationWorkflows })}\n\`\`\``),
         state,
       );
 
-      expect(getGraphStore(state)?.plan).toEqual({ goals });
+      expect(getGraphStore(state)?.plan).toEqual({ orchestrationWorkflows });
       expect(getGraphState(state)).toMatchObject({ currentNode: 'work', phase: 'node_in' });
       const workCall = expectCallLlm(workInstruction);
       expect(workCall.stepLabel).toBe('work');
@@ -869,8 +884,8 @@ describe('GraphAgent', () => {
       expect(getGraphNodeContextText(verifyInstruction)).toContain('design schema');
       expect(getGraphNodeContextText(verifyInstruction)).toContain(firstSummary);
 
-      const unfinishedGoal = {
-        desc: 'The goal-loop E2E still needs a passing verification branch.',
+      const unfinishedOrchestrationWorkflow = {
+        desc: 'The orchestration-workflow-loop E2E still needs a passing verification branch.',
         name: 'finish tests',
       };
       const reworkInstruction = await agent.runner(
@@ -878,7 +893,7 @@ describe('GraphAgent', () => {
           JSON.stringify({
             review: {
               fin: false,
-              unfinish: [unfinishedGoal],
+              unfinish: [unfinishedOrchestrationWorkflow],
             },
           }),
         ),
@@ -888,17 +903,18 @@ describe('GraphAgent', () => {
       expect(getGraphStore(state)?.verify).toEqual({
         review: {
           fin: false,
-          unfinish: [unfinishedGoal],
+          unfinish: [unfinishedOrchestrationWorkflow],
         },
       });
       expect(getGraphState(state)).toMatchObject({ currentNode: 'work', phase: 'node_in' });
       expect(expectCallLlm(reworkInstruction).stepLabel).toBe('work');
       expect(getGraphNodeContextText(reworkInstruction)).toContain('finish tests');
       expect(getGraphNodeContextText(reworkInstruction)).toContain(
-        'The goal-loop E2E still needs a passing verification branch.',
+        'The orchestration-workflow-loop E2E still needs a passing verification branch.',
       );
 
-      const finalSummary = 'Completed schema, runtime wiring, and goal-loop E2E tests.';
+      const finalSummary =
+        'Completed schema, runtime wiring, and orchestration-workflow-loop E2E tests.';
       const finalVerifyInstruction = await agent.runner(
         createLlmResultContext(JSON.stringify({ summary: finalSummary })),
         state,
@@ -934,12 +950,12 @@ describe('GraphAgent', () => {
     it('should preserve node tool allow-list when delegating to GeneralChatAgent', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         modelRuntimeConfig: { model: 'gpt-4', provider: 'openai' },
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal inspect workspace', role: 'user' }],
+        messages: [{ content: 'inspect workspace', role: 'user' }],
       });
 
       expectCallLlm(await agent.runner(createContext('init'), state));
@@ -959,12 +975,12 @@ describe('GraphAgent', () => {
     it('should reject a resolved tool call outside the active node allow-list', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         modelRuntimeConfig: { model: 'gpt-4', provider: 'openai' },
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal inspect workspace', role: 'user' }],
+        messages: [{ content: 'inspect workspace', role: 'user' }],
       });
       const writeToolCall = {
         apiName: 'write',
@@ -1001,7 +1017,7 @@ describe('GraphAgent', () => {
     });
 
     it('should not add a tool allow-list when delegating an unrestricted agent node', async () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const planNode = graph.nodes.plan;
       if (planNode.type !== 'agent') throw new Error('Expected plan to be an agent node');
       const { allowedToolApiNames: _, ...unrestrictedPlan } = planNode;
@@ -1013,7 +1029,7 @@ describe('GraphAgent', () => {
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal inspect workspace', role: 'user' }],
+        messages: [{ content: 'inspect workspace', role: 'user' }],
       });
 
       const initialCall = expectCallLlm(await agent.runner(createContext('init'), state));
@@ -1037,13 +1053,13 @@ describe('GraphAgent', () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
         graph: {
-          ...loadGoalLoopGraph(),
+          ...loadOrchestrationWorkflowLoopGraph(),
           maxInstructionCount: 1,
         },
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal stop after first instruction', role: 'user' }],
+        messages: [{ content: 'stop after first instruction', role: 'user' }],
       });
 
       expectCallLlm(await agent.runner(createContext('init'), state));
@@ -1052,7 +1068,9 @@ describe('GraphAgent', () => {
       const result = await agent.runner(
         createLlmResultContext(
           JSON.stringify({
-            goals: [{ desc: 'This output should not be consumed.', name: 'ignored' }],
+            orchestrationWorkflows: [
+              { desc: 'This output should not be consumed.', name: 'ignored' },
+            ],
           }),
         ),
         state,
@@ -1070,11 +1088,11 @@ describe('GraphAgent', () => {
     it('should not increment instructionCount for graph finish instructions', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal finish without extra instruction count', role: 'user' }],
+        messages: [{ content: 'finish without extra instruction count', role: 'user' }],
       });
 
       expectCallLlm(await agent.runner(createContext('init'), state));
@@ -1082,7 +1100,9 @@ describe('GraphAgent', () => {
         await agent.runner(
           createLlmResultContext(
             JSON.stringify({
-              goals: [{ desc: 'Finish counting should remain stable.', name: 'count' }],
+              orchestrationWorkflows: [
+                { desc: 'Finish counting should remain stable.', name: 'count' },
+              ],
             }),
           ),
           state,
@@ -1090,7 +1110,9 @@ describe('GraphAgent', () => {
       );
       expectCallLlm(
         await agent.runner(
-          createLlmResultContext(JSON.stringify({ summary: 'Completed the count goal.' })),
+          createLlmResultContext(
+            JSON.stringify({ summary: 'Completed the count orchestration workflow.' }),
+          ),
           state,
         ),
       );
@@ -1144,7 +1166,7 @@ describe('GraphAgent', () => {
     });
 
     it('should move an agent node to output extraction when maxAgentSteps is reached', async () => {
-      const graph = loadGoalLoopGraph();
+      const graph = loadOrchestrationWorkflowLoopGraph();
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
         graph: {
@@ -1157,7 +1179,7 @@ describe('GraphAgent', () => {
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal enforce node budget', role: 'user' }],
+        messages: [{ content: 'enforce node budget', role: 'user' }],
       });
 
       expectCallLlm(await agent.runner(createContext('init'), state));
@@ -1233,7 +1255,7 @@ describe('GraphAgent', () => {
         operationId: 'test-operation',
       });
       const matchedState = createMockState({
-        messages: [{ content: '/goal route matched', role: 'user' }],
+        messages: [{ content: 'route matched', role: 'user' }],
       });
 
       expectCallLlm(await matchedAgent.runner(createContext('init'), matchedState));
@@ -1252,7 +1274,7 @@ describe('GraphAgent', () => {
         operationId: 'test-operation',
       });
       const fallbackState = createMockState({
-        messages: [{ content: '/goal route fallback', role: 'user' }],
+        messages: [{ content: 'route fallback', role: 'user' }],
       });
 
       expectCallLlm(await fallbackAgent.runner(createContext('init'), fallbackState));
@@ -1317,7 +1339,7 @@ describe('GraphAgent', () => {
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal invalid condition fallback', role: 'user' }],
+        messages: [{ content: 'invalid condition fallback', role: 'user' }],
       });
 
       expectCallLlm(await agent.runner(createContext('init'), state));
@@ -1338,17 +1360,19 @@ describe('GraphAgent', () => {
     it('should retry extraction when parsed JSON does not match the edge output schema', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal validate planned output schema', role: 'user' }],
+        messages: [{ content: 'validate planned output schema', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
 
       const extractionInstruction = await agent.runner(
-        createLlmResultContext(JSON.stringify({ goals: [{ name: 'missing-desc' }] })),
+        createLlmResultContext(
+          JSON.stringify({ orchestrationWorkflows: [{ name: 'missing-desc' }] }),
+        ),
         state,
       );
       const prompt = getLastPrompt(extractionInstruction);
@@ -1362,36 +1386,43 @@ describe('GraphAgent', () => {
         phase: 'node_out',
       });
       expect(prompt).toContain('requires an output object that matches this schema');
-      expect(prompt).toContain('goals');
+      expect(prompt).toContain('orchestrationWorkflows');
       expect(prompt).toContain('desc');
 
-      const goals = [{ desc: 'Recovered with a valid goal description.', name: 'valid-goal' }];
+      const orchestrationWorkflows = [
+        {
+          desc: 'Recovered with a valid orchestration workflow description.',
+          name: 'valid-orchestrationWorkflow',
+        },
+      ];
       const workInstruction = await agent.runner(
-        createLlmResultContext(JSON.stringify({ goals })),
+        createLlmResultContext(JSON.stringify({ orchestrationWorkflows })),
         state,
       );
 
-      expect(getGraphStore(state)?.plan).toEqual({ goals });
+      expect(getGraphStore(state)?.plan).toEqual({ orchestrationWorkflows });
       expect(expectCallLlm(workInstruction).stepLabel).toBe('work');
       expect(getGraphNodeContextText(workInstruction)).toContain(
-        'Recovered with a valid goal description.',
+        'Recovered with a valid orchestration workflow description.',
       );
     });
 
     it('should request fenced json extraction and commit recovered node output', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal add graph tests', role: 'user' }],
+        messages: [{ content: 'add graph tests', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
 
       const extractionInstruction = await agent.runner(
-        createLlmResultContext('I found two goals, but I am not returning JSON yet.'),
+        createLlmResultContext(
+          'I found two orchestration workflows, but I am not returning JSON yet.',
+        ),
         state,
       );
 
@@ -1409,13 +1440,15 @@ describe('GraphAgent', () => {
       expect(getLastPrompt(extractionInstruction)).toContain('format_instruction');
       expect(getLastPrompt(extractionInstruction)).toContain('previous_error');
 
-      const goals = [{ desc: 'Cover graph extraction retry.', name: 'test extraction' }];
+      const orchestrationWorkflows = [
+        { desc: 'Cover graph extraction retry.', name: 'test extraction' },
+      ];
       const workInstruction = await agent.runner(
-        createLlmResultContext(`\`\`\`json\n${JSON.stringify({ goals })}\n\`\`\``),
+        createLlmResultContext(`\`\`\`json\n${JSON.stringify({ orchestrationWorkflows })}\n\`\`\``),
         state,
       );
 
-      expect(getGraphStore(state)?.plan).toEqual({ goals });
+      expect(getGraphStore(state)?.plan).toEqual({ orchestrationWorkflows });
       expect(getGraphState(state)).toMatchObject({ currentNode: 'work', phase: 'node_in' });
       expect(expectCallLlm(workInstruction).stepLabel).toBe('work');
       expect(getGraphNodeContextText(workInstruction)).toContain('Cover graph extraction retry.');
@@ -1424,17 +1457,19 @@ describe('GraphAgent', () => {
     it('should stop the verify-to-work loop when maxTraversals is reached', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal keep iterating until verified', role: 'user' }],
+        messages: [{ content: 'keep iterating until verified', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);
 
-      const goals = [{ desc: 'Iterate until the verifier accepts the work.', name: 'iterate' }];
-      await agent.runner(createLlmResultContext(JSON.stringify({ goals })), state);
+      const orchestrationWorkflows = [
+        { desc: 'Iterate until the verifier accepts the work.', name: 'iterate' },
+      ];
+      await agent.runner(createLlmResultContext(JSON.stringify({ orchestrationWorkflows })), state);
 
       for (let index = 1; index <= 3; index++) {
         await agent.runner(
@@ -1494,11 +1529,11 @@ describe('GraphAgent', () => {
     it('should commit raw output after extraction attempts are exhausted', async () => {
       const agent = new GraphAgent({
         agentConfig: { maxSteps: 100 },
-        graph: loadGoalLoopGraph(),
+        graph: loadOrchestrationWorkflowLoopGraph(),
         operationId: 'test-operation',
       });
       const state = createMockState({
-        messages: [{ content: '/goal recover from bad planning output', role: 'user' }],
+        messages: [{ content: 'recover from bad planning output', role: 'user' }],
       });
 
       await agent.runner(createContext('init'), state);

@@ -25,7 +25,7 @@ Read-only device inspection found only `e2e-mock-device`, supplied by the existi
 
 Reasoning/tool/planning/approval messages are explicitly labeled synthetic database fixtures. Mock Clerk authenticates the disposable test user through the repository's normal session helper; the expired fixture session was renewed. Existing backend was restored against the disposable orvilo database after inherited environment variables targeted a nonexistent database. A generated Next/pdfkit dependency link was repaired; no product source or package manifest was changed for environment repair. Transient HMR duplicate-store state disappeared after runtime restart and session renewal.
 
-Parent-branch acceptance already covers unchanged attachments, Artifact, special HTML/Mermaid fences, code controls and operation-indicator states. This page pass rendered long code, sources, Terminal, Snippet, goal and todo adapters, but did not repeat all their engine/control tests. Custom-question approval, streaming20px Orbs lifecycle, IME, real upload, queue/real cancellation, multi-thousand-row history and non-main chat surfaces were not newly exercised here. These are coverage limits, not claimed passes.
+Parent-branch acceptance already covers unchanged attachments, Artifact, special HTML/Mermaid fences, code controls and operation-indicator states. This page pass rendered long code, sources, Terminal, Snippet, orchestration workflow and todo adapters, but did not repeat all their engine/control tests. Custom-question approval, streaming20px Orbs lifecycle, IME, real upload, queue/real cancellation, multi-thousand-row history and non-main chat surfaces were not newly exercised here. These are coverage limits, not claimed passes.
 
 ## Retained final images
 

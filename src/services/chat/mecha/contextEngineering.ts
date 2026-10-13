@@ -394,7 +394,7 @@ export const contextEngineering = async ({
           context: planDoc.content ?? undefined,
           createdAt: planDoc.createdAt.toISOString(),
           description: planDoc.description || '',
-          goal: planDoc.title || '',
+          orchestrationWorkflow: planDoc.title || '',
           id: planDoc.id,
           updatedAt: planDoc.updatedAt.toISOString(),
         };
@@ -408,7 +408,11 @@ export const contextEngineering = async ({
           todos,
         };
 
-        log('Plan/Todo context resolved: plan=%s, todos=%o', plan.goal, todos?.items?.length ?? 0);
+        log(
+          'Plan/Todo context resolved: plan=%s, todos=%o',
+          plan.orchestrationWorkflow,
+          todos?.items?.length ?? 0,
+        );
       }
     } catch (error) {
       // Silently fail - plan/todo context is optional

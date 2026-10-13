@@ -4,7 +4,7 @@ This document explains how the Page Agent works, including context tracking, inj
 
 ## Overview
 
-The Page Agent is a specialized AI agent that helps users create, read, update, and edit documents in the PageEditor. It has access to the current page's content and structure through context injection.
+The Page Agent is a specialized AI agent that helps users create, read, update, and edit documents in the PageEditor. It has access to the current page's content and structure through context injection..
 
 ## Architecture Components
 
@@ -279,7 +279,7 @@ Currently disabled for MVP, but will support:
 
 1. **MVP Features**: Only `initPage` and `editTitle` are currently enabled
 2. **Node ID Generation**: IDs are generated per-request (not persistent)
-3. **No Direct Editing**: Tools can't directly modify editor state (would need integration)
+3. **No Direct Editing**: Tools can't directly modify editor state (would need integration))
 4. **Temp Documents**: Work in progress, IDs may change on save
 
 ## Future Enhancements

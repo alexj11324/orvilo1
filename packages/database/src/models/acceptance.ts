@@ -129,7 +129,7 @@ export class AcceptanceModel {
 
   /**
    * The acceptances for many subjects of one type, for surfaces that show a
-   * verification state per row. Batched because the caller (the Goal graph
+   * verification state per row. Batched because the caller (the OrchestrationWorkflow graph
    * read) polls every few seconds and would otherwise issue one query per task.
    */
   findBySubjects = async (subjectType: AcceptanceSubjectType, subjectIds: string[]) => {

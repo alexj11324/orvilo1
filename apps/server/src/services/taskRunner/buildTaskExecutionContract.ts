@@ -1,4 +1,4 @@
-import type { TaskRunPromptGoalLoop } from '@orvilo/prompts';
+import type { TaskRunPromptOrchestrationWorkflowLoop } from '@orvilo/prompts';
 import type {
   AutomationOccurrenceSnapshot,
   TaskExecutionContract,
@@ -28,7 +28,6 @@ export interface BuildTaskExecutionContractInput {
     taskRevision: number;
   };
   environment: TaskExecutionEnvironmentSnapshot;
-  goalLoop?: TaskRunPromptGoalLoop;
   grantId?: string;
   integration?: {
     baseBranch?: string;
@@ -42,6 +41,7 @@ export interface BuildTaskExecutionContractInput {
   /** Run intent this contract was minted under. */
   intent?: TaskRunIntent;
   occurrence?: AutomationOccurrenceSnapshot;
+  orchestrationWorkflowLoop?: TaskRunPromptOrchestrationWorkflowLoop;
   /** Server-derived replan evidence (`authorized_replan` only). */
   replan?: TaskExecutionContract['replan'];
   /** Contract this attempt's content descends from, when one exists. */
@@ -68,8 +68,8 @@ export function buildTaskExecutionContract(
     ...(input.contractRevision != null ? { revision: input.contractRevision } : {}),
     ...(input.sourceContractId ? { sourceContractId: input.sourceContractId } : {}),
     budget: {
-      maxRounds: input.goalLoop?.maxRounds ?? null,
-      round: input.goalLoop?.round ?? (task.totalTopics || 0) + 1,
+      maxRounds: input.orchestrationWorkflowLoop?.maxRounds ?? null,
+      round: input.orchestrationWorkflowLoop?.round ?? (task.totalTopics || 0) + 1,
     },
     environment: input.environment,
     schemaVersion: 1,

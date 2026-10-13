@@ -2,19 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { normalizeIntent, normalizeSynthesis, TaskIntentService } from './intent';
 
-const { generateObject, resolveLightweightJudgment } = vi.hoisted(() => ({
-  generateObject: vi.fn(),
-  resolveLightweightJudgment: vi.fn(),
-}));
-
-vi.mock('@/server/services/aiGeneration', () => ({
-  AiGenerationService: vi.fn(function () {
-    return { generateObject };
-  }),
-}));
-
-vi.mock('@/server/services/systemAgent/lightweightJudgment', () => ({
-  resolveLightweightJudgment,
+const { generateObject } = vi.hoisted(() => ({ generateObject: vi.fn() }));
+vi.mock('@/server/services/orchestrationWorkflow/generation', () => ({
+  generateOrchestrationWorkflowObject: (
+    _db: unknown,
+    _userId: string,
+    _workspaceId: string,
+    _agentId: string,
+    input: unknown,
+    options: unknown,
+  ) => generateObject(input, options),
 }));
 
 const wellFormed = {
@@ -30,7 +27,6 @@ const wellFormed = {
 describe('TaskIntentService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resolveLightweightJudgment.mockResolvedValue({ model: 'mini', provider: 'openai' });
     generateObject.mockResolvedValue(wellFormed);
   });
 
@@ -42,8 +38,6 @@ describe('TaskIntentService', () => {
 
     expect(generateObject).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'mini',
-        provider: 'openai',
         schema: expect.objectContaining({ name: 'task_intent' }),
       }),
       expect.objectContaining({

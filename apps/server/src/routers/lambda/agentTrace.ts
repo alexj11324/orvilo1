@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { GoalTraceModel } from '@/database/models/goalTrace';
+import { OrchestrationWorkflowTraceModel } from '@/database/models/orchestrationWorkflowTrace';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { FileS3 } from '@/server/modules/S3';
@@ -25,7 +25,11 @@ const agentTraceProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
         ctx.userId,
         ctx.workspaceId ?? undefined,
       ),
-      goalTraceModel: new GoalTraceModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
+      orchestrationWorkflowTraceModel: new OrchestrationWorkflowTraceModel(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+      ),
     },
   });
 });
@@ -85,23 +89,25 @@ export const agentTraceRouter = router({
     }),
 
   /**
-   * Pre-signed GET for one goal's trajectory object.
+   * Pre-signed GET for one orchestration workflow's trajectory object.
    *
-   * A goal trajectory has no derivable key — unlike an operation snapshot,
+   * A orchestration workflow trajectory has no derivable key — unlike an operation snapshot,
    * whose id carries its agent and topic — so this is the only way to reach
    * one. Same reasoning as `getSnapshotUrl` for not returning the blob itself:
    * it is zstd and the client decompresses it directly.
    */
-  getGoalTrajectoryUrl: agentTraceProcedure
-    .input(z.object({ goalId: z.string() }))
+  getOrchestrationWorkflowTrajectoryUrl: agentTraceProcedure
+    .input(z.object({ orchestrationWorkflowId: z.string() }))
     .query(async ({ input, ctx }) => {
       try {
-        const trace = await ctx.goalTraceModel.findById(input.goalId);
+        const trace = await ctx.orchestrationWorkflowTraceModel.findById(
+          input.orchestrationWorkflowId,
+        );
         if (!trace) {
           throw new TRPCError({
             code: 'NOT_FOUND',
             message:
-              'No trajectory was recorded for this goal. It may predate goal tracing, ' +
+              'No trajectory was recorded for this orchestration workflow. It may predate orchestration workflow tracing, ' +
               'or trace upload was disabled when it ran.',
           });
         }
@@ -109,13 +115,14 @@ export const agentTraceRouter = router({
         if (!trace.traceS3Key) {
           throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'This goal has an observation row but no trajectory object to download.',
+            message:
+              'This orchestration workflow has an observation row but no trajectory object to download.',
           });
         }
 
         return {
           data: {
-            goalId: trace.goalId,
+            orchestrationWorkflowId: trace.orchestrationWorkflowId,
             key: trace.traceS3Key,
             url: await new FileS3().createPreSignedUrlForPreview(trace.traceS3Key),
           },
@@ -123,21 +130,21 @@ export const agentTraceRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
-        console.error('[agentTrace:getGoalTrajectoryUrl]', error);
+        console.error('[agentTrace:getOrchestrationWorkflowTrajectoryUrl]', error);
         throw new TRPCError({
           cause: error,
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to sign the goal trajectory URL',
+          message: 'Failed to sign the orchestration workflow trajectory URL',
         });
       }
     }),
 
-  /** Goals that recorded a trajectory, newest run first. */
-  listGoalTraces: agentTraceProcedure
+  /** Orchestration workflows that recorded a trajectory, newest run first. */
+  listOrchestrationWorkflowTraces: agentTraceProcedure
     .input(z.object({ limit: z.number().min(1).max(100).default(20) }))
     .query(async ({ input, ctx }) => {
       try {
-        const traces = await ctx.goalTraceModel.list(input.limit);
+        const traces = await ctx.orchestrationWorkflowTraceModel.list(input.limit);
 
         return {
           // The key is an internal storage detail; callers only need to know
@@ -149,11 +156,11 @@ export const agentTraceRouter = router({
           success: true as const,
         };
       } catch (error) {
-        console.error('[agentTrace:listGoalTraces]', error);
+        console.error('[agentTrace:listOrchestrationWorkflowTraces]', error);
         throw new TRPCError({
           cause: error,
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to list goal traces',
+          message: 'Failed to list orchestration workflow traces',
         });
       }
     }),

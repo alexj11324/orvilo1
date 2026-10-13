@@ -63,7 +63,7 @@ membership-equivalence claim until a matched dataset is exercised.
 
 The main rail is open in both default screenshots. Orvilo persists
 `status.showLeftPanel=false`, exposes multiple collapse buttons and `Mod+[`,
-and auto-collapses at narrow widths and in Portal/Goal flows. The user requires
+and auto-collapses at narrow widths and in Portal/Orchestration workflow flows. The user requires
 it to start open and never collapse. This is a functional failure independent
 of team accordion expansion. The width resize is a separate behavior to keep.
 

@@ -520,7 +520,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     await service.execAgent({
       agentId: 'agent-1',
       clientIds: { userMessageId: 'msg-manager-turn' },
-      prompt: 'Inspect the Goal',
+      prompt: 'Inspect the Orchestration workflow',
     });
     expect(recordStartSpy).toHaveBeenCalledWith(
       expect.objectContaining({

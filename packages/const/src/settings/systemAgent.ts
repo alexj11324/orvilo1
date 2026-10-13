@@ -24,7 +24,7 @@ export const DEFAULT_USER_MEMORY_EMBEDDING_SYSTEM_AGENT_ITEM: SystemAgentItem = 
 
 export const DEFAULT_SYSTEM_AGENT_CONFIG: UserServiceModelConfig = {
   expertise: DEFAULT_MINI_SYSTEM_AGENT_ITEM,
-  goal: DEFAULT_MINI_SYSTEM_AGENT_ITEM,
+  orchestrationWorkflow: DEFAULT_MINI_SYSTEM_AGENT_ITEM,
   memoryAnalysisAgentConfig: DEFAULT_MINI_SYSTEM_AGENT_ITEM,
   onboardingTaskRecommender: DEFAULT_MINI_SYSTEM_AGENT_ITEM,
   onboardingUnderstanding: DEFAULT_MINI_SYSTEM_AGENT_ITEM,

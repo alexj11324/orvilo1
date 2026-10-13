@@ -1,0 +1,125 @@
+{
+  "baseline": "111c9056919284e159d13f77de4884d55ef5937f",
+  "compilerVersions": {
+    "tailwind": {
+      "name": "tailwindcss",
+      "version": "4.3.3",
+      "package": "/workspace/orvilo1/node_modules/tailwindcss/package.json"
+    },
+    "tailwindNode": {
+      "name": "@tailwindcss/node",
+      "version": "4.3.3",
+      "package": "/workspace/orvilo1/node_modules/.pnpm/@tailwindcss+node@4.3.3/node_modules/@tailwindcss/node/package.json"
+    },
+    "vite": "8.0.16"
+  },
+  "earlierProbeFailuresPreserved": "001 syntax extra quote;002 unsupported absolute-directory require;003 presumed Root Vite dependency absent;004 block fixture resolved auto to0px. Original author script and all failure outputs remain preserved; finalcorrected probe uses genuine declared compiler export and actual flex-none context. No product or acceptance assertion relaxed.",
+  "head": "e3051d8f11afeb30b0181a3388f14ca243d5e619",
+  "memoryEventsAfter": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "nativeVersion": {
+    "electron": "43.2.0",
+    "chrome": "150.0.7871.129",
+    "version": "43.2.0"
+  },
+  "ownedElectronClosed": true,
+  "ownedElectronPid": 27114,
+  "passed": true,
+  "rawFiles": [
+    {
+      "path": "proof/report.json",
+      "bytes": 47639,
+      "sha256": "1ba4cb0b868c52aaea76d649a9c81f8b0106c37748507317b95002c3e79a362e"
+    },
+    {
+      "path": "proof/electron-main.cjs",
+      "bytes": 370,
+      "sha256": "087b519aa5bd481aa0f1c33e233803a1452d07d4367910c4cf95519b2511b742"
+    },
+    {
+      "path": "proof/tailwind-after.css",
+      "bytes": 5528,
+      "sha256": "2e423e40aea1f1649a41c610088cada17b3b266df4e511e6236e5e37ad4392f3"
+    },
+    {
+      "path": "proof/tailwind-before.css",
+      "bytes": 5557,
+      "sha256": "8817ab776793d5bfb94539563dd198dd106473520e3bba36981d1ea06583f72f"
+    },
+    {
+      "path": "proof/vite-module.js",
+      "bytes": 217,
+      "sha256": "c05681134c2cfb3ed65b92256f9633453b183806f507bce96d3a6e5e04336be3"
+    },
+    {
+      "path": "proof/vite-module.css",
+      "bytes": 260,
+      "sha256": "cb785bc1bce99466d97f8983dc0320f2171302a5aadc426f6205b20d6606bcd5"
+    },
+    {
+      "path": "packet/root-quality-lint.log",
+      "bytes": 1357,
+      "sha256": "7cdb90ac6a2c7306daa0860246627bd3ca6e3f542ae31b496e676275503a3407"
+    },
+    {
+      "path": "packet/root-normal-commit.log",
+      "bytes": 1768,
+      "sha256": "1e644a98038a69a137fe3e1432fb50fc40645d393c5b6c50aade47b9562d6554"
+    },
+    {
+      "path": "packet/root-linear-gate.log",
+      "bytes": 26,
+      "sha256": "085fbaaf58ddfa465d6acb6babf730cac9e57f2ab5ba9eb737f3e579380d624f"
+    },
+    {
+      "path": "packet/root-compile-probe-005.log",
+      "bytes": 178,
+      "sha256": "71b3757727c8087fdaeccc6acbf09168a46d19a1d4f807336297e6da08aeaadd"
+    },
+    {
+      "path": "packet/compile-compare-root-flex-context.mjs",
+      "bytes": 14971,
+      "sha256": "6975b84542683bf1a555a1dfe47967180522fca13f035314555aecf28f872b28"
+    },
+    {
+      "path": "packet/change.patch",
+      "bytes": 5895,
+      "sha256": "c29ffbc4d200e9645610e687230eecb5055e39ad7a7676cbda1e2328e28d717a"
+    },
+    {
+      "path": "packet/manifest.json",
+      "bytes": 2557,
+      "sha256": "f6c2c973ab51ee30bd657c2a9c43ce80e433cb059aa8d643556842af18980970"
+    },
+    {
+      "path": "packet/root-probe-syntax-correction.json",
+      "bytes": 356,
+      "sha256": "efa704108e4106c43dc215a3b4dbb73150efc07592aa615c1d2a3ec22913be25"
+    },
+    {
+      "path": "packet/root-probe-resolution-correction.json",
+      "bytes": 436,
+      "sha256": "241c3debaa415d147252609f78cff6b1112d777dafda9dba0d5584f35f7c1f3c"
+    },
+    {
+      "path": "packet/root-probe-public-export-correction.json",
+      "bytes": 428,
+      "sha256": "0a59de1db7ba74d08e3a89756c534b504ac4c805a6ca4ef138ef59e8b8a2392a"
+    },
+    {
+      "path": "packet/root-probe-flex-context-correction.json",
+      "bytes": 551,
+      "sha256": "47fd9c43cee3cef7c4ff6ddc5d242ffd694ce9183eddccc0a1253ebc545b4425"
+    }
+  ],
+  "rawProofSHA256": "963af6effa9e4e8d253fdbb135c916b652dc23568abb130ff09fc7372d964f5d",
+  "reportSHA256": "1ba4cb0b868c52aaea76d649a9c81f8b0106c37748507317b95002c3e79a362e",
+  "scope": "Seven necessary #780 token-gate repairs only; actual native env0 plus clearly separate derived CSS safe-area34 algebra; no whole-goal or real-device env34 claim.",
+  "strictBeforeAfterComparisons": 112
+}

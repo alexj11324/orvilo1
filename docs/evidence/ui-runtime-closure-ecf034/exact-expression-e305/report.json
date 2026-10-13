@@ -1,0 +1,1950 @@
+{
+  "actualHead": "e3051d8f11afeb30b0181a3388f14ca243d5e619",
+  "baseline": "111c9056919284e159d13f77de4884d55ef5937f",
+  "bindings": [
+    {
+      "path": "src/features/AgentTasks/features/AgentTaskItem.tsx",
+      "actualSHA256": "a877082d1f6a06a6bc7d7420bec4eb45029641a1e76f4effa7d1897a18f5db96",
+      "packetSHA256": "18f42d24d90ebe0a87d2a3c0a5efc827904e14220a382d57a997809ff74302a1",
+      "byteEqual": false,
+      "emittedJavaScriptEqual": true
+    },
+    {
+      "path": "src/routes/(main)/memory/features/Loading.tsx",
+      "actualSHA256": "e06cc5231b37f7453c672f456d172aa345dac8ccbd4064ddf336354a1de3d1ba",
+      "packetSHA256": "e06cc5231b37f7453c672f456d172aa345dac8ccbd4064ddf336354a1de3d1ba",
+      "byteEqual": true,
+      "emittedJavaScriptEqual": true
+    },
+    {
+      "path": "src/routes/(mobile)/_layout/NavBar.tsx",
+      "actualSHA256": "26cdca62b1fa04c3a80fccf4227898489b410861ef627a9cec54bb3d66d610c2",
+      "packetSHA256": "26cdca62b1fa04c3a80fccf4227898489b410861ef627a9cec54bb3d66d610c2",
+      "byteEqual": true,
+      "emittedJavaScriptEqual": true
+    },
+    {
+      "path": "src/routes/(mobile)/me/settings/features/Category.tsx",
+      "actualSHA256": "16203fd5612a9dfce9e257a94005c8b5c1bc9f3c3c409acdc8acc59dce6e77ce",
+      "packetSHA256": "16203fd5612a9dfce9e257a94005c8b5c1bc9f3c3c409acdc8acc59dce6e77ce",
+      "byteEqual": true,
+      "emittedJavaScriptEqual": true
+    },
+    {
+      "path": "src/routes/(mobile)/_layout/NavBar.module.css",
+      "actualSHA256": "772a7774854d637df05194921369d9977d57de965a2476d64d942e5af4165348",
+      "packetSHA256": "772a7774854d637df05194921369d9977d57de965a2476d64d942e5af4165348",
+      "byteEqual": true
+    },
+    {
+      "path": "src/routes/(mobile)/me/settings/features/Category.module.css",
+      "actualSHA256": "d6c14d1a92c7f7cf27389b4e89e468c989917223167b105402756faac4917177",
+      "packetSHA256": "d6c14d1a92c7f7cf27389b4e89e468c989917223167b105402756faac4917177",
+      "byteEqual": true
+    }
+  ],
+  "browserWidthQuantization": "Before/after CSSOM values must be strictly equal. The 1/64px bound is used only to check Chromium layout quantization against the exact unchanged rational width; raw emitted fraction declarations and class candidates are recorded above. No CSS equivalence tolerance or source rounding is used.",
+  "comparisons": 112,
+  "compiler": {
+    "tailwind": {
+      "name": "tailwindcss",
+      "version": "4.3.3",
+      "package": "/workspace/orvilo1/node_modules/tailwindcss/package.json"
+    },
+    "tailwindNode": {
+      "name": "@tailwindcss/node",
+      "version": "4.3.3",
+      "package": "/workspace/orvilo1/node_modules/.pnpm/@tailwindcss+node@4.3.3/node_modules/@tailwindcss/node/package.json"
+    },
+    "vite": "8.0.16",
+    "moduleExports": {
+      "nav": {
+        "container": "_container_1km8g_1"
+      },
+      "category": {
+        "groupTitle": "_groupTitle_1unps_1"
+      }
+    },
+    "candidates": [
+      {
+        "id": "issueIdentifier",
+        "before": "min-w-[var(--issue-id-width,auto)]",
+        "after": "min-w-(--issue-id-width,auto)",
+        "properties": ["minWidth"]
+      },
+      {
+        "id": "memoryTimeline30",
+        "before": "w-[30%]",
+        "after": "w-3/10",
+        "properties": ["width"],
+        "fraction": 0.3
+      },
+      {
+        "id": "memoryTimeline66",
+        "before": "w-[66%]",
+        "after": "w-33/50",
+        "properties": ["width"],
+        "fraction": 0.66
+      },
+      {
+        "id": "memoryCard80",
+        "before": "w-[80%]",
+        "after": "w-4/5",
+        "properties": ["width"],
+        "fraction": 0.8
+      },
+      {
+        "id": "memoryCard66",
+        "before": "w-[66%]",
+        "after": "w-33/50",
+        "properties": ["width"],
+        "fraction": 0.66
+      },
+      {
+        "id": "mobileNavSafeArea",
+        "before": "h-[calc(var(--spacing)*12+env(safe-area-inset-bottom))] pbe-[env(safe-area-inset-bottom)]",
+        "after": "h-(--mobile-nav-height) pbe-(--mobile-nav-safe-area-bottom)",
+        "module": "_container_1km8g_1",
+        "properties": ["height", "paddingBlockEnd"]
+      },
+      {
+        "id": "mobileCategoryTracking",
+        "before": "tracking-[calc(var(--spacing)*0.125)]",
+        "after": "tracking-(--mobile-settings-category-tracking)",
+        "module": "_groupTitle_1unps_1",
+        "properties": ["letterSpacing"]
+      }
+    ],
+    "beforeRules": [
+      {
+        "selector": ".h-\\[calc\\(var\\(--spacing\\)\\*12\\+env\\(safe-area-inset-bottom\\)\\)\\]",
+        "values": [
+          {
+            "property": "height",
+            "value": "calc(var(--spacing) * 12 + env(safe-area-inset-bottom))"
+          }
+        ]
+      },
+      {
+        "selector": ".w-\\[30\\%\\]",
+        "values": [
+          {
+            "property": "width",
+            "value": "30%"
+          }
+        ]
+      },
+      {
+        "selector": ".w-\\[66\\%\\]",
+        "values": [
+          {
+            "property": "width",
+            "value": "66%"
+          }
+        ]
+      },
+      {
+        "selector": ".w-\\[80\\%\\]",
+        "values": [
+          {
+            "property": "width",
+            "value": "80%"
+          }
+        ]
+      },
+      {
+        "selector": ".min-w-\\[var\\(--issue-id-width\\,auto\\)\\]",
+        "values": [
+          {
+            "property": "min-width",
+            "value": "var(--issue-id-width,auto)"
+          }
+        ]
+      },
+      {
+        "selector": ".pbe-\\[env\\(safe-area-inset-bottom\\)\\]",
+        "values": [
+          {
+            "property": "padding-block-end",
+            "value": "env(safe-area-inset-bottom)"
+          }
+        ]
+      },
+      {
+        "selector": ".tracking-\\[calc\\(var\\(--spacing\\)\\*0\\.125\\)\\]",
+        "values": [
+          {
+            "property": "--tw-tracking",
+            "value": "calc(var(--spacing) * 0.125)"
+          },
+          {
+            "property": "letter-spacing",
+            "value": "calc(var(--spacing) * 0.125)"
+          }
+        ]
+      }
+    ],
+    "afterRules": [
+      {
+        "selector": ".h-\\(--mobile-nav-height\\)",
+        "values": [
+          {
+            "property": "height",
+            "value": "var(--mobile-nav-height)"
+          }
+        ]
+      },
+      {
+        "selector": ".w-3\\/10",
+        "values": [
+          {
+            "property": "width",
+            "value": "calc(3 / 10 * 100%)"
+          }
+        ]
+      },
+      {
+        "selector": ".w-4\\/5",
+        "values": [
+          {
+            "property": "width",
+            "value": "calc(4 / 5 * 100%)"
+          }
+        ]
+      },
+      {
+        "selector": ".w-33\\/50",
+        "values": [
+          {
+            "property": "width",
+            "value": "calc(33 / 50 * 100%)"
+          }
+        ]
+      },
+      {
+        "selector": ".min-w-\\(--issue-id-width\\,auto\\)",
+        "values": [
+          {
+            "property": "min-width",
+            "value": "var(--issue-id-width,auto)"
+          }
+        ]
+      },
+      {
+        "selector": ".pbe-\\(--mobile-nav-safe-area-bottom\\)",
+        "values": [
+          {
+            "property": "padding-block-end",
+            "value": "var(--mobile-nav-safe-area-bottom)"
+          }
+        ]
+      },
+      {
+        "selector": ".tracking-\\(--mobile-settings-category-tracking\\)",
+        "values": [
+          {
+            "property": "--tw-tracking",
+            "value": "var(--mobile-settings-category-tracking)"
+          },
+          {
+            "property": "letter-spacing",
+            "value": "var(--mobile-settings-category-tracking)"
+          }
+        ]
+      }
+    ],
+    "dependencies": [
+      "/workspace/orvilo1/node_modules/.pnpm/tailwindcss@4.3.3/node_modules/tailwindcss/index.css"
+    ]
+  },
+  "error": null,
+  "fatal": [],
+  "nativePreferences": {
+    "allowRunningInsecureContent": false,
+    "contextIsolation": true,
+    "disableDialogs": false,
+    "disablePopups": false,
+    "enableBlinkFeatures": "",
+    "experimentalFeatures": false,
+    "javascript": true,
+    "nodeIntegration": false,
+    "nodeIntegrationInSubFrames": false,
+    "safeDialogs": false,
+    "safeDialogsMessage": "",
+    "sandbox": true,
+    "webSecurity": true,
+    "webviewTag": false
+  },
+  "nativeProcess": {
+    "pid": 27114,
+    "actualProcArgv": [
+      "/tmp/orvilo-cloud-tools-new/node_modules/electron/dist/electron",
+      "--inspect=0",
+      "--remote-debugging-port=0",
+      "/tmp/orvilo-pr780-exact-expression-proof-e305-005/electron-main.cjs",
+      "--user-data-dir=/tmp/orvilo-pr780-exact-expression-proof-e305-005/electron-profile"
+    ],
+    "spawnargs": [
+      "/tmp/orvilo-cloud-tools-new/node_modules/electron/dist/electron",
+      "--inspect=0",
+      "--remote-debugging-port=0",
+      "/tmp/orvilo-pr780-exact-expression-proof-e305-005/electron-main.cjs",
+      "--user-data-dir=/tmp/orvilo-pr780-exact-expression-proof-e305-005/electron-profile"
+    ],
+    "mainArgv": [
+      "/tmp/orvilo-cloud-tools-new/node_modules/electron/dist/electron",
+      "--inspect=0",
+      "--remote-debugging-port=0",
+      "/tmp/orvilo-pr780-exact-expression-proof-e305-005/electron-main.cjs",
+      "--user-data-dir=/tmp/orvilo-pr780-exact-expression-proof-e305-005/electron-profile"
+    ]
+  },
+  "nativeSandbox": {
+    "chromiumSandbox": true,
+    "sandbox": true,
+    "contextIsolation": true,
+    "nodeIntegration": false,
+    "webSecurity": true
+  },
+  "nativeVersion": {
+    "electron": "43.2.0",
+    "chrome": "150.0.7871.129",
+    "version": "43.2.0"
+  },
+  "results": [
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "auto",
+          "after": "auto"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "99.8906px",
+          "after": "99.8906px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "266.391px",
+          "after": "266.391px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "48px",
+          "after": "48px"
+        },
+        "paddingBlockEnd": {
+          "before": "0px",
+          "after": "0px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.5px",
+          "after": "0.5px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "auto",
+          "after": "auto"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "99.8906px",
+          "after": "99.8906px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "266.391px",
+          "after": "266.391px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "82px",
+          "after": "82px"
+        },
+        "paddingBlockEnd": {
+          "before": "34px",
+          "after": "34px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.5px",
+          "after": "0.5px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "73.5px",
+          "after": "73.5px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "99.8906px",
+          "after": "99.8906px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "266.391px",
+          "after": "266.391px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "48px",
+          "after": "48px"
+        },
+        "paddingBlockEnd": {
+          "before": "0px",
+          "after": "0px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.5px",
+          "after": "0.5px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "73.5px",
+          "after": "73.5px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "99.8906px",
+          "after": "99.8906px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "266.391px",
+          "after": "266.391px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "82px",
+          "after": "82px"
+        },
+        "paddingBlockEnd": {
+          "before": "34px",
+          "after": "34px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.5px",
+          "after": "0.5px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "auto",
+          "after": "auto"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "300px",
+          "after": "300px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "800px",
+          "after": "800px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "48px",
+          "after": "48px"
+        },
+        "paddingBlockEnd": {
+          "before": "0px",
+          "after": "0px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.5px",
+          "after": "0.5px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "auto",
+          "after": "auto"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "300px",
+          "after": "300px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "800px",
+          "after": "800px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "82px",
+          "after": "82px"
+        },
+        "paddingBlockEnd": {
+          "before": "34px",
+          "after": "34px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.5px",
+          "after": "0.5px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "73.5px",
+          "after": "73.5px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "300px",
+          "after": "300px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "800px",
+          "after": "800px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "48px",
+          "after": "48px"
+        },
+        "paddingBlockEnd": {
+          "before": "0px",
+          "after": "0px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.5px",
+          "after": "0.5px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "73.5px",
+          "after": "73.5px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "300px",
+          "after": "300px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "800px",
+          "after": "800px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "82px",
+          "after": "82px"
+        },
+        "paddingBlockEnd": {
+          "before": "34px",
+          "after": "34px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 16,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.5px",
+          "after": "0.5px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "auto",
+          "after": "auto"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "99.8906px",
+          "after": "99.8906px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "266.391px",
+          "after": "266.391px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "60px",
+          "after": "60px"
+        },
+        "paddingBlockEnd": {
+          "before": "0px",
+          "after": "0px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.625px",
+          "after": "0.625px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "auto",
+          "after": "auto"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "99.8906px",
+          "after": "99.8906px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "266.391px",
+          "after": "266.391px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "94px",
+          "after": "94px"
+        },
+        "paddingBlockEnd": {
+          "before": "34px",
+          "after": "34px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.625px",
+          "after": "0.625px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "73.5px",
+          "after": "73.5px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "99.8906px",
+          "after": "99.8906px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "266.391px",
+          "after": "266.391px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "60px",
+          "after": "60px"
+        },
+        "paddingBlockEnd": {
+          "before": "0px",
+          "after": "0px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.625px",
+          "after": "0.625px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "73.5px",
+          "after": "73.5px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "99.8906px",
+          "after": "99.8906px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "266.391px",
+          "after": "266.391px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "219.766px",
+          "after": "219.766px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "94px",
+          "after": "94px"
+        },
+        "paddingBlockEnd": {
+          "before": "34px",
+          "after": "34px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 333,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.625px",
+          "after": "0.625px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "auto",
+          "after": "auto"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "300px",
+          "after": "300px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "800px",
+          "after": "800px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "60px",
+          "after": "60px"
+        },
+        "paddingBlockEnd": {
+          "before": "0px",
+          "after": "0px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.625px",
+          "after": "0.625px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "auto",
+          "after": "auto"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "300px",
+          "after": "300px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "800px",
+          "after": "800px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "94px",
+          "after": "94px"
+        },
+        "paddingBlockEnd": {
+          "before": "34px",
+          "after": "34px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": null,
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.625px",
+          "after": "0.625px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "73.5px",
+          "after": "73.5px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "300px",
+          "after": "300px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "800px",
+          "after": "800px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "60px",
+          "after": "60px"
+        },
+        "paddingBlockEnd": {
+          "before": "0px",
+          "after": "0px"
+        }
+      }
+    },
+    {
+      "domain": "actual-cloud-electron-env0",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.625px",
+          "after": "0.625px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "issueIdentifier",
+      "properties": {
+        "minWidth": {
+          "before": "73.5px",
+          "after": "73.5px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline30",
+      "properties": {
+        "width": {
+          "before": "300px",
+          "after": "300px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryTimeline66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard80",
+      "properties": {
+        "width": {
+          "before": "800px",
+          "after": "800px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "memoryCard66",
+      "properties": {
+        "width": {
+          "before": "660px",
+          "after": "660px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileNavSafeArea",
+      "properties": {
+        "height": {
+          "before": "94px",
+          "after": "94px"
+        },
+        "paddingBlockEnd": {
+          "before": "34px",
+          "after": "34px"
+        }
+      }
+    },
+    {
+      "domain": "derived-css-safe-area34",
+      "fontSize": 20,
+      "parentWidth": 1000,
+      "issueWidth": "73.5px",
+      "nativeSafeAreaObserved": "0px",
+      "id": "mobileCategoryTracking",
+      "properties": {
+        "letterSpacing": {
+          "before": "0.625px",
+          "after": "0.625px"
+        }
+      }
+    }
+  ],
+  "scope": "Seven necessary #780 token-gate repairs only; actual native env0 plus clearly separate derived CSS safe-area34 algebra; no whole-goal or real-device env34 claim.",
+  "status": "PASS"
+}

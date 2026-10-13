@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { resolveGoalDispatchNotice } from '@/features/AgentTasks/shared/dispatchNotice';
+import { usePermission } from '@/hooks/usePermission';
 import { goalService } from '@/services/goal';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
@@ -47,6 +48,7 @@ interface ProcessControlProps {
 const ProcessControl = memo<ProcessControlProps>(
   ({ goalId, graphFullscreen, onGraphFullscreenChange }) => {
     const { t } = useTranslation('chat');
+    const { allowed: canEdit } = usePermission('create_content');
     const [lastSelectedId, setSelectedId] = useState<string>();
     const nodePortal = useChatStore(chatPortalSelectors.goalNodeView);
     const selectedId = nodePortal?.goalId === goalId ? nodePortal.nodeId : lastSelectedId;
@@ -114,6 +116,9 @@ const ProcessControl = memo<ProcessControlProps>(
     const planning =
       ['planning', 'running'].includes(graph.goal.status) &&
       !graph.nodes.some((view) => view.node.kind === 'task');
+    // Closed Goals cannot accept new work or decisions.
+    const closed = ['achieved', 'canceled', 'failed'].includes(graph.goal.status);
+    const canAct = canEdit && !closed;
     const hasExperiments = graph.nodes.some((view) => view.node.kind === 'experiment');
 
     const map = (

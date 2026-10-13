@@ -53,7 +53,7 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
     >
       <div className="flex w-full items-center gap-2.5">
         {/* The pile heading says which of the two states this is; the glyph
-            carries the exact one (verifying, planning, waiting) on hover, where
+            carries the exact one (planning, waiting) on hover, where
             it costs the row nothing. */}
         <span className={styles.glyph} title={t(entry.statusKey, { ns: 'chat' })}>
           {entry.bucket === 'running' ? (

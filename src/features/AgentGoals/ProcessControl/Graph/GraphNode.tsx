@@ -2,7 +2,7 @@
 
 import { Handle, type NodeProps, Position } from '@xyflow/react';
 import { clsx as cx } from 'cn';
-import { AtSign, FileBox, type LucideIcon, Repeat2, ShieldCheck } from 'lucide-react';
+import { AtSign, FileBox, type LucideIcon, Repeat2 } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,8 +23,8 @@ import nativeStyles from './Graph.module.css';
 /**
  * A graph card: leading kind icon on a tinted square, title plus a one-line
  * subtitle, a state chip on the top edge, and — for a task — a metric strip
- * (attempts · verifier · artifacts · running clock) so the map answers "who is
- * on it, has it been checked, did it produce anything" without opening a node.
+ * (attempts · artifacts · running clock) so the map answers "who is
+ * on it, did it produce anything" without opening a node.
  */
 
 export interface GraphNodeData extends Record<string, unknown> {
@@ -198,22 +198,6 @@ const GraphNodeView = memo<NodeProps>(({ data }) => {
                   }
                 />
                 <TooltipContent>{t('goalProcess.node.humanTouched')}</TooltipContent>
-              </Tooltip>
-            )}
-            {/* Top-right corner: this Task carries its own verifier. Icon only —
-                the word added nothing the hover hint doesn't say better. */}
-            {isTask && node.taskId && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <span>
-                      <span className="ms-auto inline-flex">
-                        <ShieldCheck className="text-foreground-tertiary" size={16} />
-                      </span>
-                    </span>
-                  }
-                />
-                <TooltipContent>{t('goalProcess.node.verifierTooltip')}</TooltipContent>
               </Tooltip>
             )}
           </div>

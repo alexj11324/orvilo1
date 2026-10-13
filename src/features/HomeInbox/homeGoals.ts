@@ -30,7 +30,6 @@ const BUCKET_BY_STATUS_KEY = {
   'goalList.status.planning': 'running',
   'goalList.status.review': 'review',
   'goalList.status.running': 'running',
-  'goalList.status.verifying': 'running',
   'goalList.status.waiting': 'running',
 } as const satisfies Record<string, HomeGoalBucket>;
 

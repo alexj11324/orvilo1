@@ -8,7 +8,7 @@ import { buildHomeGoalEntries, homeGoalHref, resolveHomeGoalView } from './homeG
 interface GoalOverrides {
   agentId?: string | null;
   id: string;
-  orchestrationWorkflow?: Partial<OrchestrationWorkflowListItem['goal']>;
+  orchestrationWorkflow?: Partial<OrchestrationWorkflowListItem['orchestrationWorkflow']>;
   pendingDecisions?: number;
   taskDone?: number;
   taskTotal?: number;

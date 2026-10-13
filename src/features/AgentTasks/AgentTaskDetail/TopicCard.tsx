@@ -378,9 +378,13 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             <Tag
               size="sm"
               style={{ flexShrink: 0 }}
-              title={t(`taskDetail.runTrigger.${activity.trigger}` as const)}
+              title={t(
+                `taskDetail.runTrigger.${activity.trigger === 'orchestrationWorkflow' ? 'goal' : activity.trigger}` as const,
+              )}
             >
-              {t(`taskDetail.runTrigger.${activity.trigger}` as const)}
+              {t(
+                `taskDetail.runTrigger.${activity.trigger === 'orchestrationWorkflow' ? 'goal' : activity.trigger}` as const,
+              )}
             </Tag>
           )}
           {durationText && (

@@ -2300,7 +2300,8 @@ export class OrchestrationWorkflowService {
       if (!fenced) return false;
       const claim = await new TaskDispatchModel(tx, this.workspaceId).request({
         idempotencyKey: attemptKey,
-        initiator: ORCHESTRATION_WORKFLOW_COORDINATOR_ACTOR_ID,
+        initiator: this.userId,
+        origin: 'caid',
         requestedBy: ORCHESTRATION_WORKFLOW_COORDINATOR_ACTOR_ID,
         taskId: task.id,
         trigger: 'orchestrationWorkflow',

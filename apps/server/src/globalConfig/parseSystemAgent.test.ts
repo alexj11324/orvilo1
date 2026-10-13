@@ -54,7 +54,7 @@ describe('parseSystemAgent', () => {
 
   it('should handle extra whitespace in environment variable string', () => {
     const envValue =
-      '  thread = openai/gpt-3.5-turbo , orchestration workflow = anthropic/claude-1 ';
+      '  thread = openai/gpt-3.5-turbo , orchestrationWorkflow = anthropic/claude-1 ';
     const expected = {
       thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
       orchestrationWorkflow: { provider: 'anthropic', model: 'claude-1' },
@@ -74,8 +74,7 @@ describe('parseSystemAgent', () => {
   });
 
   it('should handle extra whitespace around provider and model names', () => {
-    const envValue =
-      'thread= openai / gpt-3.5-turbo ,orchestration workflow= anthropic / claude-1 ';
+    const envValue = 'thread= openai / gpt-3.5-turbo ,orchestrationWorkflow= anthropic / claude-1 ';
     const expected = {
       thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
       orchestrationWorkflow: { provider: 'anthropic', model: 'claude-1' },

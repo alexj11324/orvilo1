@@ -116,8 +116,12 @@ const ModelAssignmentsForm = memo(() => {
         </Tooltip>
       ),
       // Only the planning row says more than its label: it also drives acceptance.
-      desc: key === 'goal' ? t('systemAgent.goal.modelDesc') : undefined,
-      label: <span className="flex min-h-9 items-center">{t(`systemAgent.${key}.title`)}</span>,
+      desc: key === 'orchestrationWorkflow' ? t('systemAgent.goal.modelDesc') : undefined,
+      label: (
+        <span className="flex min-h-9 items-center">
+          {t(`systemAgent.${key === 'orchestrationWorkflow' ? 'goal' : key}.title`)}
+        </span>
+      ),
     } satisfies FormItemProps;
   });
 
@@ -182,7 +186,11 @@ const ModelAssignmentsForm = memo(() => {
           </div>
         ),
         desc: t(`systemAgent.${key}.modelDesc`),
-        label: <span className="flex min-h-9 items-center">{t(`systemAgent.${key}.title`)}</span>,
+        label: (
+          <span className="flex min-h-9 items-center">
+            {t(`systemAgent.${key === 'orchestrationWorkflow' ? 'goal' : key}.title`)}
+          </span>
+        ),
       } satisfies FormItemProps;
     },
   );

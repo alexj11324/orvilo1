@@ -300,7 +300,7 @@ describe('LinearPlanningWorker incremental affected-subgraph planning', () => {
           .from(taskPlanningRevisions)
           .where(eq(taskPlanningRevisions.id, revision.id))
       )[0].error,
-    ).toContain('OrchestrationWorkflow');
+    ).toContain('Orchestration workflow');
   });
 
   it('C06 coalesces burst events and requeues changes that arrive during planning', async () => {

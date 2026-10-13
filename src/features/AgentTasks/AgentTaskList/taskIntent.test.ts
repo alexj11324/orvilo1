@@ -24,11 +24,11 @@ describe('shouldConfirmIntent', () => {
     expect(shouldConfirmIntent(analysis())).toBe(false);
   });
 
-  it('stops for a question, a goal, or a reading the model is unsure of', () => {
+  it('stops for a question, a orchestrationWorkflow, or a reading the model is unsure of', () => {
     expect(shouldConfirmIntent(analysis({ clarifications: [{ question: 'Which repo?' }] }))).toBe(
       true,
     );
-    expect(shouldConfirmIntent(analysis({ kind: 'goal' }))).toBe(true);
+    expect(shouldConfirmIntent(analysis({ kind: 'orchestrationWorkflow' }))).toBe(true);
     expect(shouldConfirmIntent(analysis({ confidence: 'medium' }))).toBe(true);
   });
 });
@@ -133,11 +133,11 @@ describe('buildConfirmedDraft', () => {
 });
 
 describe('buildGoalSeed', () => {
-  it('carries the answers already given into the goal handoff', () => {
+  it('carries the answers already given into the orchestrationWorkflow handoff', () => {
     const seed = buildGoalSeed({
       analysis: analysis({
         clarifications: [{ question: 'Which metric?' }],
-        kind: 'goal',
+        kind: 'orchestrationWorkflow',
         refinedInstruction: 'Keep the p95 latency under the agreed bar.',
         title: 'Hold p95 latency',
       }),

@@ -16,6 +16,7 @@ import {
   orchestrationWorkflowNodeDecisions,
   orchestrationWorkflowNodes,
   orchestrationWorkflows,
+  taskDispatches,
   tasks,
   topics,
   users,
@@ -264,5 +265,11 @@ describe('board split and conversation reply admission', () => {
     expect(run).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: result.taskIds[0], trigger: 'orchestrationWorkflow' }),
     );
+    const [dispatch] = await db
+      .select()
+      .from(taskDispatches)
+      .where(eq(taskDispatches.taskId, result.taskIds[0]));
+    expect(dispatch.initiator).toBe(userId);
+    expect(dispatch.origin).toBe('caid');
   });
 });

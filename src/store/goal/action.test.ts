@@ -64,10 +64,10 @@ describe('GoalAction', () => {
   it('stores goal lists independently for each agent', () => {
     useGoalStore.getState().useFetchGoals('agent-1');
     const options = vi.mocked(useClientDataSWR).mock.calls[0][2] as {
-      onSuccess: (value: { goals: Array<{ id: string }> }) => void;
+      onSuccess: (value: { orchestrationWorkflows: Array<{ id: string }> }) => void;
     };
 
-    options.onSuccess({ goals: [{ id: 'goal-1' }] });
+    options.onSuccess({ orchestrationWorkflows: [{ id: 'goal-1' }] });
 
     expect(useGoalStore.getState().goalListByAgentId['agent-1']).toEqual([{ id: 'goal-1' }]);
     expect(useGoalStore.getState().goalListInitializedAgentIds).toContain('agent-1');
@@ -96,10 +96,10 @@ describe('GoalAction', () => {
 
     const onSuccess = (
       options as {
-        onSuccess: (value: { goals: Array<{ id: string }> }) => void;
+        onSuccess: (value: { orchestrationWorkflows: Array<{ id: string }> }) => void;
       }
     ).onSuccess;
-    onSuccess({ goals: [{ id: 'project-goal-1' }] });
+    onSuccess({ orchestrationWorkflows: [{ id: 'project-goal-1' }] });
 
     expect(useGoalStore.getState().goalListByAgentId['project:project-1']).toEqual([
       { id: 'project-goal-1' },
@@ -111,12 +111,12 @@ describe('GoalAction', () => {
     useGoalStore.getState().useFetchHomeGoals(true, 'user:ws-b');
     const optionsOf = (call: number) =>
       vi.mocked(useClientDataSWR).mock.calls[call][2] as {
-        onSuccess: (value: { goals: Array<{ id: string }> }) => void;
+        onSuccess: (value: { orchestrationWorkflows: Array<{ id: string }> }) => void;
       };
 
     // ws-b lands first, then the workspace you already left answers.
-    optionsOf(1).onSuccess({ goals: [{ id: 'goal-b' }] });
-    optionsOf(0).onSuccess({ goals: [{ id: 'goal-a' }] });
+    optionsOf(1).onSuccess({ orchestrationWorkflows: [{ id: 'goal-b' }] });
+    optionsOf(0).onSuccess({ orchestrationWorkflows: [{ id: 'goal-a' }] });
 
     expect(useGoalStore.getState().homeGoalsByScope).toEqual({
       'user:ws-a': [{ id: 'goal-a' }],
@@ -164,10 +164,12 @@ describe('GoalAction', () => {
   it('deletes a goal through the goal endpoint and removes it from local state', async () => {
     useGoalStore.getState().useFetchGoals('agent-1');
     const options = vi.mocked(useClientDataSWR).mock.calls[0][2] as {
-      onSuccess: (value: { goals: Array<{ orchestrationWorkflow: { id: string } }> }) => void;
+      onSuccess: (value: {
+        orchestrationWorkflows: Array<{ orchestrationWorkflow: { id: string } }>;
+      }) => void;
     };
     options.onSuccess({
-      goals: [
+      orchestrationWorkflows: [
         { orchestrationWorkflow: { id: 'goal-1' } },
         { orchestrationWorkflow: { id: 'goal-2' } },
       ],

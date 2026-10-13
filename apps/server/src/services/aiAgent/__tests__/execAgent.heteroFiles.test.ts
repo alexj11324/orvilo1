@@ -158,6 +158,7 @@ const heteroAgentConfig = {
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: vi.fn().mockResolvedValue(heteroAgentConfig),
       queryAgents: vi.fn().mockResolvedValue([]),
     };

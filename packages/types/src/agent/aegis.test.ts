@@ -25,7 +25,7 @@ describe('AEGIS_ORVILO_CONTRACT', () => {
   it('documents the closeout contract the server-side gate evaluates', () => {
     expect(AEGIS_ORVILO_CONTRACT).toContain('.aegis/closeout.json');
     expect(AEGIS_ORVILO_CONTRACT).toContain(AEGIS_CLOSEOUT_SCHEMA);
-    expect(AEGIS_ORVILO_CONTRACT).toContain('orchestrationWorkflowClosure');
+    expect(AEGIS_ORVILO_CONTRACT).toContain('goalClosure');
     expect(AEGIS_ORVILO_CONTRACT).toContain('confidence');
   });
 });

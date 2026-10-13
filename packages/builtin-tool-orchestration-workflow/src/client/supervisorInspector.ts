@@ -6,11 +6,13 @@ import type { OrchestrationWorkflowSupervisorApiName } from '../../../builtin-to
 const inspector = (api: keyof typeof OrchestrationWorkflowSupervisorApiName): BuiltinInspector =>
   function SupervisorInspector() {
     const { t } = useTranslation('plugin');
-    return t(`builtins.orvilo-goal-supervisor.apiName.${api}`);
+    return t(
+      `builtins.orvilo-goal-supervisor.apiName.${api === 'inspectOrchestrationWorkflow' ? 'inspectGoal' : api}`,
+    );
   };
 
 export const OrchestrationWorkflowSupervisorInspectors = {
-  inspectOrchestrationWorkflow: inspector('inspectGoal'),
+  inspectOrchestrationWorkflow: inspector('inspectOrchestrationWorkflow'),
   inspectTask: inspector('inspectTask'),
   readArtifact: inspector('readArtifact'),
   resolveInterruption: inspector('resolveInterruption'),

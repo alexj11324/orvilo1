@@ -292,7 +292,7 @@ describe('SettingsAction', () => {
 
       // Perform the action
       await act(async () => {
-        await result.current.updateSystemAgent('goal', {
+        await result.current.updateSystemAgent('orchestrationWorkflow', {
           provider: 'provider',
           model: 'testmodel',
         });
@@ -311,7 +311,7 @@ describe('SettingsAction', () => {
       const provider = DEFAULT_SETTINGS.systemAgent.orchestrationWorkflow.provider;
 
       await act(async () => {
-        await result.current.updateSystemAgent('goal', { model, provider });
+        await result.current.updateSystemAgent('orchestrationWorkflow', { model, provider });
       });
 
       expect(userService.updateUserSettings).toHaveBeenLastCalledWith(
@@ -420,19 +420,19 @@ describe('SettingsAction', () => {
       useUserStore.setState({
         settings: {
           general: { fontSize: 18 },
-          systemAgent: { goal: { customPrompt: 'keep', enabled: false } },
+          systemAgent: { orchestrationWorkflow: { customPrompt: 'keep', enabled: false } },
         },
       });
       const pair = { model: 'retry-goal-model', provider: 'retry-provider' };
       vi.mocked(userService.updateUserSettings).mockRejectedValueOnce(new Error('offline'));
-      await expect(useUserStore.getState().updateSystemAgent('goal', pair)).rejects.toThrow(
-        'offline',
-      );
+      await expect(
+        useUserStore.getState().updateSystemAgent('orchestrationWorkflow', pair),
+      ).rejects.toThrow('offline');
       const failedPayload = vi.mocked(userService.updateUserSettings).mock.calls[0][0];
-      await useUserStore.getState().updateSystemAgent('goal', pair);
+      await useUserStore.getState().updateSystemAgent('orchestrationWorkflow', pair);
       expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
       expect(vi.mocked(userService.updateUserSettings).mock.calls[1][0]).toEqual(failedPayload);
-      expect(failedPayload).toHaveProperty('systemAgent.goal', {
+      expect(failedPayload).toHaveProperty('systemAgent.orchestrationWorkflow', {
         ...pair,
         customPrompt: 'keep',
         enabled: false,
@@ -451,7 +451,7 @@ describe('SettingsAction', () => {
         config: { model: 'pending-default', provider: 'retry-provider' },
       });
       const pair = { model: 'pending-goal', provider: 'retry-provider' };
-      const b = useUserStore.getState().updateSystemAgent('goal', pair);
+      const b = useUserStore.getState().updateSystemAgent('orchestrationWorkflow', pair);
       const bRejected = expect(b).rejects.toThrow('newest failure');
       const calls = vi.mocked(userService.updateUserSettings).mock.calls;
       expect(calls[0][1]?.aborted).toBe(true);
@@ -460,11 +460,11 @@ describe('SettingsAction', () => {
       expect(useUserStore.getState().refreshUserState).not.toHaveBeenCalled();
       newer.reject(new Error('newest failure'));
       await bRejected;
-      await useUserStore.getState().updateSystemAgent('goal', pair);
+      await useUserStore.getState().updateSystemAgent('orchestrationWorkflow', pair);
       expect(userService.updateUserSettings).toHaveBeenCalledTimes(3);
       expect(vi.mocked(userService.updateUserSettings).mock.calls[2][0]).toEqual(calls[1][0]);
       expect(calls[1][0]).toHaveProperty('defaultAgent.config.model', 'pending-default');
-      expect(calls[1][0]).toHaveProperty('systemAgent.goal.model', 'pending-goal');
+      expect(calls[1][0]).toHaveProperty('systemAgent.orchestrationWorkflow.model', 'pending-goal');
       expect(useUserStore.getState().refreshUserState).toHaveBeenCalledOnce();
     });
 
@@ -476,18 +476,20 @@ describe('SettingsAction', () => {
         .mockImplementationOnce(() => newer.promise);
       const a = useUserStore
         .getState()
-        .updateSystemAgent('goal', { model: 'older', provider: 'retry-provider' });
+        .updateSystemAgent('orchestrationWorkflow', { model: 'older', provider: 'retry-provider' });
       const aRejected = expect(a).rejects.toThrow('older abort');
       const pair = { model: 'newer', provider: 'retry-provider' };
-      const b = useUserStore.getState().updateSystemAgent('goal', pair);
+      const b = useUserStore.getState().updateSystemAgent('orchestrationWorkflow', pair);
       older.reject(new Error('older abort'));
       await aRejected;
-      expect(useUserStore.getState().settings.systemAgent?.goal).toMatchObject(pair);
+      expect(useUserStore.getState().settings.systemAgent?.orchestrationWorkflow).toMatchObject(
+        pair,
+      );
       expect(useUserStore.getState().refreshUserState).not.toHaveBeenCalled();
       newer.resolve();
       await b;
       expect(useUserStore.getState().refreshUserState).toHaveBeenCalledOnce();
-      await useUserStore.getState().updateSystemAgent('goal', pair);
+      await useUserStore.getState().updateSystemAgent('orchestrationWorkflow', pair);
       expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
     });
   });

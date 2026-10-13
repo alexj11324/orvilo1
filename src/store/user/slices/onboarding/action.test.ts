@@ -125,7 +125,7 @@ describe('onboarding actions', () => {
       act(() => {
         useUserStore.setState({
           onboarding: {
-            setup: { goals: ['roadmaps'], workspaceId: 'workspace-1' },
+            setup: { orchestrationWorkflows: ['roadmaps'], workspaceId: 'workspace-1' },
             version: CURRENT_ONBOARDING_VERSION,
           },
         });
@@ -140,7 +140,7 @@ describe('onboarding actions', () => {
       expect(userService.updateOnboarding).toHaveBeenCalledWith({
         currentStep: 1,
         finishedAt: expect.any(String),
-        setup: { goals: ['roadmaps'], workspaceId: 'workspace-1' },
+        setup: { orchestrationWorkflows: ['roadmaps'], workspaceId: 'workspace-1' },
         version: CURRENT_ONBOARDING_VERSION,
       });
     });

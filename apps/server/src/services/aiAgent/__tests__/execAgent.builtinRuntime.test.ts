@@ -53,6 +53,7 @@ vi.mock('@/database/models/message', () => ({
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: vi.fn(),
       getBuiltinAgent: mockGetBuiltinAgent,
       queryAgents: vi.fn().mockResolvedValue([]),

@@ -213,12 +213,32 @@ export class OrchestrationWorkflowConversationPlanService {
         const prerequisite = nodesByTask.get(dependency.dependsOnId);
         if (node && prerequisite) await graphModel.createEdge(id, node, prerequisite, 'depends_on');
       }
+      const agentModel = new AgentModel(tx, this.userId, this.workspaceId);
+      const agentIds = [
+        ...new Set(
+          issues
+            .flatMap((issue) => [
+              issue.assigneeAgentId,
+              (issue.config as { verify?: { verifierAgentId?: string } } | null)?.verify
+                ?.verifierAgentId,
+            ])
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      const agentNames = new Map(
+        await Promise.all(
+          agentIds.map(async (id) => {
+            const agent = await agentModel.getAgentConfig(id);
+            return [id, agent?.title ?? 'Assigned Agent'] as const;
+          }),
+        ),
+      );
       const content = [
         `Orchestration workflow: ${item.title}`,
         `Attempt budget per Issue: ${item.config?.recovery?.maxAttemptsPerTask ?? 3}; parallelism: ${item.config?.maxConcurrentTasks ?? 'coordinator default'}; cost budget: ${item.maxTotalCost ?? 'none'}; deadline: ${item.config?.schedule?.deadline ?? 'none'}.`,
         ...issues.map(
           (issue) =>
-            `${issue.identifier}: ${issue.name}\n${issue.instruction}\nAssignee Agent: ${issue.assigneeAgentId ?? 'unassigned'}; reviewer Agent: ${(issue.config as { verify?: { verifierAgentId?: string } } | null)?.verify?.verifierAgentId ?? 'existing verification policy'}; dependencies: ${
+            `${issue.identifier}: ${issue.name}\n${issue.instruction}\nAssignee Agent: ${agentNames.get(issue.assigneeAgentId ?? '') ?? 'unassigned'}; reviewer Agent: ${agentNames.get((issue.config as { verify?: { verifierAgentId?: string } } | null)?.verify?.verifierAgentId ?? '') ?? 'existing verification policy'}; dependencies: ${
               dependencies
                 .filter((dependency) => dependency.taskId === issue.id)
                 .map(

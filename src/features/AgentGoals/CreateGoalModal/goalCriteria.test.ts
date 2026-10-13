@@ -10,15 +10,17 @@ describe('generateGoalCriteria', () => {
   });
 
   it('generates and normalizes acceptance criteria for the goal review step', async () => {
-    const generateCriteria = vi.spyOn(verifyService, 'generateGoalPlan').mockResolvedValue({
-      criteria: [
-        { title: 'Paper draft is complete' },
-        { required: false, title: 'Results are reproducible', verifierType: 'llm' },
-      ],
-      instruction:
-        'Complete an RSI benchmark paper in three months. Write and publish the benchmark paper.',
-      title: 'Publish benchmark paper',
-    });
+    const generateCriteria = vi
+      .spyOn(verifyService, 'generateOrchestrationWorkflowPlan')
+      .mockResolvedValue({
+        criteria: [
+          { title: 'Paper draft is complete' },
+          { required: false, title: 'Results are reproducible', verifierType: 'llm' },
+        ],
+        instruction:
+          'Complete an RSI benchmark paper in three months. Write and publish the benchmark paper.',
+        title: 'Publish benchmark paper',
+      });
 
     const result = await generateOrchestrationWorkflowCriteria({
       context: 'Goal: Publish an ICLR paper',
@@ -52,11 +54,13 @@ describe('generateGoalCriteria', () => {
   });
 
   it('passes the chosen agent so an ACP round can draft the plan', async () => {
-    const generatePlan = vi.spyOn(verifyService, 'generateGoalPlan').mockResolvedValue({
-      criteria: [{ title: 'Paper draft is complete' }],
-      instruction: 'Write the paper.',
-      title: 'Publish benchmark paper',
-    });
+    const generatePlan = vi
+      .spyOn(verifyService, 'generateOrchestrationWorkflowPlan')
+      .mockResolvedValue({
+        criteria: [{ title: 'Paper draft is complete' }],
+        instruction: 'Write the paper.',
+        title: 'Publish benchmark paper',
+      });
 
     await generateOrchestrationWorkflowCriteria({
       agentId: 'agent-acp',
@@ -73,7 +77,7 @@ describe('generateGoalCriteria', () => {
   });
 
   it('rejects an empty AI response instead of advancing with no criteria', async () => {
-    vi.spyOn(verifyService, 'generateGoalPlan').mockResolvedValue({
+    vi.spyOn(verifyService, 'generateOrchestrationWorkflowPlan').mockResolvedValue({
       criteria: [],
       instruction: 'Ship the project.',
       title: 'Ship the project',
@@ -87,7 +91,7 @@ describe('generateGoalCriteria', () => {
   });
 
   it('replaces the original input with the generated review instruction', async () => {
-    vi.spyOn(verifyService, 'generateGoalPlan').mockResolvedValue({
+    vi.spyOn(verifyService, 'generateOrchestrationWorkflowPlan').mockResolvedValue({
       criteria: [{ title: 'Training loop works' }],
       instruction: 'Implement a reproducible self-improvement training loop.',
       title: 'Reproduce self-improvement training',

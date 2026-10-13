@@ -45,10 +45,6 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-env
       - run: pnpm install --no-frozen-lockfile
-      - name: Build real UI fixture module graphs
-        run: |
-          pnpm exec vite build --config tests/ui-alignment/vite.config.ts --outDir "$RUNNER_TEMP/ui-alignment/alignment" --emptyOutDir
-          pnpm exec vite build --config tests/ui-alignment/design.vite.config.ts --outDir "$RUNNER_TEMP/ui-alignment/design" --emptyOutDir
       - name: Build authorization SPA for Electron verification
         run: bun run build:spa:auth
       - name: Upload authorization SPA

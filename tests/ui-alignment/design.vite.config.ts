@@ -7,8 +7,12 @@ const repository = fileURLToPath(new URL('../..', import.meta.url));
 
 export default defineConfig({
   build: {
+    outDir: `${process.env.RUNNER_TEMP ?? `${repository}/node_modules/.cache`}/ui-alignment/design`,
     rolldownOptions: {
-      input: [`${repository}/tests/ui-alignment/design.html`],
+      input: [
+        `${repository}/tests/ui-alignment/design.html`,
+        `${repository}/tests/ui-alignment/standaloneTheme.html`,
+      ],
     },
   },
   cacheDir: process.env.UI_ALIGNMENT_CACHE_DIR ?? repository + '/node_modules/.vite-ui-alignment',

@@ -7,6 +7,7 @@ const repository = fileURLToPath(new URL('../..', import.meta.url));
 
 export default defineConfig({
   build: {
+    outDir: `${process.env.RUNNER_TEMP ?? `${repository}/node_modules/.cache`}/ui-alignment/alignment`,
     rolldownOptions: {
       input: [
         `${repository}/tests/ui-alignment/index.html`,

@@ -26,16 +26,18 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'pnpm exec vite --config tests/ui-alignment/vite.config.ts',
+      command:
+        'pnpm exec vite build --config tests/ui-alignment/vite.config.ts --emptyOutDir && pnpm exec vite preview --config tests/ui-alignment/vite.config.ts --host 127.0.0.1 --port 5188 --strictPort',
       cwd: repository,
       reuseExistingServer: !process.env.CI,
       url: 'http://127.0.0.1:5188',
     },
     {
-      command: 'pnpm exec vite --config tests/ui-alignment/design.vite.config.ts',
+      command:
+        'pnpm exec vite build --config tests/ui-alignment/design.vite.config.ts --emptyOutDir && pnpm exec vite preview --config tests/ui-alignment/design.vite.config.ts --host 127.0.0.1 --port 5190 --strictPort',
       cwd: repository,
       reuseExistingServer: !process.env.CI,
-      url: 'http://127.0.0.1:5190',
+      url: 'http://127.0.0.1:5190/design.html',
     },
   ],
 });

@@ -24,11 +24,14 @@ import {
 import { TaskService } from '@/server/services/task';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
+import { advanceOrchestrationWorkflow } from './advanceOrchestrationWorkflow';
 import { OrchestrationWorkflowConversationPlanService } from './conversationPlan';
 import { OrchestrationWorkflowConversationService } from './conversationState';
 import { OrchestrationWorkflowService } from './index';
 
 const db = await getTestDB();
+vi.mock('@/database/server', () => ({ getServerDB: async () => db }));
+vi.mock('./traceStore', () => ({ createDefaultOrchestrationWorkflowTraceStore: () => null }));
 const userId = 'split-test-user';
 const context = { agentId: 'split-orchestrator', topicId: 'split-topic' };
 const plans = () => new OrchestrationWorkflowConversationPlanService(db, userId);
@@ -271,5 +274,39 @@ describe('board split and conversation reply admission', () => {
       .where(eq(taskDispatches.taskId, result.taskIds[0]));
     expect(dispatch.initiator).toBe(userId);
     expect(dispatch.origin).toBe('caid');
+  });
+  it('fills both parallel slots in one advance before waiting for worker completion', async () => {
+    const result = await plans().prepare(
+      {
+        ...input,
+        config: { maxConcurrentTasks: 2 },
+        tasks: input.tasks.map((task) => ({ ...task, dependsOn: [] })),
+      },
+      context,
+    );
+    const message = await reply(result.orchestrationWorkflowId);
+    const run = vi.spyOn(TaskRunnerService.prototype, 'runTask').mockImplementation(
+      async ({ taskId }) =>
+        ({
+          taskId,
+          operationId: `operation-${taskId}`,
+          topicId: `topic-${taskId}`,
+          success: true,
+        }) as never,
+    );
+    await plans().release(result.orchestrationWorkflowId, {
+      ...context,
+      sourceMessageId: message.id,
+    });
+    const advanced = await advanceOrchestrationWorkflow({
+      orchestrationWorkflowId: result.orchestrationWorkflowId,
+      userId,
+    });
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(run.mock.calls.map(([args]) => args.taskId)).toEqual(
+      expect.arrayContaining(result.taskIds),
+    );
+    expect(advanced.result.outcome).toBe('waiting_external');
+    expect(advanced.ticks).toBe(3);
   });
 });

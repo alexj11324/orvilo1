@@ -863,7 +863,7 @@ describe('driveTaskFromVerify', () => {
             {
               content: JSON.stringify({
                 confidence: 'C',
-                orchestrationWorkflowClosure: 'done',
+                goalClosure: 'done',
                 schema: 'orvilo.aegis-closeout.v0',
               }),
               path: '.aegis/closeout.json',
@@ -900,7 +900,7 @@ describe('driveTaskFromVerify', () => {
                 evidence: [
                   { action: 'edits', covered: 'orchestrationWorkflow', result: 'verified' },
                 ],
-                orchestrationWorkflowClosure: 'done',
+                goalClosure: 'done',
                 schema: 'orvilo.aegis-closeout.v0',
               }),
               path: '.aegis/closeout.json',

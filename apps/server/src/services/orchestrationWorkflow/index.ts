@@ -2376,7 +2376,7 @@ export class OrchestrationWorkflowService {
         orchestrationWorkflowId,
         message: `Started task ${task.identifier}`,
         nodeId,
-        outcome: 'waiting_external',
+        outcome: 'advanced',
         taskId: run.taskId,
       };
     } catch (error) {

@@ -185,7 +185,7 @@ const ModelAssignmentsForm = memo(() => {
             )}
           </div>
         ),
-        desc: t(`systemAgent.${key}.modelDesc`),
+        desc: t(`systemAgent.${key === 'orchestrationWorkflow' ? 'goal' : key}.modelDesc`),
         label: (
           <span className="flex min-h-9 items-center">
             {t(`systemAgent.${key === 'orchestrationWorkflow' ? 'goal' : key}.title`)}

@@ -8,7 +8,7 @@ Reproduce:
 git grep -n -i goal -- apps/server apps/cli packages
 ```
 
-The scan matches 222 files. Historical migrations keep their original checksums. #0212 and storage upgrades reference legacy data names. Frontend client/locales remain with the user. Third-party objective contracts keep their exact upstream names.
+The scan matches 223 files. Historical migrations keep their original checksums. #0212 and storage upgrades reference legacy data names. Frontend client/locales remain with the user. Third-party objective contracts keep their exact upstream names.
 
 | File                                                                                                      | Reason                                                                                                                    |
 | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -24,6 +24,7 @@ The scan matches 222 files. Historical migrations keep their original checksums.
 | `apps/server/src/services/agentExecution/__tests__/completionVerifyScheduling.test.ts`                    | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
 | `apps/server/src/services/aiAgent/deviceToolAudit.ts`                                                     | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
 | `apps/server/src/services/aiAgent/shareGate.ts`                                                           | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
+| `apps/server/src/services/verify/__tests__/driveTaskFromVerify.test.ts`                                   | Asserts the exact third-party Aegis closeout wire field `goalClosure`; this is not an orchestration workflow field.       |
 | `apps/server/src/services/controlPlane/coreRuntimeHost.ts`                                                | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
 | `apps/server/src/services/controlPlane/devicePrimeDispatch.ts`                                            | Upstream Prime goal/initialGoal/includeGoals objective protocol; retain exact third-party fields.                         |
 | `apps/server/src/services/controlPlane/embeddedAcceptance.protocol.test.ts`                               | Upstream Prime goal/initialGoal/includeGoals objective protocol; retain exact third-party fields.                         |

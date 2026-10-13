@@ -781,7 +781,7 @@ export class AcceptanceService {
     }
 
     const runs = await this.runModel.listByAcceptance(acceptanceId);
-    const current = runs.at(-1);
+    const { current } = await this.resolveDecisionBinding(acceptance, runs);
     if (!current) return acceptance.status as AcceptanceStatus;
 
     // The rejected round stays rejected; only a NEWER round re-opens the loop.
@@ -799,7 +799,44 @@ export class AcceptanceService {
   /** Latest round of an aggregate — the row `stampDecision` would write to. */
   latestRound = async (acceptanceId: string) => {
     const runs = await this.runModel.listByAcceptance(acceptanceId);
-    return runs.at(-1) ?? null;
+    const acceptance = await this.acceptanceModel.findById(acceptanceId);
+    return acceptance
+      ? ((await this.resolveDecisionBinding(acceptance, runs)).current ?? null)
+      : (runs.at(-1) ?? null);
+  };
+
+  private resolveDecisionBinding = async (acceptance: AcceptanceItem, runs: VerifyRunItem[]) => {
+    const latest = runs.at(-1);
+    if (acceptance.subjectType !== 'task')
+      return { current: latest, operationId: latest?.operationId };
+    const task = await new TaskModel(this.db, this.userId, this.workspaceId).resolve(
+      acceptance.subjectId,
+    );
+    if (!task?.currentTopicId) return { current: latest, operationId: latest?.operationId };
+    const topic = await new TaskTopicModel(this.db, this.userId, this.workspaceId).findByTopicId(
+      task.currentTopicId,
+    );
+    const deliveryOperationId = topic?.integration?.verifyOperationId ?? topic?.operationId;
+    const operationModel = new AgentOperationModel(this.db, this.userId, this.workspaceId);
+    const deliveryTopicId = topic?.integration?.verifyOperationId
+      ? (await operationModel.findById(deliveryOperationId!))?.topicId
+      : task.currentTopicId;
+    for (const run of [...runs].reverse()) {
+      if (!deliveryOperationId || !run.operationId) continue;
+      if (run.operationId === deliveryOperationId)
+        return { current: run, operationId: topic?.operationId };
+      let operation = await operationModel.findById(run.operationId);
+      if (operation?.topicId !== deliveryTopicId) continue;
+      const visited = new Set<string>();
+      while (operation?.parentOperationId && visited.size < 32) {
+        if (operation.parentOperationId === deliveryOperationId)
+          return { current: run, operationId: topic?.operationId };
+        if (visited.has(operation.parentOperationId)) break;
+        visited.add(operation.parentOperationId);
+        operation = await operationModel.findById(operation.parentOperationId);
+      }
+    }
+    return { current: undefined, operationId: topic?.operationId };
   };
 
   regroupChecks = async (
@@ -845,14 +882,13 @@ export class AcceptanceService {
   accept = async (acceptanceId: string, comment?: string): Promise<AcceptanceItem> => {
     const acceptance = await this.requireDecidableAcceptance(acceptanceId);
 
-    let operationId: string | null | undefined;
+    const runs = await this.runModel.listByAcceptance(acceptanceId);
+    const { current, operationId } = await this.resolveDecisionBinding(acceptance, runs);
     if (acceptance.subjectType === 'task') {
-      const runs = await this.runModel.listByAcceptance(acceptanceId);
-      operationId = runs.at(-1)?.operationId;
       await this.assertTaskIntegrationSettled(operationId);
     }
 
-    await this.stampDecision(acceptanceId, 'accept', comment);
+    await this.stampDecision(acceptance, runs, current, 'accept', comment);
 
     if (acceptance.subjectType === 'task') {
       await this.completeTaskSubject(acceptance.subjectId, operationId);
@@ -873,9 +909,11 @@ export class AcceptanceService {
    * decision detail through the prompt builder.
    */
   reject = async (acceptanceId: string, comment: string): Promise<AcceptanceItem> => {
-    await this.requireDecidableAcceptance(acceptanceId);
+    const acceptance = await this.requireDecidableAcceptance(acceptanceId);
+    const runs = await this.runModel.listByAcceptance(acceptanceId);
+    const { current } = await this.resolveDecisionBinding(acceptance, runs);
 
-    await this.stampDecision(acceptanceId, 'reject', comment);
+    await this.stampDecision(acceptance, runs, current, 'reject', comment);
 
     return (await this.acceptanceModel.findById(acceptanceId))!;
   };
@@ -1037,12 +1075,12 @@ export class AcceptanceService {
   };
 
   private stampDecision = async (
-    acceptanceId: string,
+    acceptance: AcceptanceItem,
+    runs: VerifyRunItem[],
+    current: VerifyRunItem | undefined,
     decision: 'accept' | 'reject',
     comment?: string,
   ): Promise<void> => {
-    const runs = await this.runModel.listByAcceptance(acceptanceId);
-    const current = runs.at(-1);
     if (!current) throw new Error('This acceptance has no verification round to decide on');
 
     const detail: VerifyRunDecisionDetail = {
@@ -1053,31 +1091,40 @@ export class AcceptanceService {
     const canceled: string[] = [];
     await this.db.transaction(async (tx) => {
       const results = new VerifyCheckResultModel(tx, this.userId, this.workspaceId);
-      for (const result of await results.listByRun(current.id)) {
-        if (
-          result.userDecision ||
-          !['pending', 'running', 'errored', 'skipped'].includes(result.status)
-        )
-          continue;
-        const operationId =
-          result.verifierOperationId ?? pickTrimmedString(result.metadata?.reviewerOperationId);
-        if (
-          operationId &&
-          (await cancelQueuedDeviceOperation(tx, this.userId, operationId, this.workspaceId))
-        )
-          canceled.push(operationId);
-        await results.update(result.id, {
-          userDecision: decision === 'accept' ? 'accepted' : 'rejected',
-          userDecisionDetail: detail,
-        });
+      const pendingRuns =
+        acceptance.subjectType === 'task'
+          ? runs.filter(
+              (run) =>
+                run.id === current.id ||
+                (!run.userDecision &&
+                  (!run.status ||
+                    ['pending', 'planned', 'verifying', 'repairing'].includes(run.status))),
+            )
+          : [current];
+      const runModel = new VerifyRunModel(tx, this.userId, this.workspaceId);
+      for (const run of pendingRuns) {
+        for (const result of await results.listByRun(run.id)) {
+          if (
+            result.userDecision ||
+            !['pending', 'running', 'errored', 'skipped'].includes(result.status)
+          )
+            continue;
+          const operationId =
+            result.verifierOperationId ?? pickTrimmedString(result.metadata?.reviewerOperationId);
+          if (
+            operationId &&
+            (await cancelQueuedDeviceOperation(tx, this.userId, operationId, this.workspaceId))
+          )
+            canceled.push(operationId);
+          await results.update(result.id, {
+            userDecision: decision === 'accept' ? 'accepted' : 'rejected',
+            userDecisionDetail: detail,
+          });
+        }
+        await runModel.setDecision(run.id, decision, detail);
       }
-      await new VerifyRunModel(tx, this.userId, this.workspaceId).setDecision(
-        current.id,
-        decision,
-        detail,
-      );
       await new AcceptanceModel(tx, this.userId, this.workspaceId).updateStatus(
-        acceptanceId,
+        acceptance.id,
         decision === 'accept' ? 'accepted' : 'rejected',
       );
     });

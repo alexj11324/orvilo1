@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   setDecision: vi.fn(),
   taskResolve: vi.fn(),
   taskTopicFindByOperationId: vi.fn(),
+  taskTopicFindByTopicId: vi.fn(),
+  taskUpdateStatus: vi.fn(),
   updateStatus: vi.fn(),
   updatePolicyStatus: vi.fn(),
   listCheckResults: vi.fn(),
@@ -74,7 +76,10 @@ vi.mock('@/database/models/task', () => ({
 }));
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn(function () {
-    return { findByOperationId: mocks.taskTopicFindByOperationId };
+    return {
+      findByOperationId: mocks.taskTopicFindByOperationId,
+      findByTopicId: mocks.taskTopicFindByTopicId,
+    };
   }),
 }));
 vi.mock('@/database/models/topic', () => ({
@@ -83,7 +88,11 @@ vi.mock('@/database/models/topic', () => ({
   }),
 }));
 vi.mock('@/database/models/document', () => ({ DocumentModel: vi.fn() }));
-vi.mock('@/server/services/task', () => ({ TaskService: vi.fn() }));
+vi.mock('@/server/services/task', () => ({
+  TaskService: vi.fn(function () {
+    return { updateStatus: mocks.taskUpdateStatus };
+  }),
+}));
 
 const service = () =>
   new AcceptanceService(
@@ -106,6 +115,8 @@ describe('AcceptanceService decision gating', () => {
     });
     mocks.listByAcceptance.mockResolvedValue([{ id: 'run-1', roundIndex: 1 }]);
     mocks.taskTopicFindByOperationId.mockResolvedValue(null);
+    mocks.taskTopicFindByTopicId.mockResolvedValue(null);
+    mocks.taskResolve.mockResolvedValue(null);
     mocks.listCheckResults.mockResolvedValue([]);
     mocks.cancelQueuedDeviceOperation.mockResolvedValue(false);
     mocks.findOperation.mockResolvedValue({ id: 'queued-reviewer', status: 'interrupted' });
@@ -177,6 +188,124 @@ describe('AcceptanceService decision gating', () => {
       expect(mocks.finishQueuedDeviceOperation).toHaveBeenCalledTimes(1);
     },
   );
+
+  it.each(['accept', 'reject'] as const)(
+    'manual %s decides the current task delivery and cancels its checks despite a newer advisory round',
+    async (action) => {
+      mocks.findById.mockResolvedValue({
+        id: 'acc-1',
+        status: 'planned',
+        subjectId: 'task-1',
+        subjectType: 'task',
+      });
+      mocks.taskResolve.mockResolvedValue({
+        id: 'task-1',
+        currentTopicId: 'delivery-topic',
+        status: 'paused',
+      });
+      mocks.taskTopicFindByTopicId.mockResolvedValue({ operationId: 'delivery-operation' });
+      mocks.listByAcceptance.mockResolvedValue([
+        {
+          id: 'delivery-run',
+          operationId: 'delivery-operation',
+          roundIndex: 1,
+          status: 'verifying',
+        },
+        { id: 'advisory-run', operationId: 'advisory-operation', roundIndex: 2, status: 'planned' },
+      ]);
+      mocks.listCheckResults.mockImplementation(async (runId: string) =>
+        runId === 'delivery-run'
+          ? [{ id: 'queued-check', status: 'running', verifierOperationId: 'queued-reviewer' }]
+          : [],
+      );
+      mocks.cancelQueuedDeviceOperation.mockResolvedValue(true);
+
+      await service()[action]('acc-1', 'Decide the delivery');
+
+      expect(mocks.setDecision).toHaveBeenCalledWith('delivery-run', action, expect.any(Object));
+      expect(mocks.setDecision).toHaveBeenCalledWith('advisory-run', action, expect.any(Object));
+      expect(mocks.cancelQueuedDeviceOperation).toHaveBeenCalledWith(
+        expect.anything(),
+        'user-1',
+        'queued-reviewer',
+        undefined,
+      );
+      expect(mocks.updateCheckResult).toHaveBeenCalledWith(
+        'queued-check',
+        expect.objectContaining({ userDecision: action === 'accept' ? 'accepted' : 'rejected' }),
+      );
+      expect(mocks.finishQueuedDeviceOperation).toHaveBeenCalledTimes(1);
+      if (action === 'accept') {
+        expect(mocks.taskTopicFindByOperationId).toHaveBeenCalledWith('delivery-operation');
+        expect(mocks.taskUpdateStatus).toHaveBeenCalledWith({ id: 'task-1', status: 'completed' });
+      }
+    },
+  );
+
+  it('projects the current delivery and keeps a same-topic repair ahead of an unrelated advisory run', async () => {
+    mocks.findById.mockResolvedValue({
+      id: 'acc-1',
+      subjectType: 'task',
+      subjectId: 'task-1',
+      status: 'repairing',
+    });
+    mocks.taskResolve.mockResolvedValue({ currentTopicId: 'delivery-topic' });
+    mocks.taskTopicFindByTopicId.mockResolvedValue({ operationId: 'delivery-operation' });
+    const repair = {
+      id: 'repair-run',
+      operationId: 'repair-operation',
+      roundIndex: 2,
+      status: 'verifying',
+    };
+    mocks.listByAcceptance.mockResolvedValue([
+      { id: 'delivery-run', operationId: 'delivery-operation', roundIndex: 1, status: 'failed' },
+      repair,
+      { id: 'advisory-run', operationId: 'advisory-operation', roundIndex: 3, status: 'planned' },
+    ]);
+    mocks.findOperation.mockImplementation(async (id: string) =>
+      id === 'repair-operation'
+        ? { id, topicId: 'delivery-topic', parentOperationId: 'delivery-operation' }
+        : { id, topicId: 'advisory-topic' },
+    );
+
+    await expect(service().latestRound('acc-1')).resolves.toEqual(repair);
+    await service().reject('acc-1', 'Repair still needs work');
+    expect(mocks.setDecision).toHaveBeenCalledWith('repair-run', 'reject', expect.any(Object));
+    expect(mocks.setDecision).not.toHaveBeenCalledWith(
+      'delivery-run',
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it('checks the current corrective branch integration while deciding its original verification run', async () => {
+    mocks.findById.mockResolvedValue({
+      id: 'acc-1',
+      subjectType: 'task',
+      subjectId: 'task-1',
+      status: 'verifying',
+    });
+    mocks.taskResolve.mockResolvedValue({
+      id: 'task-1',
+      currentTopicId: 'corrective-topic',
+      status: 'paused',
+    });
+    mocks.taskTopicFindByTopicId.mockResolvedValue({
+      operationId: 'corrective-operation',
+      integration: { verifyOperationId: 'delivery-operation', state: 'blocked' },
+    });
+    mocks.listByAcceptance.mockResolvedValue([
+      { id: 'delivery-run', operationId: 'delivery-operation', roundIndex: 1, status: 'verifying' },
+      { id: 'advisory-run', operationId: 'advisory-operation', roundIndex: 2, status: 'planned' },
+    ]);
+    mocks.taskTopicFindByOperationId.mockResolvedValue({ integration: { state: 'blocked' } });
+
+    await expect(service().accept('acc-1')).rejects.toThrow(
+      'retry acceptance after delivery completes',
+    );
+    expect(mocks.taskTopicFindByOperationId).toHaveBeenCalledWith('corrective-operation');
+    expect(mocks.setDecision).not.toHaveBeenCalled();
+  });
 
   it('refuses to decide twice', async () => {
     mocks.findById.mockResolvedValue(acceptance('accepted'));

@@ -29,6 +29,7 @@ describe('CompletionLifecycle — verify gate scheduling', () => {
 
   it('schedules the verify gate as post-response work, not a detached promise', async () => {
     const lifecycle = new CompletionLifecycle({} as any, 'user-1');
+    vi.spyOn((lifecycle as any).agentOperationModel, 'findById').mockResolvedValue(null);
     vi.spyOn(lifecycle as any, 'persistCompletion').mockResolvedValue(undefined);
     vi.spyOn(lifecycle as any, 'createVerifyMessage').mockResolvedValue(undefined);
     vi.spyOn(hookDispatcher, 'dispatch').mockResolvedValue(undefined as any);

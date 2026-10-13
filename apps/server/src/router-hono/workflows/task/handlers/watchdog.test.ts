@@ -104,7 +104,7 @@ vi.mock('@/database/models/task', () => ({
         updateStatusIfReservation,
       };
     }),
-    { findStuckTasks },
+    { findStuckTasks, queryPendingIssueReviews: vi.fn().mockResolvedValue([]) },
   ),
 }));
 vi.mock('@/database/models/taskDispatch', () => ({

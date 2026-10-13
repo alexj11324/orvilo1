@@ -48,6 +48,15 @@ describe('supervisor recovery authority', () => {
     expect(recoveryEligibility(graph, task, operation).eligible).toBe(true);
   });
 
+  it.each([null, undefined])('uses recorded Task failure when the operation is %s', (missing) => {
+    expect(recoveryEligibility(graph, { ...task, error: 'DEVICE_OFFLINE' }, missing).eligible).toBe(
+      true,
+    );
+    expect(recoveryEligibility(graph, { ...task, error: 'unknown error' }, missing).eligible).toBe(
+      false,
+    );
+  });
+
   it.each([
     'InvalidProviderAPIKey',
     'authentication failed after network error',

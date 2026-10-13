@@ -1929,20 +1929,30 @@ describe('Task Router Integration', () => {
         },
         {},
       );
-      const selected = await caller.update({
-        id: task.data.id,
-        reviewerAgentId: piAgentId,
-        expectedDomainRevision: await revisionOf(task.data.id),
+      await expect(
+        caller.update({
+          id: task.data.id,
+          reviewerAgentId: piAgentId,
+          expectedDomainRevision: await revisionOf(task.data.id),
+        }),
+      ).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+        message: 'Reviewer runtime cannot mount submitTaskReview.',
       });
-      expect(selected.data).toMatchObject({
-        reviewerAgentId: piAgentId,
+      expect((await caller.detail({ id: task.data.id })).data).toMatchObject({
+        reviewerAgentId: null,
         workflowCategory: 'in_progress',
         parkedReason: 'review_required',
+        error: 'Delivery is waiting for a reviewer Agent',
       });
-      expect(selected.data.error).toContain('cannot mount submitVerifyResult');
       expect(mockExecAgent).not.toHaveBeenCalled();
     });
     it('reports a readable reviewer requirement, then allows review with an Agent', async () => {
+      const { agents } = await import('@/database/schemas');
+      await serverDB
+        .update(agents)
+        .set({ agencyConfig: { heterogeneousProvider: { type: 'opencode' } }, model: 'opencode' })
+        .where(eq(agents.id, testAgentId));
       const task = await caller.create({ instruction: 'Review delivery' });
       await expect(
         caller.update({ id: task.data.id, workflowCategory: 'in_review' }),

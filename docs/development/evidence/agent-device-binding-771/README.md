@@ -1,6 +1,6 @@
 # Agent device binding and verification recovery evidence
 
-Final implementation source: `383bbe9cbf19077a119be5e7e32d49051c8a499e`, rebased onto `c597d9d73`. The final direct-SQL probe and T-12 default-verifier retry below ran against this source through the dedicated local product database and actual Electron app. Later evidence-only commits do not change implementation source.
+Product verification source: `383bbe9cbf19077a119be5e7e32d49051c8a499e`, rebased onto `c597d9d73`. The direct-SQL probe and T-12 default-verifier retry below ran against this source through the dedicated local product database and actual Electron app. The later `a9536d09b54b3000215abbc6825b0b1790c1260e` correction captures the same guarded reply string in a typed local constant and declares the fixture's supplied agency field; it does not change product behavior. Later evidence and regression-only commits also reuse this product verification. The PR records the final CI source SHA separately.
 
 The environment uses PostgreSQL, Redis, both local gateways and Electron with OpenCode `opencode/mimo-v2.6-flash-free`. Sign-in uses the seed-login helper. Verification retry and reviewer selection use normal authenticated, workspace-scoped product APIs from the Electron renderer. Server provider bindings remain **0**. This does not use a browser to spawn local CLI processes.
 

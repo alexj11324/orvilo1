@@ -53,14 +53,15 @@ describe('AgentOperationModel', () => {
   });
 
   describe('recordStart', () => {
-    it.each([{ skipTaskVerification: true }, { trigger: 'acp_judgment' }])(
-      'persists internal verification suppression for callback recovery (%o)',
-      async (policy) => {
-        const model = new AgentOperationModel(serverDB, userId);
-        await model.recordStart({ operationId: 'op-skip-verify', ...policy });
-        expect((await model.findById('op-skip-verify'))?.metadata?.skipTaskVerification).toBe(true);
-      },
-    );
+    it.each([
+      { skipTaskVerification: true },
+      { skipTaskVerification: true, metadata: { skipTaskVerification: false } },
+      { trigger: 'acp_judgment' },
+    ])('persists internal verification suppression for callback recovery (%o)', async (policy) => {
+      const model = new AgentOperationModel(serverDB, userId);
+      await model.recordStart({ operationId: 'op-skip-verify', ...policy });
+      expect((await model.findById('op-skip-verify'))?.metadata?.skipTaskVerification).toBe(true);
+    });
 
     it('does not accept verification suppression from caller metadata', async () => {
       const model = new AgentOperationModel(serverDB, userId);

@@ -158,6 +158,15 @@ const Select = <Value extends string | number = string>({
             aria-label={ariaLabel}
             id={id}
             placeholder={typeof placeholder === 'string' ? placeholder : undefined}
+            onKeyDown={(event) => {
+              if (
+                event.key === 'Escape' &&
+                event.currentTarget.getAttribute('aria-expanded') === 'false'
+              ) {
+                // Closed Escape dismisses ancestors; it must not clear this Select's values.
+                event.preventBaseUIHandler();
+              }
+            }}
           />
           {allowClear && (
             <ComboboxClear

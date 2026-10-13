@@ -8,9 +8,11 @@ Never shorten this concept to `workflow`. Use `orchestrationWorkflow`, `Orchestr
 
 The server mounts `orvilo-orchestration-workflow` automatically for a conversation with the scope's configured Orchestrator. An ordinary Agent, a child Task operation, and an exclusive judgment or supervisor run do not receive this start tool. A runtime that cannot mount the required surface is rejected with `ORCHESTRATOR_RUNTIME_UNSUPPORTED`.
 
-The Orchestrator calls `startOrchestrationWorkflow` with the complete proposed deliverable, acceptance criteria, attempt budget, optional cost budget, deadline and parallelism. The tool's client intervention remains an editable plan. CLI/MCP calls use the existing durable tool-approval receipt: it binds the operation, tool call, complete arguments, schema and current approval window. Only a human-authenticated approval can satisfy it. The host shows the full orchestration plan, then retries the same call. Pending or denied approval creates no orchestration workflow or Issue.
+The Orchestrator calls `prepareOrchestrationWorkflow` with the parent request and the complete split: distinct sub-Issue titles, descriptions with scope and checkable acceptance criteria, assignees, reviewers, dependencies and budgets. The server creates real parent/sub-Issues in Backlog and posts the split in the originating conversation. `config.conversationPlan` persists that message and its reply boundary. Intake and every dispatch entry point, including direct runs, hold the split until release. Other Backlog Issues retain their normal intake behavior.
 
-The server stamps `config.planConfirmedAt` only on the confirmed creation path. The coordinator does not advance an unconfirmed row. After a confirmed start the conversation delegates execution to the coordinator instead of doing or duplicating the requested work.
+Confirmation is the person's reply in that conversation. On a confirming reply, the Orchestrator calls `startOrchestrationWorkflow` with the existing id. The server checks that this turn's source message is a real user message in the same conversation, later than the posted split. An Agent cannot manufacture its own confirmation. The guard checks arrival, while the Orchestrator judges whether the reply confirms or requests changes. No permission dialog, Start button or special pending-plan editor is involved.
+
+For revisions, the Orchestrator edits or deletes the ordinary Backlog Issues, then calls `postOrchestrationWorkflowPlan`. This synchronizes the graph with the current Issue descriptions and dependency order, posts the revised split, and resets the reply boundary. The server stamps `config.planConfirmedAt` on release. After release the existing coordinator executes the Issues; the conversation does not duplicate their delivery.
 
 There is no Orvilo slash-command contract for starting this engine. Codex's own `/goal` remains a Codex command.
 
@@ -18,7 +20,7 @@ There is no Orvilo slash-command contract for starting this engine. Codex's own 
 
 `AgentModel.getOrchestratorSourceAgentId()` resolves the acting user's configured Orchestrator in the active workspace, or their personal scope. New orchestration workflows are owned by that Agent even when a caller supplies a different current-agent id. Agent-authored creation is refused unless its author is the Orchestrator. Rebinding and restarting under another Agent require selecting that Agent as the scope's Orchestrator first.
 
-`OrchestrationWorkflowService.createResponsibleTask` assigns each created Issue to the orchestration workflow's Agent. The coordinator does not currently choose separate workers per node. Parallelism remains a cap on independent Issue executions, with the existing isolated workspaces and merge-back path.
+`OrchestrationWorkflowService.createResponsibleTask` defaults each Issue to the orchestration workflow's Orchestrator; the proposed split may select another accessible Agent and a reviewer. The parent Issue is the request container and is not dispatched as a duplicate delivery. Parallelism remains a cap on independent Issue executions, with the existing isolated workspaces and merge-back path.
 
 Criteria drafting, executable decomposition, graph exploration and task-intent analysis/synthesis all use `generateOrchestrationWorkflowObject`. It resolves the scope's Orchestrator and invokes an ACP judgment operation on its execution device with structured tool submission. There is no server-model fallback for these planning calls. Missing setup or an unavailable device is an explicit failure. Manager planning already runs through an Agent operation. The retained acceptance/reviewer engine is separate.
 
@@ -34,15 +36,15 @@ Migration `0212_orchestration_workflow` renames SQL tables, columns, indexes and
 
 All procedures live under `orchestrationWorkflow`. The caller supplies the orchestration workflow id as `id`; no graph-page load is required.
 
-| Procedure       | Input                                       | Result                                                                          |
-| --------------- | ------------------------------------------- | ------------------------------------------------------------------------------- |
-| `pause`         | `{ id }`                                    | Paused orchestration workflow                                                   |
-| `resume`        | `{ id }`                                    | Resumed orchestration workflow; schedules advancement                           |
-| `listDecisions` | `{ id }`                                    | Open decisions, including their ids, questions and options                      |
-| `decide`        | `{ id, decisionId, optionId, resolution? }` | Records the answer and schedules advancement                                    |
-| `listIssues`    | `{ id }`                                    | Issue ids, identifiers, titles, canonical status category and status references |
-| `getStatus`     | `{ id }`                                    | State, ownership/project, confirmation marker, admission and waiting reason     |
+| Procedure       | Input                                       | Result                                                                                         |
+| --------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `pause`         | `{ id }`                                    | Paused orchestration workflow                                                                  |
+| `resume`        | `{ id }`                                    | Resumed orchestration workflow; schedules advancement                                          |
+| `listDecisions` | `{ id }`                                    | Open decisions, including their ids, questions and options                                     |
+| `decide`        | `{ id, decisionId, optionId, resolution? }` | Records the answer and schedules advancement                                                   |
+| `listIssues`    | `{ id }`                                    | Issue ids, identifiers, titles, parent, assignee/reviewer, dependency ids and canonical status |
+| `getStatus`     | `{ id }`                                    | State, ownership/project, confirmation marker, admission and waiting reason                    |
 
-Waiting reasons distinguish `plan_not_confirmed`, `decision_pending`, `dispatch_not_admitted`, `device_offline`, `planning` and `paused`; terminal states have no waiting reason. Before creation the existing tool-approval card represents the pending proposal. Card reads query only their own rows and do not hydrate graph artifacts, trace history or Work versions.
+Waiting reasons distinguish `plan_not_confirmed`, `decision_pending`, `dispatch_not_admitted`, `device_offline`, `planning` and `paused`; terminal states have no waiting reason. The durable conversation plan represents the pending split, including after reload. Card reads query only their own rows and do not hydrate graph artifacts, trace history or Work versions.
 
 The frontend owner removes the old pages and entry points and adds these controls to conversation cards. Backend changes follow renamed public references while preserving frontend-owned directories, copy, route parameter keys and persisted UI preferences.

@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
+import { TaskModel } from '@/database/models/task';
 import {
   orchestrationWorkflowNodeDecisions,
   orchestrationWorkflowNodes,
@@ -74,7 +75,7 @@ export class OrchestrationWorkflowConversationService {
 
   listIssues = async (id: string) => {
     await this.requireOrchestrationWorkflow(id);
-    return this.db
+    const issues = await this.db
       .select({
         id: tasks.id,
         identifier: tasks.identifier,
@@ -83,10 +84,27 @@ export class OrchestrationWorkflowConversationService {
         workflowCategory: tasks.workflowCategory,
         workflowStateId: tasks.workflowStateId,
         workflowStateRefId: tasks.workflowStateRefId,
+        parentTaskId: tasks.parentTaskId,
+        assigneeAgentId: tasks.assigneeAgentId,
+        config: tasks.config,
       })
       .from(orchestrationWorkflowNodes)
       .innerJoin(tasks, eq(tasks.id, orchestrationWorkflowNodes.taskId))
       .where(eq(orchestrationWorkflowNodes.orchestrationWorkflowId, id));
+    const dependencies = await new TaskModel(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).getDependenciesByTaskIds(issues.map((issue) => issue.id));
+    return issues.map(({ config, ...issue }) => ({
+      ...issue,
+      reviewerAgentId:
+        (config as { verify?: { verifierAgentId?: string } } | null)?.verify?.verifierAgentId ??
+        null,
+      dependsOn: dependencies
+        .filter((dependency) => dependency.taskId === issue.id)
+        .map((dependency) => dependency.dependsOnId),
+    }));
   };
 
   getStatus = async (id: string) => {
@@ -109,6 +127,8 @@ export class OrchestrationWorkflowConversationService {
       projectId: item.projectId,
       status: item.status,
       planConfirmedAt: item.config?.planConfirmedAt ?? null,
+      parentTaskId: item.subjectType === 'task' ? item.subjectId : null,
+      conversationTopicId: item.config?.conversationPlan?.topicId ?? null,
       waitingReason: orchestrationWorkflowWaitingReason(item, {
         decisionPending: decisions.length > 0,
         dispatchAllowed,

@@ -265,8 +265,6 @@ export interface ToolExecutionContext {
   onWorkRegistration?: (intent: WorkRegistrationIntent) => void;
   /** Agent runtime operation ID for structured tool outcome identity. */
   operationId?: string;
-  /** Internal approval provenance; never populated from tool arguments. */
-  orchestrationWorkflowPlanApproved?: boolean;
   /**
    * Filesystem skills (name + absolute SKILL.md path) discovered on the
    * execution device. Used by the Skills runtime to load them on demand via the

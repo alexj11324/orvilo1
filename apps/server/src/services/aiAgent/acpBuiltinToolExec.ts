@@ -242,27 +242,6 @@ export const execAcpBuiltinTool = async (
 
   const operation = await loadAcpToolOperation(db, operationId);
   const allowlist = resolveToolAllowlist(operation, identifier, apiName);
-  // CLI MCP calls bypass client interventions. Use the existing durable,
-  // argument-bound human approval protocol before creating any work.
-  if (identifier === 'orvilo-orchestration-workflow') {
-    const pending = await gateAcpExternalToolApproval({
-      apiName,
-      argsJson: JSON.stringify(args ?? {}),
-      db,
-      identifier,
-      kind: 'builtin_tool',
-      operation,
-      schemaDigest: apiSchemaDigest(
-        builtinTools
-          .find((tool) => tool.identifier === identifier)
-          ?.manifest.api.find((api) => api.name === apiName)?.parameters ?? {},
-      ),
-      toolCallId,
-      userId,
-      workspaceId: operation.workspaceId ?? workspaceId,
-    });
-    if (pending) return pending;
-  }
   if (groupSupervisorToolIds.includes(identifier)) {
     if (!operation.chatGroupId || !operation.agentId) {
       throw new AcpBuiltinToolForbiddenError('Group tools require the assigned group supervisor');
@@ -379,7 +358,6 @@ export const execAcpBuiltinTool = async (
   );
 
   const context: ToolExecutionContext = {
-    orchestrationWorkflowPlanApproved: identifier === 'orvilo-orchestration-workflow',
     activeDeviceId: builtinToolContext.activeDeviceId,
     activeDeviceScope: builtinToolContext.activeDeviceScope,
     agentId: operation.agentId ?? undefined,
@@ -717,7 +695,7 @@ const gateAcpExternalToolApproval = async (params: {
   db: OrviloDatabase;
   identifier: string;
   grantRevision?: string;
-  kind: 'connector_tool' | 'plugin_tool' | 'builtin_tool';
+  kind: 'connector_tool' | 'plugin_tool';
   operation: OperationRow;
   pluginInstallId?: string;
   schemaDigest?: string;

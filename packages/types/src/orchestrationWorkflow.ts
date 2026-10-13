@@ -259,6 +259,8 @@ export interface OrchestrationWorkflowConfig {
    */
   caidPlan?: { revision: number };
 
+  /** Conversation receipt for the split; only a later user message may release it. */
+  conversationPlan?: { topicId: string; postedMessageId: string; postedAt: string };
   exploration?: OrchestrationWorkflowExplorationConfig;
   manager?: OrchestrationWorkflowManagerPolicy;
   managerState?: OrchestrationWorkflowManagerState;
@@ -287,7 +289,7 @@ export interface OrchestrationWorkflowConfig {
 /** Creation accepts planning options, never a separate manager identity or runtime receipt. */
 export type OrchestrationWorkflowCreateConfig = Omit<
   OrchestrationWorkflowConfig,
-  'manager' | 'managerState' | 'supervisorState'
+  'manager' | 'managerState' | 'supervisorState' | 'planConfirmedAt' | 'conversationPlan'
 > & {
   manager?: Omit<OrchestrationWorkflowManagerPolicy, 'agentId'>;
 };

@@ -99,7 +99,6 @@ export interface AcpBuiltinToolCaller {
     expiresAt?: number;
     identifier: string;
     operationId: string;
-    onProgress?: (elapsedMs: number, totalMs: number) => Promise<void>;
     toolCallId: string;
     /** Approval-window id the card must echo back on submit (SA02-C). */
     windowId?: string;
@@ -241,21 +240,6 @@ export const buildAcpBuiltinToolExtras = (
             expiresAt: toolApproval?.expiresAt,
             identifier: spec.identifier,
             operationId,
-            onProgress:
-              (typeof rawProgressToken === 'string' || typeof rawProgressToken === 'number') &&
-              extra?.sendNotification
-                ? async (elapsedMs, totalMs) => {
-                    await extra.sendNotification!({
-                      method: 'notifications/progress',
-                      params: {
-                        message: 'Waiting for human approval',
-                        progress: elapsedMs,
-                        progressToken: rawProgressToken,
-                        total: totalMs,
-                      },
-                    });
-                  }
-                : undefined,
             toolCallId,
             windowId: toolApproval?.windowId,
           });

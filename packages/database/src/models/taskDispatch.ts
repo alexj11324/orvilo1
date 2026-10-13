@@ -467,6 +467,35 @@ export class TaskDispatchModel {
     task: TaskItem,
     trigger: TaskRunTrigger,
   ): Promise<string | null> {
+    // This hold applies to every entry point, including direct/manual runs.
+    // The parent is a container; only its graph Tasks execute after release.
+    const [split] = await db
+      .select({
+        config: orchestrationWorkflows.config,
+        subjectId: orchestrationWorkflows.subjectId,
+      })
+      .from(orchestrationWorkflows)
+      .where(
+        and(
+          sql`${orchestrationWorkflows.config} ? 'conversationPlan'`,
+          or(
+            and(
+              eq(orchestrationWorkflows.subjectType, 'task'),
+              eq(orchestrationWorkflows.subjectId, task.id),
+            ),
+            sql`EXISTS (
+              WITH RECURSIVE ancestors AS (
+                SELECT id, parent_task_id FROM tasks WHERE id = ${task.id}
+                UNION SELECT parent.id, parent.parent_task_id FROM tasks parent JOIN ancestors ON parent.id = ancestors.parent_task_id
+              ) SELECT 1 FROM ancestors WHERE id = ${orchestrationWorkflows.subjectId}
+            )`,
+            sql`EXISTS (SELECT 1 FROM ${orchestrationWorkflowNodes} n WHERE n.orchestration_workflow_id = ${orchestrationWorkflows.id} AND n.task_id = ${task.id})`,
+          ),
+        ),
+      )
+      .limit(1);
+    if (split && !split.config?.planConfirmedAt) return 'orchestration_workflow_awaiting_reply';
+    if (split?.subjectId === task.id) return 'orchestration_workflow_parent';
     if (trigger === 'manual') return null;
     const [blocked] = await db
       .select({ status: orchestrationWorkflows.status })
@@ -652,6 +681,23 @@ export class TaskDispatchModel {
           isNotNull(tasks.assigneeAgentId),
           isNull(tasks.automationMode),
           sql`${tasks.isDeleted} IS NOT TRUE`,
+          sql`NOT EXISTS (
+            SELECT 1 FROM ${orchestrationWorkflows} split
+            WHERE split.config ? 'conversationPlan'
+              AND (
+                (split.subject_type = 'task' AND split.subject_id = ${tasks.id})
+                OR (split.config ->> 'planConfirmedAt' IS NULL AND EXISTS (
+                  SELECT 1 FROM ${orchestrationWorkflowNodes} n
+                  WHERE n.orchestration_workflow_id = split.id AND n.task_id = ${tasks.id}
+                ))
+                OR (split.config ->> 'planConfirmedAt' IS NULL AND EXISTS (
+                  WITH RECURSIVE ancestors AS (
+                    SELECT seed.id, seed.parent_task_id FROM tasks seed WHERE seed.id = ${tasks.id}
+                    UNION SELECT parent.id, parent.parent_task_id FROM tasks parent JOIN ancestors ON parent.id = ancestors.parent_task_id
+                  ) SELECT 1 FROM ancestors WHERE id = split.subject_id
+                ))
+              )
+          )`,
           sql`(${projects.orchestrationPolicy} ->> 'autoDispatch')::boolean`,
           sql`NOT EXISTS (
             SELECT 1 FROM ${taskDispatches} active

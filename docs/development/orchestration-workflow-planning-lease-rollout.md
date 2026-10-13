@@ -4,7 +4,7 @@ Initial decomposition claims a bounded coordinator lease through `OrchestrationW
 
 Planning runs through the scope's Orchestrator ACP operation. It does not hold a database lock while waiting for the Agent. The commit transaction rechecks the current token, expiry, state and authoritative requirement, then writes the bounded task nodes and their dependencies atomically. A stale claimant cannot commit over a newer plan or duplicate the initial nodes.
 
-Human plan confirmation precedes this lease. An unconfirmed row is held with `plan_not_confirmed`; `config.planConfirmedAt` is server-stamped after approval. The independent CLI/MCP approval receipt binds the complete proposed arguments and current decision window before any creation occurs.
+A conversation reply releases the board split before this execution lease. An unconfirmed row is held with `plan_not_confirmed`; `config.conversationPlan` records the posted split and `config.planConfirmedAt` is server-stamped only after checking a later user message in the same conversation. Creation persists the Issues without dispatching them.
 
 Migration `0212_orchestration_workflow` preserves existing rows, lease tokens and graph relationships while renaming their SQL and application names. Existing admitted rows receive the confirmation marker. It does not drop or recreate the graph.
 

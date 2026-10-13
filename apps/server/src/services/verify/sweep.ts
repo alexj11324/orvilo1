@@ -45,7 +45,7 @@ export interface VerifySweepOutcome {
  * deploy, OOM, provider hang — strands the run. Nothing downstream re-reads it:
  * the rollup is denormalized, the read paths trust it, and the task watchdog
  * only looks at tasks carrying a heartbeat timeout. Without this sweep such a
- * run is stuck for good, and so is the acceptance and goal card above it.
+ * run is stuck for good, and so is the acceptance and orchestration workflow card above it.
  *
  * Two shapes, deliberately treated differently:
  *
@@ -194,7 +194,7 @@ const recoverRun = async (
 
   await statusService.recompute(operationId);
   // No report context — the sweep holds no deliverable. The task is still driven,
-  // which is the whole point: the goal has been waiting on this verdict.
+  // which is the whole point: the orchestration workflow has been waiting on this verdict.
   await finalizeVerifyRun(db, run.userId, operationId, {}, workspaceId);
 
   const action = outstanding.length > 0 ? 'abandoned' : 'settled';

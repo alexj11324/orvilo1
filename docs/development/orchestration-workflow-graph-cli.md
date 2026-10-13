@@ -21,6 +21,6 @@ orvilo orchestration-workflow submit-draft --token <token> --file <json-path>
 orvilo orchestration-workflow plan <id> --token <token> --file <json-path> --json
 ```
 
-An operation-bound token is restricted to its own active operation and planning turn; it cannot approve a human tool-approval receipt. The MCP start tool waits for an actual human approval before creation.
+An operation-bound token is restricted to its own active operation and planning turn. The MCP prepare tool creates a board split and posts it in the originating conversation; its start tool can release that split only after a later user reply in the same conversation. Operator creation leaves an unconfirmed graph; it does not bypass this admission.
 
 The graph remains the engine's problem/task/experiment/decision/evidence structure. A Task node owns a normal Issue and execution attempt; it is not a replacement Issue status model. API consumers can use `orchestrationWorkflow.listIssues`, `listDecisions` and `getStatus` without loading this graph.

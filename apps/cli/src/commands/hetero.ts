@@ -41,10 +41,6 @@ import type { Command } from 'commander';
 import { createLambdaClient, getTrpcClient } from '../api/client';
 import { resolveServerUrl } from '../settings';
 import {
-  buildAcpToolApprovalOptions,
-  buildAcpToolApprovalQuestion,
-} from '../utils/acpToolApproval';
-import {
   persistChildResultInboxRecord,
   resolvePersistentToolCallId,
 } from '../utils/childResultInbox';
@@ -636,18 +632,11 @@ const exec = async (options: ExecOptions): Promise<void> => {
         // surface the permission card on the run's AskUser bridge. No bridge
         // (headless producer) cancels immediately — the server receipt stays
         // pending and the call is refused.
-        requestApproval: async ({
-          apiName,
-          args,
-          expiresAt,
-          identifier,
-          onProgress,
-          toolCallId,
-          windowId,
-        }) => {
+        requestApproval: async ({ apiName, args, expiresAt, identifier, toolCallId, windowId }) => {
           if (!askBridge) {
             return { cancelReason: 'session_ended' as const, cancelled: true };
           }
+          const argsPreview = JSON.stringify(args);
           return askBridge.pending(
             {
               arguments: {
@@ -655,8 +644,13 @@ const exec = async (options: ExecOptions): Promise<void> => {
                   {
                     header: `${identifier}.${apiName}`,
                     multiSelect: false,
-                    options: buildAcpToolApprovalOptions(identifier),
-                    question: buildAcpToolApprovalQuestion(identifier, apiName, args),
+                    options: [
+                      { id: 'approve', label: 'Approve' },
+                      { id: 'deny', label: 'Deny' },
+                    ],
+                    question:
+                      `Allow tool "${identifier}.${apiName}" to run?\n\n` +
+                      (argsPreview.length > 2000 ? `${argsPreview.slice(0, 2000)}…` : argsPreview),
                   },
                 ],
               },
@@ -665,8 +659,6 @@ const exec = async (options: ExecOptions): Promise<void> => {
               windowId,
             },
             {
-              onProgress,
-              progressIntervalMs: 5000,
               timeoutMs: expiresAt === undefined ? undefined : Math.max(1, expiresAt - Date.now()),
             },
           );

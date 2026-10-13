@@ -208,38 +208,24 @@ const baseInput = {
 };
 
 describe('execAcpBuiltinTool', () => {
-  it('blocks a CLI orchestration proposal until the human approves its complete arguments', async () => {
+  it('forwards an orchestration call with its trusted conversation and source user message, without an approval dialog', async () => {
     const input = {
       ...baseInput,
       identifier: 'orvilo-orchestration-workflow',
-      apiName: 'startOrchestrationWorkflow',
-      args: {
-        name: 'Ship it',
-        instruction: 'Deliver two files',
-        criteria: [{ title: 'Both exist' }],
-      },
+      apiName: 'prepareOrchestrationWorkflow',
     };
     const op = {
       ...baseOp,
       taskId: null,
+      appContext: { ...baseOp.appContext, sourceMessageId: 'user-reply' },
       metadata: { ...baseOp.metadata, builtinTools: { [input.identifier]: [input.apiName] } },
     };
-    mockConsumeApprovalReceipt.mockResolvedValue(false);
-    mockGetReceiptPayload.mockResolvedValue(undefined);
-    const result = await execAcpBuiltinTool(buildDeps({ op }), input);
-    expect(result.success).toBe(false);
-    expect(result.error?.code).toBe('acp_tool_approval_pending');
-    expect(mockExecute).not.toHaveBeenCalled();
-    expect(mockUpsertReceipt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: expect.objectContaining({
-          payload: expect.objectContaining({
-            kind: 'builtin_tool',
-            argsHash: sha256Hex(stableStringify(input.args)),
-          }),
-        }),
-      }),
+    await execAcpBuiltinTool(buildDeps({ op }), input);
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ messageId: 'user-reply', topicId: op.topicId }),
     );
+    expect(mockUpsertReceipt).not.toHaveBeenCalled();
   });
   beforeEach(() => {
     vi.clearAllMocks();

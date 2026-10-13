@@ -219,7 +219,7 @@ export class OrchestrationWorkflowModel {
         return undefined;
       // A running orchestration workflow without lease provenance may still have an unfenced
       // pre-lease worker in flight. Never infer abandonment from elapsed time.
-      // See docs/developmentstartOrchestrationWorkflow-planning-lease-rollout.md before rollout/rollback.
+      // See docs/development/orchestration-workflow-planning-lease-rollout.md before rollout/rollback.
       if (
         orchestrationWorkflow.status === 'running' &&
         !orchestrationWorkflow.config?.planningProtocol &&

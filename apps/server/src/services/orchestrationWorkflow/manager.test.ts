@@ -8,6 +8,7 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import { OrchestrationWorkflowGraphModel } from '@/database/models/orchestrationWorkflowGraph';
 import { TaskModel } from '@/database/models/task';
+import { UserModel } from '@/database/models/user';
 import {
   acceptances,
   agentOperations,
@@ -41,7 +42,7 @@ const db = await getTestDB();
 const userId = 'cli-manager-test-user';
 const agentId = 'cli-manager-test-agent';
 let seq = 0;
-const service = () => new OrchestrationWorkflowService(db, userId);
+const service = () => confirmedService();
 const manager = () => new OrchestrationWorkflowManagerService(db, userId);
 const model = () => new OrchestrationWorkflowModel(db, userId);
 const ops = () => new AgentOperationModel(db, userId);
@@ -51,6 +52,25 @@ const taskPlan = {
   tasks: [{ title: 'Audit', description: 'Count actual evidence and register a report' }],
 };
 
+// Engine tests start from a persisted, already confirmed admission (as historical rows do).
+const confirmedService = () => {
+  const service = new OrchestrationWorkflowService(db, userId);
+  const create = service.create;
+  service.create = async (input) => {
+    const graph = await create(input);
+    const config = {
+      ...graph.orchestrationWorkflow.config,
+      planConfirmedAt: new Date().toISOString(),
+    };
+    await new OrchestrationWorkflowModel(db, userId).update(graph.orchestrationWorkflow.id, {
+      config,
+    });
+    graph.orchestrationWorkflow.config = config;
+    return graph;
+  };
+  return service;
+};
+
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
   await db.insert(agents).values({
@@ -58,6 +78,7 @@ beforeEach(async () => {
     id: agentId,
     userId,
   });
+  await new UserModel(db, userId).updatePreference({ orchestratorAgentId: agentId });
   vi.spyOn(scheduler, 'scheduleOrchestrationWorkflowAdvance').mockResolvedValue();
   vi.spyOn(AiAgentService.prototype, 'execAgent').mockImplementation(async (params) => {
     const operationId = `op-manager-${++seq}`;
@@ -259,16 +280,20 @@ describe('CLI main Agent planning', () => {
       id: 'new-task-worker',
       userId,
     });
-    await service().setAgent(graph.orchestrationWorkflow.id, 'new-task-worker');
+    await expect(
+      service().setAgent(graph.orchestrationWorkflow.id, 'new-task-worker'),
+    ).rejects.toThrow('ORCHESTRATOR_REQUIRED');
     expect((await model().findById(graph.orchestrationWorkflow.id))?.config?.manager?.agentId).toBe(
       agentId,
     );
   });
 
   it('requires an accessible creator when planning options are supplied', async () => {
+    await new UserModel(db, userId).updatePreference({ orchestratorAgentId: null });
     await expect(
       service().create({ title: 'Missing creator', config: { manager: {} } }),
-    ).rejects.toThrow('creating or selected Agent');
+    ).rejects.toThrow('ORCHESTRATOR_SETUP_REQUIRED');
+    await new UserModel(db, userId).updatePreference({ orchestratorAgentId: agentId });
     await expect(
       service().create({ title: 'Unknown creator', createdByAgentId: 'unrelated-agent' }),
     ).rejects.toThrow();

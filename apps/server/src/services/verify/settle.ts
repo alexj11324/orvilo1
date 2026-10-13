@@ -470,7 +470,7 @@ export const driveTaskFromVerify = async (
 
       // Every summary is a contract string, not copy: the OrchestrationWorkflow coordinator
       // matches on them to decide whether a paused OrchestrationWorkflow Task starts another
-      // attempt or opens a decision gate. They live in `@orvilo/conststartOrchestrationWorkflow`
+      // attempt or opens a decision gate. They live in `@orvilo/const/orchestrationWorkflow`
       // so the writer and the reader cannot drift apart.
       const pauseSummary =
         outcome === 'unjudgeable'

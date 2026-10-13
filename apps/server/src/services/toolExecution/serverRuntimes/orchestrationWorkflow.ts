@@ -6,29 +6,26 @@ import {
   resolveOrchestrationWorkflowScheduleConfig,
 } from '@orvilo/builtin-tool-orchestration-workflow';
 
-import { AgentModel } from '@/database/models/agent';
-import { OrchestrationWorkflowService } from '@/server/services/orchestrationWorkflow';
 import { advanceOrchestrationWorkflow } from '@/server/services/orchestrationWorkflow/advanceOrchestrationWorkflow';
+import {
+  OrchestrationWorkflowConversationPlanService,
+  type OrchestrationWorkflowSplitTask,
+} from '@/server/services/orchestrationWorkflow/conversationPlan';
 import { scheduleOrchestrationWorkflowAdvance } from '@/server/services/orchestrationWorkflow/scheduler';
 
 import type { ServerRuntimeRegistration } from './types';
 
-/**
- * Server-side `startOrchestrationWorkflow`: create a OrchestrationWorkflow Graph and advance it once.
- *
- * It lives in its own runtime rather than on the task runtime because a orchestration workflow is
- * no longer a task with a `orchestration workflows` row attached — the graph owns the
- * decomposition and dispatches its own Work Tasks.
- */
 export const orchestrationWorkflowRuntime: ServerRuntimeRegistration = {
   factory: (context) => {
-    if (!context.userId || !context.serverDB) {
-      throw new Error('userId and serverDB are required for Orchestration workflow tool execution');
-    }
-    const { agentId, serverDB, userId, workspaceId } = context;
-
+    const { agentId, serverDB, userId, workspaceId, topicId } = context;
+    if (!userId || !serverDB) throw new Error('userId and serverDB are required');
+    const plans = new OrchestrationWorkflowConversationPlanService(serverDB, userId, workspaceId);
+    const conversation = () => {
+      if (!agentId || !topicId) throw new Error('An Orchestrator conversation is required');
+      return { agentId, topicId };
+    };
     return {
-      startOrchestrationWorkflow: async (args: {
+      prepareOrchestrationWorkflow: async (args: {
         criteria: Array<{ description?: string; instruction?: string; title: string }>;
         deadline?: string | null;
         instruction: string;
@@ -36,131 +33,78 @@ export const orchestrationWorkflowRuntime: ServerRuntimeRegistration = {
         maxIterations?: number | null;
         maxTotalCost?: number | null;
         name: string;
+        tasks: OrchestrationWorkflowSplitTask[];
       }) => {
-        if (!context.orchestrationWorkflowPlanApproved) {
-          return {
-            content:
-              'The complete orchestration workflow plan must be confirmed by the person first.',
-            success: false,
-          };
-        }
-        const orchestratorAgentId = await new AgentModel(
-          serverDB,
-          userId,
-          workspaceId ?? undefined,
-        ).getOrchestratorSourceAgentId();
-        if (agentId !== orchestratorAgentId) {
-          return {
-            content: 'Only the workspace Orchestrator may start an orchestration workflow.',
-            success: false,
-          };
-        }
-
         const drafts = (args.criteria ?? []).filter((item) => item.title?.trim());
-        if (drafts.length === 0) {
+        if (!drafts.length)
           return {
-            content: 'An orchestration workflow needs at least one acceptance criterion.',
+            content: 'An orchestration workflow needs acceptance criteria.',
             success: false,
           };
-        }
-
-        try {
-          const orchestrationWorkflowService = new OrchestrationWorkflowService(
-            serverDB,
-            userId,
-            workspaceId ?? undefined,
-          );
-          const scheduleConfig = resolveOrchestrationWorkflowScheduleConfig(args.deadline);
-          const maxConcurrentTasks = resolveOrchestrationWorkflowConcurrency(
-            args.maxConcurrentTasks,
-          );
-          const graph = await orchestrationWorkflowService.create({
-            agentId,
-            createdByAgentId: agentId,
+        const schedule = resolveOrchestrationWorkflowScheduleConfig(args.deadline);
+        const concurrency = resolveOrchestrationWorkflowConcurrency(args.maxConcurrentTasks);
+        const state = await plans.prepare(
+          {
             config: {
-              ...(maxConcurrentTasks !== undefined ? { maxConcurrentTasks } : {}),
+              ...(concurrency !== undefined ? { maxConcurrentTasks: concurrency } : {}),
               recovery: {
                 maxAttemptsPerTask: resolveOrchestrationWorkflowAttemptBudget(args.maxIterations),
               },
-              ...(scheduleConfig ? { schedule: scheduleConfig } : {}),
+              ...(schedule ? { schedule } : {}),
             },
-            // `maxIterations` caps attempts on one Work; it is deliberately not
-            // passed as `maxRounds`, which counts runs across every Work in the
-            // graph and would strand later tasks that have not run at all.
-            // Structured criteria persist alongside the prose requirement so the
-            // orchestration workflow page can edit them and the terminal acceptance runs exactly them.
             criteria: drafts,
             maxTotalCost: args.maxTotalCost ?? undefined,
-            // No seed work: the coordinator plans the decomposition on first
-            // advance, so a complex ask becomes several explorable directions
-            // instead of one task that mirrors the whole request.
             problemDescription: args.instruction,
             requirement: buildOrchestrationWorkflowRequirement(args.name, drafts, args.instruction),
+            tasks: args.tasks,
             title: args.name,
-          });
-          // The TRPC `orchestrationWorkflow.create` route queues this; calling the service
-          // directly does not. Without it the "the server will pick it up"
-          // promise below is false — outside queue mode there is no local timer
-          // for the orchestration workflow and no recurring sweep, so it would sit in `planning`
-          // while the agent has been told not to create it again.
-          await scheduleOrchestrationWorkflowAdvance({
-            orchestrationWorkflowId: graph.orchestrationWorkflow.id,
+          },
+          conversation(),
+        );
+        return {
+          content: `Orchestration workflow ${state.orchestrationWorkflowId}: parent Issue ${state.parentTaskId} and ${state.taskIds.length} sub-Issues are on the board in Backlog. The complete split is posted in this conversation. Await the person's reply; no execution has started. Do not deliver the work in this conversation.`,
+          state: { ...state, name: args.name, success: true, waitingReason: 'plan_not_confirmed' },
+          success: true,
+        };
+      },
+      postOrchestrationWorkflowPlan: async (args: { orchestrationWorkflowId: string }) => {
+        const state = await plans.post(args.orchestrationWorkflowId, conversation());
+        return {
+          content: 'Revised split posted. Await a new user reply before release.',
+          state,
+          success: true,
+        };
+      },
+      startOrchestrationWorkflow: async (args: { orchestrationWorkflowId: string }) => {
+        if (!context.messageId)
+          return { content: 'A user reply after the posted split is required.', success: false };
+        const state = await plans.release(args.orchestrationWorkflowId, {
+          ...conversation(),
+          sourceMessageId: context.messageId,
+        });
+        await scheduleOrchestrationWorkflowAdvance({
+          orchestrationWorkflowId: state.orchestrationWorkflowId,
+          trigger: 'create',
+          userId,
+          workspaceId,
+        });
+        try {
+          const { result } = await advanceOrchestrationWorkflow({
+            orchestrationWorkflowId: state.orchestrationWorkflowId,
             trigger: 'create',
             userId,
-            workspaceId: workspaceId ?? undefined,
+            workspaceId,
           });
-
-          const created = `Orchestration workflow "${graph.orchestrationWorkflow.title}" created with ${drafts.length} acceptance criteria.`;
-          const tail =
-            'Execution continues in its own task; do not perform or reproduce the work in this conversation.';
-
-          // The orchestration workflow is committed. Kickoff failure must not be reported as
-          // creation failure — an agent told the orchestration workflow was not created makes
-          // another one, and both then do the same paid work. `orchestrationWorkflow.create`
-          // already queued an advance, so this is only about immediate feedback.
-          try {
-            // Advance until the coordinator is waiting on something other than a
-            // tick — normally that is the first Work Task executing. From there
-            // the orchestration workflow keeps itself moving through the queued advances.
-            const { result } = await advanceOrchestrationWorkflow({
-              orchestrationWorkflowId: graph.orchestrationWorkflow.id,
-              trigger: 'create',
-              userId,
-              workspaceId: workspaceId ?? undefined,
-            });
-
-            return {
-              content: `${created} ${result.message}. ${tail}`,
-              state: {
-                orchestrationWorkflowId: graph.orchestrationWorkflow.id,
-                name: args.name,
-                startedAt: new Date().toISOString(),
-                success: true,
-                taskId: result.taskId,
-              },
-              success: true,
-            };
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Could not start it right away';
-            return {
-              content: `${created} It has not started yet (${message}); the server will pick it up. Do not create it again. ${tail}`,
-              state: {
-                orchestrationWorkflowId: graph.orchestrationWorkflow.id,
-                name: args.name,
-                startedAt: new Date().toISOString(),
-                success: true,
-              },
-              success: true,
-            };
-          }
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to create the orchestration workflow';
           return {
-            content: `Could not create the orchestration workflow: ${message}`,
-            state: { name: args.name, success: false },
-            success: false,
+            content: `Orchestration workflow released after the user's reply. ${result.message}. Execution belongs to its Issues; do not perform the work in this conversation.`,
+            state: { ...state, startedAt: new Date().toISOString(), success: true },
+            success: true,
+          };
+        } catch (error) {
+          return {
+            content: `Orchestration workflow released; execution is waiting (${error instanceof Error ? error.message : 'dispatch unavailable'}). Do not create it again or deliver the work in chat.`,
+            state: { ...state, success: true },
+            success: true,
           };
         }
       },

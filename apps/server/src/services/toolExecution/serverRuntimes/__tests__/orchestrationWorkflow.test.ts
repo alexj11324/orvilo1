@@ -1,99 +1,88 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  orchestrator: vi.fn(),
-  advanceOrchestrationWorkflow: vi.fn(),
-  create: vi.fn(),
-  scheduleOrchestrationWorkflowAdvance: vi.fn(),
+  prepare: vi.fn(),
+  post: vi.fn(),
+  release: vi.fn(),
+  advance: vi.fn(),
+  schedule: vi.fn(),
 }));
-vi.mock('@/database/models/agent', () => ({
-  AgentModel: class {
-    getOrchestratorSourceAgentId = mocks.orchestrator;
+vi.mock('@/server/services/orchestrationWorkflow/conversationPlan', () => ({
+  OrchestrationWorkflowConversationPlanService: class {
+    prepare = mocks.prepare;
+    post = mocks.post;
+    release = mocks.release;
   },
 }));
-
-vi.mock('@/server/services/orchestrationWorkflow', () => ({
-  OrchestrationWorkflowService: vi.fn(function () {
-    return { create: mocks.create };
-  }),
-}));
 vi.mock('@/server/services/orchestrationWorkflow/advanceOrchestrationWorkflow', () => ({
-  advanceOrchestrationWorkflow: mocks.advanceOrchestrationWorkflow,
+  advanceOrchestrationWorkflow: mocks.advance,
 }));
 vi.mock('@/server/services/orchestrationWorkflow/scheduler', () => ({
-  scheduleOrchestrationWorkflowAdvance: mocks.scheduleOrchestrationWorkflowAdvance,
+  scheduleOrchestrationWorkflowAdvance: mocks.schedule,
 }));
-
 const { orchestrationWorkflowRuntime } = await import('../orchestrationWorkflow');
-
-const runtime = () =>
+const runtime = (messageId: string | undefined = 'user-reply') =>
   orchestrationWorkflowRuntime.factory({
-    orchestrationWorkflowPlanApproved: true,
-    agentId: 'agt_1',
+    agentId: 'orchestrator',
+    topicId: 'conversation',
+    messageId,
     serverDB: {} as never,
     toolManifestMap: {},
-    userId: 'user-1',
-    workspaceId: 'ws-1',
-  } as never);
-
+    userId: 'user',
+    workspaceId: 'workspace',
+  });
 const args = {
-  criteria: [{ title: 'It works' }],
-  instruction: 'do the thing',
-  name: 'An orchestration workflow',
+  criteria: [{ title: 'Both files exist' }],
+  instruction: 'Deliver files',
+  name: 'Delivery',
+  tasks: [{ title: 'Alpha', description: 'Exactly Alpha' }],
 };
-
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.orchestrator.mockResolvedValue('agt_1');
-  mocks.create.mockResolvedValue({
-    orchestrationWorkflow: { id: 'orchestration_workflow_1', title: 'An orchestration workflow' },
+  mocks.prepare.mockResolvedValue({
+    orchestrationWorkflowId: 'split',
+    parentTaskId: 'parent',
+    taskIds: ['alpha'],
   });
+  mocks.release.mockResolvedValue({ orchestrationWorkflowId: 'split', parentTaskId: 'parent' });
+  mocks.advance.mockResolvedValue({ result: { message: 'Started Issue' } });
 });
-
-describe('orchestrationWorkflowRuntime.startOrchestrationWorkflow', () => {
-  it('refuses direct execution without a recorded human confirmation', async () => {
-    const tool = orchestrationWorkflowRuntime.factory({
-      agentId: 'agt_1',
-      serverDB: {},
-      userId: 'user-1',
-    } as never);
-    expect((await tool.startOrchestrationWorkflow(args)).success).toBe(false);
-    expect(mocks.create).not.toHaveBeenCalled();
-  });
-  it('refuses a normal Agent even when a plan was confirmed', async () => {
-    mocks.orchestrator.mockResolvedValue('other-agent');
-    expect((await runtime().startOrchestrationWorkflow(args)).success).toBe(false);
-    expect(mocks.create).not.toHaveBeenCalled();
-  });
-  it('queues the advance so a failed kickoff is genuinely recoverable', async () => {
-    // This path calls OrchestrationWorkflowService directly, so nothing else schedules the orchestration workflow.
-    // Without the queued advance the "the server will pick it up" message below
-    // is false and the orchestration workflow sits in `planning` forever.
-    mocks.advanceOrchestrationWorkflow.mockRejectedValue(new Error('runner offline'));
-
-    const result = await runtime().startOrchestrationWorkflow(args);
-
-    expect(mocks.scheduleOrchestrationWorkflowAdvance).toHaveBeenCalledWith({
-      orchestrationWorkflowId: 'orchestration_workflow_1',
-      // The label survives the queue hop onto the trajectory, so a run can be
-      // sliced by what drove it — asserted here rather than left loose.
-      trigger: 'create',
-      userId: 'user-1',
-      workspaceId: 'ws-1',
+describe('conversation split runtime', () => {
+  it('creates the board split without scheduling execution or opening an approval dialog', async () => {
+    const result = await runtime().prepareOrchestrationWorkflow(args);
+    expect(result.state).toMatchObject({
+      orchestrationWorkflowId: 'split',
+      waitingReason: 'plan_not_confirmed',
     });
+    expect(mocks.prepare).toHaveBeenCalledWith(expect.objectContaining({ tasks: args.tasks }), {
+      agentId: 'orchestrator',
+      topicId: 'conversation',
+    });
+    expect(mocks.schedule).not.toHaveBeenCalled();
+    expect(mocks.advance).not.toHaveBeenCalled();
+  });
+  it('passes the server source message to the release guard before scheduling a dispatch', async () => {
+    await runtime().startOrchestrationWorkflow({ orchestrationWorkflowId: 'split' });
+    expect(mocks.release).toHaveBeenCalledWith('split', {
+      agentId: 'orchestrator',
+      topicId: 'conversation',
+      sourceMessageId: 'user-reply',
+    });
+    expect(mocks.schedule).toHaveBeenCalledOnce();
+    expect(mocks.advance).toHaveBeenCalledOnce();
+  });
+  it('schedules no execution when the server refuses the reply receipt', async () => {
+    mocks.release.mockRejectedValue(new Error('AWAITING_USER_REPLY'));
+    await expect(
+      runtime().startOrchestrationWorkflow({ orchestrationWorkflowId: 'split' }),
+    ).rejects.toThrow('AWAITING_USER_REPLY');
+    expect(mocks.schedule).not.toHaveBeenCalled();
+  });
+  it('reports a released split truthfully if the immediate dispatch is unavailable', async () => {
+    mocks.advance.mockRejectedValue(new Error('Device offline'));
+    const result = await runtime().startOrchestrationWorkflow({ orchestrationWorkflowId: 'split' });
     expect(result.success).toBe(true);
+    expect(result.content).toContain('execution is waiting');
     expect(result.content).toContain('Do not create it again');
-  });
-
-  it('reports the started orchestration workflow when the kickoff succeeds', async () => {
-    mocks.advanceOrchestrationWorkflow.mockResolvedValue({
-      result: { message: 'Started task T-1', taskId: 't1' },
-    });
-
-    const result = await runtime().startOrchestrationWorkflow(args);
-
-    expect(mocks.scheduleOrchestrationWorkflowAdvance).toHaveBeenCalledOnce();
-    expect(result.success).toBe(true);
-    expect(result.content).toContain('Started task T-1');
   });
 });

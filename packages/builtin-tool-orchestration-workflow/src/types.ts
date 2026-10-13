@@ -5,6 +5,8 @@ export type {
 } from '@orvilo/builtin-tool-task';
 
 export const OrchestrationWorkflowApiName = {
+  prepareOrchestrationWorkflow: 'prepareOrchestrationWorkflow',
+  postOrchestrationWorkflowPlan: 'postOrchestrationWorkflowPlan',
   startOrchestrationWorkflow: 'startOrchestrationWorkflow',
 } as const;
 

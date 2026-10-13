@@ -1,6 +1,6 @@
 // @vitest-environment node
 import type { ProjectOrchestrationPolicy } from '@orvilo/types';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
@@ -1714,6 +1714,49 @@ describe('tiered orchestration', () => {
       .returning();
     return project;
   };
+
+  it('excludes an awaiting split from intake while ordinary Backlog work stays eligible', async () => {
+    await db.insert(agents).values({ id: 'split-intake-agent', userId, workspaceId });
+    const project = await seedTieredProject('SPLIT');
+    const parent = await createTask('PARENT-201', 201);
+    const child = await createTask('CHILD-202', 202);
+    const ordinary = await createTask('ORDINARY-203', 203);
+    await db
+      .update(tasks)
+      .set({ projectId: project.id, assigneeAgentId: 'split-intake-agent' })
+      .where(inArray(tasks.id, [parent.id, child.id, ordinary.id]));
+    await db.update(tasks).set({ parentTaskId: parent.id }).where(eq(tasks.id, child.id));
+    const [split] = await db
+      .insert(orchestrationWorkflows)
+      .values({
+        userId,
+        workspaceId,
+        title: 'Awaiting split',
+        subjectType: 'task',
+        subjectId: parent.id,
+        config: {
+          conversationPlan: {
+            topicId: 'conversation',
+            postedMessageId: 'split-message',
+            postedAt: new Date().toISOString(),
+          },
+        },
+      })
+      .returning();
+    expect(
+      (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
+    ).toEqual([ordinary.id]);
+    await db
+      .update(orchestrationWorkflows)
+      .set({ config: { ...split.config, planConfirmedAt: new Date().toISOString() } })
+      .where(eq(orchestrationWorkflows.id, split.id));
+    expect(
+      (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
+    ).toEqual(expect.arrayContaining([ordinary.id, child.id]));
+    expect(
+      (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
+    ).not.toContain(parent.id);
+  });
 
   it("snapshots the bound agent's roster tier onto the dispatch row", async () => {
     await db.insert(agents).values({ id: 'tier-agent-low', userId, workspaceId });

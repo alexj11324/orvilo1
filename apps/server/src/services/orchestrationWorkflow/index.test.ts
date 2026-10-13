@@ -124,6 +124,25 @@ const derivedStatus = async (id: string) => {
   return row?.status;
 };
 
+// Engine tests start from a persisted, already confirmed admission (as historical rows do).
+const confirmedService = () => {
+  const service = new OrchestrationWorkflowService(serverDB, userId);
+  const create = service.create;
+  service.create = async (input) => {
+    const graph = await create(input);
+    const config = {
+      ...graph.orchestrationWorkflow.config,
+      planConfirmedAt: new Date().toISOString(),
+    };
+    await new OrchestrationWorkflowModel(serverDB, userId).update(graph.orchestrationWorkflow.id, {
+      config,
+    });
+    graph.orchestrationWorkflow.config = config;
+    return graph;
+  };
+  return service;
+};
+
 beforeEach(async () => {
   await serverDB.insert(users).values({ id: userId }).onConflictDoNothing();
   await serverDB
@@ -161,7 +180,7 @@ afterEach(async () => {
 
 describe('OrchestrationWorkflowService', () => {
   it('owns new work through the Orchestrator and serves the conversation controls by id', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const card = new OrchestrationWorkflowConversationService(serverDB, userId);
     vi.spyOn(scopedDevices, 'getScopedOnlineDevices').mockResolvedValue([]);
     const graph = await service.create({
@@ -222,7 +241,7 @@ describe('OrchestrationWorkflowService', () => {
     });
   });
   it('explores after result settlement and dispatches the new graph node through the ordinary Task path', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       title: 'Explore',
       config: { exploration: { instruction: 'Compare evidence', maxExperiments: 3 } },
@@ -262,7 +281,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('pauses a failed exploration planner without creating a phantom experiment', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       title: 'Explore',
       config: { exploration: { instruction: 'Compare evidence', maxExperiments: 3 } },
@@ -288,7 +307,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('resumes an exhausted exploration only after increasing its cap, preserving explicit user pause', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       title: 'Explore',
       config: { exploration: { instruction: 'Compare evidence', maxExperiments: 1 } },
@@ -323,7 +342,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('passes the selected older experiment result into the actual child Task instruction', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       title: 'Text exploration',
       config: { exploration: { instruction: 'Compare alternatives', maxExperiments: 3 } },
@@ -364,7 +383,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('persists structured criteria on create and records their ids on the orchestration workflow config', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       criteria: [
         { description: 'Runs end to end locally', title: 'Local run works' },
@@ -386,7 +405,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('persists the reviewed orchestration workflow document verbatim when structured criteria are supplied', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const instruction = '将办公体验提升到可交付水平，支持 PPT、XLSX、Word 的创建和定向修改。';
     const graph = await service.create({
       criteria: [{ instruction: '打开并编辑最终文件', title: '三类办公文档端到端可用' }],
@@ -405,7 +424,7 @@ describe('OrchestrationWorkflowService', () => {
   it('rebinding criteria also updates the dispatched terminal acceptance task', async () => {
     // Editing the standard after the terminal OrchestrationWorkflow-acceptance Task exists must
     // not leave that Task's Acceptance gating on the stale id list.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       criteria: [{ title: 'Original criterion' }],
@@ -446,7 +465,7 @@ describe('OrchestrationWorkflowService', () => {
   ] as const)(
     'scopes the handoff to manager=$managerEnabled action=$action',
     async ({ action, managerEnabled }) => {
-      const service = new OrchestrationWorkflowService(serverDB, userId);
+      const service = confirmedService();
       const taskModel = new TaskModel(serverDB, userId);
       const requirement = 'Deliver the original result with independently inspectable evidence';
       const handoff =
@@ -508,7 +527,7 @@ describe('OrchestrationWorkflowService', () => {
   );
 
   it('creates only one responsible task when ticks race on the same task node', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       tasks: ['Single owner task'],
       title: 'Concurrent orchestration workflow',
@@ -534,7 +553,7 @@ describe('OrchestrationWorkflowService', () => {
     const runSpy = vi
       .spyOn(TaskRunnerService.prototype, 'runTask')
       .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ tasks: ['Only run once'], title: 'Raced dispatch' });
     await service.tick(graph.orchestrationWorkflow.id);
 
@@ -553,7 +572,7 @@ describe('OrchestrationWorkflowService', () => {
       const runSpy = vi
         .spyOn(TaskRunnerService.prototype, 'runTask')
         .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
-      const service = new OrchestrationWorkflowService(serverDB, userId);
+      const service = confirmedService();
       const graph = await service.create({ title: 'Gated dispatch', tasks: ['Stay gated'] });
       // First tick materializes the task node; the second reaches dispatchWork.
       await service.tick(graph.orchestrationWorkflow.id);
@@ -586,7 +605,7 @@ describe('OrchestrationWorkflowService', () => {
     const runSpy = vi
       .spyOn(TaskRunnerService.prototype, 'runTask')
       .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { maxAttemptsPerTask: 3 } },
@@ -614,7 +633,7 @@ describe('OrchestrationWorkflowService', () => {
       const runSpy = vi
         .spyOn(TaskRunnerService.prototype, 'runTask')
         .mockResolvedValue({} as never);
-      const service = new OrchestrationWorkflowService(serverDB, userId);
+      const service = confirmedService();
       const taskModel = new TaskModel(serverDB, userId);
       const graph = await service.create({
         config: { schedule: { deadline: new Date(Date.now() - 1000).toISOString() } },
@@ -640,7 +659,7 @@ describe('OrchestrationWorkflowService', () => {
     [VERIFICATION_ERRORED_ERROR, 'canceled'],
   ])('does not restart a Task settled during recovery (%s → %s)', async (error, settledAs) => {
     const runSpy = vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       title: `Settled during recovery ${error} ${settledAs}`,
@@ -667,7 +686,7 @@ describe('OrchestrationWorkflowService', () => {
 
   it('does not restart a Task a person paused themselves', async () => {
     const runSpy = vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       title: 'Actor paused during recovery',
@@ -701,7 +720,7 @@ describe('OrchestrationWorkflowService', () => {
     const runSpy = vi
       .spyOn(TaskRunnerService.prototype, 'runTask')
       .mockRejectedValue(new Error('worker died'));
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ tasks: ['Start me'], title: 'Orphaned claim' });
     const created = await service.tick(graph.orchestrationWorkflow.id);
 
@@ -729,7 +748,7 @@ describe('OrchestrationWorkflowService', () => {
     // back to backlog, and the next advance paid for a ghost attempt that the
     // verify settle path then canceled.
     const runSpy = vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
       title: 'Deliveries wait for verification',
@@ -764,7 +783,7 @@ describe('OrchestrationWorkflowService', () => {
     // The hold-off above cannot be unconditional: a verify run that died
     // silently would otherwise strand the orchestration workflow forever, which is exactly the
     // failure mode the sweep exists to break.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
       title: 'Dead verification is reclaimed',
@@ -796,7 +815,7 @@ describe('OrchestrationWorkflowService', () => {
     // retry it superseded — leaving the canceled, handoff-less topic as the
     // newest row. Reading blindly by seq produced findings titled
     // "Completed: <task>" with no description.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Deliver me'], title: 'Consume the delivery' });
     const created = await service.tick(graph.orchestrationWorkflow.id);
@@ -837,7 +856,7 @@ describe('OrchestrationWorkflowService', () => {
   it('links what the task delivered to its node, and skips the task Work itself', async () => {
     // The deliverable used to survive only as a URL inside the finding's prose:
     // the graph recorded that a task finished but not what came out of it.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const workModel = new WorkModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Deliver me'], title: 'Harvest deliverables' });
@@ -873,7 +892,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('re-settling a task does not duplicate its deliverable links', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const workModel = new WorkModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Deliver me'], title: 'Idempotent harvest' });
@@ -910,7 +929,7 @@ describe('OrchestrationWorkflowService', () => {
   it('leaves a fresh dispatch claim alone', async () => {
     // The same shape a moment after the claim is just a run about to start.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockRejectedValue(new Error('worker died'));
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ tasks: ['Start me'], title: 'Fresh claim' });
     const created = await service.tick(graph.orchestrationWorkflow.id);
     await expect(service.tick(graph.orchestrationWorkflow.id)).rejects.toThrow('worker died');
@@ -925,7 +944,7 @@ describe('OrchestrationWorkflowService', () => {
   it('reopens an orchestration workflow its round budget stopped when the budget is raised', async () => {
     // `tick` refuses to move a paused orchestration workflow, so without this the queued advance
     // returns straight away and the user has to find Resume as a second gesture.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       maxRounds: 1,
       title: 'Budget stopped',
@@ -953,7 +972,7 @@ describe('OrchestrationWorkflowService', () => {
     // The header renders `spent / cap` as one fraction, so the number it shows
     // has to be the number the coordinator will stop on — not the orchestration workflow list's
     // subtree roll-up, which counts Tasks the graph's Tasks spawned.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       maxTotalCost: 10,
       tasks: ['Costs money'],
@@ -987,7 +1006,7 @@ describe('OrchestrationWorkflowService', () => {
     // The budget panel sends one dimension at a time; an omitted deadline used
     // to be written back as null, silently dropping a calendar budget someone
     // set from a click that only meant to raise the dollars.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const deadline = new Date(Date.now() + 3_600_000).toISOString();
     const graph = await service.create({
       config: { schedule: { deadline } },
@@ -1002,7 +1021,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('leaves the round cap alone when only the cost cap is edited', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       maxRounds: 7,
       tasks: ['Bounded'],
@@ -1015,7 +1034,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('edits the standing requirement in place', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       requirement: '初版验收',
       tasks: ['A'],
@@ -1051,7 +1070,7 @@ describe('OrchestrationWorkflowService', () => {
         userId,
       },
     ]);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     await new UserModel(serverDB, userId).updatePreference({ orchestratorAgentId: 'agt_old' });
     const graph = await service.create({
@@ -1095,7 +1114,7 @@ describe('OrchestrationWorkflowService', () => {
         userId,
       },
     ]);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
 
     // Every Task a orchestration workflow mints needs the MCP tool surface — both a bridge that
     // silently drops mcpServers (pi) and an engine with no ACP transport
@@ -1133,7 +1152,7 @@ describe('OrchestrationWorkflowService', () => {
       slug: 'agt-claude',
       userId,
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
 
     await new UserModel(serverDB, userId).updatePreference({ orchestratorAgentId: 'agt_claude' });
     const graph = await service.create({ agentId: 'agt_claude', title: 'Capable' });
@@ -1149,7 +1168,7 @@ describe('OrchestrationWorkflowService', () => {
       slug: 'agt-restart',
       userId,
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Stuck task'], title: 'Restartable' });
     const created = await service.tick(graph.orchestrationWorkflow.id);
@@ -1188,7 +1207,7 @@ describe('OrchestrationWorkflowService', () => {
     // itself. Left pending, it keeps winning the coordinator's
     // pending-decision branch and the orchestration workflow sits waiting_human with every task
     // freshly reset.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Risky task'], title: 'Restart clears gate' });
     const created = await service.tick(graph.orchestrationWorkflow.id);
@@ -1209,7 +1228,7 @@ describe('OrchestrationWorkflowService', () => {
   it('leaves a deliberately paused orchestration workflow paused when its budget changes', async () => {
     // Nothing distinguishes a user pause from a budget pause on the row, so the
     // reopen is limited to orchestration workflows whose budget was actually binding.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ tasks: ['Wait'], title: 'User paused' });
     await service.pause(graph.orchestrationWorkflow.id);
 
@@ -1222,7 +1241,7 @@ describe('OrchestrationWorkflowService', () => {
     // Deleting anyway would remove the only surface that can stop an operation
     // which keeps spending.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ tasks: ['Runs on'], title: 'Unstoppable' });
     const created = await service.tick(graph.orchestrationWorkflow.id);
     await serverDB.insert(topics).values({ id: 'tpc_stuck', userId });
@@ -1242,7 +1261,7 @@ describe('OrchestrationWorkflowService', () => {
     // An experiment is a candidate answer under test. A caller-supplied seed is
     // ordinary work, so it takes the same shape as a planned or manager-submitted
     // Task: a `decomposes` edge from the problem, no answer container.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ title: 'Question', tasks: ['Seed work'] });
     const question = graph.nodes.find((n) => n.kind === 'problem')!;
     const task = graph.nodes.find((n) => n.kind === 'task')!;
@@ -1258,7 +1277,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('seeds the exploration baseline inside an experiment container', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       config: { exploration: { instruction: 'Compare evidence', maxExperiments: 3 } },
       title: 'Explore',
@@ -1301,7 +1320,7 @@ describe('OrchestrationWorkflowService', () => {
         { dependsOn: [1, 2, 9], instruction: '汇编最终报告', title: '方向C:汇编' },
       ],
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       problemDescription: '用户的原话',
       requirement: '完整需求与验收标准全文',
@@ -1374,7 +1393,7 @@ describe('OrchestrationWorkflowService', () => {
         { dependsOn: [0], hypothesis: null, instruction: '逐项修复', title: '实施修复' },
       ],
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ title: 'Bug sweep' });
 
     expect((await service.tick(graph.orchestrationWorkflow.id)).outcome).toBe('advanced');
@@ -1419,7 +1438,7 @@ describe('OrchestrationWorkflowService', () => {
         ],
       };
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ problemDescription: '原话', title: 'Raced planning' });
 
     const ticks = Promise.all([
@@ -1441,7 +1460,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('waits for an unfenced legacy planner instead of generating a second graph', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ title: 'Legacy in-flight planning' });
     // The pre-lease binary claimed only the status, without a checkpoint.
     await serverDB
@@ -1476,7 +1495,7 @@ describe('OrchestrationWorkflowService', () => {
       problemStatement: 'Second plan',
       tasks: [{ instruction: 'Collect sources', title: 'Equivalent research' }],
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ title: 'Staggered planning' });
     const first = service.tick(graph.orchestrationWorkflow.id);
     try {
@@ -1485,9 +1504,7 @@ describe('OrchestrationWorkflowService', () => {
       expect(
         (await service.graph(graph.orchestrationWorkflow.id)).orchestrationWorkflow.status,
       ).toBe('running');
-      const late = await new OrchestrationWorkflowService(serverDB, userId).tick(
-        graph.orchestrationWorkflow.id,
-      );
+      const late = await confirmedService().tick(graph.orchestrationWorkflow.id);
       expect(late.outcome).toBe('waiting_external');
       expect(planner).toHaveBeenCalledTimes(1);
     } finally {
@@ -1515,7 +1532,7 @@ describe('OrchestrationWorkflowService', () => {
       problemStatement: 'Recovered plan',
       tasks: [{ instruction: 'New', title: 'New task' }],
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ title: 'Lease recovery' });
     const first = service.tick(graph.orchestrationWorkflow.id);
     try {
@@ -1534,7 +1551,7 @@ describe('OrchestrationWorkflowService', () => {
           },
         })
         .where(eq(orchestrationWorkflows.id, graph.orchestrationWorkflow.id));
-      await new OrchestrationWorkflowService(serverDB, userId).tick(graph.orchestrationWorkflow.id);
+      await confirmedService().tick(graph.orchestrationWorkflow.id);
     } finally {
       release();
       await first;
@@ -1549,7 +1566,7 @@ describe('OrchestrationWorkflowService', () => {
   it.each(['paused', 'changed'] as const)(
     'discards planning when the orchestration workflow is %s during generation',
     async (change) => {
-      const service = new OrchestrationWorkflowService(serverDB, userId);
+      const service = confirmedService();
       const graph = await service.create({ title: 'Original orchestration workflow' });
       vi.spyOn(
         OrchestrationWorkflowCriteriaGeneratorService.prototype,
@@ -1579,7 +1596,7 @@ describe('OrchestrationWorkflowService', () => {
         { dependsOn: [0], instruction: 'Write report', title: 'Report' },
       ],
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       problemDescription: 'Original question',
       title: 'Atomic planning',
@@ -1615,7 +1632,7 @@ describe('OrchestrationWorkflowService', () => {
       OrchestrationWorkflowCriteriaGeneratorService.prototype,
       'decompose',
     ).mockRejectedValue(new Error('model unavailable'));
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ problemDescription: '原话', title: 'Nothing to do' });
 
     const result = await service.tick(graph.orchestrationWorkflow.id);
@@ -1632,7 +1649,7 @@ describe('OrchestrationWorkflowService', () => {
     // Every remaining Task is blocked and nothing runs to unblock it. Left
     // `running` it is selected by every newest-first scan forever, and enough
     // of them starve every other stalled orchestration workflow out of the sweep's window.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ tasks: ['A', 'B'], title: 'Deadlocked' });
     const [a, b] = graph.nodes.filter((n) => n.kind === 'task');
     const graphModel = new OrchestrationWorkflowGraphModel(serverDB, userId);
@@ -1656,7 +1673,7 @@ describe('OrchestrationWorkflowService', () => {
     // The coordinator parks and reopens orchestration workflows constantly, but only node
     // transitions used to be recorded — `entity_type='orchestration workflow'` events existed in
     // the schema with no writer, so the lifecycle timeline was unreconstructable.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ tasks: ['A', 'B'], title: 'Lifecycle trail' });
     const [a, b] = graph.nodes.filter((n) => n.kind === 'task');
     const graphModel = new OrchestrationWorkflowGraphModel(serverDB, userId);
@@ -1688,7 +1705,7 @@ describe('OrchestrationWorkflowService', () => {
     // A calendar deadline is the long-horizon budget unit; extending it has to
     // unstick the orchestration workflow exactly like raising a round budget does. Two ticks:
     // creating the responsible task costs nothing, the deadline gates the run.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       config: { schedule: { deadline: new Date(Date.now() - 1000).toISOString() } },
       title: 'Overdue',
@@ -1711,7 +1728,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('dispatches a Task when the orchestration workflow has no deadline', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ tasks: ['Just task'], title: 'No deadline' });
 
     const result = await service.tick(graph.orchestrationWorkflow.id);
@@ -1728,7 +1745,7 @@ describe('OrchestrationWorkflowService', () => {
       slug: 'agt-orchestration-workflow-author',
       userId,
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
 
     await new UserModel(serverDB, userId).updatePreference({
       orchestratorAgentId: 'agt_orchestration_workflow_author',
@@ -1759,7 +1776,7 @@ describe('OrchestrationWorkflowService', () => {
       slug: 'agt-assignee',
       userId,
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
 
     const graph = await service.create({
       agentId: 'agt_assignee',
@@ -1775,7 +1792,7 @@ describe('OrchestrationWorkflowService', () => {
   it('separates what the coordinator decided from what the user asked for', async () => {
     // The audit trail recorded every transition as the orchestration workflow's owner, so "what did
     // the system decide on its own" could not be answered from product data.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       tasks: ['Do the thing'],
       title: 'Attributed orchestration workflow',
@@ -1799,7 +1816,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('keeps the overall requirement as background while making the current Task authoritative', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const requirement = `Generate verified training data. ${'Detailed acceptance evidence. '.repeat(20)}`;
     const graph = await service.create({
       requirement,
@@ -1834,7 +1851,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('gates every responsible task with a Task-scoped Acceptance requirement', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const agentId = 'orchestration-workflow-work-verifier-agent';
     await serverDB.insert(agents).values({
       agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
@@ -1868,7 +1885,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('requires an Orchestration workflow-level Acceptance Task before marking the complete orchestration workflow achieved', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       requirement: 'A runnable minimal training loop with evidence',
@@ -1945,7 +1962,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('does not mark a required orchestration workflow achieved when only its initial Task is complete', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       requirement: 'Return a supplier list with fixed prices.',
@@ -1972,7 +1989,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('creates only one Orchestration workflow-level Acceptance Task when terminal ticks race', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       requirement: 'Return three verified supplier quotes.',
@@ -2006,7 +2023,7 @@ describe('OrchestrationWorkflowService', () => {
     // not be created — and the orchestration workflow must not sit `running` reporting
     // `no_progress`, or every sweep would re-tick it for the whole wait.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const orchestrationWorkflowModel = new OrchestrationWorkflowModel(serverDB, userId);
     const graph = await service.create({
@@ -2084,7 +2101,7 @@ describe('OrchestrationWorkflowService', () => {
     // them until somebody pressed Resume by hand, so the transition's recorded
     // actor stands in for it.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const orchestrationWorkflowModel = new OrchestrationWorkflowModel(serverDB, userId);
     const orchestrationWorkflowId = await parkedOnGate(service);
 
@@ -2110,7 +2127,7 @@ describe('OrchestrationWorkflowService', () => {
     // Those carry no marker either once they predate it, so the fallback has to
     // read *why* it parked — not just that it was the coordinator.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const orchestrationWorkflowModel = new OrchestrationWorkflowModel(serverDB, userId);
     const graph = await service.create({
       config: { acceptance: { metrics: [{ key: 'followers', target: 1000 }] } },
@@ -2145,7 +2162,7 @@ describe('OrchestrationWorkflowService', () => {
     // and without it a satisfying sample would restart a orchestration workflow somebody stopped
     // on purpose — and run its acceptance work.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const orchestrationWorkflowModel = new OrchestrationWorkflowModel(serverDB, userId);
     const orchestrationWorkflowId = await parkedOnGate(service);
     await service.pause(orchestrationWorkflowId);
@@ -2170,7 +2187,7 @@ describe('OrchestrationWorkflowService', () => {
     // The other half: once the person lifts their own pause, the orchestration workflow is the
     // coordinator's again.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const orchestrationWorkflowId = await parkedOnGate(service);
     await service.pause(orchestrationWorkflowId);
     await service.recordObservation(orchestrationWorkflowId, { key: 'followers', value: 5000 });
@@ -2186,7 +2203,7 @@ describe('OrchestrationWorkflowService', () => {
     // scheduled advance ticked straight back out as `orchestration_workflow_paused` and only a
     // manual resume could move it.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const orchestrationWorkflowModel = new OrchestrationWorkflowModel(serverDB, userId);
     const orchestrationWorkflowId = await parkedOnGate(service);
     expect((await orchestrationWorkflowModel.findById(orchestrationWorkflowId))?.status).toBe(
@@ -2203,7 +2220,7 @@ describe('OrchestrationWorkflowService', () => {
 
   it('unblocks a parked orchestration workflow when a clause is relaxed below the measurement', async () => {
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const orchestrationWorkflowModel = new OrchestrationWorkflowModel(serverDB, userId);
     const orchestrationWorkflowId = await parkedOnGate(service);
     await service.recordObservation(orchestrationWorkflowId, { key: 'followers', value: 400 });
@@ -2223,7 +2240,7 @@ describe('OrchestrationWorkflowService', () => {
     // alone, so declaring criteria — at creation or later from the orchestration workflow page —
     // silently dropped a live measured gate and let the orchestration workflow be accepted
     // without it.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       config: { acceptance: { metrics: [{ key: 'followers', target: 1000 }] } },
       criteria: [{ title: 'Ship the launch post' }],
@@ -2249,7 +2266,7 @@ describe('OrchestrationWorkflowService', () => {
   it('merges a declared clause into the server-side list instead of replacing it', async () => {
     // Two editors declaring from the same stale snapshot must not erase each
     // other: merge upserts by key against the list as it stands on the server.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const orchestrationWorkflowModel = new OrchestrationWorkflowModel(serverDB, userId);
     const graph = await service.create({
       config: { acceptance: { metrics: [{ key: 'followers', target: 1000 }] } },
@@ -2280,7 +2297,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('declares numeric clauses after creation without touching the criteria binding', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       criteria: [{ title: 'Ship the launch post' }],
       requirement: 'Grow the account',
@@ -2306,7 +2323,7 @@ describe('OrchestrationWorkflowService', () => {
     // A replay has to see the number the live run saw — the same reason the
     // deadline verdict travels with the budget.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const metricModel = new MetricModel(serverDB, userId);
     const graph = await service.create({
@@ -2341,7 +2358,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('evolves a failed task into a durable decision gate', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Risky task'], title: 'Failure recovery' });
     const created = await service.tick(graph.orchestrationWorkflow.id);
@@ -2370,7 +2387,7 @@ describe('OrchestrationWorkflowService', () => {
     // forgets to report one reads as "no human was ever involved" — silently,
     // and only in the trace. Driving the real path is the only thing that
     // catches it; a synthetic observation always agrees with itself.
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Risky task'], title: 'Effect reporting' });
 
@@ -2410,7 +2427,7 @@ describe('OrchestrationWorkflowService', () => {
       .spyOn(TaskRunnerService.prototype, 'runTask')
       .mockResolvedValue({ operationId: 'op-cap', taskId: 'placeholder' } as never);
 
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       config: { maxConcurrentTasks: 1 },
       title: 'Capped orchestration workflow',
@@ -2445,7 +2462,7 @@ describe('OrchestrationWorkflowService', () => {
       topicId: 'topic-recovery',
       userMessageId: 'message-user',
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: {
@@ -2504,7 +2521,7 @@ describe('OrchestrationWorkflowService', () => {
       .spyOn(AgentOperationModel.prototype, 'settleStaleRunning')
       .mockResolvedValue(true);
 
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: {
@@ -2548,7 +2565,7 @@ describe('OrchestrationWorkflowService', () => {
       totalSteps: 2,
     });
 
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { maxAttemptsPerTask: 3, operationLeaseTimeoutMs: 60_000 } },
@@ -2586,7 +2603,7 @@ describe('OrchestrationWorkflowService', () => {
     ]);
     const settleSpy = vi.spyOn(AgentOperationModel.prototype, 'settleStaleRunning');
 
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
       title: 'Wait for topic persistence',
@@ -2606,7 +2623,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('starts a ready sibling Task even when a running Task row is older than the operation lease', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
       title: 'Keep parallel work moving',
@@ -2633,7 +2650,7 @@ describe('OrchestrationWorkflowService', () => {
       new Error('topic update failed'),
     );
 
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const operationModel = new AgentOperationModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
@@ -2672,7 +2689,7 @@ describe('OrchestrationWorkflowService', () => {
       topicId: 'topic-recovery-next',
       userMessageId: 'message-user',
     });
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { maxAttemptsPerTask: 3 } },
@@ -2695,7 +2712,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('opens the decision gate only after the Task attempt budget is exhausted', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { maxAttemptsPerTask: 1 } },
@@ -2715,7 +2732,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('fails the Orchestration workflow when terminal acceptance is retired after recovery is exhausted', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { maxAttemptsPerTask: 1 } },
@@ -2749,7 +2766,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('respects a manually paused responsible task without rerunning it', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Wait for review'], title: 'Paused task' });
     const created = await service.tick(graph.orchestrationWorkflow.id);
@@ -2765,7 +2782,7 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('only selects Tasks whose explicit dependencies are resolved', async () => {
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({ title: 'Dependency-aware orchestration workflow' });
     const prerequisite = await service.addNode(graph.orchestrationWorkflow.id, {
       kind: 'task',
@@ -2805,7 +2822,7 @@ describe('dispatch readiness recheck', () => {
     const runSpy = vi
       .spyOn(TaskRunnerService.prototype, 'runTask')
       .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
-    const service = new OrchestrationWorkflowService(serverDB, userId);
+    const service = confirmedService();
     const graph = await service.create({
       tasks: ['Ship the report'],
       title: 'Patch-raced dispatch',

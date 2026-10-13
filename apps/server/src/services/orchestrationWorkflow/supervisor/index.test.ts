@@ -13,6 +13,7 @@ import { OrchestrationWorkflowGraphModel } from '@/database/models/orchestration
 import { ProviderBindingModel } from '@/database/models/providerBinding';
 import { TaskModel } from '@/database/models/task';
 import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
+import { UserModel } from '@/database/models/user';
 import { WorkModel } from '@/database/models/work';
 import {
   acceptances,
@@ -54,7 +55,7 @@ let sequence = 0;
 const operationModel = new AgentOperationModel(db, userId);
 const taskModel = new TaskModel(db, userId);
 const orchestrationWorkflowModel = new OrchestrationWorkflowModel(db, userId);
-const service = () => new OrchestrationWorkflowService(db, userId);
+const service = () => confirmedService();
 
 /**
  * `tasks.status` is retired — read the derived legacy vocabulary so a fixture
@@ -78,6 +79,25 @@ const runResult = (operationId: string, topicId: string, agentId = 'agent'): Exe
   topicId,
   userMessageId: 'user-message',
 });
+
+// Engine tests start from a persisted, already confirmed admission (as historical rows do).
+const confirmedService = () => {
+  const service = new OrchestrationWorkflowService(db, userId);
+  const create = service.create;
+  service.create = async (input) => {
+    const graph = await create(input);
+    const config = {
+      ...graph.orchestrationWorkflow.config,
+      planConfirmedAt: new Date().toISOString(),
+    };
+    await new OrchestrationWorkflowModel(db, userId).update(graph.orchestrationWorkflow.id, {
+      config,
+    });
+    graph.orchestrationWorkflow.config = config;
+    return graph;
+  };
+  return service;
+};
 
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
@@ -117,6 +137,14 @@ beforeEach(async () => {
     model: 'saved-supervisor-model',
     provider: 'openai',
     title: 'Prime',
+  });
+  await db.insert(agents).values({
+    id: 'supervisor-orchestrator',
+    userId,
+    agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+  });
+  await new UserModel(db, userId).updatePreference({
+    orchestratorAgentId: 'supervisor-orchestrator',
   });
   vi.spyOn(scheduler, 'scheduleOrchestrationWorkflowAdvance').mockResolvedValue();
   vi.spyOn(AiAgentService.prototype, 'execAgent').mockImplementation(async (params) => {
@@ -620,7 +648,10 @@ describe('Orchestration workflow Supervisor integration', () => {
   it('settles the final failed recovery even when the incident ledger is full', async () => {
     const { orchestrationWorkflowId, taskId } = await failedOrchestrationWorkflow();
     await orchestrationWorkflowModel.update(orchestrationWorkflowId, {
-      config: { supervision: { enabled: true, maxIncidents: 1 } },
+      config: {
+        ...(await orchestrationWorkflowModel.findById(orchestrationWorkflowId))!.config,
+        supervision: { enabled: true, maxIncidents: 1 },
+      },
     });
     await service().tick(orchestrationWorkflowId);
     await diagnose(orchestrationWorkflowId);

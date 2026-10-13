@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { AskUserBridge } from '../askUser/AskUserBridge';
 import {
@@ -107,50 +107,6 @@ describe('OrviloBuiltinMcpServer', () => {
   });
 
   describe('end-to-end tool call', () => {
-    it('forwards progress from a builtin approval beyond the client idle timeout', async () => {
-      server = new OrviloBuiltinMcpServer({
-        includeAskUserTool: false,
-        extraTools: [
-          {
-            name: 'review_plan',
-            description: 'Review the plan',
-            inputSchema: {},
-            handler: async (_operationId, _args, extra) => {
-              expect(extra?.sendNotification).toBeTypeOf('function');
-              for (let tick = 1; tick <= 5; tick++) {
-                await new Promise((resolve) => setTimeout(resolve, 100));
-                await extra!.sendNotification!({
-                  method: 'notifications/progress',
-                  params: {
-                    progressToken: extra!._meta!.progressToken as string,
-                    progress: tick * 100,
-                    total: 500,
-                    message: 'Waiting for human approval',
-                  },
-                });
-              }
-              return { content: [{ type: 'text', text: 'Approved' }] };
-            },
-          },
-        ],
-      });
-      await server.start();
-      server.registerOperation('op-review');
-      const client = await connectClient(server.urlForOperation('op-review'));
-      const onprogress = vi.fn();
-      try {
-        const result = await client.callTool({ name: 'review_plan', arguments: {} }, undefined, {
-          timeout: 250,
-          resetTimeoutOnProgress: true,
-          onprogress,
-        });
-        expect(result.content).toEqual([{ type: 'text', text: 'Approved' }]);
-        expect(onprogress).toHaveBeenCalledTimes(5);
-      } finally {
-        await client.close();
-      }
-    });
-
     it('routes a tools/call to the right per-op bridge and returns the user answer', async () => {
       server = new OrviloBuiltinMcpServer({ pendingTimeoutMs: 30_000, progressIntervalMs: 1000 });
       await server.start();

@@ -38,7 +38,7 @@ export const taskRunIdempotencyKey = {
     taskId: string;
     taskRevision: number;
   }): string =>
-    `orchestration workflow:${input.orchestrationWorkflowId}:task:${input.taskId}:generation:${input.executionGeneration + 1}:revision:${input.taskRevision}`,
+    `orchestrationWorkflow:${input.orchestrationWorkflowId}:task:${input.taskId}:generation:${input.executionGeneration + 1}:revision:${input.taskRevision}`,
 
   integrationCorrection: (input: {
     attempt: number;

@@ -57,7 +57,7 @@ export interface ToolApprovalScope {
   /** Provider grant generation, when the connector resolves credentials externally. */
   grantRevision?: string;
   identifier: string;
-  kind: 'connector_tool' | 'plugin_tool' | 'builtin_tool';
+  kind: 'connector_tool' | 'plugin_tool';
   operationId: string;
   pluginInstallId?: string;
   schemaDigest?: string;
@@ -111,7 +111,7 @@ export interface ToolApprovalReceiptPayload {
   expiresAt: number;
   grantRevision?: string;
   identifier: string;
-  kind: 'connector_tool' | 'plugin_tool' | 'builtin_tool';
+  kind: 'connector_tool' | 'plugin_tool';
   operationId: string;
   pluginInstallId?: string;
   requestedAt: number;

@@ -1,11 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import {
-  type AcpBuiltinToolCaller,
-  buildAcpBuiltinToolExtras,
-  decodeAcpBuiltinToolSpecs,
-} from './acpBuiltinToolExtras';
+import { buildAcpBuiltinToolExtras, decodeAcpBuiltinToolSpecs } from './acpBuiltinToolExtras';
 import { jsonSchemaToZodRawShape } from './jsonSchemaToZod';
 
 describe('jsonSchemaToZodRawShape', () => {
@@ -415,43 +411,6 @@ describe('buildAcpBuiltinToolExtras', () => {
     const result = await extras[0].handler('op_1', { instruction: 'go' });
     expect(result.isError).toBeUndefined();
     expect(ackChildResults).not.toHaveBeenCalled();
-  });
-
-  it('keeps the MCP request alive while a person reviews the full plan', async () => {
-    const exec = vi
-      .fn()
-      .mockResolvedValueOnce({
-        success: false,
-        error: { code: 'acp_tool_approval_pending', message: 'Review plan' },
-      })
-      .mockResolvedValueOnce({ success: true, content: 'Started' });
-    const sendNotification = vi.fn().mockResolvedValue(undefined);
-    const requestApproval = vi.fn<NonNullable<AcpBuiltinToolCaller['requestApproval']>>(
-      async ({ onProgress }) => {
-        await onProgress?.(65_000, 600_000);
-        return { result: { approved: true } };
-      },
-    );
-    const [tool] = buildAcpBuiltinToolExtras(specs, {
-      awaitChildren: vi.fn(),
-      exec,
-      requestApproval,
-    });
-    await tool.handler(
-      'op_1',
-      { instruction: 'go' },
-      { _meta: { progressToken: 'review' }, sendNotification },
-    );
-    expect(sendNotification).toHaveBeenCalledWith({
-      method: 'notifications/progress',
-      params: {
-        message: 'Waiting for human approval',
-        progress: 65_000,
-        progressToken: 'review',
-        total: 600_000,
-      },
-    });
-    expect(exec).toHaveBeenCalledTimes(2);
   });
 
   it('SA02-C: a pending-approval retry forwards the live windowId to the card', async () => {

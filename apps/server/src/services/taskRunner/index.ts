@@ -1548,7 +1548,7 @@ export class TaskRunnerService {
           continue;
         }
         if (error instanceof TRPCError && error.cause instanceof TaskDispatchWaitingError) {
-          // The admission gate (or projectstartOrchestrationWorkflow policy) held this dispatch —
+          // The admission gate (or project/orchestration workflow policy) held this dispatch —
           // the intent is persisted as `waiting`, the task stays claimable,
           // and nothing may be marked paused/failed for a policy hold.
           continue;

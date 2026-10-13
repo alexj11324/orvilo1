@@ -9,9 +9,9 @@ export const OrchestrationWorkflowManifest: BuiltinToolManifest = {
   api: [
     {
       description:
-        'Propose an orchestration workflow for work the workspace Orchestrator judges should be delivered through Issues. Present the full plan for human confirmation; nothing is created or dispatched until approval. Questions and quick replies stay in the conversation. After a confirmed start, the coordinator owns execution; do not perform the work in this conversation.',
-      humanIntervention: 'always',
-      name: OrchestrationWorkflowApiName.startOrchestrationWorkflow,
+        "Create a parent Issue and its sub-Issues in Backlog, post the complete split in this conversation, and await the person's reply. No execution or intake is permitted until a later user reply releases the split. Questions stay in conversation.",
+      humanIntervention: 'never',
+      name: OrchestrationWorkflowApiName.prepareOrchestrationWorkflow,
       parameters: {
         additionalProperties: false,
         properties: {
@@ -58,11 +58,53 @@ export const OrchestrationWorkflowManifest: BuiltinToolManifest = {
             type: ['number', 'null'],
           },
           name: { description: 'Short orchestration workflow title.', type: 'string' },
+          tasks: {
+            description:
+              'Ordered sub-Issues with distinct outcome titles, scope, exclusions and checkable acceptance criteria. Dependency indices are zero-based and refer to earlier entries.',
+            type: 'array',
+            minItems: 1,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                title: { type: 'string' },
+                description: { type: 'string' },
+                assigneeAgentId: { type: 'string' },
+                reviewerAgentId: { type: 'string' },
+                dependsOn: { type: 'array', items: { type: 'integer', minimum: 0 } },
+              },
+              required: ['title', 'description'],
+            },
+          },
         },
-        required: ['name', 'instruction', 'criteria'],
+        required: ['name', 'instruction', 'criteria', 'tasks'],
         type: 'object',
       },
       renderDisplayControl: 'expand',
+    },
+    {
+      name: OrchestrationWorkflowApiName.postOrchestrationWorkflowPlan,
+      description:
+        'After editing or deleting the pending Backlog Issues, post the revised split and ask for another reply. Resets the server reply boundary; cannot modify a released split.',
+      humanIntervention: 'never',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { orchestrationWorkflowId: { type: 'string' } },
+        required: ['orchestrationWorkflowId'],
+      },
+    },
+    {
+      name: OrchestrationWorkflowApiName.startOrchestrationWorkflow,
+      description:
+        'Release the existing split after the person confirms it in this conversation. The server requires the current turn to originate from a user message later than the posted split. Never call on a change request; edit the Backlog Issues and post the revised split instead. No Start or confirmation button is used.',
+      humanIntervention: 'never',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { orchestrationWorkflowId: { type: 'string' } },
+        required: ['orchestrationWorkflowId'],
+      },
     },
   ],
   identifier: OrchestrationWorkflowIdentifier,

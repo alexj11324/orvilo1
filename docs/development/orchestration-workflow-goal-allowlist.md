@@ -8,7 +8,7 @@ Reproduce:
 git grep -n -i goal -- apps/server apps/cli packages
 ```
 
-The scan matches 220 files. Historical migrations keep their original checksums. #0212 and storage upgrades reference legacy data names. Frontend client/locales remain with the user. Third-party objective contracts keep their exact upstream names.
+The scan matches 218 files. Historical migrations keep their original checksums. #0212 and storage upgrades reference legacy data names. Frontend client/locales remain with the user. Third-party objective contracts keep their exact upstream names.
 
 | File                                                                                                      | Reason                                                                                                                    |
 | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -39,8 +39,6 @@ The scan matches 220 files. Historical migrations keep their original checksums.
 | `apps/server/src/services/verify/__tests__/aegisEvidence.test.ts`                                         | Third-party Aegis goalClosure/objective contract; not the orchestration entity.                                           |
 | `apps/server/src/services/verify/acceptanceMerge.ts`                                                      | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
 | `apps/server/src/services/verify/aegisEvidence.ts`                                                        | Third-party Aegis goalClosure/objective contract; not the orchestration entity.                                           |
-| `apps/server/src/services/verify/reviewPredictor.ts`                                                      | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
-| `apps/server/src/services/verify/sweep.ts`                                                                | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
 | `packages/agent-execution/src/controlPlane/harnessProtocol.ts`                                            | Upstream Prime goal/initialGoal/includeGoals objective protocol; retain exact third-party fields.                         |
 | `packages/agent-execution/src/controlPlane/primeEmbeddedRuntime.ts`                                       | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |
 | `packages/agent-templates/src/templates/claw/AGENTS.md`                                                   | Ordinary English objective prose or fixture text; no legacy orchestration symbol, tool, CLI command or backend API alias. |

@@ -4,14 +4,16 @@ import { OrchestrationWorkflowManifest } from './manifest';
 import { OrchestrationWorkflowApiName } from './types';
 
 describe('OrchestrationWorkflowManifest', () => {
-  it('exposes only the canonical startOrchestrationWorkflow API', () => {
+  it('exposes board splits and reply-based release without a confirmation button', () => {
     expect(OrchestrationWorkflowManifest.identifier).toBe('orvilo-orchestration-workflow');
     expect(OrchestrationWorkflowManifest.api.map(({ name }) => name)).toEqual([
+      OrchestrationWorkflowApiName.prepareOrchestrationWorkflow,
+      OrchestrationWorkflowApiName.postOrchestrationWorkflowPlan,
       OrchestrationWorkflowApiName.startOrchestrationWorkflow,
     ]);
-    // 'always' cannot be bypassed by the user's auto-run approval mode —
-    // launching a orchestration workflow must always pause for the user to review the acceptance plan
-    expect(OrchestrationWorkflowManifest.api[0].humanIntervention).toBe('always');
+    expect(
+      OrchestrationWorkflowManifest.api.every((api) => api.humanIntervention === 'never'),
+    ).toBe(true);
     expect(OrchestrationWorkflowManifest.api[0].work).toBeUndefined();
   });
 });

@@ -257,7 +257,12 @@ export class OrchestrationWorkflowService {
     // subsumes the visibility assert for `input.agentId`.
     const boundAgentId = creatorAgentId;
     if (boundAgentId) await this.assertOrchestrationWorkflowAgentMountCapable(boundAgentId);
-    const { manager: managerOptions, ...options } = input.config ?? {};
+    const {
+      manager: managerOptions,
+      planConfirmedAt: _confirmation,
+      conversationPlan: _conversation,
+      ...options
+    } = (input.config ?? {}) as OrchestrationWorkflowConfig;
     const managed = managerOptions !== undefined;
     let config: OrchestrationWorkflowConfig | undefined = input.config ? options : undefined;
     if (managed) {
@@ -336,7 +341,7 @@ export class OrchestrationWorkflowService {
 
     const orchestrationWorkflow = await this.orchestrationWorkflowModel.create({
       agentId: creatorAgentId,
-      config: { ...config, planConfirmedAt: new Date().toISOString() },
+      config,
       maxRounds: input.maxRounds,
       maxTotalCost: input.maxTotalCost,
       projectId: input.projectId,
@@ -1916,10 +1921,11 @@ export class OrchestrationWorkflowService {
   };
 
   /** Claim the chosen Task node and give it a responsible task plus its acceptance contract. */
-  private createResponsibleTask = async (
+  createResponsibleTask = async (
     graph: OrchestrationWorkflowGraphSnapshot,
     frontier: OrchestrationWorkflowGraphNode,
     effects: OrchestrationWorkflowAdvanceEffect[],
+    split?: { parentTaskId: string; assigneeAgentId?: string; reviewerAgentId?: string },
   ): Promise<OrchestrationWorkflowTickResult> => {
     const orchestrationWorkflowId = graph.orchestrationWorkflow.id;
     const claim = await this.coordinatorGraph.claimTaskNode(
@@ -1959,8 +1965,15 @@ export class OrchestrationWorkflowService {
         .filter(Boolean)
         .join('\n\n');
       task = await this.taskService.createTask({
-        assigneeAgentId: graph.orchestrationWorkflow.agentId ?? undefined,
-        config: { checkpoint: { topic: { after: false } } },
+        assigneeAgentId: split?.assigneeAgentId ?? graph.orchestrationWorkflow.agentId ?? undefined,
+        config: {
+          checkpoint: { topic: { after: false } },
+          ...(split?.reviewerAgentId ? { verify: { verifierAgentId: split.reviewerAgentId } } : {}),
+        },
+        createdByAgentId: split ? (graph.orchestrationWorkflow.agentId ?? undefined) : undefined,
+        parentTaskId: split?.parentTaskId,
+        status: 'backlog',
+        workflowCategory: 'backlog',
         description: description?.slice(0, TASK_DESCRIPTION_MAX_LENGTH),
         instruction: this.buildTaskInstruction(graph, frontier.title, description),
         name: frontier.title,
@@ -2038,11 +2051,13 @@ export class OrchestrationWorkflowService {
         'produced',
       );
     }
-    await this.transitionStatus(
-      graph.orchestrationWorkflow,
-      'running',
-      `dispatched ${task.identifier}`,
-    );
+    if (!split) {
+      await this.transitionStatus(
+        graph.orchestrationWorkflow,
+        'running',
+        `dispatched ${task.identifier}`,
+      );
+    }
     return {
       orchestrationWorkflowId,
       message: `Created responsible task ${task.identifier}`,

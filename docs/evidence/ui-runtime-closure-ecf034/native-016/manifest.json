@@ -1,0 +1,102 @@
+{
+  "canarySyncSHA256": "97e4a6bb98b244ff71da804b19911266ead14a2a4cfef1eea7d1b497606b5f6a",
+  "checks": 35,
+  "coverageBoundary": "Focused scroll/hit-test/Tab/data-invariance supplement only. Not the full52 matrix or305 checks; original015 stays immutable. Real pipeline/module maps/sandbox/guard maintained.",
+  "head": "111c9056919284e159d13f77de4884d55ef5937f",
+  "passed": true,
+  "reports": [
+    {
+      "path": "runtime-report.json",
+      "bytes": 197750,
+      "sha256": "f00212b5a99e90cf3fd10fb7e8086b6c97129b0aa8ec82d00c386aeb04942ac2"
+    },
+    {
+      "path": "execution.json",
+      "bytes": 2189,
+      "sha256": "2506f4cb59564aec95350c6432affd4c8df3fc65852bc66a2db163ee29fddd49"
+    },
+    {
+      "path": "source-binding.json",
+      "bytes": 853402,
+      "sha256": "840efd4cc78cc9ed155b31e34f44d99ac2091c9412bd4e9c16d38858996c047c"
+    },
+    {
+      "path": "actual-revision.json",
+      "bytes": 211,
+      "sha256": "d29f22fe3ae9b449354ba5511dfbc4f3b0ea9140f6e8cbe09b5f14ca45ea103a"
+    },
+    {
+      "path": "actual-package-identities.json",
+      "bytes": 4021,
+      "sha256": "b393b3d2fe3092811b17a00db534351bd39933ab5e172195ded6389b70bb0049"
+    },
+    {
+      "path": "production-css-proof.json",
+      "bytes": 4337,
+      "sha256": "a567399be272b300917de1497fa1397cec9aa983d9a535e96175a195486e03bd"
+    },
+    {
+      "path": "actual-production-module-map.json",
+      "bytes": 13584,
+      "sha256": "ee4adbeae99eeedb9af1f329bf8b09804adc684181dbedd337c3c95136714408"
+    },
+    {
+      "path": "actual-production-css-replacement.json",
+      "bytes": 2734783,
+      "sha256": "1b1c03c9eb84878b8a6ef1f73511f5071948ae6f03f3b4664cb818420cc74721"
+    },
+    {
+      "path": "actual-electron-main-process.json",
+      "bytes": 952,
+      "sha256": "809cc597d53b40c888d6102dccc2c052c5bb9ec1f3c89e1a51cc5cb147b59e0a"
+    },
+    {
+      "path": "actual-electron-web-preferences.json",
+      "bytes": 428,
+      "sha256": "7df4c9dbbe765771f85c6f2783bfcd2ad5cbbd07ab54bb02c3b43eca15016663"
+    },
+    {
+      "path": "frozen-harness-inputs.json",
+      "bytes": 1796,
+      "sha256": "96c738178062db122f21d93d009bdbf0ae7ee5e0a801a5d87bcbb8a51070370f"
+    },
+    {
+      "path": "harness-hashes.json",
+      "bytes": 1796,
+      "sha256": "a6911b030bb573a202aa0dc663a20cd571bec5487c6ce06b7f0c5248deeddf45"
+    },
+    {
+      "path": "dark-390-16-model-below-fold-witness.json",
+      "bytes": 72036,
+      "sha256": "aa13516193de8f110799121a684f6d62fe1c157f9f79b8c776305a675dd3951d"
+    },
+    {
+      "path": "light-390-16-model-below-fold-witness.json",
+      "bytes": 72037,
+      "sha256": "8d91ed848457ea8472adf37e71204466d3cb9c3eaaef7cd41013c898a9fa98d7"
+    }
+  ],
+  "rootFont": 16,
+  "sceneWidths": [390],
+  "scope": "model-below-fold-current",
+  "screenshots": [
+    {
+      "path": "dark-390-16-assignments-below-fold.png",
+      "sha256": "ca3fcec95ebee3ec3f655c30b30bb8894e6b86c0a6641aa6e21a77b8f096bcca"
+    },
+    {
+      "path": "dark-390-16-assignments.png",
+      "sha256": "97135e630d31fd709162a63f73718bc2be4ba99e565d045a97423f1a85b02a45"
+    },
+    {
+      "path": "light-390-16-assignments-below-fold.png",
+      "sha256": "6751cbc6f6cc166b2198b2902853ed85b06dce095880396c281055b106dfa3c5"
+    },
+    {
+      "path": "light-390-16-assignments.png",
+      "sha256": "ea06ffbf2e8397ff23a66ea159c2af59989692ba3919c5d450f5bc0388c7b6fd"
+    }
+  ],
+  "themes": ["light", "dark"],
+  "zipSHA256": "22a836cf1b2b754c0365fe7c155782408dbbe2f63a117af227bf05357630f45d"
+}

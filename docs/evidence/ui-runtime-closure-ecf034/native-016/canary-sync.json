@@ -1,0 +1,1602 @@
+{
+  "allMigrationComponentCodeUnchanged": true,
+  "appendedParagraph": "\nOne departure from upstream sizing: assistant message content takes the full\nmessage width. Upstream sizes `MessageContent` to its content (`w-fit`), which\nsuits a user bubble but collapses the assistant's steps, tool calls and code to\nthe width of their longest label, leaving half the column empty. User bubbles\nkeep `w-fit`.\n",
+  "designOnlyAppendedExactCanaryParagraph": true,
+  "finalMergeHead": "111c9056919284e159d13f77de4884d55ef5937f",
+  "finalTree": "f39fdc70d1e4009a1d97cf132c5530cd78bfdc5d",
+  "importedPaths": [
+    "DESIGN.md",
+    "docs/development/assistant-message-full-width.md",
+    "src/components/ai-elements/message.tsx",
+    "src/features/DailyBrief/__tests__/BriefCardSummary.test.tsx"
+  ],
+  "migrationFiles": 263,
+  "oldVerifiedHead": "ecf034b91ff459c4c6621ee85b7c9e271e2808b1",
+  "overlappingPaths": ["DESIGN.md"],
+  "parents": [
+    "ecf034b91ff459c4c6621ee85b7c9e271e2808b1",
+    "9b5139d37b842f5c42cd636fa565dcf36d5ad330"
+  ],
+  "productClean": true,
+  "rows": [
+    {
+      "path": "DESIGN.md",
+      "unchanged": false,
+      "treeEntry": "100755 blob 098bd3870d863f4bcf24f64e10bbb8f69d275389",
+      "deletedInBoth": false
+    },
+    {
+      "path": "apps/share/src/shell/ShareAppShell.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 2d1663cc3828f4e2906947bf6df1bd6cf906e1cb",
+      "deletedInBoth": false
+    },
+    {
+      "path": "apps/share/src/shell/ShareLocale.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob dfe88f85b0122f9ae3c23f5843522ca10659b8c1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "apps/share/src/shell/ShareTheme.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 1a707a552a05c5bb723019444104214dd22d429b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "apps/workbench/src/shell/WorkbenchLocale.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 8926e30346ac26b5dd99a13087a94533847f1ed4",
+      "deletedInBoth": false
+    },
+    {
+      "path": "apps/workbench/src/shell/WorkbenchShell.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0bfab348472afdeb9c2f47732acccefb46864b76",
+      "deletedInBoth": false
+    },
+    {
+      "path": "apps/workbench/src/shell/WorkbenchTheme.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 9191efd6717d8c020638805dad88ea61bcb24da7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "apps/workbench/src/shell/createWorkbenchI18n.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob f7e948e2aae8aa6341dc57e3c8e137339969991f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "docs/development/antd-style-layer-spike.md",
+      "unchanged": true,
+      "treeEntry": "100644 blob 6db3c8d0f917cb11757d3b1aeaf73dcbfefc1fc2",
+      "deletedInBoth": false
+    },
+    {
+      "path": "docs/development/antd-style-rollout-batch-1.md",
+      "unchanged": true,
+      "treeEntry": "100644 blob 64bca80f0089f02e531871c266907063de7d0dbe",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-agent-documents/src/client/Streaming/CreateDocument/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 762c3e016ff5b2d9e650bedd84abdb8ae0134273",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/Agent.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 4472754f936cf23f97dd438a7dfb5390d0eaa159",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/AskUserQuestion.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob dd452eb44b45ad4a68638580384d55b4d435e459",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/BrowserMcp.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0b3ebe95b904f0d84dab8e267930b0837a702183",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/Monitor.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 3c4bd9df59ad056bb5d78ed3902b2b373c4e9762",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/ScheduleWakeup.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 53bbd581d4dd74581afc802c6c8fe2b34bcb98ec",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/SendMessage.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0cf5cfa15dc60eb3ec4a3ba29d9cc0e66bf4512b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/Skill.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 60a9bfb72a997e0f19e96ffbe661fb8f9fd5b680",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/Task.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob e9d1a2229c23a21cb83bc035159c27ebea20b355",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/TaskOutput.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob cd2f878c2893374556393363549e21abdce9a73d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/TaskStop.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob d99b14afc532db2546295fb8dd669abecd16d03b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/ToolSearch.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0d326cd281c62c40ce99c932189d3ea271da0b28",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/WebFetch.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0451959b0e5e1b1ad195f3859b4b5667aa5c1f99",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-claude-code/src/client/Inspector/Worktree.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob ae53b52f5e34d707618e66d0e50b6b29d6531bf6",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 925cd207b2b3ac86256dfd90b04752c10104f36e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/MemoryCardParts.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob c556a2eb8c2a124173ee21d2f1f7e3dd80ccc007",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob af32940429b1c2977d0dc2171a568d181275275e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-orvilo-agent/src/client/Intervention/CreatePlan.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob f1626c55686ab5fc404fdcf3630691d94196a7cc",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/CreateTask/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0af154dee366ffe915b139edbebf8c2a9f334520",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/CreateTasks/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 9a63be761405b9e2936c061bdd43117e90487e6e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/DeleteTask/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 3964fbbbec162df891a4d0bd726141fa04c3e13a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/EditTask/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob a25410109ca352235db70f2afee3260f10ec6f67",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/RunTask/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 97c315293bde5e179e4487e61638288de5744e36",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/RunTasks/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 640dcbbbb03dfe77f2d3f3c008898c04c5902487",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/SetTaskSchedule/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob b9f3d30250d650a5f92200405ce699eb8c3773db",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/SetTaskVerify/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 514ed30576dafc7a739cc9a8ba4823b21ddf545f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/TaskComment/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 68bbfc6a729e3a129dc6cc566b540f7e92ef6896",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/UpdateTaskStatus/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob abce1059a0ce00da6b70c966aa2c3fedf2316b67",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/ViewTask/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0f061f8aabb97454b9ec10fc0d0d662b130fa9a3",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Inspector/statusText.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 18dfcc0c3ee695a567281cff6f4c4752b5a031c3",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Render/CreateTasks/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 070fa036b1d49fa3c83dcf7087548dffd984936e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Render/RunTask/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 51b38e8ab86bbd6fea7b87a8ba5832a39b0d1ae4",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Render/RunTasks/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 3b9ac7f15f4ae4299792ffdf024878fc633196a1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Render/SetTaskVerify/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 15d014390e0a245da52eb80afd2ec22e2ebfcac9",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/builtin-tool-web-browsing/src/client/components/SearchBar.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob d30d5ddc33cb7527e0584eccb18baaec2cbcd6e0",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionResult.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob f72cf9f6607db60db86b28704c092da49cafa155",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/GlobLocalFiles/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob db1e202fd1631eca84bd17bafabe818a002fd406",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/GrepContent/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob c209c8f9769ca6ae04b9667d7ce47ed4f5243e26",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/RunCommand/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob d7f468b9d4a0dc8676c142b28b61ce07f3bdaf57",
+      "deletedInBoth": false
+    },
+    {
+      "path": "packages/shared-tool-ui/src/components/OptionCard.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0a1404f68cf35e5913731e6c031f4db282e44846",
+      "deletedInBoth": false
+    },
+    {
+      "path": "scripts/ci/checkChineseUiFont.mjs",
+      "unchanged": true,
+      "treeEntry": "100644 blob bf1d626c1c3b6083e1cff024e2f7cd11e878c941",
+      "deletedInBoth": false
+    },
+    {
+      "path": "scripts/ci/checkChineseUiFont.test.mjs",
+      "unchanged": true,
+      "treeEntry": "100644 blob cb49b700ab38319e3fcb40c1bed9bf731028723c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "scripts/ci/hostDeviceBoundariesAllowlist.json",
+      "unchanged": true,
+      "treeEntry": "100644 blob 86a419c55cdae0b2d89a73e58364c52c8e386572",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/app/globals.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob a419e35ed49a30fc0597a0128203e716bfdc4161",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/Branding/ProductLogo/Custom.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 48739f2b20ce6465ab39c6162a28b603745c037c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/DatePicker/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 3222bc7041ee885ec77f3a9b302fe334132bef43",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/DiscreteSlider/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 4b5dbfbc87517d2f666bf060b59e2e4ce5bd7094",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/DotsLoading/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 9b62417cf4cafdae6dd51b3abbdbe10c7d7a98eb",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/FileParsingStatus/EmbeddingStatus.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 4e960fd05edf61a50c14744818ea1ec06cc61121",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/FileParsingStatus/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob ab40836aac692372bf4a770cd9ca5621b80e4f07",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/GeneratingBorder/index.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 04ee46ce6e502e6dc906c31d1a936266c6587a8b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/GeneratingBorder/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 5994049e4053f1ffb8edba04e53a49d2a64c17a4",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/GroupForm/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob be1b1dd104e01f40dd653bc7a2f3150304e92a49",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ImageItem/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 280764bc464f0c790ae400c3fb682de81124cbd3",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/LibIcon/Locked.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 93f8847c2eb376aab716fd4df2452c608712bad0",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/LibIcon/StatusIcon.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob dd31d8a74dcbc87aa0cdade12436214960ff17f9",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/LibIcon/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob a078c395ce028fe4ea560f7bee15f622c527f54d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/Loading/SkeletonLoading/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 45ca200f2339ccc50570ab53c08f1b07b5e8d25a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ModelSelect/ModelSelect.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 43fb995fe61e193928666096e8fa3fe18c7a6c04",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ModelSelect/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 2224c3a9d989b5eb9955915183e36fef39f6ec3d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/Notification/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 5214ea32eaa341562d9ae77636baef740d92a417",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/RingLoading.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob d5577025dab0b671578e1c34e294e17965a200d7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/SearchBar/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob bb38598d335654fec1c5d017b2106a1a3937f510",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/Skeleton/Conversation/Container.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 8732226a9b48d331a8e70dcd46a266432b1b94b4",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/Skeleton/SkeletonSwitch.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 11a9fc938d6051b91b237ff5bef26ceba61f12ef",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/TablePagination/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 536bfcc6afa481b9c5cb53d02d52890377cb2dab",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/TipGuide/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 690e3021c1ab9109ef7fd4a8462fa1f2199caba2",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ai-elements/audio-player.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob d89efaca6e7fc459ad74b8a08a1735d5f8a9877e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ai-elements/inline-citation.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob eb1038fcd4262a3e2defea320d1d63126764b69c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/reui/code-block/code-block.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 1f4c0b80e91adabe40b8f7b4c118592647626a65",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ui/accordion.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 57f147c75ab894e6265518949c74571b42b653e7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ui/checkbox.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 2ad4ac1bc6dd7a13cd5061c1b338c476e7605165",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ui/code-block.test.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 7943b8b8d95e7a78905aef2b4c8f5797ae1e40c5",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/components/ui/code-block.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 1f4c0b80e91adabe40b8f7b4c118592647626a65",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AIChatbot/Composer.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 613b46eb57699bfc02a540283dc41de3fed09429",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Report/InteractionCost.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob ef6434858d66c4c8133578596132dbfd52e32923",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Run/CheckerDock.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob a42bddbc23c96743df55bb8f7809f695ed1de823",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Run/RunResult.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob f22b991afc7a90c698c99d9d044b354d0661d4b5",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/Checks/CheckRow.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 29158ce8c7b80ceedf33ed5b3175a69d713b98d5",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/Checks/styles.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob c269bb6f48b6dd1afed5c8e921a3d45019217cca",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/Comments/CommentReactions.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob c9d253030d1640690cccf09288f117e2e6cc75ca",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/Comments/EvidenceCommentModal.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 3d5f981a29853e1daf92e4c2e03c7e2b8edf14e5",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/Comments/ReviewerApprovalBar.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 7bf2ad98c485a054d0bbf3df7fe929790f63bd5f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/Evidence/Annotation.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob fed5c520a2b2e8409797ab67559ff3a50fc1426b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/Evidence/DesktopEvidenceReview.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob defcab2ef8a28b5c5f7c1c20a019498c92dbf576",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/Header/AcceptanceStatusPill.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 89eddc7d05c7d7b2701cab3e9b7a704f83e9a0a8",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Acceptance/Viewer/History/LedgerPanel.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob da0f96575757a0e778c11a0741cf310b43f7080a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentGoals/AgentGoalsPage.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 7de2ace1e0ab53c541b22b60dde4e39fbeadb3b1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentGoals/CreateGoalModal/CreateGoalContent.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 4008c7f4c8f7e3a8d95114257b5b7b4b8788155e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentGoals/CreateGoalModal/CreateGoalContent.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 2feb793de1290c724618b5b6e270be17341cb89f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentGoals/NorthStarMetrics/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 3a83c081d6435441d60c93437ff3b07b0ab5934d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/Graph/Graph.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 8098ef88269089485fa49da0b5aaec1e339d8183",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/Graph/GraphNode.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 027afcd0eda5dd58e9660574ab77140ce6f6d04b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/Graph/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 8c7efdc5d3169f894074c9d3e5a61632c1f0ae31",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentOnboarding/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 0a6643898cf74629e4633c5f1ff5856ab3de0293",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob dc94b26307f80695096d1225dc2ceb43139b9ec9",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentSidebar/Topic/List/Item/MetaHoverCard.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 3f17de191a16bd619d1520c11b7c9fdc865d2d1b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentSidebar/Topic/TopicListContent/ByProjectMode/GroupItem.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob c8d4451c6902146cdac52591d4f4a855edb79a75",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentSidebar/Topic/accordionStyles.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 64c3440978a9f42cd063c83b4d9c04e429d719b7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskInstruction.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 34c4899898350ea299781457e6e0e520a089d4f1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/TaskIssueDefinitionModal.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 439a30f225f54d1a37c98e397a79e2d05d0a2891",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/railText.test.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob e800749b2e45da65b144b9c26d72dc81c8bba2f4",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/taskInstructionStyles.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 1e72d87e6b456f65520b6bb415b39ad1ea0e883b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskList/CreateTaskInlineEntry.test.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 055837c14bfcca24afbd9e63cef0291b9fe87be0",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskList/CreateTaskInlineEntry.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 82e80b82994b670c0bf11a9d966cbf66db7395b0",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskList/TaskBoardCard.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob f51eeb691ab29beb3164b1ea99eb8dbba738d8a4",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskList/TaskRowIndent.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 6456522eb3480d5e14174ceedfe8e699bd9e4ca6",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/CreateTaskModal/CreateTaskContent.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0d6dfe644d913d58a51cef700a26517ac3791e13",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/features/AgentTaskItem.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 451ca63b5488a4a902c692fe20d439b3a1897391",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AgentTasks/features/TaskStatusCascadeModal.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 32c1da3739c119c58c42d70bffca526fefc8b1e5",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AttachmentInput/AttachmentMenu.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 11f529db1e2652e18f6a5da6fe1c5e0b02aae5ec",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/AuthCard/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 12f48dfe69a2854fe3a3538c8f0993d0f9b81227",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Automations/AutomationScheduleList.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob da4c8911597a3ba6092a6852cb3c0d741d1eb044",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ChatInput/ActionBar/components/ActionPopover.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 199a50622d2d1406029e2aa29e76af9f5d13088b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ChatInput/Desktop/ContextContainer/ElementItem.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob a2a615c81024501b3e784db4d9561e66440caa0f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ChatInput/Desktop/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 25f26b3dc2959b1d5fd531f6b6d58188ea1222bb",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ChatInput/Dictation/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 443ada7a65230bee0b4f9bc5b923f582bdbbaf6c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ChatInput/VoiceMessage/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 13a34aa88bd1ccfca5cf51d8b62a3bfa7c82034e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Conversation/ChatItem/ChatItem.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 14b92f4a066f65d0dcc24739bf161a89240ec760",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Conversation/ChatItem/style.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 4d14a0770d7e408ae5b8cb1ab9be157735af179d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Conversation/Messages/Tasks/shared/ProcessingState.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 32af467f5acd1c34973de1f296843c3e538d3fd4",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/DevDock/Bar.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob f1ad280e93e91ba160a10deb2ab1d2bb50088f5b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/EditorCanvas/EditorCanvas.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 643d3241b854226cf7a1ac5b4173e155735e593e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/EditorCanvas/InternalEditor.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob b8133348036d2c9adee03a61eb407834d43fc183",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Electron/ScreenCapture/OverlaySnapshotPublisher.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 7eb541daaab37ff0d9bb0f383219603dadfd33ff",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Electron/titlebar/TabBar/TabItem.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 2fc1997024fb65534ac54045111fcd204ab64e0c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Electron/titlebar/TabBar/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob f2908a40751c68cc32dfd0f0ce6ca38f686136c1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Electron/titlebar/TabBar/motion.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 9aaf81b60115323c7f307679a1c9017745093c10",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Electron/titlebar/TabBar/styles.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob e53a9db8130f387dca05ebfbac296c7872ee52e1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Electron/titlebar/TabBar/styles.test.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob a7d7ce3f4d80b9de16cd1ebc49ee2dc503aa118b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Electron/titlebar/TabBar/styles.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob ea1c35155680142b04250cf290b4bcbde09c08e0",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/FileViewer/Renderer/MSDoc/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob fe1c4f531bc9db9174dd5e93401f48f20f621c70",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/FloatingChatPanel/FloatingChatPanel.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob ca915eff44aa41fbddfb24721438ad02481469ce",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/FloatingChatPanel/InputRow.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob cec770f16d541bda5af8b9abe196b6e5f5f803f7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/FloatingChatPanel/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 7069b02c81fbeb5bd22046afbda6ae9faa9b7c0e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/GlobalApprovalNotification/ApprovalMotion.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob bfe5d35acce6954fae893f7bcf3e09e0f9015220",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/GlobalApprovalNotification/GlobalApprovalNotification.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 75d914f1e750fa7a6aab332222a3e0e6ae4fc671",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/GlobalApprovalNotification/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 9f09c74dac1a74ecdb0cbfdcba3dad9b460bac75",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/GlobalApprovalNotification/styles.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 24b56de7783d65cac1d306eda29ecc15e0c969c9",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/GlobalApprovalNotification/useApprovalMotion.test.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 2403d9f72a30f26803ec0e4cf148a1f9b06f068f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/GlobalApprovalNotification/useApprovalMotion.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 16eb5e9d64d8a7be00283a9b71f3a75804174b92",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/HeterogeneousAgent/modelPicker.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob ce915270492d097f1347d4d1f3d39b4ee59defb7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/HeterogeneousAgent/modelPicker.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 59ba17fe8b90cc8b5557a9618885655039fb1f24",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Home/AgentSelect/ConfiguredAgentRow.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 35209c59a6b2b492e888d50912723c64b6e248cf",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/HomeSidebar/Header/components/User.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 8a2e6922ee138be8a530c331b907ecc6e7a23dd9",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/LocalFile/LocalFile.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob c2e3a780aa47b60444a2cfb2fa29b8388abb46aa",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/MCPPluginDetail/Overview/TagList.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob d82b5d27732f0ae0d47b23d529e7a586443e08b0",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/MCPPluginDetail/Score/TotalScore.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 587bc4b5089185b60f980842215d05361df3ae57",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSelect/ModelSelect.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob b8ebcdd74b89b6b8ce1216dcb4cbc7c111e241e6",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSelect/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 8c57ba5334edb942ce248a8348ba35c472b1f590",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSwitchPanel/components/List/GenerationListItemRenderer.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob a99e743c354194a22c4c6931a619a6ef5e8d5c90",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSwitchPanel/components/List/GenerationMultipleProvidersItem.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob bcc0d9456c77ea4fc8de494b01fc8a37f2d7434e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSwitchPanel/components/List/ListItemRenderer.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 43e8d8294e101b1f8e9358166735d8734ec474b6",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSwitchPanel/components/List/MultipleProvidersModelItem.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 7399810f16c4a1cfa867719587459c5738bd44b2",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSwitchPanel/components/Toolbar.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob cbd435c29631030e408ca061c4c3bb6ef21f1959",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSwitchPanel/styles.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob a2707c1ba324caf478959fd41a1f07b1876143fb",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ModelSwitchPanel/styles.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0d0afcb3ddc180ba092ccf4d31925c3dba993982",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/NavHeader/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 2a04202d30fc4cb830582b92c39c0fb78af84d2b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/NavPanel/SidebarHeaderSelect.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 5e17da3b30309e0e61c4ae32b87420c2e89b02c0",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/NavPanel/components/NavItem.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob dd84cfa8666815e15ff4a62189f506169e707a7e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Orchestrator/ConfiguredOrchestratorSelector.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 5fbe5ab61355a5362c8bf6cd50aa386d7970ddd8",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/PlanIcon/PlanIcon.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 061870550e91900955e979d7d15577fac119434d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/PlanIcon/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob c06bae10d73ad20d6a9529438f46659d20efc76a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/PluginDevModal/MCPManifestForm/MCPTypeSelect.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 4f8231e1a64ff5533a75be736bf9ca767acfc17d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Portal/Artifacts/Body/Renderer/SVG.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 6e38acfb64c8e06c694f11d5cd147a765018ce4c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Portal/Home/Body/Plugins/ArtifactList/Item/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 92a3b3619033c04efc70e091425c8da94c0178c3",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Portal/LocalFile/DocumentPreview.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob fc4e5324b52ff1122d7ab0c60f8d8a183c408eb6",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/SheetGrid.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 30cad45325e8dcd025100be8499c227dc5117dfc",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Portal/MessageDetail/Body/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 8817b7e54bf6d1cdfaca12dae495f6055e4408e1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/Activity/ProjectCreationActivity.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob a2f77b6be3061b7bfa4baf8da91a87c4602da73f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/Issues/IssueFilterPopover.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob ba8257733d7f2ee095f06b2dc68b2c30efd616c2",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/Issues/ProjectIssuesControls.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 04fc2233866913916e504c76309d3e26603ac186",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/List/AddFilterPopover.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob bce65048a91a867fbf8b0663caf205486b1141fe",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/Milestones/MilestoneFormModal.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 026e9cb1d2f0e256453e640d2cf34812abac40fe",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/RenameProjectModal.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob e27395898d3bb6295d8f6cc3b50cf2dfa2d43b22",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/Resources/AddResourceModal.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 10e801f15882b376d888a4fe46e272588078c6d6",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/Resources/ProjectLinks.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob eb75a7461a26deb240aba44d375c5fa16f3f41b7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/Resources/ProjectResources.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob abad743c4c5089c6ffa64278c99692b3784ca44b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Projects/Updates/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 93029b25a81556ec1dcdb7bd94a6dec53919d418",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ReUIShell/ThemeSegmentedToggle.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob b747f548b9067898677b0ef75f1b99bd5d0be364",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ReUIShell/WorkspaceAvatar.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 3ab8bf08890b5099fa9ff526022fef548fd30ddf",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ReUIShell/WorkspaceMenuContent.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 74d22b9a68fb3bb8ebcf598e2efb089aa86d34af",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ResourceLibrary/Layout/Header/LibraryHead.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 4db7d47544184a210852a70e0c64f1a1a3328087",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ResourceLibrary/Layout/Header/LibraryHead.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob de4e2d4153a9cef5b654eecc42ded2b0191c9e5f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ResourceLibrary/Layout/Header/LibrarySearchBar.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob d6eb177258d5d3029eb6aa3722c85cae6ebaf772",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ResourceManager/components/Explorer/ListView/ColumnResizeHandle.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 7a7977705e117b9e301fc84d76f147b7e675d9cc",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ResourceManager/components/Explorer/MasonryView/MasonryItem/MasonryItem.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob d6456fce58b97efa42a9179e7db8d34d600e0975",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ResourceManager/components/Explorer/MasonryView/MasonryItem/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob f70a7716ef9218e0c423da559d82dedb0ab4436a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ResourceManager/components/Explorer/ToolBar/SourceFilter.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob edd8a7a027d7b92c886b1bcbe0f7597ffceede3a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/SavedViews/SavedViewPage.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 20522f5f5c0ce2819d1d51fd022c7c47f923357f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/SavedViews/SavedViews.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 582e6b544eee8610a2e4eb5133498b0a4d1b62f4",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/SavedViews/SavedViewsPage.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 402995f4f617308e80043216b63fd9e30d89981d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/SelfLearning/Portrait/LessonPreview.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 19729e7e7a85c2c8fe68c52884cbed31b84fab3b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ServiceModel/ModelAssignmentsForm.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob b303cdb255ac6f708d95985cb788662775131051",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ServiceModel/ServiceModel.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob 9ab5c9f60e4a227c8daa7f0ad4c08f7d666a0784",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ServiceModel/styles.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 6dba7a3e3e731923df71c754636611432f9249d7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ServiceModel/useModelAssignmentsForm.test.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 6d31071dbc55603cd3d57d33acade78e406f822f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ServiceModel/useModelAssignmentsForm.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob f0c7b4d36e3ab246c734dcebe18f79df75b5c638",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Setting/Footer.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 13fbc34eb2f16057f05e8c99d9f64ea567df9d8e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/connector/features/ConnectorRow.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 4bc591e8e79266300ca5fa7136118094924ae605",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/creds/features/CreateCredModal/CredTypeSelector.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 96f7666e1599c08460caf718fcf61de1f2f6728f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/creds/features/CredItem.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob cd13fd9f90741487b60ecebaeeb1c0fa0e909a4a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/devices/OsPermissionsPanel.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 71d48275a1993cb4070a95e55c40966b5ffe6b3c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/profile/features/AvatarRow.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 201dd2df3b4f785bd8f11a3e7be9d53fc283e3ee",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/provider/ProviderMenu/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 4f714f2f92a43e805a083a1221aed64f59999959",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/ProviderHeader.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob 8cef2eb0352ab1678e8d6935b72586f7f1a3c2b9",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/UpdateProviderInfo/SettingModal.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 5163253de98a43aabb4e9070bacd92fef530558f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/provider/features/ProviderConfig/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 96b210579f93c6c480a1dd68de3be5baf7e273e1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/Settings/proxy/features/ProxyForm.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0b8006042a09714c053663e697364b96e752016f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/SettingsSearch/SettingsAnchor.module.css",
+      "unchanged": true,
+      "treeEntry": "100644 blob f25a0a592f7f1666a8f2732551109bb516cdda1d",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/SettingsSearch/anchor.test.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 18dc989ace639395ea74ab3e2e6aedcfe9621397",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/SettingsSearch/anchor.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob fae08936b1a8371453ac8234c337c7c5e093dc7c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/ShareModal/SharePdf/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 481e44f6a6e47c7f186fb3abccfa096bf8b8afc6",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/WorkGallery/WorkPreview.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob f938d537976901664c6eb96c5aa49ef7bb9c36cc",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/WorkTeams/TeamIdentity.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob c2a195f3954e0b3ebc628bd861c08dc53870b0c1",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/WorkTeams/TeamProjectsSurface.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob f7a4de558d66490041e0078592714db131170d0c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/features/WorkspaceSetting/Integrations/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob fc78eec8ec24acbf0294a01582810efe88779a5a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/hooks/useIsMobile.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob acfe75fad3af82e812deaf0a3d6851aed703fae3",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/hooks/useSaveState.test.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 19745102947e7e8825458b8b92842cc7bbd7611a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/hooks/useSaveState.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 6072d17e1cdbf0c0d87689ce0fc21395c13f028c",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/initialize.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob a0c7992a3867acc0f805bfe09f9621e40887e15f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/layout/GlobalProvider/AppTheme.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 3cf92ce146a88b9e093667ba5fc2bfc55c9cccc5",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/layout/GlobalProvider/ServerVersionOutdatedAlert.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob b57b3297b97a64386ea9708819ff83f8ab1dfb4a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/layout/GlobalProvider/serverEntryStyleCollection.integration.test.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 6f5c466ebbb79bf4380d6edb640190da9cf7878e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/layout/SPAGlobalProvider/Locale.test.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0e86427007436d10e0d8ac032bda62ea1cc41f22",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/layout/SPAGlobalProvider/Locale.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 6ebe04b2968d434a7f5b2cae98952f192674c133",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/layout/SPAGlobalProvider/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 7f96ff3d011fea889004f8fd079606475db959a2",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/[workspaceSlug]/settings/credential/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 1d525320a0dae56ea6bbe39ead857e3ad4d5a913",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/agent/features/Conversation/ExamplePrompts.tsx",
+      "unchanged": true,
+      "treeEntry": "100644 blob b1eee108ac7e4ce1118214ae9c4698cb420e78c5",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/agent/features/Portal/features/Portal.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 651fd2bdbfc4322500b0dff3cb1fc68e7777d761",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/group/_layout/Sidebar/Topic/List/Item/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 4660f6b0fec3d37cc5c092d151386bc096f1fc61",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/memory/_layout/style.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 9deb453bbed37b3fd9bb8aa8666cf29429f8cd7f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/memory/features/GridView/GridCard.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 967818539551b686b18fd76a3e920742cf48bd8f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/memory/features/Loading.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0d017ded94cea6f5e1c1ebac46a5b27a2e9d5f74",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/memory/features/TimeLineView/PeriodGroup.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 9b6ce37f277469de13d308c81a91ce138d21694a",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/memory/features/TimeLineView/TimeLineCard.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 659ec202f9e7cfe9205eff3c45e0516e19621809",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/memory/features/TimeLineView/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob b7699890bbc699d1d7661f9323e2aaa27ec11911",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/memory/features/useCateColor.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob fc8ecf809beac6a7eeea77129e25ad00a458f377",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(main)/memory/preferences/features/PreferenceRightPanel.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 51596e8e7560400abdf27946cd56a9a07f9806ce",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(mobile)/_layout/NavBar.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 8bbb8dd0b7205657e5ccc96c66e1d2980dd6c916",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(mobile)/chat/_layout/style.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 0d36e6a685801db00185405d4258c31813215b3e",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(mobile)/me/settings/features/Category.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob f549b9efa419eb9154a1727190f42196fbbca1bb",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(popup)/_layout/index.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 642e5174173624294c5ea3b7948623f91ed1599f",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/routes/(popup)/agent/[aid]/QuickChatAgentSwitcher.tsx",
+      "unchanged": true,
+      "treeEntry": "100755 blob 08030837d739abc9e22518110392b59f7f872bb7",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/store/user/slices/settings/action.test.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob bcd347412eb95bbc06dec142ecb3d52424ff3839",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/store/user/slices/settings/action.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob d705c0f15bc62466fd932de3bbfb474f78ef5fb9",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/styles/antdOverride.ts",
+      "unchanged": true,
+      "treeEntry": null,
+      "deletedInBoth": true
+    },
+    {
+      "path": "src/styles/antdStyleLayer.ts",
+      "unchanged": true,
+      "treeEntry": null,
+      "deletedInBoth": true
+    },
+    {
+      "path": "src/styles/index.ts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 804509b2cf71205ec629a9d4425907d3e83cc254",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/styles/layerEmotionCache.test.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 30fc342983d3d942c93b954c760722d82653cf61",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/styles/layerEmotionCache.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob 23174339f2f34b5e3778acf92f044832ec5c631b",
+      "deletedInBoth": false
+    },
+    {
+      "path": "src/styles/themeRoles.ts",
+      "unchanged": true,
+      "treeEntry": "100644 blob cbfe3005d35ea34262caa01e21c38c50d0962e07",
+      "deletedInBoth": false
+    },
+    {
+      "path": "vitest.config.mts",
+      "unchanged": true,
+      "treeEntry": "100755 blob 3e0a68a52bfebfe9e8b4b8b211819401087e796b",
+      "deletedInBoth": false
+    }
+  ],
+  "unchangedMigrationFiles": 262
+}

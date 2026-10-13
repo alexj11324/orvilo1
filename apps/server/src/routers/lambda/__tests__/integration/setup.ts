@@ -38,7 +38,16 @@ export const createTestAgent = async (
 
   await serverDB
     .insert(agents)
-    .values(await withTestAgentDevices(serverDB, { id, slug: id, userId }))
+    .values(
+      await withTestAgentDevices(serverDB, {
+        id,
+        slug: id,
+        userId,
+        ...(id === 'inbox'
+          ? { agencyConfig: { heterogeneousProvider: { type: 'codex' as const } } }
+          : {}),
+      }),
+    )
     .onConflictDoNothing();
 
   return id;

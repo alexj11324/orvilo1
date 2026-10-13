@@ -267,7 +267,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
       style={{ justifyContent: showCountdown ? 'space-between' : 'flex-end', width: '100%' }}
     >
       {showCountdown && (
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {expired ? labels.timeExpired : labels.timeRemaining(formatRemaining(remainingMs))}
         </div>
       )}

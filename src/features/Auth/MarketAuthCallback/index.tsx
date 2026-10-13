@@ -1,5 +1,4 @@
 'use client';
-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
 
 import { CircleCheckIcon, FrownIcon, HourglassIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -176,9 +175,9 @@ const MarketAuthCallbackPage = () => {
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="default">{getStatusIcon()}</EmptyMedia>
-        <EmptyTitle>{<div className="text-[32px] font-bold">{getTitle()}</div>}</EmptyTitle>
+        <EmptyTitle>{<div className="text-3xl font-semibold">{getTitle()}</div>}</EmptyTitle>
         <EmptyDescription>
-          {<div className="text-base text-muted-foreground">{getSubTitle()}</div>}
+          {<div className="text-sm text-muted-foreground">{getSubTitle()}</div>}
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>{getExtra()}</EmptyContent>

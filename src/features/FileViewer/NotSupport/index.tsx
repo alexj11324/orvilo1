@@ -25,7 +25,7 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
     <div className={cn('flex flex-col', styles.page)} id="not-support-renderer" style={style}>
       <div className="flex flex-col items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
-          <span className="text-[64px] leading-none">{'👀'}</span>
+          <span className="text-[4rem] leading-none">{'👀'}</span>
           <div className="flex flex-col text-center">
             <Trans
               i18nKey="preview.unsupportedFileAndContact"

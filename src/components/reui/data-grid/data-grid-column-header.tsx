@@ -138,7 +138,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
   );
 
   const headerButtonClassName = cn(
-    'text-secondary-foreground/80 hover:bg-accent data-[state=open]:bg-accent hover:text-foreground data-[state=open]:text-foreground px-2 font-normal h-6 rounded-lg',
+    'text-secondary-foreground/80 hover:bg-accent data-[state=open]:bg-accent hover:text-foreground data-[state=open]:text-foreground px-2 font-normal h-6 rounded-(--radius-button)',
     className,
   );
 
@@ -341,7 +341,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
         {props.tableLayout?.columnsPinnable && canPin && isPinned && (
           <Button
             aria-label={i18n.labels.unpinColumn(resolvedTitle)}
-            className="rounded-lg -me-1 size-7"
+            className="rounded-(--radius-button) -me-1 size-7"
             size="icon-sm"
             title={i18n.labels.unpinColumn(resolvedTitle)}
             variant="ghost"

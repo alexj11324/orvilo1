@@ -7,10 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 const BriefCardSkeleton = memo(() => {
   return (
     <div
-      className="flex flex-col gap-3 p-3"
+      className="flex flex-col gap-3 p-3 rounded-(--radius-card)"
       style={{
         border: `1px solid ${'var(--ant-color-border)'}`,
-        borderRadius: 'var(--ant-border-radius-lg)',
       }}
     >
       <div className="flex items-center gap-4 justify-between">
@@ -19,9 +18,8 @@ const BriefCardSkeleton = memo(() => {
           style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
         >
           <Skeleton
-            className="rounded-md shrink-0"
+            className="rounded-(--radius-card) shrink-0"
             style={{
-              borderRadius: 'var(--ant-border-radius)',
               flex: 'none',
               width: 28,
               height: 28,

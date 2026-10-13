@@ -43,7 +43,7 @@ const AgentInfo = memo(() => {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3">
-        <Skeleton className="rounded-md shrink-0" style={{ width: 64, height: 64 }} />
+        <Skeleton className="rounded-(--radius-card) shrink-0" style={{ width: 64, height: 64 }} />
         <Skeleton style={{ height: 32, width: 200 }} />
         <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
           <div className="flex flex-col gap-2">

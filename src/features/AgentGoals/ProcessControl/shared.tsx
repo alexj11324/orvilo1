@@ -38,7 +38,7 @@ export const KIND_ICON: Record<GoalGraphNodeKind, LucideIcon> = {
 };
 
 const styles = {
-  dot: 'inline-block flex-none size-2 rounded-[2px]',
+  dot: 'inline-block flex-none size-2 rounded-full',
   mono: 'font-mono tabular-nums',
 };
 

@@ -12,16 +12,29 @@ describe('Avatar', () => {
     expect(img).toHaveAttribute('src', 'https://example.com/a.png');
     expect(img).toHaveAttribute('width', '32');
     expect(img).toHaveAttribute('height', '32');
-    expect(img.style.borderRadius).toBe('16px');
+    expect(img.style.borderRadius).toBe('inherit');
+    expect(img.parentElement).toHaveClass('rounded-full');
   });
 
   it('keeps the rounded-square tile when shape="square"', () => {
-    const { container } = render(
+    const { container, rerender } = render(
       <Avatar avatar="https://example.com/a.png" shape="square" size={40} />,
     );
 
     const img = container.querySelector('img');
-    expect(img?.style.borderRadius).toBe('9px');
+    expect(img?.style.borderRadius).toBe('inherit');
+    expect(img?.parentElement).toHaveClass('rounded-(--radius-card)');
+
+    rerender(
+      <Avatar
+        avatar="https://example.com/a.png"
+        shape="square"
+        size={40}
+        style={{ borderRadius: 12 }}
+      />,
+    );
+    expect(img?.parentElement?.style.borderRadius).toBe('12px');
+    expect(img?.style.borderRadius).toBe('inherit');
   });
 
   it('falls back to initials when there is no image', () => {

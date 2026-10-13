@@ -1,5 +1,4 @@
 'use client';
-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
 
 import { CircleCheckIcon, FrownIcon } from 'lucide-react';
 import React, { memo, useEffect, useState } from 'react';
@@ -92,14 +91,14 @@ const SocialOAuthCallbackPage = memo(() => {
         </EmptyMedia>
         <EmptyTitle>
           {
-            <div className="text-[32px] font-bold">
+            <div className="text-3xl font-semibold">
               {status === 'success' ? t('success.title') : t('error.title')}
             </div>
           }
         </EmptyTitle>
         <EmptyDescription>
           {
-            <div className="text-base text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {status === 'success' && provider
                 ? t('success.subTitleWithCountdown', {
                     countdown,

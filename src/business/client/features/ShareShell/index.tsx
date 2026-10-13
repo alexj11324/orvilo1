@@ -33,11 +33,11 @@ export const ShareHero = ({ avatar, byline, title }: ShareHeroProps) => (
   <div className="flex flex-col gap-2 px-6 pt-6 pb-4">
     {avatar}
     {title && (
-      <h1 className="text-[24px] font-bold" style={{ margin: 0 }}>
+      <h1 className="text-2xl font-semibold" style={{ margin: 0 }}>
         {title}
       </h1>
     )}
-    {byline && <div className="text-[12px] text-muted-foreground">{byline}</div>}
+    {byline && <div className="text-xs text-muted-foreground">{byline}</div>}
   </div>
 );
 

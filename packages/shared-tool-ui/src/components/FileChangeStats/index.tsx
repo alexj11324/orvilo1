@@ -16,12 +16,12 @@ export type FileChangeKind = 'added' | 'deleted' | 'modified' | 'renamed';
 const styles = {
   kindAdded: 'bg-success',
   kindDeleted: 'bg-destructive',
-  kindDot: 'size-2 shrink-0 rounded-[999px]',
+  kindDot: 'size-2 shrink-0 rounded-full',
   kindModified: 'bg-info',
   kindRenamed: 'bg-warning',
   lineAdded: 'text-success',
   lineDeleted: 'text-destructive',
-  lineStats: 'inline-flex shrink-0 items-center gap-1.5 text-[12px]',
+  lineStats: 'inline-flex shrink-0 items-center gap-1.5 text-xs',
 };
 
 const KIND_CLASS: Record<FileChangeKind, string> = {

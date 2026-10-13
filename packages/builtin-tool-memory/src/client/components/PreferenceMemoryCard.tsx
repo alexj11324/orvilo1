@@ -151,7 +151,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                             step={index + 1}
                           >
                             <div className="flex items-start gap-2">
-                              <StepperIndicator className="size-5 rounded-md">
+                              <StepperIndicator className="size-5 rounded-(--radius-chip)">
                                 <Avatar
                                   shadow
                                   avatar={item.avatar}
@@ -205,7 +205,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                             step={index + 1}
                           >
                             <div className="flex items-start gap-2">
-                              <StepperIndicator className="size-5 rounded-md">
+                              <StepperIndicator className="size-5 rounded-(--radius-chip)">
                                 <Avatar
                                   shadow
                                   avatar={item.avatar}

@@ -1,0 +1,6 @@
+.geometry {
+  /* DESIGN's work frames keep their geometry when the root font size changes. */
+  --work-surface-gutter-x: 16px;
+  --work-surface-gutter-y: 16px;
+  --work-surface-document-max-width: 960px;
+}

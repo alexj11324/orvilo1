@@ -166,8 +166,8 @@ const ROOT_TOKEN_CLASS = [
   'data-[gutter-channel]:[--code-block-number-pad:calc(var(--code-block-gutter-gap)+var(--code-block-fold-width))]',
   /* A diff column breathes: the +/- glyph gets a wider channel. */
   'data-[has-diff]:[--code-block-gutter-gap:--spacing(4)]',
-  '[--code-block-line-height:1.5rem]',
-  '[--code-block-font-size:0.8125rem]',
+  '[--code-block-line-height:calc(var(--text-sm)*22/14)]',
+  '[--code-block-font-size:var(--text-sm)]',
   '[--code-block-copy-inset:--spacing(2)]',
   /* Where a PINNED control starts. With a header composed in, the root's top
      edge is the header, so an unadjusted inset drops the copy button onto the
@@ -551,7 +551,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
                an 18px channel. Hover feedback only; folded state reads
                through color. */
             /* Square, centred in the line box: height matches the width and
-               the translate makes up the difference to the 24px line. Open
+               the translate makes up the difference to the 22px line. Open
                regions read darker than folded ones. */
             'text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 sticky z-20 inline-flex size-(--code-block-fold-width) shrink-0 translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center justify-center rounded-(--radius-button) align-top outline-none focus-visible:ring-2',
             /* Margins cancel: -(4px + width) then +4px, so the toggle paints
@@ -1676,7 +1676,7 @@ function CodeBlockLanguage({ className, children, ...props }: ComponentProps<'sp
       data-slot="code-block-language"
       data-unsupported={!resolvedLanguage || undefined}
       className={cn(
-        'border-border bg-muted/60 text-muted-foreground inline-flex shrink-0 items-center rounded-(--radius-chip) border px-1.5 py-0.5 font-mono text-xs leading-5 uppercase',
+        'border-border bg-muted/60 text-muted-foreground inline-flex shrink-0 items-center rounded-(--radius-chip) border px-1.5 py-0.5 font-mono text-xs uppercase',
         className,
       )}
       {...props}

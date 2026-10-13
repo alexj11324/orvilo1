@@ -7,7 +7,7 @@ import { shinyTextStyles } from '@/styles';
 
 const styles = {
   font: 'text-xs text-foreground-tertiary',
-  query: 'rounded-[8px] px-2 py-1 text-xs text-muted-foreground',
+  query: 'rounded-(--radius-chip) px-2 py-1 text-xs text-muted-foreground',
 };
 
 interface SearchBarProps {

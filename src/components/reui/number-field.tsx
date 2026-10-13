@@ -11,6 +11,8 @@ import { createContext, use, useId } from 'react';
 import { FormControlProvider, useFormControlContext } from '@/components/FormControlContext';
 import { Label } from '@/components/ui/label';
 
+import cursorStyles from './number-field.module.css';
+
 const NumberFieldContext = createContext<{
   fieldId: string;
   size: 'sm' | 'default' | 'compact' | 'normal' | 'lg' | 'large';
@@ -232,7 +234,9 @@ function NumberFieldScrubArea({
       <Label className="cursor-ew-resize" htmlFor={context.fieldId}>
         {label}
       </Label>
-      <NumberFieldPrimitive.ScrubAreaCursor className="drop-shadow-[0_1px_1px_#0008] filter">
+      <NumberFieldPrimitive.ScrubAreaCursor
+        className={cn(cursorStyles.cursor, 'drop-shadow-(--number-field-cursor-shadow) filter')}
+      >
         <CursorGrowIcon />
       </NumberFieldPrimitive.ScrubAreaCursor>
     </NumberFieldPrimitive.ScrubArea>

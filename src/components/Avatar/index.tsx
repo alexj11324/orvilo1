@@ -100,9 +100,6 @@ const Avatar = memo<AvatarProps>(
     const numericSize = typeof size === 'number' ? size : Number.parseFloat(size) || 48;
     const imgAlt = alt ?? title ?? name ?? '';
 
-    const borderRadius =
-      shape === 'square' ? Math.max(4, Math.round(numericSize * 0.22)) : numericSize / 2;
-
     let content: ReactNode;
     if (src && !isBroken) {
       content = (
@@ -113,7 +110,7 @@ const Avatar = memo<AvatarProps>(
           src={src}
           width={numericSize}
           style={{
-            borderRadius: style?.borderRadius ?? borderRadius,
+            borderRadius: 'inherit',
             display: 'block',
             height: '100%',
             objectFit: 'cover',
@@ -157,12 +154,15 @@ const Avatar = memo<AvatarProps>(
       <AvatarPrimitive.Root
         {...rest}
         aria-label={imgAlt || (rest['aria-label'] as string | undefined)}
-        className={cn('orvilo-avatar', className)}
         title={title}
+        className={cn(
+          'orvilo-avatar',
+          shape === 'square' ? 'rounded-(--radius-card)' : 'rounded-full',
+          className,
+        )}
         style={{
           alignItems: 'center',
           background: resolved.background ?? 'var(--border)',
-          borderRadius,
           display: 'inline-flex',
           flexShrink: 0,
           height: numericSize,

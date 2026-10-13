@@ -2380,7 +2380,7 @@ function DataGridSelectionBar({
           <div
             data-slot="data-grid-selection-bar"
             className={cn(
-              'bg-background rounded-lg sticky inset-x-0 bottom-4 z-40 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-3 border px-4 py-2.5 shadow-lg',
+              'bg-background rounded-(--radius-overlay) sticky inset-x-0 bottom-4 z-40 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-3 border px-4 py-2.5 shadow-lg',
               className,
             )}
           >

@@ -17,7 +17,7 @@ describe('role class forms', () => {
     expect(cn('text-foreground', 'text-(length:--text-dense)')).toBe(
       'text-foreground text-(length:--text-dense)',
     );
-    expect(cn('rounded-lg', 'rounded-(--radius-card)')).toBe('rounded-(--radius-card)');
+    expect(cn('rounded-full', 'rounded-(--radius-card)')).toBe('rounded-(--radius-card)');
     expect(cn('rounded-(--radius-card)', 'rounded-full')).toBe('rounded-full');
   });
 
@@ -25,7 +25,9 @@ describe('role class forms', () => {
   // @theme. If `cn` learns custom names, the lookup can use the short form.
   it('cannot classify an invented role utility', () => {
     expect(cn('text-foreground', 'text-dense')).toBe('text-dense');
-    expect(cn('rounded-md', 'rounded-card')).toBe('rounded-md rounded-card');
+    expect(cn('rounded-(--radius-input)', 'rounded-card')).toBe(
+      'rounded-(--radius-input) rounded-card',
+    );
   });
 
   it('declares every role variable the lookup names', () => {

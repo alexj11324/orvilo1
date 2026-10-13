@@ -1,5 +1,4 @@
 'use client';
-// #691: Preserve the existing 26px title geometry pending a design-scale choice; no matching role is approved.
 
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -109,14 +108,11 @@ const LessonDetail = memo(() => {
                   <div className="text-xs text-muted-foreground font-semibold">
                     {t('rules.detail.eyebrow', { code: data.lesson.code })}
                   </div>
-                  <div
-                    className={cn('text-[26px] font-bold', styles.title)}
-                    style={{ lineHeight: 1.35 }}
-                  >
+                  <div className={cn('text-xl font-semibold', styles.title)}>
                     {data.lesson.title}
                   </div>
                   <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                    <div className="text-muted-foreground" style={{ fontSize: 12.5 }}>
+                    <div className="text-xs text-muted-foreground">
                       {t('rules.detail.meta', {
                         hits: data.lesson.hitCount,
                         runs: data.lesson.hitRunCount,
@@ -144,7 +140,7 @@ const LessonDetail = memo(() => {
                     </div>
                   </div>
                   {domainError && (
-                    <div className="text-destructive" style={{ fontSize: 12.5 }}>
+                    <div className="text-xs text-destructive">
                       {t('rules.detail.domainUnavailable')} ·{' '}
                       <Button
                         className="h-auto p-0 text-info"
@@ -170,9 +166,7 @@ const LessonDetail = memo(() => {
                       <div className="text-xs text-muted-foreground font-semibold">
                         <SectionLabel sectionKey={section.key} />
                       </div>
-                      <div className="text-sm" style={{ lineHeight: 1.65 }}>
-                        {section.body}
-                      </div>
+                      <div className="text-sm">{section.body}</div>
                     </div>
                   ))}
                 </div>
@@ -193,12 +187,7 @@ const LessonDetail = memo(() => {
                         key={`${hit.createdAt}-${index}`}
                       >
                         <div className="flex items-start gap-3 justify-between">
-                          <div
-                            className={cn('text-(length:--text-dense)', styles.hitTitle)}
-                            style={{ lineHeight: 1.65 }}
-                          >
-                            {hit.example}
-                          </div>
+                          <div className={cn('text-sm', styles.hitTitle)}>{hit.example}</div>
                           <Badge variant={hit.outcome === 'pass' ? 'success' : 'destructive'}>
                             {t(`rules.detail.outcome.${hit.outcome}`)}
                           </Badge>

@@ -1,12 +1,14 @@
 'use client';
 
-import { clsx as cx } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { SlidersHorizontalIcon } from 'lucide-react';
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+import geometry from './WorkSurface.module.css';
 
 /**
  * Work-surface layout skeletons (v6 parity contract).
@@ -39,10 +41,19 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
  */
 
 const styles = {
-  collectionBody: 'w-full p-4',
+  collectionBody: cx(
+    geometry.geometry,
+    'w-full px-(--work-surface-gutter-x) py-(--work-surface-gutter-y)',
+  ),
   columnHeader: 'sticky inset-bs-0 z-1 bg-background',
-  documentBody: 'mx-auto [width:min(calc(var(--spacing)*240),100%)] p-4',
-  reviewFooter: 'flex-none border-bs border-divider px-4 py-2',
+  documentBody: cx(
+    geometry.geometry,
+    'mx-auto w-full max-w-(--work-surface-document-max-width) px-(--work-surface-gutter-x) py-(--work-surface-gutter-y)',
+  ),
+  reviewFooter: cx(
+    geometry.geometry,
+    'flex-none border-bs border-divider px-(--work-surface-gutter-x) py-2',
+  ),
   reviewNav: 'w-70 flex-none overflow-y-auto border-e border-divider',
   root: '@container/work-surface flex h-full min-h-0 min-w-0 flex-1 flex-col',
   scrollHost: 'min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]',
@@ -50,7 +61,10 @@ const styles = {
   splitDetail: 'min-w-0 flex-1 overflow-y-auto',
   splitList: 'w-90 max-w-9/20 flex-none overflow-y-auto border-e border-divider',
   splitListSolo: 'min-w-0 flex-1 overflow-y-auto',
-  toolbar: 'flex min-w-0 flex-none items-center gap-2 px-4 py-2',
+  toolbar: cx(
+    geometry.geometry,
+    'flex min-w-0 flex-none items-center gap-2 px-(--work-surface-gutter-x) py-2',
+  ),
   toolbarAside:
     'ms-auto flex flex-none items-center gap-2 [@container_work-surface_(width<=560px)]:hidden',
   toolbarOverflowTrigger:
@@ -86,7 +100,7 @@ const WorkSurfaceCollection = memo<WorkSurfaceCollectionProps>(
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {toolbar}
       <div className={styles.scrollHost}>
-        <div className={cx(styles.collectionBody, className)} style={style}>
+        <div className={cn(styles.collectionBody, className)} style={style}>
           {columnHeader ? <div className={styles.columnHeader}>{columnHeader}</div> : null}
           {children}
         </div>
@@ -107,7 +121,7 @@ export interface WorkSurfaceDocumentProps {
 
 const WorkSurfaceDocument = memo<WorkSurfaceDocumentProps>(({ children, className, style }) => (
   <div className={styles.scrollHost}>
-    <div className={cx(styles.documentBody, className)} style={style}>
+    <div className={cn(styles.documentBody, className)} style={style}>
       {children}
     </div>
   </div>
@@ -199,7 +213,7 @@ export interface WorkSurfaceToolbarProps {
 
 const WorkSurfaceToolbar = memo<WorkSurfaceToolbarProps>(
   ({ aside, asideLabel, children, className }) => (
-    <div className={cx(styles.toolbar, className)}>
+    <div className={cn(styles.toolbar, className)}>
       <div className={styles.toolbarPrimary}>{children}</div>
       {aside ? (
         <>

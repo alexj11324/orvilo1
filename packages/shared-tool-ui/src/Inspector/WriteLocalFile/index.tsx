@@ -62,7 +62,7 @@ export const createWriteLocalFileInspector = (translationKey: string) => {
             <>
               {' '}
               <span
-                className="font-mono rounded bg-muted px-1 text-[12px]"
+                className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs"
                 style={{ color: 'var(--success)' }}
               >
                 <Plus size={12} />

@@ -26,7 +26,7 @@ const ListSkeleton = memo<ListSkeletonProps>(({ paddingInline = 12, rows = 4 }) 
         key={index}
         style={{ paddingBlock: 12, paddingInline }}
       >
-        <Skeleton className={'size-12 rounded-md'} />
+        <Skeleton className={'size-12 rounded-(--radius-card)'} />
         <div className={'flex flex-col gap-2 flex-1'}>
           <Skeleton style={{ height: 14, width: 140 }} />
           <Skeleton style={{ height: 12, width: 200 }} />

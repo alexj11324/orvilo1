@@ -697,7 +697,7 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
               it starts at the body top instead of below a full-width control. */}
           <ToggleGroup
             className="rounded-(--radius-button)"
-            size="default"
+            size="compact"
             style={{ alignSelf: 'flex-start' }}
             value={[seriesId(series)]}
             onValueChange={(value) => {

@@ -284,7 +284,7 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
                 {canRender && (
                   <ToggleGroup
                     className="rounded-(--radius-button)"
-                    size="default"
+                    size="compact"
                     value={[mode]}
                     variant="outline"
                     onValueChange={(value) => {

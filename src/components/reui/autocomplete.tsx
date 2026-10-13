@@ -13,9 +13,15 @@ const inputVariants = cva(
     variants: {
       size: {
         sm: 'h-7 px-2 [&~[data-slot=autocomplete-clear]]:end-1.5 [&~[data-slot=autocomplete-trigger]]:end-1.5',
-        default:
+        compact:
           'h-8 px-2.5 [&~[data-slot=autocomplete-clear]]:end-1.75 [&~[data-slot=autocomplete-trigger]]:end-1.75',
+        default:
+          'h-9 px-2.5 [&~[data-slot=autocomplete-clear]]:end-2 [&~[data-slot=autocomplete-trigger]]:end-2',
+        md: 'h-9 px-2.5 [&~[data-slot=autocomplete-clear]]:end-2 [&~[data-slot=autocomplete-trigger]]:end-2',
+        // lg remains a normal-height API alias; large selects the 40px role.
         lg: 'h-9 px-2.5 [&~[data-slot=autocomplete-clear]]:end-2 [&~[data-slot=autocomplete-trigger]]:end-2',
+        large:
+          'h-10 px-2.5 text-base [&~[data-slot=autocomplete-clear]]:end-2.5 [&~[data-slot=autocomplete-trigger]]:end-2.5',
       },
     },
     defaultVariants: {

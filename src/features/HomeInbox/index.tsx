@@ -264,7 +264,7 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
   const scopeToggle = isTeam ? (
     <ToggleGroup
       className="rounded-(--radius-button)"
-      size="default"
+      size="compact"
       value={[scope]}
       onValueChange={(value) => value[0] && setScope(value[0] as 'mine' | 'team')}
     >

@@ -16,8 +16,7 @@ const styles = {
   modes: 'h-9 w-auto flex-none rounded-(--radius-button)',
   tab: 'cursor-pointer border-0 bg-transparent px-3 py-1 text-muted-foreground hover:bg-accent data-[active=true]:bg-selected data-[active=true]:font-medium data-[active=true]:text-foreground',
   tabs: 'me-auto flex gap-1 overflow-x-auto',
-  truncatedNote:
-    'flex-none border-bs border-divider px-3 py-1.5 text-xs leading-5 text-foreground-tertiary',
+  truncatedNote: 'flex-none border-bs border-divider px-3 py-1.5 text-xs text-foreground-tertiary',
 } as const;
 
 interface XlsxPaneProps {

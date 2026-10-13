@@ -69,7 +69,7 @@ export const createSearchLocalFilesInspector = ({
                 <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
               ) : (
                 <span
-                  className="text-[12px]"
+                  className="text-xs"
                   style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
                 >
                   ({t(noResultsKey as any)})

@@ -112,6 +112,7 @@ const PageContent = memo<PageContentProps>(({ result }) => {
         <div className="flex flex-col gap-3" style={{ paddingBlock: '0 12px' }}>
           <div className="flex flex-row justify-between">
             <ToggleGroup
+              size="compact"
               value={[display]}
               onValueChange={(value) => value[0] && setDisplay(value[0] as DisplayType)}
             >

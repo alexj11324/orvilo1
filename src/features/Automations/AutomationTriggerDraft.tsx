@@ -43,7 +43,7 @@ export interface TriggerDraft {
 
 const styles = {
   fieldLabel: 'text-xs text-muted-foreground',
-  preview: 'rounded-[12px] bg-fill-quaternary px-3.5 py-3',
+  preview: 'rounded-(--radius-card) bg-fill-quaternary px-3.5 py-3',
 };
 
 interface AutomationTriggerDraftProps {

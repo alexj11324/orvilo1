@@ -123,6 +123,7 @@ const ListPane = ({
       aria-label={searchLabel}
       className={searchPlaceholder ? undefined : 'sr-only'}
       placeholder={searchPlaceholder}
+      size="compact"
     />
     <AutocompletePrimitive.List
       className="mt-1 flex max-h-72 flex-col gap-0.5 overflow-y-auto overscroll-contain"

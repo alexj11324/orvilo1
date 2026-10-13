@@ -1,5 +1,4 @@
 'use client';
-// #691: Preserve the existing 22px title geometry pending a design-scale choice; no matching role is approved.
 
 import { EyeIcon, PauseIcon, PlayIcon } from 'lucide-react';
 import { memo, type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -229,7 +228,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
         <div className="flex flex-col flex-1" style={{ overflowY: 'auto' }}>
           <WideScreenContainer wrapperStyle={{ gap: 20, paddingBlock: 16 }}>
             <div className={`flex flex-col gap-2 ${styles.header}`}>
-              <h1 className="text-[22px] font-semibold">{goal.title}</h1>
+              <h1 className="text-xl font-semibold">{goal.title}</h1>
               <div className={`flex gap-2 flex-wrap ${styles.metrics}`}>
                 <Metric
                   label={t('goalProcess.metrics.status')}

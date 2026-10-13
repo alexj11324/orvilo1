@@ -76,7 +76,7 @@ export const QuestionPanel = memo<QuestionPanelProps>(
         <div className="flex items-center gap-2">
           {question.header && <div className="text-muted-foreground">{question.header}</div>}
           {question.multiSelect && (
-            <div className="text-[12px] text-muted-foreground">{multiSelectTag}</div>
+            <div className="text-xs text-muted-foreground">{multiSelectTag}</div>
           )}
         </div>
         <div className="font-semibold">{question.question}</div>

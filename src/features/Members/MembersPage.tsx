@@ -442,7 +442,7 @@ const MembersPage = memo(() => {
             aside={
               <ToggleGroup
                 className="w-full rounded-(--radius-button)"
-                size="default"
+                size="compact"
                 value={[groupFilter]}
                 onValueChange={(value) => value[0] && setGroupFilter(value[0] as DirectoryFilter)}
               >

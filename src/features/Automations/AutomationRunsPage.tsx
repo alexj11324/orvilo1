@@ -1,4 +1,3 @@
-// #691: Preserve the existing 22px title geometry pending a design-scale choice; no matching role is approved.
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -78,7 +77,7 @@ const StatCard = memo<{
       {createElement(icon, { color: danger ? 'var(--destructive)' : 'var(--success)', size: 16 })}
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
-    <div className="text-[22px] font-semibold">{value}</div>
+    <div className="text-xl font-semibold">{value}</div>
   </div>
 ));
 

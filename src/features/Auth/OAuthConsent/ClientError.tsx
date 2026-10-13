@@ -1,5 +1,4 @@
 'use client';
-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
 
 import { FrownIcon } from 'lucide-react';
 import React, { memo } from 'react';
@@ -37,9 +36,9 @@ const ConsentClientError = memo<ClientProps>(({ error }) => {
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="default">{<FrownIcon size={96} />}</EmptyMedia>
-        <EmptyTitle>{<div className="text-[32px] font-bold">{title}</div>}</EmptyTitle>
+        <EmptyTitle>{<div className="text-3xl font-semibold">{title}</div>}</EmptyTitle>
         <EmptyDescription>
-          {<div className="text-base text-muted-foreground">{message}</div>}
+          {<div className="text-sm text-muted-foreground">{message}</div>}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

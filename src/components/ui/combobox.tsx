@@ -228,11 +228,11 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
 }
 
 const comboboxChipsSizeClasses: Record<InputVisualSize, string> = {
-  default: 'min-h-9 text-sm leading-5.5',
-  compact: 'min-h-8 text-sm leading-5.5',
-  small: 'min-h-7 py-0.5 text-sm leading-5.5',
-  normal: 'min-h-9 text-sm leading-5.5',
-  large: 'min-h-10 text-base leading-6',
+  default: 'min-h-9 text-sm',
+  compact: 'min-h-8 text-sm',
+  small: 'min-h-7 py-0.5 text-sm',
+  normal: 'min-h-9 text-sm',
+  large: 'min-h-10 text-base',
 };
 
 function ComboboxChips({
@@ -279,7 +279,7 @@ function ComboboxChip({
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
       className={cn(
-        'flex min-h-7 w-fit items-center justify-center gap-1 rounded-(--radius-chip) bg-muted px-1.5 text-xs leading-5 font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pe-0',
+        'flex min-h-7 w-fit items-center justify-center gap-1 rounded-(--radius-chip) bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pe-0',
         className,
       )}
       {...props}

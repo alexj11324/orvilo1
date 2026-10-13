@@ -374,6 +374,7 @@ const AgentViewAllPage = memo(() => {
               personal mode leads with the search box instead. */}
           {activeWorkspaceId ? (
             <ToggleGroup
+              size="compact"
               value={[segment]}
               onValueChange={(value) => value[0] && handleSegmentChange(value[0] as SegmentValue)}
             >

@@ -856,7 +856,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
                       <div className="flex flex-col flex-1" />
                       <ToggleGroup
                         className="rounded-(--radius-button)"
-                        size="default"
+                        size="compact"
                         value={[viewMode]}
                         onValueChange={(value) =>
                           value[0] && setViewMode(value[0] as 'split' | 'unified')

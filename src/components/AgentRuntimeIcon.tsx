@@ -10,9 +10,10 @@ const AgentRuntimeIcon = memo<{ size?: number; type?: string | null }>(({ size =
       <img
         aria-hidden
         alt=""
+        className="rounded-(--radius-card)"
         height={size}
         src="/app-icons/icon-512x512.png"
-        style={{ borderRadius: Math.max(4, Math.round(size * 0.22)), flex: 'none' }}
+        style={{ flex: 'none' }}
         width={size}
       />
     );
@@ -21,7 +22,12 @@ const AgentRuntimeIcon = memo<{ size?: number; type?: string | null }>(({ size =
   if (!provider) return <CircleHelp aria-hidden size={size} />;
   return (
     <span aria-hidden style={{ flex: 'none' }}>
-      <provider.brand.Avatar shape="square" size={size} />
+      <provider.brand.Avatar
+        className="rounded-(--radius-card)"
+        shape="square"
+        size={size}
+        style={{ borderRadius: undefined }}
+      />
     </span>
   );
 });

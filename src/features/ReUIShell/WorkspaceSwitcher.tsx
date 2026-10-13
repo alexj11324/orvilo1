@@ -46,7 +46,7 @@ export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
                 </>
               ) : (
                 <>
-                  <Skeleton className="size-6 shrink-0 rounded-md" />
+                  <Skeleton className="size-6 shrink-0 rounded-(--radius-chip)" />
                   <Skeleton className="h-4 min-w-0 flex-1" />
                 </>
               )}

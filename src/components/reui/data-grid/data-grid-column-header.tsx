@@ -133,12 +133,12 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
   };
 
   const headerLabelClassName = cn(
-    'text-secondary-foreground/80 inline-flex h-full items-center gap-1.5 font-normal [&_svg]:opacity-60 text-[0.8125rem] leading-[calc(1.125/0.8125)] [&_svg]:size-3.5',
+    'text-secondary-foreground/80 inline-flex h-full items-center gap-1.5 font-normal [&_svg]:opacity-60 text-sm [&_svg]:size-3.5',
     className,
   );
 
   const headerButtonClassName = cn(
-    'text-secondary-foreground/80 hover:bg-accent data-[state=open]:bg-accent hover:text-foreground data-[state=open]:text-foreground px-2 font-normal h-6 rounded-lg',
+    'text-secondary-foreground/80 hover:bg-accent data-[state=open]:bg-accent hover:text-foreground data-[state=open]:text-foreground px-2 text-sm font-normal rounded-(--radius-button)',
     className,
   );
 
@@ -327,7 +327,12 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button className={headerButtonClassName} disabled={isLoading} variant="ghost">
+              <Button
+                className={headerButtonClassName}
+                disabled={isLoading}
+                size="sm"
+                variant="ghost"
+              >
                 {icon && icon}
                 {resolvedTitle}
                 {sortIcon}
@@ -341,7 +346,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
         {props.tableLayout?.columnsPinnable && canPin && isPinned && (
           <Button
             aria-label={i18n.labels.unpinColumn(resolvedTitle)}
-            className="rounded-lg -me-1 size-7"
+            className="rounded-(--radius-button) -me-1 size-7"
             size="icon-sm"
             title={i18n.labels.unpinColumn(resolvedTitle)}
             variant="ghost"
@@ -360,6 +365,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
         <Button
           className={headerButtonClassName}
           disabled={isLoading}
+          size="sm"
           variant="ghost"
           onClick={handleSort}
         >

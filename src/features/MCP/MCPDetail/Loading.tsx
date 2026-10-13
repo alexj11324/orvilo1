@@ -15,7 +15,7 @@ const DetailsLoading = memo(() => {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-4" style={{ width: '100%' }}>
-          <Skeleton className="rounded-md" style={{ height: 64, width: 64 }} />
+          <Skeleton className="rounded-(--radius-card)" style={{ height: 64, width: 64 }} />
           <Skeleton style={{ height: 36, width: 200 }} />
         </div>
         <Skeleton style={{ height: 28, width: 200 }} />

@@ -7,14 +7,14 @@ const styles = {
   // Unformatted cells are document body on white paper. Authored workbook
   // ink, fonts, fills and borders continue to override this readable fallback.
   container:
-    'flex-1 overflow-auto bg-white text-black [&_table]:table-fixed [&_table]:border-separate [&_table]:border-spacing-0 [&_td]:overflow-hidden [&_td]:border-e [&_td]:border-be [&_td]:border-neutral-200 [&_td]:bg-white [&_td]:px-1 [&_td]:py-px [&_td]:text-sm [&_td]:leading-5.5 [&_td]:align-bottom',
+    'flex-1 overflow-auto bg-white text-black [&_table]:table-fixed [&_table]:border-separate [&_table]:border-spacing-0 [&_td]:overflow-hidden [&_td]:border-e [&_td]:border-be [&_td]:border-neutral-200 [&_td]:bg-white [&_td]:px-1 [&_td]:py-px [&_td]:text-sm [&_td]:align-bottom',
   corner: 'inset-bs-0 start-0 z-5',
   frozen: '[&_td]:sticky [&_td]:z-3 [&_th]:sticky [&_th]:z-3',
   frozenLast: '[&_td]:shadow-[0_1px_0_0_var(--border)] [&_th]:shadow-[0_1px_0_0_var(--border)]',
   frozenColumnLast: 'shadow-[1px_0_0_0_var(--border)]',
   // Coordinates are application chrome; the sheet cells retain authored colors.
   gutter:
-    'sticky border-e border-be border-divider bg-card text-center text-xs leading-5 font-normal whitespace-nowrap text-muted-foreground',
+    'sticky border-e border-be border-divider bg-card text-center text-xs font-normal whitespace-nowrap text-muted-foreground',
   headCell: 'inset-bs-0 z-3 h-5.5',
   rowHead: 'start-0 z-2 w-11.5',
 } as const;

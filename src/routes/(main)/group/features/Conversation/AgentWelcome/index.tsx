@@ -1,5 +1,4 @@
 'use client';
-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
 
 import { Markdown } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
@@ -45,9 +44,9 @@ const InboxWelcome = memo(() => {
         }}
       >
         <SupervisorAvatar size={78} />
-        <div className="text-[32px] font-bold">{displayTitle}</div>
+        <div className="text-xl font-semibold">{displayTitle}</div>
         <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
-          <Markdown fontSize={fontSize} variant={'chat'}>
+          <Markdown fontSize={fontSize} lineHeight={22 / 14} variant={'chat'}>
             {isInbox
               ? t('guide.defaultMessageWithoutCreate', { appName: 'Orvilo AI' })
               : agentSystemRoleMsg}

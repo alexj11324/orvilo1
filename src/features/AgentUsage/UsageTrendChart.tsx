@@ -57,6 +57,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
       <div className="flex items-center gap-2 justify-between">
         <div className="text-base font-medium">{t('usageStats.chart.title')}</div>
         <ToggleGroup
+          size="compact"
           value={[type]}
           onValueChange={(value) => value[0] && setType(value[0] as ShowType)}
         >

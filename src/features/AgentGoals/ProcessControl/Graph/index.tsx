@@ -691,7 +691,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
       {experiments.length === 0 && (
         <ToggleGroup
           className="rounded-(--radius-button)"
-          size="default"
+          size="compact"
           value={[view]}
           onValueChange={(value) => {
             if (value.length > 0) setView(value[0] as GraphViewMode);

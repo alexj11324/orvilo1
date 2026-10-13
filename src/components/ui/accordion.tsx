@@ -35,7 +35,7 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          'group/accordion-trigger relative flex flex-1 items-center justify-between min-h-9 pointer-coarse:min-h-11 rounded-(--radius-button) border border-transparent py-1.5 text-start text-sm font-medium leading-5.5 transition-[color,background-color,border-color,box-shadow,opacity] duration-(--orvilo-motion-mid) motion-reduce:transition-none outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring aria-disabled:pointer-events-none aria-disabled:opacity-50',
+          'group/accordion-trigger relative flex flex-1 items-center justify-between min-h-9 pointer-coarse:min-h-11 rounded-(--radius-button) border border-transparent py-1.5 text-start text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity] duration-(--orvilo-motion-mid) motion-reduce:transition-none outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring aria-disabled:pointer-events-none aria-disabled:opacity-50',
           className,
         )}
         {...props}
@@ -63,7 +63,7 @@ function AccordionTrigger({
 function AccordionContent({ className, children, ...props }: AccordionPrimitive.Panel.Props) {
   return (
     <AccordionPrimitive.Panel
-      className="h-(--accordion-panel-height) overflow-hidden text-sm leading-5.5 transition-[height] duration-(--orvilo-motion-mid) data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none"
+      className="h-(--accordion-panel-height) overflow-hidden text-sm transition-[height] duration-(--orvilo-motion-mid) data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none"
       data-slot="accordion-content"
       {...props}
     >

@@ -2,6 +2,7 @@
 
 import { type GroupAvatarProps } from '@lobehub/ui';
 import { GroupAvatar } from '@lobehub/ui';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,13 +10,25 @@ import { DEFAULT_AVATAR } from '@/const/meta';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
+import styles from './GroupAvatar.module.css';
+
 interface GroupAvatarComponentProps extends GroupAvatarProps {
   background?: string;
   loading?: boolean;
 }
 
 const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
-  ({ size = 28, avatars = [], background, loading, ...rest }) => {
+  ({
+    size = 28,
+    avatars = [],
+    avatarShape = 'square',
+    cornerShape = 'square',
+    background,
+    className,
+    loading,
+    style,
+    ...rest
+  }) => {
     const [userAvatar, nickName, username] = useUserStore((s) => [
       userProfileSelectors.userAvatar(s),
       userProfileSelectors.nickName(s),
@@ -41,23 +54,25 @@ const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
     }, [avatars, userAvatar, nickName, username]);
 
     if (loading)
-      return <Skeleton className="rounded-md shrink-0" style={{ width: size, height: size }} />;
+      return (
+        <Skeleton
+          className={cn('shrink-0', cornerShape === 'circle' ? 'rounded-full' : styles.identity)}
+          style={{ width: size, height: size }}
+        />
+      );
 
     return (
       <GroupAvatar
-        avatarShape={'square'}
-        cornerShape={'square'}
+        avatarShape={avatarShape}
+        className={cn(cornerShape === 'square' && styles.square, className)}
+        cornerShape={cornerShape}
         size={size}
+        style={style ?? (background && background !== 'rgba(0,0,0,0)' ? { background } : undefined)}
         avatars={groupAvatars.map((agent: any) => ({
           avatar: agent.avatar || DEFAULT_AVATAR,
           background: agent?.backgroundColor || undefined,
           ...agent,
         }))}
-        style={
-          background && background !== 'rgba(0,0,0,0)'
-            ? { background, borderRadius: '22%' }
-            : undefined
-        }
         {...rest}
       />
     );

@@ -2076,11 +2076,6 @@ export class TaskDispatchModel {
           .set({
             context: parkMarkerSet({ at: new Date().toISOString(), reason: 'canceled' }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
-            reviewerUserId: sql<string | null>`coalesce(
-              ${tasks.reviewerUserId},
-              ${tasks.assigneeUserId},
-              ${tasks.createdByUserId}
-            )`,
             updatedAt: new Date(),
           })
           .where(
@@ -2201,11 +2196,6 @@ export class TaskDispatchModel {
             context: parkMarkerSet({ at: new Date().toISOString(), reason: input.reason }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: input.reason,
-            reviewerUserId: sql<string | null>`coalesce(
-              ${tasks.reviewerUserId},
-              ${tasks.assigneeUserId},
-              ${tasks.createdByUserId}
-            )`,
             updatedAt: new Date(),
           })
           .where(
@@ -2328,11 +2318,6 @@ export class TaskDispatchModel {
             context: parkMarkerSet({ at: new Date().toISOString(), reason: input.reason }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: input.reason,
-            reviewerUserId: sql<string | null>`coalesce(
-              ${tasks.reviewerUserId},
-              ${tasks.assigneeUserId},
-              ${tasks.createdByUserId}
-            )`,
             updatedAt: new Date(),
           })
           .where(
@@ -2447,7 +2432,7 @@ export class TaskDispatchModel {
         dispatchPolicyRevision: taskDispatches.policyRevision,
         dispatchRequestedBy: taskDispatches.requestedBy,
         dispatchRequirementRevision: taskDispatches.requirementRevision,
-        taskAgentId: tasks.assigneeAgentId,
+        taskAssigneeAgentId: tasks.assigneeAgentId,
         taskAssigneeUserId: tasks.assigneeUserId,
         taskAssignmentMode: tasks.assignmentMode,
         taskCreatedBySubjectKind: tasks.createdBySubjectKind,
@@ -2474,10 +2459,10 @@ export class TaskDispatchModel {
       (owner.occurrence ||
         (owner.taskPolicyRevision === input.policyRevision &&
           owner.taskRequirementRevision === input.requirementRevision)) &&
-      (owner.taskAgentId === owner.dispatchAgentId ||
+      (owner.taskAssigneeAgentId === owner.dispatchAgentId ||
         (owner.dispatchAgentId !== null &&
           owner.dispatchRequestedBy.startsWith('manual:') &&
-          owner.taskAgentId === null &&
+          owner.taskAssigneeAgentId === null &&
           owner.taskAssigneeUserId !== null &&
           owner.taskAssignmentMode === 'manual' &&
           owner.taskOrchestrationOwner === 'manual' &&
@@ -2564,11 +2549,6 @@ export class TaskDispatchModel {
             }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: 'Task changed while this run was active; review before retrying.',
-            reviewerUserId: sql<string | null>`coalesce(
-              ${tasks.reviewerUserId},
-              ${tasks.assigneeUserId},
-              ${tasks.createdByUserId}
-            )`,
             updatedAt: new Date(),
           })
           .where(

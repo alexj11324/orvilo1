@@ -18,11 +18,16 @@ import {
 const mocks = vi.hoisted(() => ({
   createCascadeModal: vi.fn(),
   createPicker: vi.fn(),
+  pickReviewer: vi.fn(),
   find: vi.fn(),
   getTaskTree: vi.fn(),
   moveBoard: vi.fn(),
   update: vi.fn(),
   updateStatusCascade: vi.fn(),
+}));
+
+vi.mock('@/features/AgentTasks/features/ReviewerAgentSelector', () => ({
+  pickReviewerAgent: mocks.pickReviewer,
 }));
 
 vi.mock('@/services/workAttention', () => ({
@@ -83,6 +88,47 @@ describe('moveBoardMaybePickingState', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.moveBoard.mockResolvedValue({ success: true });
+    mocks.find.mockResolvedValue({ data: { ...task, reviewerAgentId: 'reviewer-1' } });
+  });
+
+  it('does not move into review when reviewer selection is cancelled', async () => {
+    mocks.find.mockResolvedValue({ data: { ...task, reviewerAgentId: null } });
+    mocks.pickReviewer.mockResolvedValue(null);
+    await expect(
+      moveBoardMaybePickingState({
+        expectedDomainRevision: 3,
+        groupBy: 'workflowCategory',
+        targetKey: 'in_review',
+        taskId: task.id,
+      }),
+    ).resolves.toBe(false);
+    expect(mocks.moveBoard).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it('sets the chosen reviewer before committing review with the fresh revision', async () => {
+    mocks.find
+      .mockResolvedValueOnce({ data: { ...task, reviewerAgentId: null } })
+      .mockResolvedValueOnce({
+        data: { ...task, domainRevision: 4, reviewerAgentId: 'reviewer-2' },
+      });
+    mocks.pickReviewer.mockResolvedValue('reviewer-2');
+    await moveBoardMaybePickingState({
+      expectedDomainRevision: 3,
+      groupBy: 'workflowCategory',
+      targetKey: 'in_review',
+      taskId: task.id,
+    });
+    expect(mocks.update).toHaveBeenCalledWith(task.id, {
+      reviewerAgentId: 'reviewer-2',
+      expectedDomainRevision: 3,
+    });
+    expect(mocks.moveBoard).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedDomainRevision: 4 }),
+    );
+    expect(mocks.update.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.moveBoard.mock.invocationCallOrder[0],
+    );
   });
 
   it('commits a versioned move without opening the picker', async () => {
@@ -168,6 +214,7 @@ describe('commitWorkQueryBoardMove', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.moveBoard.mockResolvedValue({ success: true });
+    mocks.find.mockResolvedValue({ data: { ...task, reviewerAgentId: 'reviewer-1' } });
   });
 
   it('drops onto a workflow column through moveBoard, not a raw category patch', async () => {
@@ -351,6 +398,7 @@ describe('applyWorkQueryStatusChoice', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.moveBoard.mockResolvedValue({ success: true });
+    mocks.find.mockResolvedValue({ data: { ...task, reviewerAgentId: 'reviewer-1' } });
   });
 
   it('routes a category menu row through the shared board command', async () => {

@@ -74,28 +74,29 @@ describe('shouldSurfaceProposal', () => {
  * finished" the instant the current model's row was cleared for re-judging.
  */
 describe('isCurrentReviewPrediction', () => {
-  const current = { model: 'gemini-3.6-flash', provider: 'google' };
+  const current = { model: 'reviewer-1', provider: 'acp' };
 
   it('accepts a row from the pinned model on the current prompt version', () => {
     expect(
       isCurrentReviewPrediction(
         { ...current, promptVersion: REVIEW_PREDICT_PROMPT_VERSION },
-        current,
+        current.model,
       ),
     ).toBe(true);
   });
 
-  it('includes the exact configured-model prediction used by a Goal review', () => {
-    const prediction = {
-      id: 'goal-prediction',
-      model: 'gpt-4o',
-      provider: 'openai',
-      promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
-    };
-    expect(isCurrentReviewPrediction(prediction, current, new Set(['goal-prediction']))).toBe(true);
-    expect(isCurrentReviewPrediction(prediction, current, new Set(['another-prediction']))).toBe(
-      false,
-    );
+  it('rejects historical Goal predictions from another reviewer', () => {
+    expect(
+      isCurrentReviewPrediction(
+        {
+          id: 'goal-prediction',
+          model: 'old-reviewer',
+          provider: 'acp',
+          promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
+        },
+        current.model,
+      ),
+    ).toBe(false);
   });
 
   it('rejects rows from another model, provider, or prompt version', () => {
@@ -106,9 +107,11 @@ describe('isCurrentReviewPrediction', () => {
           promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
           provider: 'orvilo',
         },
-        current,
+        current.model,
       ),
     ).toBe(false);
-    expect(isCurrentReviewPrediction({ ...current, promptVersion: 'v0' }, current)).toBe(false);
+    expect(isCurrentReviewPrediction({ ...current, promptVersion: 'v0' }, current.model)).toBe(
+      false,
+    );
   });
 });

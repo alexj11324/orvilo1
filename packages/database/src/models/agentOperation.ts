@@ -127,6 +127,106 @@ export class AgentOperationModel {
   private ownership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, agentOperations);
 
+  /** A definitive pre-launch offline answer parks this exact operation, not a replacement run. */
+  async parkForDevice(
+    operationId: string,
+    queue: Record<string, unknown>,
+    observedQueue?: Record<string, unknown>,
+  ): Promise<boolean> {
+    const rows = await this.db
+      .update(agentOperations)
+      .set({
+        metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({ deviceQueue: queue })}::jsonb`,
+        status: 'idle',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(agentOperations.id, operationId),
+          this.ownership(),
+          observedQueue
+            ? eq(agentOperations.status, 'idle')
+            : inArray(agentOperations.status, ['idle', 'running']),
+          observedQueue
+            ? sql`${agentOperations.metadata}->'deviceQueue' = ${JSON.stringify(observedQueue)}::jsonb`
+            : undefined,
+          sql`coalesce(${agentOperations.metadata}->'remoteAdmission'->>'state', '') NOT IN ('unknown', 'acknowledged', 'running')`,
+          sql`coalesce(${agentOperations.metadata}->'remoteCancel'->>'state', '') NOT IN ('requested', 'unknown', 'confirmed')`,
+        ),
+      )
+      .returning({ id: agentOperations.id });
+    return rows.length === 1;
+  }
+
+  /** CAS shared by reconnect sweeps and cancellation: only one unlaunched intent wins. */
+  async claimDeviceQueue(operationId: string) {
+    const now = new Date();
+    const [row] = await this.db
+      .update(agentOperations)
+      .set({
+        metadata: sql`jsonb_set(jsonb_set(${agentOperations.metadata}, '{deviceQueue,state}', '"launching"'::jsonb), '{remoteAdmission}', coalesce(${agentOperations.metadata}->'remoteAdmission', '{}'::jsonb) || ${JSON.stringify({ state: 'pending', updatedAt: now.toISOString() })}::jsonb)`,
+        startedAt: now,
+        status: 'running',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(agentOperations.id, operationId),
+          this.ownership(),
+          eq(agentOperations.status, 'idle'),
+          sql`${agentOperations.metadata}->'deviceQueue'->>'state' = 'waiting'`,
+          sql`coalesce(${agentOperations.metadata}->'remoteAdmission'->>'state', '') NOT IN ('unknown', 'acknowledged', 'running')`,
+          sql`coalesce(${agentOperations.metadata}->'remoteCancel'->>'state', '') NOT IN ('requested', 'unknown', 'confirmed')`,
+        ),
+      )
+      .returning();
+    return row;
+  }
+
+  /** Never signal a device for an intent that has definitively not launched. */
+  async cancelDeviceQueue(operationId: string): Promise<boolean> {
+    return this.settleDeviceQueue(operationId, 'interrupted');
+  }
+
+  async settleDeviceQueue(
+    operationId: string,
+    status: 'error' | 'interrupted',
+    error?: AgentOperationError,
+    observedQueue?: Record<string, unknown>,
+  ): Promise<boolean> {
+    const rows = await this.db
+      .update(agentOperations)
+      .set({
+        completedAt: new Date(),
+        completionReason: status,
+        error,
+        status,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(agentOperations.id, operationId),
+          this.ownership(),
+          eq(agentOperations.status, 'idle'),
+          observedQueue
+            ? sql`${agentOperations.metadata}->'deviceQueue' = ${JSON.stringify(observedQueue)}::jsonb`
+            : undefined,
+          sql`${agentOperations.metadata}->'deviceQueue'->>'state' = 'waiting'`,
+        ),
+      )
+      .returning({ id: agentOperations.id });
+    return rows.length === 1;
+  }
+
+  async clearDeviceQueue(operationId: string): Promise<void> {
+    await this.db
+      .update(agentOperations)
+      .set({
+        metadata: sql`${agentOperations.metadata} - 'deviceQueue'`,
+      })
+      .where(and(eq(agentOperations.id, operationId), this.ownership()));
+  }
+
   /**
    * Insert the initial row when an operation is created. Idempotent via
    * `onConflictDoNothing` on the primary key so resumed operations don't

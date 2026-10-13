@@ -1868,6 +1868,54 @@ describe('Task Router Integration', () => {
     });
   });
 
+  describe('reviewer Agent admission', () => {
+    it('reports a readable reviewer requirement, then allows review with an Agent', async () => {
+      const task = await caller.create({ instruction: 'Review delivery' });
+      await expect(
+        caller.update({ id: task.data.id, workflowCategory: 'in_review' }),
+      ).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+        message: expect.stringContaining('TASK_REVIEWER_REQUIRED'),
+      });
+      const assigned = await caller.update({
+        id: task.data.id,
+        reviewerAgentId: testAgentId,
+        expectedDomainRevision: task.data.domainRevision,
+      });
+      const reviewed = await caller.update({ id: task.data.id, workflowCategory: 'in_review' });
+      expect(reviewed.data).toMatchObject({
+        reviewerAgentId: testAgentId,
+        workflowCategory: 'in_review',
+      });
+      await expect(
+        caller.update({
+          id: task.data.id,
+          reviewerAgentId: null,
+          expectedDomainRevision: reviewed.data.domainRevision,
+        }),
+      ).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+        message: expect.stringContaining('TASK_REVIEWER_REQUIRED'),
+      });
+      expect(assigned.data.reviewerAgentId).toBe(testAgentId);
+      // Delete the reviewed Issue before fixture cleanup cascades its Agent.
+      await caller.delete({ id: task.data.id });
+    });
+    it('requires a revision fence and rejects an unavailable reviewer Agent before review', async () => {
+      const task = await caller.create({ instruction: 'Review delivery' });
+      await expect(
+        caller.update({ id: task.data.id, reviewerAgentId: testAgentId }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        caller.update({
+          id: task.data.id,
+          reviewerAgentId: 'missing-reviewer',
+          expectedDomainRevision: task.data.domainRevision,
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+  });
+
   describe('status transitions', () => {
     it('should transition backlog → running → paused → completed', async () => {
       const task = await caller.create({ instruction: 'Test' });
@@ -2360,23 +2408,18 @@ describe('Task Router Integration', () => {
         assigneeUserId: otherUserId!,
         expectedDomainRevision: await revisionOf(task.data.id),
         id: task.data.id,
-        reviewerUserId: otherUserId!,
       });
       expect((await subscriptionsOf(task.data.id))[otherUserId!]).toBe('unsubscribed');
       expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(false);
 
-      // Assignee and reviewer are subscribed at creation and on change.
+      // The human assignee is subscribed; Agent reviewer assignment has no human recipient.
       const assigned = await wsCaller.create({
         assigneeUserId: otherUserId!,
         instruction: 'Yours',
         name: 'Yours',
       });
       expect(await subscriptionsOf(assigned.data.id)).toEqual({ [otherUserId!]: 'assigned' });
-      await wsCaller.update({ id: assigned.data.id, reviewerUserId: thirdUserId });
-      expect(await subscriptionsOf(assigned.data.id)).toEqual({
-        [otherUserId!]: 'assigned',
-        [thirdUserId]: 'reviewer',
-      });
+      expect(await subscriptionsOf(assigned.data.id)).toEqual({ [otherUserId!]: 'assigned' });
     });
 
     it('does not subscribe anyone for an agent-authored comment', async () => {
@@ -2690,7 +2733,6 @@ describe('Task Router Integration', () => {
         verify: {
           enabled: true,
           maxIterations: 3,
-          verifierAgentId: 'agt_codex',
           verifyCriteriaIds: ['c1', 'c2'],
           verifyRubricId: 'rub_1',
         },
@@ -2700,7 +2742,6 @@ describe('Task Router Integration', () => {
       expect(verify.data).toEqual({
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
         verifyCriteriaIds: ['c1', 'c2'],
         verifyRubricId: 'rub_1',
       });
@@ -2710,7 +2751,6 @@ describe('Task Router Integration', () => {
       expect(detail.data!.verify).toEqual({
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
         verifyCriteriaIds: ['c1', 'c2'],
         verifyRubricId: 'rub_1',
       });
@@ -2725,7 +2765,6 @@ describe('Task Router Integration', () => {
         config: {
           enabled: true,
           maxIterations: 3,
-          verifierAgentId: 'agt_codex',
           verifyCriteriaIds: ['c1', 'c2'],
           verifyRubricId: 'rub_1',
         },
@@ -2737,13 +2776,13 @@ describe('Task Router Integration', () => {
 
       await caller.updateVerifyConfig({
         id: task.data.id,
-        verify: { enabled: true, verifierAgentId: 'agt_codex', verifyRubricId: 'rub_1' },
+        verify: { enabled: true, verifyRubricId: 'rub_1' },
       });
 
-      // Switch the verifier back to default + drop the rubric.
+      // Clear the rubric.
       await caller.updateVerifyConfig({
         id: task.data.id,
-        verify: { verifierAgentId: null, verifyRubricId: null },
+        verify: { verifyRubricId: null },
       });
 
       const verify = await caller.getVerifyConfig({ id: task.data.id });
@@ -2767,7 +2806,6 @@ describe('Task Router Integration', () => {
       await new TaskModel(serverDB, userId).updateVerifyConfig(task.data.id, {
         enabled: true,
         maxIterations: 4,
-        verifierAgentId: 'legacy-verifier',
       });
 
       await caller.updateVerifyConfig({
@@ -2779,7 +2817,6 @@ describe('Task Router Integration', () => {
       expect(verify.data).toEqual({
         enabled: true,
         maxIterations: 2,
-        verifierAgentId: 'legacy-verifier',
       });
     });
   });

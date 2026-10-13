@@ -1,6 +1,7 @@
 import { type AgentState, isParkedStatus } from '@orvilo/agent-execution';
 import debug from 'debug';
 
+import { isQueuedDeviceOperation, readDeviceQueue } from '@/server/services/aiAgent/deviceQueue';
 import { loadRemoteExecutionStatus } from '@/server/services/heterogeneousAgent/runAdmission';
 
 import type { AgentExecutionServiceDeps, OperationStatusResult } from './types';
@@ -19,11 +20,13 @@ export class OperationStatusService {
   private readonly serverDB: AgentExecutionServiceDeps['serverDB'];
   private readonly stateManager: AgentExecutionServiceDeps['stateManager'];
   private readonly streamManager: AgentExecutionServiceDeps['streamManager'];
+  private readonly operations: AgentExecutionServiceDeps['agentOperationModel'];
 
   constructor(deps: AgentExecutionServiceDeps) {
     this.serverDB = deps.serverDB;
     this.stateManager = deps.stateManager;
     this.streamManager = deps.streamManager;
+    this.operations = deps.agentOperationModel;
   }
 
   /**
@@ -50,13 +53,14 @@ export class OperationStatusService {
     try {
       log('Getting operation status for %s', operationId);
 
-      const [currentState, operationMetadata, remoteExecution] = await Promise.all([
+      const [currentState, operationMetadata, remoteExecution, operation] = await Promise.all([
         this.stateManager.loadAgentState(operationId),
         this.stateManager.getOperationMetadata(operationId),
         loadRemoteExecutionStatus(this.serverDB, this.streamManager, operationId).catch((error) => {
           log('Failed to load remote execution status for %s: %O', operationId, error);
           return undefined;
         }),
+        this.operations.findById(operationId),
       ]);
 
       // Operation may have expired or does not exist — unless a
@@ -77,13 +81,17 @@ export class OperationStatusService {
         const durableTerminal = ['abandoned', 'done', 'error', 'interrupted'].includes(
           durableStatus ?? '',
         );
+        const queued = isQueuedDeviceOperation(operation);
         const remoteActive =
-          !durableTerminal && !['offline', 'rejected'].includes(remoteExecution.admission.state);
-        const status = remoteActive
-          ? 'running'
-          : durableTerminal
-            ? (durableStatus as 'abandoned' | 'done' | 'error' | 'interrupted')
-            : 'error';
+          queued ||
+          (!durableTerminal && !['offline', 'rejected'].includes(remoteExecution.admission.state));
+        const status = queued
+          ? 'idle'
+          : remoteActive
+            ? 'running'
+            : durableTerminal
+              ? (durableStatus as 'abandoned' | 'done' | 'error' | 'interrupted')
+              : 'error';
 
         return {
           currentState: {
@@ -94,7 +102,7 @@ export class OperationStatusService {
           hasError: status === 'error',
           isActive: remoteActive,
           isCompleted: status === 'done',
-          metadata: {},
+          metadata: queued ? { deviceQueue: readDeviceQueue(operation?.metadata) } : {},
           needsHumanInput: false,
           operationId,
           remoteExecution,

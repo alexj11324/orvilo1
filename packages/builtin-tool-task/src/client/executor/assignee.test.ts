@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   deleteComment: vi.fn(),
   getActiveWorkspaceSlug: vi.fn(),
   getWorkspaceMembers: vi.fn(),
+  fetchTaskDetail: vi.fn(),
+  listReviewerAgents: vi.fn(),
   removeDependency: vi.fn(),
   updateComment: vi.fn(),
   updateTask: vi.fn(),
@@ -42,6 +44,9 @@ vi.mock('@/store/task/slices/detail/reducer', () => ({
 }));
 
 vi.mock('@/services/task', () => ({ taskService: {} }));
+vi.mock('@/libs/trpc/client', () => ({
+  lambdaClient: { task: { listReviewerAgents: { query: mocks.listReviewerAgents } } },
+}));
 
 // Keep the role gate deterministic: only 'viewer' is excluded here.
 vi.mock('@orvilo/const/rbac', () => ({
@@ -75,6 +80,38 @@ describe('TaskExecutor — human assignee (assigneeUserId)', () => {
     });
     mocks.updateTask.mockResolvedValue(undefined);
   });
+
+  it('viewTask exposes usable reviewer agents for the delivered Issue', async () => {
+    mocks.fetchTaskDetail.mockResolvedValue({
+      identifier: 'T-1',
+      instruction: 'Work',
+      status: 'backlog',
+      domainRevision: 4,
+    });
+    mocks.listReviewerAgents.mockResolvedValue({
+      data: [{ id: 'agt-reviewer', title: 'Reviewer' }],
+    });
+    const result = await taskExecutor.viewTask({ identifier: 'T-1' });
+    expect(result.success).toBe(true);
+    expect(result.content).toContain('agt-reviewer');
+    expect(result.content).toContain('Set reviewerAgentId with editTask');
+  });
+
+  it.each(['agt-reviewer', null])(
+    'sets the delivered Issue reviewer to %s',
+    async (reviewerAgentId) => {
+      const result = await taskExecutor.editTask({ identifier: 'T-1', reviewerAgentId });
+      expect(result.success).toBe(true);
+      expect(result.content).toContain(
+        reviewerAgentId ? `reviewer agent → ${reviewerAgentId}` : 'reviewer cleared',
+      );
+      expect(mocks.updateTask).toHaveBeenCalledWith(
+        'T-1',
+        { reviewerAgentId },
+        { source: 'external' },
+      );
+    },
+  );
 
   it('waits for the revision-fenced field write before mutating dependencies', async () => {
     let rejectUpdate!: (reason: Error) => void;

@@ -23,12 +23,12 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { trpcErrorMessage } from '@/utils/trpcError';
 
-import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
+import { ReviewerAgentSelector } from '../features/ReviewerAgentSelector';
 import TaskLabelSelector from '../features/TaskLabelSelector';
 import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
+import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
 import { useTaskProjectChange } from '../shared/useTaskProjectChange';
-import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { ISSUE_RELATION_KINDS } from './relationGroups';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
@@ -62,7 +62,7 @@ const TaskPropertiesSetup = () => {
   const projects = useCurrentProjectList();
   const setTaskMilestone = useProjectStore((s) => s.setTaskMilestone);
   const currentUserId = useUserStore(userProfileSelectors.userId);
-  const reviewer = useUserDisplayMeta(task?.reviewerUserId);
+  const reviewer = useAgentDisplayMeta(task?.reviewerAgentId);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const disabled = !canEdit || pending || projectPending;
@@ -211,29 +211,12 @@ const TaskPropertiesSetup = () => {
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium">{t('taskDetail.reviewer')}</span>
         <div className={styles.propertyValue}>
-          <AssigneeMemberSelector
-            currentUserId={task.reviewerUserId}
-            disabled={disabled || task.status === 'running'}
-            taskCreatorId={task.createdByUserId}
+          <ReviewerAgentSelector
+            currentAgentId={task.reviewerAgentId}
+            disabled={disabled}
             taskIdentifier={taskId}
-            taskVisibility={task.visibility}
-            onChange={(userId, member) =>
-              void apply(() =>
-                updateTask(
-                  taskId,
-                  { reviewerUserId: userId },
-                  {
-                    optimisticReviewer: member
-                      ? {
-                          avatar: member.user?.avatar ?? null,
-                          id: member.userId,
-                          name: member.user?.fullName ?? null,
-                          type: 'user',
-                        }
-                      : undefined,
-                  },
-                ),
-              )
+            onChange={(reviewerAgentId) =>
+              void apply(() => updateTask(taskId, { reviewerAgentId }))
             }
           >
             <div
@@ -242,7 +225,7 @@ const TaskPropertiesSetup = () => {
             >
               {reviewer?.title ?? t('taskDetail.property.addReviewer')}
             </div>
-          </AssigneeMemberSelector>
+          </ReviewerAgentSelector>
         </div>
       </div>
       <div className="flex flex-col gap-2">

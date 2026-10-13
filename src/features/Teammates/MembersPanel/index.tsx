@@ -44,7 +44,7 @@ const styles = {
   memberCell: 'flex flex-1 gap-2.5 items-center min-w-0',
   name: 'overflow-hidden text-sm leading-5.5 font-medium text-ellipsis whitespace-nowrap',
   numeric: 'text-xs leading-5 tabular-nums text-muted-foreground',
-  row: 'grid grid-cols-[minmax(0,1fr)_140px_76px_76px_86px_110px_110px_40px] gap-3 items-center py-2.5 px-1 border-be border-divider',
+  row: 'grid grid-cols-[minmax(0,1fr)_140px_76px_76px_110px_110px_40px] gap-3 items-center py-2.5 px-1 border-be border-divider',
   table: 'min-w-210',
   transferBanner:
     'flex gap-3 items-center justify-between py-2.5 px-3 border border-warning-border rounded-(--radius-card) bg-warning-wash',
@@ -174,7 +174,6 @@ const MemberRow = memo<MemberRowProps>(
 
         <div className={styles.numeric}>{member.projectCount ?? 0}</div>
         <div className={styles.numeric}>{member.openAssignedCount ?? 0}</div>
-        <div className={styles.numeric}>{member.openReviewingCount ?? 0}</div>
 
         <div>
           <Tag
@@ -407,9 +406,6 @@ export const MembersPanel = memo(() => {
               {t('workspaceSetting.members.columnProjects')}
             </span>
             <span className={styles.headerCell}>{t('workspaceSetting.members.columnTasks')}</span>
-            <span className={styles.headerCell}>
-              {t('workspaceSetting.members.columnReviewing')}
-            </span>
             <span className={styles.headerCell}>{t('workspaceSetting.members.columnStatus')}</span>
             <span className={styles.headerCell}>{t('workspaceSetting.members.columnJoined')}</span>
             <span />

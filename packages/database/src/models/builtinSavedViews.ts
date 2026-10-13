@@ -7,7 +7,6 @@ import {
 
 import type { SavedViewItem } from '../schemas/workAttention';
 
-const CURRENT_USER = { ref: 'currentUser' as const };
 const STAMP = new Date('2026-01-01T00:00:00.000Z');
 /** Virtual owner — never matches a visitor, so builtins are not editable. */
 export const BUILTIN_SAVED_VIEW_OWNER = 'system';
@@ -29,7 +28,7 @@ const QUERY: Record<BuiltinSavedViewKey, WorkQuery> = {
   'projects': { entityType: 'project', schemaVersion: 2 },
   'review': {
     entityType: 'task',
-    filter: { all: [{ field: 'reviewerUserId', op: 'eq', value: CURRENT_USER }] },
+    filter: { all: [{ field: 'workflowCategory', op: 'eq', value: 'in_review' }] },
     schemaVersion: 2,
   },
 };

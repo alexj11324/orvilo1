@@ -29,15 +29,20 @@ const workspaceId = 'wm-workspace';
 const otherWorkspaceId = 'wm-other-workspace';
 
 beforeEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: inviterId }, { id: memberId }, { id: otherUserId }]);
   await serverDB.insert(workspaces).values([
     { id: workspaceId, name: 'WS', primaryOwnerId: inviterId, slug: 'ws' },
     { id: otherWorkspaceId, name: 'Other WS', primaryOwnerId: otherUserId, slug: 'other-ws' },
   ]);
+  await serverDB
+    .insert(agents)
+    .values({ id: 'wm-reviewer-agent', slug: 'wm-reviewer-agent', userId: inviterId, workspaceId });
 });
 
 afterEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
 });
 
@@ -438,7 +443,7 @@ describe('WorkspaceMemberModel', () => {
           id: 'wm-task-departing-member',
           identifier: 'WM-1',
           instruction: 'Assigned to the departing member',
-          reviewerUserId: memberId,
+          reviewerAgentId: 'wm-reviewer-agent',
           seq: 1,
           workspaceId,
         },
@@ -468,9 +473,9 @@ describe('WorkspaceMemberModel', () => {
       expect(
         taskRows.find((task) => task.id === 'wm-task-departing-member')?.assigneeUserId,
       ).toBeNull();
-      expect(
-        taskRows.find((task) => task.id === 'wm-task-departing-member')?.reviewerUserId,
-      ).toBeNull();
+      expect(taskRows.find((task) => task.id === 'wm-task-departing-member')?.reviewerAgentId).toBe(
+        'wm-reviewer-agent',
+      );
       expect(taskRows.find((task) => task.id === 'wm-task-other-member')?.assigneeUserId).toBe(
         otherUserId,
       );
@@ -479,10 +484,7 @@ describe('WorkspaceMemberModel', () => {
       );
     });
 
-    // Regression: the old OR-predicate update cleared BOTH responsibility
-    // fields wherever EITHER matched, so removing an assignee also clobbered
-    // a different member's reviewer slot (and vice versa).
-    it('keeps a different teammate reviewer when only the assignee departs', async () => {
+    it('keeps the Agent reviewer when the human assignee departs', async () => {
       const model = new WorkspaceMemberModel(serverDB, inviterId);
       await model.addMember({ userId: memberId, workspaceId });
       await model.addMember({ userId: otherUserId, workspaceId });
@@ -492,7 +494,7 @@ describe('WorkspaceMemberModel', () => {
         id: 'wm-task-split-assignee',
         identifier: 'WM-SPLIT-1',
         instruction: 'Sam assigns, Alex reviews',
-        reviewerUserId: otherUserId,
+        reviewerAgentId: 'wm-reviewer-agent',
         seq: 1,
         workspaceId,
       });
@@ -504,10 +506,10 @@ describe('WorkspaceMemberModel', () => {
         .from(tasks)
         .where(eq(tasks.id, 'wm-task-split-assignee'));
       expect(task.assigneeUserId).toBeNull();
-      expect(task.reviewerUserId).toBe(otherUserId);
+      expect(task.reviewerAgentId).toBe('wm-reviewer-agent');
     });
 
-    it('keeps a different teammate assignee when only the reviewer departs', async () => {
+    it('keeps the Agent reviewer and another human assignee when a member departs', async () => {
       const model = new WorkspaceMemberModel(serverDB, inviterId);
       await model.addMember({ userId: memberId, workspaceId });
       await model.addMember({ userId: otherUserId, workspaceId });
@@ -517,7 +519,7 @@ describe('WorkspaceMemberModel', () => {
         id: 'wm-task-split-reviewer',
         identifier: 'WM-SPLIT-2',
         instruction: 'Alex assigns, Sam reviews',
-        reviewerUserId: memberId,
+        reviewerAgentId: 'wm-reviewer-agent',
         seq: 1,
         workspaceId,
       });
@@ -529,7 +531,7 @@ describe('WorkspaceMemberModel', () => {
         .from(tasks)
         .where(eq(tasks.id, 'wm-task-split-reviewer'));
       expect(task.assigneeUserId).toBe(otherUserId);
-      expect(task.reviewerUserId).toBeNull();
+      expect(task.reviewerAgentId).toBe('wm-reviewer-agent');
     });
 
     it('bumps authzVersion so cached authorizations invalidate on removal', async () => {
@@ -582,7 +584,7 @@ describe('WorkspaceMemberModel', () => {
         id: 'wm-task-role-downgrade',
         identifier: 'WM-ROLE-1',
         instruction: 'Assigned before the role downgrade',
-        reviewerUserId: memberId,
+        reviewerAgentId: 'wm-reviewer-agent',
         seq: 1,
         workspaceId,
       });
@@ -595,7 +597,7 @@ describe('WorkspaceMemberModel', () => {
         .where(eq(tasks.id, 'wm-task-role-downgrade'));
       expect(task.assigneeUserId).toBeNull();
       expect(task.domainRevision).toBe(2);
-      expect(task.reviewerUserId).toBeNull();
+      expect(task.reviewerAgentId).toBe('wm-reviewer-agent');
       await expect(
         serverDB.select().from(taskDomainEvents).where(eq(taskDomainEvents.taskId, task.id)),
       ).resolves.toEqual([expect.objectContaining({ source: 'system', type: 'task.assigned' })]);
@@ -610,7 +612,7 @@ describe('WorkspaceMemberModel', () => {
         id: 'wm-task-eligible-role',
         identifier: 'WM-ROLE-2',
         instruction: 'Assigned before the eligible role change',
-        reviewerUserId: memberId,
+        reviewerAgentId: 'wm-reviewer-agent',
         seq: 1,
         workspaceId,
       });
@@ -622,12 +624,10 @@ describe('WorkspaceMemberModel', () => {
         .from(tasks)
         .where(eq(tasks.id, 'wm-task-eligible-role'));
       expect(task.assigneeUserId).toBe(memberId);
-      expect(task.reviewerUserId).toBe(memberId);
+      expect(task.reviewerAgentId).toBe('wm-reviewer-agent');
     });
 
-    // Same independent-detach regression as removeMember: downgrading the
-    // assignee must not clobber a different member's reviewer slot.
-    it('keeps a different teammate reviewer when the assignee is downgraded', async () => {
+    it('keeps the Agent reviewer when the human assignee is downgraded', async () => {
       const model = new WorkspaceMemberModel(serverDB, inviterId);
       await model.addMember({ role: 'member', userId: memberId, workspaceId });
       await model.addMember({ role: 'member', userId: otherUserId, workspaceId });
@@ -637,7 +637,7 @@ describe('WorkspaceMemberModel', () => {
         id: 'wm-task-role-split',
         identifier: 'WM-ROLE-3',
         instruction: 'Sam assigned, Alex reviewing',
-        reviewerUserId: otherUserId,
+        reviewerAgentId: 'wm-reviewer-agent',
         seq: 1,
         workspaceId,
       });
@@ -646,7 +646,7 @@ describe('WorkspaceMemberModel', () => {
 
       const [task] = await serverDB.select().from(tasks).where(eq(tasks.id, 'wm-task-role-split'));
       expect(task.assigneeUserId).toBeNull();
-      expect(task.reviewerUserId).toBe(otherUserId);
+      expect(task.reviewerAgentId).toBe('wm-reviewer-agent');
     });
   });
 

@@ -956,7 +956,7 @@ export default {
   'savedViews.fields.ownerUserId': 'Lead',
   'savedViews.fields.priority': 'Priority',
   'savedViews.fields.projectId': 'Project',
-  'savedViews.fields.reviewerUserId': 'Reviewer',
+  'savedViews.fields.reviewerAgentId': 'Reviewer Agent',
   'savedViews.fields.status': 'Status',
   'savedViews.fields.subscribed': 'Subscribed',
   'savedViews.fields.teamId': 'Team',

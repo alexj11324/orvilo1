@@ -257,6 +257,17 @@ const DecisionBar = memo<DecisionBarProps>(
             </Button>
           )}
 
+          {state === 'live' && !repairing && (
+            <>
+              <Button disabled={pending} size="compact" variant="ghost" onClick={onRejectComment}>
+                {t('acceptance.bar.rejectComment')}
+              </Button>
+              <Button disabled={pending} size="compact" variant="secondary" onClick={onAccept}>
+                {t('acceptance.actions.accept')}
+              </Button>
+            </>
+          )}
+
           {(state === 'settled' || state === 'rejected') &&
             (hasFeedback || state === 'rejected' ? (
               // Feedback is queued — the delivery isn't being accepted now; the

@@ -17,7 +17,7 @@ import { BUILTIN_AGENT_SLUGS } from './types';
  *
  * Deliberately NOT the whole of `BUILTIN_AGENT_SLUGS`: the internal automation
  * agents (`nightly-review`, `self-reflection`, `self-feedback-intent`,
- * `skill-management`, `verify-agent`, `task-agent`, the onboarding agents, the
+ * `skill-management`, the onboarding agents, the
  * group supervisor) have no configuration surface, and letting any member
  * repoint their persisted model / chatConfig would silently change background
  * automation for the entire workspace. They keep the ordinary creator + General

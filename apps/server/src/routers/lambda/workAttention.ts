@@ -83,7 +83,7 @@ const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.strictObject({
     'priority',
     'projectId',
     'projectMilestoneId',
-    'reviewerUserId',
+    'reviewerAgentId',
     'status',
     'subscribed',
     'teamId',
@@ -233,7 +233,7 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z
             'ownerUserId',
             'priority',
             'projectId',
-            'reviewerUserId',
+            'reviewerAgentId',
             'status',
             'teamId',
             'triageStatus',
@@ -549,8 +549,8 @@ export const workAttentionRouter = router({
     }),
 
   /**
-   * Reviews surface — `/reviews?tab=for-me|created`. 'for-me' returns tasks
-   * awaiting my review plus non-task approvals addressed to me; 'created'
+   * Reviews surface — `/reviews?tab=for-me|created`. 'for-me' returns
+   * non-task approvals addressed to me; 'created'
    * returns approvals I requested plus tasks I created that carry a reviewer.
    */
   reviews: workAttentionProcedure
@@ -566,16 +566,27 @@ export const workAttentionRouter = router({
     )
     .query(async ({ ctx, input }) => {
       try {
+        if (input.tab === 'for-me') {
+          return {
+            data: {
+              externalReviews: await ctx.workQueryModel.queryExternalReviews(input.tab),
+              groupBy: 'none' as const,
+              groups: undefined,
+              layout: 'list' as const,
+              queryHash: 'external-reviews',
+              tasks: [],
+              total: 0,
+            },
+            success: true,
+          };
+        }
         const me = { ref: 'currentUser' } as const;
-        const filter: WorkQueryFilter =
-          input.tab === 'for-me'
-            ? { all: [{ field: 'reviewerUserId', op: 'eq', value: me }] }
-            : {
-                all: [
-                  { field: 'createdByUserId', op: 'eq', value: me },
-                  { field: 'reviewerUserId', op: 'isNotNull' },
-                ],
-              };
+        const filter: WorkQueryFilter = {
+          all: [
+            { field: 'createdByUserId', op: 'eq', value: me },
+            { field: 'reviewerAgentId', op: 'isNotNull' },
+          ],
+        };
         const query = applyWorkQueryLayout(
           {
             entityType: 'task',

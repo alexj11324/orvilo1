@@ -239,6 +239,7 @@ export interface EditTaskParams {
   /** Existing project id; null removes the task from its project. */
   projectId?: string | null;
   removeDependencies?: string[];
+  reviewerAgentId?: string | null;
 }
 
 export interface EditTaskState {
@@ -315,7 +316,6 @@ export interface SetTaskVerifyParams {
   /** One-sentence acceptance requirement; the source criteria are synthesized from. Pass null to clear. */
   requirement?: string | null;
   /** Agent that executes the verify run. Pass null to fall back to the built-in verify agent. */
-  verifierAgentId?: string | null;
   /** Ad-hoc acceptance criteria ids (references verify_criteria.id). Pass null to clear. */
   verifyCriteriaIds?: string[] | null;
   /** Reuse a rubric template (references verify_rubrics.id). Pass null to clear. */

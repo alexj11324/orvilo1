@@ -80,6 +80,8 @@ import {
 } from '@/server/services/heterogeneousAgent/runAdmission';
 import type { MarketService } from '@/server/services/market';
 
+import type { DeviceQueuePayload } from '../deviceQueue';
+import { isDefinitiveDeviceOffline, queueOfflineDeviceRun } from '../deviceQueue';
 import {
   getHeterogeneousAgentTitle,
   humanizeHeteroDispatchError,
@@ -128,8 +130,13 @@ export interface HeteroDispatchDeps {
  * Stream-close / hook dispatch / metadata clear are best-effort: a failure
  * there must not mask the original dispatch error the caller surfaces.
  */
-const finalizeHeteroDispatchError = async (
-  deps: HeteroDispatchDeps,
+type HeteroLifecycleDeps = Pick<
+  HeteroDispatchDeps,
+  'db' | 'messageModel' | 'topicModel' | 'userId' | 'workspaceId'
+>;
+
+export const finalizeHeteroDispatchError = async (
+  deps: HeteroLifecycleDeps,
   params: {
     agentId?: string;
     assistantMessageId: string;
@@ -244,7 +251,7 @@ const finalizeHeteroDispatchError = async (
  * agent-gateway inactivity watchdog still reaps it through `finalizeAbandoned`.
  */
 const hasHeteroRunStarted = async (
-  deps: HeteroDispatchDeps,
+  deps: HeteroLifecycleDeps,
   params: { operationId: string; topicId: string },
 ): Promise<boolean> => {
   const { operationId, topicId } = params;
@@ -521,8 +528,8 @@ const classifyUnreachableDeviceError = async (
  *   P20 fix for the zombie-run hazard: the old code finalized every dispatch
  *   failure, which could leave a live device writing into a settled marker.
  */
-const settleRemoteDispatchOutcome = async (
-  deps: HeteroDispatchDeps,
+export const settleRemoteDispatchOutcome = async (
+  deps: HeteroLifecycleDeps,
   params: {
     error?: string;
     errorCode?: string;
@@ -723,6 +730,22 @@ export const dispatchHeteroAgent = async (
   // Same structured shape as the built-in path (`op_{ts}_{agentId}_{topicId}_{rand}`)
   // so hetero ops aren't visually distinct bare nanoids in the trace/op tables.
   const operationId = `op_${Date.now()}_${resolvedAgentId}_${topicId}_${nanoid(8)}`;
+  const queuedResult = async (): Promise<ExecAgentResult> => ({
+    agentId: resolvedAgentId,
+    assistantMessageId,
+    autoStarted: false,
+    createdAt: new Date().toISOString(),
+    heteroType,
+    message: 'Waiting for the saved Agent device to reconnect.',
+    operationId,
+    remoteAdmission: 'pending',
+    status: 'idle',
+    success: true,
+    timestamp: new Date().toISOString(),
+    token: deps.withholdGatewayToken ? undefined : await signUserJWT(deps.userId),
+    topicId,
+    userMessageId: userMessageId ?? parentMessageId ?? '',
+  });
 
   // Hooks belong to this operation's lifecycle. Persist their serializable
   // form on the durable operation row before dispatch; runningOperation below
@@ -1342,6 +1365,30 @@ export const dispatchHeteroAgent = async (
           },
           120_000, // hetero tasks can take longer than the default 30 s
         );
+    if (
+      isDefinitiveDeviceOffline(result) &&
+      !authorizationError &&
+      (await queueOfflineDeviceRun(
+        deps.db,
+        deps.userId,
+        operationId,
+        {
+          agentId: resolvedAgentId,
+          agentType: heteroType,
+          assistantMessageId,
+          channel: 'tool_call',
+          deviceId: remoteDeviceId,
+          deviceWorkspaceId: remoteDeviceWorkspaceId,
+          platformAgentId: agentConfig.agencyConfig?.heterogeneousProvider?.platformAgentId,
+          prompt,
+          topicId,
+          topicStartOwnerOperationId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        },
+        deps.workspaceId,
+      ))
+    )
+      return queuedResult();
     const dispatchOutcome = await settleRemoteDispatchOutcome(deps, {
       error: result.error,
       errorCode: result.errorCode,
@@ -1629,6 +1676,28 @@ export const dispatchHeteroAgent = async (
       );
       if (deviceAdmissionFailure) return deviceAdmissionFailure;
 
+      const deviceQueuePayload: DeviceQueuePayload = {
+        aegisEnabled,
+        agentId: resolvedAgentId,
+        agentType: heteroType,
+        args: heteroExecArgs,
+        assistantMessageId,
+        builtinTools: builtinToolSpecs,
+        channel: 'agent_run_request',
+        cwd: deviceCwd,
+        deviceId: dispatchDeviceId,
+        deviceWorkspaceId: dispatchWorkspaceId,
+        imageFileIds: runAttachments.imageList?.map((image) => image.id),
+        model: ctx.model,
+        prompt,
+        resumeFallbackSystemContext: deviceResumeFallbackSystemContext,
+        resumeSessionId,
+        systemContext: deviceSystemContext,
+        topicId,
+        topicStartOwnerOperationId,
+        userMessageId: userMessageId ?? parentMessageId ?? '',
+      };
+
       // Prime adapter (type 'orvilo' once the transitional embedded fence
       // flips): compose the device-run descriptor — artifact pin, bound
       // broker credential, lease, subject — and register the canonical run
@@ -1640,6 +1709,31 @@ export const dispatchHeteroAgent = async (
           heteroType,
           operationTaskId,
         });
+        deviceQueuePayload.primeTask = deviceEmbeddedRoute ?? undefined;
+        if (!authorizationError && !heteroPlan.candidate.online) {
+          let online: boolean | undefined;
+          try {
+            online = await deviceGateway.queryDevicePresence(
+              deps.userId,
+              dispatchDeviceId,
+              dispatchWorkspaceId,
+            );
+          } catch (error) {
+            console.error('[device-queue] Initial presence unavailable', { operationId, error });
+          }
+          if (
+            online === false &&
+            (await queueOfflineDeviceRun(
+              deps.db,
+              deps.userId,
+              operationId,
+              deviceQueuePayload,
+              deps.workspaceId,
+            ))
+          ) {
+            return queuedResult();
+          }
+        }
         const composed = await composeDevicePrimeRun(
           { database: deps.db, userId: deps.userId, workspaceId: deps.workspaceId },
           {
@@ -1677,6 +1771,7 @@ export const dispatchHeteroAgent = async (
           };
         }
         primeDescriptor = composed.value.descriptor;
+        deviceQueuePayload.primeRegistration = composed.value.binding;
       }
 
       const result = authorizationError
@@ -1711,6 +1806,18 @@ export const dispatchHeteroAgent = async (
             // device still has to write back under `deps.workspaceId`.
             ingestWorkspaceId: deps.workspaceId,
           });
+      if (
+        isDefinitiveDeviceOffline(result) &&
+        !authorizationError &&
+        (await queueOfflineDeviceRun(
+          deps.db,
+          deps.userId,
+          operationId,
+          deviceQueuePayload,
+          deps.workspaceId,
+        ))
+      )
+        return queuedResult();
       const dispatchOutcome = await settleRemoteDispatchOutcome(deps, {
         error: result.error,
         errorCode: result.errorCode,

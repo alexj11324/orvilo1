@@ -36,29 +36,17 @@ export interface HomeAgentRows {
   workspaceRows: AgentRow[];
 }
 
-interface UseHomeAgentRowsOptions {
-  /**
-   * Also list the builtin task agent (the task-manager surface's default
-   * agent). Virtual agents never reach the sidebar buckets, so it is injected
-   * the same way the inbox row is. Opt-in: the home switcher keeps its
-   * inbox-only builtin row.
-   */
-  includeTaskAgent?: boolean;
-}
-
 /**
  * Rows for the home Agent switcher, bucketed the same way the sidebar and the
  * agent-detail switcher bucket theirs: private first, then workspace, each in
  * pinned → folders → ungrouped order. Kept out of the component so the
  * bucketing is unit-testable.
  */
-export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRows => {
+export const useHomeAgentRows = (): HomeAgentRows => {
   const { t } = useTranslation(['chat', 'topic']);
 
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const inboxMeta = useAgentStore(agentSelectors.getAgentMetaById(inboxAgentId ?? ''));
-  const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
-  const taskAgentMeta = useAgentStore(agentSelectors.getAgentMetaById(taskAgentId ?? ''));
 
   const pinnedAgents = useHomeStore(homeAgentListSelectors.pinnedAgents, isEqual);
   const agentGroups = useHomeStore(homeAgentListSelectors.agentGroups, isEqual);
@@ -75,7 +63,7 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
   // Per-item sidebar membership was retired with the fixed IA — keep() is an
   // identity seam shared with the other list-shaping call sites.
   const keep = useKeepSidebarListed();
-  // The inbox and task agents are virtual rows on the built-in harness.
+  // The inbox is a virtual row on the built-in harness.
   const builtinOffered = useBuiltinHarnessOffered();
   const keepGroups = useKeepSidebarGroupsListed();
 
@@ -125,18 +113,6 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
         title: agentDisplayName(inboxMeta, 'Orvilo AI'),
       });
     }
-    if (builtinOffered && options?.includeTaskAgent && taskAgentId && !seen.has(taskAgentId)) {
-      seen.add(taskAgentId);
-      workspaceRows.push({
-        avatar: typeof taskAgentMeta?.avatar === 'string' ? taskAgentMeta.avatar : undefined,
-        backgroundColor: taskAgentMeta?.backgroundColor || undefined,
-        id: taskAgentId,
-        // The task agent's row title is provisioned server-side but its list
-        // payload is virtual — fall back to the same label the task manager's
-        // own selector uses until the config hydrates.
-        title: agentDisplayName(taskAgentMeta, t('taskManager.agent', { ns: 'topic' })),
-      });
-    }
     workspaceRows.push(
       ...collect([
         pinnedAgents,
@@ -161,14 +137,11 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
     inboxMeta,
     keep,
     keepGroups,
-    options?.includeTaskAgent,
     pinnedAgents,
     privateAgentGroups,
     privatePinnedAgents,
     privateUngroupedAgents,
     t,
-    taskAgentId,
-    taskAgentMeta,
     ungroupedAgents,
   ]);
 };

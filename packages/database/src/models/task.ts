@@ -46,6 +46,7 @@ import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { merge } from '@/utils/merge';
 
+import { agents } from '../schemas/agent';
 import { agentOperations } from '../schemas/agentOperations';
 import { executionGrants } from '../schemas/executionGrant';
 import { documents } from '../schemas/file';
@@ -129,7 +130,7 @@ const TRACKED_TASK_COLUMNS = [
   'config',
   'heartbeatInterval',
   'priority',
-  'reviewerUserId',
+  'reviewerAgentId',
   'schedulePattern',
   'scheduleTimezone',
   // Retired as state: still tracked so an explicit `status` write (legacy
@@ -209,7 +210,7 @@ const TASK_DOMAIN_COLUMNS = [
   'priorityLocked',
   'projectId',
   'requirementLocked',
-  'reviewerUserId',
+  'reviewerAgentId',
   'schedulePattern',
   'scheduleTimezone',
   'sortOrder',
@@ -301,6 +302,15 @@ export interface TaskStatusTransitionExtra {
   workflowCategory?: TaskWorkflowCategory;
   workflowStateId?: string | null;
   workflowStateRefId?: string | null;
+}
+
+export class TaskReviewerRequiredError extends Error {
+  readonly code = 'PRECONDITION_FAILED' as const;
+
+  constructor() {
+    super('TASK_REVIEWER_REQUIRED: Select a reviewer Agent before moving the Issue to In Review');
+    this.name = 'TaskReviewerRequiredError';
+  }
 }
 
 export class TaskRevisionConflictError extends Error {
@@ -702,6 +712,66 @@ export class TaskModel {
     }
   }
 
+  private reviewerValidationHeld = false;
+
+  private async assertReviewerAgent(db: OrviloDatabase, reviewerAgentId?: string | null) {
+    if (!reviewerAgentId) return;
+    const [agent] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(
+        and(
+          eq(agents.id, reviewerAgentId),
+          isNull(agents.deletedAt),
+          this.workspaceId
+            ? eq(agents.workspaceId, this.workspaceId)
+            : and(isNull(agents.workspaceId), eq(agents.userId, this.userId)),
+        ),
+      )
+      .for('key share')
+      .limit(1);
+    if (!agent)
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Reviewer Agent not found in the Issue scope',
+      });
+  }
+
+  private async withReviewerValidation<T>(
+    ids: string[],
+    data: { reviewerAgentId?: string | null; workflowCategory?: TaskWorkflowCategory },
+    write: (model: TaskModel) => Promise<T>,
+    condition?: SQL,
+  ): Promise<T> {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const scoped = new TaskModel(runner, this.userId, this.workspaceId, {
+        managedSubject: this.managedSubject,
+      });
+      await scoped.lockDependencyGraph();
+      scoped.dependencyLockHeld = true;
+      scoped.assigneeGuardHeld = this.assigneeGuardHeld;
+      scoped.reviewerValidationHeld = true;
+      await scoped.assertReviewerAgent(runner, data.reviewerAgentId);
+      const rows = await runner
+        .select({
+          reviewerAgentId: tasks.reviewerAgentId,
+          workflowCategory: tasks.workflowCategory,
+        })
+        .from(tasks)
+        .where(and(inArray(tasks.id, ids), this.ownership(), condition))
+        .for('update');
+      for (const row of rows) {
+        const category = data.workflowCategory ?? row.workflowCategory;
+        const reviewer =
+          data.reviewerAgentId === undefined ? row.reviewerAgentId : data.reviewerAgentId;
+        if (category === 'in_review' && !reviewer) throw new TaskReviewerRequiredError();
+        if (category === 'in_review') await scoped.assertReviewerAgent(runner, reviewer);
+      }
+      return write(scoped);
+    });
+  }
+
   // ========== CRUD ==========
 
   async create(
@@ -743,6 +813,10 @@ export class TaskModel {
     }
 
     const createInDatabase = async (runner: OrviloDatabase): Promise<TaskItem> => {
+      if (rest.workflowCategory === 'in_review' && !rest.reviewerAgentId) {
+        throw new TaskReviewerRequiredError();
+      }
+      await this.assertReviewerAgent(runner, rest.reviewerAgentId);
       // Seq is allocated per ownership scope: workspace-wide in team mode,
       // user-private in personal mode. This keeps `T-N` identifiers stable
       // within the surface the user actually sees.
@@ -821,7 +895,6 @@ export class TaskModel {
       // never subscribers; these are member ids only).
       const subscriptions = new TaskSubscriptionModel(runner, this.userId, this.workspaceId);
       await subscriptions.ensureSubscribed(task.id, [task.assigneeUserId], 'assigned');
-      await subscriptions.ensureSubscribed(task.id, [task.reviewerUserId], 'reviewer');
 
       if (this.workspaceId && !options.mutation?.suppressDomainEvent) {
         await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
@@ -845,7 +918,7 @@ export class TaskModel {
     const maxRetries = options.maxRetries ?? 5;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        return this.workspaceId
+        return this.workspaceId || rest.reviewerAgentId
           ? await this.db.transaction((tx) => createInDatabase(tx as OrviloDatabase))
           : await createInDatabase(this.db);
       } catch (error: any) {
@@ -963,13 +1036,6 @@ export class TaskModel {
   }
 
   /**
-   * Reviewer backfill for the 'paused' ("pending review") transition: the
-   * human accountable at review is the member assignee when there is one,
-   * otherwise the creator. COALESCE keeps an explicitly chosen reviewer
-   * (either a non-null `reviewer_user_id` already on the row, or a caller-
-   * supplied `data.reviewerUserId`) instead of overwriting it.
-   */
-  /**
    * `tasks.status` is retired — callers still pass the legacy transition
    * vocabulary ('running' | 'paused' | 'failed' | 'completed' | 'canceled' |
    * 'scheduled' | 'backlog') to `updateStatus*`, but nothing is written to
@@ -1036,17 +1102,6 @@ export class TaskModel {
     };
   }
 
-  private static reviewerBackfillSet(status: string | undefined, explicit?: string | null) {
-    if (status !== 'paused' || explicit !== undefined) return {};
-    return {
-      reviewerUserId: sql<string | null>`coalesce(
-        ${tasks.reviewerUserId},
-        ${tasks.assigneeUserId},
-        ${tasks.createdByUserId}
-      )`,
-    };
-  }
-
   async update(
     id: string,
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>> &
@@ -1054,6 +1109,19 @@ export class TaskModel {
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
+    if (
+      !this.reviewerValidationHeld &&
+      (data.reviewerAgentId !== undefined || data.workflowCategory !== undefined)
+    ) {
+      return this.withReviewerValidation(
+        [id],
+        data,
+        (model) => model.update(id, data, mutation),
+        mutation.expectedDomainRevision === undefined
+          ? undefined
+          : eq(tasks.domainRevision, mutation.expectedDomainRevision),
+      );
+    }
     if (this.workspaceId && data.visibility !== undefined) data = { ...data, visibility: 'public' };
     if (
       data.assigneeAgentId !== undefined &&
@@ -1145,7 +1213,7 @@ export class TaskModel {
           ...transitionPatch,
           ...TaskModel.workflowCategorySet(transition, data.workflowCategory),
           ...completionStamp,
-          ...TaskModel.reviewerBackfillSet(transition, data.reviewerUserId),
+
           updatedAt: new Date(),
         })
         .where(and(...updateWhere))
@@ -1187,7 +1255,7 @@ export class TaskModel {
           ...transitionPatch,
           ...TaskModel.workflowCategorySet(transition, data.workflowCategory),
           ...completionStamp,
-          ...TaskModel.reviewerBackfillSet(transition, data.reviewerUserId),
+
           domainRevision: sql`${tasks.domainRevision} + 1`,
           ...(changesPolicy ? { policyRevision: sql`${tasks.policyRevision} + 1` } : {}),
           ...(changesRequirement
@@ -2665,6 +2733,14 @@ export class TaskModel {
     extra?: TaskStatusTransitionExtra,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
+    if (!this.reviewerValidationHeld && extra?.workflowCategory !== undefined) {
+      return this.withReviewerValidation(
+        [id],
+        extra,
+        (model) => model.updateStatusIfCurrent(id, expected, transition, extra, mutation),
+        predicateForLegacyStatus(expected) ?? sql`false`,
+      );
+    }
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) =>
         model.updateStatusIfCurrent(id, expected, transition, extra, mutation),
@@ -2679,7 +2755,7 @@ export class TaskModel {
         updatedAt: new Date(),
         ...TaskModel.statusTransitionData(transition, extra),
         ...TaskModel.workflowCategorySet(transition, extra?.workflowCategory),
-        ...TaskModel.reviewerBackfillSet(transition),
+
         domainRevision: sql`${tasks.domainRevision} + 1`,
       })
       .where(and(eq(tasks.id, id), expectedGuard, this.ownership()))
@@ -2717,6 +2793,17 @@ export class TaskModel {
     status: string,
     extra?: TaskStatusTransitionExtra,
   ): Promise<TaskItem | null> {
+    if (!this.reviewerValidationHeld && extra?.workflowCategory !== undefined) {
+      return this.withReviewerValidation(
+        [id],
+        extra,
+        (model) => model.updateStatusIfReservation(id, reservationId, currentStatus, status, extra),
+        and(
+          eq(tasks.runReservationId, reservationId),
+          predicateForLegacyStatus(currentStatus) ?? sql`false`,
+        ),
+      );
+    }
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) =>
         model.updateStatusIfReservation(id, reservationId, currentStatus, status, extra),
@@ -2734,7 +2821,6 @@ export class TaskModel {
       .set({
         updatedAt: new Date(),
         ...TaskModel.statusTransitionData(status, extra),
-        ...TaskModel.reviewerBackfillSet(status),
       })
       .where(
         and(
@@ -2924,6 +3010,33 @@ export class TaskModel {
     mutation: TaskMutationContext = {},
     beforeMutation?: (tx: OrviloDatabase) => Promise<boolean>,
   ): Promise<TaskItem | null> {
+    if (!this.reviewerValidationHeld && extra?.workflowCategory !== undefined) {
+      return this.withReviewerValidation(
+        [id],
+        extra,
+        (model) =>
+          model.updateStatusForExecutionContract(
+            id,
+            status,
+            expected,
+            extra,
+            mutation,
+            beforeMutation,
+          ),
+        and(
+          eq(tasks.executionGeneration, expected.executionGeneration),
+          eq(tasks.policyRevision, expected.policyRevision),
+          eq(tasks.requirementRevision, expected.requirementRevision),
+          expected.status ? predicateForLegacyStatus(expected.status) : undefined,
+          expected.runReservationId
+            ? eq(tasks.runReservationId, expected.runReservationId)
+            : undefined,
+          expected.assigneeAgentId === null
+            ? isNull(tasks.assigneeAgentId)
+            : eq(tasks.assigneeAgentId, expected.assigneeAgentId),
+        ),
+      );
+    }
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       if (beforeMutation && !(await beforeMutation(runner))) return null;
@@ -2933,7 +3046,7 @@ export class TaskModel {
           updatedAt: new Date(),
           ...TaskModel.statusTransitionData(status, extra),
           ...TaskModel.workflowCategorySet(status, extra?.workflowCategory),
-          ...TaskModel.reviewerBackfillSet(status),
+
           domainRevision: sql`${tasks.domainRevision} + 1`,
         })
         .where(
@@ -2995,6 +3108,11 @@ export class TaskModel {
     extra?: TaskStatusTransitionExtra,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem[]> {
+    if (!this.reviewerValidationHeld && extra?.workflowCategory !== undefined) {
+      return this.withReviewerValidation(ids, extra, (model) =>
+        model.updateStatusForIds(ids, status, extra, mutation),
+      );
+    }
     if (ids.length === 0) return [];
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) =>
@@ -3008,7 +3126,7 @@ export class TaskModel {
         updatedAt: new Date(),
         ...TaskModel.statusTransitionData(status, extra),
         ...TaskModel.workflowCategorySet(status, extra?.workflowCategory),
-        ...TaskModel.reviewerBackfillSet(status),
+
         domainRevision: sql`${tasks.domainRevision} + 1`,
       })
       .where(and(inArray(tasks.id, ids), this.ownership()))
@@ -4805,7 +4923,7 @@ export class TaskModel {
           parentTaskId: tasks.parentTaskId,
           priority: tasks.priority,
           projectId: tasks.projectId,
-          reviewerUserId: tasks.reviewerUserId,
+          reviewerAgentId: tasks.reviewerAgentId,
           schedulePattern: tasks.schedulePattern,
           scheduleTimezone: tasks.scheduleTimezone,
           workflowCategory: tasks.workflowCategory,
@@ -4874,16 +4992,14 @@ export class TaskModel {
         // about the Issue after it is handed on, unless they unsubscribed.
         await subscriptions.ensureSubscribed(id, [updated.assigneeUserId], 'assigned');
       }
-      // Only an explicit reviewer write earns a feed row — the COALESCE
-      // backfill stamped on a paused transition is the system's fallback
-      // choice, and attributing it to whoever paused would read as their
-      // deliberate pick.
-      if (data.reviewerUserId !== undefined && before.reviewerUserId !== updated.reviewerUserId) {
+      if (
+        data.reviewerAgentId !== undefined &&
+        before.reviewerAgentId !== updated.reviewerAgentId
+      ) {
         events.push({
-          payload: { fromId: before.reviewerUserId, toId: updated.reviewerUserId },
+          payload: { fromId: before.reviewerAgentId, toId: updated.reviewerAgentId },
           type: 'reviewer',
         });
-        await subscriptions.ensureSubscribed(id, [updated.reviewerUserId], 'reviewer');
       }
       // Where the Issue sits in its workflow, in the words the board uses.
       const workflowPayload = workflowStatePayload(
@@ -5186,6 +5302,13 @@ export class TaskModel {
       const subtree = await scoped.collectTaskSubtree(taskId, trx as OrviloDatabase);
       if (subtree.length === 0) throw new Error('Task not found');
 
+      const sameScope =
+        targetWorkspaceId === (this.workspaceId ?? null) &&
+        (targetWorkspaceId !== null || targetUserId === this.userId);
+      if (!sameScope && subtree.some((task) => task.workflowCategory === 'in_review')) {
+        throw new TaskReviewerRequiredError();
+      }
+
       const ids = subtree.map((t) => t.id);
 
       // Workspace task metadata is always public; personal rows stay owner-only.
@@ -5201,7 +5324,8 @@ export class TaskModel {
           .update(tasks)
           .set({
             // Clear cross-scope refs: agent / topic may be invalid in new scope.
-            assigneeAgentId: targetWorkspaceId === this.workspaceId ? task.assigneeAgentId : null,
+            assigneeAgentId: sameScope ? task.assigneeAgentId : null,
+            reviewerAgentId: sameScope ? task.reviewerAgentId : null,
             createdByUserId: targetUserId,
             currentTopicId: null,
             identifier,
@@ -5289,6 +5413,7 @@ export class TaskModel {
           .values({
             assigneeAgentId: null,
             assigneeUserId: null,
+            reviewerAgentId: null,
             automationMode: original.automationMode,
             config: original.config ?? {},
             context: {

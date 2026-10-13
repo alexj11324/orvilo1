@@ -32,10 +32,11 @@ const EMPTY_LEFT_ACTIONS: [] = [];
 const Welcome = memo(() => {
   // The `topic` namespace is fetched lazily; `t` returns the raw key until it lands.
   const { t, ready } = useTranslation('topic');
+  const agentId = useConversationStore(conversationSelectors.agentId);
   return (
     <div className="flex flex-col flex-1 items-center justify-center p-6">
       <div className="text-muted-foreground" style={{ fontSize: 15 }}>
-        {ready ? t('taskManager.welcome') : null}
+        {ready ? t(agentId ? 'taskManager.welcome' : 'taskManager.orchestratorRequired') : null}
       </div>
     </div>
   );

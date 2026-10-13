@@ -52,6 +52,7 @@ const otherUserId = 'work-query-other';
 const workspaceId = 'work-query-ws';
 
 beforeEach(async () => {
+  await serverDB.delete(tasksTable);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
   await serverDB.insert(workspaces).values({
@@ -60,6 +61,9 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: 'work-query-ws',
   });
+  await serverDB
+    .insert(agents)
+    .values({ id: 'query-reviewer-agent', slug: 'query-reviewer-agent', userId, workspaceId });
   await serverDB
     .insert(workspaceMembers)
     .values([
@@ -70,12 +74,17 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await serverDB.delete(tasksTable);
   await serverDB.delete(users);
 });
 
 const createTask = async (owner: string, values: Partial<typeof tasks.$inferInsert> = {}) => {
   const model = new TaskModel(serverDB, owner, workspaceId);
-  return model.create({ instruction: values.instruction ?? 'Do the work', ...values });
+  return model.create({
+    instruction: values.instruction ?? 'Do the work',
+    ...(values.workflowCategory === 'in_review' ? { reviewerAgentId: 'query-reviewer-agent' } : {}),
+    ...values,
+  });
 };
 
 // `tasks.status` is retired — a live run is an active dispatch row.
@@ -425,8 +434,11 @@ describe('WorkQueryModel', () => {
     expect(ids).not.toContain(assignedOnly.id);
   });
 
-  it('reviewerUserId isNotNull lists any task in review, for the created tab', async () => {
-    const inReview = await createTask(userId, { name: 'I asked', reviewerUserId: otherUserId });
+  it('reviewerAgentId isNotNull lists any task in review, for the created tab', async () => {
+    const inReview = await createTask(userId, {
+      name: 'I asked',
+      reviewerAgentId: 'query-reviewer-agent',
+    });
     await createTask(userId, { name: 'Plain mine' });
 
     const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
@@ -435,7 +447,7 @@ describe('WorkQueryModel', () => {
         filter: {
           all: [
             { field: 'createdByUserId', op: 'eq', value: { ref: 'currentUser' } },
-            { field: 'reviewerUserId', op: 'isNotNull' },
+            { field: 'reviewerAgentId', op: 'isNotNull' },
           ],
         },
         schemaVersion: 1,
@@ -445,10 +457,30 @@ describe('WorkQueryModel', () => {
     expect(result.tasks.map((row) => row.id)).toEqual([inReview.id]);
   });
 
-  it('keeps review responsibility even when the inbox row is gone', async () => {
+  it('filters and groups reviewer responsibility by Agent id', async () => {
+    const issue = await createTask(userId, {
+      name: 'Agent review',
+      reviewerAgentId: 'query-reviewer-agent',
+    });
+    await createTask(userId, { name: 'Unassigned review' });
+    const result = await new WorkQueryModel(serverDB, userId, workspaceId).queryTasks({
+      query: {
+        entityType: 'task',
+        schemaVersion: 2,
+        groupBy: 'reviewer',
+        layout: 'board',
+        filter: { all: [{ field: 'reviewerAgentId', op: 'eq', value: 'query-reviewer-agent' }] },
+      },
+    });
+    expect(result.tasks.map((row) => row.id)).toEqual([issue.id]);
+    expect(result.groups).toMatchObject([{ key: 'query-reviewer-agent', total: 1 }]);
+  });
+
+  it('lists Issues in review independently of their inbox row', async () => {
     const reviewed = await createTask(otherUserId, {
       name: 'Needs review',
-      reviewerUserId: userId,
+      reviewerAgentId: 'query-reviewer-agent',
+      workflowCategory: 'in_review',
     });
     await serverDB.insert(actionApprovals).values({
       actionType: 'tool.danger',
@@ -471,7 +503,8 @@ describe('WorkQueryModel', () => {
     const task = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Followed then not',
-      reviewerUserId: userId,
+      reviewerAgentId: 'query-reviewer-agent',
+      workflowCategory: 'in_review',
     });
     const follows = new TaskSubscriptionModel(serverDB, userId, workspaceId);
     await follows.subscribe(task.id);

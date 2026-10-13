@@ -105,7 +105,7 @@ const TASK_FIELDS = new Set<WorkQueryField>([
   'priority',
   'projectId',
   'projectMilestoneId',
-  'reviewerUserId',
+  'reviewerAgentId',
   'status',
   'subscribed',
   'teamId',
@@ -280,8 +280,8 @@ const taskColumn = (field: WorkQueryField) => {
     case 'projectMilestoneId': {
       return tasks.projectMilestoneId;
     }
-    case 'reviewerUserId': {
-      return tasks.reviewerUserId;
+    case 'reviewerAgentId': {
+      return tasks.reviewerAgentId;
     }
     case 'status': {
       return legacyStatusExpr;
@@ -405,25 +405,6 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
       throw new WorkQueryError('INVALID_QUERY', 'delegatedByUserId only supports eq currentUser');
     }
     return sql`exists (select 1 from ${executionGrants} where ${executionGrants.taskId} = ${tasks.id} and ${executionGrants.initiatedBy} = ${resolved} and ${executionGrants.status} = 'active')`;
-  }
-
-  if (predicate.field === 'reviewerUserId') {
-    // `isNotNull` = "task is in review" — has a reviewer or a pending
-    // task-targeted approval, whoever they are for.
-    if (predicate.op === 'isNotNull') {
-      return or(
-        isNotNull(tasks.reviewerUserId),
-        sql`exists (select 1 from ${actionApprovals} where ${actionApprovals.targetId} = ${tasks.id} and ${actionApprovals.targetType} = 'task' and ${actionApprovals.status} = 'pending')`,
-      )!;
-    }
-    const resolved = resolveValue(predicate.value, ctx.currentUserId);
-    if (predicate.op !== 'eq' || typeof resolved !== 'string') {
-      throw new WorkQueryError('INVALID_QUERY', 'reviewerUserId only supports eq currentUser');
-    }
-    return or(
-      eq(tasks.reviewerUserId, resolved),
-      sql`exists (select 1 from ${actionApprovals} where ${actionApprovals.targetId} = ${tasks.id} and ${actionApprovals.status} = 'pending' and ${actionApprovals.approverUserId} = ${resolved})`,
-    )!;
   }
 
   if (predicate.field === 'teamId') {
@@ -711,7 +692,7 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
     case 'review': {
       return {
         entityType: 'task',
-        filter: { all: [{ field: 'reviewerUserId', op: 'eq', value: current }] },
+        filter: { all: [{ field: 'workflowCategory', op: 'eq', value: 'in_review' }] },
         schemaVersion: 2,
       };
     }
@@ -865,6 +846,7 @@ const limitPage = <T>(rows: T[], limit: number): { hasMore: boolean; rows: T[] }
 const BOARD_GROUP_BY = new Set<WorkQueryGroupBy>([
   'agent',
   'assignee',
+  'reviewer',
   'attention',
   'priority',
   'status',
@@ -875,6 +857,7 @@ const LIST_GROUP_BY = new Set<WorkQueryGroupBy>([
   'activityDate',
   'agent',
   'assignee',
+  'reviewer',
   'attention',
   'cycle',
   'milestone',
@@ -926,6 +909,7 @@ export type WorkQueryBoardDimension =
   | 'activityDate'
   | 'agent'
   | 'assignee'
+  | 'reviewer'
   | 'attention'
   | 'cycle'
   | 'milestone'
@@ -940,6 +924,7 @@ export const workQueryBoardGroupBy = (query: WorkQuery): WorkQueryBoardDimension
       query.groupBy === 'status' ||
       query.groupBy === 'priority' ||
       query.groupBy === 'assignee' ||
+      query.groupBy === 'reviewer' ||
       query.groupBy === 'agent' ||
       query.groupBy === 'attention'
     ) {
@@ -1012,7 +997,14 @@ const attentionGroupExpr = (ctx: {
 END`;
 
 type BoardLaneAxis =
-  'agent' | 'assignee' | 'milestone' | 'priority' | 'project' | 'status' | 'workflowCategory';
+  | 'agent'
+  | 'assignee'
+  | 'reviewer'
+  | 'milestone'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 
 /**
  * Local-day recency buckets matching `activityBucketKey`: day:0–6, then
@@ -1054,6 +1046,9 @@ const axisExpr = (
     }
     case 'agent': {
       return sql`coalesce(${tasks.assigneeAgentId}, 'none')`;
+    }
+    case 'reviewer': {
+      return sql`coalesce(${tasks.reviewerAgentId}, 'none')`;
     }
     case 'milestone': {
       return sql`coalesce(${tasks.projectMilestoneId}::text, 'none')`;
@@ -1165,14 +1160,7 @@ const DEFAULT_TASK_SORT: WorkQuerySort[] = [
 
 const normalizeTaskSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[] => {
   const next = sort?.length ? [...sort] : [...DEFAULT_TASK_SORT];
-  if (
-    next.some(
-      (item) =>
-        item.field === 'delegatedByUserId' ||
-        item.field === 'labelId' ||
-        item.field === 'reviewerUserId',
-    )
-  ) {
+  if (next.some((item) => item.field === 'delegatedByUserId' || item.field === 'labelId')) {
     throw new WorkQueryError('INVALID_QUERY', 'Cannot sort by a virtual field');
   }
   if (next.at(-1)?.field !== 'id') {

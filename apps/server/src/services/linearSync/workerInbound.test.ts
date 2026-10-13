@@ -10,6 +10,7 @@ import { TaskModel } from '@/database/models/task';
 import {
   agents,
   linearInstallations,
+  linearSyncInbox,
   linearSyncOutbox,
   taskDispatches,
   tasks,
@@ -50,6 +51,91 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe('LinearSyncWorker inbound ordering', () => {
+  it('skips an inbound review transition without an agent reviewer and records the reason', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'REV',
+      name: 'Review Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-review', workspaceId })
+      .returning();
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-review',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-review',
+      projectId: project.id,
+      teamIds: ['linear-team-review'],
+      settings: {
+        statusMappings: [{ linearStateId: 'linear-state-review', workflowCategory: 'in_review' }],
+      },
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'REV-1',
+        instruction: 'Review me',
+        workflowStateId: 'linear-state-backlog',
+        name: 'Review me',
+        projectId: project.id,
+        seq: 1,
+        visibility: 'public',
+        workspaceId,
+      })
+      .returning();
+    const base = {
+      id: 'linear-issue-review',
+      identifier: 'REV-1',
+      projectId: binding.linearProjectId,
+      teamId: 'linear-team-review',
+      title: 'Review me',
+      stateId: 'linear-state-backlog',
+      updatedAt: '2026-09-16T12:00:00.000Z',
+    };
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: base.identifier,
+      linearIssueId: base.id,
+      organizationId: installation.organizationId,
+      remoteSnapshot: base,
+      taskId: task.id,
+    });
+    await model.captureDelivery({
+      action: 'update',
+      deliveryId: 'review-transition-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: { id: base.id },
+      subjectId: base.id,
+    });
+    const provider = {
+      getIssue: vi.fn().mockResolvedValue({
+        ...base,
+        stateId: 'linear-state-review',
+        updatedAt: '2026-09-16T12:01:00.000Z',
+      }),
+      listRelations: vi.fn().mockResolvedValue([]),
+    };
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+    expect((await new TaskModel(db, userId, workspaceId).findById(task.id))?.workflowCategory).toBe(
+      'backlog',
+    );
+    const [receipt] = await db
+      .select()
+      .from(linearSyncInbox)
+      .where(eq(linearSyncInbox.installationId, installation.id));
+    expect(receipt).toMatchObject({
+      status: 'processed',
+      lastError: expect.stringContaining('TASK_REVIEWER_REQUIRED'),
+    });
+  });
+
   it('tombstones an issue from the signed remove payload when the remote issue is gone', async () => {
     const model = new LinearSyncModel(db, workspaceId);
     const project = await new ProjectModel(db, userId, workspaceId).create({

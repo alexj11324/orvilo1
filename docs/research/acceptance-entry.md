@@ -9,7 +9,7 @@ The normal user journey starts from the delivery context: open a task and click 
 ### 1. Task detail: the contextual entry
 
 1. Open a task that already has an Acceptance aggregate. The task detail renders an Acceptance state row only when the aggregate exists; clicking it calls `openAcceptanceInPanel(acceptance.id)`.
-2. The hook turns on the task-agent panel and calls the chat store's `openAcceptance`; it deliberately does not navigate to `/acceptance/<id>`.
+2. The hook turns on the task conversation panel and calls the chat store's `openAcceptance`; it deliberately does not navigate to `/acceptance/<id>`.
 3. The task's Acceptance section exposes the same panel destination through “Open report”; individual checks open the corresponding Acceptance check in that panel. Verification-run tags do the same.
 
 Sources: [`TaskAcceptanceStateRow.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/AgentTasks/AgentTaskDetail/TaskAcceptanceStateRow.tsx#L27-L38), [`useOpenAcceptanceInPanel.ts`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/AgentTasks/AgentTaskDetail/useOpenAcceptanceInPanel.ts#L6-L23), [`TaskAcceptance.tsx`](https://github.com/lobehub/lobehub/blob/a96777960d6e5ed2a04203da5dc82ec0e3f9a396/src/features/AgentTasks/AgentTaskDetail/TaskAcceptance.tsx#L160-L170).

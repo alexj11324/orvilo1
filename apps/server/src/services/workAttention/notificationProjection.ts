@@ -188,7 +188,7 @@ export class NotificationProjectionService {
     ];
     const recipientKinds = new Map<
       string,
-      'comment' | 'completion' | 'mention' | 'status' | 'assigned' | 'review'
+      'comment' | 'completion' | 'mention' | 'status' | 'assigned'
     >();
     const completion = row.eventType.startsWith('task.run.');
     const commentId = asString(payload.commentId);
@@ -203,18 +203,11 @@ export class NotificationProjectionService {
       : undefined;
     const statusChange = row.eventType === 'task.status.changed';
     const assignment = row.eventType === 'task.assigned';
-    const review =
-      task.reviewerUserId &&
-      (statusChange ||
-        (Array.isArray(payload.changedFields) &&
-          payload.changedFields.includes('reviewerUserId'))) &&
-      task.workflowCategory === 'in_review';
-    if (!completion && !comment && !statusChange && !assignment && !review) return [];
+    if (!completion && !comment && !statusChange && !assignment) return [];
     if (statusChange) {
       for (const userId of followers) recipientKinds.set(userId, 'status');
     }
     if (assignment && task.assigneeUserId) recipientKinds.set(task.assigneeUserId, 'assigned');
-    if (review) recipientKinds.set(task.reviewerUserId!, 'review');
     if (completion || row.eventType === 'task.comment.created') {
       for (const userId of followers)
         recipientKinds.set(userId, completion ? 'completion' : 'comment');
@@ -320,9 +313,7 @@ export class NotificationProjectionService {
             ? `Issue status changed to ${statusLabel}`
             : kind === 'assigned'
               ? 'Issue assigned to you'
-              : kind === 'review'
-                ? 'Issue review requested'
-                : (asString(payload.content) ?? comment!.content),
+              : (asString(payload.content) ?? comment!.content),
         episodeKey: completion
           ? `task:${task.id}:run:${String(payload.topicId)}:${String(payload.status)}`
           : `task:${task.id}:${kind}`,
@@ -337,15 +328,13 @@ export class NotificationProjectionService {
             ? 'task_status_changed'
             : kind === 'assigned'
               ? 'task_assigned'
-              : kind === 'review'
-                ? 'task_review'
-                : kind === 'mention'
-                  ? 'mention'
-                  : completion
-                    ? row.eventType === 'task.run.completed'
-                      ? 'agent_run_completed'
-                      : 'agent_run_failed'
-                    : 'task_comment',
+              : kind === 'mention'
+                ? 'mention'
+                : completion
+                  ? row.eventType === 'task.run.completed'
+                    ? 'agent_run_completed'
+                    : 'agent_run_failed'
+                  : 'task_comment',
       });
     }
     return targets;

@@ -22,6 +22,7 @@ import debug from 'debug';
 
 import { TopicTrigger } from '@/const/topic';
 import { AgentModel } from '@/database/models/agent';
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
@@ -33,6 +34,7 @@ import { isBuiltinHarnessOffered } from '@/server/featureFlags/builtinHarness';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
+import { isQueuedDeviceOperation } from '@/server/services/aiAgent/deviceQueue';
 import type { EventDispatchEvidence, PreparedTaskDispatch } from '@/server/services/taskDispatch';
 import {
   TaskDispatchConflictError,
@@ -522,13 +524,29 @@ export class TaskRunnerService {
       }
 
       let existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+      const heartbeatExpired =
+        task.lastHeartbeatAt &&
+        task.heartbeatTimeout &&
+        (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000 > task.heartbeatTimeout;
+      const queuedOperations = heartbeatExpired
+        ? await Promise.all(
+            existingTopics
+              .filter((topic) => topic.operationId)
+              .map((topic) =>
+                new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
+                  topic.operationId!,
+                ),
+              ),
+          )
+        : [];
+      const waitingForDevice = queuedOperations.some(isQueuedDeviceOperation);
 
       // Recover expired runs before deciding whether another run conflicts.
       // The previous ordering rejected every stale `running` topic first, so
       // the timeout cleanup below was unreachable for the case it existed to
       // repair. Re-read after the conditional update so concurrent callers all
       // make their decision from the persisted state.
-      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+      if (!waitingForDevice && task.lastHeartbeatAt && task.heartbeatTimeout) {
         const elapsed = (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000;
         if (elapsed > task.heartbeatTimeout) {
           await this.taskTopicModel.timeoutRunning(task.id);
@@ -539,7 +557,7 @@ export class TaskRunnerService {
       // Recover a dead generation before checking for an in-flight topic. The
       // old ordering rejected on the stale running row first, so timeout
       // cleanup below was unreachable precisely when it was needed.
-      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+      if (!waitingForDevice && task.lastHeartbeatAt && task.heartbeatTimeout) {
         const now = Date.now();
         const elapsed = (now - new Date(task.lastHeartbeatAt).getTime()) / 1000;
         const hasRunningTopic = existingTopics.some((topic) => topic.status === 'running');

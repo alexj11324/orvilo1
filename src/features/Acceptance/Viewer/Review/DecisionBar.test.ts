@@ -64,3 +64,13 @@ it('keeps the repair prompt available after an aggregate rejection', () => {
   expect(screen.getByRole('button', { name: 'acceptance.bar.copyReview' })).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'acceptance.bar.rerun' })).toBeNull();
 });
+
+it('allows a person to accept or reject while verification is waiting', () => {
+  render(
+    createElement(DecisionBar, { ...props, state: 'live', repairing: false, feedbackCount: 0 }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'acceptance.actions.accept' }));
+  fireEvent.click(screen.getByRole('button', { name: 'acceptance.bar.rejectComment' }));
+  expect(props.onAccept).toHaveBeenCalled();
+  expect(props.onRejectComment).toHaveBeenCalled();
+});

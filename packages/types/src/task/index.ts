@@ -807,13 +807,6 @@ export interface TaskVerifyConfig {
    * offer "regenerate", distinct from the resolved criteria themselves.
    */
   requirement?: string;
-  /**
-   * Which agent executes the verify run (the Push-model review agent). When
-   * omitted, falls back to the built-in verify agent. The execution target /
-   * bound device is inherited from the chosen agent's `agencyConfig`, not
-   * written here.
-   */
-  verifierAgentId?: string;
   /** One-off ad-hoc criteria ids (references `verify_criteria.id`). */
   verifyCriteriaIds?: string[];
   /** Reuse a rubric template (references `verify_rubrics.id`). */
@@ -1060,11 +1053,8 @@ export interface TaskItem {
   projectMilestoneId?: string | null;
   requirementLocked: boolean;
   requirementRevision: number;
-  /**
-   * The human accountable while the task sits in 'paused' ("pending review").
-   * Stamped when a run hands off for review; the assignees stay the executors.
-   */
-  reviewerUserId: string | null;
+  /** The Agent responsible for review; required while the Issue is In Review. */
+  reviewerAgentId: string | null;
   /** Expiry for the active run-generation fence, when one is present. */
   runReservationExpiresAt: Date | null;
   /** Active run-generation fence; null when no generation owns the task. */
@@ -1197,7 +1187,7 @@ export interface NewTask {
   projectId?: string | null;
   requirementLocked?: boolean;
   requirementRevision?: number;
-  reviewerUserId?: string | null;
+  reviewerAgentId?: string | null;
   schedulePattern?: string | null;
   scheduleTimezone?: string | null;
   seq: number;
@@ -1243,8 +1233,8 @@ export interface TaskDetailSubtask {
   identifier: string;
   name?: string | null;
   priority?: number | null;
-  /** Review-phase owner once the subtask pauses for review. */
-  reviewerUserId?: string | null;
+  /** The Agent responsible for reviewing this subtask. */
+  reviewerAgentId?: string | null;
   runningTopic?: TaskDetailSubtaskRunningTopic | null;
   schedule?: { pattern?: string | null; timezone?: string | null };
   /** @deprecated Legacy status projection — see {@link TaskItem.status}. */
@@ -1549,7 +1539,7 @@ export interface TaskDetailData {
   /**
    * Whether the requesting user has an active subscription to this Issue
    * (manual, or added when they commented / were mentioned / assigned / made
-   * reviewer). False after an explicit unsubscribe.
+   * participant). False after an explicit unsubscribe.
    */
   isSubscribed?: boolean;
   /** Labels assigned to the task (Linear-style issue labels). */
@@ -1563,8 +1553,8 @@ export interface TaskDetailData {
   priority?: number | null;
   /** Owning project; drives the automation detail's project picker. */
   projectId?: string | null;
-  /** The human accountable while the task sits in 'paused' ("pending review"). */
-  reviewerUserId?: string | null;
+  /** The Agent responsible for review. */
+  reviewerAgentId?: string | null;
   schedule?: {
     maxExecutions?: number | null;
     pattern?: string | null;

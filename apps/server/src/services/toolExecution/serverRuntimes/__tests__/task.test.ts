@@ -117,6 +117,29 @@ describe('taskRuntime.factory', () => {
 });
 
 describe('createTaskRuntime', () => {
+  it('viewTask exposes usable reviewer agents for the delivered Issue', async () => {
+    const runtime = createTaskRuntime({
+      taskCaller: {
+        listReviewerAgents: vi
+          .fn()
+          .mockResolvedValue({ data: [{ id: 'agt-reviewer', title: 'Reviewer' }] }),
+      } as never,
+      taskService: {
+        getTaskDetail: vi.fn().mockResolvedValue({
+          identifier: 'T-1',
+          instruction: 'Work',
+          status: 'backlog',
+          domainRevision: 4,
+        }),
+      } as never,
+    });
+    const result = await runtime.viewTask({ identifier: 'T-1' });
+    expect(result.success).toBe(true);
+    expect(result.content).toContain('agt-reviewer');
+    expect(result.content).toContain('Set reviewerAgentId with editTask');
+    expect(result.state).toMatchObject({ identifier: 'T-1', domainRevision: 4 });
+  });
+
   describe('readAutomationInput', () => {
     const makeRuntime = (overrides: Record<string, unknown> = {}) => {
       const findById = vi.fn().mockResolvedValue({ id: 'task-1', content: 'Mutable definition' });
@@ -643,6 +666,25 @@ describe('createTaskRuntime', () => {
       const taskCaller = { update: vi.fn().mockResolvedValue({}) } as any;
       return { agentModel, taskCaller, taskModel, taskService };
     };
+
+    it.each(['agt-reviewer', null])(
+      'sets the delivered Issue reviewer to %s',
+      async (reviewerAgentId) => {
+        const deps = makeDeps();
+        const runtime = createTaskRuntime({
+          agentModel: deps.agentModel as never,
+          taskCaller: deps.taskCaller,
+          taskModel: deps.taskModel as never,
+          taskService: deps.taskService,
+        });
+        const result = await runtime.editTask({ identifier: 'T-1', reviewerAgentId });
+        expect(result.success).toBe(true);
+        expect(result.content).toContain(
+          reviewerAgentId ? `reviewer agent → ${reviewerAgentId}` : 'reviewer cleared',
+        );
+        expect(deps.taskCaller.update).toHaveBeenCalledWith({ id: 'task-1', reviewerAgentId });
+      },
+    );
 
     it('leaves dependencies untouched when the revision-fenced field update fails', async () => {
       const deps = makeDeps();

@@ -32,11 +32,6 @@ export {
 } from './executor';
 export { computeFalseFlags, VerifyFeedbackService } from './feedbackService';
 export { runVerifyOnCompletion } from './lifecycle';
-export {
-  isHeterogeneousVerifyProvider,
-  resolveVerifyModelConfig,
-  REVIEW_PREDICT_MODEL_CONFIG,
-} from './modelConfig';
 export { type GeneratePlanParams, VerifyPlanGeneratorService } from './planGenerator';
 export { instantiateVerifyPlanOnStart } from './planInstantiation';
 export {

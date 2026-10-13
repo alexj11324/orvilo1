@@ -46,6 +46,7 @@ import { GoalCriteriaGeneratorService } from '@/server/services/goal/criteriaGen
 import {
   AcceptanceService,
   createEvidenceFileResolver,
+  createVerifierAgentRunner,
   finalizeVerifyRun,
   purgeVerifyRun,
   VerifyExecutorService,
@@ -53,13 +54,13 @@ import {
   VerifyPlanGeneratorService,
   VerifyReporterService,
 } from '@/server/services/verify';
+import { resolveIssueReviewer } from '@/server/services/verify/reviewerAgent';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
 
 const verifierTypeSchema = z.enum(['program', 'agent', 'llm']);
 const onFailSchema = z.enum(['manual', 'auto_repair']);
 const decisionSchema = z.enum(['accepted', 'rejected', 'overridden']);
-const modelConfigSchema = z.object({ model: z.string(), provider: z.string() });
 const verdictSchema = z.enum(['passed', 'failed', 'uncertain']);
 const checkStatusSchema = z.enum([
   'pending',
@@ -514,7 +515,6 @@ export const verifyRouter = router({
         enableAiGeneration: z.boolean().optional(),
         goal: z.string(),
         maxAiCriteria: z.number().optional(),
-        modelConfig: modelConfigSchema.optional(),
         operationId: z.string(),
         verifyCriteriaIds: z.array(z.string()).optional(),
         verifyRubricId: z.string().nullish(),
@@ -525,7 +525,20 @@ export const verifyRouter = router({
       // and gate on the run owner before writing (same as confirmPlan).
       const run = await ctx.runModel.ensureForOperation(input.operationId);
       assertWorkspaceRowManageable(ctx, run.userId, 'verify run');
-      return ctx.planGenerator.generateDraftPlan(input);
+      const operation = await new AgentOperationModel(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+      ).findById(input.operationId);
+      const reviewerAgentId = input.enableAiGeneration
+        ? await resolveIssueReviewer(
+            ctx.serverDB,
+            ctx.userId,
+            operation?.taskId,
+            ctx.workspaceId ?? undefined,
+          )
+        : undefined;
+      return ctx.planGenerator.generateDraftPlan({ ...input, reviewerAgentId });
     }),
 
   /**
@@ -539,7 +552,7 @@ export const verifyRouter = router({
         context: z.string().optional(),
         goal: z.string().min(1),
         maxCriteria: z.number().int().min(1).max(8).optional(),
-        modelConfig: modelConfigSchema,
+        taskId: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -679,7 +692,11 @@ export const verifyRouter = router({
     .query(async ({ ctx, input }) => {
       // Resolve an agent verifier's sub-run to the thread it ran in, so the
       // client can open that execution trace in the portal.
-      const op = await ctx.operationModel.findById(input.operationId);
+      const op = await new AgentOperationModel(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+      ).findById(input.operationId);
       if (!op) return null;
       return { threadId: op.threadId ?? null, topicId: op.topicId ?? null };
     }),
@@ -725,10 +742,8 @@ export const verifyRouter = router({
   executeVerify: verifyWriteProcedure
     .input(
       z.object({
-        batchLlm: z.boolean().optional(),
         deliverable: z.string(),
         goal: z.string(),
-        modelConfig: modelConfigSchema,
         operationId: z.string(),
       }),
     )
@@ -738,7 +753,28 @@ export const verifyRouter = router({
       const existingRun = await ctx.runModel.findByOperation(input.operationId);
       if (existingRun) assertWorkspaceRowManageable(ctx, existingRun.userId, 'verify run');
 
-      await ctx.executorService.execute(input);
+      const operation = await new AgentOperationModel(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+      ).findById(input.operationId);
+      const reviewerAgentId = await resolveIssueReviewer(
+        ctx.serverDB,
+        ctx.userId,
+        operation?.taskId,
+        ctx.workspaceId ?? undefined,
+      );
+      await ctx.executorService.execute({
+        ...input,
+        reviewerAgentId,
+        runVerifierAgent: createVerifierAgentRunner({
+          db: ctx.serverDB,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId ?? undefined,
+          taskId: operation?.taskId,
+          deliverable: input.deliverable,
+        }),
+      });
       // Settle the run through the SAME finalizer the completion-time gate uses
       // (runVerifyOnCompletion → finalizeVerifyRun): repair-aware tail (spawn a
       // repair round on auto_repair failures), then report + drive the bound task.
@@ -752,7 +788,7 @@ export const verifyRouter = router({
           report: {
             deliverable: input.deliverable,
             goal: input.goal,
-            modelConfig: input.modelConfig,
+            reviewerAgentId,
           },
         },
         ctx.workspaceId ?? undefined,
@@ -1169,17 +1205,27 @@ export const verifyRouter = router({
       z.object({
         deliverable: z.string(),
         goal: z.string(),
-        modelConfig: modelConfigSchema,
         verifyRunId: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const run = await resolveVerifyRun(ctx, input.verifyRunId);
       assertWorkspaceRowManageable(ctx, run.userId, 'verify run');
+      const operation = await new AgentOperationModel(
+        ctx.serverDB,
+        ctx.userId,
+        ctx.workspaceId ?? undefined,
+      ).findById(run.operationId!);
+      const reviewerAgentId = await resolveIssueReviewer(
+        ctx.serverDB,
+        ctx.userId,
+        operation?.taskId,
+        ctx.workspaceId ?? undefined,
+      );
       return ctx.reporterService.generateReport({
         deliverable: input.deliverable,
         goal: input.goal,
-        modelConfig: input.modelConfig,
+        reviewerAgentId,
         verifyRunId: run.id,
       });
     }),

@@ -29,7 +29,7 @@ Verify fields (setTaskVerify):
 - **requirement**: a one-sentence description of what "done" means for the task; the server synthesizes acceptance criteria from it. This is usually all you need
 - **verifyRubricId**: reuse a saved rubric template instead of an ad-hoc requirement
 - **verifyCriteriaIds**: explicit acceptance criteria ids, when you want exact checks rather than a synthesized requirement
-- **verifierAgentId**: agent that runs the verification; omit to use the built-in verify agent
+- **reviewerAgentId**: set with editTask; choose any usable workspace Agent listed by viewTask, including yourself. A delivered Issue needs a reviewer before entering review.
 - **maxIterations**: cap on verify repair / re-run iterations (1-10)
 
 When you dispatch an executable task to another agent (you set assigneeAgentId, then runTask), do NOT trust its self-reported "done" blindly — set a verify gate so the result is independently checked. Right after creating such a task, call setTaskVerify(identifier, enabled=true, requirement="<one sentence acceptance criteria>") before runTask. Skip verify only for trivial or non-deliverable tasks (e.g. pure status bookkeeping).

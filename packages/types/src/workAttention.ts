@@ -245,7 +245,7 @@ export type WorkQueryField =
   | 'priority'
   | 'projectId'
   | 'projectMilestoneId'
-  | 'reviewerUserId'
+  | 'reviewerAgentId'
   | 'status'
   | 'subscribed'
   | 'teamId'
@@ -293,6 +293,7 @@ export type WorkQueryGroupBy =
   | 'activityDate'
   | 'agent'
   | 'assignee'
+  | 'reviewer'
   | 'attention'
   | 'cycle'
   | 'milestone'
@@ -311,6 +312,7 @@ export type WorkQueryGroupBy =
 export type WorkQuerySubGroupBy =
   | 'agent'
   | 'assignee'
+  | 'reviewer'
   | 'milestone'
   | 'none'
   | 'priority'
@@ -322,11 +324,12 @@ export type WorkQuerySubGroupBy =
 export const WORK_QUERY_BOARD_KEY_SEP = '\u001F';
 
 export type WorkQueryBoardAxis =
-  'agent' | 'assignee' | 'priority' | 'project' | 'status' | 'workflowCategory';
+  'agent' | 'assignee' | 'reviewer' | 'priority' | 'project' | 'status' | 'workflowCategory';
 
 export const WORK_QUERY_BOARD_AXIS_PREFIX: Record<WorkQueryBoardAxis, string> = {
   agent: 'ag',
   assignee: 'as',
+  reviewer: 'rv',
   priority: 'pr',
   project: 'pj',
   status: 'st',
@@ -562,10 +565,9 @@ export const WORK_QUERY_TASK_FIELD_SPECS: readonly WorkQueryFieldSpec[] = [
     valueKind: 'user',
   },
   {
-    currentUserOnly: true,
-    field: 'reviewerUserId',
-    ops: ['eq', 'isNotNull'],
-    valueKind: 'user',
+    field: 'reviewerAgentId',
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
+    valueKind: 'agent',
   },
   {
     field: 'projectId',

@@ -24,6 +24,7 @@ import debug from 'debug';
 
 import { getActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { getWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import { lambdaClient } from '@/libs/trpc/client';
 import { taskService } from '@/services/task';
 import { getChatStoreState } from '@/store/chat';
 import { getTaskStoreState } from '@/store/task';
@@ -404,6 +405,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
         description?: string;
         assigneeAgentId?: string | null;
         assigneeUserId?: string | null;
+        reviewerAgentId?: string | null;
         instruction?: string;
         name?: string;
         parentTaskId?: string | null;
@@ -431,6 +433,14 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
           params.assigneeUserId
             ? `assignee member → ${memberLabel(params.assigneeUserId)}`
             : 'assignee member cleared',
+        );
+      }
+      if (params.reviewerAgentId !== undefined) {
+        updateData.reviewerAgentId = params.reviewerAgentId;
+        changes.push(
+          params.reviewerAgentId
+            ? `reviewer agent → ${params.reviewerAgentId}`
+            : 'reviewer cleared',
         );
       }
       if (params.instruction !== undefined) {
@@ -623,7 +633,6 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
       identifier: string;
       maxIterations?: number | null;
       requirement?: string | null;
-      verifierAgentId?: string | null;
       verifyCriteriaIds?: string[] | null;
       verifyRubricId?: string | null;
     },
@@ -641,7 +650,6 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
         enabled?: boolean | null;
         maxIterations?: number | null;
         requirement?: string | null;
-        verifierAgentId?: string | null;
         verifyCriteriaIds?: string[] | null;
         verifyRubricId?: string | null;
       } = {};
@@ -669,14 +677,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
             : `max iterations → ${params.maxIterations}`,
         );
       }
-      if (params.verifierAgentId !== undefined) {
-        verify.verifierAgentId = params.verifierAgentId;
-        changes.push(
-          params.verifierAgentId
-            ? `verifier agent → ${params.verifierAgentId}`
-            : 'verifier agent cleared',
-        );
-      }
+
       if (params.verifyRubricId !== undefined) {
         verify.verifyRubricId = params.verifyRubricId;
         changes.push(
@@ -983,8 +984,9 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
         params.identifier ?? ctx?.taskId ?? undefined,
       );
 
+      const reviewers = await lambdaClient.task.listReviewerAgents.query();
       return {
-        content: formatTaskDetail(detail),
+        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review.`,
         state: {
           domainRevision: detail.domainRevision,
           identifier: detail.identifier,

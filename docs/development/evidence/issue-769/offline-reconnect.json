@@ -1,0 +1,86 @@
+{
+  "after": {
+    "at": "2026-10-13T13:58:42.139Z",
+    "task": {
+      "id": "task_OzQJeI8Tzuz0",
+      "workflow_category": "done",
+      "reviewer_agent_id": "agt_byif1Y2m45BF",
+      "error": null
+    },
+    "checker": {
+      "id": "op_1791899608153_agt_byif1Y2m45BF_tpc_owZ2UphXvHp1_BpDMEABK",
+      "status": "done",
+      "agent_id": "agt_byif1Y2m45BF",
+      "topic_id": "tpc_owZ2UphXvHp1",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "error": null,
+      "queue": null,
+      "created_at": "2026-10-13T13:53:28.159Z",
+      "updated_at": "2026-10-13T13:58:23.954Z"
+    },
+    "check": {
+      "id": "2dba6a1c-941c-43cb-8796-c8e4fd7eb54e",
+      "operation_id": "op_1791899502178_agt_byif1Y2m45BF_tpc_JbXIXgX0o85Q_TqaNzpIw",
+      "check_item_id": "087075a2-dd46-4c4f-9886-4f1684aee252",
+      "status": "passed",
+      "verdict": "passed",
+      "verifier_operation_id": "op_1791899608153_agt_byif1Y2m45BF_tpc_owZ2UphXvHp1_BpDMEABK",
+      "metadata": {
+        "initiatingMessage": "Please review this delivery for Issue task_OzQJeI8Tzuz0.\n\n## Check to verify\ncheckItemId: 087075a2-dd46-4c4f-9886-4f1684aee252\nTitle: Exact final reply\nSummary: The deliverable is the final reply itself and it must equal ISSUE769_VERIFIER_OK. No app or source inspection is needed for this text-only check.\n\n## Judging instruction\n{\"definition\":{},\"resources\":{\"fixtures\":[]}}\n\n## Run goal\n<task>\n<hint>This tag contains the complete task context. Do NOT call viewTask to re-fetch it.</hint>\nT-11 Issue 769 offline-reconnect acceptance\nStatus: ● running     Priority: -\nInstruction: The deliverable is ONLY the final reply text ISSUE769_VERIFIER_OK. Do not inspect Orvilo, open a browser, or run repository commands. If listCriteria requests evidence, submit the intended exact final text as text evidence. Run the shell command sleep 15 once, then finish promptly with the exact reply ISSUE769_VERIFIER_OK.\nAgent: agt_byif1Y2m45BF\n\nReview: (not configured)\n\nVerify — delivery acceptance (maxIterations: 3):\n  Criteria — capture the listed evidence while you work:\n    - Exact final reply (required)\n  Run the Acceptance inside this Task, not after it: drive the real product surface and submit each artifact as soon as the criterion it proves is provable.\n  Criterion ids are minted when this run starts, so they are not listed above. Read them at runtime with `listCriteria`, or `orvilo verify plan state \"$ORVILO_OPERATION_ID\" --json` if you have a shell.\n  Drive the real product with your own tools and cite each artifact by id through `submitEvidence`.\n  A criterion with a visible surface is proved by a screenshot or recording, and `screenshot`/`video` evidence must reference a real artifact by fileId. Never label prose as a visual artifact: if you could not capture one, say what you observed as `text` and name the blocker.\n  Produce concrete evidence while you work, and include artifact paths, commands, and observed results in your final response.\n  Do not judge the Acceptance — submit evidence only; an independent verifier decides whether this Task is complete.\n</task>\n\n## Deliverable / final output\nISSUE769_VERIFIER_OK\n\n## Captured evidence (builder self-evidence — primary Data, weight above prose)\nEvidence captured during the run:\n  - (text) — The exact final reply text required by the task deliverable.: ISSUE769_VERIFIER_OK\n\n## Your task\nInvestigate whether the deliverable satisfies this check, judging against the run goal and the judging instruction. Weight the captured evidence above as primary Data; gather more yourself only where it's missing or insufficient. When done, call `submitVerifyResult` exactly once with checkItemId=\"087075a2-dd46-4c4f-9886-4f1684aee252\" and your verdict (passed / failed / uncertain) plus evidence and reasoning as strings. Use your available runtime tools to inspect the deliverable where needed. A prose reply alone does not record the verdict.",
+        "reviewerOperationId": "op_1791899608153_agt_byif1Y2m45BF_tpc_owZ2UphXvHp1_BpDMEABK"
+      },
+      "toulmin": {
+        "evidence": "Captured builder self-evidence records the final reply text as: ISSUE769_VERIFIER_OK. This matches the required deliverable string exactly, character-for-character, with no extra whitespace, punctuation, or surrounding text.",
+        "reasoning": "The check is a pure text-equality check: the deliverable must equal ISSUE769_VERIFIER_OK. The run goal explicitly states no app inspection, browser, or repository commands are needed, and the judging instruction confirms this is a text-only check. The captured evidence (primary Data per the instructions) shows the exact final reply as ISSUE769_VERIFIER_OK, which satisfies the check definition. No further inspection was needed or permitted by the run goal."
+      }
+    }
+  },
+  "before": {
+    "sourceCommit": "86ef9cf630ef6236212393755338732fd7093b8c",
+    "at": "2026-10-13T13:55:37.601Z",
+    "task": {
+      "id": "task_OzQJeI8Tzuz0",
+      "name": "Issue 769 offline-reconnect acceptance",
+      "current_topic_id": "tpc_JbXIXgX0o85Q",
+      "workflow_category": "in_review",
+      "status": "backlog",
+      "reviewer_agent_id": "agt_byif1Y2m45BF",
+      "error": null,
+      "context": {
+        "execution": {
+          "parked": {
+            "at": "2026-10-13T13:53:27.812Z",
+            "reason": "review_required"
+          }
+        }
+      }
+    },
+    "queuedChecker": {
+      "id": "op_1791899608153_agt_byif1Y2m45BF_tpc_owZ2UphXvHp1_BpDMEABK",
+      "status": "idle",
+      "agent_id": "agt_byif1Y2m45BF",
+      "topic_id": "tpc_owZ2UphXvHp1",
+      "created_at": "2026-10-13T13:53:28.159Z"
+    },
+    "queue": {
+      "state": "waiting",
+      "queuedAt": "2026-10-13T13:53:28.220Z",
+      "offlineSince": "2026-10-13T13:53:28.220Z",
+      "verifyCheck": {
+        "checkItemId": "087075a2-dd46-4c4f-9886-4f1684aee252",
+        "parentOperationId": "op_1791899502178_agt_byif1Y2m45BF_tpc_JbXIXgX0o85Q_TqaNzpIw"
+      }
+    },
+    "checks": [
+      {
+        "id": "2dba6a1c-941c-43cb-8796-c8e4fd7eb54e",
+        "status": "running",
+        "verdict": null,
+        "verifier_operation_id": "op_1791899608153_agt_byif1Y2m45BF_tpc_owZ2UphXvHp1_BpDMEABK"
+      }
+    ]
+  },
+  "note": "The main reviewer operation resumed automatically with the same ID and topic. This earlier run also exposed an independent administrative recursion defect, fixed in ed490845c; the d32 orchestrator receipt proves administrative jobs now create no verify_runs.",
+  "sourceCommit": "86ef9cf630ef6236212393755338732fd7093b8c"
+}

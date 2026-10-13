@@ -1,0 +1,2854 @@
+{
+  "actualCompiledCSS": [
+    {
+      "file": "/tmp/orvilo-native-design-md-005/production-css/assets/css-entry-AIEjgISh.css",
+      "sha256": "b69f5ec3602376ebf98bf32947ea9dc576492d088d274840e280ef15f197f77b",
+      "originalOrderedRules": [
+        {
+          "selector": ".sr-only",
+          "originalRule": ".sr-only{clip-path:inset(50%);white-space:nowrap;border-width:0;width:1px;height:1px;margin:-1px;padding:0;position:absolute;overflow:hidden}",
+          "declarations": [
+            {
+              "property": "clip-path",
+              "value": "inset(50%)",
+              "important": false
+            },
+            {
+              "property": "white-space",
+              "value": "nowrap",
+              "important": false
+            },
+            {
+              "property": "border-width",
+              "value": "0",
+              "important": false
+            },
+            {
+              "property": "width",
+              "value": "1px",
+              "important": false
+            },
+            {
+              "property": "height",
+              "value": "1px",
+              "important": false
+            },
+            {
+              "property": "margin",
+              "value": "-1px",
+              "important": false
+            },
+            {
+              "property": "padding",
+              "value": "0",
+              "important": false
+            },
+            {
+              "property": "position",
+              "value": "absolute",
+              "important": false
+            },
+            {
+              "property": "overflow",
+              "value": "hidden",
+              "important": false
+            }
+          ]
+        },
+        {
+          "selector": ".h-8",
+          "originalRule": ".h-8{height:32px}",
+          "declarations": [
+            {
+              "property": "height",
+              "value": "32px",
+              "important": false
+            }
+          ]
+        },
+        {
+          "selector": ".w-full",
+          "originalRule": ".w-full{width:100%}",
+          "declarations": [
+            {
+              "property": "width",
+              "value": "100%",
+              "important": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/tmp/orvilo-native-project-sr-only-006/production-css/assets/css-entry-AIEjgISh.css",
+      "sha256": "b69f5ec3602376ebf98bf32947ea9dc576492d088d274840e280ef15f197f77b",
+      "originalOrderedRules": [
+        {
+          "selector": ".sr-only",
+          "originalRule": ".sr-only{clip-path:inset(50%);white-space:nowrap;border-width:0;width:1px;height:1px;margin:-1px;padding:0;position:absolute;overflow:hidden}",
+          "declarations": [
+            {
+              "property": "clip-path",
+              "value": "inset(50%)",
+              "important": false
+            },
+            {
+              "property": "white-space",
+              "value": "nowrap",
+              "important": false
+            },
+            {
+              "property": "border-width",
+              "value": "0",
+              "important": false
+            },
+            {
+              "property": "width",
+              "value": "1px",
+              "important": false
+            },
+            {
+              "property": "height",
+              "value": "1px",
+              "important": false
+            },
+            {
+              "property": "margin",
+              "value": "-1px",
+              "important": false
+            },
+            {
+              "property": "padding",
+              "value": "0",
+              "important": false
+            },
+            {
+              "property": "position",
+              "value": "absolute",
+              "important": false
+            },
+            {
+              "property": "overflow",
+              "value": "hidden",
+              "important": false
+            }
+          ]
+        },
+        {
+          "selector": ".h-8",
+          "originalRule": ".h-8{height:32px}",
+          "declarations": [
+            {
+              "property": "height",
+              "value": "32px",
+              "important": false
+            }
+          ]
+        },
+        {
+          "selector": ".w-full",
+          "originalRule": ".w-full{width:100%}",
+          "declarations": [
+            {
+              "property": "width",
+              "value": "100%",
+              "important": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "actualHead": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+  "actualInputs": {
+    "/tmp/orvilo-native-design-md-005/runtime-report.json": {
+      "sha256": "fab9f9a07100af158ed8ed9ad9e0e8c5f6f342a11a413d2dcf80862fa786f3ed",
+      "bytes": 1782229
+    },
+    "/tmp/orvilo-native-design-md-005/execution.json": {
+      "sha256": "4d92c5c9a4bcdde8c24bd30f254cb1cbc60ebf82743c6f7b513c3f7554700fed",
+      "bytes": 2332
+    },
+    "/tmp/orvilo-native-design-md-005/source-binding.json": {
+      "sha256": "c53c742ba30d4e07970759eb2f5a10c60a5101246dd36215c131336009b5f18d",
+      "bytes": 858229
+    },
+    "/tmp/orvilo-native-design-md-005/actual-revision.json": {
+      "sha256": "bdabe915ef119168ca5e82e111836380607c10db07c0d389f7e9050f9cc36e88",
+      "bytes": 211
+    },
+    "/tmp/orvilo-native-design-md-005/production-css-proof.json": {
+      "sha256": "613c4deed12a0db80fcb4f2c1e0788b0b0f7f2d50a3c9a511447de11863fa7a8",
+      "bytes": 4619
+    },
+    "/tmp/orvilo-native-design-md-005/actual-production-css-replacement.json": {
+      "sha256": "4ede74c3fcc58cfe6a4254dd48274d513375cac4b0a8b44a5878ca4ec906b382",
+      "bytes": 104040122
+    },
+    "/tmp/orvilo-native-design-md-005/production-css/assets/css-entry-AIEjgISh.css": {
+      "sha256": "b69f5ec3602376ebf98bf32947ea9dc576492d088d274840e280ef15f197f77b",
+      "bytes": 562357
+    },
+    "/tmp/orvilo-native-project-sr-only-006/runtime-report.json": {
+      "sha256": "2243c1b23d476a71f4aa601d42eb83cbcc15cb4c8aa8f53aa35d4df8da3ebd60",
+      "bytes": 168869
+    },
+    "/tmp/orvilo-native-project-sr-only-006/execution.json": {
+      "sha256": "fb938bd28f893580b1bb128437e3ad7451fdffe84343ab77ae69cb439c244e19",
+      "bytes": 2251
+    },
+    "/tmp/orvilo-native-project-sr-only-006/source-binding.json": {
+      "sha256": "d1e55b6d32b572339724bd450532a1551878e5fb3780c245f9a90ad5690833e1",
+      "bytes": 857996
+    },
+    "/tmp/orvilo-native-project-sr-only-006/actual-revision.json": {
+      "sha256": "bdabe915ef119168ca5e82e111836380607c10db07c0d389f7e9050f9cc36e88",
+      "bytes": 211
+    },
+    "/tmp/orvilo-native-project-sr-only-006/production-css-proof.json": {
+      "sha256": "613c4deed12a0db80fcb4f2c1e0788b0b0f7f2d50a3c9a511447de11863fa7a8",
+      "bytes": 4619
+    },
+    "/tmp/orvilo-native-project-sr-only-006/actual-production-css-replacement.json": {
+      "sha256": "8130624615502ae173a91da88be739c78d399b10286840f5ee46196db3bc05d4",
+      "bytes": 5029659
+    },
+    "/tmp/orvilo-native-project-sr-only-006/production-css/assets/css-entry-AIEjgISh.css": {
+      "sha256": "b69f5ec3602376ebf98bf32947ea9dc576492d088d274840e280ef15f197f77b",
+      "bytes": 562357
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-1240-16-focused-project-sr-only-proof.json": {
+      "sha256": "caa5ab68f0e7499a1ad7f06b8bab08875b575b60806896e4779acbf049bd136d",
+      "bytes": 6228
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-1240-16-focused-project-sr-only-keyboard.png": {
+      "sha256": "35eb5f313816a2ead8a9d84ab597b0081854c79182ab8a750f30664ef7f38f65",
+      "bytes": 32493
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-1240-16-focused-business-receipts.json": {
+      "sha256": "272a1b56aa7fb4672f03e6908f03ab7c0366ce88b42520c38769048a305e14fd",
+      "bytes": 6631
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-1240-20-focused-project-sr-only-proof.json": {
+      "sha256": "e3ad8f4193e26bb4bab089e4998513a1029ebc457a2b32b88890662fda488bc7",
+      "bytes": 6228
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-1240-20-focused-project-sr-only-keyboard.png": {
+      "sha256": "c019742ef201829166e541a70919b76b068430424655aa04a0753c179e50aad7",
+      "bytes": 37493
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-1240-20-focused-business-receipts.json": {
+      "sha256": "e8cc6acff1b63bd746026e9653584506de14a6eefb56791b8901599df6d1ad69",
+      "bytes": 6643
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-1240-16-focused-project-sr-only-proof.json": {
+      "sha256": "a4357c530d7990389ddb0511f116238fe6b2375384422166a9c1fb3072e0c9b6",
+      "bytes": 6228
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-1240-16-focused-project-sr-only-keyboard.png": {
+      "sha256": "c9ce5f6d184f5cf039aefe1c43f644ba7f084c014f991114b062aad79cbaea70",
+      "bytes": 31631
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-1240-16-focused-business-receipts.json": {
+      "sha256": "1623371cba0f2b7dc2dd47bda8e90145d79ae4b88605435cbea77b6f78c6308d",
+      "bytes": 6646
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-1240-20-focused-project-sr-only-proof.json": {
+      "sha256": "0170ba48b2a67733eb65d4cc40bd94283e2edb64c82dacb5a14febe579c44601",
+      "bytes": 6228
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-1240-20-focused-project-sr-only-keyboard.png": {
+      "sha256": "bd9e904f8d36262543c273f7be4d12840292e164f4ff8dce82dd46e8c3c7a69d",
+      "bytes": 36830
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-1240-20-focused-business-receipts.json": {
+      "sha256": "ac717b799874d4a0fdf4a998c666237326bb668426e4ea546c7d0f8911e3ddae",
+      "bytes": 6644
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-390-16-focused-project-sr-only-proof.json": {
+      "sha256": "617fcc0a4d03a6541a7766f114969466caa3ec6db7231368b209ab175672941f",
+      "bytes": 6228
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-390-16-focused-project-sr-only-keyboard.png": {
+      "sha256": "f481700d1bfbab60d93986d49b781ea4e76bde9f8728f788c732cc42ba20f114",
+      "bytes": 27690
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-390-16-focused-business-receipts.json": {
+      "sha256": "aaf3334883f2101d3a51eec014004400bee69467344233b47453d6aceab74fac",
+      "bytes": 6642
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-390-20-focused-project-sr-only-proof.json": {
+      "sha256": "d2873566c5c446bb1e86ccb0a940666a146c98637e63f1d43124d666788ce1db",
+      "bytes": 6228
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-390-20-focused-project-sr-only-keyboard.png": {
+      "sha256": "7cf6ed67898fe1bc9ec40c8ecca5d6ed372642d6e3b950265d34ff38c2b2ab51",
+      "bytes": 29892
+    },
+    "/tmp/orvilo-native-project-sr-only-006/light-390-20-focused-business-receipts.json": {
+      "sha256": "00e2f5a6a5b1901f0cf904615ac238eab4d10bd3f201e504ded1c12e6ea9b3f5",
+      "bytes": 6643
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-390-16-focused-project-sr-only-proof.json": {
+      "sha256": "c1a9ce4e256ecd7f942f15fd917a885f5aa8655ad38d077b4bd6616accc94843",
+      "bytes": 6228
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-390-16-focused-project-sr-only-keyboard.png": {
+      "sha256": "f5c29f460c11018570f653b17efff3d93c6376a680fd94916567e22828997b2f",
+      "bytes": 26961
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-390-16-focused-business-receipts.json": {
+      "sha256": "afaec0467ee1e21555eccc4b56231bb15c5638ea92b48c1eff26d1c8fe35d17a",
+      "bytes": 6656
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-390-20-focused-project-sr-only-proof.json": {
+      "sha256": "dc8ae781bc5ebccf90f80939f121aebc1c505f6ef407045672a6475273dc6b8e",
+      "bytes": 6228
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-390-20-focused-project-sr-only-keyboard.png": {
+      "sha256": "278ae8f9e52070e779626ee4aff819080081d4637d9ba70ec895372232739313",
+      "bytes": 29402
+    },
+    "/tmp/orvilo-native-project-sr-only-006/dark-390-20-focused-business-receipts.json": {
+      "sha256": "afcdcff924f5f6222042a2ea78996a59ec27f11d47a00f72a6ba7b5404a6c35f",
+      "bytes": 6645
+    }
+  },
+  "actualProofs": [
+    {
+      "label": "light-1240-16",
+      "actualProofSHA256": "caa5ab68f0e7499a1ad7f06b8bab08875b575b60806896e4779acbf049bd136d",
+      "actualPNG_SHA256": "35eb5f313816a2ead8a9d84ab597b0081854c79182ab8a750f30664ef7f38f65",
+      "actualRawCascade": [
+        {
+          "index": 6,
+          "origin": "user-agent",
+          "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+          "properties": [
+            {
+              "name": "overflow-x",
+              "value": "clip !important",
+              "important": true
+            },
+            {
+              "name": "overflow-y",
+              "value": "clip !important",
+              "important": true
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "origin": "regular",
+          "selector": "button, input",
+          "properties": [
+            {
+              "name": "overflow",
+              "value": "visible",
+              "implicit": false,
+              "text": "overflow:visible",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 12834,
+                "endLine": 1,
+                "endColumn": 12850
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "visible"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "visible"
+                }
+              ]
+            },
+            {
+              "name": "overflow-x",
+              "value": "visible"
+            },
+            {
+              "name": "overflow-y",
+              "value": "visible"
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "origin": "regular",
+          "selector": ".sr-only",
+          "properties": [
+            {
+              "name": "clip-path",
+              "value": "inset(50%)",
+              "implicit": false,
+              "text": "clip-path:inset(50%);",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17457,
+                "endLine": 1,
+                "endColumn": 17478
+              }
+            },
+            {
+              "name": "width",
+              "value": "1px",
+              "implicit": false,
+              "text": "width:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17512,
+                "endLine": 1,
+                "endColumn": 17522
+              }
+            },
+            {
+              "name": "height",
+              "value": "1px",
+              "implicit": false,
+              "text": "height:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17522,
+                "endLine": 1,
+                "endColumn": 17533
+              }
+            },
+            {
+              "name": "position",
+              "value": "absolute",
+              "implicit": false,
+              "text": "position:absolute;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17555,
+                "endLine": 1,
+                "endColumn": 17573
+              }
+            },
+            {
+              "name": "overflow",
+              "value": "hidden",
+              "implicit": false,
+              "text": "overflow:hidden",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17573,
+                "endLine": 1,
+                "endColumn": 17588
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "hidden"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "hidden"
+                }
+              ]
+            },
+            {
+              "name": "clip-path",
+              "value": "inset(50%)"
+            },
+            {
+              "name": "width",
+              "value": "1px"
+            },
+            {
+              "name": "height",
+              "value": "1px"
+            },
+            {
+              "name": "position",
+              "value": "absolute"
+            },
+            {
+              "name": "overflow-x",
+              "value": "hidden"
+            },
+            {
+              "name": "overflow-y",
+              "value": "hidden"
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "origin": "regular",
+          "selector": ".h-8",
+          "properties": [
+            {
+              "name": "height",
+              "value": "32px",
+              "implicit": false,
+              "text": "height:32px",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 33996,
+                "endLine": 1,
+                "endColumn": 34007
+              }
+            },
+            {
+              "name": "height",
+              "value": "32px"
+            }
+          ]
+        },
+        {
+          "index": 21,
+          "origin": "regular",
+          "selector": ".w-full",
+          "properties": [
+            {
+              "name": "width",
+              "value": "100%",
+              "implicit": false,
+              "text": "width:100%",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 43819,
+                "endLine": 1,
+                "endColumn": 43829
+              }
+            },
+            {
+              "name": "width",
+              "value": "100%"
+            }
+          ]
+        }
+      ],
+      "actualProductionRules": [
+        {
+          "selector": ".sr-only",
+          "style": "clip-path: inset(50%); white-space: nowrap; border-width: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden;",
+          "clipPath": "inset(50%)",
+          "overflow": "hidden",
+          "position": "absolute",
+          "width": "1px",
+          "height": "1px",
+          "order": 0
+        },
+        {
+          "selector": ".h-8",
+          "style": "height: 32px;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "",
+          "height": "32px",
+          "order": 1
+        },
+        {
+          "selector": ".w-full",
+          "style": "width: 100%;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "100%",
+          "height": "",
+          "order": 2
+        }
+      ],
+      "actualHiddenMetrics": {
+        "label": "Add filter…",
+        "size": "compact",
+        "position": "absolute",
+        "overflow": "clip",
+        "clip": "auto",
+        "clipPath": "inset(50%)",
+        "width": 248,
+        "height": 32,
+        "focused": true,
+        "clippingRegion": {
+          "x": 145,
+          "y": 896,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "actualKeyboardBusinessReceipts": [
+        {
+          "kind": "md-project-hidden-toggle",
+          "payload": true,
+          "at": 8218.199999999255
+        }
+      ],
+      "decoded": {
+        "passed": true,
+        "decoded": [
+          {
+            "index": 6,
+            "origin": "user-agent",
+            "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+            "declarations": [
+              {
+                "name": "overflow-x",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-x:clip !important;",
+                "parsedProperty": "overflow-x",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              },
+              {
+                "name": "overflow-y",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-y:clip !important;",
+                "parsedProperty": "overflow-y",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "rawCascadeSHA256": "128bf528cfb57d2a3c04b4860cf68d5982a9b2de3870de14e4f4c6a9ebbcd261",
+        "rawCascadePreserved": true
+      }
+    },
+    {
+      "label": "light-1240-20",
+      "actualProofSHA256": "e3ad8f4193e26bb4bab089e4998513a1029ebc457a2b32b88890662fda488bc7",
+      "actualPNG_SHA256": "c019742ef201829166e541a70919b76b068430424655aa04a0753c179e50aad7",
+      "actualRawCascade": [
+        {
+          "index": 6,
+          "origin": "user-agent",
+          "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+          "properties": [
+            {
+              "name": "overflow-x",
+              "value": "clip !important",
+              "important": true
+            },
+            {
+              "name": "overflow-y",
+              "value": "clip !important",
+              "important": true
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "origin": "regular",
+          "selector": "button, input",
+          "properties": [
+            {
+              "name": "overflow",
+              "value": "visible",
+              "implicit": false,
+              "text": "overflow:visible",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 12834,
+                "endLine": 1,
+                "endColumn": 12850
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "visible"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "visible"
+                }
+              ]
+            },
+            {
+              "name": "overflow-x",
+              "value": "visible"
+            },
+            {
+              "name": "overflow-y",
+              "value": "visible"
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "origin": "regular",
+          "selector": ".sr-only",
+          "properties": [
+            {
+              "name": "clip-path",
+              "value": "inset(50%)",
+              "implicit": false,
+              "text": "clip-path:inset(50%);",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17457,
+                "endLine": 1,
+                "endColumn": 17478
+              }
+            },
+            {
+              "name": "width",
+              "value": "1px",
+              "implicit": false,
+              "text": "width:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17512,
+                "endLine": 1,
+                "endColumn": 17522
+              }
+            },
+            {
+              "name": "height",
+              "value": "1px",
+              "implicit": false,
+              "text": "height:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17522,
+                "endLine": 1,
+                "endColumn": 17533
+              }
+            },
+            {
+              "name": "position",
+              "value": "absolute",
+              "implicit": false,
+              "text": "position:absolute;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17555,
+                "endLine": 1,
+                "endColumn": 17573
+              }
+            },
+            {
+              "name": "overflow",
+              "value": "hidden",
+              "implicit": false,
+              "text": "overflow:hidden",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17573,
+                "endLine": 1,
+                "endColumn": 17588
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "hidden"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "hidden"
+                }
+              ]
+            },
+            {
+              "name": "clip-path",
+              "value": "inset(50%)"
+            },
+            {
+              "name": "width",
+              "value": "1px"
+            },
+            {
+              "name": "height",
+              "value": "1px"
+            },
+            {
+              "name": "position",
+              "value": "absolute"
+            },
+            {
+              "name": "overflow-x",
+              "value": "hidden"
+            },
+            {
+              "name": "overflow-y",
+              "value": "hidden"
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "origin": "regular",
+          "selector": ".h-8",
+          "properties": [
+            {
+              "name": "height",
+              "value": "32px",
+              "implicit": false,
+              "text": "height:32px",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 33996,
+                "endLine": 1,
+                "endColumn": 34007
+              }
+            },
+            {
+              "name": "height",
+              "value": "32px"
+            }
+          ]
+        },
+        {
+          "index": 21,
+          "origin": "regular",
+          "selector": ".w-full",
+          "properties": [
+            {
+              "name": "width",
+              "value": "100%",
+              "implicit": false,
+              "text": "width:100%",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 43819,
+                "endLine": 1,
+                "endColumn": 43829
+              }
+            },
+            {
+              "name": "width",
+              "value": "100%"
+            }
+          ]
+        }
+      ],
+      "actualProductionRules": [
+        {
+          "selector": ".sr-only",
+          "style": "clip-path: inset(50%); white-space: nowrap; border-width: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden;",
+          "clipPath": "inset(50%)",
+          "overflow": "hidden",
+          "position": "absolute",
+          "width": "1px",
+          "height": "1px",
+          "order": 0
+        },
+        {
+          "selector": ".h-8",
+          "style": "height: 32px;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "",
+          "height": "32px",
+          "order": 1
+        },
+        {
+          "selector": ".w-full",
+          "style": "width: 100%;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "100%",
+          "height": "",
+          "order": 2
+        }
+      ],
+      "actualHiddenMetrics": {
+        "label": "Add filter…",
+        "size": "compact",
+        "position": "absolute",
+        "overflow": "clip",
+        "clip": "auto",
+        "clipPath": "inset(50%)",
+        "width": 248,
+        "height": 32,
+        "focused": true,
+        "clippingRegion": {
+          "x": 145,
+          "y": 780,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "actualKeyboardBusinessReceipts": [
+        {
+          "kind": "md-project-hidden-toggle",
+          "payload": true,
+          "at": 7085.60000000149
+        }
+      ],
+      "decoded": {
+        "passed": true,
+        "decoded": [
+          {
+            "index": 6,
+            "origin": "user-agent",
+            "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+            "declarations": [
+              {
+                "name": "overflow-x",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-x:clip !important;",
+                "parsedProperty": "overflow-x",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              },
+              {
+                "name": "overflow-y",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-y:clip !important;",
+                "parsedProperty": "overflow-y",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "rawCascadeSHA256": "128bf528cfb57d2a3c04b4860cf68d5982a9b2de3870de14e4f4c6a9ebbcd261",
+        "rawCascadePreserved": true
+      }
+    },
+    {
+      "label": "dark-1240-16",
+      "actualProofSHA256": "a4357c530d7990389ddb0511f116238fe6b2375384422166a9c1fb3072e0c9b6",
+      "actualPNG_SHA256": "c9ce5f6d184f5cf039aefe1c43f644ba7f084c014f991114b062aad79cbaea70",
+      "actualRawCascade": [
+        {
+          "index": 6,
+          "origin": "user-agent",
+          "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+          "properties": [
+            {
+              "name": "overflow-x",
+              "value": "clip !important",
+              "important": true
+            },
+            {
+              "name": "overflow-y",
+              "value": "clip !important",
+              "important": true
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "origin": "regular",
+          "selector": "button, input",
+          "properties": [
+            {
+              "name": "overflow",
+              "value": "visible",
+              "implicit": false,
+              "text": "overflow:visible",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 12834,
+                "endLine": 1,
+                "endColumn": 12850
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "visible"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "visible"
+                }
+              ]
+            },
+            {
+              "name": "overflow-x",
+              "value": "visible"
+            },
+            {
+              "name": "overflow-y",
+              "value": "visible"
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "origin": "regular",
+          "selector": ".sr-only",
+          "properties": [
+            {
+              "name": "clip-path",
+              "value": "inset(50%)",
+              "implicit": false,
+              "text": "clip-path:inset(50%);",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17457,
+                "endLine": 1,
+                "endColumn": 17478
+              }
+            },
+            {
+              "name": "width",
+              "value": "1px",
+              "implicit": false,
+              "text": "width:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17512,
+                "endLine": 1,
+                "endColumn": 17522
+              }
+            },
+            {
+              "name": "height",
+              "value": "1px",
+              "implicit": false,
+              "text": "height:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17522,
+                "endLine": 1,
+                "endColumn": 17533
+              }
+            },
+            {
+              "name": "position",
+              "value": "absolute",
+              "implicit": false,
+              "text": "position:absolute;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17555,
+                "endLine": 1,
+                "endColumn": 17573
+              }
+            },
+            {
+              "name": "overflow",
+              "value": "hidden",
+              "implicit": false,
+              "text": "overflow:hidden",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17573,
+                "endLine": 1,
+                "endColumn": 17588
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "hidden"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "hidden"
+                }
+              ]
+            },
+            {
+              "name": "clip-path",
+              "value": "inset(50%)"
+            },
+            {
+              "name": "width",
+              "value": "1px"
+            },
+            {
+              "name": "height",
+              "value": "1px"
+            },
+            {
+              "name": "position",
+              "value": "absolute"
+            },
+            {
+              "name": "overflow-x",
+              "value": "hidden"
+            },
+            {
+              "name": "overflow-y",
+              "value": "hidden"
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "origin": "regular",
+          "selector": ".h-8",
+          "properties": [
+            {
+              "name": "height",
+              "value": "32px",
+              "implicit": false,
+              "text": "height:32px",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 33996,
+                "endLine": 1,
+                "endColumn": 34007
+              }
+            },
+            {
+              "name": "height",
+              "value": "32px"
+            }
+          ]
+        },
+        {
+          "index": 21,
+          "origin": "regular",
+          "selector": ".w-full",
+          "properties": [
+            {
+              "name": "width",
+              "value": "100%",
+              "implicit": false,
+              "text": "width:100%",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 43819,
+                "endLine": 1,
+                "endColumn": 43829
+              }
+            },
+            {
+              "name": "width",
+              "value": "100%"
+            }
+          ]
+        }
+      ],
+      "actualProductionRules": [
+        {
+          "selector": ".sr-only",
+          "style": "clip-path: inset(50%); white-space: nowrap; border-width: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden;",
+          "clipPath": "inset(50%)",
+          "overflow": "hidden",
+          "position": "absolute",
+          "width": "1px",
+          "height": "1px",
+          "order": 0
+        },
+        {
+          "selector": ".h-8",
+          "style": "height: 32px;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "",
+          "height": "32px",
+          "order": 1
+        },
+        {
+          "selector": ".w-full",
+          "style": "width: 100%;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "100%",
+          "height": "",
+          "order": 2
+        }
+      ],
+      "actualHiddenMetrics": {
+        "label": "Add filter…",
+        "size": "compact",
+        "position": "absolute",
+        "overflow": "clip",
+        "clip": "auto",
+        "clipPath": "inset(50%)",
+        "width": 248,
+        "height": 32,
+        "focused": true,
+        "clippingRegion": {
+          "x": 145,
+          "y": 896,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "actualKeyboardBusinessReceipts": [
+        {
+          "kind": "md-project-hidden-toggle",
+          "payload": true,
+          "at": 7283.699999999255
+        }
+      ],
+      "decoded": {
+        "passed": true,
+        "decoded": [
+          {
+            "index": 6,
+            "origin": "user-agent",
+            "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+            "declarations": [
+              {
+                "name": "overflow-x",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-x:clip !important;",
+                "parsedProperty": "overflow-x",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              },
+              {
+                "name": "overflow-y",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-y:clip !important;",
+                "parsedProperty": "overflow-y",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "rawCascadeSHA256": "128bf528cfb57d2a3c04b4860cf68d5982a9b2de3870de14e4f4c6a9ebbcd261",
+        "rawCascadePreserved": true
+      }
+    },
+    {
+      "label": "dark-1240-20",
+      "actualProofSHA256": "0170ba48b2a67733eb65d4cc40bd94283e2edb64c82dacb5a14febe579c44601",
+      "actualPNG_SHA256": "bd9e904f8d36262543c273f7be4d12840292e164f4ff8dce82dd46e8c3c7a69d",
+      "actualRawCascade": [
+        {
+          "index": 6,
+          "origin": "user-agent",
+          "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+          "properties": [
+            {
+              "name": "overflow-x",
+              "value": "clip !important",
+              "important": true
+            },
+            {
+              "name": "overflow-y",
+              "value": "clip !important",
+              "important": true
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "origin": "regular",
+          "selector": "button, input",
+          "properties": [
+            {
+              "name": "overflow",
+              "value": "visible",
+              "implicit": false,
+              "text": "overflow:visible",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 12834,
+                "endLine": 1,
+                "endColumn": 12850
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "visible"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "visible"
+                }
+              ]
+            },
+            {
+              "name": "overflow-x",
+              "value": "visible"
+            },
+            {
+              "name": "overflow-y",
+              "value": "visible"
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "origin": "regular",
+          "selector": ".sr-only",
+          "properties": [
+            {
+              "name": "clip-path",
+              "value": "inset(50%)",
+              "implicit": false,
+              "text": "clip-path:inset(50%);",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17457,
+                "endLine": 1,
+                "endColumn": 17478
+              }
+            },
+            {
+              "name": "width",
+              "value": "1px",
+              "implicit": false,
+              "text": "width:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17512,
+                "endLine": 1,
+                "endColumn": 17522
+              }
+            },
+            {
+              "name": "height",
+              "value": "1px",
+              "implicit": false,
+              "text": "height:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17522,
+                "endLine": 1,
+                "endColumn": 17533
+              }
+            },
+            {
+              "name": "position",
+              "value": "absolute",
+              "implicit": false,
+              "text": "position:absolute;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17555,
+                "endLine": 1,
+                "endColumn": 17573
+              }
+            },
+            {
+              "name": "overflow",
+              "value": "hidden",
+              "implicit": false,
+              "text": "overflow:hidden",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17573,
+                "endLine": 1,
+                "endColumn": 17588
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "hidden"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "hidden"
+                }
+              ]
+            },
+            {
+              "name": "clip-path",
+              "value": "inset(50%)"
+            },
+            {
+              "name": "width",
+              "value": "1px"
+            },
+            {
+              "name": "height",
+              "value": "1px"
+            },
+            {
+              "name": "position",
+              "value": "absolute"
+            },
+            {
+              "name": "overflow-x",
+              "value": "hidden"
+            },
+            {
+              "name": "overflow-y",
+              "value": "hidden"
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "origin": "regular",
+          "selector": ".h-8",
+          "properties": [
+            {
+              "name": "height",
+              "value": "32px",
+              "implicit": false,
+              "text": "height:32px",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 33996,
+                "endLine": 1,
+                "endColumn": 34007
+              }
+            },
+            {
+              "name": "height",
+              "value": "32px"
+            }
+          ]
+        },
+        {
+          "index": 21,
+          "origin": "regular",
+          "selector": ".w-full",
+          "properties": [
+            {
+              "name": "width",
+              "value": "100%",
+              "implicit": false,
+              "text": "width:100%",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 43819,
+                "endLine": 1,
+                "endColumn": 43829
+              }
+            },
+            {
+              "name": "width",
+              "value": "100%"
+            }
+          ]
+        }
+      ],
+      "actualProductionRules": [
+        {
+          "selector": ".sr-only",
+          "style": "clip-path: inset(50%); white-space: nowrap; border-width: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden;",
+          "clipPath": "inset(50%)",
+          "overflow": "hidden",
+          "position": "absolute",
+          "width": "1px",
+          "height": "1px",
+          "order": 0
+        },
+        {
+          "selector": ".h-8",
+          "style": "height: 32px;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "",
+          "height": "32px",
+          "order": 1
+        },
+        {
+          "selector": ".w-full",
+          "style": "width: 100%;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "100%",
+          "height": "",
+          "order": 2
+        }
+      ],
+      "actualHiddenMetrics": {
+        "label": "Add filter…",
+        "size": "compact",
+        "position": "absolute",
+        "overflow": "clip",
+        "clip": "auto",
+        "clipPath": "inset(50%)",
+        "width": 248,
+        "height": 32,
+        "focused": true,
+        "clippingRegion": {
+          "x": 145,
+          "y": 780,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "actualKeyboardBusinessReceipts": [
+        {
+          "kind": "md-project-hidden-toggle",
+          "payload": true,
+          "at": 6887.70000000298
+        }
+      ],
+      "decoded": {
+        "passed": true,
+        "decoded": [
+          {
+            "index": 6,
+            "origin": "user-agent",
+            "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+            "declarations": [
+              {
+                "name": "overflow-x",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-x:clip !important;",
+                "parsedProperty": "overflow-x",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              },
+              {
+                "name": "overflow-y",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-y:clip !important;",
+                "parsedProperty": "overflow-y",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "rawCascadeSHA256": "128bf528cfb57d2a3c04b4860cf68d5982a9b2de3870de14e4f4c6a9ebbcd261",
+        "rawCascadePreserved": true
+      }
+    },
+    {
+      "label": "light-390-16",
+      "actualProofSHA256": "617fcc0a4d03a6541a7766f114969466caa3ec6db7231368b209ab175672941f",
+      "actualPNG_SHA256": "f481700d1bfbab60d93986d49b781ea4e76bde9f8728f788c732cc42ba20f114",
+      "actualRawCascade": [
+        {
+          "index": 6,
+          "origin": "user-agent",
+          "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+          "properties": [
+            {
+              "name": "overflow-x",
+              "value": "clip !important",
+              "important": true
+            },
+            {
+              "name": "overflow-y",
+              "value": "clip !important",
+              "important": true
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "origin": "regular",
+          "selector": "button, input",
+          "properties": [
+            {
+              "name": "overflow",
+              "value": "visible",
+              "implicit": false,
+              "text": "overflow:visible",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 12834,
+                "endLine": 1,
+                "endColumn": 12850
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "visible"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "visible"
+                }
+              ]
+            },
+            {
+              "name": "overflow-x",
+              "value": "visible"
+            },
+            {
+              "name": "overflow-y",
+              "value": "visible"
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "origin": "regular",
+          "selector": ".sr-only",
+          "properties": [
+            {
+              "name": "clip-path",
+              "value": "inset(50%)",
+              "implicit": false,
+              "text": "clip-path:inset(50%);",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17457,
+                "endLine": 1,
+                "endColumn": 17478
+              }
+            },
+            {
+              "name": "width",
+              "value": "1px",
+              "implicit": false,
+              "text": "width:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17512,
+                "endLine": 1,
+                "endColumn": 17522
+              }
+            },
+            {
+              "name": "height",
+              "value": "1px",
+              "implicit": false,
+              "text": "height:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17522,
+                "endLine": 1,
+                "endColumn": 17533
+              }
+            },
+            {
+              "name": "position",
+              "value": "absolute",
+              "implicit": false,
+              "text": "position:absolute;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17555,
+                "endLine": 1,
+                "endColumn": 17573
+              }
+            },
+            {
+              "name": "overflow",
+              "value": "hidden",
+              "implicit": false,
+              "text": "overflow:hidden",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17573,
+                "endLine": 1,
+                "endColumn": 17588
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "hidden"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "hidden"
+                }
+              ]
+            },
+            {
+              "name": "clip-path",
+              "value": "inset(50%)"
+            },
+            {
+              "name": "width",
+              "value": "1px"
+            },
+            {
+              "name": "height",
+              "value": "1px"
+            },
+            {
+              "name": "position",
+              "value": "absolute"
+            },
+            {
+              "name": "overflow-x",
+              "value": "hidden"
+            },
+            {
+              "name": "overflow-y",
+              "value": "hidden"
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "origin": "regular",
+          "selector": ".h-8",
+          "properties": [
+            {
+              "name": "height",
+              "value": "32px",
+              "implicit": false,
+              "text": "height:32px",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 33996,
+                "endLine": 1,
+                "endColumn": 34007
+              }
+            },
+            {
+              "name": "height",
+              "value": "32px"
+            }
+          ]
+        },
+        {
+          "index": 21,
+          "origin": "regular",
+          "selector": ".w-full",
+          "properties": [
+            {
+              "name": "width",
+              "value": "100%",
+              "implicit": false,
+              "text": "width:100%",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 43819,
+                "endLine": 1,
+                "endColumn": 43829
+              }
+            },
+            {
+              "name": "width",
+              "value": "100%"
+            }
+          ]
+        }
+      ],
+      "actualProductionRules": [
+        {
+          "selector": ".sr-only",
+          "style": "clip-path: inset(50%); white-space: nowrap; border-width: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden;",
+          "clipPath": "inset(50%)",
+          "overflow": "hidden",
+          "position": "absolute",
+          "width": "1px",
+          "height": "1px",
+          "order": 0
+        },
+        {
+          "selector": ".h-8",
+          "style": "height: 32px;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "",
+          "height": "32px",
+          "order": 1
+        },
+        {
+          "selector": ".w-full",
+          "style": "width: 100%;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "100%",
+          "height": "",
+          "order": 2
+        }
+      ],
+      "actualHiddenMetrics": {
+        "label": "Add filter…",
+        "size": "compact",
+        "position": "absolute",
+        "overflow": "clip",
+        "clip": "auto",
+        "clipPath": "inset(50%)",
+        "width": 248,
+        "height": 32,
+        "focused": true,
+        "clippingRegion": {
+          "x": 145,
+          "y": 896,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "actualKeyboardBusinessReceipts": [
+        {
+          "kind": "md-project-hidden-toggle",
+          "payload": true,
+          "at": 7290.60000000149
+        }
+      ],
+      "decoded": {
+        "passed": true,
+        "decoded": [
+          {
+            "index": 6,
+            "origin": "user-agent",
+            "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+            "declarations": [
+              {
+                "name": "overflow-x",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-x:clip !important;",
+                "parsedProperty": "overflow-x",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              },
+              {
+                "name": "overflow-y",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-y:clip !important;",
+                "parsedProperty": "overflow-y",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "rawCascadeSHA256": "128bf528cfb57d2a3c04b4860cf68d5982a9b2de3870de14e4f4c6a9ebbcd261",
+        "rawCascadePreserved": true
+      }
+    },
+    {
+      "label": "light-390-20",
+      "actualProofSHA256": "d2873566c5c446bb1e86ccb0a940666a146c98637e63f1d43124d666788ce1db",
+      "actualPNG_SHA256": "7cf6ed67898fe1bc9ec40c8ecca5d6ed372642d6e3b950265d34ff38c2b2ab51",
+      "actualRawCascade": [
+        {
+          "index": 6,
+          "origin": "user-agent",
+          "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+          "properties": [
+            {
+              "name": "overflow-x",
+              "value": "clip !important",
+              "important": true
+            },
+            {
+              "name": "overflow-y",
+              "value": "clip !important",
+              "important": true
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "origin": "regular",
+          "selector": "button, input",
+          "properties": [
+            {
+              "name": "overflow",
+              "value": "visible",
+              "implicit": false,
+              "text": "overflow:visible",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 12834,
+                "endLine": 1,
+                "endColumn": 12850
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "visible"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "visible"
+                }
+              ]
+            },
+            {
+              "name": "overflow-x",
+              "value": "visible"
+            },
+            {
+              "name": "overflow-y",
+              "value": "visible"
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "origin": "regular",
+          "selector": ".sr-only",
+          "properties": [
+            {
+              "name": "clip-path",
+              "value": "inset(50%)",
+              "implicit": false,
+              "text": "clip-path:inset(50%);",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17457,
+                "endLine": 1,
+                "endColumn": 17478
+              }
+            },
+            {
+              "name": "width",
+              "value": "1px",
+              "implicit": false,
+              "text": "width:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17512,
+                "endLine": 1,
+                "endColumn": 17522
+              }
+            },
+            {
+              "name": "height",
+              "value": "1px",
+              "implicit": false,
+              "text": "height:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17522,
+                "endLine": 1,
+                "endColumn": 17533
+              }
+            },
+            {
+              "name": "position",
+              "value": "absolute",
+              "implicit": false,
+              "text": "position:absolute;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17555,
+                "endLine": 1,
+                "endColumn": 17573
+              }
+            },
+            {
+              "name": "overflow",
+              "value": "hidden",
+              "implicit": false,
+              "text": "overflow:hidden",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17573,
+                "endLine": 1,
+                "endColumn": 17588
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "hidden"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "hidden"
+                }
+              ]
+            },
+            {
+              "name": "clip-path",
+              "value": "inset(50%)"
+            },
+            {
+              "name": "width",
+              "value": "1px"
+            },
+            {
+              "name": "height",
+              "value": "1px"
+            },
+            {
+              "name": "position",
+              "value": "absolute"
+            },
+            {
+              "name": "overflow-x",
+              "value": "hidden"
+            },
+            {
+              "name": "overflow-y",
+              "value": "hidden"
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "origin": "regular",
+          "selector": ".h-8",
+          "properties": [
+            {
+              "name": "height",
+              "value": "32px",
+              "implicit": false,
+              "text": "height:32px",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 33996,
+                "endLine": 1,
+                "endColumn": 34007
+              }
+            },
+            {
+              "name": "height",
+              "value": "32px"
+            }
+          ]
+        },
+        {
+          "index": 21,
+          "origin": "regular",
+          "selector": ".w-full",
+          "properties": [
+            {
+              "name": "width",
+              "value": "100%",
+              "implicit": false,
+              "text": "width:100%",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 43819,
+                "endLine": 1,
+                "endColumn": 43829
+              }
+            },
+            {
+              "name": "width",
+              "value": "100%"
+            }
+          ]
+        }
+      ],
+      "actualProductionRules": [
+        {
+          "selector": ".sr-only",
+          "style": "clip-path: inset(50%); white-space: nowrap; border-width: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden;",
+          "clipPath": "inset(50%)",
+          "overflow": "hidden",
+          "position": "absolute",
+          "width": "1px",
+          "height": "1px",
+          "order": 0
+        },
+        {
+          "selector": ".h-8",
+          "style": "height: 32px;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "",
+          "height": "32px",
+          "order": 1
+        },
+        {
+          "selector": ".w-full",
+          "style": "width: 100%;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "100%",
+          "height": "",
+          "order": 2
+        }
+      ],
+      "actualHiddenMetrics": {
+        "label": "Add filter…",
+        "size": "compact",
+        "position": "absolute",
+        "overflow": "clip",
+        "clip": "auto",
+        "clipPath": "inset(50%)",
+        "width": 248,
+        "height": 32,
+        "focused": true,
+        "clippingRegion": {
+          "x": 145,
+          "y": 780,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "actualKeyboardBusinessReceipts": [
+        {
+          "kind": "md-project-hidden-toggle",
+          "payload": true,
+          "at": 7286.599999997765
+        }
+      ],
+      "decoded": {
+        "passed": true,
+        "decoded": [
+          {
+            "index": 6,
+            "origin": "user-agent",
+            "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+            "declarations": [
+              {
+                "name": "overflow-x",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-x:clip !important;",
+                "parsedProperty": "overflow-x",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              },
+              {
+                "name": "overflow-y",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-y:clip !important;",
+                "parsedProperty": "overflow-y",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "rawCascadeSHA256": "128bf528cfb57d2a3c04b4860cf68d5982a9b2de3870de14e4f4c6a9ebbcd261",
+        "rawCascadePreserved": true
+      }
+    },
+    {
+      "label": "dark-390-16",
+      "actualProofSHA256": "c1a9ce4e256ecd7f942f15fd917a885f5aa8655ad38d077b4bd6616accc94843",
+      "actualPNG_SHA256": "f5c29f460c11018570f653b17efff3d93c6376a680fd94916567e22828997b2f",
+      "actualRawCascade": [
+        {
+          "index": 6,
+          "origin": "user-agent",
+          "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+          "properties": [
+            {
+              "name": "overflow-x",
+              "value": "clip !important",
+              "important": true
+            },
+            {
+              "name": "overflow-y",
+              "value": "clip !important",
+              "important": true
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "origin": "regular",
+          "selector": "button, input",
+          "properties": [
+            {
+              "name": "overflow",
+              "value": "visible",
+              "implicit": false,
+              "text": "overflow:visible",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 12834,
+                "endLine": 1,
+                "endColumn": 12850
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "visible"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "visible"
+                }
+              ]
+            },
+            {
+              "name": "overflow-x",
+              "value": "visible"
+            },
+            {
+              "name": "overflow-y",
+              "value": "visible"
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "origin": "regular",
+          "selector": ".sr-only",
+          "properties": [
+            {
+              "name": "clip-path",
+              "value": "inset(50%)",
+              "implicit": false,
+              "text": "clip-path:inset(50%);",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17457,
+                "endLine": 1,
+                "endColumn": 17478
+              }
+            },
+            {
+              "name": "width",
+              "value": "1px",
+              "implicit": false,
+              "text": "width:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17512,
+                "endLine": 1,
+                "endColumn": 17522
+              }
+            },
+            {
+              "name": "height",
+              "value": "1px",
+              "implicit": false,
+              "text": "height:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17522,
+                "endLine": 1,
+                "endColumn": 17533
+              }
+            },
+            {
+              "name": "position",
+              "value": "absolute",
+              "implicit": false,
+              "text": "position:absolute;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17555,
+                "endLine": 1,
+                "endColumn": 17573
+              }
+            },
+            {
+              "name": "overflow",
+              "value": "hidden",
+              "implicit": false,
+              "text": "overflow:hidden",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17573,
+                "endLine": 1,
+                "endColumn": 17588
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "hidden"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "hidden"
+                }
+              ]
+            },
+            {
+              "name": "clip-path",
+              "value": "inset(50%)"
+            },
+            {
+              "name": "width",
+              "value": "1px"
+            },
+            {
+              "name": "height",
+              "value": "1px"
+            },
+            {
+              "name": "position",
+              "value": "absolute"
+            },
+            {
+              "name": "overflow-x",
+              "value": "hidden"
+            },
+            {
+              "name": "overflow-y",
+              "value": "hidden"
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "origin": "regular",
+          "selector": ".h-8",
+          "properties": [
+            {
+              "name": "height",
+              "value": "32px",
+              "implicit": false,
+              "text": "height:32px",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 33996,
+                "endLine": 1,
+                "endColumn": 34007
+              }
+            },
+            {
+              "name": "height",
+              "value": "32px"
+            }
+          ]
+        },
+        {
+          "index": 21,
+          "origin": "regular",
+          "selector": ".w-full",
+          "properties": [
+            {
+              "name": "width",
+              "value": "100%",
+              "implicit": false,
+              "text": "width:100%",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 43819,
+                "endLine": 1,
+                "endColumn": 43829
+              }
+            },
+            {
+              "name": "width",
+              "value": "100%"
+            }
+          ]
+        }
+      ],
+      "actualProductionRules": [
+        {
+          "selector": ".sr-only",
+          "style": "clip-path: inset(50%); white-space: nowrap; border-width: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden;",
+          "clipPath": "inset(50%)",
+          "overflow": "hidden",
+          "position": "absolute",
+          "width": "1px",
+          "height": "1px",
+          "order": 0
+        },
+        {
+          "selector": ".h-8",
+          "style": "height: 32px;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "",
+          "height": "32px",
+          "order": 1
+        },
+        {
+          "selector": ".w-full",
+          "style": "width: 100%;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "100%",
+          "height": "",
+          "order": 2
+        }
+      ],
+      "actualHiddenMetrics": {
+        "label": "Add filter…",
+        "size": "compact",
+        "position": "absolute",
+        "overflow": "clip",
+        "clip": "auto",
+        "clipPath": "inset(50%)",
+        "width": 248,
+        "height": 32,
+        "focused": true,
+        "clippingRegion": {
+          "x": 145,
+          "y": 896,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "actualKeyboardBusinessReceipts": [
+        {
+          "kind": "md-project-hidden-toggle",
+          "payload": true,
+          "at": 7005.89999999851
+        }
+      ],
+      "decoded": {
+        "passed": true,
+        "decoded": [
+          {
+            "index": 6,
+            "origin": "user-agent",
+            "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+            "declarations": [
+              {
+                "name": "overflow-x",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-x:clip !important;",
+                "parsedProperty": "overflow-x",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              },
+              {
+                "name": "overflow-y",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-y:clip !important;",
+                "parsedProperty": "overflow-y",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "rawCascadeSHA256": "128bf528cfb57d2a3c04b4860cf68d5982a9b2de3870de14e4f4c6a9ebbcd261",
+        "rawCascadePreserved": true
+      }
+    },
+    {
+      "label": "dark-390-20",
+      "actualProofSHA256": "dc8ae781bc5ebccf90f80939f121aebc1c505f6ef407045672a6475273dc6b8e",
+      "actualPNG_SHA256": "278ae8f9e52070e779626ee4aff819080081d4637d9ba70ec895372232739313",
+      "actualRawCascade": [
+        {
+          "index": 6,
+          "origin": "user-agent",
+          "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+          "properties": [
+            {
+              "name": "overflow-x",
+              "value": "clip !important",
+              "important": true
+            },
+            {
+              "name": "overflow-y",
+              "value": "clip !important",
+              "important": true
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "origin": "regular",
+          "selector": "button, input",
+          "properties": [
+            {
+              "name": "overflow",
+              "value": "visible",
+              "implicit": false,
+              "text": "overflow:visible",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 12834,
+                "endLine": 1,
+                "endColumn": 12850
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "visible"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "visible"
+                }
+              ]
+            },
+            {
+              "name": "overflow-x",
+              "value": "visible"
+            },
+            {
+              "name": "overflow-y",
+              "value": "visible"
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "origin": "regular",
+          "selector": ".sr-only",
+          "properties": [
+            {
+              "name": "clip-path",
+              "value": "inset(50%)",
+              "implicit": false,
+              "text": "clip-path:inset(50%);",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17457,
+                "endLine": 1,
+                "endColumn": 17478
+              }
+            },
+            {
+              "name": "width",
+              "value": "1px",
+              "implicit": false,
+              "text": "width:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17512,
+                "endLine": 1,
+                "endColumn": 17522
+              }
+            },
+            {
+              "name": "height",
+              "value": "1px",
+              "implicit": false,
+              "text": "height:1px;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17522,
+                "endLine": 1,
+                "endColumn": 17533
+              }
+            },
+            {
+              "name": "position",
+              "value": "absolute",
+              "implicit": false,
+              "text": "position:absolute;",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17555,
+                "endLine": 1,
+                "endColumn": 17573
+              }
+            },
+            {
+              "name": "overflow",
+              "value": "hidden",
+              "implicit": false,
+              "text": "overflow:hidden",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 17573,
+                "endLine": 1,
+                "endColumn": 17588
+              },
+              "longhandProperties": [
+                {
+                  "name": "overflow-x",
+                  "value": "hidden"
+                },
+                {
+                  "name": "overflow-y",
+                  "value": "hidden"
+                }
+              ]
+            },
+            {
+              "name": "clip-path",
+              "value": "inset(50%)"
+            },
+            {
+              "name": "width",
+              "value": "1px"
+            },
+            {
+              "name": "height",
+              "value": "1px"
+            },
+            {
+              "name": "position",
+              "value": "absolute"
+            },
+            {
+              "name": "overflow-x",
+              "value": "hidden"
+            },
+            {
+              "name": "overflow-y",
+              "value": "hidden"
+            }
+          ]
+        },
+        {
+          "index": 20,
+          "origin": "regular",
+          "selector": ".h-8",
+          "properties": [
+            {
+              "name": "height",
+              "value": "32px",
+              "implicit": false,
+              "text": "height:32px",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 33996,
+                "endLine": 1,
+                "endColumn": 34007
+              }
+            },
+            {
+              "name": "height",
+              "value": "32px"
+            }
+          ]
+        },
+        {
+          "index": 21,
+          "origin": "regular",
+          "selector": ".w-full",
+          "properties": [
+            {
+              "name": "width",
+              "value": "100%",
+              "implicit": false,
+              "text": "width:100%",
+              "disabled": false,
+              "range": {
+                "startLine": 1,
+                "startColumn": 43819,
+                "endLine": 1,
+                "endColumn": 43829
+              }
+            },
+            {
+              "name": "width",
+              "value": "100%"
+            }
+          ]
+        }
+      ],
+      "actualProductionRules": [
+        {
+          "selector": ".sr-only",
+          "style": "clip-path: inset(50%); white-space: nowrap; border-width: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden;",
+          "clipPath": "inset(50%)",
+          "overflow": "hidden",
+          "position": "absolute",
+          "width": "1px",
+          "height": "1px",
+          "order": 0
+        },
+        {
+          "selector": ".h-8",
+          "style": "height: 32px;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "",
+          "height": "32px",
+          "order": 1
+        },
+        {
+          "selector": ".w-full",
+          "style": "width: 100%;",
+          "clipPath": "",
+          "overflow": "",
+          "position": "",
+          "width": "100%",
+          "height": "",
+          "order": 2
+        }
+      ],
+      "actualHiddenMetrics": {
+        "label": "Add filter…",
+        "size": "compact",
+        "position": "absolute",
+        "overflow": "clip",
+        "clip": "auto",
+        "clipPath": "inset(50%)",
+        "width": 248,
+        "height": 32,
+        "focused": true,
+        "clippingRegion": {
+          "x": 145,
+          "y": 780,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "actualKeyboardBusinessReceipts": [
+        {
+          "kind": "md-project-hidden-toggle",
+          "payload": true,
+          "at": 7163.39999999851
+        }
+      ],
+      "decoded": {
+        "passed": true,
+        "decoded": [
+          {
+            "index": 6,
+            "origin": "user-agent",
+            "selector": "input:not([type=\"image\" i], [type=\"range\" i], [type=\"checkbox\" i], [type=\"radio\" i])",
+            "declarations": [
+              {
+                "name": "overflow-x",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-x:clip !important;",
+                "parsedProperty": "overflow-x",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              },
+              {
+                "name": "overflow-y",
+                "rawCDPValue": "clip !important",
+                "rawCDPImportant": true,
+                "rawCDPDisabled": null,
+                "declarationText": "overflow-y:clip !important;",
+                "parsedProperty": "overflow-y",
+                "parsedValue": "clip",
+                "parsedImportant": true,
+                "exact": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "rawCascadeSHA256": "128bf528cfb57d2a3c04b4860cf68d5982a9b2de3870de14e4f4c6a9ebbcd261",
+        "rawCascadePreserved": true
+      }
+    }
+  ],
+  "actualPublicParser": {
+    "name": "postcss",
+    "version": "8.5.28",
+    "packagePath": "/workspace/orvilo1/node_modules/.pnpm/postcss@8.5.28/node_modules/postcss/package.json",
+    "packageSHA256": "f5c32824e407aadf9d306cb36370330109f017a7590e4f10c4fe0ff61831e436",
+    "publicEntry": "/workspace/orvilo1/node_modules/.pnpm/postcss@8.5.28/node_modules/postcss/lib/postcss.js",
+    "publicEntrySHA256": "80304467231d94293a4c1ca5549d6d5a6fe9985171f3e64b98c3c1c22d08a4f9",
+    "parserPath": "/workspace/orvilo1/node_modules/.pnpm/postcss@8.5.28/node_modules/postcss/lib/parser.js",
+    "parserSHA256": "8bb6e0ffc48c19f56431017a119ae32b11f5413d29584a36e105886ee71c6e46"
+  },
+  "atUTC": "2026-10-13T18:14:07.032Z",
+  "boundary": "Offline read/strict decode of saved same-head actual native CDP facts only. No new GUI run or runtime result fabricated. Original005/006 remain FAIL.",
+  "checks": [
+    {
+      "name": "light-1240-16/strict public PostCSS decode of actual UA x/y clip-important",
+      "passed": true
+    },
+    {
+      "name": "light-1240-20/strict public PostCSS decode of actual UA x/y clip-important",
+      "passed": true
+    },
+    {
+      "name": "dark-1240-16/strict public PostCSS decode of actual UA x/y clip-important",
+      "passed": true
+    },
+    {
+      "name": "dark-1240-20/strict public PostCSS decode of actual UA x/y clip-important",
+      "passed": true
+    },
+    {
+      "name": "light-390-16/strict public PostCSS decode of actual UA x/y clip-important",
+      "passed": true
+    },
+    {
+      "name": "light-390-20/strict public PostCSS decode of actual UA x/y clip-important",
+      "passed": true
+    },
+    {
+      "name": "dark-390-16/strict public PostCSS decode of actual UA x/y clip-important",
+      "passed": true
+    },
+    {
+      "name": "dark-390-20/strict public PostCSS decode of actual UA x/y clip-important",
+      "passed": true
+    }
+  ],
+  "combination": {
+    "native005UnaffectedPassedChecks": 1544,
+    "native005ActualMatrixCaptures": 136,
+    "native006ActualFocusedPassedChecks": 56,
+    "native006ActualFocusedContexts": 8,
+    "offlineDecodedUAProofs": 8,
+    "independentFinalAssessmentStillRequired": true,
+    "wholeGoalClaim": false
+  },
+  "offlineManifestSHA256": "5c6dffc2f558bd7ff4008b47302beef542cde710af09e6cd8d013c96b64211b3",
+  "oldNative005Passed": false,
+  "oldNative006Passed": false,
+  "oldReportsRewritten": false,
+  "passed": true,
+  "predicateModuleSHA256": "edad3cd1f2146001a40584de73234c89cfc63400dc2473e8d447802e7773cd66",
+  "readerSHA256": "17399c4a7e00a4047aeed4324955f8ec28dcc8e3ce2f1309e2ca5eab0fa97a0c",
+  "schema": "actual-native006-public-css-declaration-proof-v1"
+}

@@ -1,0 +1,57 @@
+{
+  "actualEvidence": {
+    "full005": {
+      "originalReportedPassed": false,
+      "passedChecks": 1544,
+      "failedChecks": 8,
+      "actualSceneCaptures": 136,
+      "originalSHA256": "fab9f9a07100af158ed8ed9ad9e0e8c5f6f342a11a413d2dcf80862fa786f3ed",
+      "executionSHA256": "4d92c5c9a4bcdde8c24bd30f254cb1cbc60ebf82743c6f7b513c3f7554700fed",
+      "actualRevision": {
+        "head": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+        "tree": "19d705fbabeff164295a6b3e23245a734867b9ac",
+        "status": "",
+        "diffSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "sourceBindingSHA256": "c53c742ba30d4e07970759eb2f5a10c60a5101246dd36215c131336009b5f18d"
+    },
+    "focused006": {
+      "originalReportedPassed": false,
+      "passedChecks": 56,
+      "failedChecks": 8,
+      "actualSceneCaptures": 8,
+      "originalSHA256": "2243c1b23d476a71f4aa601d42eb83cbcc15cb4c8aa8f53aa35d4df8da3ebd60",
+      "executionSHA256": "fb938bd28f893580b1bb128437e3ad7451fdffe84343ab77ae69cb439c244e19",
+      "actualRevision": {
+        "head": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+        "tree": "19d705fbabeff164295a6b3e23245a734867b9ac",
+        "status": "",
+        "diffSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "sourceBindingSHA256": "d1e55b6d32b572339724bd450532a1551878e5fb3780c245f9a90ad5690833e1"
+    },
+    "offlineUA": {
+      "actualHead": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+      "passedChecks": 8,
+      "resultSHA256": "3c5aa24194c29ab0fc972f4c2c83bc8dd7b568454798cbc630bd44417a559c60",
+      "executionSHA256": "a85b332463a0da0a4c3eaf12099e78f8a78f426e296c573d5b6e10e5cd83f19b",
+      "inputManifestSHA256": "5c6dffc2f558bd7ff4008b47302beef542cde710af09e6cd8d013c96b64211b3",
+      "originalReportsRewritten": false,
+      "electronExecuted": false
+    }
+  },
+  "base": "7a0db38fc2a78dc0c145ce180bcd638ae9dfeb6c",
+  "changedPaths": 81,
+  "head": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+  "independentFinalPending": true,
+  "pushCI": {
+    "38439061925": "success",
+    "38439061747": "success",
+    "38439061817": "success"
+  },
+  "schema": "current81-scoped-verification-delivery-v1",
+  "scope": "Real current source component fixtures with actual Desktop renderer configuration, public application providers and compiled production CSS. Does not claim routed/full app, backend, local agents or wholeGoal. Original reports FAIL are retained; strict offline decode addresses recorded CDP-format assertion only.",
+  "sourceManifestSHA256": "5ef27c785411b18e21ad09d136160f8667f971d0790510b5356999a7d023d106",
+  "tree": "19d705fbabeff164295a6b3e23245a734867b9ac",
+  "wholeGoalComplete": false
+}

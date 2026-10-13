@@ -1,0 +1,64 @@
+{
+  "actualToolScript": "/tmp/orvilo-native-project-sr-only-v8/read-native006-ua.mjs",
+  "actualToolScriptSHA256": "17399c4a7e00a4047aeed4324955f8ec28dcc8e3ce2f1309e2ca5eab0fa97a0c",
+  "artifactAllocatedBytes": 102400,
+  "artifactCapBytes": 1073741824,
+  "closureSignals": [],
+  "elapsedSeconds": 1.0820183950017963,
+  "electronExecuted": false,
+  "exitCode": 0,
+  "failures": [],
+  "final": {
+    "memoryCurrent": 10056556544,
+    "memoryHeadroom": 7123312640,
+    "tmpFree": 914685952,
+    "workspaceFree": 52019200,
+    "memoryEvents": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0
+    }
+  },
+  "head": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+  "initial": {
+    "memoryCurrent": 10056572928,
+    "memoryHeadroom": 7123296256,
+    "tmpFree": 914788352,
+    "workspaceFree": 52019200,
+    "memoryEvents": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0
+    }
+  },
+  "knownOwned": [
+    {
+      "pid": 48438,
+      "ppid": 48413,
+      "startTicks": 2931171,
+      "state": "R"
+    }
+  ],
+  "knownOwnedClosure": true,
+  "lease": "root-native006-ua-decode-001",
+  "memoryEventsDelta": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "passed": true,
+  "runtimeReportSHA256": null,
+  "schema": "root-real-compiled-tool-resource-wrapper-v1",
+  "scope": "compiled-tool",
+  "scopeBoundary": "Actual tool exit and resource/source closure only; inspect the tool original result for proven scope.",
+  "unknownProcessBoundary": "No claim about unrelated processes; signals use proven birth identity and PIDFD only."
+}

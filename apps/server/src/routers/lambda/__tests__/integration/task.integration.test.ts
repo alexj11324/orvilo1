@@ -1869,6 +1869,48 @@ describe('Task Router Integration', () => {
   });
 
   describe('reviewer Agent admission', () => {
+    it('exposes saved-runtime verification eligibility without hiding an unsupported reviewer', async () => {
+      const { agents } = await import('@/database/schemas');
+      const piAgentId = await createTestAgent(serverDB, userId, `agt_pi_${userId}`);
+      await serverDB
+        .update(agents)
+        .set({ agencyConfig: { heterogeneousProvider: { type: 'opencode' } }, model: 'opencode' })
+        .where(eq(agents.id, testAgentId));
+      await serverDB
+        .update(agents)
+        .set({ agencyConfig: { heterogeneousProvider: { type: 'pi' } }, model: 'pi' })
+        .where(eq(agents.id, piAgentId));
+      const choices = await caller.listReviewerAgents();
+      expect(choices.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: testAgentId, canVerifyDeliveries: true }),
+          expect.objectContaining({ id: piAgentId, canVerifyDeliveries: false }),
+        ]),
+      );
+      const task = await caller.create({ instruction: 'Manual reviewer selection' });
+      await new TaskModel(serverDB, userId).updateWithLog(
+        task.data.id,
+        {
+          status: 'paused',
+          workflowCategory: 'in_progress',
+          parkedReason: 'review_required',
+          error: 'Delivery is waiting for a reviewer Agent',
+        },
+        {},
+      );
+      const selected = await caller.update({
+        id: task.data.id,
+        reviewerAgentId: piAgentId,
+        expectedDomainRevision: await revisionOf(task.data.id),
+      });
+      expect(selected.data).toMatchObject({
+        reviewerAgentId: piAgentId,
+        workflowCategory: 'in_progress',
+        parkedReason: 'review_required',
+      });
+      expect(selected.data.error).toContain('cannot mount submitVerifyResult');
+      expect(mockExecAgent).not.toHaveBeenCalled();
+    });
     it('reports a readable reviewer requirement, then allows review with an Agent', async () => {
       const task = await caller.create({ instruction: 'Review delivery' });
       await expect(

@@ -64,6 +64,7 @@ import {
   TASK_INPUT_STATUSES,
   TaskInputService,
 } from '@/server/services/agentDelegation';
+import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipeline/resolveExecutionBinding';
 import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { AutomationResultDeliveryService } from '@/server/services/automationResultDelivery';
 import { automationResultWebhookConfigSchema } from '@/server/services/automationResultDelivery/transport';
@@ -1849,7 +1850,12 @@ export const taskRouter = router({
             userId: ctx.userId,
             workspaceId: ctx.workspaceId,
           });
-          return { id: agent.id, name: agent.title ?? agent.name ?? agent.id };
+          const config = await ctx.agentModel.getAgentConfigForExecution(agent.id);
+          return {
+            canVerifyDeliveries: !!config && agentCanMountBuiltinToolSurface(config, config.model),
+            id: agent.id,
+            name: agent.title ?? agent.name ?? agent.id,
+          };
         } catch (error) {
           if (error instanceof TRPCError && ['FORBIDDEN', 'NOT_FOUND'].includes(error.code))
             return null;

@@ -191,7 +191,7 @@ export const TaskManifest: BuiltinToolManifest = {
     },
     {
       description:
-        'View details of a specific task. If identifier is omitted, this only works when there is a current task context.',
+        'View details of a specific task and its usable reviewer Agents, including canVerifyDeliveries from each saved runtime. For automatic assignment, choose canVerifyDeliveries=true when available; unsupported choices remain selectable but wait for a person. If identifier is omitted, this only works when there is a current task context.',
       name: TaskApiName.viewTask,
       parameters: {
         properties: {
@@ -274,7 +274,7 @@ export const TaskManifest: BuiltinToolManifest = {
           },
           reviewerAgentId: {
             description:
-              'Reviewer Agent ID. Choose a usable workspace Agent from viewTask, including yourself. A delivered Issue needs a reviewer before entering review. Set at any pre-review stage; null clears it only outside review.',
+              'Reviewer Agent ID. Choose a usable workspace Agent from viewTask, including yourself. For automatic assignment, choose canVerifyDeliveries=true when available. Unsupported choices remain selectable but wait for a person. A delivered Issue needs a reviewer before entering review. Set at any pre-review stage; null clears it only outside review.',
             type: ['string', 'null'],
           },
           assigneeAgentId: {

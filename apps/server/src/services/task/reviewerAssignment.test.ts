@@ -74,6 +74,7 @@ describe('reviewer assignment after delivery', () => {
         additionalPluginIds: ['orvilo-task'],
         appContext: { taskId: 'task-1' },
         skipTaskVerification: true,
+        prompt: expect.stringContaining('canVerifyDeliveries=true'),
       }),
     );
     expect(mocks.updateWithLog).not.toHaveBeenCalled();

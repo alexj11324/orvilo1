@@ -235,6 +235,13 @@ describe('canonical completion admission', () => {
   );
   it('invokes the actual Verify convergence for a passed mapped completed run', async () => {
     const mapped = await acceptedEvidence();
+    const task = await new TaskModel(db, binding.userId, binding.workspaceId).findById(
+      fixtureTaskId(binding),
+    );
+    await db
+      .update(tasks)
+      .set({ reviewerAgentId: task!.assigneeAgentId })
+      .where(eq(tasks.id, fixtureTaskId(binding)));
     await db
       .update(taskTopics)
       .set({ status: 'completed' })

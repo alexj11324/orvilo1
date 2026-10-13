@@ -20,6 +20,7 @@ import { FieldError } from '@/components/ui/field';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import ModelSelect from '@/features/ModelSelect';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 import {
   MEMORY_MODEL_ITEMS,
@@ -30,6 +31,7 @@ import {
 
 const ModelAssignmentsForm = memo(() => {
   const { t } = useTranslation('setting');
+  const isMobile = useIsMobile();
   const {
     canManageServiceModel,
     changeContextLimit,
@@ -219,6 +221,7 @@ const ModelAssignmentsForm = memo(() => {
       collapsible={false}
       items={[modelAssignments, memoryModels]}
       itemsType={'group'}
+      layout={isMobile ? 'vertical' : 'horizontal'}
       variant={'filled'}
       {...FORM_STYLE}
       itemMinWidth={undefined}

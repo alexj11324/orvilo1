@@ -49,9 +49,7 @@ const ToolPermissionRow = memo<ToolPermissionRowProps>(({ disabled, tool, onPerm
         <div className={'truncate font-mono text-sm text-foreground'}>{tool.toolName}</div>
         {tool.description && (
           <SimpleTooltip title={tool.description}>
-            <div className={'truncate text-xs leading-[1.4] text-foreground-tertiary'}>
-              {tool.description}
-            </div>
+            <div className={'truncate text-xs text-foreground-tertiary'}>{tool.description}</div>
           </SimpleTooltip>
         )}
       </div>

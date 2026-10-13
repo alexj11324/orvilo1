@@ -31,7 +31,7 @@ const styles = {
   header: 'p-4 border-b border-sidebar-border',
   body: 'overflow-auto min-h-0 p-4',
   plan: 'text-xs text-muted-foreground [&_summary]:cursor-pointer [&_summary]:py-1.5',
-  observation: 'leading-[1.7] wrap-anywhere whitespace-pre-wrap',
+  observation: 'text-sm wrap-anywhere whitespace-pre-wrap',
   review: 'pt-4 border-t border-sidebar-border',
 };
 

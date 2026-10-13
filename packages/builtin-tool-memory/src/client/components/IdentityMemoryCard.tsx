@@ -12,7 +12,7 @@ import { memoryCardStyles as styles, MemorySection, SummaryAccordion } from './M
 
 const localStyles = {
   evidence:
-    'py-2 px-3 [border-inline-start:2px_solid_var(--border)] text-(length:--text-dense) italic leading-[1.6] text-muted-foreground',
+    'py-2 px-3 [border-inline-start:2px_solid_var(--border)] text-sm italic text-muted-foreground',
 };
 
 export interface IdentityMemoryCardProps {

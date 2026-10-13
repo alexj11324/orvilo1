@@ -13,10 +13,10 @@ import { formatSize } from '@/utils/format';
 const styles = {
   container:
     'rounded-(--radius-input) text-muted-foreground [&_:hover]:bg-accent [&_:hover]:text-foreground',
-  dir: 'truncate font-mono text-xs leading-[1.3] text-foreground-tertiary',
+  dir: 'truncate font-mono text-xs text-foreground-tertiary',
   size: 'min-w-14 shrink-0 text-end font-mono text-xs text-foreground-tertiary',
-  time: 'truncate text-xs leading-none text-foreground-description',
-  title: 'block truncate leading-[1.3] text-inherit',
+  time: 'truncate text-xs text-foreground-description',
+  title: 'block truncate text-sm text-inherit',
 };
 
 interface FileItemProps {
@@ -62,7 +62,6 @@ const FileItem = memo<FileItemProps>(
         className={cn('flex flex-row items-center gap-3', styles.container)}
         style={{
           cursor: openFile || openFolder ? 'pointer' : 'default',
-          fontSize: 12,
           width: '100%',
           padding: '4px 8px',
         }}

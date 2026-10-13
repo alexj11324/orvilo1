@@ -30,12 +30,12 @@ import type { AddExperienceMemoryParams } from '../../types';
 const styles = {
   container: 'overflow-hidden w-full border border-sidebar-border rounded-(--radius-card) bg-card',
   content: 'py-3 px-4',
-  detail: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
+  detail: 'text-sm text-muted-foreground',
   header: 'py-2.5 px-3 [border-block-end:1px_solid_var(--sidebar-border)]',
-  keyLearning: 'text-sm leading-[1.6] text-foreground',
+  keyLearning: 'text-sm text-foreground',
   section: 'p-1 [border-block-start:1px_solid_var(--sidebar-border)]',
-  stepContent: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground whitespace-pre-wrap',
-  summary: 'text-sm leading-[inherit] font-medium text-muted-foreground',
+  stepContent: 'text-sm text-muted-foreground whitespace-pre-wrap',
+  summary: 'text-sm font-medium text-muted-foreground',
   tags: 'pbs-2 [border-block-start:1px_dashed_var(--sidebar-border)]',
   title: 'line-clamp-1 font-medium text-foreground',
 };

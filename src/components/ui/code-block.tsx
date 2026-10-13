@@ -168,6 +168,10 @@ const ROOT_TOKEN_CLASS = [
   'data-[has-diff]:[--code-block-gutter-gap:--spacing(4)]',
   '[--code-block-line-height:calc(var(--text-sm)*22/14)]',
   '[--code-block-font-size:var(--text-sm)]',
+  /* Fold-count metadata follows the public code font: default12/20. */
+  '[--code-block-meta-font-size:calc(var(--code-block-font-size)*6/7)]',
+  '[--code-block-meta-line-height:calc(var(--code-block-font-size)*10/7)]',
+  '[--code-block-meta-height:max(var(--code-block-fold-width),var(--code-block-meta-line-height))]',
   '[--code-block-copy-inset:--spacing(2)]',
   /* Where a PINNED control starts. With a header composed in, the root's top
      edge is the header, so an unadjusted inset drops the copy button onto the
@@ -631,7 +635,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
              the source. The copy button reads the raw code and never sees it. */
           <button
             aria-label={`Unfold ${hiddenCount} hidden lines`}
-            className="bg-muted/80 text-muted-foreground hover:bg-accent ml-2 inline-flex h-(--code-block-fold-width) translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center rounded-(--radius-button) px-1.5 align-top text-[0.8em] leading-none select-none"
+            className="bg-muted/80 text-muted-foreground hover:bg-accent ml-2 inline-flex h-(--code-block-meta-height) translate-y-[calc((var(--code-block-line-height)-var(--code-block-meta-height))/2)] cursor-pointer items-center rounded-(--radius-button) px-1.5 align-top text-(length:--code-block-meta-font-size) leading-(--code-block-meta-line-height) select-none"
             data-slot="code-block-fold-marker"
             tabIndex={selectable ? -1 : undefined}
             type="button"

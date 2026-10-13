@@ -34,7 +34,8 @@ export const TaskManifest: BuiltinToolManifest = {
       parameters: {
         properties: {
           instruction: {
-            description: 'Detailed instruction for what the task should accomplish.',
+            description:
+              'The editable Issue description: what to deliver and its acceptance criteria.',
             type: 'string',
           },
           assigneeAgentId: {
@@ -86,7 +87,7 @@ export const TaskManifest: BuiltinToolManifest = {
             items: {
               properties: {
                 instruction: {
-                  description: 'Detailed instruction for what the task should accomplish.',
+                  description: 'The editable Issue description, including its acceptance criteria.',
                   type: 'string',
                 },
                 assigneeAgentId: {
@@ -191,7 +192,7 @@ export const TaskManifest: BuiltinToolManifest = {
     },
     {
       description:
-        'View details of a specific task and its usable reviewer Agents, including canVerifyDeliveries from each saved runtime. For automatic assignment, choose canVerifyDeliveries=true when available; unsupported choices remain selectable but wait for a person. If identifier is omitted, this only works when there is a current task context.',
+        'View details of a specific Issue and its usable reviewer Agents. Choose an Agent with canReviewIssues=true; a runtime that cannot mount the review tool cannot be assigned as reviewer. If identifier is omitted, this only works when there is a current task context.',
       name: TaskApiName.viewTask,
       parameters: {
         properties: {
@@ -202,6 +203,31 @@ export const TaskManifest: BuiltinToolManifest = {
           },
         },
         required: [],
+        type: 'object',
+      },
+    },
+    {
+      description:
+        'Record the verdict for the Issue you were asked to review. Read its description and investigate the delivered work with your runtime tools, then call this exactly once. A fail requires a comment explaining what is missing. Pass moves the Issue to Done; fail posts your comment and returns it to its assignee. A prose reply alone does not record a verdict. This call is authorized only for the current reviewer Agent run.',
+      humanIntervention: 'never',
+      name: TaskApiName.submitTaskReview,
+      parameters: {
+        additionalProperties: false,
+        properties: {
+          identifier: {
+            description: 'The Issue identifier in your review request.',
+            minLength: 1,
+            type: 'string',
+          },
+          verdict: { enum: ['pass', 'fail'], type: 'string' },
+          comment: {
+            description:
+              'A normal Issue comment. Required for fail; say what the assignee must fix.',
+            minLength: 1,
+            type: 'string',
+          },
+        },
+        required: ['identifier', 'verdict'],
         type: 'object',
       },
     },
@@ -274,7 +300,7 @@ export const TaskManifest: BuiltinToolManifest = {
           },
           reviewerAgentId: {
             description:
-              'Reviewer Agent ID. Choose a usable workspace Agent from viewTask, including yourself. For automatic assignment, choose canVerifyDeliveries=true when available. Unsupported choices remain selectable but wait for a person. A delivered Issue needs a reviewer before entering review. Set at any pre-review stage; null clears it only outside review.',
+              'Reviewer Agent ID. Choose a usable workspace Agent from viewTask with canReviewIssues=true, including yourself. A delivered Issue needs a reviewer before entering review. Set at any pre-review stage; null clears it only outside review.',
             type: ['string', 'null'],
           },
           assigneeAgentId: {

@@ -41,6 +41,9 @@ export const TaskApiName = {
   /** Configure (or clear) the delivery-acceptance (verify) gate of a task */
   setTaskVerify: 'setTaskVerify',
 
+  /** Record the current reviewer Agent's verdict on an Issue. */
+  submitTaskReview: 'submitTaskReview',
+
   /** Update a task comment */
   updateTaskComment: 'updateTaskComment',
 
@@ -326,6 +329,20 @@ export interface SetTaskVerifyState {
   enabled?: boolean | null;
   identifier: string;
   success: boolean;
+}
+
+export interface SubmitTaskReviewParams {
+  comment?: string;
+  identifier: string;
+  verdict: 'pass' | 'fail';
+}
+
+export interface SubmitTaskReviewState {
+  commentId?: string;
+  identifier: string;
+  stopped: boolean;
+  success: boolean;
+  workflowCategory: TaskWorkflowCategory;
 }
 
 // ==================== updateTaskStatus ====================

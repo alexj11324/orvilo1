@@ -38,7 +38,6 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { isDueDateOverdue } from './isDueDateOverdue';
 import { RAIL_CONTROL_CLASS, RAIL_PLACEHOLDER_CLASS } from './railControl';
 import { ISSUE_RELATION_KINDS } from './relationGroups';
-import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -222,10 +221,6 @@ const TaskProperties = memo(() => {
         {/* Execution sits under the agent it describes: state, reason and the
             one action that moves it on, in a single place. */}
         <TaskExecutionSection />
-
-        {/* The human half of "is it done": the acceptance state, one click from
-            its details. Automations have no acceptance to wait on. */}
-        {!automationMode && <TaskAcceptanceStateRow />}
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
           <PropertyRow label={t('taskDetail.assignee')}>

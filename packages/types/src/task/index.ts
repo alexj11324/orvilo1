@@ -361,7 +361,7 @@ export interface TaskExecutionContract {
 export type TaskPriority = 0 | 1 | 2 | 3 | 4;
 
 export type TaskActivityType =
-  'assignment' | 'brief' | 'comment' | 'created' | 'property' | 'topic';
+  'review_waiting' | 'assignment' | 'brief' | 'comment' | 'created' | 'property' | 'topic';
 
 /**
  * Persisted event kinds in `task_activities`. Kept as a plain union (the column
@@ -386,6 +386,7 @@ export type TaskActivityLogType =
   | 'resource_added'
   | 'resource_removed'
   | 'reviewer'
+  | 'review_waiting'
   | 'status'
   | 'sub_issue_added'
   | 'sub_issue_removed'
@@ -425,6 +426,7 @@ export const TASK_ACTIVITY_LOG_BEHAVIOR: Record<TaskActivityLogType, TaskActivit
   resource_added: 'event',
   resource_removed: 'event',
   reviewer: 'value',
+  review_waiting: 'event',
   status: 'value',
   sub_issue_added: 'event',
   sub_issue_removed: 'event',
@@ -468,6 +470,7 @@ export interface TaskActivityLogPayload {
    * and history should keep saying what the person saw.
    */
   fromLabel?: string | null;
+  reason?: string;
   /** Relation events: how the Issue in `toId` relates to this one. */
   relation?: TaskActivityRelationKind;
   /** Resource events: which kind of attachment was added or removed. */
@@ -1415,6 +1418,7 @@ export interface TaskDetailActivity {
   resolvedAction?: string | null;
   resolvedAt?: string | null;
   resolvedComment?: string | null;
+  reviewWaiting?: { reason: string };
   /**
    * Topic-only: currently running Gateway operation, mirrored from
    * `topics.metadata.runningOperation`. Lets the task topic drawer establish
@@ -1586,4 +1590,22 @@ export interface TaskDetailData {
   workspace?: TaskDetailWorkspaceNode[];
   /** Owning workspace; null for personal (non-workspace) tasks. */
   workspaceId?: string | null;
+}
+
+export const MAX_CONSECUTIVE_REVIEW_FAILURES = 3;
+
+export interface IssueReviewState {
+  consecutiveFailures: number;
+  cycleId: string;
+  deliveryOperationId?: string;
+  lastFailureCommentId?: string;
+  repairPending?: boolean;
+  retryReason?: string;
+  reviewerAgentId: string;
+  reviewerOperationId?: string;
+  state: 'pending' | 'running' | 'submitted';
+}
+
+export interface TaskConfig {
+  issueReview?: IssueReviewState;
 }

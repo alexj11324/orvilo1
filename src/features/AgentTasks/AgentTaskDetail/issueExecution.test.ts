@@ -266,6 +266,53 @@ describe('resolveIssueExecution', () => {
       },
     );
 
+    it.each([
+      {
+        workflowCategory: 'in_review',
+        consecutiveFailures: 0,
+        repairPending: false,
+        kind: 'reviewPending',
+      },
+      {
+        workflowCategory: 'in_progress',
+        consecutiveFailures: 1,
+        repairPending: true,
+        kind: 'reworkRequired',
+      },
+      {
+        workflowCategory: 'in_progress',
+        consecutiveFailures: 3,
+        repairPending: false,
+        kind: 'reworkRequired',
+      },
+    ] as const)(
+      'does not show acceptance or a finished run during $kind',
+      ({ workflowCategory, consecutiveFailures, repairPending, kind }) => {
+        const view = resolveIssueExecution(
+          withAgent({
+            dispatchPhase: 'succeeded',
+            status: 'paused',
+            workflowCategory,
+            issueReview: { consecutiveFailures, repairPending },
+          }),
+        );
+        expect(view).toEqual({ actionBlocked: false, hints: [], kind, showFailureReason: false });
+      },
+    );
+
+    it('preserves a real rework runtime failure', () => {
+      expect(
+        resolveIssueExecution(
+          withAgent({
+            dispatchPhase: 'failed',
+            status: 'failed',
+            workflowCategory: 'in_progress',
+            issueReview: { consecutiveFailures: 1, repairPending: true },
+          }),
+        ),
+      ).toMatchObject({ kind: 'failed', showFailureReason: true });
+    });
+
     it('reads as finished once the Issue is Done', () => {
       expect(
         resolveIssueExecution(

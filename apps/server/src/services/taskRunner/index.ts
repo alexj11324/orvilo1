@@ -98,6 +98,8 @@ export interface RunTaskParams {
    * name the contract they mean instead of silently adopting old or new.
    */
   intent?: TaskRunIntent;
+  /** Internal reviewer feedback continuation; fenced again before operation dispatch. */
+  issueReviewRepairCycleId?: string;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
   /** Parent delivery operation for internal corrective runs. */
@@ -212,6 +214,7 @@ export class TaskRunnerService {
       extraPrompt,
       integrationSeed,
       idempotencyKey,
+      issueReviewRepairCycleId,
       intent,
       maxSteps,
       parentOperationId,
@@ -784,6 +787,7 @@ export class TaskRunnerService {
         new Date(),
         undefined,
         replaceReservationId,
+        issueReviewRepairCycleId,
       );
       if (!reserved) {
         throw new TRPCError({
@@ -799,7 +803,12 @@ export class TaskRunnerService {
         this.db,
         this.userId,
         {
-          context: { reservationId },
+          context: {
+            reservationId,
+            ...(issueReviewRepairCycleId
+              ? { expectedIssueReviewCycleId: issueReviewRepairCycleId }
+              : {}),
+          },
           runStarted: true,
           taskId: task.id,
         },
@@ -836,6 +845,7 @@ export class TaskRunnerService {
         extraPrompt,
         {
           contractContent: inheritedContractContent,
+          skipTaskVerification,
           ...(runIntent === 'fresh_occurrence'
             ? {
                 occurrence: preparedDispatch!.dispatch.automationOccurrence ?? undefined,
@@ -1061,6 +1071,20 @@ export class TaskRunnerService {
             const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
             const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
 
+            if (
+              issueReviewRepairCycleId &&
+              !(await taskModel.isIssueReviewRepairCurrent(
+                task.id,
+                { cycleId: issueReviewRepairCycleId },
+                tx,
+              ))
+            ) {
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'Issue review repair cycle changed before launch.',
+              });
+            }
+
             // Revalidate the task reservation in the same transaction that
             // publishes the running topic. A concurrent terminal cascade
             // locks and clears this reservation before changing status, so a
@@ -1153,6 +1177,7 @@ export class TaskRunnerService {
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
         appContext: {
+          ...(issueReviewRepairCycleId ? { issueReviewRepairCycleId } : {}),
           dispatchFence: preparedDispatch!.fence,
           dispatchId: preparedDispatch!.dispatch.id,
           executionGeneration: preparedDispatch!.dispatch.generation,

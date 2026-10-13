@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   getAgentConfigForExecution: vi.fn(),
   canMount: vi.fn(),
   resolveIssueReviewer: vi.fn(),
-  resumeIssueVerification: vi.fn(),
+  startIssueReview: vi.fn(),
   updateWithLog: vi.fn(),
 }));
 vi.mock('@/database/models/task', () => ({
@@ -42,8 +42,10 @@ vi.mock('../aiAgent', () => ({
     return { execAgent: mocks.execAgent };
   }),
 }));
-vi.mock('../verify/reviewerAgent', () => ({ resolveIssueReviewer: mocks.resolveIssueReviewer }));
-vi.mock('../verify/lifecycle', () => ({ resumeIssueVerification: mocks.resumeIssueVerification }));
+vi.mock('./review', () => ({
+  resolveIssueReviewer: mocks.resolveIssueReviewer,
+  startIssueReview: mocks.startIssueReview,
+}));
 
 const task = {
   id: 'task-1',
@@ -74,7 +76,7 @@ describe('reviewer assignment after delivery', () => {
         additionalPluginIds: ['orvilo-task'],
         appContext: { taskId: 'task-1' },
         skipTaskVerification: true,
-        prompt: expect.stringContaining('canVerifyDeliveries=true'),
+        prompt: expect.stringContaining('canReviewIssues=true'),
       }),
     );
     expect(mocks.updateWithLog).not.toHaveBeenCalled();
@@ -125,12 +127,7 @@ describe('reviewer assignment after delivery', () => {
       {},
       { expectedDomainRevision: 5 },
     );
-    expect(mocks.resumeIssueVerification).toHaveBeenCalledWith(
-      db,
-      'user-1',
-      { taskId: 'task-1' },
-      'ws-1',
-    );
+    expect(mocks.startIssueReview).toHaveBeenCalledWith(db, 'user-1', 'task-1', {}, 'ws-1');
   });
   it('an unsupported reviewer keeps delivery waiting without checks', async () => {
     mocks.findById.mockResolvedValue({ ...task, reviewerAgentId: 'reviewer' });
@@ -142,12 +139,12 @@ describe('reviewer assignment after delivery', () => {
       {},
       { expectedDomainRevision: 5 },
     );
-    expect(mocks.resumeIssueVerification).not.toHaveBeenCalled();
+    expect(mocks.startIssueReview).not.toHaveBeenCalled();
   });
   it('does not start checks after a lost revision fence', async () => {
     mocks.findById.mockResolvedValue({ ...task, reviewerAgentId: 'reviewer' });
     mocks.updateWithLog.mockResolvedValue(null);
     await resumeReviewerAssignment(db, 'user-1', 'task-1', 'ws-1');
-    expect(mocks.resumeIssueVerification).not.toHaveBeenCalled();
+    expect(mocks.startIssueReview).not.toHaveBeenCalled();
   });
 });

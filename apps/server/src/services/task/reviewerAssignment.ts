@@ -45,7 +45,7 @@ export const requestReviewerAssignment = async (
       appContext: { taskId: task.id },
       autoStart: true,
       skipTaskVerification: true,
-      prompt: `Issue ${task.identifier} delivered and is waiting for a reviewer Agent. Call viewTask to read it and the usable reviewer Agents. For automatic assignment, choose an Agent with canVerifyDeliveries=true when one is available, including yourself if appropriate, then call editTask with reviewerAgentId. Unsupported choices wait for a person. Do not rerun the delivered task.`,
+      prompt: `Issue ${task.identifier} delivered and is waiting for a reviewer Agent. Call viewTask to read it and the usable reviewer Agents. For automatic assignment, choose an Agent with canReviewIssues=true when one is available, including yourself if appropriate, then call editTask with reviewerAgentId. Unsupported choices wait for a person. Do not rerun the delivered task.`,
       userInterventionConfig: { approvalMode: 'headless' },
     });
     if (!result.success) throw new Error(result.error ?? 'Orchestrator could not run');
@@ -89,7 +89,7 @@ export const resumeReviewerAssignment = async (
   const task = await model.findById(taskId);
   if (!task?.reviewerAgentId || !isWaitingForReviewer(task)) return;
   try {
-    const { resolveIssueReviewer } = await import('../verify/reviewerAgent');
+    const { resolveIssueReviewer } = await import('./review');
     await resolveIssueReviewer(db, userId, taskId, workspaceId);
   } catch (error) {
     await model.updateWithLog(
@@ -116,8 +116,8 @@ export const resumeReviewerAssignment = async (
     },
   );
   if (!updated) return;
-  const { resumeIssueVerification } = await import('../verify/lifecycle');
-  await resumeIssueVerification(db, userId, { taskId }, workspaceId);
+  const { startIssueReview } = await import('./review');
+  await startIssueReview(db, userId, taskId, {}, workspaceId);
 };
 
 export const markReviewerUnavailable = async (

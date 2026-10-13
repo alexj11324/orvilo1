@@ -429,6 +429,7 @@
   "builtins.orvilo-task.apiName.runTasks": "批量启动 Issue",
   "builtins.orvilo-task.apiName.setTaskSchedule": "设置调度",
   "builtins.orvilo-task.apiName.setTaskVerify": "设置验收",
+  "builtins.orvilo-task.apiName.submitTaskReview": "提交 Issue 审核",
   "builtins.orvilo-task.apiName.updateTaskComment": "更新评论",
   "builtins.orvilo-task.apiName.updateTaskStatus": "更新状态",
   "builtins.orvilo-task.apiName.viewTask": "查看 Issue",

@@ -261,6 +261,7 @@ const mockShellCommandCtr = {
 
 const mockHeterogeneousAgentCtr = {
   cancelOrviloHeteroExec: vi.fn().mockResolvedValue(undefined),
+  hasOrviloHeteroExec: vi.fn().mockResolvedValue(false),
   sendPrompt: vi.fn().mockResolvedValue(undefined),
   spawnOrviloHeteroExec: vi.fn().mockResolvedValue({ status: 'accepted' }),
   startSession: vi.fn().mockResolvedValue({ sessionId: 'mock-session-id' }),
@@ -350,6 +351,84 @@ describe('GatewayConnectionCtr', () => {
     ctr.disconnect();
     vi.unstubAllEnvs();
     vi.useRealTimers();
+  });
+
+  describe('getHeteroTaskStatus', () => {
+    it('answers the registered gateway request with the structured status', async () => {
+      ctr.afterFirstFrame();
+      await vi.advanceTimersByTimeAsync(0);
+      const client = MockGatewayClient.lastInstance!;
+      client.simulateConnected();
+      client.simulateToolCallRequest(
+        'getHeteroTaskStatus',
+        { taskId: 'missing' },
+        'req-status',
+        'getHeteroTaskStatus',
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(client.sendToolCallResponse).toHaveBeenCalledWith({
+        requestId: 'req-status',
+        result: expect.objectContaining({
+          content: '{"active":false}',
+          state: { active: false },
+          success: true,
+        }),
+      });
+      expect(mockHeterogeneousAgentCtr.cancelOrviloHeteroExec).not.toHaveBeenCalled();
+    });
+
+    it('reports starting and registered runs without cancellation, then absence after exit', async () => {
+      let accept!: (result: { status: 'accepted' }) => void;
+      const child = Object.assign(new EventEmitter(), { pid: 4321 });
+      vi.mocked(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).mockImplementationOnce(
+        (params) => {
+          params.onChildSpawned?.(child as unknown as ChildProcessModule.ChildProcess);
+          return new Promise((resolve) => {
+            accept = resolve;
+          });
+        },
+      );
+      const run = ctr['executeAgentRun']({
+        agentType: 'opencode',
+        jwt: 'jwt',
+        operationId: 'op-live',
+        prompt: 'review',
+        topicId: 'topic-live',
+        type: 'agent_run_request',
+      });
+      const probe = () =>
+        ctr['executeToolCall']('getHeteroTaskStatus', 'getHeteroTaskStatus', {
+          taskId: 'op-live',
+        });
+      expect((await probe()).state).toEqual({ active: true });
+      await vi.advanceTimersByTimeAsync(0);
+      accept({ status: 'accepted' });
+      await run;
+      expect((await probe()).state).toEqual({ active: true });
+      child.emit('exit', 0);
+      expect(await probe()).toEqual({
+        content: '{"active":false}',
+        state: { active: false },
+        success: true,
+      });
+      expect(mockHeterogeneousAgentCtr.cancelOrviloHeteroExec).not.toHaveBeenCalled();
+    });
+
+    it('includes the local wrapper registry and rejects malformed probes', async () => {
+      vi.mocked(mockHeterogeneousAgentCtr.hasOrviloHeteroExec).mockResolvedValueOnce(true);
+      expect(
+        (
+          await ctr['executeToolCall']('getHeteroTaskStatus', 'getHeteroTaskStatus', {
+            taskId: 'op-wrapper',
+          })
+        ).state,
+      ).toEqual({ active: true });
+      await expect(
+        ctr['executeToolCall']('getHeteroTaskStatus', 'getHeteroTaskStatus', {}),
+      ).rejects.toThrow('taskId');
+      expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).not.toHaveBeenCalled();
+      expect(mockHeterogeneousAgentCtr.cancelOrviloHeteroExec).not.toHaveBeenCalled();
+    });
   });
 
   // ─── Connection ───

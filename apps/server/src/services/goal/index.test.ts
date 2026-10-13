@@ -36,7 +36,6 @@ import { InMemoryAgentStateManager } from '@/server/modules/AgentExecution/InMem
 
 import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
-import { VerifyPlanGeneratorService } from '../verify/planGenerator';
 import { GoalCriteriaGeneratorService } from './criteriaGenerator';
 import {
   LEASE_EXPIRED_ERROR,
@@ -251,7 +250,7 @@ describe('GoalService', () => {
     expect(dispatched?.instruction).toContain('Try changing A');
   });
 
-  it('persists structured criteria on create and records their ids on the goal config', async () => {
+  it('stores criteria in the requirement without creating engine records', async () => {
     const service = new GoalService(serverDB, userId);
     const graph = await service.create({
       criteria: [
@@ -262,15 +261,10 @@ describe('GoalService', () => {
       tasks: ['Only task'],
     });
 
-    const criteriaIds = graph.goal.config?.acceptance?.criteriaIds ?? [];
-    expect(criteriaIds).toHaveLength(2);
-
-    const rows = await serverDB.query.verifyCriteria.findMany();
-    const byId = new Map(rows.map((row) => [row.id, row]));
-    expect(byId.get(criteriaIds[0])?.title).toBe('Local run works');
-    expect(byId.get(criteriaIds[1])?.title).toBe('Docs are complete');
-    // the how-to-judge instruction landed in a linked document
-    expect(byId.get(criteriaIds[1])?.documentId).toBeTruthy();
+    expect(graph.goal.requirement).toContain('Local run works');
+    expect(graph.goal.requirement).toContain('Check README covers install and run');
+    expect(graph.goal.config?.acceptance?.criteriaIds).toBeUndefined();
+    expect(await serverDB.query.verifyCriteria.findMany()).toHaveLength(0);
   });
 
   it('persists the reviewed goal document verbatim when structured criteria are supplied', async () => {
@@ -287,43 +281,7 @@ describe('GoalService', () => {
     const persisted = await service.graph(graph.goal.id);
     expect(persisted.goal.requirement).toBe(instruction);
     expect(persisted.nodes.find((node) => node.kind === 'problem')?.description).toBe(instruction);
-    expect(persisted.goal.config?.acceptance?.criteriaIds).toHaveLength(1);
-  });
-
-  it('rebinding criteria also updates the dispatched terminal acceptance task', async () => {
-    // Editing the standard after the terminal Goal-acceptance Task exists must
-    // not leave that Task's Acceptance gating on the stale id list.
-    const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
-    const graph = await service.create({
-      criteria: [{ title: 'Original criterion' }],
-      requirement: 'Deliver with evidence',
-      title: 'Rebind criteria goal',
-      tasks: ['Only task'],
-    });
-
-    const created = await service.tick(graph.goal.id);
-    await taskModel.updateStatus(created.taskId!, 'completed');
-    await service.tick(graph.goal.id); // synthesize finding
-    await service.tick(graph.goal.id); // create acceptance task
-    const acceptanceTaskCreated = await service.tick(graph.goal.id); // dispatch it
-    expect(acceptanceTaskCreated.taskId).toBeDefined();
-
-    const [replacementId] = await new VerifyPlanGeneratorService(
-      serverDB,
-      userId,
-    ).createCriteriaFromDrafts([
-      { onFail: 'manual', required: true, title: 'Replacement criterion', verifierType: 'agent' },
-    ]);
-    await service.setAcceptanceCriteria(graph.goal.id, [replacementId]);
-
-    const goal = (await service.graph(graph.goal.id)).goal;
-    expect(goal.config?.acceptance?.criteriaIds).toEqual([replacementId]);
-    const acceptance = await new AcceptanceModel(serverDB, userId).findBySubject(
-      'task',
-      acceptanceTaskCreated.taskId!,
-    );
-    expect(acceptance?.config?.verifyCriteriaIds).toEqual([replacementId]);
+    expect(persisted.goal.config?.acceptance?.criteriaIds).toBeUndefined();
   });
 
   it.each([
@@ -378,15 +336,7 @@ describe('GoalService', () => {
       } else {
         expect(task?.instruction).not.toContain(handoff);
       }
-      const acceptance = await new AcceptanceModel(serverDB, userId).findBySubject(
-        'task',
-        finalTask.taskId!,
-      );
-      expect(acceptance?.requirement).toContain(requirement);
-      expect(acceptance?.config?.verifyCriteriaIds).toEqual(
-        originalConfig?.acceptance?.criteriaIds,
-      );
-      expect(acceptance?.config?.verifyCriteriaIds).toHaveLength(1);
+      expect(task?.instruction).toContain(requirement);
       expect((await service.graph(graph.goal.id)).goal.requirement).toBe(requirement);
     },
   );
@@ -1607,7 +1557,7 @@ describe('GoalService', () => {
     const task = await new TaskModel(serverDB, userId).findById(created.taskId!);
 
     expect(created.outcome).toBe('advanced');
-    expect(task?.description).toBe('Generate training data');
+    expect(task?.description).toContain('Generate training data');
     expect(task?.instruction).toContain(requirement);
     expect(task?.instruction).toContain(
       'Current Task contract (authoritative execution scope): Generate training data',
@@ -1623,13 +1573,13 @@ describe('GoalService', () => {
       'For an investigation-only Task, deliver supported findings',
     );
     expect(task?.instruction).toContain('do not silently expand into implementation');
-    expect(task?.instruction).toContain('run it inside this Task');
+    expect(task?.instruction).toContain('reviewer Agent reads the description');
     expect(task?.instruction).toContain(
       'Include the relevant artifact contents or exact excerpts and the raw outputs of decisive verification commands',
     );
   });
 
-  it('gates every responsible task with a Task-scoped Acceptance requirement', async () => {
+  it('puts complete criteria in the editable Issue body without engine records', async () => {
     const service = new GoalService(serverDB, userId);
     const agentId = 'goal-work-verifier-agent';
     await serverDB.insert(agents).values({
@@ -1655,12 +1605,10 @@ describe('GoalService', () => {
 
     expect(taskModel.shouldPauseOnTopicComplete(task!)).toBe(false);
     expect(task?.config).not.toHaveProperty('verify');
-    expect(acceptance).toMatchObject({ config: { enabled: true } });
-    expect(acceptance?.config).not.toHaveProperty('verifierAgentId');
-    expect(acceptance?.requirement).toContain('Verify only this Task: Generate isolated data.');
-    expect(acceptance?.requirement).toContain(
-      'Ignore sibling and downstream Task deliverables; they are verified by their own acceptance runs.',
-    );
+    expect(acceptance).toBeUndefined();
+    expect(task?.description).toBe('Generate isolated data');
+    expect(task?.instruction).toContain('Verify only this Task: Generate isolated data.');
+    expect(task?.instruction).toContain('their reviewer Agents judge them separately');
   });
 
   it('requires a Goal-level Acceptance Task before marking the complete goal achieved', async () => {
@@ -1713,11 +1661,12 @@ describe('GoalService', () => {
     expect(acceptanceTask?.instruction).toContain(
       'Complete and prove the overall Goal acceptance requirement',
     );
-    expect(acceptance?.requirement).toContain('A runnable minimal training loop with evidence');
-    expect(acceptance?.requirement).toContain(
+    expect(acceptance).toBeUndefined();
+    expect(acceptanceTask?.instruction).toContain('A runnable minimal training loop with evidence');
+    expect(acceptanceTask?.instruction).toContain(
       'An accurate gap analysis, a report that the Goal is not accepted',
     );
-    expect(acceptance?.requirement).toContain('the verdict MUST be failed');
+    expect(acceptanceTask?.instruction).toContain('the verdict MUST be failed');
     expect(acceptanceWork?.description).toContain('Do not repeat expensive or destructive work');
     expect(acceptanceWork?.description).toContain('Run only the missing or stale checks');
 
@@ -1993,7 +1942,7 @@ describe('GoalService', () => {
 
     const created = await new GoalModel(serverDB, userId).findById(graph.goal.id);
     expect(created?.config?.acceptance?.metrics).toEqual([{ key: 'followers', target: 1000 }]);
-    expect(created?.config?.acceptance?.criteriaIds).toHaveLength(1);
+    expect(created?.config?.acceptance?.criteriaIds).toBeUndefined();
 
     await service.setAcceptanceCriteria(graph.goal.id, []);
 
@@ -2046,10 +1995,9 @@ describe('GoalService', () => {
 
     const updated = await new GoalModel(serverDB, userId).findById(graph.goal.id);
     expect(updated?.config?.acceptance).toMatchObject({
-      criteriaIds: expect.any(Array),
       metrics: [{ key: 'churn', op: 'lte', target: 5 }],
     });
-    expect(updated?.config?.acceptance?.criteriaIds).toHaveLength(1);
+    expect(updated?.config?.acceptance?.criteriaIds).toBeUndefined();
   });
 
   it('records what the measured decision read, not just its verdict', async () => {

@@ -25,6 +25,8 @@ const {
   reviewer,
   runDecision,
   composePrime,
+  issueTask,
+  repairCurrent,
 } = vi.hoisted(() => ({
   rows: new Map<string, AgentOperationItem>(),
   dispatch: vi.fn(),
@@ -37,6 +39,8 @@ const {
   reviewer: vi.fn(),
   runDecision: vi.fn(),
   composePrime: vi.fn(),
+  issueTask: vi.fn(),
+  repairCurrent: vi.fn(),
 }));
 vi.mock('@/database/models/agentOperation', () => ({
   AgentOperationModel: class {
@@ -89,6 +93,15 @@ vi.mock('@/database/models/agentOperation', () => ({
       return true;
     }
   },
+}));
+vi.mock('@/database/models/task', () => ({
+  TaskModel: class {
+    findById = issueTask;
+    isIssueReviewRepairCurrent = repairCurrent;
+  },
+}));
+vi.mock('@/server/services/task/review', () => ({
+  readIssueReview: (task: { config?: { issueReview?: unknown } }) => task.config?.issueReview,
 }));
 vi.mock('@/database/models/verifyRun', () => ({
   VerifyRunModel: class {
@@ -317,6 +330,42 @@ describe('ordinary offline device queue', () => {
     expect(dispatch).not.toHaveBeenCalled();
     expect(sign).not.toHaveBeenCalled();
     expect(rows.get('original-op')?.status).toBe('interrupted');
+  });
+
+  it.each(['cycle changed', 'reviewer changed', 'manual status changed'])(
+    'does not launch an Issue review when %s',
+    async (change) => {
+      const operation = rows.get('original-op')!;
+      operation.taskId = 'task';
+      operation.appContext = { issueReviewCycleId: 'cycle' };
+      operation.metadata = {};
+      issueTask.mockResolvedValue({
+        workflowCategory: change === 'manual status changed' ? 'in_progress' : 'in_review',
+        reviewerAgentId: change === 'reviewer changed' ? 'replacement' : 'agent',
+        config: {
+          issueReview: {
+            cycleId: change === 'cycle changed' ? 'new-cycle' : 'cycle',
+            reviewerOperationId: 'original-op',
+          },
+        },
+      });
+      await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
+      await sweepQueuedDeviceOperations({ db });
+      expect(dispatch).not.toHaveBeenCalled();
+      expect(operation.status).toBe('interrupted');
+    },
+  );
+
+  it('fences an invalidated automatic repair before reconnect launch', async () => {
+    const operation = rows.get('original-op')!;
+    operation.taskId = 'task';
+    operation.appContext = { issueReviewRepairCycleId: 'cycle' };
+    operation.metadata = {};
+    repairCurrent.mockResolvedValue(false);
+    await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
+    await sweepQueuedDeviceOperations({ db });
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(operation.status).toBe('interrupted');
   });
 
   it('retains the Prime registration when reconnect dispatch returns offline again', async () => {

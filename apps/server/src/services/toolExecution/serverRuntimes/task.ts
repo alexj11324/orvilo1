@@ -1,4 +1,8 @@
-import type { EditTaskParams, ListWorkspaceMembersParams } from '@orvilo/builtin-tool-task';
+import type {
+  EditTaskParams,
+  ListWorkspaceMembersParams,
+  SubmitTaskReviewParams,
+} from '@orvilo/builtin-tool-task';
 import {
   normalizeListTasksParams,
   normalizeListWorkspaceMembersParams,
@@ -34,6 +38,7 @@ import { tasks } from '@/database/schemas';
 import { appEnv } from '@/envs/app';
 import { taskRouter } from '@/server/routers/lambda/task';
 import { TaskService } from '@/server/services/task';
+import { submitIssueReview } from '@/server/services/task/review';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
@@ -690,6 +695,55 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       return { content: formatTaskEdited(task.identifier, changes), success: true };
     },
 
+    submitTaskReview: async (args: SubmitTaskReviewParams) => {
+      if (!deps.db || !deps.userId || !agentId || !operationId || !taskId)
+        return { content: 'No authenticated reviewer Agent run.', success: false };
+      if (
+        !['pass', 'fail'].includes(args.verdict) ||
+        (args.verdict === 'fail' && !args.comment?.trim())
+      )
+        return {
+          content: 'A failed review requires a comment explaining what is missing.',
+          success: false,
+        };
+      const task = await taskModel().resolve(args.identifier);
+      const review = task?.config?.issueReview;
+      if (!task || task.id !== taskId || !review)
+        return { content: 'This reviewer run cannot judge the requested Issue.', success: false };
+      try {
+        const result = await submitIssueReview(
+          deps.db,
+          deps.userId,
+          {
+            actorAgentId: agentId,
+            comment: args.comment,
+            cycleId: review.cycleId,
+            operationId,
+            taskId: task.id,
+            verdict: args.verdict,
+          },
+          deps.workspaceId,
+        );
+        return {
+          content: `Issue ${task.identifier} review recorded. Status: ${result.task.workflowCategory}.`,
+          state: {
+            commentId: result.commentId,
+            identifier: task.identifier,
+            stopped: result.stopped,
+            success: true,
+            workflowCategory: result.task.workflowCategory,
+          },
+          success: true,
+        };
+      } catch (error) {
+        console.error('[task-runtime] Issue review verdict was not applied', error);
+        return {
+          content: error instanceof Error ? error.message : 'Issue review verdict was not applied.',
+          success: false,
+        };
+      }
+    },
+
     setTaskVerify: async (args: {
       enabled?: boolean | null;
       identifier: string;
@@ -951,7 +1005,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
 
       const reviewers = await taskCaller().listReviewerAgents();
       return {
-        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. For automatic assignment, choose canVerifyDeliveries=true when available. Unsupported choices remain selectable but wait for a person.`,
+        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. Choose canReviewIssues=true; unsupported runtimes cannot be assigned as reviewer.`,
         state: {
           domainRevision: detail.domainRevision,
           identifier: detail.identifier,

@@ -1215,7 +1215,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(synthesize).not.toHaveBeenCalled();
     });
 
-    it('verify-bound task → does NOT pause-for-review (lets Verify drive completion async)', async () => {
+    it('ordinary Issue bypasses the old Verify gate and waits for its reviewer', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
       // A confirmed verify run exists for this op → onTopicComplete "lets go".
@@ -1244,8 +1244,8 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       );
       // The creator callback is DEFERRED to the verify settle path, not fired here.
       expect(bridge).not.toHaveBeenCalled();
-      // The completion lease fences this generation until Verify settles.
-      expect((service as any).taskModel.releaseRunReservation).not.toHaveBeenCalled();
+      // Ordinary review has its own cycle; release the finished delivery lease.
+      expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalled();
     });
 
     it('does not re-arm a verify-bound heartbeat before Verify releases the lease', async () => {
@@ -1294,7 +1294,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     });
 
     it('drives a Verify verdict that settled before the topic callback', async () => {
-      const task = baseTask({ automationMode: null });
+      const task = baseTask({ automationMode: 'heartbeat' });
       findById.mockResolvedValue(task);
       verifyFindByOperation.mockResolvedValue({
         planConfirmedAt: new Date(),
@@ -1319,7 +1319,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       );
     });
 
-    it('non-verify-bound task → fires the creator callback at onTopicComplete', async () => {
+    it('ordinary Issue defers its creator callback until the reviewer passes', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
       verifyFindByOperation.mockResolvedValue(undefined); // no verify run
@@ -1336,7 +1336,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(bridge).toHaveBeenCalledTimes(1);
+      expect(bridge).not.toHaveBeenCalled();
     });
 
     it('re-drives the original Verify run after a corrective integration settles', async () => {

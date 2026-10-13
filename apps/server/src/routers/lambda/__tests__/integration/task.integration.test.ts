@@ -1911,8 +1911,8 @@ describe('Task Router Integration', () => {
       const choices = await caller.listReviewerAgents();
       expect(choices.data).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ id: testAgentId, canVerifyDeliveries: true }),
-          expect.objectContaining({ id: piAgentId, canVerifyDeliveries: false }),
+          expect.objectContaining({ id: testAgentId, canReviewIssues: true }),
+          expect.objectContaining({ id: piAgentId, canReviewIssues: false }),
         ]),
       );
       const task = await caller.create({ instruction: 'Manual reviewer selection' });

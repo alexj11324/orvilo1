@@ -4,6 +4,8 @@ import { ChatErrorType, RequestTrigger } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NotifyAgentInterventionRequiredParams } from '@/business/server/agent-run/agentInterventionReview';
+import { AgentOperationModel } from '@/database/models/agentOperation';
+import { TaskModel } from '@/database/models/task';
 import * as agentSignalService from '@/server/services/agentSignal';
 import * as verifyServices from '@/server/services/verify';
 import { registerWorksForOperation } from '@/server/services/workRegistration';
@@ -58,6 +60,14 @@ vi.mock('@/server/services/workRegistration', () => ({
 const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const buildLifecycle = () => new CompletionLifecycle({} as any, 'user-1');
+
+beforeEach(() => {
+  vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(null);
+  vi.spyOn(TaskModel.prototype, 'findById').mockResolvedValue({
+    automationMode: 'heartbeat',
+  } as never);
+});
+afterEach(() => vi.restoreAllMocks());
 
 describe('isSuccessLikeCompletionReason', () => {
   // Regression: file-Work registration was gated on `reason === 'done'` alone,
@@ -660,6 +670,15 @@ describe('CompletionLifecycle.dispatchHooks — verify plan race', () => {
     settle();
     await dispatch;
     expect(runVerifySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not instantiate the old acceptance plan for an ordinary Issue', async () => {
+    vi.spyOn(TaskModel.prototype, 'findById').mockResolvedValue({ automationMode: null } as never);
+    const instantiateSpy = vi
+      .spyOn(verifyServices, 'instantiateVerifyPlanOnStart')
+      .mockResolvedValue(undefined);
+    await buildLifecycle().recordStart({ operationId: 'issue-op', taskId: 'task-1' });
+    expect(instantiateSpy).not.toHaveBeenCalled();
   });
 
   it('does not register an instantiation for a repair / verifier sub-op (parentOperationId set)', async () => {

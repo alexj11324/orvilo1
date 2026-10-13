@@ -220,6 +220,7 @@ export class TaskService {
   async createTask(input: CreateTaskInput, mutation: TaskMutationContext = {}): Promise<TaskItem> {
     await this.assertAssigneeAgentBelongsToUser(input.assigneeAgentId);
     if (input.reviewerAgentId) {
+      await this.assertReviewerCanReview(input.reviewerAgentId);
       await this.assertAssigneeAgentBelongsToUser(input.reviewerAgentId);
       await assertCanUseWorkspaceAgent({
         agentId: input.reviewerAgentId,
@@ -301,6 +302,10 @@ export class TaskService {
       }
     }
 
+    if (task.workflowCategory === 'in_review') {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, task.id, {}, this.workspaceId);
+    }
     return task;
   }
 
@@ -748,6 +753,14 @@ export class TaskService {
       });
     }
     options?.onStatusCommitted?.();
+    if (
+      task.workflowCategory === 'in_review' &&
+      resolved.workflowCategory !== 'in_review' &&
+      actor
+    ) {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, task.id, {}, this.workspaceId);
+    }
 
     // A person's plain move is logged inside `updateWithLog`. Every other
     // write went through an unlogged writer: the system reacting to a run
@@ -768,7 +781,7 @@ export class TaskService {
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
     // must never break the status change itself.
-    if (TERMINAL_TASK_STATUSES.has(status)) {
+    if (status !== 'completed' && TERMINAL_TASK_STATUSES.has(status)) {
       await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
         task.id,
       );
@@ -850,32 +863,42 @@ export class TaskService {
       }
     }
 
-    const unlocked: string[] = [];
-    const paused: string[] = [];
+    const completion =
+      status === 'completed'
+        ? await this.finalizeCompletedTask(task)
+        : status === 'canceled'
+          ? await new TaskRunnerService(this.db, this.userId, this.workspaceId)
+              .cascadeOnCompletion(task.id)
+              .then((cascade) => ({ paused: cascade.paused, unlocked: cascade.started }))
+          : { paused: [], unlocked: [] };
+    return { ...completion, task };
+  }
+
+  /** Finish a committed Done transition without issuing a second status mutation. */
+  async finalizeCompletedTask(task: TaskItem) {
+    const current = await this.taskModel.findById(task.id);
+    if (current?.workflowCategory !== 'done') return { paused: [], unlocked: [] };
+    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+      task.id,
+    );
     let allSubtasksDone = false;
     let checkpointTriggered = false;
-
-    if (status === 'completed' || status === 'canceled') {
-      if (status === 'completed' && task.parentTaskId) {
-        const parentTask = await this.taskModel.findById(task.parentTaskId);
-        if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
-          await this.taskModel.updateStatus(parentTask.id, 'paused');
-          checkpointTriggered = true;
-        }
-        allSubtasksDone = await this.taskModel.areAllSubtasksCompleted(task.parentTaskId);
+    if (task.parentTaskId) {
+      const parentTask = await this.taskModel.findById(task.parentTaskId);
+      if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
+        await this.taskModel.updateStatus(parentTask.id, 'paused');
+        checkpointTriggered = true;
       }
-
-      // Unlock blocked tasks and actually kick them off via the runner.
-      const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
-      const cascade = await runner.cascadeOnCompletion(task.id);
-      unlocked.push(...cascade.started);
-      paused.push(...cascade.paused);
+      allSubtasksDone = await this.taskModel.areAllSubtasksCompleted(task.parentTaskId);
     }
-
+    const cascade = await new TaskRunnerService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).cascadeOnCompletion(task.id);
     return {
-      paused,
-      task,
-      unlocked,
+      paused: cascade.paused,
+      unlocked: cascade.started,
       ...(checkpointTriggered && { checkpointTriggered: true }),
       ...(allSubtasksDone && { allSubtasksDone: true, parentTaskId: task.parentTaskId }),
     };
@@ -1227,6 +1250,18 @@ export class TaskService {
     return { failed, kickedOff, plan };
   }
 
+  private async assertReviewerCanReview(agentId: string): Promise<void> {
+    const agent = await this.agentModel.getAgentConfigForExecution(agentId);
+    const { agentCanMountBuiltinToolSurface } =
+      await import('../aiAgent/pipeline/resolveExecutionBinding');
+    if (!agent || !agentCanMountBuiltinToolSurface(agent, agent.model)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Reviewer runtime cannot mount submitTaskReview.',
+      });
+    }
+  }
+
   private async assertAssigneeAgentBelongsToUser(assigneeAgentId?: string | null): Promise<void> {
     if (!assigneeAgentId) return;
     // `existsById` already applies the workspace + visibility predicate, so a
@@ -1353,6 +1388,7 @@ export class TaskService {
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (data.reviewerAgentId) {
+      await this.assertReviewerCanReview(data.reviewerAgentId);
       await this.assertAssigneeAgentBelongsToUser(data.reviewerAgentId);
       await assertCanUseWorkspaceAgent({
         agentId: data.reviewerAgentId,
@@ -1377,7 +1413,7 @@ export class TaskService {
       ? { ...data, runReservationExpiresAt: null, runReservationId: null }
       : data;
 
-    return this.withAssigneeUserLock(data.assigneeUserId, (db) =>
+    const result = await this.withAssigneeUserLock(data.assigneeUserId, (db) =>
       new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
         taskId,
         guardedData,
@@ -1385,6 +1421,14 @@ export class TaskService {
         mutation,
       ),
     );
+    if (
+      result?.workflowCategory === 'in_review' &&
+      (data.workflowCategory === 'in_review' || data.reviewerAgentId)
+    ) {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, result.id, {}, this.workspaceId);
+    }
+    return result;
   }
 
   /**
@@ -2082,6 +2126,18 @@ export class TaskService {
                 stub('', actorKind)
               : // Genuinely nobody: the runner's system fallback.
                 undefined;
+
+        if (log.type === 'review_waiting' && typeof log.payload?.reason === 'string') {
+          return [
+            {
+              author,
+              id: log.id,
+              time: toISO(log.createdAt),
+              type: 'review_waiting',
+              reviewWaiting: { reason: log.payload.reason },
+            },
+          ];
+        }
 
         const propertyChange = activityLogPropertyChange(
           withReadableContainerNames(log, readableContainers),

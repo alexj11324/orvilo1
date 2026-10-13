@@ -43,6 +43,7 @@ import type {
   EditTaskParams,
   ListWorkspaceMembersParams,
   RunTasksItemResult,
+  SubmitTaskReviewParams,
   UpdateTaskCommentParams,
 } from '../../types';
 import { TaskApiName } from '../../types';
@@ -67,6 +68,7 @@ const LIST_MUTATING_APIS = new Set<string>([
   TaskApiName.runTask,
   TaskApiName.runTasks,
   TaskApiName.setTaskSchedule,
+  TaskApiName.submitTaskReview,
   TaskApiName.updateTaskStatus,
 ]);
 
@@ -77,6 +79,7 @@ const DETAIL_MUTATING_APIS = new Set<string>([
   TaskApiName.runTask,
   TaskApiName.setTaskSchedule,
   TaskApiName.setTaskVerify,
+  TaskApiName.submitTaskReview,
   TaskApiName.updateTaskComment,
   TaskApiName.updateTaskStatus,
   TaskApiName.viewTask,
@@ -626,6 +629,15 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
       };
     }
   };
+
+  submitTaskReview = async (_params: SubmitTaskReviewParams): Promise<BuiltinToolResult> => ({
+    content: 'Review verdicts must be submitted by the authenticated reviewer Agent runtime.',
+    error: {
+      message: 'An authenticated reviewer Agent run is required.',
+      type: 'ReviewerRunRequired',
+    },
+    success: false,
+  });
 
   setTaskVerify = async (
     params: {

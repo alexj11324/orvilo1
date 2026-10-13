@@ -3422,7 +3422,7 @@ export class TaskModel {
         });
         await model.db.insert(taskActivities).values({
           taskId: id,
-          userId: task.createdByUserId,
+          userId: model.userId,
           workspaceId: task.workspaceId,
           visibility: task.visibility,
           type: 'review_waiting',
@@ -3454,7 +3454,11 @@ export class TaskModel {
       );
   }
 
-  async isIssueReviewRepairCurrent(id: string, input: { cycleId: string }, tx?: OrviloDatabase) {
+  async isIssueReviewRepairCurrent(
+    id: string,
+    input: { cycleId: string },
+    tx?: OrviloDatabase,
+  ): Promise<boolean> {
     if (tx) {
       const [task] = await tx
         .select(taskRowColumns)

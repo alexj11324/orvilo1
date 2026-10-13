@@ -2,12 +2,16 @@ import { normalizeListTasksParams, UNFINISHED_TASK_STATUSES } from '@orvilo/buil
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskDependencyError } from '@/database/models/taskDependency';
+import type * as taskReview from '@/server/services/task/review';
 
 import { createTaskRuntime, taskRuntime } from '../task';
 
 const verifyMocks = vi.hoisted(() => ({ createCriteriaFromDrafts: vi.fn() }));
 const reviewMocks = vi.hoisted(() => ({ submitIssueReview: vi.fn() }));
-vi.mock('@/server/services/task/review', () => reviewMocks);
+vi.mock('@/server/services/task/review', async (importOriginal) => ({
+  ...(await importOriginal<typeof taskReview>()),
+  ...reviewMocks,
+}));
 const automationInputMocks = vi.hoisted(() => ({ findByTaskId: vi.fn() }));
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn().mockImplementation(function () {

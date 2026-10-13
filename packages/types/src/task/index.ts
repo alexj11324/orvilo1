@@ -1488,7 +1488,7 @@ export interface TaskDetailData {
   automationMode?: TaskAutomationMode | null;
   capabilities?: { canEdit: boolean; canDelete: boolean };
   checkpoint?: CheckpointConfig;
-  config?: Record<string, unknown>;
+  config?: Record<string, unknown> & TaskConfig;
   createdAt?: string;
   /** Creator of the task; used by the UI to gate creator-only actions (e.g. make private). */
   createdByUserId?: string | null;

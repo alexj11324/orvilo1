@@ -16,6 +16,7 @@ import type {
   AgentOperationAppContext,
   AgentOperationError,
   AgentOperationInterruption,
+  AgentOperationItem,
   NewAgentOperation,
 } from '../schemas/agentOperations';
 import { agentOperations } from '../schemas/agentOperations';
@@ -568,7 +569,7 @@ export class AgentOperationModel {
    * it. Creator-facing read entry points must use
    * {@link AgentOperationModel.findOwnOperationById} instead.
    */
-  async findById(operationId: string) {
+  async findById(operationId: string): Promise<AgentOperationItem | null> {
     const [row] = await this.db
       .select()
       .from(agentOperations)

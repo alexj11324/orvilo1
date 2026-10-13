@@ -38,7 +38,7 @@ import { tasks } from '@/database/schemas';
 import { appEnv } from '@/envs/app';
 import { taskRouter } from '@/server/routers/lambda/task';
 import { TaskService } from '@/server/services/task';
-import { submitIssueReview } from '@/server/services/task/review';
+import { readIssueReview, submitIssueReview } from '@/server/services/task/review';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
@@ -707,7 +707,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
           success: false,
         };
       const task = await taskModel().resolve(args.identifier);
-      const review = task?.config?.issueReview;
+      const review = task && readIssueReview(task);
       if (!task || task.id !== taskId || !review)
         return { content: 'This reviewer run cannot judge the requested Issue.', success: false };
       try {

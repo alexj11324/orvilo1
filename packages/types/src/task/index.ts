@@ -1550,6 +1550,8 @@ export interface TaskDetailData {
   /** Current admission gate reason, not the execution state of an existing run. */
   orchestrationAdmissionReason?: 'caid_dispatch_disabled' | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
+  /** Durable reason why execution is parked. */
+  parkedReason?: string | null;
   priority?: number | null;
   /** Owning project; drives the automation detail's project picker. */
   projectId?: string | null;

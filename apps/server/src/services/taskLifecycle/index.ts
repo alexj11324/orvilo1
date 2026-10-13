@@ -52,6 +52,7 @@ import {
   settleTaskExecution,
   type SettleTaskExecutionInput,
 } from '@/server/services/taskSettlement';
+import { after } from '@/server/utils/scheduleAfterResponse';
 
 import {
   isTrivialAssistantContent,
@@ -331,6 +332,7 @@ export class TaskLifecycleService {
     let verifyBound = false;
     let verifySettled = false;
     let lifecycleFailed = false;
+    let enrichTopic: (() => Promise<void>) | undefined;
     try {
       const { TaskIntegrationService } = await import('@/server/services/taskIntegration');
       const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
@@ -371,7 +373,7 @@ export class TaskLifecycleService {
         }
 
         // 2. Generate handoff summary + topic title (best-effort LLM synthesis).
-        if (topicId && lastAssistantContent) {
+        if (currentTask?.automationMode && topicId && lastAssistantContent) {
           await this.generateHandoff(
             taskId,
             taskIdentifier,
@@ -381,10 +383,7 @@ export class TaskLifecycleService {
           );
         }
 
-        // 2b. Persist the raw last message as the run card's result.
-        //     Done independently of (and after) generateHandoff via a jsonb_set
-        //     patch, so `handoff.content` is written even when the summary LLM in
-        //     step 2 throws — otherwise a completed run would show no result.
+        // Persist the raw result before settlement; ACP enrichment may wait for an offline device.
         if (topicId && lastAssistantContent) {
           try {
             await this.taskTopicModel.updateHandoffContent(taskId, topicId, lastAssistantContent);
@@ -466,41 +465,38 @@ export class TaskLifecycleService {
           if (integrationOutcome === 'hold' || integrationOutcome === 'stale') return;
         }
 
-        // 3. Delivery acceptance now runs through Verify: the verify
-        //    run settles asynchronously (agent verifier) and drives the task to its
-        //    terminal state via `driveTaskFromVerify`. The legacy eval-rubric
-        //    auto-review is removed; this branch only lets the task go on to the
-        //    brief + post-tick transition, and the verify-bound check below makes it
-        //    "let go" so verify owns the completion decision.
+        if (topicId && lastAssistantContent) {
+          enrichTopic = async () => {
+            if (!currentTask?.automationMode)
+              await this.generateHandoff(
+                taskId,
+                taskIdentifier,
+                topicId,
+                lastAssistantContent,
+                currentTask,
+              );
+            // Goal-loop rounds stay silent; retain handoff-before-brief ordering.
+            const isGoalLoopRound =
+              currentTask &&
+              (await new GoalModel(this.db, this.userId, this.workspaceId).findByGraphTask(
+                currentTask.id,
+              ));
+            if (!isGoalLoopRound && getBriefMode(currentTask) === 'auto' && currentTask) {
+              await this.synthesizeTopicBrief(
+                taskId,
+                taskIdentifier,
+                topicId,
+                lastAssistantContent,
+                reason,
+                currentTask,
+              );
+            }
+          };
+        }
 
-        // 4. Synthesize a programmatic brief for the user (auto mode only).
-        //    The agent-driven `createBrief` tool path stays the default until
-        //    the GrowthBook flag flips. See for the rollout plan.
-        //
-        //    Goal Task rounds are deliberately silent. The coordinator can run
-        //    many attempts on one Task before it converges, and a card per round
-        //    buries the one moment that actually needs the user — the decision
-        //    gate the coordinator opens when the attempt budget runs out.
-        const isGoalLoopRound =
-          !!currentTask &&
-          !!(await new GoalModel(this.db, this.userId, this.workspaceId).findByGraphTask(
-            currentTask.id,
-          ));
-        if (
-          !isGoalLoopRound &&
-          getBriefMode(currentTask) === 'auto' &&
-          currentTask &&
-          topicId &&
-          lastAssistantContent
-        ) {
-          await this.synthesizeTopicBrief(
-            taskId,
-            taskIdentifier,
-            topicId,
-            lastAssistantContent,
-            reason,
-            currentTask,
-          );
+        if (currentTask?.automationMode && enrichTopic) {
+          await enrichTopic();
+          enrichTopic = undefined;
         }
 
         // 5. Default post-tick transition.
@@ -863,6 +859,8 @@ export class TaskLifecycleService {
         const { driveTaskFromVerify } = await import('../verify/settle');
         await driveTaskFromVerify(this.db, this.userId, params.operationId, this.workspaceId);
       }
+      // Ordinary Issue enrichment must not hold settlement or the caller's Verify scheduling.
+      if (enrichTopic) after(enrichTopic);
       if (!verifyBound) {
         await this.markAutomationResultReady(params);
         await this.persistAutomationResult(params);
@@ -1281,10 +1279,12 @@ export class TaskLifecycleService {
         await this.topicModel.update(topicId, { title: handoff.title });
       }
 
-      // Store handoff in task_topics dedicated fields. `handoff.content` (the raw
-      // last message) is persisted separately in onTopicComplete so it survives
-      // even when this LLM synthesis throws.
-      await this.taskTopicModel.updateHandoff(taskId, topicId, handoff);
+      // Preserve the raw result when deferred synthesis replaces the handoff JSONB.
+      // onTopicComplete also writes it before synthesis so it survives a failed judgment.
+      await this.taskTopicModel.updateHandoff(taskId, topicId, {
+        ...handoff,
+        content: lastAssistantContent,
+      });
 
       log('handoff generated for topic %s: title=%s', topicId, handoff.title);
     } catch (e) {

@@ -48,7 +48,7 @@ export const requestReviewerAssignment = async (
       prompt: `Issue ${task.identifier} delivered and is waiting for a reviewer Agent. Call viewTask to read it and the usable reviewer Agents. Choose one, including yourself if appropriate, then call editTask with reviewerAgentId. Do not rerun the delivered task.`,
       userInterventionConfig: { approvalMode: 'headless' },
     });
-    if (!result.success) throw new Error(result.error?.message ?? 'Orchestrator could not run');
+    if (!result.success) throw new Error(result.error ?? 'Orchestrator could not run');
     if (result.status === 'idle' && !result.autoStarted) {
       await model.updateWithLog(
         current.id,

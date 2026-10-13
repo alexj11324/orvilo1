@@ -105,12 +105,14 @@ export const isDefinitiveDeviceOffline = (result: {
   error?: string;
   errorCode?: string;
   success: boolean;
-}): boolean =>
-  !result.success &&
-  [
-    DeviceTransportErrorCode.DeviceNotFound,
-    DeviceTransportErrorCode.DeviceChannelUnavailable,
-  ].includes((result.errorCode ?? result.error) as DeviceTransportErrorCode);
+}): boolean => {
+  const code = result.errorCode ?? result.error;
+  return (
+    !result.success &&
+    (code === DeviceTransportErrorCode.DeviceNotFound ||
+      code === DeviceTransportErrorCode.DeviceChannelUnavailable)
+  );
+};
 
 /** Called only for a definitive offline-before-launch result. Never parks an unknown ACK. */
 export async function queueOfflineDeviceRun(

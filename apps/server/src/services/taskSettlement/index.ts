@@ -109,7 +109,11 @@ export const settleTaskExecution = async (
   });
 
   const deliveredIssue =
-    input.outcome === 'succeeded' && !task.automationMode && !context?.blocked && !unresolvedInput;
+    input.outcome === 'succeeded' &&
+    !task.automationMode &&
+    !context?.blocked &&
+    !unresolvedInput &&
+    !context?.manualAcceptance;
   if (deliveredIssue) {
     plan = {
       ...plan,
@@ -126,7 +130,11 @@ export const settleTaskExecution = async (
     plan = { ...plan, workflowCategory: 'in_progress' };
     input = { ...input, context: { ...context, error: task.error } };
   }
-  const waitingForReviewer = !task.reviewerAgentId && plan.workflowCategory === 'in_review';
+  const waitingForReviewer =
+    !task.reviewerAgentId &&
+    !context?.manualAcceptance &&
+    (plan.workflowCategory === 'in_review' ||
+      (input.verifyOutcome === 'passed' && !task.automationMode && !unresolvedInput));
   if (waitingForReviewer) {
     plan = {
       ...plan,

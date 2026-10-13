@@ -212,6 +212,7 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z
         'none',
         'priority',
         'project',
+        'reviewer',
         'status',
         'workflowCategory',
       ])
@@ -253,6 +254,7 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z
         'none',
         'priority',
         'project',
+        'reviewer',
         'status',
         'workflowCategory',
       ])
@@ -487,6 +489,7 @@ export const workAttentionRouter = router({
             'none',
             'priority',
             'project',
+            'reviewer',
             'status',
             'workflowCategory',
           ])

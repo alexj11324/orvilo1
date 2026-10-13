@@ -993,7 +993,8 @@ describe('resolveAgentConfig', () => {
       });
 
       expect(result.plugins).toEqual([TaskIdentifier, 'plugin-a', 'plugin-b']);
-      expect(result.agentConfig.systemRole).toContain('Task agent system prompt');
+      expect(result.agentConfig.systemRole).toContain('You are a helpful assistant');
+      expect(result.agentConfig.systemRole).not.toContain('Task agent system prompt');
       expect(result.isBuiltinAgent).toBe(false);
     });
 
@@ -1008,7 +1009,7 @@ describe('resolveAgentConfig', () => {
       expect(result.plugins).toEqual([TaskIdentifier, 'other-plugin']);
     });
 
-    it('should not duplicate injection when task-agent itself is used in task scope', () => {
+    it('treats a legacy task-agent slug as an ordinary Agent in task scope', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
         () => 'task-agent',
       );
@@ -1024,9 +1025,9 @@ describe('resolveAgentConfig', () => {
       });
 
       expect(result.plugins.filter((p) => p === TaskIdentifier)).toHaveLength(1);
-      expect(result.agentConfig.systemRole).toBe('Task agent system prompt');
-      expect(result.isBuiltinAgent).toBe(true);
-      expect(result.slug).toBe('task-agent');
+      expect(result.agentConfig.systemRole).toContain('You are a helpful assistant');
+      expect(result.agentConfig.systemRole).not.toContain('Task agent system prompt');
+      expect(result.isBuiltinAgent).toBe(false);
     });
   });
 

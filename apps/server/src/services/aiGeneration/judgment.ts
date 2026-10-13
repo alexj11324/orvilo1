@@ -990,7 +990,6 @@ export const runAcpJudgment = async <T = unknown>(
         ...binding,
         appContext: {
           ...(initialTopicMetadata ? { initialTopicMetadata } : {}),
-          skipTaskVerification: true,
           judgment: {
             attempt: judgment.attempt,
             budget: { maxSteps, maxWaitMs: timeoutMs },
@@ -1002,6 +1001,7 @@ export const runAcpJudgment = async <T = unknown>(
           taskId: judgment.taskId ?? null,
         },
         autoStart: true,
+        skipTaskVerification: true,
         disableTools: judgment.outputMode !== 'tool',
         fileIds: judgment.fileIds,
         instructions,

@@ -24,24 +24,25 @@ vi.mock('@/server/services/aiGeneration/judgment', () => ({ runAcpJudgment: mock
 
 beforeEach(() => vi.clearAllMocks());
 describe('ACP planning without a builtin provider (#623)', () => {
-  it('drafts acceptance criteria using the selected ACP agent and a tool submission', async () => {
+  it('drafts acceptance criteria through the selected ACP judgment binding', async () => {
     const data = { title: 'Ship it', instruction: 'Publish the release', criteria: [] };
-    mocks.run.mockResolvedValue({ data });
+    mocks.generate.mockResolvedValue(data);
     await expect(
       new GoalCriteriaGeneratorService({} as never, 'user', 'workspace').generatePlan({
         agentId: 'codex',
         goal: 'Ship it',
       }),
     ).resolves.toEqual(data);
-    expect(mocks.run).toHaveBeenCalledWith(
-      {},
-      'user',
+    expect(mocks.generate).toHaveBeenCalledWith(
+      expect.objectContaining({ schema: expect.any(Object) }),
       expect.objectContaining({
-        judgment: expect.objectContaining({ binding: { agentId: 'codex' }, outputMode: 'tool' }),
-        workspaceId: 'workspace',
+        judgment: expect.objectContaining({
+          binding: { agentId: 'codex', allowEnvFallback: false },
+        }),
+        kind: 'judgment',
       }),
     );
-    expect(mocks.generate).not.toHaveBeenCalled();
+    expect(mocks.run).not.toHaveBeenCalled();
     expect(mocks.settings).not.toHaveBeenCalled();
   });
   it('uses the same ACP round for exploration', async () => {

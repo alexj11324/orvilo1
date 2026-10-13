@@ -4893,7 +4893,8 @@ export class TaskModel {
    */
   async updateWithLog(
     id: string,
-    data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>>,
+    data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>> &
+      Pick<TaskStatusTransitionExtra, 'parkedReason'>,
     actor: { agentId?: string | null; userId?: string | null },
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {

@@ -5,6 +5,7 @@ import { VerifyToolApiName } from './types';
 export const VerifyToolIdentifier = 'orvilo-verify';
 
 export const VerifyToolManifest: BuiltinToolManifest = {
+  systemRole: '',
   api: [
     {
       description:

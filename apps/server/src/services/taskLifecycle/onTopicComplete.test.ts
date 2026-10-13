@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { TaskLifecycleService } from './index';
 
@@ -271,6 +272,73 @@ describe('TaskLifecycleService.onTopicComplete', () => {
   afterEach(() => {
     mockBrandingUrl.subscription = undefined;
     vi.restoreAllMocks();
+  });
+
+  it('releases completion for Verify while administrative handoff generation is blocked', async () => {
+    findById.mockResolvedValue(baseTask({ automationMode: null }));
+    verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'planned' });
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const handoff = vi.spyOn(service as any, 'generateHandoff').mockReturnValue(blocked);
+    const brief = vi.spyOn(service as any, 'synthesizeTopicBrief').mockResolvedValue(undefined);
+    const persistContent = vi.fn().mockResolvedValue(undefined);
+    (service as any).taskTopicModel.updateHandoffContent = persistContent;
+    let completed = false;
+    const completion = service
+      .onTopicComplete({
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+        operationId: 'op-1',
+        reason: 'done',
+        lastAssistantContent: 'Delivered the report',
+      })
+      .then(() => {
+        completed = true;
+      });
+    try {
+      await vi.waitFor(() => expect(completed).toBe(true), { timeout: 1000 });
+      expect(persistContent).toHaveBeenCalledWith('task-1', 'topic-1', 'Delivered the report');
+      expect(handoff).toHaveBeenCalledOnce();
+      expect(brief).not.toHaveBeenCalled();
+    } finally {
+      release();
+      await completion;
+    }
+    await vi.waitFor(() => expect(brief).toHaveBeenCalledOnce());
+  });
+
+  it('preserves raw output after deferred handoff replaces the summary', async () => {
+    findById.mockResolvedValue(baseTask({ automationMode: null }));
+    verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'planned' });
+    vi.spyOn(AiGenerationService.prototype, 'generateObject').mockResolvedValue({
+      summary: 'Analyzed',
+    });
+    vi.spyOn(service as any, 'synthesizeTopicBrief').mockResolvedValue(undefined);
+    let stored: Record<string, unknown> = {};
+    (service as any).taskTopicModel.updateHandoffContent.mockImplementation(
+      async (_taskId: string, _topicId: string, content: string) => {
+        stored.content = content;
+      },
+    );
+    const updateHandoff = vi.fn(
+      async (_taskId: string, _topicId: string, handoff: Record<string, unknown>) => {
+        stored = handoff;
+      },
+    );
+    (service as any).taskTopicModel.updateHandoff = updateHandoff;
+    await service.onTopicComplete({
+      taskId: 'task-1',
+      taskIdentifier: 'TASK-1',
+      topicId: 'topic-1',
+      operationId: 'op-1',
+      reason: 'done',
+      lastAssistantContent: 'Delivered the full report',
+    });
+    await vi.waitFor(() => expect(updateHandoff).toHaveBeenCalledOnce());
+    expect(stored).toMatchObject({ summary: 'Analyzed', content: 'Delivered the full report' });
   });
 
   it('does not publish a result until handoff and integration have both finished', async () => {
@@ -688,7 +756,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     it('retains the completion lease when lifecycle processing throws so delivery can retry', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
-      vi.spyOn(service as any, 'generateHandoff').mockRejectedValue(new Error('process crashed'));
+      integrateOnComplete.mockRejectedValueOnce(new Error('process crashed'));
 
       await expect(
         service.onTopicComplete({

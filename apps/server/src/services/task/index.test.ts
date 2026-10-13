@@ -420,6 +420,7 @@ describe('TaskService', () => {
           id: 'task_001',
           identifier: 'TASK-1',
           totalTopics: 0,
+          parkedReason: 'review_required',
         });
         mockTaskModel.findAllDescendants.mockResolvedValue([]);
         mockTaskModel.getDependencies.mockResolvedValue([]);
@@ -438,6 +439,7 @@ describe('TaskService', () => {
           orchestrationAdmission: admission,
           orchestrationAdmissionReason: reason,
           dispatchWaitingReason: 'caid_dispatch_disabled',
+          parkedReason: 'review_required',
         });
         expect(admissionFlags.read).toHaveBeenCalledWith(userId);
       },

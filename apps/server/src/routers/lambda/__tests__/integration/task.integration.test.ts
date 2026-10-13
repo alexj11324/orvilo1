@@ -1986,6 +1986,8 @@ describe('Task Router Integration', () => {
       });
       const view = await runtime.viewTask({ identifier: task.data.identifier });
       expect(view.content).toContain(`Domain revision: ${before?.domainRevision}`);
+      expect(view.content).toContain(testAgentId);
+      expect(view.content).toContain('Set reviewerAgentId with editTask');
       await runtime.editTask({
         identifier: task.data.identifier,
         assigneeUserId: userId,

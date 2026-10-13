@@ -428,6 +428,8 @@ describe('TaskDetailSliceAction', () => {
         taskDetailMap: {
           'T-1': {
             identifier: 'T-1',
+            instruction: '',
+            status: 'paused',
             reviewerAgentId: 'reviewer-1',
             workflowCategory: 'in_review',
           },

@@ -1,0 +1,163 @@
+{
+  "artifactAllocatedBytes": 673882112,
+  "beforeImage": "014010ccf intermediate candidate before mobile layout repair; no claim that this is original legacySDK before image.",
+  "browserErrors": [],
+  "ciRuns": ["38405881933", "38405881578", "38405881972"],
+  "codeHeadAll20ChecksSuccessful": true,
+  "coverageBoundary": "Real current source components on a component fixture using actual application theme/locale/query providers and Desktop renderer configuration. Not a routed/full desktop app, backend, local CLI, SDK5.56 upgrade or wholeGoal acceptance. Service transports are in-memory fixtures; approval hooks veto execution.",
+  "elapsedSeconds": 111.16464107299907,
+  "exitCode": 0,
+  "fixturesOnly": true,
+  "independentFinalOpenFindings": [],
+  "initialMotionPrimingLimit": "Initial Antd MotionWrapper first-off remount already existed before this diff. Tests prime before creating actionable approval and then prove live user/OS gate identity. First-toggle draft retention is not proved.",
+  "memoryEventsDelta": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "moduleCSSKeptViaActualLiveExports": true,
+  "nativeChecks": 305,
+  "networkErrors": [],
+  "old014Correction": "014 passed the checks it executed, but its side-effect-only CSS entry dropped module rules. Full module paint claim withdrawn;015 retains actual module mappings and asserts identical scoped classes/CSSOM and before-after computed styles.",
+  "operationalArtifactCapBytes": 1073741824,
+  "ownedProcessClosure": true,
+  "pendingGoalsOutsideThisScope": [
+    "Source47 font/radius/Avatar/Code roles",
+    "new root20 width behavior",
+    "public SDK locale/reset/SSR closure",
+    "wholeGoal acceptance"
+  ],
+  "plannedScreenshots": 52,
+  "priorCapBytes": 536870912,
+  "priorCapDeviation": "Root raised its own generated artifact cap to1GiB after an old512MiB cache-cap failure, using measured available memory/disk. Heap2048/time480 and original admission/live floors preserved. Not OOM/CI bypass.",
+  "productTree": "afa966606262499d5110297d5168afb49c60e787",
+  "publicationDoesNotChangeProductSource": true,
+  "rawReports": [
+    {
+      "path": "runtime-report.json",
+      "bytes": 246840,
+      "sha256": "e917aa507f33cfb60ac144aebe88a0f291f6c2c465a5d01113adbc05e898e906"
+    },
+    {
+      "path": "execution.json",
+      "bytes": 2275,
+      "sha256": "a2540e520eb5dcec162dd719c06af32970d44e7cc26c9168b6d63f99b6a09d70"
+    },
+    {
+      "path": "source-binding.json",
+      "bytes": 853402,
+      "sha256": "d622264e4a3f37db33db7afb48304c637277125fbeb264d5ea71dae446ef2b5a"
+    },
+    {
+      "path": "actual-revision.json",
+      "bytes": 211,
+      "sha256": "3da0bee2ba58e0516c5505a7890ddeab917c7c10b96d0ee62e33313cd6c16589"
+    },
+    {
+      "path": "actual-package-identities.json",
+      "bytes": 4021,
+      "sha256": "b393b3d2fe3092811b17a00db534351bd39933ab5e172195ded6389b70bb0049"
+    },
+    {
+      "path": "production-css-proof.json",
+      "bytes": 4337,
+      "sha256": "fb7bb60923fcf7d36152bc63206d54e1f79398d0d3ccd9f34d5f8648b1fd45d4"
+    },
+    {
+      "path": "actual-production-module-map.json",
+      "bytes": 13584,
+      "sha256": "ee4adbeae99eeedb9af1f329bf8b09804adc684181dbedd337c3c95136714408"
+    },
+    {
+      "path": "actual-production-css-replacement.json",
+      "bytes": 50057528,
+      "sha256": "a1325f21b0d277f5f95b7dfbc2ade131a0e9b40702cc43fc4efe092b85694265"
+    },
+    {
+      "path": "actual-pre-electron-warmup.json",
+      "bytes": 7587,
+      "sha256": "08f6d30721d8d400ca2aaa61e05bde0b20bf82e5913fb7ea126cd1e4573366a0"
+    },
+    {
+      "path": "frozen-harness-inputs.json",
+      "bytes": 1649,
+      "sha256": "300555ea1de43f61a32749081049fe3eade269b5fbe2335c918792b34287579f"
+    },
+    {
+      "path": "harness-hashes.json",
+      "bytes": 1649,
+      "sha256": "37f533d372b294dd3e343a89de6f8abbe865e3bc6b3da597b0b4ef96565d72ff"
+    },
+    {
+      "path": "actual-electron-main-process.json",
+      "bytes": 946,
+      "sha256": "431b8a0665f2e679c8ddac61be0488ad178993ce16aca5ad66ba15fca7fbd185"
+    },
+    {
+      "path": "actual-electron-web-preferences.json",
+      "bytes": 428,
+      "sha256": "7df4c9dbbe765771f85c6f2783bfcd2ad5cbbd07ab54bb02c3b43eca15016663"
+    },
+    {
+      "path": "light-390-16-model-assignment-layout.json",
+      "bytes": 7622,
+      "sha256": "ea81f730df5362e8010acb5dcc29ba003a2d3d131b7ae4f63a235b135e9483a0"
+    },
+    {
+      "path": "dark-390-16-model-assignment-layout.json",
+      "bytes": 7622,
+      "sha256": "ea81f730df5362e8010acb5dcc29ba003a2d3d131b7ae4f63a235b135e9483a0"
+    },
+    {
+      "path": "light-1240-16-model-assignment-layout.json",
+      "bytes": 7806,
+      "sha256": "ec1e55b6abd12df1fccdd59bd76ee38daab355d513be6d4ee20708bf71382245"
+    },
+    {
+      "path": "dark-1240-16-model-assignment-layout.json",
+      "bytes": 7806,
+      "sha256": "ec1e55b6abd12df1fccdd59bd76ee38daab355d513be6d4ee20708bf71382245"
+    },
+    {
+      "path": "light-1240-16-actual-audio-state.json",
+      "bytes": 670,
+      "sha256": "3e0f29a6d77466a12b430d1f9951a70bbc5c07589dcb51bfb9c6300371df9f60"
+    },
+    {
+      "path": "dark-1240-16-actual-audio-state.json",
+      "bytes": 671,
+      "sha256": "68e61046a9076e42769dcfadc325217cab028d9c2514cb7d5b28024690b3df38"
+    },
+    {
+      "path": "light-1240-16-actual-code-clipboard.json",
+      "bytes": 902,
+      "sha256": "75b788968d2546778f6186db6e6306def5b83af0ff415f50cd03e31657047a22"
+    },
+    {
+      "path": "dark-1240-16-actual-code-clipboard.json",
+      "bytes": 1263,
+      "sha256": "64a1b4ee5e700c6949d01b80414df62e3ee8147cafbbcd6e6c649edc40254ac3"
+    },
+    {
+      "path": "quality-owning-33.log",
+      "bytes": 376,
+      "sha256": "e89a2ef206227f46156ebf8ff2f3c32b84238c0a49dd49dd6a86163f73752487"
+    },
+    {
+      "path": "quality-responsive-17.log",
+      "bytes": 418,
+      "sha256": "6d6689308a72abbe3d517d4cf84d691f698d061aa74a6abcb502d656b4fbfdf2"
+    },
+    {
+      "path": "independent-final-review.md",
+      "bytes": 12167,
+      "sha256": "310d8ff806495911013d7742bf7846dfd1a94fd1369d1d458fd72cc290003707"
+    }
+  ],
+  "reviewReportSHA256": "310d8ff806495911013d7742bf7846dfd1a94fd1369d1d458fd72cc290003707",
+  "scope": "main-current13scenes x2themes x2widths/root16",
+  "verifiedProductHead": "ecf034b91ff459c4c6621ee85b7c9e271e2808b1"
+}

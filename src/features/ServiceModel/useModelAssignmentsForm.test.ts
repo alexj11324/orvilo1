@@ -433,10 +433,11 @@ describe('useModelAssignmentsForm owned autosave', () => {
   });
 
   it('keeps init failure distinct from loading and retries the existing state fetch', async () => {
-    useUserStore.setState({ isUserStateInit: false, isUserStateInitError: new Error('offline') });
+    const initError = new Error('offline');
+    useUserStore.setState({ isUserStateInit: false, isUserStateInitError: initError });
     const { result } = mount();
     expect(result.current.isUserStateInit).toBe(false);
-    expect(result.current.isUserStateInitError?.message).toBe('offline');
+    expect(result.current.isUserStateInitError).toBe(initError);
     await act(async () => result.current.refreshUserState());
     expect(useUserStore.getState().refreshUserState).toHaveBeenCalledOnce();
     act(() => useUserStore.setState({ isUserStateInitError: undefined }));

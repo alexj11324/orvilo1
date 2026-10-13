@@ -47,7 +47,8 @@ const styles = {
     'box-border h-9 min-h-9 min-w-9 w-auto cursor-pointer justify-center rounded-(--radius-button) border-transparent ps-2.5 pe-3 py-0 text-sm leading-5.5 font-medium whitespace-nowrap',
   emptyContainer:
     'box-border flex w-full justify-center rounded-(--radius-card) border border-border p-4',
-  composer: 'min-h-43 overflow-hidden rounded-(--radius-card) border-[0.5px] border-border bg-card',
+  composer:
+    'min-h-43 overflow-hidden rounded-(--radius-card) border-[length:calc(var(--spacing)_/_8)] border-border bg-card',
   composerFooter: 'mbs-auto py-3.5 ps-3 pe-3.5',
   healthPick: 'cursor-pointer',
   modeTab:

@@ -7,7 +7,7 @@ import Avatar from '@/components/Avatar';
 export const styles = {
   container: 'rounded-(--radius-card) text-foreground',
   desc: 'text-foreground-tertiary text-center',
-  form: 'w-full max-w-75 [padding-block:12px]',
+  form: 'w-full max-w-75 py-3',
 };
 
 export const FormAction = memo<

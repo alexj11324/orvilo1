@@ -281,7 +281,7 @@ function RoleStep({
               <Item key={option.value} size="sm" variant="outline">
                 <Field className="w-full gap-3" orientation="horizontal">
                   <RadioGroupItem id={fieldId} value={option.value} />
-                  <FieldLabel className="items-center leading-none" htmlFor={fieldId}>
+                  <FieldLabel className="items-center" htmlFor={fieldId}>
                     <span className="truncate font-medium">{option.label}</span>
                   </FieldLabel>
                 </Field>
@@ -494,7 +494,7 @@ function GoalsStep({
                   id={fieldId}
                   onCheckedChange={(checked) => onGoalToggle(option.value, checked === true)}
                 />
-                <FieldLabel className="items-center leading-none" htmlFor={fieldId}>
+                <FieldLabel className="items-center" htmlFor={fieldId}>
                   <span className="truncate font-medium">{option.label}</span>
                 </FieldLabel>
               </Field>
@@ -936,7 +936,7 @@ export function Onboarding({
     );
 
   return (
-    <main className="orvilo-entry-surface bg-background text-foreground relative min-h-[var(--onboarding-viewport-height,100svh)] w-full overflow-x-hidden">
+    <main className="orvilo-entry-surface bg-background text-foreground relative min-h-(--onboarding-viewport-height,100svh) w-full overflow-x-hidden">
       <div className="absolute inset-x-0 top-0 z-40 h-1 w-full overflow-hidden">
         <OnboardingStepper currentStep={currentStep} steps={onboardingSteps} />
       </div>

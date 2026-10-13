@@ -41,7 +41,7 @@ export const AddExperienceMemoryInspector = memo<
         </>
       )}
       {!isLoading && isSuccess && (
-        <Check className="[margin-block-end:-2px] ms-1" color="var(--success)" size={14} />
+        <Check className="-mbe-0.5 ms-1" color="var(--success)" size={14} />
       )}
     </div>
   );

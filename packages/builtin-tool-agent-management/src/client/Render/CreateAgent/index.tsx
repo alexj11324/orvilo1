@@ -57,24 +57,24 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
     return (
       <div className="py-1">
         {title && (
-          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+          <div className="mbe-2 last:[margin-block-end:0]">
+            <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
               Title
             </div>
             <div className="text-(length:--text-dense)">{title}</div>
           </div>
         )}
         {description && (
-          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+          <div className="mbe-2 last:[margin-block-end:0]">
+            <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
               Description
             </div>
             <div className="text-(length:--text-dense)">{description}</div>
           </div>
         )}
         {(model || provider) && (
-          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+          <div className="mbe-2 last:[margin-block-end:0]">
+            <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
               Model
             </div>
             <div className="text-(length:--text-dense)">
@@ -84,8 +84,8 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
           </div>
         )}
         {plugins && plugins.length > 0 && (
-          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+          <div className="mbe-2 last:[margin-block-end:0]">
+            <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
               Plugins
             </div>
             <div className="flex flex-row gap-1 flex-wrap">
@@ -96,8 +96,8 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
           </div>
         )}
         {systemRole && (
-          <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-            <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+          <div className="mbe-2 last:[margin-block-end:0]">
+            <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
               System Prompt
             </div>
             <div

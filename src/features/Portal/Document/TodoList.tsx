@@ -28,17 +28,17 @@ const styles = {
   // Merged after listContainer: py-0 removes its py-1 without priority CSS.
   collapsed: 'max-h-0 overflow-y-hidden py-0 opacity-0',
   container:
-    'cursor-pointer select-none rounded-(--radius-card) border border-divider bg-popover p-4 transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid) ease-[var(--ant-motion-ease-in-out)] hover:bg-accent motion-reduce:transition-none',
+    'cursor-pointer select-none rounded-(--radius-card) border border-divider bg-popover p-4 transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) hover:bg-accent motion-reduce:transition-none',
   count: 'font-mono text-xs leading-5 text-muted-foreground',
   expanded: 'max-h-75 overflow-y-auto opacity-100',
   header: 'truncate text-sm leading-5.5 font-medium text-foreground',
   itemRow:
     'border-be border-dashed border-divider px-1 py-1.5 text-sm leading-5.5 last:border-be-0',
   listContainer:
-    'mbs-2 flex flex-col overflow-x-hidden border-bs border-divider py-1 transition-[max-height,opacity,padding-block-start,padding-block-end] duration-(--orvilo-motion-mid) ease-[var(--ant-motion-ease-in-out)] motion-reduce:transition-none',
+    'mbs-2 flex flex-col overflow-x-hidden border-bs border-divider py-1 transition-[max-height,opacity,padding-block-start,padding-block-end] duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) motion-reduce:transition-none',
   progress: 'h-1 flex-1 rounded-full bg-selected',
   progressFill:
-    'h-full rounded-full bg-success transition-[width] duration-(--orvilo-motion-mid) ease-[var(--ant-motion-ease-in-out)] motion-reduce:transition-none',
+    'h-full rounded-full bg-success transition-[width] duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) motion-reduce:transition-none',
   root: 'shrink-0 px-4 pbe-4',
   textChecked: 'text-foreground-quaternary line-through',
 } as const;

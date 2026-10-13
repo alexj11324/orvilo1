@@ -21,7 +21,7 @@ import { GoalListItem } from './GoalListItem';
 
 const styles = {
   countBadge:
-    '[padding-block:1px] [padding-inline:7px] rounded-full text-xs tabular-nums leading-5 text-muted-foreground bg-accent',
+    'py-0.25 px-1.75 rounded-full text-xs tabular-nums leading-5 text-muted-foreground bg-accent',
   overview: '[padding-block:6px_18px]',
   list: 'grid grid-cols-2 gap-3 [@media(width<=900px)]:grid-cols-1',
   listRows: 'flex flex-col [border-block:1px_solid_var(--sidebar-border)]',

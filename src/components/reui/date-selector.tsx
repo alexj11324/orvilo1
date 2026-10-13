@@ -1117,7 +1117,7 @@ export function DateSelector({
                 type="button"
                 className={cn(
                   // Base Styles
-                  'rounded-xs absolute end-2.5 top-1/2 size-4 -translate-y-1/2 cursor-pointer',
+                  'rounded-(--radius-input) absolute end-2.5 top-1/2 size-4 -translate-y-1/2 cursor-pointer',
                   // Visual States
                   'opacity-70 transition-opacity hover:opacity-100',
                   // Focus States

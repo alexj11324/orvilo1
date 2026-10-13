@@ -646,7 +646,7 @@ function DataGridTableDndRows<TData extends object>({
               {carried && carriedRow ? (
                 <table
                   aria-hidden="true"
-                  className="bg-background border-border pointer-events-none cursor-grabbing rounded-md border shadow-lg"
+                  className="bg-background border-border pointer-events-none cursor-grabbing rounded-(--radius-card) border shadow-lg"
                   style={{ width: carried.width, tableLayout: 'fixed' }}
                 >
                   <tbody>

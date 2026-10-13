@@ -4,7 +4,7 @@ export const styles = {
   body: 'overflow-hidden flex-1 min-h-0',
   card: 'relative py-3.5 [border-block-end:1px_solid_var(--sidebar-border)] [&:hover_.topic-comment-actions]:opacity-100',
   cardActions:
-    'absolute [inset-block-start:8px] end-0 opacity-100 transition-opacity duration-(--ant-motion-duration-fast) ease-[ease] [@media(hover:hover)]:opacity-0',
+    'absolute inset-bs-2 end-0 opacity-100 transition-opacity duration-(--ant-motion-duration-fast) ease-[ease] [@media(hover:hover)]:opacity-0',
   composer: 'shrink-0 [margin-block:12px_16px] mx-4',
   deleted: 'italic text-foreground-tertiary',
   editEditor:

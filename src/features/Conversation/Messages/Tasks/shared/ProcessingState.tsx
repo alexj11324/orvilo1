@@ -15,7 +15,7 @@ import { formatElapsedTime, formatToolName } from './utils';
 
 const styles = {
   activityRow: 'flex items-center gap-2 py-2',
-  footer: '[padding-block-start:8px] [border-block-start:1px_solid_var(--sidebar-border)]',
+  footer: 'pbs-2 [border-block-start:1px_solid_var(--sidebar-border)]',
   progress: 'relative mx-2 my-3 h-0.75 overflow-hidden rounded-full bg-selected',
   progressBar: 'absolute h-full rounded-full [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,var(--primary),var(--primary-hover))] transition-[width] duration-500 ease-out',
   progressCompact: 'relative h-0.75 overflow-hidden rounded-full bg-selected',

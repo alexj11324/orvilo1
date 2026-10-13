@@ -64,7 +64,7 @@ const styles = {
   panel:
     '[scrollbar-width:thin] [scrollbar-gutter:stable] overflow-y-auto flex-none w-99.75 h-full py-3 ps-1 pe-0',
   railCard:
-    'py-3 [padding-inline:11px] border border-divider rounded-(--radius-card) bg-[color-mix(in_srgb,var(--card)_78%,transparent)]',
+    'py-3 px-2.75 border border-divider rounded-(--radius-card) bg-[color-mix(in_srgb,var(--card)_78%,transparent)]',
   milestoneRow:
     'cursor-default relative flex gap-2 items-center h-10.5 -mx-2.5 px-2.5 rounded-(--radius-card) hover:bg-accent hover:[&>a]:flex focus-within:[&>a]:flex',
   seeIssues:

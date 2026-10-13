@@ -145,7 +145,7 @@ function useCodeBlockConfig(part: string): CodeBlockConfigValue & { code: string
    rung is a style someone forgot. The parity suite enforces all-eight-or-one. */
 const ROOT_GHOST_CLASS = '[--code-block-bg:transparent]';
 
-const ROOT_RADIUS_CLASS = '[--code-block-radius:var(--radius-lg)]';
+const ROOT_RADIUS_CLASS = '[--code-block-radius:var(--radius-card)]';
 
 /*
  * Colour vars use the BASE theme tokens (--card, --primary, ...), never the
@@ -212,7 +212,7 @@ const ROOT_SURFACE_CLASS = 'border border-border bg-card text-card-foreground bg
  * highlighter that silently failed. Same reason the font size uses `length:`.
  */
 const TOKEN_COLOR_CLASS =
-  '[&_[data-slot=code-block-token]]:text-[color:var(--cb-c,currentColor)] dark:[&_[data-slot=code-block-token]]:text-[color:var(--cb-cd,currentColor)]';
+  '[&_[data-slot=code-block-token]]:text-(color:--cb-c,currentColor) dark:[&_[data-slot=code-block-token]]:text-(color:--cb-cd,currentColor)';
 
 /**
  * Line numbers are a CSS counter, never DOM: a pseudo-element cannot join a
@@ -419,7 +419,7 @@ function CodeBlockTokens({ tokens }: { tokens: CodeBlockToken[] }) {
             style={style}
             className={cn(
               token.word &&
-                'bg-primary/10 ring-primary/20 rounded-sm px-0.5 py-px ring-1 ring-inset',
+                'bg-primary/10 ring-primary/20 rounded-(--radius-chip) px-0.5 py-px ring-1 ring-inset',
             )}
           >
             {token.content}

@@ -37,7 +37,7 @@ import {
 } from './taskCreateDrafts';
 
 const styles = {
-  card: 'relative block h-35 overflow-hidden rounded-(--radius-card) border-[0.5px] border-border bg-fill-quaternary text-foreground no-underline hover:bg-accent [&:hover_.draft-discard]:opacity-100 [&:focus-within_.draft-discard]:opacity-100',
+  card: 'relative block h-35 overflow-hidden rounded-(--radius-card) border-[length:calc(var(--spacing)_/_8)] border-border bg-fill-quaternary text-foreground no-underline hover:bg-accent [&:hover_.draft-discard]:opacity-100 [&:focus-within_.draft-discard]:opacity-100',
   cardButton:
     'absolute inset-0 z-1 block cursor-pointer border-0 bg-transparent p-0 [font:inherit] text-inherit text-start outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2',
   cardLink:
@@ -56,7 +56,7 @@ const styles = {
   issueChipIdentifier: 'flex-none font-mono',
   issueChipName: 'overflow-hidden text-ellipsis',
   preview:
-    'h-22.5 overflow-hidden mbs-4 rounded-ss-(--radius-card) rounded-se-(--radius-card) border-[0.5px] border-border border-be-0',
+    'h-22.5 overflow-hidden mbs-4 rounded-ss-(--radius-card) rounded-se-(--radius-card) border-[length:calc(var(--spacing)_/_8)] border-border border-be-0',
   previewLabel:
     'flex h-8 items-center gap-2 border-be border-divider px-3 text-xs leading-5 font-medium text-foreground-description whitespace-nowrap',
   previewLabelText: 'flex-none',

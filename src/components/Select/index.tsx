@@ -1,7 +1,8 @@
 'use client';
 
+import { Combobox as ComboboxPrimitive } from '@base-ui/react/combobox';
 import type { CSSProperties, ReactNode } from 'react';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,9 @@ import {
   ComboboxClear,
   ComboboxContent,
   ComboboxEmpty,
+  ComboboxGroup,
   ComboboxItem,
+  ComboboxLabel,
   ComboboxList,
   useComboboxAnchor,
 } from '@/components/ui/combobox';
@@ -73,6 +76,59 @@ const isScalarValue = <Value extends string | number>(
   value: Value | Value[] | null | undefined,
 ): value is Value => typeof value === 'string' || typeof value === 'number';
 
+type MultipleSelectOptionGroup<Value> = Readonly<{
+  disabled?: boolean;
+  group: boolean;
+  index: number;
+  items: readonly Value[];
+  label?: ReactNode;
+}>;
+
+function MultipleSelectOptions<Value extends string | number>({
+  labelFor,
+  optionFor,
+  optionRender,
+}: Pick<SelectProps<Value>, 'optionRender'> & {
+  labelFor: (value: Value) => ReactNode;
+  optionFor: (value: Value) => SelectOption<Value> | undefined;
+}) {
+  const groups: readonly MultipleSelectOptionGroup<Value>[] =
+    ComboboxPrimitive.useFilteredItems<MultipleSelectOptionGroup<Value>>();
+  // Recount filtered leaf options per render; group labels do not consume an index.
+  let optionIndex = 0;
+
+  return (
+    <ComboboxList>
+      {groups.map((group) => {
+        const children = group.items.map((v) => {
+          const option = optionFor(v);
+          const index = optionIndex++;
+          return (
+            <ComboboxItem
+              className={option?.className}
+              disabled={option?.disabled || group.disabled}
+              key={String(v)}
+              style={option?.style}
+              value={v}
+            >
+              {option && optionRender ? optionRender(option, { index }) : labelFor(v)}
+            </ComboboxItem>
+          );
+        });
+
+        return group.group ? (
+          <ComboboxGroup items={group.items} key={group.index}>
+            <ComboboxLabel>{group.label}</ComboboxLabel>
+            {children}
+          </ComboboxGroup>
+        ) : (
+          <Fragment key={group.index}>{children}</Fragment>
+        );
+      })}
+    </ComboboxList>
+  );
+}
+
 /**
  * Thin adapter exposing the lobehub base-ui Select surface (`options` +
  * `value` + `onChange(value)`) on top of `@/components/ui/select`.
@@ -122,12 +178,24 @@ const Select = <Value extends string | number = string>({
 
   if (mode === 'multiple') {
     const values = (Array.isArray(value) ? value : []) as Value[];
+    const groups: readonly MultipleSelectOptionGroup<Value>[] = (options ?? []).map(
+      (option, index) =>
+        isGroup(option)
+          ? {
+              disabled: option.disabled,
+              group: true,
+              index,
+              items: option.options.map((o) => o.value),
+              label: option.label,
+            }
+          : { group: false, index, items: [option.value] },
+    );
     return (
       <Combobox
         multiple
         disabled={loading ? true : disabled}
         itemToStringLabel={(v) => textFor(v as Value)}
-        items={items.map((item) => item.value)}
+        items={groups}
         value={values}
         onOpenChange={(open) => onOpenChange?.(open)}
         onValueChange={(v) => onChange?.(v as Value[])}
@@ -181,18 +249,11 @@ const Select = <Value extends string | number = string>({
           <ComboboxEmpty>
             {typeof placeholder === 'string' ? placeholder : 'No options'}
           </ComboboxEmpty>
-          <ComboboxList>
-            {(v: string | number) => {
-              const option = optionFor(v as Value);
-              return (
-                <ComboboxItem key={String(v)} value={v}>
-                  {option && optionRender
-                    ? (optionRender(option, { index: 0 }) as ReactNode)
-                    : labelFor(v as Value)}
-                </ComboboxItem>
-              );
-            }}
-          </ComboboxList>
+          <MultipleSelectOptions
+            labelFor={labelFor}
+            optionFor={optionFor}
+            optionRender={optionRender}
+          />
         </ComboboxContent>
       </Combobox>
     );

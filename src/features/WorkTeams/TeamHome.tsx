@@ -14,7 +14,7 @@ import TeamHomeTabs from './home/TeamHomeTabs';
 
 const styles = {
   page: 'w-full',
-  sectionBody: 'w-[min(972px,100%)] [margin-block-start:8px] mx-auto',
+  sectionBody: 'w-[min(972px,100%)] mbs-2 mx-auto',
 };
 
 interface TeamHomeProps {

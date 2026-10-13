@@ -41,7 +41,7 @@ import { ALL_TEAM_CYCLES } from './teamWorkQuery';
 const styles = {
   controlPopover: 'w-[min(420px,calc(100vw-32px))] p-3',
   optionLabel: 'flex-none w-24 text-(length:--text-dense) text-muted-foreground',
-  sectionLabel: '[padding-block-start:4px] text-xs font-medium text-muted-foreground',
+  sectionLabel: 'pbs-1 text-xs font-medium text-muted-foreground',
 };
 
 const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, label }) => (

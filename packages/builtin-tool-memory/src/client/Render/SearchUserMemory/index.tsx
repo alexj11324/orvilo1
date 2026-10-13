@@ -19,11 +19,11 @@ const styles = {
   container:
     'overflow-hidden w-full border border-sidebar-border rounded-(--radius-overlay) bg-card',
   empty: 'p-6 text-foreground-tertiary text-center',
-  item: '[padding-block:10px] [padding-inline:12px] [border-block-end:1px_dashed_var(--sidebar-border)] last:[border-block-end:none]',
+  item: 'py-2.5 px-3 [border-block-end:1px_dashed_var(--sidebar-border)] last:[border-block-end:none]',
   itemContent: 'text-(length:--text-dense) leading-[1.5] text-muted-foreground',
   itemTitle: 'text-sm leading-[inherit] font-medium text-foreground',
   sectionHeader: 'text-xs leading-[inherit] font-medium',
-  tags: '[padding-block-start:6px]',
+  tags: 'pbs-1.5',
 };
 
 interface MemoryItemProps {

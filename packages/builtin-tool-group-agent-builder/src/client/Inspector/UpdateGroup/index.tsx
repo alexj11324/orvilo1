@@ -11,7 +11,7 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 import type { UpdateGroupParams, UpdateGroupState } from '../../../types';
 
 const styles = {
-  statusIcon: 'ms-1 [margin-block-end:-2px]',
+  statusIcon: 'ms-1 -mbe-0.5',
 };
 
 export const UpdateGroupInspector = memo<

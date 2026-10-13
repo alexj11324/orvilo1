@@ -1,11 +1,9 @@
 'use client';
 
 import { Tooltip } from '@lobehub/ui';
-import isEqual from 'fast-deep-equal';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { memo } from 'react';
+import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { z } from 'zod';
 
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
@@ -22,114 +20,33 @@ import { FieldError } from '@/components/ui/field';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import ModelSelect from '@/features/ModelSelect';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
-import { usePermission } from '@/hooks/usePermission';
-import { useSaveState } from '@/hooks/useSaveState';
-import { useUserStore } from '@/store/user';
-import { settingsSelectors } from '@/store/user/selectors';
-import type { SystemAgentItem, UserServiceModelConfigKey } from '@/types/user/settings';
 
-// Only the rows this form renders. Listed positively so the locale keys
-// templated from them (`systemAgent.${key}.title`) all exist.
-type ModelAssignmentItemKey = Extract<
-  UserServiceModelConfigKey,
-  | 'expertise'
-  | 'goal'
-  | 'memoryAnalysisAgentConfig'
-  | 'userMemoryEmbedding'
-  | 'userMemoryPersonaWriter'
->;
-
-interface SystemAgentModelItem {
-  contextLimit?: boolean;
-  key: ModelAssignmentItemKey;
-  modelType?: 'chat' | 'embedding';
-}
-
-type LoadingKey = 'defaultAgent' | UserServiceModelConfigKey;
-
-type SavingGroup = 'assignments' | 'memory';
-
-type ModelChoice = Pick<SystemAgentItem, 'model'> & Partial<Pick<SystemAgentItem, 'provider'>>;
-type AssignmentValue = Omit<SystemAgentItem, 'contextLimit'> & { contextLimit: number | null };
-interface ModelAssignmentsValues {
-  defaultAgent: { config: ModelChoice };
-  systemAgent: Record<ModelAssignmentItemKey, AssignmentValue>;
-}
-const contextLimitSchema = z.number().min(1).nullable();
-const assignmentValue = (value: SystemAgentItem): AssignmentValue => ({
-  ...value,
-  contextLimit: value.contextLimit ?? null,
-});
-
-const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [{ key: 'expertise' }, { key: 'goal' }];
-
-const MEMORY_MODEL_ITEMS: SystemAgentModelItem[] = [
-  { contextLimit: true, key: 'memoryAnalysisAgentConfig' },
-  { contextLimit: true, key: 'userMemoryPersonaWriter' },
-  { contextLimit: true, key: 'userMemoryEmbedding', modelType: 'embedding' },
-];
+import {
+  MEMORY_MODEL_ITEMS,
+  type SavingGroup,
+  SYSTEM_AGENT_MODEL_ITEMS,
+  useModelAssignmentsForm,
+} from './useModelAssignmentsForm';
 
 const ModelAssignmentsForm = memo(() => {
   const { t } = useTranslation('setting');
-  const { allowed: canManageServiceModel, reason } = usePermission('manage_settings');
-  const [defaultAgent, systemAgentSettings] = useUserStore(
-    (s) => [settingsSelectors.defaultAgent(s), settingsSelectors.currentSystemAgent(s)],
-    isEqual,
-  );
-  const [
-    updateDefaultAgent,
-    updateSystemAgent,
+  const {
+    canManageServiceModel,
+    changeContextLimit,
+    changeDefaultAgentModel,
+    changeSystemAgentModel,
+    contextLimitRules,
+    control,
     isUserStateInit,
     isUserStateInitError,
-    refreshUserState,
-  ] = useUserStore((s) => [
-    s.updateDefaultAgent,
-    s.updateSystemAgent,
-    s.isUserStateInit,
-    s.isUserStateInitError,
-    s.refreshUserState,
-  ]);
-  const [loadingKey, setLoadingKey] = useState<LoadingKey>();
-  // Track which group last saved so its AutoSaveHint (and only its) reflects the
-  // shared save-state — the write-side counterpart to the read-side AsyncError above.
-  const [savingGroup, setSavingGroup] = useState<SavingGroup>();
-  const {
-    status: saveStatus,
     lastSavedAt,
-    save,
-    retry,
-  } = useSaveState({ latestRequestOnly: true });
-  const permission = useRef(canManageServiceModel);
-  useEffect(() => {
-    permission.current = canManageServiceModel;
-  }, [canManageServiceModel]);
-  const values = useMemo<ModelAssignmentsValues>(
-    () => ({
-      defaultAgent: { config: defaultAgent.config },
-      systemAgent: {
-        expertise: assignmentValue(systemAgentSettings.expertise),
-        goal: assignmentValue(systemAgentSettings.goal),
-        memoryAnalysisAgentConfig: assignmentValue(systemAgentSettings.memoryAnalysisAgentConfig),
-        userMemoryEmbedding: assignmentValue(systemAgentSettings.userMemoryEmbedding),
-        userMemoryPersonaWriter: assignmentValue(systemAgentSettings.userMemoryPersonaWriter),
-      },
-    }),
-    [defaultAgent.config, systemAgentSettings],
-  );
-  const { control, getValues, trigger } = useForm<ModelAssignmentsValues>({
-    values,
-    mode: 'onChange',
-    shouldUnregister: false,
-  });
-
-  useEffect(() => {
-    if (loadingKey === 'defaultAgent') setLoadingKey(undefined);
-  }, [defaultAgent.config.model, defaultAgent.config.provider, loadingKey]);
-
-  const groupOfKey = (key: UserServiceModelConfigKey): SavingGroup => {
-    if (MEMORY_MODEL_ITEMS.some((item) => item.key === key)) return 'memory';
-    return 'assignments';
-  };
+    reason,
+    refreshUserState,
+    retrySave,
+    saveStatus,
+    savingGroup,
+    trigger,
+  } = useModelAssignmentsForm();
 
   if (!isUserStateInit) {
     // A failed user-state init must show error + Retry, not a permanent skeleton
@@ -143,39 +60,6 @@ const ModelAssignmentsForm = memo(() => {
       );
     return <RouteLoading />;
   }
-
-  const updateDefaultAgentModel = async ({
-    model,
-    provider,
-  }: {
-    model: string;
-    provider: string;
-  }) => {
-    if (!permission.current) return;
-
-    setSavingGroup('assignments');
-    setLoadingKey('defaultAgent');
-    try {
-      await save(() => updateDefaultAgent({ config: { model, provider } }));
-    } finally {
-      setLoadingKey(undefined);
-    }
-  };
-
-  const updateSystemAgentModel = async (
-    key: UserServiceModelConfigKey,
-    value: Partial<SystemAgentItem>,
-  ) => {
-    if (!permission.current) return;
-
-    setSavingGroup(groupOfKey(key));
-    setLoadingKey(key);
-    try {
-      await save(() => updateSystemAgent(key, value));
-    } finally {
-      setLoadingKey(undefined);
-    }
-  };
 
   const defaultAgentItem: FormItemProps = {
     children: (
@@ -191,9 +75,7 @@ const ModelAssignmentsForm = memo(() => {
                 style={{ minWidth: 0, width: '100%' }}
                 value={field.value}
                 onChange={(next) => {
-                  if (!permission.current) return;
-                  field.onChange({ ...getValues(field.name), ...next });
-                  void updateDefaultAgentModel(next);
+                  void changeDefaultAgentModel(next, field.onChange);
                 }}
               />
             )}
@@ -223,9 +105,7 @@ const ModelAssignmentsForm = memo(() => {
                   style={{ minWidth: 0, width: '100%' }}
                   value={field.value}
                   onChange={(next) => {
-                    if (!permission.current) return;
-                    field.onChange({ ...getValues(field.name), ...next });
-                    void updateSystemAgentModel(key, next);
+                    void changeSystemAgentModel(key, next, field.onChange);
                   }}
                 />
               )}
@@ -255,9 +135,7 @@ const ModelAssignmentsForm = memo(() => {
                   style={{ minWidth: 0, width: '100%' }}
                   value={field.value}
                   onChange={(next) => {
-                    if (!permission.current) return;
-                    field.onChange({ ...getValues(field.name), ...next });
-                    void updateSystemAgentModel(key, next);
+                    void changeSystemAgentModel(key, next, field.onChange);
                   }}
                 />
               )}
@@ -266,6 +144,7 @@ const ModelAssignmentsForm = memo(() => {
               <Controller
                 control={control}
                 name={`systemAgent.${key}.contextLimit`}
+                rules={contextLimitRules}
                 render={({ field, fieldState }) => (
                   <NumberField
                     className="w-35 flex-none"
@@ -275,12 +154,7 @@ const ModelAssignmentsForm = memo(() => {
                     size="normal"
                     value={field.value}
                     onValueChange={(next) => {
-                      if (!permission.current) return;
-                      field.onChange(next);
-                      if (contextLimitSchema.safeParse(next).success)
-                        void updateSystemAgentModel(key, {
-                          contextLimit: typeof next === 'number' ? next : undefined,
-                        });
+                      void changeContextLimit(key, next, field.onChange);
                     }}
                   >
                     <NumberFieldGroup>
@@ -301,11 +175,6 @@ const ModelAssignmentsForm = memo(() => {
                     <FieldError errors={[fieldState.error]} />
                   </NumberField>
                 )}
-                rules={{
-                  validate: (next) =>
-                    contextLimitSchema.safeParse(next).success ||
-                    t('serviceModel.contextLimit.placeholder'),
-                }}
               />
             )}
           </div>
@@ -321,13 +190,7 @@ const ModelAssignmentsForm = memo(() => {
       <AutoSaveHint
         lastUpdatedTime={lastSavedAt}
         saveStatus={saveStatus}
-        onRetry={
-          canManageServiceModel
-            ? () => {
-                if (permission.current) void retry();
-              }
-            : undefined
-        }
+        onRetry={canManageServiceModel ? () => void retrySave() : undefined}
       />
     );
 

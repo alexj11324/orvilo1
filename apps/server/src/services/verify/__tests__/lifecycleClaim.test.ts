@@ -122,6 +122,19 @@ describe('runVerifyOnCompletion — verification claim', () => {
     evidenceListByRun.mockResolvedValue([]);
   });
 
+  it('does not run a confirmed administrative plan when the durable operation opts out of task verification', async () => {
+    operationFindById.mockResolvedValue({
+      id: 'op-1',
+      taskId: 'task-1',
+      metadata: { skipTaskVerification: true },
+    });
+    await runVerifyOnCompletion(db, 'u1', params);
+    expect(claimEvidenceCollection).not.toHaveBeenCalled();
+    expect(claimVerifying).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+    expect(finalizeVerifyRun).not.toHaveBeenCalled();
+  });
+
   it('defers task verification while its workspace integration is unresolved', async () => {
     operationFindById.mockResolvedValue({ id: 'op-1', taskId: 'task-1' });
     taskTopicFindByOperationId.mockResolvedValue({

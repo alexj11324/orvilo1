@@ -99,6 +99,7 @@ const executeVerifyLifecycle = async (
       log('op %s missing, cannot run verify', params.operationId);
       return;
     }
+    if (op.metadata?.skipTaskVerification === true) return;
 
     // Aegis method-pack runs (metadata.aegis.enabled, opt-in only) carry their
     // agent-submitted closeout/reports in the operation metadata — appended to

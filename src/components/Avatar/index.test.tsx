@@ -23,7 +23,7 @@ describe('Avatar', () => {
 
     const img = container.querySelector('img');
     expect(img?.style.borderRadius).toBe('inherit');
-    expect(img?.parentElement).toHaveClass('rounded-(--radius-card)');
+    expect(img?.parentElement).toHaveClass('rounded-(--avatar-square-radius)');
 
     rerender(
       <Avatar
@@ -34,6 +34,30 @@ describe('Avatar', () => {
       />,
     );
     expect(img?.parentElement?.style.borderRadius).toBe('12px');
+    expect(img?.style.borderRadius).toBe('inherit');
+
+    rerender(
+      <Avatar
+        avatar="https://example.com/a.png"
+        className="rounded-full"
+        shape="square"
+        size={16}
+      />,
+    );
+    expect(img?.parentElement).toHaveClass('rounded-full');
+    expect(img?.parentElement).not.toHaveClass('rounded-(--avatar-square-radius)');
+    expect(img?.style.borderRadius).toBe('inherit');
+
+    rerender(
+      <Avatar
+        avatar="https://example.com/a.png"
+        className="rounded-(--radius-overlay)"
+        shape="square"
+        size={40}
+      />,
+    );
+    expect(img?.parentElement).toHaveClass('rounded-(--radius-overlay)');
+    expect(img?.parentElement).not.toHaveClass('rounded-(--avatar-square-radius)');
     expect(img?.style.borderRadius).toBe('inherit');
   });
 

@@ -4,6 +4,7 @@ import { Avatar as AvatarPrimitive } from '@base-ui/react/avatar';
 import { cn } from 'cn';
 import { type ComponentProps, isValidElement, memo, type ReactNode } from 'react';
 
+import styles from './Avatar.module.css';
 import { remoteAvatarSrc, resolveAvatar } from './fallback';
 import { useBrokenSrc } from './useBrokenSrc';
 
@@ -157,7 +158,8 @@ const Avatar = memo<AvatarProps>(
         title={title}
         className={cn(
           'orvilo-avatar',
-          shape === 'square' ? 'rounded-(--radius-card)' : 'rounded-full',
+          shape === 'square' && styles.square,
+          shape === 'square' ? 'rounded-(--avatar-square-radius)' : 'rounded-full',
           className,
         )}
         style={{

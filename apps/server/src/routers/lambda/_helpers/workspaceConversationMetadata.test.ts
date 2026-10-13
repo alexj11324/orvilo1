@@ -194,6 +194,7 @@ describe('workspace conversation runtime metadata projection', () => {
 
   it('redacts a foreign personal Agent runtime while preserving its actual owner access', async () => {
     const personal = await withTestAgentDevices(db, {
+      agencyConfig: {},
       id: agentId,
       userId: owner,
       workspaceId: null,

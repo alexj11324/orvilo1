@@ -362,10 +362,11 @@ export const retryErroredVerification = async (
               topicId: operation.topicId,
             })
           : undefined;
-    if (typeof originalReply?.content !== 'string' || !originalReply.content)
+    const originalContent = originalReply?.content;
+    if (typeof originalContent !== 'string' || !originalContent)
       throw new Error('VERIFICATION_CONTEXT_UNAVAILABLE: the original delivery was not recorded');
-    deliverable = originalReply.content;
-    await model.recordVerificationContext(run.id, deliverable);
+    deliverable = originalContent;
+    await model.recordVerificationContext(run.id, originalContent);
   }
   if (!(await model.prepareErroredRetry(run.id))) return false;
   await executeVerifyLifecycle(

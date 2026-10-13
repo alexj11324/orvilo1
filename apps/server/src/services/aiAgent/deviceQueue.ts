@@ -7,6 +7,7 @@ import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
+import { TaskModel } from '@/database/models/task';
 import { TopicModel } from '@/database/models/topic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { agentOperations, verifyCheckResults } from '@/database/schemas';
@@ -360,6 +361,34 @@ async function queuedLaunchStillAllowed(
     operation.workspaceId ?? undefined,
   ).findById(operation.id);
   if (current?.status !== 'running') return false;
+  const cycleId = current.appContext?.issueReviewCycleId;
+  if (typeof cycleId === 'string') {
+    if (!current.taskId) return false;
+    const task = await new TaskModel(db, current.userId, current.workspaceId ?? undefined).findById(
+      current.taskId,
+    );
+    const { readIssueReview } = await import('../task/review');
+    const review = task && readIssueReview(task);
+    if (
+      !task ||
+      task.workflowCategory !== 'in_review' ||
+      task.reviewerAgentId !== current.agentId ||
+      review?.cycleId !== cycleId ||
+      review.reviewerOperationId !== current.id
+    )
+      return false;
+  }
+  const repairCycleId = current.appContext?.issueReviewRepairCycleId;
+  if (
+    typeof repairCycleId === 'string' &&
+    (!current.taskId ||
+      !(await new TaskModel(
+        db,
+        current.userId,
+        current.workspaceId ?? undefined,
+      ).isIssueReviewRepairCurrent(current.taskId, { cycleId: repairCycleId })))
+  )
+    return false;
   const queuedCheck = readDeviceQueue(current.metadata)?.verifyCheck;
   if (queuedCheck) {
     const model = new AgentOperationModel(db, operation.userId, operation.workspaceId ?? undefined);

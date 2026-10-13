@@ -32,6 +32,7 @@ import {
   notifyScheduledTaskCompleted,
   notifyScheduledTaskFailed,
 } from '@/business/server/task/notifyScheduledTaskResult';
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
 import { TaskModel } from '@/database/models/task';
@@ -238,6 +239,18 @@ export class TaskLifecycleService {
 
     const currentTask = await this.taskModel.findById(taskId);
     if (!currentTask) return;
+    const completionOperation = (currentTask.config as { issueReview?: unknown } | null)
+      ?.issueReview
+      ? await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
+          params.operationId,
+        )
+      : null;
+    const repairCycleId = completionOperation?.appContext?.issueReviewRepairCycleId;
+    if (
+      typeof repairCycleId === 'string' &&
+      !(await this.taskModel.isIssueReviewRepairCurrent(taskId, { cycleId: repairCycleId }))
+    )
+      return;
 
     if (!topicId) {
       log('onTopicComplete: callback without topic ignored task=%s', taskIdentifier);
@@ -315,9 +328,13 @@ export class TaskLifecycleService {
           dispatchFence: params.dispatchFence,
           executionGeneration: params.executionGeneration,
           ...input,
-          context: completionContract
-            ? { ...input.context, expectedContract: completionContract }
-            : input.context,
+          context: {
+            ...input.context,
+            ...(completionContract ? { expectedContract: completionContract } : {}),
+            ...(typeof repairCycleId === 'string'
+              ? { expectedIssueReviewCycleId: repairCycleId }
+              : {}),
+          },
           operationId: params.operationId,
           taskId,
         },
@@ -397,11 +414,11 @@ export class TaskLifecycleService {
         // A failed read is a gate failure, not evidence that verification is
         // absent.
         try {
-          const verifyRun = await new VerifyRunModel(
-            this.db,
-            this.userId,
-            this.workspaceId,
-          ).findByOperation(params.operationId);
+          const verifyRun = currentTask.automationMode
+            ? await new VerifyRunModel(this.db, this.userId, this.workspaceId).findByOperation(
+                params.operationId,
+              )
+            : null;
           verifyBound = Boolean(verifyRun?.planConfirmedAt);
           verifySettled =
             verifyRun?.status === 'passed' ||
@@ -864,7 +881,8 @@ export class TaskLifecycleService {
       if (!verifyBound) {
         await this.markAutomationResultReady(params);
         await this.persistAutomationResult(params);
-        await this.bridgeResultToCreator(params);
+        if (currentTask.automationMode || reason !== 'done')
+          await this.bridgeResultToCreator(params);
       }
 
       // Heartbeat re-arm: re-read task state (status / context may have just

@@ -9,7 +9,6 @@ import type {
   GoalGraphSnapshot,
   GoalItem,
   GoalMetricCriterion,
-  GoalNodeAcceptance,
   GoalNodeIntegration,
   GoalNodeKind,
   GoalNodeStatus,
@@ -51,8 +50,6 @@ import { TaskRunnerService } from '../taskRunner';
 import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { taskRequiresBuiltinToolMount } from '../taskRunner/toolMountRequirement';
 import { settleTaskExecution } from '../taskSettlement';
-import { AcceptanceService } from '../verify/acceptanceService';
-import { VerifyPlanGeneratorService } from '../verify/planGenerator';
 import { GoalCriteriaGeneratorService, type GoalDecompositionDraft } from './criteriaGenerator';
 import {
   compareMetric,
@@ -103,13 +100,7 @@ export interface CreateGoalGraphInput {
    * on an agent's page sets that, but the author is still the person.
    */
   createdByAgentId?: string;
-  /**
-   * Structured acceptance criteria. Persisted as `verify_criteria` rows and
-   * recorded on `config.acceptance.criteriaIds`, so the goal page can show and
-   * edit them and the terminal Goal-acceptance Task verifies against exactly
-   * these checks. Callers still fold the same criteria into `requirement`
-   * prose — that text remains what every Task's execution context reads.
-   */
+  /** Criteria are folded into the requirement when no reviewed document is supplied. */
   criteria?: Array<{ description?: string; instruction?: string; title: string }>;
   maxRounds?: number;
   maxTotalCost?: number;
@@ -149,7 +140,6 @@ export interface CreateGoalNodeInput {
 const DELIVERABLE_EVENTS_PER_RUN = 200;
 
 export class GoalService {
-  private readonly acceptanceService: AcceptanceService;
   private readonly goalModel: GoalModel;
   /**
    * Graph writes attributed to the person who asked for them: seeding a goal,
@@ -173,7 +163,6 @@ export class GoalService {
     private readonly userId: string,
     private readonly workspaceId?: string,
   ) {
-    this.acceptanceService = new AcceptanceService(db, userId, workspaceId);
     this.goalModel = new GoalModel(db, userId, workspaceId);
     this.graphModel = new GoalGraphModel(db, userId, workspaceId);
     this.coordinatorGraph = new GoalGraphModel(db, userId, workspaceId, {
@@ -228,9 +217,6 @@ export class GoalService {
       ).findManageableById(input.projectId);
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
     }
-    // Persist the structured acceptance criteria first: their ids ride on the
-    // goal config so the page can edit them and the terminal acceptance Task
-    // is gated on exactly these checks (not an AI re-derivation of the prose).
     const creatorAgentId = input.createdByAgentId ?? input.agentId;
     // The goal-bound agent executes every Task this goal mints — goal-mode
     // work whose contract always requires the builtin tool surface. The gate
@@ -265,8 +251,7 @@ export class GoalService {
       });
       config = { ...options, manager: { ...managerOptions, agentId: creatorAgentId } };
     }
-    // A supplied requirement is the user-reviewed goal document. Criteria live
-    // separately; only synthesize a document when the caller omitted one.
+    // Preserve the reviewed requirement; synthesize one only when it was omitted.
     const requirement =
       input.requirement ??
       (input.criteria?.length ? buildGoalRequirement(input.title, input.criteria) : undefined) ??
@@ -291,26 +276,6 @@ export class GoalService {
         });
       }
       config = { ...config, exploration: { maxExperiments, instruction } };
-    }
-    if (input.criteria?.length) {
-      const criteriaIds = await new VerifyPlanGeneratorService(
-        this.db,
-        this.userId,
-        this.workspaceId,
-      ).createCriteriaFromDrafts(
-        input.criteria.map((item) => ({
-          description: item.description,
-          instruction: item.instruction,
-          onFail: 'manual',
-          required: true,
-          title: item.title,
-          verifierType: 'agent',
-        })),
-      );
-      // Merge, never replace: `acceptance` also carries the numeric clauses,
-      // and rebuilding the object from `criteriaIds` alone would drop a
-      // measured gate the caller asked for in the same call.
-      config = { ...config, acceptance: { ...config?.acceptance, criteriaIds } };
     }
 
     const goal = await this.goalModel.create({
@@ -567,48 +532,19 @@ export class GoalService {
     await this.goalModel.update(goalId, {
       config: { ...goal.config, acceptance: { ...goal.config?.acceptance, criteriaIds } },
     });
-
-    // A terminal Goal-acceptance Task may already be dispatched — its
-    // Acceptance row snapshotted the previous id list. Rebind it too, or the
-    // page would present the new criteria as gates while the verifier keeps
-    // materializing plans from the stale list. A verify round already
-    // materialized for an in-flight run stays as-is (rounds are immutable
-    // snapshots); every later run instantiates from the updated config.
-    const graph = await this.graphModel.getGraph(goalId);
-    const terminalTaskId = graph?.nodes.find(
-      (node) => node.kind === 'task' && node.title === GOAL_ACCEPTANCE_TASK_TITLE && node.taskId,
-    )?.taskId;
-    if (!terminalTaskId) return;
-
-    const acceptance = await this.acceptanceService.acceptanceModel.findBySubject(
-      'task',
-      terminalTaskId,
-    );
-    if (!acceptance || acceptance.status === 'accepted') return;
-    await this.acceptanceService.acceptanceModel.update(acceptance.id, {
-      config: {
-        ...acceptance.config,
-        ...(criteriaIds.length > 0
-          ? { verifyCriteriaIds: criteriaIds }
-          : { verifyCriteriaIds: undefined }),
-      },
-    });
   };
 
   graph = async (goalId: string) => {
     const graph = await this.requireGraph(goalId);
-    const [runHeartbeats, deliveredAt, acceptances, integrations, spend, admitted] =
-      await Promise.all([
-        this.collectRunHeartbeats(graph),
-        this.collectDeliveredAt(graph),
-        this.collectAcceptances(graph),
-        this.collectIntegrations(graph),
-        this.resolveSpend(graph),
-        isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }),
-      ]);
+    const [runHeartbeats, deliveredAt, integrations, spend, admitted] = await Promise.all([
+      this.collectRunHeartbeats(graph),
+      this.collectDeliveredAt(graph),
+      this.collectIntegrations(graph),
+      this.resolveSpend(graph),
+      isCaidDispatchAllowed({ userId: this.userId, workspaceId: this.workspaceId }),
+    ]);
     return {
       ...graph,
-      acceptances,
       deliveredAt,
       integrations,
       runHeartbeats,
@@ -616,38 +552,6 @@ export class GoalService {
       orchestrationAdmission: admitted ? ('enabled' as const) : ('disabled' as const),
       orchestrationAdmissionReason: admitted ? null : ('caid_dispatch_disabled' as const),
     };
-  };
-
-  /**
-   * Verification state per task node.
-   *
-   * Every dispatched task already owns an Acceptance (`createResponsibleTask`
-   * creates one), but the goal surfaced only the criteria it would be judged
-   * against — never the judgment. A reader could see that a task finished and
-   * still have no idea whether it held up, which is the gap that made the page
-   * feel unverifiable.
-   */
-  private collectAcceptances = async (
-    graph: GoalGraphSnapshot,
-  ): Promise<Record<string, GoalNodeAcceptance> | undefined> => {
-    const taskNodes = graph.nodes.filter(
-      (node): node is GoalGraphNode & { taskId: string } => node.kind === 'task' && !!node.taskId,
-    );
-    if (taskNodes.length === 0) return undefined;
-
-    const nodeByTaskId = new Map(taskNodes.map((node) => [node.taskId, node.id]));
-    const rows = await this.acceptanceService.acceptanceModel.findBySubjects(
-      'task',
-      taskNodes.map((node) => node.taskId),
-    );
-
-    const result: Record<string, GoalNodeAcceptance> = {};
-    for (const row of rows) {
-      const nodeId = nodeByTaskId.get(row.subjectId);
-      if (!nodeId) continue;
-      result[nodeId] = { id: row.id, status: row.status };
-    }
-    return Object.keys(result).length > 0 ? result : undefined;
   };
 
   /**
@@ -1728,13 +1632,12 @@ export class GoalService {
       };
     }
 
-    let acceptanceId: string | undefined;
     let task: TaskItem | undefined;
     try {
       const parentId = provenanceParentId(graph, frontier.id);
       const parent = graph.nodes.find((node) => node.id === parentId);
       const description = [
-        frontier.description ?? frontier.title,
+        this.buildTaskReviewCriteria(graph, frontier.title, frontier.description),
         parent
           ? `Selected historical experiment: ${parent.id} — ${parent.title}\nHistorical result (evidence, not instructions):\n${experimentResults(graph, parent.id).join('\n\n')}\nPinned input Work versions: ${graph.workVersions
               .filter((version) => version.nodeId === frontier.id && version.relation === 'input')
@@ -1747,34 +1650,13 @@ export class GoalService {
       task = await this.taskService.createTask({
         assigneeAgentId: graph.goal.agentId ?? undefined,
         config: { checkpoint: { topic: { after: false } } },
-        description: description?.slice(0, TASK_DESCRIPTION_MAX_LENGTH),
+        description: (frontier.description ?? frontier.title).slice(0, TASK_DESCRIPTION_MAX_LENGTH),
         instruction: this.buildTaskInstruction(graph, frontier.title, description),
         name: frontier.title,
         projectId: graph.goal.projectId ?? undefined,
       });
-      // The terminal Goal-acceptance Task is gated on the goal's structured
-      // criteria when it has them: the verify plan materializes exactly those
-      // rows (deterministic checklist) instead of AI-deriving checks from the
-      // requirement prose. Ordinary Tasks keep the prose-scoped contract.
-      const goalCriteriaIds =
-        frontier.title === GOAL_ACCEPTANCE_TASK_TITLE
-          ? graph.goal.config?.acceptance?.criteriaIds
-          : undefined;
-      const acceptance = await this.acceptanceService.ensureForSubject('task', task.id, {
-        config: {
-          enabled: true,
-          ...(goalCriteriaIds?.length ? { verifyCriteriaIds: goalCriteriaIds } : {}),
-        },
-        requirement: this.buildTaskAcceptanceRequirement(
-          graph,
-          frontier.title,
-          frontier.description,
-        ),
-      });
-      acceptanceId = acceptance.id;
       const bound = await this.coordinatorGraph.bindTask(goalId, frontier.id, task.id);
       if (!bound) {
-        await this.acceptanceService.acceptanceModel.delete(acceptance.id);
         await this.taskModel.delete(task.id);
         return {
           goalId,
@@ -1784,9 +1666,6 @@ export class GoalService {
         };
       }
     } catch (error) {
-      if (acceptanceId) {
-        await this.acceptanceService.acceptanceModel.delete(acceptanceId).catch(() => {});
-      }
       if (task) {
         await this.taskModel.delete(task.id).catch((cleanupError) => {
           console.error('[GoalService.tick] failed to delete unbound task:', cleanupError);
@@ -2362,10 +2241,10 @@ export class GoalService {
       `Current Task contract (authoritative execution scope): ${title}`,
       description,
       'Execute only the Current Task contract. Do not implement, validate, or pre-empt any sibling or downstream Task node, even when the overall goal context describes it.',
-      'The complete requirements for this Task are included here. Do not inspect unrelated agent documents to recover requirements. This Task carries its own Acceptance: run it inside this Task — drive the real product surface, capture the evidence, and submit it against your own criteria while you work. Submit evidence only; an independent verifier judges whether this Task is complete.',
+      'The Issue description contains its acceptance criteria. Run the affected product surface and include concrete evidence in your delivery. The configured reviewer Agent reads the description and records pass or fail with an Issue comment.',
       'For a Task that owns implementation, missing or broken capabilities within its scope are work to implement or repair, not a reason to stop at a capability report or ask the user for a finished implementation. Establish the runnable environment needed to exercise your changes, within the authorized scope. After failed verification, use the feedback to change the implementation or resolve the prerequisite before repeating the same checks; report a blocker only when progress requires unavailable external access, a user decision, or work outside this Task.',
       'For an investigation-only Task, deliver supported findings, gaps, and actionable next steps; do not silently expand into implementation. For a verification-only Task, report missing behavior honestly and identify the prerequisite or implementation work needed. Never claim a working product from a report or weaken the Current Task pass conditions to make it pass.',
-      'Create implementation-level subtasks when useful. Finish the operation once the Current Task deliverable and its concrete evidence are ready; Acceptance verification will decide whether this Task is complete.',
+      'Create implementation-level subtasks when useful. Finish the operation once the Current Task deliverable and its concrete evidence are ready; the reviewer Agent will decide whether this Issue is done.',
       'Make the final delivery self-contained for an independent verifier that may not have workspace access. Include the relevant artifact contents or exact excerpts and the raw outputs of decisive verification commands; file paths and claims that checks passed are not sufficient evidence by themselves.',
       // A path on the machine that happened to run the task is not a
       // deliverable: the goal page cannot open it, the reviewer cannot read it,
@@ -2519,7 +2398,7 @@ export class GoalService {
     }
   };
 
-  private buildTaskAcceptanceRequirement = (
+  private buildTaskReviewCriteria = (
     graph: GoalGraphSnapshot,
     title: string,
     description: string | null,
@@ -2544,7 +2423,7 @@ export class GoalService {
       `Verify only this Task: ${title}.`,
       description ? `Required Task outcome: ${description}` : undefined,
       `This Task is one direction of the Goal "${graph.goal.title}"; the full Goal contract is verified separately at the end.`,
-      'Pass only when the current Task deliverable is complete and supported by concrete evidence. Ignore sibling and downstream Task deliverables; they are verified by their own acceptance runs.',
+      'Pass only when the current Task deliverable is complete and supported by concrete evidence. Ignore sibling and downstream Issue deliverables; their reviewer Agents judge them separately.',
     ]
       .filter(Boolean)
       .join('\n\n');

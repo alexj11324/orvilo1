@@ -218,12 +218,14 @@ export async function buildTaskPrompt(
      * never silently rewrite an in-flight attempt's prompt.
      */
     contractContent?: TaskExecutionContractContent;
+    skipTaskVerification?: boolean;
     occurrence?: AutomationOccurrenceSnapshot;
     independentOccurrence?: boolean;
   },
 ): Promise<BuiltTaskPrompt> {
   const { briefModel, db, taskModel, taskTopicModel, userId, workspaceId } = deps;
   const inherited = opts?.contractContent;
+  const skipTaskVerification = !task.automationMode || opts?.skipTaskVerification === true;
 
   const [topics, briefs, comments, subtasks, liveDependencies, documents] = await Promise.all([
     !opts?.independentOccurrence && task.totalTopics && task.totalTopics > 0
@@ -402,13 +404,15 @@ export async function buildTaskPrompt(
   // live Acceptance row may have been edited since the attempt started, and
   // that edit must not retroactively change this run's requirements.
   const resolvedAcceptance =
-    inherited || task.automationMode
+    inherited || task.automationMode || skipTaskVerification
       ? undefined
       : await resolveTaskAcceptance(db, userId, task.id, workspaceId).catch(() => undefined);
   const verifyConfig = resolvedAcceptance?.config;
-  const verifyEnabled = inherited
-    ? (inherited.verify?.enabled ?? false)
-    : !!resolvedAcceptance && verifyConfig?.enabled !== false;
+  const verifyEnabled =
+    !skipTaskVerification &&
+    (inherited
+      ? (inherited.verify?.enabled ?? false)
+      : !!resolvedAcceptance && verifyConfig?.enabled !== false);
   let verifyCriteria: Array<{
     required?: boolean;
     requiredEvidence?: Array<{ hint?: string; type: string }>;
@@ -446,7 +450,7 @@ export async function buildTaskPrompt(
       });
   }
 
-  const goalLoop = await resolveGoalLoopContext(task, deps);
+  const goalLoop = skipTaskVerification ? undefined : await resolveGoalLoopContext(task, deps);
 
   const prompt = buildTaskRunPrompt({
     ...(goalLoop ? { goalLoop } : {}),
@@ -556,7 +560,7 @@ export async function buildTaskPrompt(
   });
 
   const contractContent: TaskExecutionContractContent = inherited
-    ? { ...inherited }
+    ? { ...inherited, ...(skipTaskVerification ? { verify: { enabled: false } } : {}) }
     : {
         dependencies: contractDependencies,
         instruction: task.instruction,

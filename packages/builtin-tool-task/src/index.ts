@@ -20,5 +20,7 @@ export type {
   GoalCriterionDraft,
   ListWorkspaceMembersParams,
   ListWorkspaceMembersState,
+  SubmitTaskReviewParams,
+  SubmitTaskReviewState,
 } from './types';
 export { TaskApiName } from './types';

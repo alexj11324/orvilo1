@@ -1807,7 +1807,7 @@ export const taskRouter = router({
           });
           const config = await ctx.agentModel.getAgentConfigForExecution(agent.id);
           return {
-            canVerifyDeliveries: !!config && agentCanMountBuiltinToolSurface(config, config.model),
+            canReviewIssues: !!config && agentCanMountBuiltinToolSurface(config, config.model),
             id: agent.id,
             name: agent.title ?? agent.name ?? agent.id,
           };

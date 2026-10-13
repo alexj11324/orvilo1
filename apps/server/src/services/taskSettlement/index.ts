@@ -95,7 +95,7 @@ export const settleTaskExecution = async (
   }
 
   const reviewRequired =
-    input.outcome === 'succeeded' && !context?.verifyBound
+    input.outcome === 'succeeded' && task.automationMode && !context?.verifyBound
       ? await taskModel.resolveTaskReviewRequirement(task)
       : false;
 
@@ -187,6 +187,17 @@ export const settleTaskExecution = async (
     };
   }
 
+  if (deliveredIssue && !waitingForReviewer && updated.workflowCategory === 'in_review') {
+    const { startIssueReview } = await import('../task/review');
+    await startIssueReview(
+      db,
+      userId,
+      taskId,
+      { deliveryOperationId: input.operationId },
+      workspaceId,
+    );
+  }
+
   if (waitingForReviewer) {
     await requestReviewerAssignment(
       db,
@@ -243,6 +254,10 @@ const applyPlan = async (
 
   const extra = {
     ...workflowPatch,
+    ...(context?.expectedIssueReviewCycleId
+      ? { expectedIssueReviewCycleId: context.expectedIssueReviewCycleId }
+      : {}),
+    ...(input.runStarted ? { preserveIssueReviewCycle: true } : {}),
     ...(parkedReason ? { parkedReason } : {}),
     ...(context?.error !== undefined ? { error: context.error } : {}),
     ...(context?.clearRunReservation
@@ -264,7 +279,14 @@ const applyPlan = async (
       expectedContract: context?.expectedContract,
       id: task.id,
       status: status as TaskStatus,
-      workflow: { ...workflowPatch, ...(parkedReason ? { parkedReason } : {}) },
+      workflow: {
+        ...workflowPatch,
+        ...(context?.expectedIssueReviewCycleId
+          ? { expectedIssueReviewCycleId: context.expectedIssueReviewCycleId }
+          : {}),
+        ...(parkedReason ? { parkedReason } : {}),
+        ...(input.runStarted ? { preserveIssueReviewCycle: true } : {}),
+      },
     };
     const options = {
       beforeMutation: context?.beforeMutation,

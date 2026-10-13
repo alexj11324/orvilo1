@@ -50,6 +50,8 @@ export async function runTaskWatchdog(
   db: OrviloDatabase,
   options: TaskWatchdogOptions = {},
 ): Promise<TaskWatchdogResult> {
+  const { sweepIssueReviews } = await import('./task/review');
+  await sweepIssueReviews(db, options);
   const stuckTasks = await TaskModel.findStuckTasks(db, options);
   const failed: string[] = [];
   const cancellationRequired: string[] = [];

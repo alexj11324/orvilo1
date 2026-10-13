@@ -98,6 +98,8 @@ export function startLocalHeartbeatRecoveryLoop() {
     try {
       const db = await getServerDB();
       await sweepQueuedDeviceOperations({ db });
+      const { sweepIssueReviews } = await import('../task/review');
+      await sweepIssueReviews(db);
       await recoverLocalHeartbeatSchedules(db);
     } catch {
       console.error('[task-scheduler] Persistent heartbeat recovery unavailable');

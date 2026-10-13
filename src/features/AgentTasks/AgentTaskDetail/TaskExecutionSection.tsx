@@ -103,6 +103,7 @@ const useIssueExecutionView = (): { reason?: string | null; view: IssueExecution
       dispatchPhase: detail.dispatchPhase,
       dispatchWaitingReason: detail.dispatchWaitingReason,
       latestRunStatus: latestRun?.status,
+      issueReview: detail.config?.issueReview,
       orchestrationAdmission: detail.orchestrationAdmission,
       status: detail.status,
       workflowCategory: detail.workflowCategory,

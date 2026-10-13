@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   updateStatusIfReservation: vi.fn(),
 }));
 
+vi.mock('../task/review', () => ({ startIssueReview: vi.fn() }));
 vi.mock('../task/reviewerAssignment', () => ({
   requestReviewerAssignment: mocks.requestReviewerAssignment,
   isWaitingForReviewer: (task: TaskItem) =>

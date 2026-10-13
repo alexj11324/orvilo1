@@ -1,5 +1,6 @@
 import type {
   CheckpointConfig,
+  IssueReviewState,
   LinearExternalCommentOutboxPayload,
   LinearExternalRelationOutboxPayload,
   NewTask,
@@ -8,6 +9,7 @@ import type {
   TaskAttentionReason,
   TaskAutomationMode,
   TaskAutomationSnapshot,
+  TaskConfig,
   TaskDispatchPhase,
   TaskDomainEventSource,
   TaskDomainEventType,
@@ -21,7 +23,11 @@ import type {
   WorkspaceDocNode,
   WorkspaceTreeNode,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus, TASK_ACTIVITY_COLLAPSE_WINDOW_MS } from '@orvilo/types';
+import {
+  deriveLegacyTaskStatus,
+  MAX_CONSECUTIVE_REVIEW_FAILURES,
+  TASK_ACTIVITY_COLLAPSE_WINDOW_MS,
+} from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -78,6 +84,7 @@ import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamRead
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { insertOutboxEvent, newEventId } from './eventOutbox';
 import { LinearSyncModel } from './linearSync';
+import { NotificationModel } from './notification';
 import { projectEffectiveRequireHumanReview, ProjectModel } from './project';
 import { TaskDependencyError } from './taskDependency';
 import {
@@ -272,6 +279,8 @@ export interface TaskMutationContext {
    * Inbound Linear sync omits this; the Team UI must send it.
    */
   expectedDomainRevision?: number;
+  /** Trusted repair settlement may only write its current review cycle. */
+  expectedIssueReviewCycleId?: string;
   /** Stable caller key when the write is a replayable command or delivery. */
   idempotencyKey?: string;
   source?: TaskDomainEventSource;
@@ -295,7 +304,11 @@ export interface TaskCommentActor {
 export interface TaskStatusTransitionExtra {
   completedAt?: Date;
   error?: string | null;
+  /** Trusted late repair settlement guard; never accepted from user input. */
+  expectedIssueReviewCycleId?: string;
   parkedReason?: string;
+  /** Trusted run-start normalization preserves the current repair cycle. */
+  preserveIssueReviewCycle?: boolean;
   runReservationExpiresAt?: Date | null;
   runReservationId?: string | null;
   startedAt?: Date;
@@ -739,10 +752,18 @@ export class TaskModel {
 
   private async withReviewerValidation<T>(
     ids: string[],
-    data: { reviewerAgentId?: string | null; workflowCategory?: TaskWorkflowCategory },
+    data: {
+      reviewerAgentId?: string | null;
+      workflowCategory?: TaskWorkflowCategory;
+      status?: string;
+      workflowStateId?: string | null;
+      workflowStateRefId?: string | null;
+      preserveIssueReviewCycle?: boolean;
+      expectedIssueReviewCycleId?: string;
+    },
     write: (model: TaskModel) => Promise<T>,
     condition?: SQL,
-  ): Promise<T> {
+  ): Promise<T | null> {
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       const scoped = new TaskModel(runner, this.userId, this.workspaceId, {
@@ -755,18 +776,63 @@ export class TaskModel {
       await scoped.assertReviewerAgent(runner, data.reviewerAgentId);
       const rows = await runner
         .select({
+          id: tasks.id,
+          config: tasks.config,
+          status: sql<string>`${legacyStatusExpr}`,
+          workflowStateId: tasks.workflowStateId,
+          workflowStateRefId: tasks.workflowStateRefId,
           reviewerAgentId: tasks.reviewerAgentId,
           workflowCategory: tasks.workflowCategory,
         })
         .from(tasks)
         .where(and(inArray(tasks.id, ids), this.ownership(), condition))
         .for('update');
+      if (
+        data.expectedIssueReviewCycleId !== undefined &&
+        (rows.length !== ids.length ||
+          rows.some(
+            (row) =>
+              (row.config as TaskConfig)?.issueReview?.cycleId !== data.expectedIssueReviewCycleId,
+          ))
+      )
+        return null;
       for (const row of rows) {
-        const category = data.workflowCategory ?? row.workflowCategory;
+        const category =
+          data.workflowCategory ??
+          (data.status ? workflowCategoryForLegacyStatus(data.status) : undefined) ??
+          row.workflowCategory;
         const reviewer =
           data.reviewerAgentId === undefined ? row.reviewerAgentId : data.reviewerAgentId;
         if (category === 'in_review' && !reviewer) throw new TaskReviewerRequiredError();
         if (category === 'in_review') await scoped.assertReviewerAgent(runner, reviewer);
+        const config = (row.config ?? {}) as TaskConfig;
+        if (
+          config.issueReview &&
+          (category !== row.workflowCategory ||
+            reviewer !== row.reviewerAgentId ||
+            (!data.preserveIssueReviewCycle &&
+              ((data.status !== undefined && data.status !== row.status) ||
+                (data.workflowStateId !== undefined &&
+                  data.workflowStateId !== row.workflowStateId) ||
+                (data.workflowStateRefId !== undefined &&
+                  data.workflowStateRefId !== row.workflowStateRefId))))
+        ) {
+          await runner
+            .update(tasks)
+            .set({
+              config: {
+                ...config,
+                issueReview: {
+                  ...config.issueReview,
+                  cycleId: newEventId(),
+                  state: 'submitted',
+                  reviewerOperationId: undefined,
+                  repairPending: false,
+                },
+              },
+            })
+            .where(eq(tasks.id, row.id));
+        }
       }
       return write(scoped);
     });
@@ -1059,7 +1125,12 @@ export class TaskModel {
   }
 
   private static statusTransitionData(transition: string, extra?: TaskStatusTransitionExtra) {
-    const { parkedReason, ...columns } = extra ?? {};
+    const {
+      parkedReason,
+      preserveIssueReviewCycle: _preserveIssueReviewCycle,
+      expectedIssueReviewCycleId: _expectedIssueReviewCycleId,
+      ...columns
+    } = extra ?? {};
     return { ...columns, ...TaskModel.statusTransitionPatch(transition, parkedReason) };
   }
 
@@ -1105,17 +1176,30 @@ export class TaskModel {
   async update(
     id: string,
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>> &
-      Pick<TaskStatusTransitionExtra, 'parkedReason'>,
+      Pick<
+        TaskStatusTransitionExtra,
+        'parkedReason' | 'preserveIssueReviewCycle' | 'expectedIssueReviewCycleId'
+      >,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (Object.keys(data).length === 0) return this.findById(id);
     if (
       !this.reviewerValidationHeld &&
-      (data.reviewerAgentId !== undefined || data.workflowCategory !== undefined)
+      (data.reviewerAgentId !== undefined ||
+        data.workflowCategory !== undefined ||
+        data.status !== undefined ||
+        data.workflowStateId !== undefined ||
+        data.workflowStateRefId !== undefined ||
+        data.expectedIssueReviewCycleId !== undefined ||
+        mutation.expectedIssueReviewCycleId !== undefined)
     ) {
       return this.withReviewerValidation(
         [id],
-        data,
+        {
+          ...data,
+          expectedIssueReviewCycleId:
+            data.expectedIssueReviewCycleId ?? mutation.expectedIssueReviewCycleId,
+        },
         (model) => model.update(id, data, mutation),
         mutation.expectedDomainRevision === undefined
           ? undefined
@@ -1196,8 +1280,21 @@ export class TaskModel {
       return null;
     };
 
-    const { status: transition, parkedReason, ...writeData } = data;
+    const {
+      status: transition,
+      parkedReason,
+      preserveIssueReviewCycle: _preserveIssueReviewCycle,
+      expectedIssueReviewCycleId: _expectedIssueReviewCycleId,
+      ...writeData
+    } = data;
     if (this.workspaceId) writeData.visibility = 'public';
+    if (data.config !== undefined) {
+      // Review state belongs to the locked review writers, never a client config snapshot.
+      const config = sql`(${JSON.stringify(data.config ?? {})}::jsonb - 'issueReview')`;
+      writeData.config = sql`case when ${tasks.config} ? 'issueReview'
+        then jsonb_set(${config}, '{issueReview}', ${tasks.config} -> 'issueReview')
+        else ${config} end`;
+    }
     const transitionPatch =
       transition === undefined ? {} : TaskModel.statusTransitionPatch(transition, parkedReason);
     const completionStamp = TaskModel.completionStampSet(
@@ -2733,10 +2830,15 @@ export class TaskModel {
     extra?: TaskStatusTransitionExtra,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
-    if (!this.reviewerValidationHeld && extra?.workflowCategory !== undefined) {
+    if (!this.reviewerValidationHeld) {
       return this.withReviewerValidation(
         [id],
-        extra,
+        {
+          ...extra,
+          status: transition,
+          expectedIssueReviewCycleId:
+            extra?.expectedIssueReviewCycleId ?? mutation.expectedIssueReviewCycleId,
+        },
         (model) => model.updateStatusIfCurrent(id, expected, transition, extra, mutation),
         predicateForLegacyStatus(expected) ?? sql`false`,
       );
@@ -2793,10 +2895,10 @@ export class TaskModel {
     status: string,
     extra?: TaskStatusTransitionExtra,
   ): Promise<TaskItem | null> {
-    if (!this.reviewerValidationHeld && extra?.workflowCategory !== undefined) {
+    if (!this.reviewerValidationHeld) {
       return this.withReviewerValidation(
         [id],
-        extra,
+        { ...extra, status },
         (model) => model.updateStatusIfReservation(id, reservationId, currentStatus, status, extra),
         and(
           eq(tasks.runReservationId, reservationId),
@@ -2888,10 +2990,18 @@ export class TaskModel {
     now: Date = new Date(),
     leaseMs = 30 * 60 * 1000,
     replaceReservationId?: string,
+    expectedIssueReviewCycleId?: string,
   ): Promise<boolean> {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) =>
-        model.reserveRun(id, reservationId, now, leaseMs, replaceReservationId),
+        model.reserveRun(
+          id,
+          reservationId,
+          now,
+          leaseMs,
+          replaceReservationId,
+          expectedIssueReviewCycleId,
+        ),
       );
     }
     await this.assertDependenciesForStatus([id], 'running');
@@ -2909,6 +3019,12 @@ export class TaskModel {
       .where(
         and(
           eq(tasks.id, id),
+          expectedIssueReviewCycleId === undefined
+            ? undefined
+            : and(
+                eq(tasks.workflowCategory, 'in_progress'),
+                sql`${tasks.config} #>> '{issueReview,cycleId}' = ${expectedIssueReviewCycleId}`,
+              ),
           or(
             isNull(tasks.runReservationId),
             lt(tasks.runReservationExpiresAt, now),
@@ -3010,10 +3126,15 @@ export class TaskModel {
     mutation: TaskMutationContext = {},
     beforeMutation?: (tx: OrviloDatabase) => Promise<boolean>,
   ): Promise<TaskItem | null> {
-    if (!this.reviewerValidationHeld && extra?.workflowCategory !== undefined) {
+    if (!this.reviewerValidationHeld) {
       return this.withReviewerValidation(
         [id],
-        extra,
+        {
+          ...extra,
+          status,
+          expectedIssueReviewCycleId:
+            extra?.expectedIssueReviewCycleId ?? mutation.expectedIssueReviewCycleId,
+        },
         (model) =>
           model.updateStatusForExecutionContract(
             id,
@@ -3108,9 +3229,18 @@ export class TaskModel {
     extra?: TaskStatusTransitionExtra,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem[]> {
-    if (!this.reviewerValidationHeld && extra?.workflowCategory !== undefined) {
-      return this.withReviewerValidation(ids, extra, (model) =>
-        model.updateStatusForIds(ids, status, extra, mutation),
+    if (!this.reviewerValidationHeld) {
+      return (
+        (await this.withReviewerValidation(
+          ids,
+          {
+            ...extra,
+            status,
+            expectedIssueReviewCycleId:
+              extra?.expectedIssueReviewCycleId ?? mutation.expectedIssueReviewCycleId,
+          },
+          (model) => model.updateStatusForIds(ids, status, extra, mutation),
+        )) ?? []
       );
     }
     if (ids.length === 0) return [];
@@ -3149,6 +3279,337 @@ export class TaskModel {
       }
     }
     return updated;
+  }
+
+  // ========== Issue review ==========
+
+  private async withIssueReview<T>(
+    id: string,
+    write: (model: TaskModel, task: TaskItem) => Promise<T>,
+  ) {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const model = new TaskModel(runner, this.userId, this.workspaceId, {
+        managedSubject: this.managedSubject,
+      });
+      await model.lockDependencyGraph();
+      model.dependencyLockHeld = true;
+      model.reviewerValidationHeld = true;
+      const [task] = await runner
+        .select(taskRowColumns)
+        .from(tasks)
+        .where(and(eq(tasks.id, id), this.ownership()))
+        .for('update')
+        .limit(1);
+      return task ? write(model, task) : null;
+    });
+  }
+
+  private async saveIssueReview(task: TaskItem, review: IssueReviewState) {
+    await this.db
+      .update(tasks)
+      .set({
+        config: { ...(task.config as TaskConfig), issueReview: review },
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tasks.id, task.id), this.ownership()));
+  }
+
+  async claimIssueReview(id: string, input: { deliveryOperationId?: string } = {}) {
+    return this.withIssueReview(id, async (model, task) => {
+      if (task.workflowCategory !== 'in_review' || !task.reviewerAgentId) return null;
+      const previous = (task.config as TaskConfig)?.issueReview;
+      if (
+        previous &&
+        previous.state !== 'submitted' &&
+        previous.reviewerAgentId === task.reviewerAgentId
+      )
+        return previous;
+      const review: IssueReviewState = {
+        cycleId: newEventId(),
+        reviewerAgentId: task.reviewerAgentId,
+        deliveryOperationId: input.deliveryOperationId,
+        state: 'pending',
+        consecutiveFailures: previous?.consecutiveFailures ?? 0,
+        lastFailureCommentId: previous?.lastFailureCommentId,
+      };
+      await model.saveIssueReview(task, review);
+      return review;
+    });
+  }
+
+  private async issueReviewOperationMatches(
+    task: TaskItem,
+    input: { cycleId: string; actorAgentId: string; operationId: string },
+  ) {
+    const review = (task.config as TaskConfig)?.issueReview;
+    if (
+      task.workflowCategory !== 'in_review' ||
+      review?.cycleId !== input.cycleId ||
+      task.reviewerAgentId !== input.actorAgentId ||
+      review.reviewerAgentId !== input.actorAgentId
+    )
+      return false;
+    const [operation] = await this.db
+      .select({ id: agentOperations.id })
+      .from(agentOperations)
+      .where(
+        and(
+          eq(agentOperations.id, input.operationId),
+          eq(agentOperations.agentId, input.actorAgentId),
+          eq(agentOperations.taskId, task.id),
+          this.workspaceId
+            ? eq(agentOperations.workspaceId, this.workspaceId)
+            : and(isNull(agentOperations.workspaceId), eq(agentOperations.userId, this.userId)),
+        ),
+      )
+      .limit(1);
+    return Boolean(operation);
+  }
+
+  async bindIssueReviewOperation(
+    id: string,
+    input: { cycleId: string; actorAgentId: string; operationId: string },
+  ) {
+    return Boolean(
+      await this.withIssueReview(id, async (model, task) => {
+        const review = (task.config as TaskConfig)?.issueReview;
+        if (
+          !review ||
+          review.state !== 'pending' ||
+          task.workflowCategory !== 'in_review' ||
+          review.cycleId !== input.cycleId ||
+          review.reviewerAgentId !== input.actorAgentId ||
+          task.reviewerAgentId !== input.actorAgentId
+        )
+          return false;
+        await model.saveIssueReview(task, {
+          ...review,
+          state: 'running',
+          reviewerOperationId: input.operationId,
+          retryReason: undefined,
+        });
+        return true;
+      }),
+    );
+  }
+
+  async releaseIssueReview(
+    id: string,
+    input: { cycleId: string; operationId?: string; reason: string; keepOperation?: boolean },
+  ) {
+    return Boolean(
+      await this.withIssueReview(id, async (model, task) => {
+        const review = (task.config as TaskConfig)?.issueReview;
+        if (
+          task.workflowCategory !== 'in_review' ||
+          !review ||
+          review.cycleId !== input.cycleId ||
+          review.state === 'submitted' ||
+          review.reviewerOperationId !== input.operationId
+        )
+          return false;
+        if (
+          review.retryReason === input.reason &&
+          (review.state === 'pending' || input.keepOperation)
+        )
+          return true;
+        await model.saveIssueReview(task, {
+          ...review,
+          state: input.keepOperation ? review.state : 'pending',
+          reviewerOperationId: input.keepOperation ? review.reviewerOperationId : undefined,
+          retryReason: input.reason,
+        });
+        await model.db.insert(taskActivities).values({
+          taskId: id,
+          userId: task.createdByUserId,
+          workspaceId: task.workspaceId,
+          visibility: task.visibility,
+          type: 'review_waiting',
+          payload: { reason: input.reason },
+        });
+        return true;
+      }),
+    );
+  }
+
+  static async queryPendingIssueReviews(
+    db: OrviloDatabase,
+    options: { createdByUserId?: string; workspaceId?: string } = {},
+  ): Promise<TaskItem[]> {
+    return db
+      .select(taskRowColumns)
+      .from(tasks)
+      .where(
+        and(
+          options.createdByUserId ? eq(tasks.createdByUserId, options.createdByUserId) : undefined,
+          options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : undefined,
+          options.createdByUserId && !options.workspaceId ? isNull(tasks.workspaceId) : undefined,
+          or(isNull(tasks.isDeleted), eq(tasks.isDeleted, false)),
+          or(
+            eq(tasks.workflowCategory, 'in_review'),
+            sql`${tasks.config} #>> '{issueReview,repairPending}' = 'true'`,
+          ),
+        ),
+      );
+  }
+
+  async isIssueReviewRepairCurrent(id: string, input: { cycleId: string }, tx?: OrviloDatabase) {
+    if (tx) {
+      const [task] = await tx
+        .select(taskRowColumns)
+        .from(tasks)
+        .where(and(eq(tasks.id, id), this.ownership()))
+        .for('update')
+        .limit(1);
+      const review = (task?.config as TaskConfig)?.issueReview;
+      return Boolean(
+        task?.workflowCategory === 'in_progress' &&
+        review?.cycleId === input.cycleId &&
+        review.state === 'submitted' &&
+        review.lastFailureCommentId &&
+        review.consecutiveFailures < MAX_CONSECUTIVE_REVIEW_FAILURES,
+      );
+    }
+    return Boolean(
+      await this.withIssueReview(id, async (model, task) =>
+        model.isIssueReviewRepairCurrent(task.id, input, model.db),
+      ),
+    );
+  }
+
+  async queryPendingIssueReviews(): Promise<TaskItem[]> {
+    return this.db
+      .select(taskRowColumns)
+      .from(tasks)
+      .where(
+        and(
+          this.ownership(),
+          or(
+            eq(tasks.workflowCategory, 'in_review'),
+            sql`${tasks.config} #>> '{issueReview,repairPending}' = 'true'`,
+          ),
+        ),
+      );
+  }
+
+  async completeIssueReviewRepair(id: string, input: { cycleId: string }) {
+    return Boolean(
+      await this.withIssueReview(id, async (model, task) => {
+        const review = (task.config as TaskConfig)?.issueReview;
+        if (
+          !review ||
+          review.cycleId !== input.cycleId ||
+          !review.repairPending ||
+          task.workflowCategory !== 'in_progress'
+        )
+          return false;
+        await model.saveIssueReview(task, { ...review, repairPending: false });
+        return true;
+      }),
+    );
+  }
+
+  async releaseIssueReviewRepair(id: string, input: { cycleId: string }) {
+    return Boolean(
+      await this.withIssueReview(id, async (model, task) => {
+        const review = (task.config as TaskConfig)?.issueReview;
+        if (
+          !review ||
+          review.cycleId !== input.cycleId ||
+          review.state !== 'submitted' ||
+          !review.lastFailureCommentId ||
+          review.consecutiveFailures >= MAX_CONSECUTIVE_REVIEW_FAILURES ||
+          task.workflowCategory !== 'in_progress'
+        )
+          return false;
+        await model.saveIssueReview(task, { ...review, repairPending: true });
+        return true;
+      }),
+    );
+  }
+
+  async recordIssueReviewVerdict(
+    id: string,
+    input: {
+      cycleId: string;
+      actorAgentId: string;
+      operationId: string;
+      verdict: 'pass' | 'fail';
+      comment?: string;
+      transition?: TaskStatusTransitionExtra;
+    },
+  ) {
+    if (input.verdict === 'fail' && !input.comment?.trim())
+      throw new Error('A failed review requires a comment');
+    return this.withIssueReview(id, async (model, task) => {
+      const review = (task.config as TaskConfig)?.issueReview;
+      if (
+        !review ||
+        review.state !== 'running' ||
+        review.reviewerOperationId !== input.operationId ||
+        !(await model.issueReviewOperationMatches(task, input))
+      )
+        return null;
+      const failed = input.verdict === 'fail';
+      const failures = failed ? review.consecutiveFailures + 1 : 0;
+      const stopped = failed && failures >= MAX_CONSECUTIVE_REVIEW_FAILURES;
+      const comment = input.comment?.trim()
+        ? await model.addComment({
+            taskId: id,
+            userId: task.createdByUserId,
+            authorAgentId: input.actorAgentId,
+            content: input.comment,
+          })
+        : undefined;
+      const next: IssueReviewState = {
+        ...review,
+        state: 'submitted',
+        consecutiveFailures: failures,
+        lastFailureCommentId: failed ? comment?.id : undefined,
+        repairPending: failed && !stopped,
+      };
+      await model.saveIssueReview(task, next);
+      const updated = await model.update(
+        id,
+        {
+          ...input.transition,
+          status: failed ? 'paused' : 'completed',
+          workflowCategory: failed ? 'in_progress' : 'done',
+        },
+        { source: 'agent' },
+      );
+      if (!updated) return null;
+      if (stopped) {
+        const content = 'Review failed three times. Automatic repair has stopped.';
+        await model.addComment({
+          taskId: id,
+          userId: task.createdByUserId,
+          authorAgentId: input.actorAgentId,
+          content,
+        });
+        const recipientUserId = task.assigneeUserId ?? task.createdByUserId;
+        if (recipientUserId)
+          await new NotificationModel(model.db, recipientUserId, {
+            workspaceId: task.workspaceId,
+          }).create({
+            category: 'task',
+            type: 'issue_review_stopped',
+            title: task.name ?? 'Issue review stopped',
+            content,
+            dedupeKey: `issue-review:${id}:${review.cycleId}:stopped`,
+            resourceId: id,
+            resourceType: 'task',
+            workspaceId: task.workspaceId,
+          });
+      }
+      return {
+        task: updated,
+        commentId: comment?.id,
+        repairPending: Boolean(next.repairPending),
+        stopped,
+      };
+    });
   }
 
   // ========== Config ==========
@@ -4894,7 +5355,10 @@ export class TaskModel {
   async updateWithLog(
     id: string,
     data: Partial<Omit<NewTask, 'id' | 'identifier' | 'seq' | 'createdByUserId'>> &
-      Pick<TaskStatusTransitionExtra, 'parkedReason'>,
+      Pick<
+        TaskStatusTransitionExtra,
+        'parkedReason' | 'preserveIssueReviewCycle' | 'expectedIssueReviewCycleId'
+      >,
     actor: { agentId?: string | null; userId?: string | null },
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {

@@ -324,7 +324,7 @@ export class SessionModel {
       const builtin = await agentModel.getBuiltinAgent(INBOX_SESSION_ID, {
         runtime: defaultAgentConfig.agencyConfig?.boundDeviceId
           ? {
-              agencyConfig: defaultAgentConfig.agencyConfig as NewAgent['agencyConfig'],
+              agencyConfig: defaultAgentConfig.agencyConfig as AgentItem['agencyConfig'],
               model: defaultAgentConfig.model ?? null,
               provider: defaultAgentConfig.provider ?? null,
             }

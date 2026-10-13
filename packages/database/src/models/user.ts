@@ -1,4 +1,5 @@
 import type {
+  OrviloAgentConfig,
   SSOProvider,
   UserGeneralConfig,
   UserGuide,
@@ -222,14 +223,14 @@ export class UserModel {
     return user?.preference as UserPreference | undefined;
   };
 
-  getUserSettingsDefaultAgentConfig = async () => {
+  getUserSettingsDefaultAgentConfig = async (): Promise<Partial<OrviloAgentConfig> | undefined> => {
     const result = await this.db
       .select({ defaultAgent: userSettings.defaultAgent })
       .from(userSettings)
       .where(eq(userSettings.id, this.userId))
       .limit(1);
 
-    return result[0]?.defaultAgent;
+    return (result[0]?.defaultAgent ?? undefined) as Partial<OrviloAgentConfig> | undefined;
   };
 
   updateUser = async (value: Partial<UserItem>) => {

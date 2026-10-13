@@ -188,6 +188,17 @@ describe('runVerifyOnCompletion — verification claim', () => {
     evidenceListByRun.mockResolvedValue([]);
   });
 
+  it.each([{ trigger: 'acp_judgment' }, { metadata: { skipTaskVerification: true } }])(
+    'does not verify an internal judgment or corrective operation (%o)',
+    async (policy) => {
+      operationFindById.mockResolvedValue({ id: 'op-1', taskId: 'task-1', ...policy });
+      await runVerifyOnCompletion(db, 'u1', params);
+      expect(claimEvidenceCollection).not.toHaveBeenCalled();
+      expect(claimVerifying).not.toHaveBeenCalled();
+      expect(execute).not.toHaveBeenCalled();
+    },
+  );
+
   it('defers task verification while its workspace integration is unresolved', async () => {
     operationFindById.mockResolvedValue({ id: 'op-1', taskId: 'task-1' });
     taskTopicFindByOperationId.mockResolvedValue({

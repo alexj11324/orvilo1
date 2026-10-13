@@ -929,6 +929,9 @@ vi.mock('@/server/services/orchestrationWorkflow/scheduler', () => ({
 }));
 vi.mock('@/database/models/orchestrationWorkflow', () => ({
   OrchestrationWorkflowModel: vi.fn(function () {
-    return { findByGraphTask: orchestrationWorkflowFindByTask };
+    return {
+      findByGraphTask: orchestrationWorkflowFindByTask,
+      reopenAfterVerifierRepair: vi.fn().mockResolvedValue(false),
+    };
   }),
 }));

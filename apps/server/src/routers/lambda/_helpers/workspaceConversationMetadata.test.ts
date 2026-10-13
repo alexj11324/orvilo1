@@ -193,7 +193,15 @@ describe('workspace conversation runtime metadata projection', () => {
   });
 
   it('redacts a foreign personal Agent runtime while preserving its actual owner access', async () => {
-    await db.update(agents).set({ workspaceId: null }).where(eq(agents.id, agentId));
+    const personal = await withTestAgentDevices(db, {
+      id: agentId,
+      userId: owner,
+      workspaceId: null,
+    });
+    await db
+      .update(agents)
+      .set({ workspaceId: null, agencyConfig: personal.agencyConfig })
+      .where(eq(agents.id, agentId));
     const rows = await new TaskTopicModel(db, member, workspaceId).findWithDetails(taskId);
     expectSafe((await projectWorkspaceConversationMetadata(ctx(member), rows))[0]?.metadata);
     expect(await getResourceConfigAccess(ctx(owner), 'agent', agentId)).toBe('full');

@@ -568,7 +568,7 @@ export class DeviceModel {
           userId: this.userId,
           visibility: params.visibility,
         })
-        .where(and(eq(devices.workspaceId, this.workspaceId), eq(devices.deviceId, deviceId)))
+        .where(and(eq(devices.workspaceId, this.workspaceId!), eq(devices.deviceId, deviceId)))
         .returning();
       return row;
     });

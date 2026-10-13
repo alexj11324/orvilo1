@@ -1388,7 +1388,7 @@ export const dispatchHeteroAgent = async (
         ? 'Device access denied'
         : blockedCode === 'DEVICE_REQUIRED'
           ? 'No bound device'
-          : 'Bound device unavailable';
+          : 'Device unavailable';
       log('execAgent: remote hetero dispatch blocked (code=%s)', blockedCode);
       // Structured admission refusal — the code lives in `errorData.code`
       // (the contract surface the repair UI branches on), never embedded in
@@ -1665,7 +1665,7 @@ export const dispatchHeteroAgent = async (
         ? 'Device access denied'
         : blockedCode === 'DEVICE_REQUIRED'
           ? 'No bound device'
-          : 'Bound device unavailable';
+          : 'Device unavailable';
       const pickerHint = !supportsCloudHeterogeneousSandbox(heteroType)
         ? 'Pick a local or connected device in the Execution Device switcher.'
         : 'Pick a device in the Execution Device switcher, or switch to Cloud sandbox.';

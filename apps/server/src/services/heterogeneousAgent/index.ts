@@ -657,7 +657,12 @@ export class HeterogeneousAgentService {
         const op = await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
           operationId,
         );
-        if (op?.taskId && !op.parentOperationId) {
+        if (
+          op?.taskId &&
+          !op.parentOperationId &&
+          op.trigger !== 'acp_judgment' &&
+          op.metadata?.skipTaskVerification !== true
+        ) {
           await instantiateVerifyPlanOnStart(
             this.db,
             this.userId,

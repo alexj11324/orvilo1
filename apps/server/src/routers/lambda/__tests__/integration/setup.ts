@@ -1,6 +1,7 @@
 /**
  * Common integration test setup
  */
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { type OrviloDatabase } from '@/database/type';
 import { uuid } from '@/utils/uuid';
 
@@ -35,7 +36,10 @@ export const createTestAgent = async (
   const id = agentId || `agt_${uuid()}`;
   const { agents } = await import('@/database/schemas');
 
-  await serverDB.insert(agents).values({ id, slug: id, userId }).onConflictDoNothing();
+  await serverDB
+    .insert(agents)
+    .values(await withTestAgentDevices(serverDB, { id, slug: id, userId }))
+    .onConflictDoNothing();
 
   return id;
 };

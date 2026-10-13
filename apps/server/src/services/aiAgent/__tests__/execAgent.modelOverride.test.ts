@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
 
+vi.mock('@/server/services/agent/builtinRuntimeCreation', () => ({
+  getExecutableBuiltinAgent: vi.fn(async () => ({ id: 'agent-1' })),
+}));
+
 const {
   mockIsResourceAuthorOrAdmin,
   mockCreateOperation,

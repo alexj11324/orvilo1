@@ -31,6 +31,10 @@ const {
 vi.mock('../pipeline/heteroDispatch', () => ({
   dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
+vi.mock('@/server/services/agent/builtinRuntimeCreation', () => ({
+  getExecutableBuiltinAgent: (_db: unknown, _userId: string, slug: string) =>
+    mockGetBuiltinAgent(slug),
+}));
 
 vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),

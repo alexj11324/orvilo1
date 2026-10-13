@@ -105,6 +105,7 @@ const executeVerifyLifecycle = async (
       log('op %s missing, cannot run verify', params.operationId);
       return;
     }
+    if (op.trigger === 'acp_judgment' || op.metadata?.skipTaskVerification === true) return;
 
     // Aegis method-pack runs (metadata.aegis.enabled, opt-in only) carry their
     // agent-submitted closeout/reports in the operation metadata — appended to
@@ -361,7 +362,7 @@ export const retryErroredVerification = async (
               topicId: operation.topicId,
             })
           : undefined;
-    if (!originalReply?.content)
+    if (typeof originalReply?.content !== 'string' || !originalReply.content)
       throw new Error('VERIFICATION_CONTEXT_UNAVAILABLE: the original delivery was not recorded');
     deliverable = originalReply.content;
     await model.recordVerificationContext(run.id, deliverable);

@@ -25,6 +25,7 @@ describe('orchestration workflow in-place migration', () => {
         CREATE TABLE ai_models (id text PRIMARY KEY, type varchar(20));
         CREATE TABLE tasks (id text PRIMARY KEY, name text, error text);
         CREATE TABLE task_topics (id text PRIMARY KEY, trigger text);
+        CREATE TABLE message_plugins (id text PRIMARY KEY, identifier text, api_name text);
         INSERT INTO goals VALUES ('goal_original', 'Keep this objective', '{"goalId":"goal_original","notes":"goal is an objective","tools":["orvilo-goal"],"api":"startOrchestrationWorkflow"}', null, now());
         INSERT INTO goal_nodes VALUES ('node_original', 'goal_original', 'Keep this Issue');
         INSERT INTO goal_traces VALUES ('trace_original', 'goal_original', '{"s3Key":"goal-traces/goal_original.json.zst"}');
@@ -34,6 +35,7 @@ describe('orchestration workflow in-place migration', () => {
         INSERT INTO ai_models VALUES ('model', 'chat');
         INSERT INTO tasks VALUES ('acceptance', 'Complete full Goal acceptance', 'Goal Task operation lease expired.');
         INSERT INTO task_topics VALUES ('attempt', 'goal');
+        INSERT INTO message_plugins VALUES ('legacy-task-tool', 'orvilo-task', 'createGoal');
       `);
       await db.exec(migration);
       await db.exec(migration);
@@ -53,6 +55,9 @@ describe('orchestration workflow in-place migration', () => {
           api: 'startOrchestrationWorkflow',
         },
       });
+      expect((await db.query('SELECT identifier, api_name FROM message_plugins')).rows).toEqual([
+        { identifier: 'orvilo-task', api_name: 'startOrchestrationWorkflow' },
+      ]);
       expect(rows[0].config.planConfirmedAt).toBeTruthy();
       expect(
         (await db.query('SELECT id, orchestration_workflow_id FROM orchestration_workflow_nodes'))

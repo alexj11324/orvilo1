@@ -40,7 +40,10 @@ import type { Command } from 'commander';
 
 import { createLambdaClient, getTrpcClient } from '../api/client';
 import { resolveServerUrl } from '../settings';
-import { buildAcpToolApprovalQuestion } from '../utils/acpToolApproval';
+import {
+  buildAcpToolApprovalOptions,
+  buildAcpToolApprovalQuestion,
+} from '../utils/acpToolApproval';
 import {
   persistChildResultInboxRecord,
   resolvePersistentToolCallId,
@@ -633,7 +636,15 @@ const exec = async (options: ExecOptions): Promise<void> => {
         // surface the permission card on the run's AskUser bridge. No bridge
         // (headless producer) cancels immediately — the server receipt stays
         // pending and the call is refused.
-        requestApproval: async ({ apiName, args, expiresAt, identifier, toolCallId, windowId }) => {
+        requestApproval: async ({
+          apiName,
+          args,
+          expiresAt,
+          identifier,
+          onProgress,
+          toolCallId,
+          windowId,
+        }) => {
           if (!askBridge) {
             return { cancelReason: 'session_ended' as const, cancelled: true };
           }
@@ -644,10 +655,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
                   {
                     header: `${identifier}.${apiName}`,
                     multiSelect: false,
-                    options: [
-                      { id: 'approve', label: 'Approve' },
-                      { id: 'deny', label: 'Deny' },
-                    ],
+                    options: buildAcpToolApprovalOptions(identifier),
                     question: buildAcpToolApprovalQuestion(identifier, apiName, args),
                   },
                 ],
@@ -657,6 +665,8 @@ const exec = async (options: ExecOptions): Promise<void> => {
               windowId,
             },
             {
+              onProgress,
+              progressIntervalMs: 5000,
               timeoutMs: expiresAt === undefined ? undefined : Math.max(1, expiresAt - Date.now()),
             },
           );

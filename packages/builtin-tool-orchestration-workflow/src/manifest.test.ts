@@ -4,7 +4,7 @@ import { OrchestrationWorkflowManifest } from './manifest';
 import { OrchestrationWorkflowApiName } from './types';
 
 describe('OrchestrationWorkflowManifest', () => {
-  it('exposes only the canonical startOrchestrationWorkflow workflow', () => {
+  it('exposes only the canonical startOrchestrationWorkflow API', () => {
     expect(OrchestrationWorkflowManifest.identifier).toBe('orvilo-orchestration-workflow');
     expect(OrchestrationWorkflowManifest.api.map(({ name }) => name)).toEqual([
       OrchestrationWorkflowApiName.startOrchestrationWorkflow,

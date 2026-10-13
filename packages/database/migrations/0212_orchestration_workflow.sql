@@ -147,6 +147,7 @@ BEGIN
   IF to_regclass('public.message_plugins') IS NOT NULL THEN
     UPDATE message_plugins SET identifier = replace(identifier, 'orvilo-goal', 'orvilo-orchestration-workflow'),
       api_name = replace(replace(api_name, 'Goal', 'OrchestrationWorkflow'), 'createOrchestrationWorkflow', 'startOrchestrationWorkflow')
-      WHERE identifier IN ('orvilo-goal', 'orvilo-goal-supervisor');
+      WHERE identifier IN ('orvilo-goal', 'orvilo-goal-supervisor')
+        OR (identifier = 'orvilo-task' AND api_name = 'createGoal');
   END IF;
 END $$;

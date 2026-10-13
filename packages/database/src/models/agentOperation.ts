@@ -239,7 +239,7 @@ export class AgentOperationModel {
       chatGroupId: params.chatGroupId ?? null,
       id: params.operationId,
       maxSteps: params.maxSteps,
-      ...(params.metadata || params.executionEngine
+      ...(params.metadata || params.executionEngine || params.skipTaskVerification
         ? {
             metadata: {
               ...params.metadata,
@@ -247,6 +247,7 @@ export class AgentOperationModel {
               // provenance must reflect the path that actually recorded the
               // row, not whatever an upstream payload happened to carry.
               ...(params.executionEngine ? { executionEngine: params.executionEngine } : {}),
+              ...(params.skipTaskVerification ? { skipTaskVerification: true } : {}),
             },
           }
         : {}),

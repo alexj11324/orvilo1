@@ -94,6 +94,23 @@ const db = {} as any;
 const plan = [{ id: 'check-1', required: true }];
 
 describe('Verify acceptance lifecycle', () => {
+  it('does not create an Acceptance round for an administrative operation at cross-request completion', async () => {
+    mocks.operationFindById.mockResolvedValue({ metadata: { skipTaskVerification: true } });
+    mocks.taskFindById.mockResolvedValue({
+      name: 'Delivered Issue',
+      reviewerAgentId: 'reviewer-1',
+    });
+    mocks.taskAcceptanceResolve.mockResolvedValue({
+      acceptance: { id: 'a1' },
+      config: { enabled: true, verifyCriteriaIds: ['check-1'] },
+      requirement: 'Exact final reply',
+    });
+    await instantiateVerifyPlanOnStart(db, 'u1', { operationId: 'admin-op', taskId: 't1' });
+    expect(mocks.generateDraftPlan).not.toHaveBeenCalled();
+    expect(mocks.confirmPlan).not.toHaveBeenCalled();
+    expect(mocks.acceptanceAttachPolicyRun).not.toHaveBeenCalled();
+  });
+
   it('reuses the Goal acceptance checklist and supplemental check ids on a repair attempt', async () => {
     mocks.goalFind.mockResolvedValue({ id: 'goal-1' });
     mocks.taskAcceptanceResolve.mockResolvedValue({

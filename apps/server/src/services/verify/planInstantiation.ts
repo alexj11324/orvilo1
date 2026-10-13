@@ -1,5 +1,6 @@
 import debug from 'debug';
 
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { GoalModel } from '@/database/models/goal';
 import { TaskModel } from '@/database/models/task';
 import { VerifyRunModel } from '@/database/models/verifyRun';
@@ -40,6 +41,10 @@ export const instantiateVerifyPlanOnStart = async (
   workspaceId?: string,
 ): Promise<void> => {
   try {
+    const operation = await new AgentOperationModel(db, userId, workspaceId).findById(
+      params.operationId,
+    );
+    if (operation?.metadata?.skipTaskVerification === true) return;
     const taskModel = new TaskModel(db, userId, workspaceId);
 
     const task = await taskModel.findById(params.taskId);

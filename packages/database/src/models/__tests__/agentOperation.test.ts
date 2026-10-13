@@ -115,6 +115,27 @@ describe('AgentOperationModel', () => {
   });
 
   describe('recordStart', () => {
+    it('persists the internal verification skip across a fresh model and queued operation', async () => {
+      const model = new AgentOperationModel(serverDB, userId);
+      await model.recordStart({
+        operationId: 'op-admin-skip',
+        metadata: { existing: 'preserved' },
+        skipTaskVerification: true,
+      });
+      await model.parkForDevice('op-admin-skip', {
+        state: 'waiting',
+        queuedAt: new Date().toISOString(),
+        offlineSince: new Date().toISOString(),
+        payload: {},
+      });
+      expect(
+        (await new AgentOperationModel(serverDB, userId).findById('op-admin-skip'))?.metadata,
+      ).toMatchObject({
+        existing: 'preserved',
+        skipTaskVerification: true,
+      });
+    });
+
     it('inserts a row with status=running and the provided ids', async () => {
       const model = new AgentOperationModel(serverDB, userId);
       const operationId = 'op-start-1';

@@ -505,8 +505,11 @@ export const sharedOptimizeDeps = {
   ],
 };
 
-// Workspace packages can resolve @lobehub/editor through different peer-dependency
-// snapshots. They must still share one LexicalComposerContext at runtime.
-export const sharedRendererDedupe = ['@lobehub/editor', 'react', 'react-dom'];
+// Workspace packages can resolve @lobehub/editor and @lobehub/ui through different
+// peer-dependency snapshots, which installs each more than once. They must still
+// share one context at runtime: the editor's LexicalComposerContext, and the
+// @lobehub/ui ConfigProvider that AppTheme mounts and every component reads. With
+// two copies a panel throws "Please wrap your app with <ConfigProvider>".
+export const sharedRendererDedupe = ['@lobehub/editor', '@lobehub/ui', 'react', 'react-dom'];
 
 export const __testing = { isUiCoreModule, sharedChunkFileNames, sharedManualChunks };

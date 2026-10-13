@@ -34,7 +34,7 @@ const withRuntime = (archive: ImporterEntryData): ImporterEntryData => ({
       agencyConfig: {
         boundDeviceId: 'deprecated-import-host',
         executionTarget: 'device',
-        heterogeneousProvider: { type: 'codex' },
+        heterogeneousProvider: { type: 'codex', model: 'default' },
       },
     },
   })),

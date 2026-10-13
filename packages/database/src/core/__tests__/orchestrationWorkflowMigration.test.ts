@@ -38,12 +38,20 @@ describe('orchestration workflow in-place migration', () => {
         INSERT INTO message_plugins VALUES ('legacy-task-tool', 'orvilo-task', 'createGoal');
       `);
       await db.exec(migration);
+      await db.exec(`INSERT INTO orchestration_workflows (id, title, config) VALUES
+        ('pending_split', 'Awaiting a reply', '{"conversationPlan":{"topicId":"chat","postedMessageId":"split","postedAt":"2026-10-13T12:00:00Z"}}'),
+        ('new_unconfirmed', 'New graph', '{}');`);
       await db.exec(migration);
+      const pending = await db.query<{ config: Record<string, unknown> }>(
+        "SELECT config FROM orchestration_workflows WHERE id IN ('pending_split', 'new_unconfirmed')",
+      );
+      expect(pending.rows).toHaveLength(2);
+      expect(pending.rows.every((row) => !row.config.planConfirmedAt)).toBe(true);
       const { rows } = await db.query<{
         id: string;
         title: string;
         config: Record<string, unknown>;
-      }>('SELECT * FROM orchestration_workflows');
+      }>("SELECT * FROM orchestration_workflows WHERE id = 'goal_original'");
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({
         id: 'goal_original',

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { MessageModel } from '@/database/models/message';
@@ -21,6 +21,7 @@ import {
   users,
 } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
+import { TaskRunnerService } from '@/server/services/taskRunner';
 
 import { OrchestrationWorkflowConversationPlanService } from './conversationPlan';
 import { OrchestrationWorkflowConversationService } from './conversationState';
@@ -58,6 +59,7 @@ beforeEach(async () => {
   ]);
 });
 afterEach(async () => {
+  vi.restoreAllMocks();
   for (const table of [
     orchestrationWorkflowNodeDecisions,
     orchestrationWorkflowEdges,
@@ -90,6 +92,9 @@ describe('board split and conversation reply admission', () => {
     const result = await plans().prepare(input, context);
     const issues = await new TaskModel(db, userId).findSubtasks(result.parentTaskId);
     expect(issues).toHaveLength(2);
+    expect(issues.map((issue) => issue.instruction)).toEqual(
+      expect.arrayContaining(input.tasks.map((task) => task.description)),
+    );
     expect(
       issues.every(
         (issue) =>
@@ -155,6 +160,7 @@ describe('board split and conversation reply admission', () => {
     );
     expect(item).toMatchObject({
       agentId: context.agentId,
+      status: 'running',
       subjectId: result.parentTaskId,
       config: { planConfirmedAt: expect.any(String) },
     });
@@ -241,5 +247,22 @@ describe('board split and conversation reply admission', () => {
       (await new OrchestrationWorkflowService(db, userId).tick(graph.orchestrationWorkflow.id))
         .outcome,
     ).toBe('waiting_human');
+  });
+  it('hands an already materialized Issue to the existing dispatcher after the reply releases the split', async () => {
+    const result = await plans().prepare(input, context);
+    const message = await reply(result.orchestrationWorkflowId);
+    const run = vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({
+      operationId: 'dispatched-operation',
+      topicId: 'task-topic',
+      success: true,
+    } as never);
+    await plans().release(result.orchestrationWorkflowId, {
+      ...context,
+      sourceMessageId: message.id,
+    });
+    await new OrchestrationWorkflowService(db, userId).tick(result.orchestrationWorkflowId);
+    expect(run).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: result.taskIds[0], trigger: 'orchestrationWorkflow' }),
+    );
   });
 });

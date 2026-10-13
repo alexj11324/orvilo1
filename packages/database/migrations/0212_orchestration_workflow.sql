@@ -1,6 +1,6 @@
 -- Preserve existing rows, identities, foreign keys and historical trace locations.
 DO $$
-DECLARE r record; renamed text;
+DECLARE r record; renamed text; legacy_rows boolean := to_regclass('public.goals') IS NOT NULL;
 BEGIN
   FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     AND (tablename = 'goals' OR tablename LIKE 'goal\_%' ESCAPE '\')
@@ -32,12 +32,14 @@ BEGIN
     EXECUTE format('ALTER INDEX public.%I RENAME TO %I',
       r.indexname, left(replace(r.indexname, 'goal', 'orchestration_workflow'), 63));
   END LOOP;
+  -- Only rows admitted by the legacy creation path inherit confirmation.
+  -- A repeated migration must never approve newly created pending splits.
+  IF legacy_rows THEN
+    UPDATE orchestration_workflows
+    SET config = coalesce(config, '{}'::jsonb) || jsonb_build_object('planConfirmedAt', coalesce(started_at, created_at))
+    WHERE config ->> 'planConfirmedAt' IS NULL;
+  END IF;
 END $$;
---> statement-breakpoint
--- Earlier rows already passed the legacy creation path; preserve their admission.
-UPDATE orchestration_workflows
-SET config = coalesce(config, '{}'::jsonb) || jsonb_build_object('planConfirmedAt', coalesce(started_at, created_at))
-WHERE config ->> 'planConfirmedAt' IS NULL;
 --> statement-breakpoint
 -- Only technical keys and reserved discriminator/tool values change. Prose,
 -- stable entity ids (including old goal_ ids), and S3 keys keep their values.

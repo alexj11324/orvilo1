@@ -218,7 +218,7 @@ export class OrchestrationWorkflowConversationPlanService {
         `Attempt budget per Issue: ${item.config?.recovery?.maxAttemptsPerTask ?? 3}; parallelism: ${item.config?.maxConcurrentTasks ?? 'coordinator default'}; cost budget: ${item.maxTotalCost ?? 'none'}; deadline: ${item.config?.schedule?.deadline ?? 'none'}.`,
         ...issues.map(
           (issue) =>
-            `${issue.identifier}: ${issue.name}\n${issue.instruction}\nAssignee Agent: ${issue.assigneeAgentId ?? 'unassigned'}; reviewer Agent: ${(issue.config as { verify?: { verifierAgentId?: string } } | null)?.verify?.verifierAgentId ?? 'configured reviewer'}; dependencies: ${
+            `${issue.identifier}: ${issue.name}\n${issue.instruction}\nAssignee Agent: ${issue.assigneeAgentId ?? 'unassigned'}; reviewer Agent: ${(issue.config as { verify?: { verifierAgentId?: string } } | null)?.verify?.verifierAgentId ?? 'existing verification policy'}; dependencies: ${
               dependencies
                 .filter((dependency) => dependency.taskId === issue.id)
                 .map(
@@ -290,6 +290,7 @@ export class OrchestrationWorkflowConversationPlanService {
         await model.update(id, {
           config: { ...item.config, planConfirmedAt: new Date().toISOString() },
         });
+      if (item.status === 'planning') await model.updateStatus(id, 'running');
       return { orchestrationWorkflowId: id, parentTaskId: item.subjectId };
     });
   };

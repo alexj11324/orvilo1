@@ -8,7 +8,7 @@ Reproduce:
 git grep -n -i goal -- apps/server apps/cli packages
 ```
 
-The scan matches 218 files. Historical migrations keep their original checksums. #0212 and storage upgrades reference legacy data names. Frontend client/locales remain with the user. Third-party objective contracts keep their exact upstream names.
+The scan matches 221 files. Historical migrations keep their original checksums. #0212 and storage upgrades reference legacy data names. Frontend client/locales remain with the user. Third-party objective contracts keep their exact upstream names.
 
 | File                                                                                                      | Reason                                                                                                                    |
 | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -234,3 +234,6 @@ The scan matches 218 files. Historical migrations keep their original checksums.
 Historical evidence such as `docs/development/slimming/census.json` and the archived navigation implementation specification keeps the vocabulary recorded at its original revision.
 
 Existing Issue `workflowCategory`/`workflowState` and generic background workflow infrastructure are separate concepts. The renamed entity always uses the full orchestration workflow term.
+\| `packages/model-runtime/docs/test-coverage.md` | Exact provider/model fixture or historical coverage-objective prose; unrelated to the orchestration workflow API. |
+\| `packages/model-runtime/src/core/streams/google/google-ai.test.ts` | Exact provider/model fixture or historical coverage-objective prose; unrelated to the orchestration workflow API. |
+\| `packages/model-runtime/src/providers/novita/fixtures/models.json` | Exact provider/model fixture or historical coverage-objective prose; unrelated to the orchestration workflow API. |

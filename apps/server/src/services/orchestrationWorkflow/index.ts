@@ -1975,7 +1975,9 @@ export class OrchestrationWorkflowService {
         status: 'backlog',
         workflowCategory: 'backlog',
         description: description?.slice(0, TASK_DESCRIPTION_MAX_LENGTH),
-        instruction: this.buildTaskInstruction(graph, frontier.title, description),
+        instruction: split
+          ? description
+          : this.buildTaskInstruction(graph, frontier.title, description),
         name: frontier.title,
         projectId: graph.orchestrationWorkflow.projectId ?? undefined,
       });

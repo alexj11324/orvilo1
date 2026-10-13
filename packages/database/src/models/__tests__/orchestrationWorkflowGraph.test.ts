@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   orchestrationWorkflowNodes,
@@ -87,7 +88,11 @@ describe('OrchestrationWorkflowGraphModel', () => {
       kind: 'finding',
       title: 'Concluded',
     });
-    await serverDB.insert(agents).values({ id: 'agt_author', slug: 'agt-author', userId });
+    await serverDB
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(serverDB, { id: 'agt_author', slug: 'agt-author', userId }),
+      );
     const byAgent = await coordinator.createNode(orchestrationWorkflow.id, {
       createdByAgentId: 'agt_author',
       kind: 'finding',

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   taskDispatches,
@@ -1006,7 +1007,9 @@ describe('TaskTopicModel', () => {
       const topicModel = new TaskTopicModel(serverDB, userId);
       await serverDB
         .insert(agents)
-        .values({ id: 'agt_child', slug: 'agt_child', userId })
+        .values(
+          await withTestAgentDevices(serverDB, { id: 'agt_child', slug: 'agt_child', userId }),
+        )
         .onConflictDoNothing();
       const parent = await taskModel.create({ instruction: 'Parent' });
       const child = await taskModel.create({

@@ -1774,6 +1774,18 @@ export class OrchestrationWorkflowService {
             return observe(await this.recoverAfterVerification(graph, acting!.id, task, effects));
           }
 
+          case 'verification_blocked': {
+            await this.setPauseReason(orchestrationWorkflowId, 'verification_unavailable');
+            await this.transitionStatus(graph.orchestrationWorkflow, 'paused', move.message);
+            return observe({
+              orchestrationWorkflowId,
+              message: move.message,
+              nodeId: acting!.id,
+              taskId: task.id,
+              outcome: 'waiting_external',
+            });
+          }
+
           case 'failure_decision': {
             const supervision = await new OrchestrationWorkflowSupervisorService(
               this.db,

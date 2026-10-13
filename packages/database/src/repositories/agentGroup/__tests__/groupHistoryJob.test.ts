@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { AgentModel } from '../../../models/agent';
 import { AGENT_COPY_IN_PROGRESS, AgentCopyJobModel } from '../../../models/agentCopyJob';
 import {
@@ -74,16 +75,18 @@ afterEach(async () => {
  * agent, one addressed to `'user'`) and one topicless residual message.
  */
 const seedGroupWithHistory = async () => {
-  await serverDB.insert(agents).values([
-    {
-      agencyConfig: seedRuntimeConfig,
-      id: supervisorId,
-      title: 'Supervisor',
-      userId,
-      virtual: true,
-    },
-    { agencyConfig: seedRuntimeConfig, id: memberId, title: 'Member', userId },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      {
+        agencyConfig: seedRuntimeConfig,
+        id: supervisorId,
+        title: 'Supervisor',
+        userId,
+        virtual: true,
+      },
+      { agencyConfig: seedRuntimeConfig, id: memberId, title: 'Member', userId },
+    ]),
+  );
   await serverDB.insert(chatGroups).values([{ id: groupId, title: 'Team', userId }]);
   await serverDB.insert(chatGroupsAgents).values([
     { agentId: supervisorId, chatGroupId: groupId, order: -1, role: 'supervisor', userId },

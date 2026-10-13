@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   agentsToSessions,
@@ -143,10 +144,12 @@ describe('TopicModel - Delete', () => {
   describe('batchDeleteByAgentId', () => {
     it('should delete topics with direct agentId match (new data)', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([
-          { id: 'delete-agent-1', userId, title: 'Delete Agent 1' },
-          { id: 'delete-agent-2', userId, title: 'Delete Agent 2' },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'delete-agent-1', userId, title: 'Delete Agent 1' },
+            { id: 'delete-agent-2', userId, title: 'Delete Agent 2' },
+          ]),
+        );
         await trx.insert(topics).values([
           { id: 'topic-agent-1', userId, agentId: 'delete-agent-1' },
           { id: 'topic-agent-1-b', userId, agentId: 'delete-agent-1' },
@@ -167,7 +170,13 @@ describe('TopicModel - Delete', () => {
           { id: 'legacy-session-1', userId },
           { id: 'legacy-session-2', userId },
         ]);
-        await trx.insert(agents).values([{ id: 'legacy-agent', userId, title: 'Legacy Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'legacy-agent', userId, title: 'Legacy Agent' },
+            ]),
+          );
         await trx
           .insert(agentsToSessions)
           .values([{ agentId: 'legacy-agent', sessionId: 'legacy-session-1', userId }]);
@@ -190,7 +199,11 @@ describe('TopicModel - Delete', () => {
         await trx.insert(sessions).values([{ id: 'mixed-del-session', userId }]);
         await trx
           .insert(agents)
-          .values([{ id: 'mixed-del-agent', userId, title: 'Mixed Delete Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'mixed-del-agent', userId, title: 'Mixed Delete Agent' },
+            ]),
+          );
         await trx
           .insert(agentsToSessions)
           .values([{ agentId: 'mixed-del-agent', sessionId: 'mixed-del-session', userId }]);
@@ -216,7 +229,11 @@ describe('TopicModel - Delete', () => {
         await trx.insert(users).values([{ id: otherUserId }]);
         await trx
           .insert(agents)
-          .values([{ id: 'shared-delete-agent', userId, title: 'Shared Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'shared-delete-agent', userId, title: 'Shared Agent' },
+            ]),
+          );
         await trx.insert(topics).values([
           { id: 'user-topic-del', userId, agentId: 'shared-delete-agent' },
           { id: 'other-user-topic-del', userId: otherUserId, agentId: 'shared-delete-agent' },
@@ -234,7 +251,11 @@ describe('TopicModel - Delete', () => {
       await serverDB.transaction(async (trx) => {
         await trx
           .insert(agents)
-          .values([{ id: 'no-session-agent', userId, title: 'No Session Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'no-session-agent', userId, title: 'No Session Agent' },
+            ]),
+          );
         await trx
           .insert(topics)
           .values([{ id: 'orphan-del-topic', userId, agentId: 'no-session-agent' }]);
@@ -250,7 +271,11 @@ describe('TopicModel - Delete', () => {
       await serverDB.transaction(async (trx) => {
         await trx
           .insert(agents)
-          .values([{ id: 'existing-agent', userId, title: 'Existing Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'existing-agent', userId, title: 'Existing Agent' },
+            ]),
+          );
         await trx
           .insert(topics)
           .values([{ id: 'existing-topic', userId, agentId: 'existing-agent' }]);
@@ -266,7 +291,11 @@ describe('TopicModel - Delete', () => {
       await serverDB.transaction(async (trx) => {
         await trx
           .insert(agents)
-          .values([{ id: 'msg-del-agent', userId, title: 'Message Delete Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'msg-del-agent', userId, title: 'Message Delete Agent' },
+            ]),
+          );
         await trx
           .insert(topics)
           .values([{ id: 'msg-del-topic', userId, agentId: 'msg-del-agent' }]);
@@ -334,7 +363,11 @@ describe('TopicModel - Delete', () => {
     // are hidden from every creator-facing listing — so the creator's id-less
     // sweeps must not destroy them.
     beforeEach(async () => {
-      await serverDB.insert(agents).values({ id: 'share-agent', title: 'Shared', userId });
+      await serverDB
+        .insert(agents)
+        .values(
+          await withTestAgentDevices(serverDB, { id: 'share-agent', title: 'Shared', userId }),
+        );
       await serverDB.insert(topics).values([
         { agentId: 'share-agent', id: 'creator-topic', userId },
         { agentId: 'share-agent', id: 'visitor-topic', senderId: 'visitor-a', userId },
@@ -416,7 +449,9 @@ describe('TopicModel - Delete', () => {
         primaryOwnerId: userId,
         slug: workspaceId,
       });
-      await serverDB.insert(agents).values({ id: 'ws-agent', userId, workspaceId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'ws-agent', userId, workspaceId }));
       await serverDB.insert(topics).values([
         { id: 'ws-topic-mine', agentId: 'ws-agent', userId, workspaceId },
         { id: 'ws-topic-other', agentId: 'ws-agent', userId: userId2, workspaceId },

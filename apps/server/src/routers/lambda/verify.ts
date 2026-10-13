@@ -53,6 +53,7 @@ import {
   VerifyPlanGeneratorService,
   VerifyReporterService,
 } from '@/server/services/verify';
+import { retryErroredVerification } from '@/server/services/verify/lifecycle';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
 
@@ -759,6 +760,27 @@ export const verifyRouter = router({
       );
       const run = await ctx.runModel.findByOperation(input.operationId);
       return run ? ctx.resultModel.listByRun(run.id) : [];
+    }),
+
+  retryVerification: verifyWriteProcedure
+    .input(z.object({ operationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const run = await ctx.runModel.findByOperation(input.operationId);
+      if (!run) throw new TRPCError({ code: 'NOT_FOUND', message: 'Verification run not found' });
+      assertWorkspaceRowManageable(ctx, run.userId, 'verify run');
+      if (run.status !== 'errored')
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Only errored verification can be retried',
+        });
+      return {
+        retried: await retryErroredVerification(
+          ctx.serverDB,
+          ctx.userId,
+          input.operationId,
+          ctx.workspaceId ?? undefined,
+        ),
+      };
     }),
 
   listResults: verifyProcedure

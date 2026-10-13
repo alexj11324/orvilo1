@@ -36,6 +36,7 @@ import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { AgentService } from '@/server/services/agent';
+import { getExecutableBuiltinAgent } from '@/server/services/agent/builtinRuntimeCreation';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
 import {
   AgentRuntimeService,
@@ -325,9 +326,19 @@ export class AiAgentService {
    */
   private async resolveAgentConfigOrThrow(identifier: string) {
     let agentConfig = await this.agentService.getAgentConfig(identifier);
-    if (!agentConfig && (Object.values(BUILTIN_AGENT_SLUGS) as string[]).includes(identifier)) {
-      await this.agentModel.getBuiltinAgent(identifier);
-      agentConfig = await this.agentService.getAgentConfig(identifier);
+    const builtinSlug = (Object.values(BUILTIN_AGENT_SLUGS) as string[]).includes(identifier)
+      ? identifier
+      : agentConfig?.slug;
+    if (builtinSlug && (Object.values(BUILTIN_AGENT_SLUGS) as string[]).includes(builtinSlug)) {
+      const builtin = await getExecutableBuiltinAgent(
+        this.db,
+        this.userId,
+        builtinSlug,
+        this.workspaceId,
+      );
+      // Slug compatibility reads can also see the caller's personal singleton.
+      // Execute the exact row selected by the strict scope resolver instead.
+      agentConfig = builtin ? await this.agentService.getAgentConfig(builtin.id) : null;
     }
     if (!agentConfig) {
       // `agentService.getAgentConfig` already routes through `AgentModel`'s
@@ -656,6 +667,7 @@ export class AiAgentService {
       prompt,
       appContext: requestedAppContext,
       beforeOperationStart,
+      afterOperationPersisted,
       createdThreadId,
       clientIp,
       userAgent,
@@ -1090,6 +1102,7 @@ export class AiAgentService {
       runContext,
       {
         beforeOperationStart,
+        afterOperationPersisted,
         builtinToolSpecs: toolSurface.builtinToolSpecs,
         canManageAgent,
         externalToolMounts: toolSurface.externalTools,

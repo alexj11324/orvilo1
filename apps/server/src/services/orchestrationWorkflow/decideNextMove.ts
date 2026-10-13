@@ -94,11 +94,7 @@ export const needsBudget = (task?: TaskItem | null, status?: string | null): boo
   // A failure the coordinator can retry spends money too.
   const resolved = status ?? task.status;
   if (resolved === 'paused') {
-    return (
-      task.error === LEASE_EXPIRED_ERROR ||
-      task.error === VERIFICATION_FAILED_ERROR ||
-      task.error === VERIFICATION_ERRORED_ERROR
-    );
+    return task.error === LEASE_EXPIRED_ERROR || task.error === VERIFICATION_FAILED_ERROR;
   }
   return !['completed', 'failed', 'canceled', 'running', 'scheduled'].includes(resolved);
 };
@@ -541,9 +537,7 @@ const decideForTask = (
     if (
       budget?.deadlinePassed &&
       status === 'paused' &&
-      (task.error === LEASE_EXPIRED_ERROR ||
-        task.error === VERIFICATION_FAILED_ERROR ||
-        task.error === VERIFICATION_ERRORED_ERROR)
+      (task.error === LEASE_EXPIRED_ERROR || task.error === VERIFICATION_FAILED_ERROR)
     ) {
       return {
         ...base,
@@ -561,22 +555,20 @@ const decideForTask = (
         outcome: 'waiting_external',
       };
     }
-    // A verifier that could not run never evaluated the delivery, so it is an
-    // infrastructure failure rather than a verdict. It recovers the same way a
-    // rejection does; without a branch it fell through to the human gate, which
-    // stopped the orchestration workflow on a failure nobody needed to judge.
-    if (
-      status === 'paused' &&
-      (task.error === VERIFICATION_FAILED_ERROR || task.error === VERIFICATION_ERRORED_ERROR)
-    ) {
+    if (status === 'paused' && task.error === VERIFICATION_ERRORED_ERROR) {
+      return {
+        ...base,
+        branch: 'verification_blocked',
+        message: `Verification could not run for Task ${task.identifier}; repair the verifier and retry verification of the existing delivery`,
+        outcome: 'waiting_external',
+      };
+    }
+    if (status === 'paused' && task.error === VERIFICATION_FAILED_ERROR) {
       if (!capacity) return 'needs-capacity';
       return {
         ...base,
         branch: 'recover_verification',
-        message:
-          task.error === VERIFICATION_ERRORED_ERROR
-            ? `Verification could not run for Task ${task.identifier}`
-            : `Task ${task.identifier} did not pass verification`,
+        message: `Task ${task.identifier} did not pass verification`,
         outcome: 'waiting_external',
       };
     }

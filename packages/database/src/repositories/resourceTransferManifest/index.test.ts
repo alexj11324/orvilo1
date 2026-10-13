@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { AgentModel } from '../../models/agent';
 import { ChatGroupModel } from '../../models/chatGroup';
 import {
@@ -301,13 +302,15 @@ describe('buildMemberTransferManifest', () => {
     const group = await groupModel.create({ title: 'Group', visibility: 'public' });
     const [referenced] = await serverDB
       .insert(agents)
-      .values({
-        title: 'Standalone',
-        userId: teammateId,
-        virtual: false,
-        visibility: 'private',
-        workspaceId: wsId,
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          title: 'Standalone',
+          userId: teammateId,
+          virtual: false,
+          visibility: 'private',
+          workspaceId: wsId,
+        }),
+      )
       .returning();
     await serverDB.insert(chatGroupsAgents).values([
       {

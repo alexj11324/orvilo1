@@ -3,6 +3,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { agents, messages, topics, users } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 
@@ -14,11 +15,13 @@ const otherUserId = 'expertise-history-other-user';
 
 const seed = async () => {
   await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
-  await serverDB.insert(agents).values([
-    { id: 'hist-agent', userId },
-    { id: 'hist-other-agent', userId },
-    { id: 'hist-foreign-agent', userId: otherUserId },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      { id: 'hist-agent', userId },
+      { id: 'hist-other-agent', userId },
+      { id: 'hist-foreign-agent', userId: otherUserId },
+    ]),
+  );
   await serverDB.insert(topics).values([
     // Messages carry the agent explicitly.
     { agentId: 'hist-agent', id: 'topic-explicit', title: 'explicit', userId },

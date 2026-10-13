@@ -4,6 +4,7 @@ import { isSelectableDevice } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import type * as AgentModelModule from '@/database/models/agent';
 import type * as WorkspaceModelModule from '@/database/models/workspace';
 import {
@@ -324,13 +325,15 @@ describe('selected legacy private Agent visibility-aware model boundary', () => 
       await db.insert(workspaceMembers).values({ userId: 'user-1', workspaceId, role: 'member' });
       const [agent] = await db
         .insert(agents)
-        .values({
-          userId: owner,
-          workspaceId,
-          visibility: 'private',
-          systemRole: 'Private instructions',
-          agencyConfig: { heterogeneousProvider: { type: 'codex', command: 'codex' } },
-        })
+        .values(
+          await withTestAgentDevices(db, {
+            userId: owner,
+            workspaceId,
+            visibility: 'private',
+            systemRole: 'Private instructions',
+            agencyConfig: { heterogeneousProvider: { type: 'codex', command: 'codex' } },
+          }),
+        )
         .returning();
       await db.insert(resourcePermissions).values({
         accessLevel: 'use',

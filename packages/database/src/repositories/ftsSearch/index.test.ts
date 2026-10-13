@@ -5,6 +5,7 @@ import { Pool as NodePool } from 'pg';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import * as schema from '../../schemas';
 import { chatGroups, documents, workspaces } from '../../schemas';
 import type { NewAgent } from '../../schemas/agent';
@@ -172,7 +173,7 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
           userId,
         },
       ];
-      await serverDB.insert(agents).values(testAgents);
+      await serverDB.insert(agents).values(await withTestAgentDevices(serverDB, testAgents));
 
       // Create test topics
       const testTopics: NewTopic[] = [
@@ -291,7 +292,7 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
           userId,
         },
       ];
-      await serverDB.insert(agents).values(testAgents);
+      await serverDB.insert(agents).values(await withTestAgentDevices(serverDB, testAgents));
     });
 
     it('should assign relevance values in valid range', async () => {
@@ -322,18 +323,22 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
   describe('search - user isolation', () => {
     beforeEach(async () => {
       // Create agent for current user
-      await serverDB.insert(agents).values({
-        slug: 'user-agent',
-        title: 'User Agent',
-        userId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          slug: 'user-agent',
+          title: 'User Agent',
+          userId,
+        }),
+      );
 
       // Create agent for other user
-      await serverDB.insert(agents).values({
-        slug: 'other-agent',
-        title: 'Other Agent',
-        userId: otherUserId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          slug: 'other-agent',
+          title: 'Other Agent',
+          userId: otherUserId,
+        }),
+      );
 
       // Create topic for current user
       await serverDB.insert(topics).values({
@@ -401,11 +406,13 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
 
   describe('search - type filtering', () => {
     beforeEach(async () => {
-      await serverDB.insert(agents).values({
-        slug: 'test-agent',
-        title: 'Test Agent',
-        userId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          slug: 'test-agent',
+          title: 'Test Agent',
+          userId,
+        }),
+      );
 
       await serverDB.insert(topics).values({
         title: 'Test Topic',
@@ -457,7 +464,7 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
         title: `Test Agent ${i}`,
         userId,
       }));
-      await serverDB.insert(agents).values(testAgents);
+      await serverDB.insert(agents).values(await withTestAgentDevices(serverDB, testAgents));
     });
 
     it('should respect default limit of 5 per type', async () => {
@@ -477,12 +484,14 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
 
   describe('search - case insensitivity', () => {
     beforeEach(async () => {
-      await serverDB.insert(agents).values({
-        description: 'React Development Assistant',
-        slug: 'react-agent',
-        title: 'React Agent',
-        userId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          description: 'React Development Assistant',
+          slug: 'react-agent',
+          title: 'React Agent',
+          userId,
+        }),
+      );
     });
 
     it('should search case-insensitively', async () => {
@@ -502,15 +511,17 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
 
   describe('search - result structure', () => {
     beforeEach(async () => {
-      await serverDB.insert(agents).values({
-        avatar: 'avatar-url',
-        backgroundColor: '#ff0000',
-        description: 'Test description',
-        slug: 'test-agent',
-        tags: ['tag1', 'tag2'],
-        title: 'Test Agent',
-        userId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          avatar: 'avatar-url',
+          backgroundColor: '#ff0000',
+          description: 'Test description',
+          slug: 'test-agent',
+          tags: ['tag1', 'tag2'],
+          title: 'Test Agent',
+          userId,
+        }),
+      );
 
       await serverDB.insert(topics).values({
         content: 'Test content',
@@ -594,18 +605,20 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
       // Create test agents
       const [agent1, agent2] = await serverDB
         .insert(agents)
-        .values([
-          {
-            slug: 'test-agent',
-            title: 'Test Agent',
-            userId,
-          },
-          {
-            slug: 'other-agent',
-            title: 'Other Agent',
-            userId,
-          },
-        ])
+        .values(
+          await withTestAgentDevices(serverDB, [
+            {
+              slug: 'test-agent',
+              title: 'Test Agent',
+              userId,
+            },
+            {
+              slug: 'other-agent',
+              title: 'Other Agent',
+              userId,
+            },
+          ]),
+        )
         .returning();
 
       testAgentId = agent1.id;
@@ -676,13 +689,15 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
       // Add avatar/background to an existing agent so we can assert join output
       const [decoratedAgent] = await serverDB
         .insert(agents)
-        .values({
-          avatar: '🤖',
-          backgroundColor: '#123456',
-          slug: 'decorated-agent',
-          title: 'Decorated Agent',
-          userId,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: '🤖',
+            backgroundColor: '#123456',
+            slug: 'decorated-agent',
+            title: 'Decorated Agent',
+            userId,
+          }),
+        )
         .returning();
 
       await serverDB.insert(topics).values({
@@ -717,13 +732,15 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
       // Foreign agent owned by a different user
       const [foreignAgent] = await serverDB
         .insert(agents)
-        .values({
-          avatar: '🕵️',
-          backgroundColor: '#abcdef',
-          slug: 'foreign-agent',
-          title: 'Foreign Agent',
-          userId: otherUserId,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: '🕵️',
+            backgroundColor: '#abcdef',
+            slug: 'foreign-agent',
+            title: 'Foreign Agent',
+            userId: otherUserId,
+          }),
+        )
         .returning();
 
       // Topic owned by the current user but carrying the foreign agent id —
@@ -772,11 +789,14 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
     it('should return 3 agents and 3 files in agent context', async () => {
       // Create test agents
       await serverDB.insert(agents).values(
-        Array.from({ length: 5 }, (_, i) => ({
-          slug: `agent-${i}`,
-          title: `Test Agent ${i}`,
-          userId,
-        })),
+        await withTestAgentDevices(
+          serverDB,
+          Array.from({ length: 5 }, (_, i) => ({
+            slug: `agent-${i}`,
+            title: `Test Agent ${i}`,
+            userId,
+          })),
+        ),
       );
 
       // Create test files
@@ -1249,11 +1269,14 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
     beforeEach(async () => {
       // Create test data for context testing
       await serverDB.insert(agents).values(
-        Array.from({ length: 5 }, (_, i) => ({
-          slug: `ctx-agent-${i}`,
-          title: `Context Test Agent ${i}`,
-          userId,
-        })),
+        await withTestAgentDevices(
+          serverDB,
+          Array.from({ length: 5 }, (_, i) => ({
+            slug: `ctx-agent-${i}`,
+            title: `Context Test Agent ${i}`,
+            userId,
+          })),
+        ),
       );
 
       await serverDB.insert(topics).values(
@@ -1521,10 +1544,12 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
 
       const insertedAgents = await serverDB
         .insert(agents)
-        .values([
-          { title: 'Kubernetes Personal Agent', userId, workspaceId: null },
-          { title: 'Kubernetes Workspace Agent', userId, workspaceId },
-        ])
+        .values(
+          await withTestAgentDevices(serverDB, [
+            { title: 'Kubernetes Personal Agent', userId, workspaceId: null },
+            { title: 'Kubernetes Workspace Agent', userId, workspaceId },
+          ]),
+        )
         .returning({ id: agents.id, workspaceId: agents.workspaceId });
 
       personalAgentId = insertedAgents.find((a) => !a.workspaceId)!.id;
@@ -1774,10 +1799,12 @@ describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
     beforeEach(async () => {
       const insertedAgents = await serverDB
         .insert(agents)
-        .values([
-          { title: 'Terraform Agent A', userId },
-          { title: 'Terraform Agent B', userId },
-        ])
+        .values(
+          await withTestAgentDevices(serverDB, [
+            { title: 'Terraform Agent A', userId },
+            { title: 'Terraform Agent B', userId },
+          ]),
+        )
         .returning({ id: agents.id, title: agents.title });
 
       agentAId = insertedAgents.find((a) => a.title === 'Terraform Agent A')!.id;

@@ -14,6 +14,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { TaskModel } from '@/database/models/task';
 
@@ -233,7 +234,10 @@ describe('Project Router Integration', () => {
     expect(created.data.coordinatorAgentId).toBeTruthy();
     await caller.updateStatus({ id: created.data.id, status: 'active' });
 
-    const [agent] = await serverDB.insert(agents).values({ title: 'Lead', userId }).returning();
+    const [agent] = await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { title: 'Lead', userId }))
+      .returning();
     const [knowledgeBase] = await serverDB
       .insert(knowledgeBases)
       .values({ name: 'Mission data', userId })

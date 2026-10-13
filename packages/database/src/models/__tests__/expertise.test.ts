@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   expertiseBindings,
@@ -82,7 +83,9 @@ describe('ExpertiseModel', () => {
   it('does not resolve domains through an agent owned by another user', async () => {
     const foreignUserId = 'expertise-foreign-user';
     await serverDB.insert(users).values({ id: foreignUserId });
-    await serverDB.insert(agents).values({ id: 'foreign-agent', userId: foreignUserId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'foreign-agent', userId: foreignUserId }));
     await serverDB.insert(expertiseDomains).values({
       anchorChosenAt: new Date(),
       domainFilter: 'Foreign domain',
@@ -129,7 +132,9 @@ describe('ExpertiseModel', () => {
   });
 
   it('persists a generated domain definition and resolves its agent binding', async () => {
-    await serverDB.insert(agents).values({ id: 'owned-agent', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'owned-agent', userId }));
     const model = new ExpertiseModel(serverDB, userId);
 
     const domainId = await model.createDomain({
@@ -201,7 +206,9 @@ describe('ExpertiseModel', () => {
   it('deletes an owned domain with everything learned in it, and nothing else', async () => {
     const foreignUserId = 'expertise-delete-foreign-user';
     await serverDB.insert(users).values({ id: foreignUserId });
-    await serverDB.insert(agents).values({ id: 'delete-agent', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'delete-agent', userId }));
     await serverDB.insert(expertiseDomains).values([
       {
         anchorChosenAt: new Date(),

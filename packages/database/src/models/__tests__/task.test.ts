@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   acceptances,
@@ -34,7 +35,10 @@ const userId = 'task-test-user-id';
 const userId2 = 'task-test-user-id-2';
 
 const createAgent = async (id: string, uid = userId) => {
-  await serverDB.insert(agents).values({ id, slug: id, userId: uid }).onConflictDoNothing();
+  await serverDB
+    .insert(agents)
+    .values(await withTestAgentDevices(serverDB, { id, slug: id, userId: uid }))
+    .onConflictDoNothing();
   return id;
 };
 
@@ -893,9 +897,14 @@ describe('TaskModel', () => {
           { workspaceId, userId: userId2, role: 'owner' },
           { workspaceId, userId, role: 'member' },
         ]);
-        await serverDB
-          .insert(agents)
-          .values({ id: agentId, userId: userId2, workspaceId, visibility: 'private' });
+        await serverDB.insert(agents).values(
+          await withTestAgentDevices(serverDB, {
+            id: agentId,
+            userId: userId2,
+            workspaceId,
+            visibility: 'private',
+          }),
+        );
         const task = await new TaskModel(serverDB, userId2, workspaceId).create({
           instruction: 'Legacy ranked metadata',
           assigneeAgentId: agentId,
@@ -4297,7 +4306,14 @@ describe('TaskModel', () => {
       const agentId = 'count-assignee-agent';
       await serverDB
         .insert(agents)
-        .values({ id: agentId, userId, visibility: 'public', workspaceId: wsId })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            id: agentId,
+            userId,
+            visibility: 'public',
+            workspaceId: wsId,
+          }),
+        )
         .onConflictDoNothing();
 
       expect(await alice.countTasksBlockingAgentDemotion(agentId, userId)).toBe(0);

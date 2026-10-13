@@ -10,6 +10,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 import { runCleanupBatch } from '../../../../../../scripts/elasticsearchCleanupIneligibleMessages';
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   ftsSearchSyncCaptureVersion,
@@ -245,7 +246,9 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
     const functionRows = Array.isArray(functionResult) ? functionResult : functionResult.rows;
     expect(functionRows).toEqual([]);
 
-    await db.insert(agents).values({ id: 'base-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'base-agent', title: 'one', userId: USER_ID }));
     await expect(db.select().from(ftsSearchSyncOutbox)).resolves.toEqual([]);
   });
 
@@ -621,7 +624,11 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   );
 
   it('captures the first mutation immediately after opt-in installation', async () => {
-    await db.insert(agents).values({ id: 'immediate-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: 'immediate-agent', title: 'one', userId: USER_ID }),
+      );
 
     await expect(
       db
@@ -631,7 +638,9 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('coalesces mutations and increases the revision, prioritizing revocations', async () => {
-    await db.insert(agents).values({ id: 'sync-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'sync-agent', title: 'one', userId: USER_ID }));
     const [inserted] = await db
       .select()
       .from(ftsSearchSyncOutbox)
@@ -670,7 +679,11 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('does not enqueue an update that changes only an unprojected field', async () => {
-    await db.insert(agents).values({ id: 'unprojected-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: 'unprojected-agent', title: 'one', userId: USER_ID }),
+      );
     await db.delete(ftsSearchSyncOutbox);
 
     await db.execute(sql`UPDATE agents SET pinned = true WHERE id = 'unprojected-agent'`);
@@ -680,7 +693,11 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('enqueues an update that changes only the projected updated_at field', async () => {
-    await db.insert(agents).values({ id: 'updated-at-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: 'updated-at-agent', title: 'one', userId: USER_ID }),
+      );
     await db.delete(ftsSearchSyncOutbox);
 
     await db
@@ -806,9 +823,13 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   it('rolls the outbox entry back with the source transaction', async () => {
     await expect(
       db.transaction(async (transaction) => {
-        await transaction
-          .insert(agents)
-          .values({ id: 'rolled-back-agent', title: 'temporary', userId: USER_ID });
+        await transaction.insert(agents).values(
+          await withTestAgentDevices(transaction, {
+            id: 'rolled-back-agent',
+            title: 'temporary',
+            userId: USER_ID,
+          }),
+        );
         throw new Error('rollback');
       }),
     ).rejects.toThrow('rollback');
@@ -821,7 +842,11 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('uses revisions to reject stale acknowledgements after a newer mutation', async () => {
-    await db.insert(agents).values({ id: 'revision-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: 'revision-agent', title: 'one', userId: USER_ID }),
+      );
     const [first] = await repository.claim();
 
     await db.update(agents).set({ title: 'two' }).where(eq(agents.id, 'revision-agent'));
@@ -886,10 +911,12 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('keeps concurrent claims disjoint and marks permanent failures dead', async () => {
-    await db.insert(agents).values([
-      { id: 'claim-agent-a', title: 'a', userId: USER_ID },
-      { id: 'claim-agent-b', title: 'b', userId: USER_ID },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        { id: 'claim-agent-a', title: 'a', userId: USER_ID },
+        { id: 'claim-agent-b', title: 'b', userId: USER_ID },
+      ]),
+    );
 
     const [first] = await repository.claim(1);
     const [second] = await repository.claim(1);
@@ -911,7 +938,11 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('prevents stale workers from settling a reclaimed lease', async () => {
-    await db.insert(agents).values({ id: 'reclaimed-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: 'reclaimed-agent', title: 'one', userId: USER_ID }),
+      );
     const [stale] = await repository.claim(1, 1);
 
     /** Simulate the lease reaper making the same revision available to another worker. */
@@ -956,10 +987,12 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('returns revocations before ordinary edits', async () => {
-    await db.insert(agents).values([
-      { id: 'ordinary-agent', title: 'before', userId: USER_ID },
-      { id: 'revoked-agent', title: 'before', userId: USER_ID },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        { id: 'ordinary-agent', title: 'before', userId: USER_ID },
+        { id: 'revoked-agent', title: 'before', userId: USER_ID },
+      ]),
+    );
     await db.delete(ftsSearchSyncOutbox);
     await db.update(agents).set({ title: 'after' }).where(eq(agents.id, 'ordinary-agent'));
     await db.update(agents).set({ visibility: 'private' }).where(eq(agents.id, 'revoked-agent'));
@@ -971,7 +1004,11 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('reports a retry as dead when it exhausts the attempt budget', async () => {
-    await db.insert(agents).values({ id: 'exhausted-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: 'exhausted-agent', title: 'one', userId: USER_ID }),
+      );
     const [claimed] = await repository.claim(1);
     await db
       .update(ftsSearchSyncOutbox)
@@ -985,7 +1022,11 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   });
 
   it('reaps expired leases into delayed retry without reclaiming them immediately', async () => {
-    await db.insert(agents).values({ id: 'expired-agent', title: 'one', userId: USER_ID });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: 'expired-agent', title: 'one', userId: USER_ID }),
+      );
     const [claimed] = await repository.claim(1);
     await db
       .update(ftsSearchSyncOutbox)
@@ -1009,11 +1050,14 @@ describe('FtsSearchSyncOutboxRepository', { concurrent: false }, () => {
   it('bounds expired lease recovery to the requested claim limit', async () => {
     const documentIds = ['expired-agent-a', 'expired-agent-b', 'expired-agent-c'];
     await db.insert(agents).values(
-      documentIds.map((id) => ({
-        id,
-        title: id,
-        userId: USER_ID,
-      })),
+      await withTestAgentDevices(
+        db,
+        documentIds.map((id) => ({
+          id,
+          title: id,
+          userId: USER_ID,
+        })),
+      ),
     );
     const claimed = await repository.claim(documentIds.length);
     expect(claimed).toHaveLength(documentIds.length);

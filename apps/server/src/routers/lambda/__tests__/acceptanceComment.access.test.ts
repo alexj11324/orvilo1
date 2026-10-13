@@ -13,6 +13,8 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { acceptanceCommentRouter } from '../acceptanceComment';
 import { cleanupTestUser, createTestUser } from './integration/setup';
 
@@ -252,14 +254,16 @@ describe('acceptanceCommentRouter workspace scoping', () => {
     ]);
 
     workspaceAgentId = `agt_${randomUUID()}`;
-    await serverDB.insert(agents).values({
-      id: workspaceAgentId,
-      slug: workspaceAgentId,
-      title: 'Delivery Bot',
-      userId: ownerId,
-      visibility: 'public',
-      workspaceId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: workspaceAgentId,
+        slug: workspaceAgentId,
+        title: 'Delivery Bot',
+        userId: ownerId,
+        visibility: 'public',
+        workspaceId,
+      }),
+    );
 
     const [open, closed] = await serverDB
       .insert(acceptances)

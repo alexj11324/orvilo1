@@ -321,7 +321,15 @@ export class SessionModel {
 
     return this.db.transaction(async (trx) => {
       const agentModel = new AgentModel(trx, this.userId, this.workspaceId);
-      const builtin = await agentModel.getBuiltinAgent(INBOX_SESSION_ID);
+      const builtin = await agentModel.getBuiltinAgent(INBOX_SESSION_ID, {
+        runtime: defaultAgentConfig.agencyConfig?.boundDeviceId
+          ? {
+              agencyConfig: defaultAgentConfig.agencyConfig as NewAgent['agencyConfig'],
+              model: defaultAgentConfig.model ?? null,
+              provider: defaultAgentConfig.provider ?? null,
+            }
+          : undefined,
+      });
       if (!builtin) throw new Error('Builtin Inbox is unavailable');
       // Workspace bootstrap must not overwrite an existing shared builtin with
       // another member's personal defaults. Personal bootstrap remains owner-scoped.
@@ -335,11 +343,15 @@ export class SessionModel {
         !this.workspaceId ||
         (builtin.userId === this.userId &&
           (role === 'owner' || role === 'admin' || role === 'member'))
-      )
-        await agentModel.updateConfig(
-          builtin.id,
-          merge(DEFAULT_AGENT_CONFIG, defaultAgentConfig) as Partial<NewAgent>,
-        );
+      ) {
+        const {
+          agencyConfig: _agency,
+          model: _model,
+          provider: _provider,
+          ...conversationConfig
+        } = merge(DEFAULT_AGENT_CONFIG, defaultAgentConfig);
+        await agentModel.updateConfig(builtin.id, conversationConfig as Partial<NewAgent>);
+      }
       const [inbox] = await trx
         .insert(sessions)
         .values(

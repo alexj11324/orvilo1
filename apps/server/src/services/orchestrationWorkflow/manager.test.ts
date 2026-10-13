@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import { OrchestrationWorkflowGraphModel } from '@/database/models/orchestrationWorkflowGraph';
@@ -73,11 +74,13 @@ const confirmedService = () => {
 
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
-  await db.insert(agents).values({
-    agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-    id: agentId,
-    userId,
-  });
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, {
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      id: agentId,
+      userId,
+    }),
+  );
   await new UserModel(db, userId).updatePreference({ orchestratorAgentId: agentId });
   vi.spyOn(scheduler, 'scheduleOrchestrationWorkflowAdvance').mockResolvedValue();
   vi.spyOn(AiAgentService.prototype, 'execAgent').mockImplementation(async (params) => {
@@ -218,11 +221,13 @@ describe('CLI main Agent planning', () => {
   });
 
   it('explicitly dispatches the creator instead of the default Task assignee', async () => {
-    await db.insert(agents).values({
-      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      id: 'task-worker',
-      userId,
-    });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'task-worker',
+        userId,
+      }),
+    );
     const graph = await service().create({
       agentId: 'task-worker',
       createdByAgentId: agentId,
@@ -275,11 +280,13 @@ describe('CLI main Agent planning', () => {
       title: 'Bound creator',
     });
     expect(graph.orchestrationWorkflow.config?.manager).toEqual({ agentId, maxTurns: 5 });
-    await db.insert(agents).values({
-      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      id: 'new-task-worker',
-      userId,
-    });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'new-task-worker',
+        userId,
+      }),
+    );
     await expect(
       service().setAgent(graph.orchestrationWorkflow.id, 'new-task-worker'),
     ).rejects.toThrow('ORCHESTRATOR_REQUIRED');

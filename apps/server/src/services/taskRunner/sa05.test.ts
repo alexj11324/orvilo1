@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
@@ -265,20 +266,22 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         { workspaceId: 'ws-1', userId: ownerId, role: 'owner' },
         { workspaceId: 'ws-1', userId: 'user-1', role: 'member' },
       ]);
-      await db.insert(agents).values({
-        id: 'agt_assignee',
-        workspaceId: 'ws-1',
-        userId: ownerId,
-        visibility: 'private',
-        model: 'm',
-        provider: 'p',
-        agencyConfig: {
-          heterogeneousProvider: { type: 'codex' },
-          executionTargetSelectionPolicy: 'fixed',
-          executionTarget: 'device',
-          boundDeviceId: 'pinned-device',
-        },
-      });
+      await db.insert(agents).values(
+        await withTestAgentDevices(db, {
+          id: 'agt_assignee',
+          workspaceId: 'ws-1',
+          userId: ownerId,
+          visibility: 'private',
+          model: 'm',
+          provider: 'p',
+          agencyConfig: {
+            heterogeneousProvider: { type: 'codex' },
+            executionTargetSelectionPolicy: 'fixed',
+            executionTarget: 'device',
+            boundDeviceId: 'pinned-device',
+          },
+        }),
+      );
       await db.insert(resourcePermissions).values({
         resourceType: 'agent',
         resourceId: 'agt_assignee',

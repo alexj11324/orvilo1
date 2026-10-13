@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DocumentModel } from '@/database/models/document';
@@ -138,11 +139,13 @@ beforeEach(async () => {
     provider: 'openai',
     title: 'Prime',
   });
-  await db.insert(agents).values({
-    id: 'supervisor-orchestrator',
-    userId,
-    agencyConfig: { heterogeneousProvider: { type: 'codex' } },
-  });
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, {
+      id: 'supervisor-orchestrator',
+      userId,
+      agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+    }),
+  );
   await new UserModel(db, userId).updatePreference({
     orchestratorAgentId: 'supervisor-orchestrator',
   });

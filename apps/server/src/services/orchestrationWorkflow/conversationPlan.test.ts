@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { MessageModel } from '@/database/models/message';
 import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
@@ -53,11 +54,13 @@ const input = {
 };
 beforeEach(async () => {
   await db.insert(users).values({ id: userId });
-  await db.insert(agents).values({
-    id: context.agentId,
-    userId,
-    agencyConfig: { heterogeneousProvider: { type: 'codex' } },
-  });
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, {
+      id: context.agentId,
+      userId,
+      agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+    }),
+  );
   await new UserModel(db, userId).updatePreference({ orchestratorAgentId: context.agentId });
   await db.insert(topics).values([
     { id: context.topicId, userId },
@@ -323,7 +326,13 @@ describe('board split and conversation reply admission', () => {
     const acceptanceModel = new AcceptanceModel(db, userId);
     const policy = await acceptanceModel.findPolicyBySubject('task', result.taskIds[0]);
     expect(policy?.config?.verifierAgentId).toBe(context.agentId);
-    await db.insert(agents).values({ id: 'split-reviewer', title: 'Independent reviewer', userId });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: 'split-reviewer',
+        title: 'Independent reviewer',
+        userId,
+      }),
+    );
     await acceptanceModel.updatePolicy(policy!.id, {
       config: { ...policy!.config, verifierAgentId: 'split-reviewer' },
     });

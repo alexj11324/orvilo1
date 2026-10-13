@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { MessageModel } from '@/database/models/message';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import {
@@ -75,9 +76,15 @@ beforeEach(async () => {
     { userId: admin, workspaceId, role: 'admin' },
     { userId: member, workspaceId: otherWorkspaceId, role: 'member' },
   ]);
-  await db
-    .insert(agents)
-    .values({ id: agentId, slug: agentId, userId: owner, workspaceId, visibility: 'private' });
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, {
+      id: agentId,
+      slug: agentId,
+      userId: owner,
+      workspaceId,
+      visibility: 'private',
+    }),
+  );
   await db.insert(tasks).values({
     id: taskId,
     identifier: 'CM-1',
@@ -242,13 +249,15 @@ describe('workspace conversation runtime metadata projection', () => {
   it('checks a nested conversation topic independently from its parent Agent authority', async () => {
     const nestedAgentId = 'conversation-metadata-member-agent';
     const nestedTopicId = 'conversation-metadata-member-topic';
-    await db.insert(agents).values({
-      id: nestedAgentId,
-      slug: nestedAgentId,
-      userId: member,
-      workspaceId,
-      visibility: 'private',
-    });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: nestedAgentId,
+        slug: nestedAgentId,
+        userId: member,
+        workspaceId,
+        visibility: 'private',
+      }),
+    );
     await db
       .insert(topics)
       .values({ id: nestedTopicId, userId: member, workspaceId, agentId: nestedAgentId });

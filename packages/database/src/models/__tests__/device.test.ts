@@ -3,7 +3,8 @@ import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, devices, users, workspaces } from '../../schemas';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
+import { agents, devices, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { DeviceModel, WorkspaceDevicePrivateConflictError } from '../device';
 
@@ -175,6 +176,32 @@ describe('DeviceModel', () => {
   });
 
   describe('workspace devices', () => {
+    it('keeps retired devices unavailable until an explicit authorized re-share', async () => {
+      const model = new DeviceModel(serverDB, userId, wsId);
+      const host = await model.registerWorkspaceDevice({
+        deviceId: 'retired-re-share',
+        identitySource: 'installation',
+        workspaceId: wsId,
+        visibility: 'public',
+      });
+      await serverDB.update(devices).set({ retiredAt: new Date() }).where(eq(devices.id, host.id));
+      expect(await model.findWorkspaceDeviceById(host.deviceId)).toBeUndefined();
+      expect(
+        (await model.findWorkspaceDeviceById(host.deviceId, { includeRetired: true }))?.id,
+      ).toBe(host.id);
+      await model.registerWorkspaceDevice({
+        deviceId: host.deviceId,
+        identitySource: 'installation',
+        workspaceId: wsId,
+      });
+      expect(await model.findWorkspaceDeviceById(host.deviceId)).toBeUndefined();
+      await model.overwriteSharedWorkspaceDevice(host.deviceId, {
+        sharedFromDeviceId: 'owned-personal-host',
+        visibility: 'public',
+      });
+      expect((await model.findWorkspaceDeviceById(host.deviceId))?.retiredAt).toBeNull();
+    });
+
     it('never resolves an owned workspace-only enrollment through the personal registry', async () => {
       await new DeviceModel(serverDB, userId, wsId).registerWorkspaceDevice({
         deviceId: 'workspace-only',
@@ -196,6 +223,9 @@ describe('DeviceModel', () => {
       await serverDB
         .insert(workspaces)
         .values({ id: wsId, name: 'WS 1', primaryOwnerId: userId, slug: 'device-model-ws-1-slug' });
+      await serverDB
+        .insert(workspaceMembers)
+        .values({ workspaceId: wsId, userId: otherUserId, role: 'admin' });
     });
 
     it('queryPersonal excludes workspace-enrolled rows', async () => {
@@ -217,39 +247,45 @@ describe('DeviceModel', () => {
         visibility: 'public',
         workspaceId: wsId,
       });
-      await serverDB.insert(agents).values({
-        agencyConfig: {
-          boundDeviceId: 'fixed-device',
-          executionTargetSelectionPolicy: 'fixed',
-          executionTarget: 'device',
-        },
-        id: 'fixed-agent',
-        title: 'Fixed agent',
-        userId,
-        workspaceId: wsId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          agencyConfig: {
+            boundDeviceId: 'fixed-device',
+            executionTargetSelectionPolicy: 'fixed',
+            executionTarget: 'device',
+          },
+          id: 'fixed-agent',
+          title: 'Fixed agent',
+          userId,
+          workspaceId: wsId,
+        }),
+      );
 
       const wsModel = new DeviceModel(serverDB, userId, wsId);
-      expect(await wsModel.hasFixedAgentBinding('fixed-device')).toBe(true);
-      expect(await wsModel.hasFixedAgentBinding('other-device')).toBe(false);
-      expect(await deviceModel.hasFixedAgentBinding('fixed-device')).toBe(false);
+      expect(await wsModel.hasAgentBinding('fixed-device')).toBe(true);
+      expect(await wsModel.hasAgentBinding('other-device')).toBe(false);
+      expect(await deviceModel.hasAgentBinding('fixed-device')).toBe(false);
     });
 
-    it('ignores a stale device id on a fixed non-device target', async () => {
-      await serverDB.insert(agents).values({
-        agencyConfig: {
-          boundDeviceId: 'stale-device',
-          executionTarget: 'sandbox',
-          executionTargetSelectionPolicy: 'fixed',
-        },
-        id: 'fixed-sandbox-agent',
-        title: 'Fixed sandbox agent',
-        userId,
-        workspaceId: wsId,
-      });
+    it('refuses to persist an Agent with a non-device target', async () => {
+      await expect(
+        serverDB.insert(agents).values(
+          await withTestAgentDevices(serverDB, {
+            agencyConfig: {
+              boundDeviceId: 'stale-device',
+              executionTarget: 'sandbox',
+              executionTargetSelectionPolicy: 'fixed',
+            },
+            id: 'fixed-sandbox-agent',
+            title: 'Fixed sandbox agent',
+            userId,
+            workspaceId: wsId,
+          }),
+        ),
+      ).rejects.toMatchObject({ cause: { code: '23514' } });
 
       const wsModel = new DeviceModel(serverDB, userId, wsId);
-      expect(await wsModel.hasFixedAgentBinding('stale-device')).toBe(false);
+      expect(await wsModel.hasAgentBinding('stale-device')).toBe(false);
     });
 
     it('queryWorkspaceDevices returns every enrolled device (any owner), scoped to the workspace', async () => {

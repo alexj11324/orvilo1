@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agentCronJobs, agents, users } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentCronJobModel } from '../agentCronJob';
@@ -19,12 +20,15 @@ beforeEach(async () => {
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
 
   // Create test agents
-  const [agent] = await serverDB.insert(agents).values({ userId, title: 'Test Agent' }).returning();
+  const [agent] = await serverDB
+    .insert(agents)
+    .values(await withTestAgentDevices(serverDB, { userId, title: 'Test Agent' }))
+    .returning();
   agentId = agent.id;
 
   const [agent2] = await serverDB
     .insert(agents)
-    .values({ userId: userId2, title: 'Test Agent 2' })
+    .values(await withTestAgentDevices(serverDB, { userId: userId2, title: 'Test Agent 2' }))
     .returning();
   agentId2 = agent2.id;
 });
@@ -915,7 +919,7 @@ describe('AgentCronJobModel', () => {
       // Create another agent for the same user
       const [anotherAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Another Agent' })
+        .values(await withTestAgentDevices(serverDB, { userId, title: 'Another Agent' }))
         .returning();
 
       await model1.create({

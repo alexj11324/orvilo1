@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agents, userConnectors, userConnectorTools, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { ConnectorModel } from '../connector';
@@ -47,10 +48,12 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values({ id: workspaceId, name: 'WS', primaryOwnerId: userId, slug: 'agentscope-ws' });
-  await serverDB.insert(agents).values([
-    { id: agentA, userId },
-    { id: agentB, userId },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      { id: agentA, userId },
+      { id: agentB, userId },
+    ]),
+  );
 });
 
 afterEach(async () => {

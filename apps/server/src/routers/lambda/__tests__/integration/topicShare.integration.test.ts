@@ -14,6 +14,8 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { topicRouter } from '../../topic';
 import { cleanupTestUser, createTestUser } from './setup';
 
@@ -80,21 +82,25 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
     // and a private one with only its creator granted Use.
     const [sharedAgent] = await serverDB
       .insert(agents)
-      .values({
-        slug: `share-perm-shared-${creatorId.slice(0, 8)}`,
-        userId: creatorId,
-        visibility: 'public',
-        workspaceId,
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          slug: `share-perm-shared-${creatorId.slice(0, 8)}`,
+          userId: creatorId,
+          visibility: 'public',
+          workspaceId,
+        }),
+      )
       .returning();
     const [privateAgent] = await serverDB
       .insert(agents)
-      .values({
-        slug: `share-perm-private-${creatorId.slice(0, 8)}`,
-        userId: creatorId,
-        visibility: 'private',
-        workspaceId,
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          slug: `share-perm-private-${creatorId.slice(0, 8)}`,
+          userId: creatorId,
+          visibility: 'private',
+          workspaceId,
+        }),
+      )
       .returning();
 
     await serverDB.insert(resourcePermissions).values([
@@ -245,15 +251,17 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
     }) => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          agencyConfig: params.topicSharePolicy
-            ? { topicSharePolicy: params.topicSharePolicy }
-            : null,
-          title: 'Policy Agent',
-          userId: params.agentUserId,
-          visibility: 'public',
-          workspaceId,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            agencyConfig: params.topicSharePolicy
+              ? { topicSharePolicy: params.topicSharePolicy }
+              : null,
+            title: 'Policy Agent',
+            userId: params.agentUserId,
+            visibility: 'public',
+            workspaceId,
+          }),
+        )
         .returning();
 
       await serverDB.insert(resourcePermissions).values(
@@ -292,16 +300,18 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
     }) => {
       const [supervisor] = await serverDB
         .insert(agents)
-        .values({
-          agencyConfig: params.topicSharePolicy
-            ? { topicSharePolicy: params.topicSharePolicy }
-            : null,
-          title: 'Supervisor',
-          userId: params.supervisorUserId,
-          virtual: true,
-          visibility: 'public',
-          workspaceId,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            agencyConfig: params.topicSharePolicy
+              ? { topicSharePolicy: params.topicSharePolicy }
+              : null,
+            title: 'Supervisor',
+            userId: params.supervisorUserId,
+            virtual: true,
+            visibility: 'public',
+            workspaceId,
+          }),
+        )
         .returning();
 
       const [group] = await serverDB

@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agents, agentsToSessions, sessions, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { SessionModel } from '../session';
@@ -61,10 +62,12 @@ describe('SessionModel workspace scope', () => {
           workspaceId,
         },
       ]);
-      await trx.insert(agents).values([
-        { id: 'personal-agent', userId, title: 'Personal Agent', workspaceId: null },
-        { id: 'workspace-agent', userId, title: 'Workspace Agent', workspaceId },
-      ]);
+      await trx.insert(agents).values(
+        await withTestAgentDevices(trx, [
+          { id: 'personal-agent', userId, title: 'Personal Agent', workspaceId: null },
+          { id: 'workspace-agent', userId, title: 'Workspace Agent', workspaceId },
+        ]),
+      );
       await trx.insert(agentsToSessions).values([
         { agentId: 'personal-agent', sessionId: 'personal-session', userId, workspaceId: null },
         { agentId: 'workspace-agent', sessionId: 'workspace-session', userId, workspaceId },

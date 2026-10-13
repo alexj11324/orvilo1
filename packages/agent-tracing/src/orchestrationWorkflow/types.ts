@@ -58,6 +58,7 @@ export type OrchestrationWorkflowTickBranch =
   /** Its operation outlived the lease / failed verification — automatic recovery. */
   | 'recover_lease'
   | 'recover_verification'
+  | 'verification_blocked'
   /** Recovery is exhausted or the failure is not recoverable; open a gate. */
   | 'failure_decision'
   /** Task is parked or already in flight. */

@@ -624,6 +624,10 @@ export const driveTaskFromVerify = async (
         workspaceId,
       ).findByGraphTask(taskOperation.taskId);
       if (orchestrationWorkflow) {
+        if (outcome === 'passed' || outcome === 'failed')
+          await new OrchestrationWorkflowModel(db, userId, workspaceId).reopenAfterVerifierRepair(
+            orchestrationWorkflow.id,
+          );
         await scheduleOrchestrationWorkflowAdvance({
           orchestrationWorkflowId: orchestrationWorkflow.id,
           trigger: 'settle',

@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   agentsKnowledgeBases,
@@ -114,11 +115,13 @@ describe('DataExporterRepos', () => {
       });
 
       // Agents
-      await trx.insert(agents).values({
-        id: testIds.agentId,
-        title: 'Test Agent',
-        userId: testIds.userId,
-      });
+      await trx.insert(agents).values(
+        await withTestAgentDevices(trx, {
+          id: testIds.agentId,
+          title: 'Test Agent',
+          userId: testIds.userId,
+        }),
+      );
 
       // Agent-to-session associations
       await trx.insert(agentsToSessions).values({
@@ -436,12 +439,14 @@ describe('DataExporterRepos', () => {
           primaryOwnerId: userId,
           slug: workspaceId,
         });
-        await trx.insert(agents).values({
-          id: 'workspace-agent-id',
-          title: 'Workspace Agent',
-          userId,
-          workspaceId,
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: 'workspace-agent-id',
+            title: 'Workspace Agent',
+            userId,
+            workspaceId,
+          }),
+        );
         await trx.insert(sessions).values({
           id: 'workspace-session-id',
           slug: 'workspace-session',
@@ -494,20 +499,22 @@ describe('DataExporterRepos', () => {
             slug: otherWorkspaceId,
           },
         ]);
-        await trx.insert(agents).values([
-          {
-            id: 'workspace-agent-id',
-            title: 'Workspace Agent',
-            userId,
-            workspaceId,
-          },
-          {
-            id: 'other-workspace-agent-id',
-            title: 'Other Workspace Agent',
-            userId,
-            workspaceId: otherWorkspaceId,
-          },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            {
+              id: 'workspace-agent-id',
+              title: 'Workspace Agent',
+              userId,
+              workspaceId,
+            },
+            {
+              id: 'other-workspace-agent-id',
+              title: 'Other Workspace Agent',
+              userId,
+              workspaceId: otherWorkspaceId,
+            },
+          ]),
+        );
         await trx.insert(sessions).values([
           {
             id: 'workspace-session-id',

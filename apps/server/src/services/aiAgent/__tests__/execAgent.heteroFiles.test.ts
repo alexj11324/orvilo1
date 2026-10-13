@@ -11,6 +11,7 @@ import {
 } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import {
   agentOperations,
@@ -350,7 +351,11 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         { role: 'owner', userId: ownerId, workspaceId },
         ...(actorId === ownerId ? [] : [{ role: 'member', userId: actorId, workspaceId }]),
       ]);
-    await workspaceDb.insert(agents).values({ id: 'agent-1', userId: ownerId, workspaceId });
+    await workspaceDb
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(workspaceDb, { id: 'agent-1', userId: ownerId, workspaceId }),
+      );
     await workspaceDb.insert(resourcePermissions).values({
       accessLevel: 'use',
       createdBy: ownerId,

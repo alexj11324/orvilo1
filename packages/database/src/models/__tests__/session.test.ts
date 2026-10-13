@@ -1,9 +1,9 @@
-import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { LLMParams } from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import type { NewSession, SessionItem } from '../../schemas';
 import {
   agentOperations,
@@ -142,11 +142,13 @@ describe('SessionModel', () => {
         });
 
         // Create agents
-        await trx.insert(agents).values([
-          { id: 'agent-1', userId, title: 'Agent 1', model: 'gpt-4' },
-          { id: 'agent-2', userId, title: 'Agent 2', model: 'gpt-3.5-turbo' },
-          { id: 'agent-3', userId, title: 'Agent 3', model: 'claude-2' },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-1', userId, title: 'Agent 1', model: 'gpt-4' },
+            { id: 'agent-2', userId, title: 'Agent 2', model: 'gpt-3.5-turbo' },
+            { id: 'agent-3', userId, title: 'Agent 3', model: 'claude-2' },
+          ]),
+        );
 
         // Link agents to the group session
         await trx.insert(agentsToSessions).values([
@@ -227,10 +229,12 @@ describe('SessionModel', () => {
           { id: '1', userId },
           { id: '2', userId },
         ]);
-        await trx.insert(agents).values([
-          { id: 'a1', title: 'Agent1', userId },
-          { id: 'a2', title: 'Agent2', userId },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'a1', title: 'Agent1', userId },
+            { id: 'a2', title: 'Agent2', userId },
+          ]),
+        );
 
         // @ts-ignore
         await trx.insert(agentsToSessions).values([
@@ -309,10 +313,12 @@ describe('SessionModel', () => {
         { id: '2', userId },
       ]);
 
-      await serverDB.insert(agents).values([
-        { id: 'agent-1', userId, model: 'gpt-3.5-turbo', title: 'Hello, Agent 1' },
-        { id: 'agent-2', userId, model: 'gpt-4', title: 'Agent 2' },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'agent-1', userId, model: 'gpt-3.5-turbo', title: 'Hello, Agent 1' },
+          { id: 'agent-2', userId, model: 'gpt-4', title: 'Agent 2' },
+        ]),
+      );
 
       await serverDB.insert(agentsToSessions).values([
         { agentId: 'agent-1', sessionId: '1', userId },
@@ -331,16 +337,18 @@ describe('SessionModel', () => {
         { id: '2', userId },
       ]);
 
-      await serverDB.insert(agents).values([
-        {
-          id: 'agent-1',
-          userId,
-          model: 'gpt-3.5-turbo',
-          title: 'Agent 1',
-          description: 'Description with Keyword',
-        },
-        { id: 'agent-2', userId, model: 'gpt-4', title: 'Agent 2' },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            id: 'agent-1',
+            userId,
+            model: 'gpt-3.5-turbo',
+            title: 'Agent 1',
+            description: 'Description with Keyword',
+          },
+          { id: 'agent-2', userId, model: 'gpt-4', title: 'Agent 2' },
+        ]),
+      );
 
       await serverDB.insert(agentsToSessions).values([
         { agentId: 'agent-1', sessionId: '1', userId },
@@ -359,11 +367,13 @@ describe('SessionModel', () => {
         { id: '3', userId },
       ]);
 
-      await serverDB.insert(agents).values([
-        { id: '1', userId, title: 'Title with keyword', description: 'Some description' },
-        { id: '2', userId, title: 'Another Session', description: 'Description with keyword' },
-        { id: '3', userId, title: 'Third Session', description: 'Third description' },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: '1', userId, title: 'Title with keyword', description: 'Some description' },
+          { id: '2', userId, title: 'Another Session', description: 'Description with keyword' },
+          { id: '3', userId, title: 'Third Session', description: 'Third description' },
+        ]),
+      );
 
       await serverDB.insert(agentsToSessions).values([
         { agentId: '1', sessionId: '1', userId },
@@ -386,12 +396,14 @@ describe('SessionModel', () => {
         { id: 'candidate-session-own-b', userId },
         { id: 'candidate-session-other', userId: 'candidate-other-user' },
       ]);
-      await serverDB.insert(agents).values([
-        { id: 'candidate-agent-own-a', title: 'Own A', userId },
-        { id: 'candidate-agent-own-b', title: 'Own B', userId },
-        { id: 'candidate-agent-own-unlinked', title: 'Own Unlinked', userId },
-        { id: 'candidate-agent-other', title: 'Other', userId: 'candidate-other-user' },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'candidate-agent-own-a', title: 'Own A', userId },
+          { id: 'candidate-agent-own-b', title: 'Own B', userId },
+          { id: 'candidate-agent-own-unlinked', title: 'Own Unlinked', userId },
+          { id: 'candidate-agent-other', title: 'Other', userId: 'candidate-other-user' },
+        ]),
+      );
       await serverDB.insert(agentsToSessions).values([
         { agentId: 'candidate-agent-own-a', sessionId: 'candidate-session-own-a', userId },
         {
@@ -608,12 +620,14 @@ describe('SessionModel', () => {
         await trx
           .insert(sessions)
           .values({ id: '1', userId, type: 'agent', title: 'Original Session', pinned: true });
-        await trx.insert(agents).values({
-          id: 'agent-1',
-          userId,
-          model: 'gpt-3.5-turbo',
-          agencyConfig: runtimeAgencyConfig,
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: 'agent-1',
+            userId,
+            model: 'gpt-3.5-turbo',
+            agencyConfig: runtimeAgencyConfig,
+          }),
+        );
         await trx.insert(agentsToSessions).values({ agentId: 'agent-1', sessionId: '1', userId });
       });
 
@@ -721,10 +735,12 @@ describe('SessionModel', () => {
         { id: '1', sessionId, userId, role: 'user' },
         { id: '2', sessionId, userId, role: 'assistant' },
       ]);
-      await serverDB.insert(agents).values([
-        { id: 'a1', userId },
-        { id: 'a2', userId: '456' },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'a1', userId },
+          { id: 'a2', userId: '456' },
+        ]),
+      );
       await serverDB.insert(agentsToSessions).values([{ agentId: 'a1', userId, sessionId: '1' }]);
 
       // Delete the session
@@ -767,10 +783,12 @@ describe('SessionModel', () => {
         { id: '1', userId },
         { id: '2', userId },
       ]);
-      await serverDB.insert(agents).values([
-        { id: 'orphaned', userId },
-        { id: 'still-linked', userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'orphaned', userId },
+          { id: 'still-linked', userId },
+        ]),
+      );
       await serverDB.insert(agentsToSessions).values([
         { agentId: 'orphaned', sessionId: '1', userId },
         { agentId: 'still-linked', sessionId: '1', userId },
@@ -827,7 +845,9 @@ describe('SessionModel', () => {
       // Create some sessions
       const sessionIds = ['1', '2', '3'];
       await serverDB.insert(sessions).values(sessionIds.map((id) => ({ id, userId })));
-      await serverDB.insert(agents).values([{ id: '1', userId }]);
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, [{ id: '1', userId }]));
       await serverDB.insert(agentsToSessions).values([{ sessionId: '1', agentId: '1', userId }]);
 
       // Create some topics and messages associated with the sessions
@@ -893,12 +913,14 @@ describe('SessionModel', () => {
       .values({ userId, workspaceId: workspace.id, role: 'owner' });
     const [agent] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        workspaceId: workspace.id,
-        visibility: 'public',
-        systemRole: 'Original prompt',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          workspaceId: workspace.id,
+          visibility: 'public',
+          systemRole: 'Original prompt',
+        }),
+      )
       .returning();
     const [session] = await serverDB
       .insert(sessions)
@@ -946,13 +968,16 @@ describe('SessionModel', () => {
       { userId: 'builtin-owner', workspaceId: workspace.id, role: 'owner' },
       { userId, workspaceId: workspace.id, role: 'member' },
     ]);
-    await serverDB.insert(agents).values({
-      userId: 'builtin-owner',
-      workspaceId: workspace.id,
-      slug: 'inbox',
-      virtual: true,
-      title: 'Shared builtin',
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        userId: 'builtin-owner',
+        workspaceId: workspace.id,
+        slug: 'inbox',
+        virtual: true,
+        title: 'Shared builtin',
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+      }),
+    );
     const result = await new SessionModel(serverDB, userId, workspace.id).createInbox({
       systemRole: 'Personal defaults',
     });
@@ -966,7 +991,11 @@ describe('SessionModel', () => {
 
   describe('createInbox', () => {
     it('should create inbox session if not exists', async () => {
-      const inbox = await sessionModel.createInbox({});
+      const inbox = await sessionModel.createInbox({
+        agencyConfig: runtimeAgencyConfig,
+        model: 'codex',
+        provider: 'codex',
+      });
 
       expect(inbox).toBeDefined();
       expect(inbox?.slug).toBe('inbox');
@@ -974,15 +1003,27 @@ describe('SessionModel', () => {
       // verify agent config
       const session = await sessionModel.findByIdOrSlug('inbox');
       expect(session?.agent).toBeDefined();
-      expect(session?.agent.model).toBe(DEFAULT_AGENT_CONFIG.model);
+      const [persisted] = await serverDB.select().from(agents).where(eq(agents.slug, 'inbox'));
+      expect(persisted.agencyConfig).toMatchObject({
+        boundDeviceId: 'session-host',
+        heterogeneousProvider: { type: 'codex' },
+      });
     });
 
     it('should not create duplicate inbox session', async () => {
       // Create first inbox
-      await sessionModel.createInbox({});
+      await sessionModel.createInbox({
+        agencyConfig: runtimeAgencyConfig,
+        model: 'codex',
+        provider: 'codex',
+      });
 
       // Try to create another inbox
-      const duplicateInbox = await sessionModel.createInbox({});
+      const duplicateInbox = await sessionModel.createInbox({
+        agencyConfig: runtimeAgencyConfig,
+        model: 'codex',
+        provider: 'codex',
+      });
 
       // Should return undefined as inbox already exists
       expect(duplicateInbox).toBeUndefined();
@@ -1045,10 +1086,12 @@ describe('SessionModel', () => {
           { id: 'm1', sessionId: '1', userId, role: 'user' },
           { id: 'm2', sessionId: '2', userId, role: 'assistant' },
         ]);
-        await trx.insert(agents).values([
-          { id: 'a1', userId },
-          { id: 'a2', userId },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'a1', userId },
+            { id: 'a2', userId },
+          ]),
+        );
         await trx.insert(agentsToSessions).values([
           { agentId: 'a1', sessionId: '1', userId },
           { agentId: 'a2', sessionId: '2', userId },
@@ -1085,14 +1128,16 @@ describe('SessionModel', () => {
           type: 'agent',
         });
 
-        await trx.insert(agents).values({
-          id: agentId,
-          userId,
-          agencyConfig: runtimeAgencyConfig,
-          model: 'gpt-3.5-turbo',
-          title: 'Original Title',
-          description: 'Original description',
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: agentId,
+            userId,
+            agencyConfig: runtimeAgencyConfig,
+            model: 'gpt-3.5-turbo',
+            title: 'Original Title',
+            description: 'Original description',
+          }),
+        );
 
         await trx.insert(agentsToSessions).values({
           sessionId,
@@ -1133,15 +1178,17 @@ describe('SessionModel', () => {
           type: 'agent',
         });
 
-        await trx.insert(agents).values({
-          id: agentId,
-          userId,
-          agencyConfig: runtimeAgencyConfig,
-          model: 'gpt-3.5-turbo',
-          title: 'Original Title',
-          description: 'Original description',
-          systemRole: 'Original role',
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: agentId,
+            userId,
+            agencyConfig: runtimeAgencyConfig,
+            model: 'gpt-3.5-turbo',
+            title: 'Original Title',
+            description: 'Original description',
+            systemRole: 'Original role',
+          }),
+        );
 
         await trx.insert(agentsToSessions).values({
           sessionId,
@@ -1194,18 +1241,20 @@ describe('SessionModel', () => {
           type: 'agent',
         });
 
-        await trx.insert(agents).values({
-          id: agentId,
-          userId,
-          model: 'gpt-3.5-turbo',
-          title: 'Test Agent',
-          params: {
-            temperature: 0.7,
-            top_p: 1,
-            presence_penalty: 0,
-            frequency_penalty: 0,
-          },
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: agentId,
+            userId,
+            model: 'gpt-3.5-turbo',
+            title: 'Test Agent',
+            params: {
+              temperature: 0.7,
+              top_p: 1,
+              presence_penalty: 0,
+              frequency_penalty: 0,
+            },
+          }),
+        );
 
         await trx.insert(agentsToSessions).values({
           sessionId,
@@ -1247,18 +1296,20 @@ describe('SessionModel', () => {
           type: 'agent',
         });
 
-        await trx.insert(agents).values({
-          id: agentId,
-          userId,
-          model: 'gpt-3.5-turbo',
-          title: 'Test Agent',
-          params: {
-            temperature: 0.7,
-            top_p: 1,
-            presence_penalty: 0,
-            frequency_penalty: 0,
-          },
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: agentId,
+            userId,
+            model: 'gpt-3.5-turbo',
+            title: 'Test Agent',
+            params: {
+              temperature: 0.7,
+              top_p: 1,
+              presence_penalty: 0,
+              frequency_penalty: 0,
+            },
+          }),
+        );
 
         await trx.insert(agentsToSessions).values({
           sessionId,
@@ -1322,12 +1373,14 @@ describe('SessionModel', () => {
           type: 'agent',
         });
 
-        await trx.insert(agents).values({
-          id: agentId,
-          userId,
-          model: 'gpt-3.5-turbo',
-          title: 'Original Title',
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: agentId,
+            userId,
+            model: 'gpt-3.5-turbo',
+            title: 'Original Title',
+          }),
+        );
 
         await trx.insert(agentsToSessions).values({
           sessionId,
@@ -1361,17 +1414,19 @@ describe('SessionModel', () => {
           type: 'agent',
         });
 
-        await trx.insert(agents).values({
-          id: agentId,
-          userId,
-          model: 'gpt-3.5-turbo',
-          title: 'Test Agent',
-          params: {
-            temperature: 0.7,
-            top_p: 1,
-            presence_penalty: 0,
-          },
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: agentId,
+            userId,
+            model: 'gpt-3.5-turbo',
+            title: 'Test Agent',
+            params: {
+              temperature: 0.7,
+              top_p: 1,
+              presence_penalty: 0,
+            },
+          }),
+        );
 
         await trx.insert(agentsToSessions).values({
           sessionId,
@@ -1415,16 +1470,18 @@ describe('SessionModel', () => {
           type: 'agent',
         });
 
-        await trx.insert(agents).values({
-          id: agentId,
-          userId,
-          model: 'gpt-3.5-turbo',
-          title: 'Test Agent',
-          params: {
-            temperature: 0.7,
-            top_p: 1,
-          },
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: agentId,
+            userId,
+            model: 'gpt-3.5-turbo',
+            title: 'Test Agent',
+            params: {
+              temperature: 0.7,
+              top_p: 1,
+            },
+          }),
+        );
 
         await trx.insert(agentsToSessions).values({
           sessionId,
@@ -1465,12 +1522,14 @@ describe('SessionModel', () => {
           type: 'agent',
         });
 
-        await trx.insert(agents).values({
-          id: agentId,
-          userId: 'other-user',
-          model: 'gpt-3.5-turbo',
-          title: 'Original Title',
-        });
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, {
+            id: agentId,
+            userId: 'other-user',
+            model: 'gpt-3.5-turbo',
+            title: 'Original Title',
+          }),
+        );
 
         await trx.insert(agentsToSessions).values({
           sessionId,

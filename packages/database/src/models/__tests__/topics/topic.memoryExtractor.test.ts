@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agents, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { TopicModel } from '../../topic';
@@ -150,22 +151,24 @@ describe('TopicModel - memory runtime ownership', () => {
   });
 
   it('keeps builtin and legacy unbound topics but excludes ACP even during forced extraction', async () => {
-    await serverDB.insert(agents).values([
-      { id: 'builtin', userId, model: 'gpt-4o' },
-      {
-        id: 'explicit-builtin',
-        userId,
-        model: 'codex',
-        agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
-      },
-      { id: 'acp', userId, agencyConfig: { heterogeneousProvider: { type: 'codex' } } },
-      { id: 'legacy-acp', userId, model: 'opencode' },
-      {
-        id: 'legacy-config',
-        userId,
-        agencyConfig: { heterogeneousProvider: { command: 'claude' } } as any,
-      },
-    ]);
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, [
+        { id: 'builtin', userId, model: 'gpt-4o' },
+        {
+          id: 'explicit-builtin',
+          userId,
+          model: 'codex',
+          agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
+        },
+        { id: 'acp', userId, agencyConfig: { heterogeneousProvider: { type: 'codex' } } },
+        { id: 'legacy-acp', userId, model: 'opencode' },
+        {
+          id: 'legacy-config',
+          userId,
+          agencyConfig: { heterogeneousProvider: { command: 'claude' } } as any,
+        },
+      ]),
+    );
     await serverDB.insert(topics).values([
       { id: 'builtin-topic', agentId: 'builtin', userId },
       { id: 'explicit-builtin-topic', agentId: 'explicit-builtin', userId },

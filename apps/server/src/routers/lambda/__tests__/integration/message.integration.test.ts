@@ -5,6 +5,8 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { messageRouter } from '../../message';
 import { cleanupTestUser, createTestContext, createTestUser } from './setup';
 
@@ -51,10 +53,12 @@ describe('Message Router Integration Tests', () => {
     const { agents } = await import('@/database/schemas');
     const [agent] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        title: 'Test Agent',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          title: 'Test Agent',
+        }),
+      )
       .returning();
     testAgentId = agent.id;
 

@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { AgentModel } from '../../models/agent';
 import { agents } from '../../schemas/agent';
 import { chatGroups, chatGroupsAgents } from '../../schemas/chatGroup';
@@ -49,13 +50,15 @@ describe('HomeRepository', () => {
       // Create agent
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          avatar: 'agent-avatar',
-          description: 'Test agent description',
-          title: 'Test Agent',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: 'agent-avatar',
+            description: 'Test agent description',
+            title: 'Test Agent',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       // Create session
@@ -90,13 +93,15 @@ describe('HomeRepository', () => {
     it('should fallback inbox agent meta by slug', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          avatar: null,
-          slug: INBOX_SESSION_ID,
-          title: null,
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: null,
+            slug: INBOX_SESSION_ID,
+            title: null,
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [session] = await serverDB
@@ -125,11 +130,13 @@ describe('HomeRepository', () => {
       // Create virtual agent
       const [virtualAgent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Inbox',
-          userId,
-          virtual: true,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Inbox',
+            userId,
+            virtual: true,
+          }),
+        )
         .returning();
 
       // Create session for virtual agent
@@ -149,11 +156,13 @@ describe('HomeRepository', () => {
       // Create non-virtual agent
       const [normalAgent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Normal Agent',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Normal Agent',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [normalSession] = await serverDB
@@ -231,24 +240,28 @@ describe('HomeRepository', () => {
       // Create member agents
       const [agent1] = await serverDB
         .insert(agents)
-        .values({
-          avatar: '🤖',
-          backgroundColor: '#0000ff',
-          title: 'Agent 1',
-          userId,
-          virtual: true,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: '🤖',
+            backgroundColor: '#0000ff',
+            title: 'Agent 1',
+            userId,
+            virtual: true,
+          }),
+        )
         .returning();
 
       const [agent2] = await serverDB
         .insert(agents)
-        .values({
-          avatar: '🧑‍💻',
-          backgroundColor: '#00ff00',
-          title: 'Agent 2',
-          userId,
-          virtual: true,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: '🧑‍💻',
+            backgroundColor: '#00ff00',
+            title: 'Agent 2',
+            userId,
+            virtual: true,
+          }),
+        )
         .returning();
 
       // Link agents to group
@@ -288,13 +301,15 @@ describe('HomeRepository', () => {
       // Create member agent
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          avatar: '🤖',
-          backgroundColor: '#0000ff',
-          title: 'Member Agent',
-          userId,
-          virtual: true,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: '🤖',
+            backgroundColor: '#0000ff',
+            title: 'Member Agent',
+            userId,
+            virtual: true,
+          }),
+        )
         .returning();
 
       // Link agent to group
@@ -317,10 +332,12 @@ describe('HomeRepository', () => {
 
   describe('getSidebarAgentList - pinned items', () => {
     it('should separate pinned agents', async () => {
-      await serverDB.insert(agents).values([
-        { pinned: true, title: 'Pinned Agent', userId, virtual: false },
-        { pinned: false, title: 'Unpinned Agent', userId, virtual: false },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { pinned: true, title: 'Pinned Agent', userId, virtual: false },
+          { pinned: false, title: 'Unpinned Agent', userId, virtual: false },
+        ]),
+      );
 
       const result = await homeRepo.getSidebarAgentList();
 
@@ -358,13 +375,15 @@ describe('HomeRepository', () => {
         .returning();
 
       // Create agent in group
-      await serverDB.insert(agents).values({
-        pinned: false,
-        sessionGroupId: group.id,
-        title: 'Work Agent',
-        userId,
-        virtual: false,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          pinned: false,
+          sessionGroupId: group.id,
+          title: 'Work Agent',
+          userId,
+          virtual: false,
+        }),
+      );
 
       const result = await homeRepo.getSidebarAgentList();
 
@@ -442,14 +461,16 @@ describe('HomeRepository', () => {
       await serverDB
         .insert(sessionGroups)
         .values({ id: 'sg-personal-stale', name: 'Personal Folder', userId });
-      await serverDB.insert(agents).values({
-        sessionGroupId: 'sg-personal-stale',
-        title: 'Transferred Agent',
-        userId,
-        virtual: false,
-        visibility: 'private',
-        workspaceId: wsId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          sessionGroupId: 'sg-personal-stale',
+          title: 'Transferred Agent',
+          userId,
+          virtual: false,
+          visibility: 'private',
+          workspaceId: wsId,
+        }),
+      );
 
       const wsRepo = new HomeRepository(serverDB, userId, wsId);
       const result = await wsRepo.getSidebarAgentList();
@@ -492,6 +513,11 @@ describe('HomeRepository', () => {
 
       await serverDB.update(agents).set({ visibility: 'private' }).where(eq(agents.id, agent.id));
 
+      await serverDB.insert(devices).values({
+        deviceId: `creation-host-${workspaceId}`,
+        identitySource: 'installation',
+        userId,
+      });
       await workspaceAgentModel.transferAgent(agent.id, null, userId);
 
       const result = await homeRepo.getSidebarAgentList();
@@ -513,11 +539,13 @@ describe('HomeRepository', () => {
       // Create agent for current user
       const [userAgent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'User Agent',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'User Agent',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [userSession] = await serverDB
@@ -536,11 +564,13 @@ describe('HomeRepository', () => {
       // Create agent for other user
       const [otherAgent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Other User Agent',
-          userId: otherUserId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Other User Agent',
+            userId: otherUserId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [otherSession] = await serverDB
@@ -596,13 +626,15 @@ describe('HomeRepository', () => {
       // Create agents with different updatedAt
       const [oldAgent] = await serverDB
         .insert(agents)
-        .values({
-          createdAt: twoDaysAgo,
-          title: 'Old Agent',
-          updatedAt: twoDaysAgo,
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            createdAt: twoDaysAgo,
+            title: 'Old Agent',
+            updatedAt: twoDaysAgo,
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [oldSession] = await serverDB
@@ -620,13 +652,15 @@ describe('HomeRepository', () => {
 
       const [newAgent] = await serverDB
         .insert(agents)
-        .values({
-          createdAt: now,
-          title: 'New Agent',
-          updatedAt: now,
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            createdAt: now,
+            title: 'New Agent',
+            updatedAt: now,
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [newSession] = await serverDB
@@ -644,13 +678,15 @@ describe('HomeRepository', () => {
 
       const [midAgent] = await serverDB
         .insert(agents)
-        .values({
-          createdAt: yesterday,
-          title: 'Mid Agent',
-          updatedAt: yesterday,
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            createdAt: yesterday,
+            title: 'Mid Agent',
+            updatedAt: yesterday,
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [midSession] = await serverDB
@@ -688,21 +724,25 @@ describe('HomeRepository', () => {
         .returning();
 
       // Create pinned agent
-      await serverDB.insert(agents).values({
-        pinned: true,
-        title: 'Pinned Agent',
-        userId,
-        virtual: false,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          pinned: true,
+          title: 'Pinned Agent',
+          userId,
+          virtual: false,
+        }),
+      );
 
       // Create grouped agent
-      await serverDB.insert(agents).values({
-        pinned: false,
-        sessionGroupId: folder.id,
-        title: 'Grouped Agent',
-        userId,
-        virtual: false,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          pinned: false,
+          sessionGroupId: folder.id,
+          title: 'Grouped Agent',
+          userId,
+          virtual: false,
+        }),
+      );
 
       // Create ungrouped chat group
       await serverDB.insert(chatGroups).values({
@@ -752,11 +792,13 @@ describe('HomeRepository', () => {
       // Create agents
       const [agent1] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Coding Assistant',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Coding Assistant',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [session1] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -769,11 +811,13 @@ describe('HomeRepository', () => {
 
       const [agent2] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Writing Helper',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Writing Helper',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [session2] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -794,12 +838,14 @@ describe('HomeRepository', () => {
     it('should search agents by description', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          description: 'Helps with Python programming',
-          title: 'Code Helper',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            description: 'Helps with Python programming',
+            title: 'Code Helper',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [session] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -851,11 +897,13 @@ describe('HomeRepository', () => {
       // Create agent with 'dev' in title
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Dev Assistant',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Dev Assistant',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [session] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -883,11 +931,13 @@ describe('HomeRepository', () => {
     it('should be case insensitive', async () => {
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'JavaScript Expert',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'JavaScript Expert',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [session] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -910,11 +960,13 @@ describe('HomeRepository', () => {
     it('should exclude virtual agents', async () => {
       const [virtualAgent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Inbox Agent',
-          userId,
-          virtual: true,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Inbox Agent',
+            userId,
+            virtual: true,
+          }),
+        )
         .returning();
 
       const [session] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -934,11 +986,13 @@ describe('HomeRepository', () => {
       // Create agent for current user
       const [userAgent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Search Test Agent',
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Search Test Agent',
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [userSession] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -952,11 +1006,13 @@ describe('HomeRepository', () => {
       // Create agent for other user with same title
       const [otherAgent] = await serverDB
         .insert(agents)
-        .values({
-          title: 'Search Test Agent',
-          userId: otherUserId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            title: 'Search Test Agent',
+            userId: otherUserId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [otherSession] = await serverDB
@@ -982,13 +1038,15 @@ describe('HomeRepository', () => {
 
       const [oldAgent] = await serverDB
         .insert(agents)
-        .values({
-          createdAt: yesterday,
-          title: 'Old Search Agent',
-          updatedAt: yesterday,
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            createdAt: yesterday,
+            title: 'Old Search Agent',
+            updatedAt: yesterday,
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [oldSession] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -1001,13 +1059,15 @@ describe('HomeRepository', () => {
 
       const [newAgent] = await serverDB
         .insert(agents)
-        .values({
-          createdAt: now,
-          title: 'New Search Agent',
-          updatedAt: now,
-          userId,
-          virtual: false,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            createdAt: now,
+            title: 'New Search Agent',
+            updatedAt: now,
+            userId,
+            virtual: false,
+          }),
+        )
         .returning();
 
       const [newSession] = await serverDB.insert(sessions).values({ userId }).returning();
@@ -1057,13 +1117,15 @@ describe('HomeRepository', () => {
       // Create member agent
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          avatar: '🤖',
-          backgroundColor: '#112233',
-          title: 'Search Member',
-          userId,
-          virtual: true,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: '🤖',
+            backgroundColor: '#112233',
+            title: 'Search Member',
+            userId,
+            virtual: true,
+          }),
+        )
         .returning();
 
       await serverDB.insert(chatGroupsAgents).values({
@@ -1099,12 +1161,14 @@ describe('HomeRepository', () => {
 
       const [agent] = await serverDB
         .insert(agents)
-        .values({
-          avatar: '🤖',
-          title: 'Priority Member',
-          userId,
-          virtual: true,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            avatar: '🤖',
+            title: 'Priority Member',
+            userId,
+            virtual: true,
+          }),
+        )
         .returning();
 
       await serverDB.insert(chatGroupsAgents).values({

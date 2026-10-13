@@ -16,6 +16,7 @@ import { eq } from 'drizzle-orm';
 import type * as ModelBankModule from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import type * as WorkspaceModule from '@/database/models/workspace';
 import type * as InternalJwtModule from '@/libs/trpc/utils/internalJwt';
 import { AgentStartError } from '@/server/services/agentExecution/types';
@@ -159,13 +160,15 @@ describe('AI Agent Router Integration Tests', () => {
     // Create test agent
     const [agent] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        title: 'Test Agent',
-        model: 'gpt-4o-mini',
-        provider: 'openai',
-        systemRole: 'You are a helpful assistant.',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          title: 'Test Agent',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          systemRole: 'You are a helpful assistant.',
+        }),
+      )
       .returning();
     testAgentId = agent.id;
 
@@ -641,15 +644,17 @@ describe('AI Agent Router Integration Tests', () => {
 
       const [wsAgent] = await serverDB
         .insert(agents)
-        .values({
-          model: 'gpt-4o-mini',
-          provider: 'openai',
-          slug: 'ws-helper',
-          title: 'Workspace Agent',
-          userId,
-          visibility: 'public',
-          workspaceId,
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            model: 'gpt-4o-mini',
+            provider: 'openai',
+            slug: 'ws-helper',
+            title: 'Workspace Agent',
+            userId,
+            visibility: 'public',
+            workspaceId,
+          }),
+        )
         .returning();
       wsAgentId = wsAgent.id;
       vi.mocked(getResourceMeta).mockResolvedValue({

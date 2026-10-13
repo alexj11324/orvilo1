@@ -3,6 +3,7 @@ import { INBOX_SESSION_ID } from '@orvilo/const';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agentDocuments,
   agents,
@@ -34,13 +35,15 @@ describe('AgentSignalReviewContextModel', () => {
      */
     it('allows inbox Orvilo AI even when virtual and selfIteration chat config is absent', async () => {
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values({
-        id: 'agent-signal-review-context-inbox',
-        slug: INBOX_SESSION_ID,
-        title: 'Orvilo AI',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: 'agent-signal-review-context-inbox',
+          slug: INBOX_SESSION_ID,
+          title: 'Orvilo AI',
+          userId,
+          virtual: true,
+        }),
+      );
 
       const model = new AgentSignalReviewContextModel(serverDB, userId);
 
@@ -55,13 +58,15 @@ describe('AgentSignalReviewContextModel', () => {
      */
     it('does not allow non-inbox virtual agents without selfIteration chat config', async () => {
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values({
-        id: 'agent-signal-review-context-task',
-        slug: 'task-agent',
-        title: 'Task Agent',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: 'agent-signal-review-context-task',
+          slug: 'task-agent',
+          title: 'Task Agent',
+          userId,
+          virtual: true,
+        }),
+      );
 
       const model = new AgentSignalReviewContextModel(serverDB, userId);
 
@@ -76,22 +81,24 @@ describe('AgentSignalReviewContextModel', () => {
      */
     it('keeps non-Orvilo AI agents behind chatConfig.selfIteration.enabled', async () => {
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values([
-        {
-          chatConfig: { selfIteration: { enabled: true } },
-          id: 'agent-signal-review-context-enabled',
-          slug: 'custom-agent',
-          title: 'Custom enabled',
-          userId,
-        },
-        {
-          chatConfig: { selfIteration: { enabled: false } },
-          id: 'agent-signal-review-context-disabled',
-          slug: 'custom-disabled',
-          title: 'Custom disabled',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            chatConfig: { selfIteration: { enabled: true } },
+            id: 'agent-signal-review-context-enabled',
+            slug: 'custom-agent',
+            title: 'Custom enabled',
+            userId,
+          },
+          {
+            chatConfig: { selfIteration: { enabled: false } },
+            id: 'agent-signal-review-context-disabled',
+            slug: 'custom-disabled',
+            title: 'Custom disabled',
+            userId,
+          },
+        ]),
+      );
 
       const model = new AgentSignalReviewContextModel(serverDB, userId);
 
@@ -107,14 +114,16 @@ describe('AgentSignalReviewContextModel', () => {
   describe('listToolActivity', () => {
     it('groups tool activity by identifier and api name with clipped samples', async () => {
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values([
-        {
-          chatConfig: { selfIteration: { enabled: true } },
-          id: agentId,
-          title: 'Review Context Agent',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            chatConfig: { selfIteration: { enabled: true } },
+            id: agentId,
+            title: 'Review Context Agent',
+            userId,
+          },
+        ]),
+      );
       await serverDB.insert(topics).values({
         agentId,
         id: topicId,
@@ -209,14 +218,16 @@ describe('AgentSignalReviewContextModel', () => {
       const agentDocumentId = '00000000-0000-0000-0000-000000000101';
 
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values([
-        {
-          chatConfig: { selfIteration: { enabled: true } },
-          id: agentId,
-          title: 'Review Context Agent',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            chatConfig: { selfIteration: { enabled: true } },
+            id: agentId,
+            title: 'Review Context Agent',
+            userId,
+          },
+        ]),
+      );
       await serverDB.insert(documents).values([
         {
           content: 'Reusable release workflow.',
@@ -292,14 +303,16 @@ describe('AgentSignalReviewContextModel', () => {
   describe('listTopicActivity', () => {
     it('returns bounded failed tool and message evidence for nightly self-review', async () => {
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values([
-        {
-          chatConfig: { selfIteration: { enabled: true } },
-          id: agentId,
-          title: 'Review Context Agent',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            chatConfig: { selfIteration: { enabled: true } },
+            id: agentId,
+            title: 'Review Context Agent',
+            userId,
+          },
+        ]),
+      );
       await serverDB.insert(topics).values({
         agentId,
         id: topicId,
@@ -373,14 +386,16 @@ describe('AgentSignalReviewContextModel', () => {
       const visitorTopicId = 'agent-signal-review-context-visitor-topic';
 
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values([
-        {
-          chatConfig: { selfIteration: { enabled: true } },
-          id: agentId,
-          title: 'Review Context Agent',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            chatConfig: { selfIteration: { enabled: true } },
+            id: agentId,
+            title: 'Review Context Agent',
+            userId,
+          },
+        ]),
+      );
       await serverDB.insert(topics).values([
         {
           agentId,
@@ -522,14 +537,16 @@ describe('AgentSignalReviewContextModel', () => {
       const otherTopicId = 'agent-signal-review-context-other-topic';
 
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values([
-        {
-          chatConfig: { selfIteration: { enabled: true } },
-          id: agentId,
-          title: 'Review Context Agent',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            chatConfig: { selfIteration: { enabled: true } },
+            id: agentId,
+            title: 'Review Context Agent',
+            userId,
+          },
+        ]),
+      );
       await serverDB.insert(topics).values([
         {
           agentId,
@@ -619,14 +636,16 @@ describe('AgentSignalReviewContextModel', () => {
 
     it('returns an empty list when the topic has no in-window activity', async () => {
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values([
-        {
-          chatConfig: { selfIteration: { enabled: true } },
-          id: agentId,
-          title: 'Review Context Agent',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            chatConfig: { selfIteration: { enabled: true } },
+            id: agentId,
+            title: 'Review Context Agent',
+            userId,
+          },
+        ]),
+      );
       await serverDB.insert(topics).values({
         agentId,
         id: topicId,
@@ -659,14 +678,16 @@ describe('AgentSignalReviewContextModel', () => {
       const visitorTopicId = 'agent-signal-review-context-reflection-visitor-topic';
 
       await serverDB.insert(users).values({ id: userId });
-      await serverDB.insert(agents).values([
-        {
-          chatConfig: { selfIteration: { enabled: true } },
-          id: agentId,
-          title: 'Review Context Agent',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            chatConfig: { selfIteration: { enabled: true } },
+            id: agentId,
+            title: 'Review Context Agent',
+            userId,
+          },
+        ]),
+      );
       // Agent-share visitor topic: stored under the creator's userId (billing
       // attribution) but carries a visitor senderId, so it must be excluded.
       await serverDB.insert(topics).values({

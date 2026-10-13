@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import {
   agents,
   tasks,
@@ -38,27 +39,29 @@ beforeEach(async () => {
     { workspaceId, userId: owner, role: 'owner' },
     { workspaceId, userId: member, role: 'member' },
   ]);
-  await db.insert(agents).values({
-    id: agentId,
-    slug: agentId,
-    userId: owner,
-    workspaceId,
-    visibility: 'private',
-    title: 'Issue executor',
-    description: 'UNAPPROVED_PRIVATE_AGENT_DESCRIPTION',
-    openingMessage: 'UNAPPROVED_PRIVATE_WELCOME',
-    openingQuestions: ['UNAPPROVED_PRIVATE_QUESTION'],
-    systemRole: 'private instructions',
-    plugins: ['private-tool'],
-    agencyConfig: {
-      executionTarget: 'device',
-      heterogeneousProvider: {
-        type: 'codex',
-        env: { TOKEN: 'fixture-only' },
-        args: ['private-arg'],
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, {
+      id: agentId,
+      slug: agentId,
+      userId: owner,
+      workspaceId,
+      visibility: 'private',
+      title: 'Issue executor',
+      description: 'UNAPPROVED_PRIVATE_AGENT_DESCRIPTION',
+      openingMessage: 'UNAPPROVED_PRIVATE_WELCOME',
+      openingQuestions: ['UNAPPROVED_PRIVATE_QUESTION'],
+      systemRole: 'private instructions',
+      plugins: ['private-tool'],
+      agencyConfig: {
+        executionTarget: 'device',
+        heterogeneousProvider: {
+          type: 'codex',
+          env: { TOKEN: 'fixture-only' },
+          args: ['private-arg'],
+        },
       },
-    },
-  });
+    }),
+  );
 });
 afterEach(cleanup);
 

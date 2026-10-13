@@ -3,6 +3,7 @@ import { FileSource } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   chatGroups,
@@ -732,36 +733,38 @@ describe('ElasticsearchFtsSearchBackend', () => {
   });
 
   it('queries weighted agent fields and rechecks workspace visibility during hydration', async () => {
-    await db.insert(agents).values([
-      {
-        id: 'agent-public',
-        title: 'Public workspace agent',
-        userId: otherUserId,
-        visibility: 'public',
-        workspaceId,
-      },
-      {
-        id: 'agent-private-own',
-        title: 'Own private workspace agent',
-        userId,
-        visibility: 'private',
-        workspaceId,
-      },
-      {
-        id: 'agent-legacy-public',
-        title: 'Legacy public workspace agent',
-        userId: otherUserId,
-        visibility: 'public',
-        workspaceId,
-      },
-      {
-        id: 'agent-private-other',
-        title: 'Other private workspace agent',
-        userId: otherUserId,
-        visibility: 'private',
-        workspaceId,
-      },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        {
+          id: 'agent-public',
+          title: 'Public workspace agent',
+          userId: otherUserId,
+          visibility: 'public',
+          workspaceId,
+        },
+        {
+          id: 'agent-private-own',
+          title: 'Own private workspace agent',
+          userId,
+          visibility: 'private',
+          workspaceId,
+        },
+        {
+          id: 'agent-legacy-public',
+          title: 'Legacy public workspace agent',
+          userId: otherUserId,
+          visibility: 'public',
+          workspaceId,
+        },
+        {
+          id: 'agent-private-other',
+          title: 'Other private workspace agent',
+          userId: otherUserId,
+          visibility: 'private',
+          workspaceId,
+        },
+      ]),
+    );
     const client = createClient([
       { _id: 'agent-private-other', _score: 12 },
       { _id: 'agent-legacy-public', _score: 11 },
@@ -899,22 +902,24 @@ describe('ElasticsearchFtsSearchBackend', () => {
   });
 
   it('reranks topic candidates by recency and blocks invisible parent containers', async () => {
-    await db.insert(agents).values([
-      {
-        id: 'topic-agent-public',
-        title: 'Public topic agent',
-        userId: otherUserId,
-        visibility: 'public',
-        workspaceId,
-      },
-      {
-        id: 'topic-agent-private',
-        title: 'Private topic agent',
-        userId: otherUserId,
-        visibility: 'private',
-        workspaceId,
-      },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        {
+          id: 'topic-agent-public',
+          title: 'Public topic agent',
+          userId: otherUserId,
+          visibility: 'public',
+          workspaceId,
+        },
+        {
+          id: 'topic-agent-private',
+          title: 'Private topic agent',
+          userId: otherUserId,
+          visibility: 'private',
+          workspaceId,
+        },
+      ]),
+    );
     await db.insert(chatGroups).values([
       {
         id: 'topic-group-public',
@@ -1008,22 +1013,24 @@ describe('ElasticsearchFtsSearchBackend', () => {
   });
 
   it('continues topic candidates after parent authorization empties the first page', async () => {
-    await db.insert(agents).values([
-      {
-        id: 'paging-agent-private',
-        title: 'Private paging agent',
-        userId: otherUserId,
-        visibility: 'private',
-        workspaceId,
-      },
-      {
-        id: 'paging-agent-public',
-        title: 'Public paging agent',
-        userId: otherUserId,
-        visibility: 'public',
-        workspaceId,
-      },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        {
+          id: 'paging-agent-private',
+          title: 'Private paging agent',
+          userId: otherUserId,
+          visibility: 'private',
+          workspaceId,
+        },
+        {
+          id: 'paging-agent-public',
+          title: 'Public paging agent',
+          userId: otherUserId,
+          visibility: 'public',
+          workspaceId,
+        },
+      ]),
+    );
     const privateTopics = Array.from({ length: 7 }, (_, index) => ({
       agentId: 'paging-agent-private',
       id: `paging-private-${index}`,
@@ -1087,22 +1094,24 @@ describe('ElasticsearchFtsSearchBackend', () => {
   });
 
   it('continues message candidates after parent authorization empties the first page', async () => {
-    await db.insert(agents).values([
-      {
-        id: 'message-paging-agent-private',
-        title: 'Private message paging agent',
-        userId: otherUserId,
-        visibility: 'private',
-        workspaceId,
-      },
-      {
-        id: 'message-paging-agent-public',
-        title: 'Public message paging agent',
-        userId: otherUserId,
-        visibility: 'public',
-        workspaceId,
-      },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        {
+          id: 'message-paging-agent-private',
+          title: 'Private message paging agent',
+          userId: otherUserId,
+          visibility: 'private',
+          workspaceId,
+        },
+        {
+          id: 'message-paging-agent-public',
+          title: 'Public message paging agent',
+          userId: otherUserId,
+          visibility: 'public',
+          workspaceId,
+        },
+      ]),
+    );
     const privateMessages = Array.from({ length: 8 }, (_, index) => ({
       agentId: 'message-paging-agent-private',
       content: `Private message match ${index}`,
@@ -1205,22 +1214,24 @@ describe('ElasticsearchFtsSearchBackend', () => {
   });
 
   it('searches message summaries but excludes tool, foreign, deleted, and private-parent hits in PG', async () => {
-    await db.insert(agents).values([
-      {
-        id: 'message-agent-public',
-        title: 'Public message agent',
-        userId: otherUserId,
-        visibility: 'public',
-        workspaceId,
-      },
-      {
-        id: 'message-agent-private',
-        title: 'Private message agent',
-        userId: otherUserId,
-        visibility: 'private',
-        workspaceId,
-      },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        {
+          id: 'message-agent-public',
+          title: 'Public message agent',
+          userId: otherUserId,
+          visibility: 'public',
+          workspaceId,
+        },
+        {
+          id: 'message-agent-private',
+          title: 'Private message agent',
+          userId: otherUserId,
+          visibility: 'private',
+          workspaceId,
+        },
+      ]),
+    );
     await db.insert(chatGroups).values({
       id: 'message-group',
       title: 'Message group',

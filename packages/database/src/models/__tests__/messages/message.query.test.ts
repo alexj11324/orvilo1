@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { uuid } from '@/utils/uuid';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   agentsToSessions,
@@ -240,10 +241,12 @@ describe('MessageModel Query Tests', () => {
           { id: 'group-2', userId, title: 'Group 2' },
         ]);
 
-        await trx.insert(agents).values([
-          { id: 'agent-group', userId, title: 'Agent Group' },
-          { id: 'agent-other', userId, title: 'Agent Other' },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-group', userId, title: 'Agent Group' },
+            { id: 'agent-other', userId, title: 'Agent Other' },
+          ]),
+        );
 
         await trx.insert(messages).values([
           {
@@ -1093,7 +1096,9 @@ describe('MessageModel Query Tests', () => {
             { id: 'session-other', userId },
           ]);
 
-          await trx.insert(agents).values([{ id: 'agent1', userId, title: 'Agent 1' }]);
+          await trx
+            .insert(agents)
+            .values(await withTestAgentDevices(trx, [{ id: 'agent1', userId, title: 'Agent 1' }]));
 
           await trx
             .insert(agentsToSessions)
@@ -1132,7 +1137,9 @@ describe('MessageModel Query Tests', () => {
       // ========== New data tests (messages with agentId directly) ==========
       it('should query messages with direct agentId match', async () => {
         await serverDB.transaction(async (trx) => {
-          await trx.insert(agents).values([{ id: 'agent2', userId, title: 'Agent 2' }]);
+          await trx
+            .insert(agents)
+            .values(await withTestAgentDevices(trx, [{ id: 'agent2', userId, title: 'Agent 2' }]));
 
           // New messages: have agentId directly stored
           await trx.insert(messages).values([
@@ -1168,7 +1175,13 @@ describe('MessageModel Query Tests', () => {
         await serverDB.transaction(async (trx) => {
           await trx.insert(sessions).values([{ id: 'session-for-mixed', userId }]);
 
-          await trx.insert(agents).values([{ id: 'agent-mixed', userId, title: 'Agent Mixed' }]);
+          await trx
+            .insert(agents)
+            .values(
+              await withTestAgentDevices(trx, [
+                { id: 'agent-mixed', userId, title: 'Agent Mixed' },
+              ]),
+            );
 
           await trx
             .insert(agentsToSessions)
@@ -1219,7 +1232,13 @@ describe('MessageModel Query Tests', () => {
         await serverDB.transaction(async (trx) => {
           await trx.insert(sessions).values([{ id: 'session-dedup', userId }]);
 
-          await trx.insert(agents).values([{ id: 'agent-dedup', userId, title: 'Agent Dedup' }]);
+          await trx
+            .insert(agents)
+            .values(
+              await withTestAgentDevices(trx, [
+                { id: 'agent-dedup', userId, title: 'Agent Dedup' },
+              ]),
+            );
 
           await trx
             .insert(agentsToSessions)
@@ -1250,7 +1269,11 @@ describe('MessageModel Query Tests', () => {
       it('should return empty when agentId has no associated session and no direct messages', async () => {
         await serverDB
           .insert(agents)
-          .values([{ id: 'agent-no-data', userId, title: 'Agent No Data' }]);
+          .values(
+            await withTestAgentDevices(serverDB, [
+              { id: 'agent-no-data', userId, title: 'Agent No Data' },
+            ]),
+          );
 
         const result = await messageModel.query({ agentId: 'agent-no-data' });
 
@@ -1261,7 +1284,11 @@ describe('MessageModel Query Tests', () => {
         await serverDB.transaction(async (trx) => {
           await trx
             .insert(agents)
-            .values([{ id: 'agent-no-session', userId, title: 'Agent No Session' }]);
+            .values(
+              await withTestAgentDevices(trx, [
+                { id: 'agent-no-session', userId, title: 'Agent No Session' },
+              ]),
+            );
 
           // Message with agentId but agent has no session association
           await trx.insert(messages).values([
@@ -1291,10 +1318,12 @@ describe('MessageModel Query Tests', () => {
             { id: 'session-other-user', userId: otherUserId },
           ]);
 
-          await trx.insert(agents).values([
-            { id: 'agent-isolation', userId, title: 'Agent Isolation' },
-            { id: 'agent-other', userId: otherUserId, title: 'Agent Other' },
-          ]);
+          await trx.insert(agents).values(
+            await withTestAgentDevices(trx, [
+              { id: 'agent-isolation', userId, title: 'Agent Isolation' },
+              { id: 'agent-other', userId: otherUserId, title: 'Agent Other' },
+            ]),
+          );
 
           await trx.insert(agentsToSessions).values([
             { agentId: 'agent-isolation', sessionId: 'session-isolation', userId },
@@ -1330,7 +1359,11 @@ describe('MessageModel Query Tests', () => {
       // ========== Pagination tests ==========
       it('should support pagination when querying by agentId', async () => {
         await serverDB.transaction(async (trx) => {
-          await trx.insert(agents).values([{ id: 'agent-page', userId, title: 'Agent Page' }]);
+          await trx
+            .insert(agents)
+            .values(
+              await withTestAgentDevices(trx, [{ id: 'agent-page', userId, title: 'Agent Page' }]),
+            );
 
           await trx.insert(messages).values([
             {
@@ -1385,10 +1418,12 @@ describe('MessageModel Query Tests', () => {
         await serverDB.transaction(async (trx) => {
           await trx.insert(sessions).values([{ id: 'agent-session', userId }]);
 
-          await trx.insert(agents).values([
-            { id: 'agent1', userId, title: 'Agent 1' },
-            { id: 'agent2', userId, title: 'Agent 2' },
-          ]);
+          await trx.insert(agents).values(
+            await withTestAgentDevices(trx, [
+              { id: 'agent1', userId, title: 'Agent 1' },
+              { id: 'agent2', userId, title: 'Agent 2' },
+            ]),
+          );
 
           await trx
             .insert(agentsToSessions)
@@ -1445,10 +1480,12 @@ describe('MessageModel Query Tests', () => {
           ]);
 
           // Different agent IDs for different users (agent id is primary key)
-          await trx.insert(agents).values([
-            { id: 'user-agent', userId, title: 'User Agent' },
-            { id: 'other-user-agent', userId: otherUserId, title: 'Other User Agent' },
-          ]);
+          await trx.insert(agents).values(
+            await withTestAgentDevices(trx, [
+              { id: 'user-agent', userId, title: 'User Agent' },
+              { id: 'other-user-agent', userId: otherUserId, title: 'Other User Agent' },
+            ]),
+          );
 
           // Only create agentsToSessions for the other user
           await trx
@@ -1826,7 +1863,11 @@ describe('MessageModel Query Tests', () => {
     it('should include agent name/title for messages bound to an agent', async () => {
       await serverDB
         .insert(agents)
-        .values([{ id: 'q-agent', name: 'Orvilo', title: 'Diary Agent', userId }]);
+        .values(
+          await withTestAgentDevices(serverDB, [
+            { id: 'q-agent', name: 'Orvilo', title: 'Diary Agent', userId },
+          ]),
+        );
       await serverDB.insert(messages).values([
         {
           agentId: 'q-agent',
@@ -3247,11 +3288,13 @@ describe('MessageModel Query Tests', () => {
             .insert(chatGroups)
             .values([{ id: 'group-chat-1', userId, title: 'Group Chat 1' }]);
 
-          await trx.insert(agents).values([
-            { id: 'supervisor-agent', userId, title: 'Supervisor' },
-            { id: 'agent-1', userId, title: 'Data Analyst' },
-            { id: 'agent-2', userId, title: 'Code Writer' },
-          ]);
+          await trx.insert(agents).values(
+            await withTestAgentDevices(trx, [
+              { id: 'supervisor-agent', userId, title: 'Supervisor' },
+              { id: 'agent-1', userId, title: 'Data Analyst' },
+              { id: 'agent-2', userId, title: 'Code Writer' },
+            ]),
+          );
 
           await trx.insert(topics).values([{ id: 'topic-group-1', userId }]);
 
@@ -3368,10 +3411,12 @@ describe('MessageModel Query Tests', () => {
             { id: 'group-2', userId, title: 'Group 2' },
           ]);
 
-          await trx.insert(agents).values([
-            { id: 'agent-g1', userId, title: 'Agent G1' },
-            { id: 'agent-g2', userId, title: 'Agent G2' },
-          ]);
+          await trx.insert(agents).values(
+            await withTestAgentDevices(trx, [
+              { id: 'agent-g1', userId, title: 'Agent G1' },
+              { id: 'agent-g2', userId, title: 'Agent G2' },
+            ]),
+          );
 
           await trx.insert(messages).values([
             {
@@ -3420,10 +3465,12 @@ describe('MessageModel Query Tests', () => {
             .insert(chatGroups)
             .values([{ id: 'group-chat-1', userId, title: 'Group Chat' }]);
 
-          await trx.insert(agents).values([
-            { id: 'supervisor', userId, title: 'Supervisor' },
-            { id: 'agent-1', userId, title: 'Data Analyst' },
-          ]);
+          await trx.insert(agents).values(
+            await withTestAgentDevices(trx, [
+              { id: 'supervisor', userId, title: 'Supervisor' },
+              { id: 'agent-1', userId, title: 'Data Analyst' },
+            ]),
+          );
 
           await trx.insert(topics).values([{ id: 'topic-1', userId }]);
 
@@ -3555,11 +3602,13 @@ describe('MessageModel Query Tests', () => {
         await serverDB.transaction(async (trx) => {
           await trx.insert(chatGroups).values([{ id: 'group-1', userId, title: 'Group' }]);
 
-          await trx.insert(agents).values([
-            { id: 'supervisor', userId, title: 'Supervisor' },
-            { id: 'agent-1', userId, title: 'Agent 1' },
-            { id: 'agent-2', userId, title: 'Agent 2' },
-          ]);
+          await trx.insert(agents).values(
+            await withTestAgentDevices(trx, [
+              { id: 'supervisor', userId, title: 'Supervisor' },
+              { id: 'agent-1', userId, title: 'Agent 1' },
+              { id: 'agent-2', userId, title: 'Agent 2' },
+            ]),
+          );
 
           await trx.insert(topics).values([{ id: 'topic-1', userId }]);
 

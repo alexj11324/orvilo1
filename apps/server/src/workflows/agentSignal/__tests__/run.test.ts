@@ -6,6 +6,7 @@ import { agents, messages, threads, topics, users } from '@orvilo/database/schem
 import { getTestDB } from '@orvilo/database/test-utils';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { createProcedurePolicyOptions as createProcedurePolicyOptionsFixture } from '@/server/services/agentSignal/procedure';
 import type { SelfReflectionReviewContext } from '@/server/services/agentSignal/services/selfIteration/reflection/handler';
 import type { NightlyReviewContext } from '@/server/services/agentSignal/services/selfIteration/review/collect';
@@ -100,14 +101,16 @@ describe('runAgentSignalWorkflow', () => {
 
     const [agent] = await db
       .insert(agents)
-      .values({
-        model: 'gpt-4o-mini',
-        plugins: [],
-        provider: 'openai',
-        systemRole: '',
-        title: 'Workflow Scenario Agent',
-        userId,
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          model: 'gpt-4o-mini',
+          plugins: [],
+          provider: 'openai',
+          systemRole: '',
+          title: 'Workflow Scenario Agent',
+          userId,
+        }),
+      )
       .returning();
 
     await db.insert(topics).values({
@@ -401,14 +404,16 @@ describe('runAgentSignalWorkflow', () => {
 
     const [agent] = await db
       .insert(agents)
-      .values({
-        model: 'gpt-4o-mini',
-        plugins: [],
-        provider: 'openai',
-        systemRole: '',
-        title: 'Completion Workflow Agent',
-        userId,
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          model: 'gpt-4o-mini',
+          plugins: [],
+          provider: 'openai',
+          systemRole: '',
+          title: 'Completion Workflow Agent',
+          userId,
+        }),
+      )
       .returning();
 
     await db.insert(topics).values({
@@ -629,14 +634,16 @@ describe('runAgentSignalWorkflow', () => {
 
     const [agent] = await db
       .insert(agents)
-      .values({
-        model: 'gpt-4o-mini',
-        plugins: [],
-        provider: 'openai',
-        systemRole: '',
-        title: 'Threaded Workflow Scenario Agent',
-        userId,
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          model: 'gpt-4o-mini',
+          plugins: [],
+          provider: 'openai',
+          systemRole: '',
+          title: 'Threaded Workflow Scenario Agent',
+          userId,
+        }),
+      )
       .returning();
 
     await db.insert(topics).values({

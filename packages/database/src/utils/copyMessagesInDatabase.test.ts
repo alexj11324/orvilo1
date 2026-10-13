@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../core/getTestDB';
+import { withTestAgentDevices } from '../core/testAgentFixture';
 import { agents } from '../schemas/agent';
 import { files } from '../schemas/file';
 import {
@@ -42,11 +43,13 @@ const agentFlowExprs = {
 beforeEach(async () => {
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: targetUserId }]);
-  await serverDB.insert(agents).values([
-    { id: sourceAgentId, userId },
-    { id: newAgentId, userId: targetUserId },
-    { id: otherAgentId, userId },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      { id: sourceAgentId, userId },
+      { id: newAgentId, userId: targetUserId },
+      { id: otherAgentId, userId },
+    ]),
+  );
   await serverDB.insert(topics).values([
     { agentId: sourceAgentId, id: sourceTopicId, userId },
     { agentId: newAgentId, id: newTopicId, userId: targetUserId },

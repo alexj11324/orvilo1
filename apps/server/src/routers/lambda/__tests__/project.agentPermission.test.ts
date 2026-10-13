@@ -16,6 +16,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { ProjectModel } from '@/database/models/project';
 
 import { projectRouter } from '../project';
@@ -60,18 +61,20 @@ describe('Project detail linked Agent config authority', () => {
     );
     const [agent] = await db
       .insert(agents)
-      .values({
-        userId: creator,
-        workspaceId,
-        visibility: 'public',
-        virtual: true,
-        title: 'Safe coordinator',
-        description: 'Public profile',
-        systemRole: 'SECRET_PROMPT',
-        plugins: ['SECRET_PLUGIN'],
-        params: { temperature: 0.7 },
-        agencyConfig: { heterogeneousProvider: { type: 'codex', env: { TOKEN: 'SECRET_ENV' } } },
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          userId: creator,
+          workspaceId,
+          visibility: 'public',
+          virtual: true,
+          title: 'Safe coordinator',
+          description: 'Public profile',
+          systemRole: 'SECRET_PROMPT',
+          plugins: ['SECRET_PLUGIN'],
+          params: { temperature: 0.7 },
+          agencyConfig: { heterogeneousProvider: { type: 'codex', env: { TOKEN: 'SECRET_ENV' } } },
+        }),
+      )
       .returning();
     agentId = agent.id;
     await db.insert(projects).values({

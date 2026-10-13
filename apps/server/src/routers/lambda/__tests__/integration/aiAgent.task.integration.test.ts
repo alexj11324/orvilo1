@@ -13,6 +13,8 @@ import { ThreadStatus, ThreadType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { aiAgentRouter } from '../../aiAgent';
 import { cleanupTestUser, createTestUser } from './setup';
 
@@ -77,25 +79,29 @@ describe('Agent Task Integration', () => {
     // Create test agents
     const [agent1] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        title: 'Test SubAgent 1',
-        model: 'gpt-4o-mini',
-        provider: 'openai',
-        systemRole: 'You are a helpful assistant.',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          title: 'Test SubAgent 1',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          systemRole: 'You are a helpful assistant.',
+        }),
+      )
       .returning();
     testAgentId = agent1.id;
 
     const [agent2] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        title: 'Test SubAgent 2',
-        model: 'gpt-4o-mini',
-        provider: 'openai',
-        systemRole: 'You are another helpful assistant.',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          title: 'Test SubAgent 2',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          systemRole: 'You are another helpful assistant.',
+        }),
+      )
       .returning();
     testAgent2Id = agent2.id;
 

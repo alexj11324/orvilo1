@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agents, agentsToSessions, messages, sessions, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { TopicModel } from '../../topic';
@@ -39,10 +40,12 @@ describe('TopicModel - Stats', () => {
     describe('count with agentId', () => {
       it('should count topics with direct agentId match', async () => {
         await serverDB.transaction(async (trx) => {
-          await trx.insert(agents).values([
-            { id: 'count-agent-1', userId, title: 'Count Agent 1' },
-            { id: 'count-agent-2', userId, title: 'Count Agent 2' },
-          ]);
+          await trx.insert(agents).values(
+            await withTestAgentDevices(trx, [
+              { id: 'count-agent-1', userId, title: 'Count Agent 1' },
+              { id: 'count-agent-2', userId, title: 'Count Agent 2' },
+            ]),
+          );
           await trx.insert(topics).values([
             { id: 'count-topic-1', userId, agentId: 'count-agent-1' },
             { id: 'count-topic-2', userId, agentId: 'count-agent-1' },
@@ -59,7 +62,11 @@ describe('TopicModel - Stats', () => {
           await trx.insert(sessions).values([{ id: 'count-legacy-session', userId }]);
           await trx
             .insert(agents)
-            .values([{ id: 'count-legacy-agent', userId, title: 'Legacy Agent' }]);
+            .values(
+              await withTestAgentDevices(trx, [
+                { id: 'count-legacy-agent', userId, title: 'Legacy Agent' },
+              ]),
+            );
           await trx
             .insert(agentsToSessions)
             .values([{ agentId: 'count-legacy-agent', sessionId: 'count-legacy-session', userId }]);
@@ -79,7 +86,11 @@ describe('TopicModel - Stats', () => {
           await trx.insert(sessions).values([{ id: 'count-mixed-session', userId }]);
           await trx
             .insert(agents)
-            .values([{ id: 'count-mixed-agent', userId, title: 'Mixed Agent' }]);
+            .values(
+              await withTestAgentDevices(trx, [
+                { id: 'count-mixed-agent', userId, title: 'Mixed Agent' },
+              ]),
+            );
           await trx
             .insert(agentsToSessions)
             .values([{ agentId: 'count-mixed-agent', sessionId: 'count-mixed-session', userId }]);
@@ -94,7 +105,13 @@ describe('TopicModel - Stats', () => {
       });
 
       it('should return 0 when agent has no topics', async () => {
-        await serverDB.insert(agents).values([{ id: 'empty-agent', userId, title: 'Empty Agent' }]);
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, [
+              { id: 'empty-agent', userId, title: 'Empty Agent' },
+            ]),
+          );
 
         const result = await topicModel.count({ agentId: 'empty-agent' });
         expect(result).toBe(0);
@@ -145,7 +162,11 @@ describe('TopicModel - Stats', () => {
   describe('rank', () => {
     it('should return ranked topics based on message count', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([{ id: 'rank-agent', userId, title: 'Rank Agent' }]);
+        await tx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(tx, [{ id: 'rank-agent', userId, title: 'Rank Agent' }]),
+          );
         await tx.insert(topics).values([
           { id: 'topic1', title: 'Topic 1', agentId: 'rank-agent', userId },
           { id: 'topic2', title: 'Topic 2', agentId: 'rank-agent', userId },
@@ -208,11 +229,13 @@ describe('TopicModel - Stats', () => {
   });
   describe('countShareVisitors', () => {
     beforeEach(async () => {
-      await serverDB.insert(agents).values([
-        { id: 'share-agent-1', title: 'Shared', userId },
-        { id: 'share-agent-2', title: 'Other shared', userId },
-        { id: 'share-agent-foreign', title: 'Someone else', userId: userId2 },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'share-agent-1', title: 'Shared', userId },
+          { id: 'share-agent-2', title: 'Other shared', userId },
+          { id: 'share-agent-foreign', title: 'Someone else', userId: userId2 },
+        ]),
+      );
     });
 
     it('counts visitor conversations and distinct visitors for one shared agent', async () => {

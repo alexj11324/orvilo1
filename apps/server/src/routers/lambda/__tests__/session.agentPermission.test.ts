@@ -15,6 +15,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AgentModel } from '@/database/models/agent';
 
 import { agentRouter } from '../agent';
@@ -48,15 +49,17 @@ describe('Session RPC Agent config protection', () => {
     ]);
     const [agent] = await db
       .insert(agents)
-      .values({
-        userId: ownerId,
-        workspaceId,
-        visibility: 'public',
-        title: 'Safe Agent title',
-        systemRole: 'CONFIDENTIAL_SYSTEM_PROMPT',
-        plugins: ['private-tool'],
-        agencyConfig: { heterogeneousProvider: { type: 'codex', env: { TOKEN: 'fixture-key' } } },
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          userId: ownerId,
+          workspaceId,
+          visibility: 'public',
+          title: 'Safe Agent title',
+          systemRole: 'CONFIDENTIAL_SYSTEM_PROMPT',
+          plugins: ['private-tool'],
+          agencyConfig: { heterogeneousProvider: { type: 'codex', env: { TOKEN: 'fixture-key' } } },
+        }),
+      )
       .returning();
     const [group] = await db
       .insert(chatGroups)

@@ -13,6 +13,8 @@ import type { TaskItem } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { cleanupTestUser, createTestUser } from '../../routers/lambda/__tests__/integration/setup';
 import { TaskDispatchService } from './index';
 
@@ -44,12 +46,14 @@ describe('TaskDispatch reservation Agent Use', () => {
     ]);
     const [agent] = await db
       .insert(agents)
-      .values({
-        userId: ownerId,
-        workspaceId,
-        visibility: 'private',
-        title: 'Selected private Agent',
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          userId: ownerId,
+          workspaceId,
+          visibility: 'private',
+          title: 'Selected private Agent',
+        }),
+      )
       .returning();
     agentId = agent.id;
     const [row] = await db
@@ -135,7 +139,14 @@ describe('TaskDispatch reservation Agent Use', () => {
     await grant();
     const [otherAgent] = await db
       .insert(agents)
-      .values({ userId: ownerId, workspaceId, visibility: 'private', title: 'Changed assignee' })
+      .values(
+        await withTestAgentDevices(db, {
+          userId: ownerId,
+          workspaceId,
+          visibility: 'private',
+          title: 'Changed assignee',
+        }),
+      )
       .returning();
     await db.update(tasks).set({ assigneeAgentId: otherAgent.id }).where(eq(tasks.id, task.id));
     await expect(prepare()).rejects.toMatchObject({ code: 'FORBIDDEN' });

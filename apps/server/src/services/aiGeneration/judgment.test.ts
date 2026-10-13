@@ -603,6 +603,7 @@ describe('runAcpJudgment', () => {
     const execArgs = mocks.execAgent.mock.calls[0][0];
     expect(execArgs.model).toBeUndefined();
     expect(execArgs.provider).toBeUndefined();
+    expect(execArgs.skipTaskVerification).toBe(true);
   });
 
   it('applies the advisory model/provider only for slug-bound builtins', async () => {

@@ -106,6 +106,7 @@ export interface OrchestrationWorkflowAcceptancePolicy {
  * already-paused orchestration workflow is a no-op that leaves no other trace of who asked.
  */
 export type OrchestrationWorkflowPauseReason =
+  | 'verification_unavailable'
   | 'measured_acceptance'
   | 'exploration_limit'
   /** The planner asked for a correction after its allowance was already spent. */

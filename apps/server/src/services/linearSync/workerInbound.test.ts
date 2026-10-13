@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
@@ -232,7 +233,9 @@ describe('LinearSyncWorker inbound ordering', () => {
       .values({ organizationId: 'linear-org-locked', workspaceId })
       .returning();
     const agentId = 'linear-locked-agent';
-    await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: agentId, userId, workspaceId }));
     const binding = await model.upsertBinding({
       defaultTeamId: 'linear-team-locked',
       installationId: installation.id,
@@ -659,10 +662,12 @@ describe('LinearSyncWorker inbound ordering', () => {
       .insert(linearInstallations)
       .values({ organizationId: 'linear-org-defer', workspaceId })
       .returning();
-    await db.insert(agents).values([
-      { id: 'linear-defer-agent-a', userId, workspaceId },
-      { id: 'linear-defer-agent-b', userId, workspaceId },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        { id: 'linear-defer-agent-a', userId, workspaceId },
+        { id: 'linear-defer-agent-b', userId, workspaceId },
+      ]),
+    );
     const binding = await model.upsertBinding({
       defaultTeamId: 'linear-team-defer',
       installationId: installation.id,

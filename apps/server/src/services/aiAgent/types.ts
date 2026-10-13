@@ -52,6 +52,8 @@ export interface ExecRunContext {
 export interface InternalExecAgentParams extends ExecAgentParams {
   /** Additional plugin IDs to inject (e.g., task tool during task execution) */
   additionalPluginIds?: string[];
+  /** Bind foreign-key references after persistence, before any device dispatch. Server-only. */
+  afterOperationPersisted?: (input: { operationId: string; topicId: string }) => Promise<void>;
   /**
    * Server-authored generic intervention claim id. When present, the message
    * claim stores this exact id so a retry after dispatch-but-before-publish can

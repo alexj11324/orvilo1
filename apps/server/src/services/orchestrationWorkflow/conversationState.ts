@@ -21,6 +21,7 @@ export type OrchestrationWorkflowWaitingReason =
   | 'decision_pending'
   | 'dispatch_not_admitted'
   | 'device_offline'
+  | 'verification_unavailable'
   | 'planning'
   | 'paused'
   | null;
@@ -32,7 +33,10 @@ export const orchestrationWorkflowWaitingReason = (
   if (['achieved', 'failed', 'canceled'].includes(orchestrationWorkflow.status)) return null;
   if (!orchestrationWorkflow.config?.planConfirmedAt) return 'plan_not_confirmed';
   if (input.decisionPending) return 'decision_pending';
-  if (orchestrationWorkflow.status === 'paused') return 'paused';
+  if (orchestrationWorkflow.status === 'paused')
+    return orchestrationWorkflow.config?.pausedBy === 'verification_unavailable'
+      ? 'verification_unavailable'
+      : 'paused';
   if (!input.dispatchAllowed) return 'dispatch_not_admitted';
   if (!input.deviceOnline) return 'device_offline';
   return orchestrationWorkflow.status === 'planning' ? 'planning' : null;

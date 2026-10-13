@@ -105,7 +105,6 @@ export const resolveVerifyModelConfig = async (
     if (isUsableVerifyModelConfig(verifierConfig)) return verifierConfig;
   }
 
-  await agentModel.getBuiltinAgent(BUILTIN_AGENT_SLUGS.verifyAgent);
   const builtinConfig = await agentModel.getAgentModelConfig(BUILTIN_AGENT_SLUGS.verifyAgent);
   if (isUsableVerifyModelConfig(builtinConfig)) return builtinConfig;
 

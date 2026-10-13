@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   executeToolCall: vi.fn(),
   findByDeviceId: vi.fn(),
   findWorkspaceDeviceById: vi.fn(),
-  hasFixedAgentBinding: vi.fn(),
+  hasAgentBinding: vi.fn(),
   membershipRole: vi.fn(),
   queryPersonal: vi.fn(),
   setWorkspaceDeviceVisibility: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('@/database/models/device', async (importOriginal) => ({
     delete = mocks.delete;
     findByDeviceId = mocks.findByDeviceId;
     findWorkspaceDeviceById = mocks.findWorkspaceDeviceById;
-    hasFixedAgentBinding = mocks.hasFixedAgentBinding;
+    hasAgentBinding = mocks.hasAgentBinding;
     queryPersonal = mocks.queryPersonal;
     setWorkspaceDeviceVisibility = mocks.setWorkspaceDeviceVisibility;
     update = mocks.update;
@@ -99,7 +99,7 @@ describe('personal device metadata with an active workspace selector', () => {
 
   it('still refuses hiding a workspace device bound to a fixed Agent', async () => {
     mocks.findWorkspaceDeviceById.mockResolvedValue({ userId: 'owner', visibility: 'public' });
-    mocks.hasFixedAgentBinding.mockResolvedValue(true);
+    mocks.hasAgentBinding.mockResolvedValue(true);
 
     await expect(
       caller().setWorkspaceDeviceVisibility({

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { uuid } from '@/utils/uuid';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agents, embeddings, files, messages, sessions, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { MessageModel } from '../../message';
@@ -865,10 +866,12 @@ describe('MessageModel Statistics Tests', () => {
     const topicB = 'topic-count-b';
 
     beforeEach(async () => {
-      await serverDB.insert(agents).values([
-        { id: agentId, userId },
-        { id: 'agent-other', userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: agentId, userId },
+          { id: 'agent-other', userId },
+        ]),
+      );
       await serverDB.insert(topics).values([
         { id: topicA, userId, agentId, title: 'a' },
         { id: topicB, userId, agentId, title: 'b' },
@@ -905,7 +908,9 @@ describe('MessageModel Statistics Tests', () => {
     const topicB = 'topic-cbt-b';
 
     beforeEach(async () => {
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       await serverDB.insert(topics).values([
         { id: topicA, userId, agentId, title: 'a' },
         { id: topicB, userId, agentId, title: 'b' },
@@ -946,10 +951,12 @@ describe('MessageModel Statistics Tests', () => {
     const otherAgentId = 'agent-topic-stats-other';
 
     beforeEach(async () => {
-      await serverDB.insert(agents).values([
-        { id: agentId, userId },
-        { id: otherAgentId, userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: agentId, userId },
+          { id: otherAgentId, userId },
+        ]),
+      );
       // 4 topics under agentId with 1 / 2 / 3 / 4 user messages each,
       // plus one topic under another agent that must be excluded by the filter.
       const topicRows = [
@@ -1131,7 +1138,9 @@ describe('MessageModel Statistics Tests', () => {
     const emptyTopic = 'topic-empty';
 
     beforeEach(async () => {
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       await serverDB.insert(topics).values([
         { id: topicWithMessages, userId, agentId, title: 'with-messages' },
         { id: emptyTopic, userId, agentId, title: 'empty' },
@@ -1165,7 +1174,9 @@ describe('MessageModel Statistics Tests', () => {
     const topicId = 'topic-find-first-assistant';
 
     beforeEach(async () => {
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       await serverDB.insert(topics).values({ id: topicId, userId, agentId, title: 'topic' });
     });
 

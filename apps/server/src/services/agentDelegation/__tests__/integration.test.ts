@@ -3,6 +3,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import type * as EventOutboxModel from '@/database/models/eventOutbox';
 import { insertOutboxEvent } from '@/database/models/eventOutbox';
 import type { OrviloDatabase } from '@/database/type';
@@ -85,7 +86,9 @@ describe('agentDelegation services (integration)', () => {
     const task = await createTask(db, { creatorId: ownerId, workspaceId });
     taskId = task.id;
     // Grants FK to agents — the delegation subject must be a real agent row.
-    await db.insert(agents).values({ id: 'agt_worker', userId: ownerId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'agt_worker', userId: ownerId, workspaceId }));
   });
 
   afterEach(async () => {

@@ -1203,6 +1203,7 @@ export const agentRouter = router({
         agentIds: z.array(z.string()).min(1).max(100),
         targetAccessLevel: z.enum(RESOURCE_ACCESS_LEVELS_BY_TYPE.agent).optional(),
         targetVisibility: z.enum(['private', 'public']).optional(),
+        targetDeviceId: z.string().min(1).optional(),
         targetWorkspaceId: z.string().nullable(),
       }),
     )
@@ -1290,7 +1291,10 @@ export const agentRouter = router({
           input.targetWorkspaceId,
           ctx.userId,
           input.targetVisibility,
-          { rejectForeignTopicCommentAuthors: isWorkspaceNonOwner(ctx) },
+          {
+            rejectForeignTopicCommentAuthors: isWorkspaceNonOwner(ctx),
+            targetDeviceId: input.targetDeviceId,
+          },
         );
       } catch (error) {
         if (

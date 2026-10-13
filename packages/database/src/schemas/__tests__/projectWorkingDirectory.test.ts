@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agents, devices, projects, projectWorkingDirectories, topics, users } from '..';
 
 const serverDB = await getTestDB();
@@ -11,7 +12,7 @@ const userId = 'project-working-directory-schema-user';
 const createProjectFixture = async () => {
   const [coordinator] = await serverDB
     .insert(agents)
-    .values({ title: 'Coordinator', userId, virtual: true })
+    .values(await withTestAgentDevices(serverDB, { title: 'Coordinator', userId, virtual: true }))
     .returning();
   const [project] = await serverDB
     .insert(projects)

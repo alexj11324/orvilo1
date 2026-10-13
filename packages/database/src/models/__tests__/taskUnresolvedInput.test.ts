@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agentInterventions,
   agentOperations,
@@ -32,7 +33,9 @@ const cleanup = async () => {
 beforeEach(async () => {
   await cleanup();
   await db.insert(users).values({ id: userId });
-  await db.insert(agents).values({ id: agentId, slug: agentId, userId });
+  await db
+    .insert(agents)
+    .values(await withTestAgentDevices(db, { id: agentId, slug: agentId, userId }));
 });
 afterEach(cleanup);
 

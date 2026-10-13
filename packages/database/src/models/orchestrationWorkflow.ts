@@ -149,6 +149,27 @@ export class OrchestrationWorkflowModel {
       .where(and(eq(orchestrationWorkflows.id, id), this.ownership()));
   };
 
+  /** A verifier repair may release only the system pause, never a person's pause. */
+  reopenAfterVerifierRepair = async (id: string): Promise<boolean> => {
+    const rows = await this.db
+      .update(orchestrationWorkflows)
+      .set({
+        config: sql`coalesce(${orchestrationWorkflows.config}, '{}'::jsonb) - 'pausedBy'`,
+        status: 'running',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          this.ownership(),
+          eq(orchestrationWorkflows.id, id),
+          eq(orchestrationWorkflows.status, 'paused'),
+          sql`${orchestrationWorkflows.config}->>'pausedBy' = 'verification_unavailable'`,
+        ),
+      )
+      .returning({ id: orchestrationWorkflows.id });
+    return rows.length > 0;
+  };
+
   /** Compare-and-swap only the supervisor namespace; concurrent budget edits survive. */
   updateSupervisorState = async (
     id: string,

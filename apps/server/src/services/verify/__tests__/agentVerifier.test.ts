@@ -1,4 +1,3 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { VerifyToolIdentifier } from '@orvilo/builtin-tool-verify';
 import type { VerifyCheckItem } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,6 +36,11 @@ vi.mock('@/server/services/aiAgent', () => ({
     return { execAgent: execAgentMock };
   }),
 }));
+vi.mock('@/server/services/agent/builtinRuntimeCreation', () => ({
+  getExecutableBuiltinAgent: (_db: unknown, _userId: string, slug: string) =>
+    getBuiltinAgentMock(slug),
+}));
+
 vi.mock('../verifierTerminal', () => ({
   settleVerifierCheckFromTerminal: settleVerifierCheckFromTerminalMock,
 }));
@@ -99,21 +103,30 @@ describe('createVerifierAgentRunner', () => {
     expect(params.additionalPluginIds).toEqual([VerifyToolIdentifier]);
   });
 
-  it('falls back to the builtin verify agent (by slug) with the provided verify model config', async () => {
-    existsByIdMock.mockResolvedValue(false); // pinned id no longer exists
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
+  it('blocks a missing pinned verifier instead of silently replacing it', async () => {
+    existsByIdMock.mockResolvedValue(false);
     const runner = createVerifierAgentRunner({ ...baseParams, verifierAgentId: 'agent-deleted' })!;
-    await runner(runnerArgs);
+    await expect(runner(runnerArgs)).rejects.toThrow('VERIFIER_AGENT_UNAVAILABLE');
+    expect(getBuiltinAgentMock).not.toHaveBeenCalled();
+    expect(execAgentMock).not.toHaveBeenCalled();
+  });
 
-    expect(getBuiltinAgentMock).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.verifyAgent);
-    const params = execParams();
-    expect(params.slug).toBe(BUILTIN_AGENT_SLUGS.verifyAgent);
-    expect(params.agentId).toBeUndefined();
-    expect(params.model).toBe('gpt-parent');
-    expect(params.provider).toBe('openai');
-    // The builtin verify agent already declares the tool — not re-injected.
-    expect(params.additionalPluginIds).toBeUndefined();
+  it('keeps the bound builtin native runtime without server model overrides', async () => {
+    getBuiltinAgentMock.mockResolvedValue({
+      id: 'builtin-verify',
+      model: 'opencode',
+      agencyConfig: {
+        boundDeviceId: 'registered-host',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'opencode' },
+      },
+    });
+    await createVerifierAgentRunner(baseParams)!(runnerArgs);
+    expect(execParams().model).toBeUndefined();
+    expect(execParams().provider).toBeUndefined();
+    expect(execParams().skipTaskVerification).toBe(true);
+    expect(execParams().chatConfigOverride).toEqual({ enableAgentMode: true, toolMode: 'custom' });
+    expect(execParams().requiredToolIds).toEqual([VerifyToolIdentifier]);
   });
 
   it('registers a verifier-terminal hook for local and queued completion handling', async () => {
@@ -170,7 +183,8 @@ describe('createVerifierAgentRunner', () => {
 
     // No pinned id → never probes existsById, goes straight to the builtin.
     expect(existsByIdMock).not.toHaveBeenCalled();
-    expect(execParams().slug).toBe(BUILTIN_AGENT_SLUGS.verifyAgent);
+    expect(execParams().agentId).toBe('builtin-verify');
+    expect(execParams().slug).toBeUndefined();
   });
 
   it('keeps the parent task scope while starting a fresh isolated topic', async () => {

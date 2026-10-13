@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agents, messagePlugins, messages, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { TopicImporterRepo } from '../index';
@@ -20,7 +21,9 @@ describe('TopicImporterRepo.importTopic', () => {
     await serverDB.delete(users);
     await serverDB.transaction(async (tx) => {
       await tx.insert(users).values([{ id: userId }]);
-      await tx.insert(agents).values({ id: agentId, userId, title: 'Test Agent' });
+      await tx
+        .insert(agents)
+        .values(await withTestAgentDevices(tx, { id: agentId, userId, title: 'Test Agent' }));
     });
   });
 

@@ -1,8 +1,9 @@
 import { INVITATION_EXPIRY_DAYS } from '@orvilo/const';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   devices,
@@ -315,10 +316,20 @@ describe('WorkspaceMemberModel', () => {
       // surfaced so callers can best-effort unenroll live gateway sockets
       expect(removedDeviceIds.sort()).toEqual(['dep-private', 'dep-shared']);
 
-      const remaining = (await serverDB.select({ deviceId: devices.deviceId }).from(devices))
+      const remaining = (
+        await serverDB
+          .select({ deviceId: devices.deviceId })
+          .from(devices)
+          .where(isNull(devices.retiredAt))
+      )
         .map((d) => d.deviceId)
         .sort();
       expect(remaining).toEqual(['dep-personal', 'other-ws-private', 'team-box']);
+      const retired = await serverDB.select().from(devices).where(isNotNull(devices.retiredAt));
+      expect(retired.map((device) => device.deviceId).sort()).toEqual([
+        'dep-private',
+        'dep-shared',
+      ]);
     });
 
     it('revokes the departing member grants, so a re-invite does not restore them', async () => {
@@ -377,10 +388,12 @@ describe('WorkspaceMemberModel', () => {
       const pmModel = new ProjectMemberModel(serverDB, inviterId);
       await model.addMember({ userId: memberId, workspaceId });
       // projects.coordinatorAgentId is unique — each project needs its own agent.
-      await serverDB.insert(agents).values([
-        { id: 'wm-coordinator', slug: 'wm-coordinator', userId: inviterId },
-        { id: 'wm-coordinator-2', slug: 'wm-coordinator-2', userId: inviterId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'wm-coordinator', slug: 'wm-coordinator', userId: inviterId },
+          { id: 'wm-coordinator-2', slug: 'wm-coordinator-2', userId: inviterId },
+        ]),
+      );
       await serverDB.insert(projects).values([
         {
           coordinatorAgentId: 'wm-coordinator',

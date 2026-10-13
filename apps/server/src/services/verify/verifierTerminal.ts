@@ -43,23 +43,34 @@ export const settleVerifierCheckFromTerminal = async (
       (item) => item.checkItemId === checkItemId,
     );
 
-    if (!result || TERMINAL_RESULT_STATUSES.has(result.status)) return;
+    if (
+      !result ||
+      TERMINAL_RESULT_STATUSES.has(result.status) ||
+      result.verifierOperationId !== verifierOperationId
+    )
+      return;
 
     const limitation =
       reason === 'done'
         ? 'Verifier completed without submitting a verdict.'
         : `Verifier failed before submitting a verdict${errorMessage ? `: ${errorMessage}` : '.'}`;
 
-    await resultModel.updateByCheckItem(run.id, checkItemId, {
-      completedAt: new Date(),
-      // The verifier terminated without producing a verdict — an infra/verifier
-      // malfunction, not a delivery judgment. `errored` (no verdict) keeps it out
-      // of the delivery gate and the auto-repair set.
-      status: 'errored',
-      suggestion: 'Review the verifier configuration and rerun verification.',
-      toulmin: { limitation },
+    const completed = await resultModel.completeVerifierCheck(
+      run.id,
+      checkItemId,
       verifierOperationId,
-    });
+      {
+        completedAt: new Date(),
+        // The verifier terminated without producing a verdict — an infra/verifier
+        // malfunction, not a delivery judgment. `errored` (no verdict) keeps it out
+        // of the delivery gate and the auto-repair set.
+        status: 'errored',
+        suggestion: 'Review the verifier configuration and rerun verification.',
+        toulmin: { limitation },
+        verifierOperationId,
+      },
+    );
+    if (!completed) return;
 
     await new VerifyStatusService(db, userId, workspaceId).recompute(parentOperationId);
     await finalizeVerifyRun(db, userId, parentOperationId, {}, workspaceId);

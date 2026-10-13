@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   orchestrationWorkflowEdges,
@@ -33,6 +34,22 @@ afterEach(async () => {
 });
 
 describe('OrchestrationWorkflowModel', () => {
+  it('releases only the verifier system pause after repair, preserving user pauses and other config', async () => {
+    const definition = await orchestrationWorkflowModel.create({
+      title: 'Verifier paused',
+      status: 'paused',
+      config: { pausedBy: 'verification_unavailable', recovery: { maxAttemptsPerTask: 2 } },
+    });
+    expect(await orchestrationWorkflowModel.reopenAfterVerifierRepair(definition.id)).toBe(true);
+    expect((await orchestrationWorkflowModel.findById(definition.id))?.config).toEqual({
+      recovery: { maxAttemptsPerTask: 2 },
+    });
+    await orchestrationWorkflowModel.updateStatus(definition.id, 'paused');
+    await orchestrationWorkflowModel.updatePauseReason(definition.id, 'user');
+    expect(await orchestrationWorkflowModel.reopenAfterVerifierRepair(definition.id)).toBe(false);
+    expect((await orchestrationWorkflowModel.findById(definition.id))?.status).toBe('paused');
+  });
+
   describe('supervisor state', () => {
     it('claims an incident once and preserves other configuration under concurrent writes', async () => {
       const orchestrationWorkflow = await orchestrationWorkflowModel.create({
@@ -296,10 +313,12 @@ describe('OrchestrationWorkflowModel', () => {
     it('scopes by the orchestration workflow’s responsible agent', async () => {
       const mine = 'orchestration-workflow-list-agent-a';
       const theirs = 'orchestration-workflow-list-agent-b';
-      await serverDB.insert(agents).values([
-        { id: mine, slug: mine, userId },
-        { id: theirs, slug: theirs, userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: mine, slug: mine, userId },
+          { id: theirs, slug: theirs, userId },
+        ]),
+      );
       const ours = await orchestrationWorkflowModel.create({
         agentId: mine,
         subjectType: 'standalone',

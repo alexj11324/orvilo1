@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   projectMembers,
@@ -36,10 +37,12 @@ beforeEach(async () => {
     { role: 'member', userId: otherUserId, workspaceId },
   ]);
   // projects.coordinatorAgentId is unique — each project needs its own agent.
-  await serverDB.insert(agents).values([
-    { id: coordinatorAgentId, slug: coordinatorAgentId, userId: ownerId },
-    { id: otherCoordinatorAgentId, slug: otherCoordinatorAgentId, userId: ownerId },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      { id: coordinatorAgentId, slug: coordinatorAgentId, userId: ownerId },
+      { id: otherCoordinatorAgentId, slug: otherCoordinatorAgentId, userId: ownerId },
+    ]),
+  );
   await serverDB.insert(projects).values([
     {
       coordinatorAgentId,

@@ -700,6 +700,55 @@ export class VerifyRunModel {
     return claimed.length > 0;
   };
 
+  /** Freeze the delivery input before judging; retries reuse this exact delivery. */
+  recordVerificationContext = async (runId: string, deliverable: string) => {
+    await this.db
+      .update(verifyRuns)
+      .set({
+        metadata: sql`coalesce(${verifyRuns.metadata}, '{}'::jsonb)
+      || jsonb_build_object('verificationDeliverable', ${deliverable}::text)`,
+      })
+      .where(
+        and(
+          eq(verifyRuns.id, runId),
+          this.ownership(),
+          sql`NOT (coalesce(${verifyRuns.metadata}, '{}'::jsonb) ? 'verificationDeliverable')`,
+        ),
+      );
+  };
+
+  /** Retry only infrastructure errors, atomically retaining plan, evidence and real verdicts. */
+  prepareErroredRetry = async (runId: string): Promise<boolean> =>
+    this.db.transaction(async (tx) => {
+      const [claimed] = await tx
+        .update(verifyRuns)
+        .set({
+          status: 'planned',
+          metadata: sql`coalesce(${verifyRuns.metadata}, '{}'::jsonb) - 'taskDrivenAt'
+        - 'taskDriveClaimedAt' - 'taskDriveLeaseExpiresAt' - 'taskDriveOwnerToken'`,
+        })
+        .where(and(eq(verifyRuns.id, runId), this.ownership(), eq(verifyRuns.status, 'errored')))
+        .returning({ id: verifyRuns.id });
+      if (!claimed) return false;
+      await tx
+        .update(verifyCheckResults)
+        .set({
+          status: 'pending',
+          verdict: null,
+          completedAt: null,
+          startedAt: null,
+          verifierOperationId: null,
+          verifierTracingId: null,
+          toulmin: null,
+          suggestion: null,
+          confidence: null,
+        })
+        .where(
+          and(eq(verifyCheckResults.verifyRunId, runId), eq(verifyCheckResults.status, 'errored')),
+        );
+      return true;
+    });
+
   /**
    * One page of runs stranded in `verifying` since before `olderThan`, across
    * all owners — the sweep's input (see `sweepStuckVerifyRuns`).

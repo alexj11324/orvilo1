@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../core/getTestDB';
+import { withTestAgentDevices } from '../core/testAgentFixture';
 import { agents, users, workspaces } from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { assertAgentUsableBy } from './agent-access';
@@ -39,12 +40,14 @@ describe('assertAgentUsableBy', () => {
   describe('workspace mode', () => {
     it('passes for a public agent for any workspace member', async () => {
       const agentId = 'agt-public';
-      await serverDB.insert(agents).values({
-        id: agentId,
-        userId: userA,
-        workspaceId: workspaceA,
-        visibility: 'public',
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: agentId,
+          userId: userA,
+          workspaceId: workspaceA,
+          visibility: 'public',
+        }),
+      );
 
       await expect(
         assertAgentUsableBy(serverDB, agentId, { userId: userB, workspaceId: workspaceA }),
@@ -53,12 +56,14 @@ describe('assertAgentUsableBy', () => {
 
     it('passes for a private agent when the caller is the owner', async () => {
       const agentId = 'agt-private-owner';
-      await serverDB.insert(agents).values({
-        id: agentId,
-        userId: userA,
-        workspaceId: workspaceA,
-        visibility: 'private',
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: agentId,
+          userId: userA,
+          workspaceId: workspaceA,
+          visibility: 'private',
+        }),
+      );
 
       await expect(
         assertAgentUsableBy(serverDB, agentId, { userId: userA, workspaceId: workspaceA }),
@@ -67,12 +72,14 @@ describe('assertAgentUsableBy', () => {
 
     it("throws NOT_FOUND when a non-owner reaches another user's private agent", async () => {
       const agentId = 'agt-private-other';
-      await serverDB.insert(agents).values({
-        id: agentId,
-        userId: userA,
-        workspaceId: workspaceA,
-        visibility: 'private',
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: agentId,
+          userId: userA,
+          workspaceId: workspaceA,
+          visibility: 'private',
+        }),
+      );
 
       await expect(
         assertAgentUsableBy(serverDB, agentId, { userId: userB, workspaceId: workspaceA }),
@@ -84,12 +91,14 @@ describe('assertAgentUsableBy', () => {
 
     it('throws NOT_FOUND when the caller is in a different workspace from the agent', async () => {
       const agentId = 'agt-cross-ws';
-      await serverDB.insert(agents).values({
-        id: agentId,
-        userId: userA,
-        workspaceId: workspaceA,
-        visibility: 'public',
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: agentId,
+          userId: userA,
+          workspaceId: workspaceA,
+          visibility: 'public',
+        }),
+      );
 
       await expect(
         assertAgentUsableBy(serverDB, agentId, { userId: userA, workspaceId: workspaceB }),
@@ -109,7 +118,9 @@ describe('assertAgentUsableBy', () => {
   describe('personal mode', () => {
     it('passes for the owner of a personal-mode agent', async () => {
       const agentId = 'agt-personal-owner';
-      await serverDB.insert(agents).values({ id: agentId, userId: userA });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId: userA }));
 
       await expect(
         assertAgentUsableBy(serverDB, agentId, { userId: userA }),
@@ -118,7 +129,9 @@ describe('assertAgentUsableBy', () => {
 
     it('throws NOT_FOUND for non-owner access to a personal-mode agent', async () => {
       const agentId = 'agt-personal-other';
-      await serverDB.insert(agents).values({ id: agentId, userId: userA });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId: userA }));
 
       await expect(assertAgentUsableBy(serverDB, agentId, { userId: userB })).rejects.toMatchObject(
         { code: 'NOT_FOUND' },
@@ -127,12 +140,14 @@ describe('assertAgentUsableBy', () => {
 
     it('throws NOT_FOUND when caller is personal mode but agent lives in a workspace', async () => {
       const agentId = 'agt-personal-vs-ws';
-      await serverDB.insert(agents).values({
-        id: agentId,
-        userId: userA,
-        workspaceId: workspaceA,
-        visibility: 'public',
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: agentId,
+          userId: userA,
+          workspaceId: workspaceA,
+          visibility: 'public',
+        }),
+      );
 
       await expect(assertAgentUsableBy(serverDB, agentId, { userId: userA })).rejects.toMatchObject(
         { code: 'NOT_FOUND' },

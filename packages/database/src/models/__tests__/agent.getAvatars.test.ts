@@ -3,6 +3,7 @@ import { DEFAULT_INBOX_AVATAR, DEFAULT_INBOX_TITLE, INBOX_SESSION_ID } from '@or
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agents, users } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
@@ -29,25 +30,27 @@ describe('AgentModel.getAgentAvatarsByIds', () => {
   });
 
   it('should return agent avatar info by IDs', async () => {
-    await serverDB.insert(agents).values([
-      {
-        avatar: '🤖',
-        backgroundColor: '#ff0000',
-        id: 'agent-av-1',
-        name: 'Alice',
-        slug: 'agent-av-1',
-        title: 'Agent One',
-        userId,
-      },
-      {
-        avatar: '🧠',
-        backgroundColor: '#00ff00',
-        id: 'agent-av-2',
-        slug: 'agent-av-2',
-        title: 'Agent Two',
-        userId,
-      },
-    ]);
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, [
+        {
+          avatar: '🤖',
+          backgroundColor: '#ff0000',
+          id: 'agent-av-1',
+          name: 'Alice',
+          slug: 'agent-av-1',
+          title: 'Agent One',
+          userId,
+        },
+        {
+          avatar: '🧠',
+          backgroundColor: '#00ff00',
+          id: 'agent-av-2',
+          slug: 'agent-av-2',
+          title: 'Agent Two',
+          userId,
+        },
+      ]),
+    );
 
     const model = new AgentModel(serverDB, userId);
     const result = await model.getAgentAvatarsByIds(['agent-av-1', 'agent-av-2']);
@@ -66,10 +69,12 @@ describe('AgentModel.getAgentAvatarsByIds', () => {
   });
 
   it('should only return agents owned by the current user', async () => {
-    await serverDB.insert(agents).values([
-      { avatar: '🤖', id: 'agent-mine', slug: 'agent-mine', title: 'Mine', userId },
-      { avatar: '👻', id: 'agent-other', slug: 'agent-other', title: 'Other', userId: userId2 },
-    ]);
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, [
+        { avatar: '🤖', id: 'agent-mine', slug: 'agent-mine', title: 'Mine', userId },
+        { avatar: '👻', id: 'agent-other', slug: 'agent-other', title: 'Other', userId: userId2 },
+      ]),
+    );
 
     const model = new AgentModel(serverDB, userId);
     const result = await model.getAgentAvatarsByIds(['agent-mine', 'agent-other']);
@@ -79,14 +84,16 @@ describe('AgentModel.getAgentAvatarsByIds', () => {
   });
 
   it('should fallback to OrviloAI defaults for inbox agent without avatar/title', async () => {
-    await serverDB.insert(agents).values({
-      avatar: null,
-      backgroundColor: null,
-      id: 'agent-inbox',
-      slug: INBOX_SESSION_ID,
-      title: null,
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        avatar: null,
+        backgroundColor: null,
+        id: 'agent-inbox',
+        slug: INBOX_SESSION_ID,
+        title: null,
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     const result = await model.getAgentAvatarsByIds(['agent-inbox']);
@@ -102,14 +109,16 @@ describe('AgentModel.getAgentAvatarsByIds', () => {
   });
 
   it('should not override inbox agent avatar/title when they are set', async () => {
-    await serverDB.insert(agents).values({
-      avatar: '🤖',
-      backgroundColor: '#123456',
-      id: 'agent-inbox-custom',
-      slug: 'inbox',
-      title: 'Custom Inbox',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        avatar: '🤖',
+        backgroundColor: '#123456',
+        id: 'agent-inbox-custom',
+        slug: 'inbox',
+        title: 'Custom Inbox',
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     const result = await model.getAgentAvatarsByIds(['agent-inbox-custom']);
@@ -125,15 +134,17 @@ describe('AgentModel.getAgentAvatarsByIds', () => {
   });
 
   it('should return only selected fields', async () => {
-    await serverDB.insert(agents).values({
-      avatar: '🤖',
-      backgroundColor: '#000',
-      description: 'Should not be returned',
-      id: 'agent-fields',
-      slug: 'agent-fields',
-      title: 'Test Agent',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        avatar: '🤖',
+        backgroundColor: '#000',
+        description: 'Should not be returned',
+        id: 'agent-fields',
+        slug: 'agent-fields',
+        title: 'Test Agent',
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     const result = await model.getAgentAvatarsByIds(['agent-fields']);

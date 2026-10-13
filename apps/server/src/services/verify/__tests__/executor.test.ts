@@ -11,6 +11,9 @@ const mocks = vi.hoisted(() => ({
   fileFindById: vi.fn(),
   modelProperty: vi.fn(),
   resultCreateMany: vi.fn(),
+  resultClaim: vi.fn(),
+  resultBind: vi.fn(),
+  resultFailUnbound: vi.fn(),
   resultListByRun: vi.fn(),
   resultUpdateByCheckItem: vi.fn(),
   runEnsureForOperation: vi.fn(),
@@ -40,14 +43,17 @@ vi.mock('@/database/models/verifyCheckResult', () => ({
   VerifyCheckResultModel: vi.fn(function () {
     return {
       createMany: mocks.resultCreateMany,
+      claimPendingCheck: mocks.resultClaim,
+      bindVerifierOperation: mocks.resultBind,
+      failUnboundVerifierCheck: mocks.resultFailUnbound,
       listByRun: mocks.resultListByRun,
-      updateByCheckItem: mocks.resultUpdateByCheckItem,
+      updateClaimedCheck: mocks.resultUpdateByCheckItem,
     };
   }),
 }));
 vi.mock('@/database/models/verifyRun', () => ({
   VerifyRunModel: vi.fn(function () {
-    return { ensureForOperation: mocks.runEnsureForOperation };
+    return { ensureForOperation: mocks.runEnsureForOperation, recordVerificationContext: vi.fn() };
   }),
 }));
 vi.mock('@/server/services/aiGeneration', async (importOriginal) => ({
@@ -83,12 +89,81 @@ describe('VerifyExecutorService', () => {
       url: 'evidence/image.png',
     });
     mocks.resultCreateMany.mockResolvedValue(undefined);
+    mocks.resultClaim.mockResolvedValue('attempt-1');
+    mocks.resultBind.mockResolvedValue(true);
     mocks.resultListByRun
       .mockResolvedValueOnce([])
       .mockResolvedValue([{ checkItemId: 'word-count', status: 'pending' }]);
     mocks.resultUpdateByCheckItem.mockResolvedValue(undefined);
     mocks.statusMarkVerifying.mockResolvedValue(undefined);
     mocks.statusRecompute.mockResolvedValue('verifying');
+  });
+
+  it('records an unavailable judgment binding as an infrastructure error without a repair verdict', async () => {
+    mocks.runEnsureForOperation.mockResolvedValue({
+      id: 'run-1',
+      planConfirmedAt: new Date(),
+      plan: [
+        {
+          id: 'word-count',
+          index: 0,
+          required: true,
+          onFail: 'auto_repair',
+          title: 'Delivery',
+          verifierType: 'llm',
+          verifierConfig: {},
+        },
+      ],
+    });
+    mocks.aiGenerateObject.mockRejectedValueOnce(
+      Object.assign(new Error('Device configuration missing'), { code: 'ACP_JUDGMENT_NO_BINDING' }),
+    );
+    await new VerifyExecutorService({} as never, 'user-1').execute({
+      deliverable: 'original',
+      orchestrationWorkflow: 'check delivery',
+      modelConfig: { model: 'model', provider: 'provider' },
+      operationId: 'op-1',
+    });
+    expect(mocks.resultUpdateByCheckItem).toHaveBeenCalledWith(
+      'run-1',
+      'word-count',
+      'attempt-1',
+      expect.objectContaining({ status: 'errored', verdict: null }),
+    );
+    expect(mocks.resultUpdateByCheckItem).not.toHaveBeenCalledWith(
+      'run-1',
+      'word-count',
+      'attempt-1',
+      expect.objectContaining({ status: 'failed' }),
+    );
+  });
+
+  it('does not spawn a second verifier when the pending criterion was already claimed', async () => {
+    mocks.runEnsureForOperation.mockResolvedValue({
+      id: 'run-1',
+      planConfirmedAt: new Date(),
+      plan: [
+        {
+          id: 'word-count',
+          index: 0,
+          required: true,
+          title: 'Delivery',
+          verifierType: 'agent',
+          verifierConfig: {},
+        },
+      ],
+    });
+    mocks.resultClaim.mockResolvedValueOnce(false);
+    const runVerifierAgent = vi.fn();
+    await new VerifyExecutorService({} as never, 'user-1').execute({
+      deliverable: 'original',
+      orchestrationWorkflow: 'check delivery',
+      modelConfig: { model: 'model', provider: 'provider' },
+      operationId: 'op-1',
+      runVerifierAgent,
+    });
+    expect(runVerifierAgent).not.toHaveBeenCalled();
+    expect(mocks.resultUpdateByCheckItem).not.toHaveBeenCalled();
   });
 
   it('runs a program criterion through the verifier-agent fallback', async () => {
@@ -121,10 +196,11 @@ describe('VerifyExecutorService', () => {
         operationId: 'builder-op-1',
       }),
     );
-    expect(mocks.resultUpdateByCheckItem).toHaveBeenCalledWith(
+    expect(mocks.resultBind).toHaveBeenCalledWith(
       'run-1',
       'word-count',
-      expect.objectContaining({ status: 'running', verifierOperationId: 'verifier-op-1' }),
+      'verifier-op-1',
+      'attempt-1',
     );
   });
 
@@ -300,6 +376,7 @@ describe('VerifyExecutorService', () => {
     expect(mocks.resultUpdateByCheckItem).toHaveBeenCalledWith(
       'run-1',
       'b',
+      'attempt-1',
       expect.objectContaining({ status: 'passed' }),
     );
   });

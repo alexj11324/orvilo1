@@ -34,6 +34,7 @@ vi.mock('@/database/models/verifyRun', () => ({
   VerifyRunModel: vi.fn(function () {
     return {
       claimEvidenceCollection,
+      recordVerificationContext: vi.fn(),
       findByOperation,
       updateStatus,
     };

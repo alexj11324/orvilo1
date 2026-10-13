@@ -4,6 +4,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { LinearSyncModel } from '@/database/models/linearSync';
@@ -788,7 +789,14 @@ describe('Task Router Integration', () => {
       const wsAgentId = 'agt_assignee_coexist_ws';
       await serverDB
         .insert(agents)
-        .values({ id: wsAgentId, slug: wsAgentId, userId, workspaceId })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            id: wsAgentId,
+            slug: wsAgentId,
+            userId,
+            workspaceId,
+          }),
+        )
         .onConflictDoNothing();
       return {
         workspaceId,
@@ -833,13 +841,15 @@ describe('Task Router Integration', () => {
       const { workspaceId, wsAgentId, wsCaller } = await setupWorkspace();
       const { agents } = await import('@/database/schemas');
       const privateAgentId = 'agt_assignee_race_private';
-      await serverDB.insert(agents).values({
-        id: privateAgentId,
-        slug: privateAgentId,
-        userId,
-        workspaceId,
-        visibility: 'private',
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: privateAgentId,
+          slug: privateAgentId,
+          userId,
+          workspaceId,
+          visibility: 'private',
+        }),
+      );
       const created = await wsCaller.create({
         assigneeAgentId: wsAgentId,
         instruction: 'Race executor',
@@ -1761,7 +1771,11 @@ describe('Task Router Integration', () => {
         { role: 'member', userId: memberId, workspaceId },
       ]);
       const agent = async (id: string, ownerId: string) => {
-        await serverDB.insert(agents).values({ id, slug: id, userId: ownerId, workspaceId });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id, slug: id, userId: ownerId, workspaceId }),
+          );
         return id;
       };
       const incumbent = await agent('agt_takeover_incumbent', userId);
@@ -2471,7 +2485,14 @@ describe('Task Router Integration', () => {
       const wsAgentId = 'agt_task_comment_ws';
       await serverDB
         .insert(agents)
-        .values({ id: wsAgentId, slug: wsAgentId, userId, workspaceId })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            id: wsAgentId,
+            slug: wsAgentId,
+            userId,
+            workspaceId,
+          }),
+        )
         .onConflictDoNothing();
       const { resourcePermissions } = await import('@/database/schemas');
       await serverDB.insert(resourcePermissions).values({

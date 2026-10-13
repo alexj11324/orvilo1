@@ -3,6 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { TaskModel } from '@/database/models/task';
 import { TaskLabelModel } from '@/database/models/taskLabel';
@@ -75,13 +76,15 @@ describe('TaskIssueDefinitionService', () => {
     async (copyAssignees) => {
       const [agent] = await db
         .insert(agents)
-        .values({
-          userId,
-          workspaceId,
-          title: 'Assigned Agent',
-          model: 'gpt-4',
-          provider: 'openai',
-        })
+        .values(
+          await withTestAgentDevices(db, {
+            userId,
+            workspaceId,
+            title: 'Assigned Agent',
+            model: 'gpt-4',
+            provider: 'openai',
+          }),
+        )
         .returning();
       const source = await model.create({
         instruction: 'Assigned issue',

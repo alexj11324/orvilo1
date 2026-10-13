@@ -3,6 +3,7 @@ import { type Message, parse } from '@orvilo/conversation-flow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AgentDocumentModel } from '@/database/models/agentDocuments';
 import { MessageModel } from '@/database/models/message';
 import { WorkModel } from '@/database/models/work';
@@ -27,7 +28,7 @@ const lifecycle = new CompletionLifecycle(db, userId);
 beforeEach(async () => {
   await db.delete(users);
   await db.insert(users).values({ id: userId });
-  await db.insert(agents).values({ id: agentId, userId });
+  await db.insert(agents).values(await withTestAgentDevices(db, { id: agentId, userId }));
   await db.insert(topics).values({ id: topicId, userId });
   await db.insert(messages).values([
     { id: 'source', role: 'user', content: 'Create a document', topicId, userId },

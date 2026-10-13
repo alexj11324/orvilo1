@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import {
   agents,
   agentsToSessions,
@@ -62,10 +63,12 @@ beforeEach(async () => {
     { workspaceId, userId: owner, role: 'owner' },
     { workspaceId, userId: member, role: 'member' },
   ]);
-  await db.insert(agents).values([
-    { id: agentId, userId: owner, workspaceId, visibility: 'public' },
-    { id: otherAgentId, userId: owner, workspaceId, visibility: 'public' },
-  ]);
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, [
+      { id: agentId, userId: owner, workspaceId, visibility: 'public' },
+      { id: otherAgentId, userId: owner, workspaceId, visibility: 'public' },
+    ]),
+  );
   await db.insert(sessions).values({ id: sessionId, userId: member, workspaceId, type: 'agent' });
   await db.insert(agentsToSessions).values({ agentId, sessionId, userId: member, workspaceId });
 });

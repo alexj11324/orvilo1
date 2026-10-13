@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   credentials,
@@ -135,15 +136,17 @@ describe('ProjectModel', () => {
           .onConflictDoNothing();
         await serverDB
           .insert(agents)
-          .values({
-            ...runtimeFixture,
-            id: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
-            userId: actor.id,
-            workspaceId: scope,
-            visibility: 'public',
-            virtual: false,
-            title: 'Runtime fixture',
-          })
+          .values(
+            await withTestAgentDevices(serverDB, {
+              ...runtimeFixture,
+              id: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
+              userId: actor.id,
+              workspaceId: scope,
+              visibility: 'public',
+              virtual: false,
+              title: 'Runtime fixture',
+            }),
+          )
           .onConflictDoNothing();
         const preference = {
           orchestratorAgentId: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
@@ -985,7 +988,7 @@ describe('ProjectModel', () => {
     const project = await createProject(model, { name: 'Bindings' });
     const [agent] = await serverDB
       .insert(agents)
-      .values({ title: 'Researcher', userId })
+      .values(await withTestAgentDevices(serverDB, { title: 'Researcher', userId }))
       .returning();
     const [knowledgeBase] = await serverDB
       .insert(knowledgeBases)
@@ -993,7 +996,7 @@ describe('ProjectModel', () => {
       .returning();
     const [foreignAgent] = await serverDB
       .insert(agents)
-      .values({ title: 'Foreign', userId: otherUserId })
+      .values(await withTestAgentDevices(serverDB, { title: 'Foreign', userId: otherUserId }))
       .returning();
 
     await model.addAgent(project.id, { agentId: agent.id, role: 'lead' });

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { AGENT_TRANSFER_IN_PROGRESS } from '../../models/agentTransferJob';
 import { ChatGroupModel } from '../../models/chatGroup';
 import { ProviderBindingModel } from '../../models/providerBinding';
@@ -107,15 +108,17 @@ const seedRuntimeFixtures = async () => {
         .onConflictDoNothing();
       await serverDB
         .insert(agents)
-        .values({
-          ...runtimeFixture,
-          id: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
-          userId: actor.id,
-          workspaceId: scope,
-          visibility: 'public',
-          virtual: false,
-          title: 'Runtime fixture',
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            ...runtimeFixture,
+            id: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
+            userId: actor.id,
+            workspaceId: scope,
+            visibility: 'public',
+            virtual: false,
+            title: 'Runtime fixture',
+          }),
+        )
         .onConflictDoNothing();
       const preference = {
         orchestratorAgentId: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
@@ -163,24 +166,26 @@ describe('AgentGroupRepository', () => {
         userId,
       });
 
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          avatar: 'avatar1.png',
-          description: 'Agent 1 description',
-          id: 'agent-1',
-          title: 'Agent 1',
-          userId,
-        },
-        {
-          ...runtimeFixture,
-          avatar: 'avatar2.png',
-          description: 'Agent 2 description',
-          id: 'agent-2',
-          title: 'Agent 2',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            avatar: 'avatar1.png',
+            description: 'Agent 1 description',
+            id: 'agent-1',
+            title: 'Agent 1',
+            userId,
+          },
+          {
+            ...runtimeFixture,
+            avatar: 'avatar2.png',
+            description: 'Agent 2 description',
+            id: 'agent-2',
+            title: 'Agent 2',
+            userId,
+          },
+        ]),
+      );
 
       // Link agents to group with order (as participants)
       await serverDB.insert(chatGroupsAgents).values([
@@ -228,13 +233,15 @@ describe('AgentGroupRepository', () => {
 
     it('should return full agent details including all fields', async () => {
       // Create supervisor agent first
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'detail-supervisor',
-        title: 'Supervisor',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'detail-supervisor',
+          title: 'Supervisor',
+          userId,
+          virtual: true,
+        }),
+      );
 
       // Create group
       await serverDB.insert(chatGroups).values({
@@ -245,22 +252,24 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create agent with all fields
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        agencyConfig: {
-          ...runtimeFixture.agencyConfig,
-          heterogeneousProvider: { type: 'orvilo', model: 'gpt-4' },
-        },
-        avatar: 'test-avatar.png',
-        backgroundColor: '#ff0000',
-        description: 'Full agent description',
-        id: 'full-agent',
-        model: 'gpt-4',
-        provider: 'openai',
-        systemRole: 'You are a helpful assistant',
-        title: 'Full Agent',
-        userId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          agencyConfig: {
+            ...runtimeFixture.agencyConfig,
+            heterogeneousProvider: { type: 'orvilo', model: 'gpt-4' },
+          },
+          avatar: 'test-avatar.png',
+          backgroundColor: '#ff0000',
+          description: 'Full agent description',
+          id: 'full-agent',
+          model: 'gpt-4',
+          provider: 'openai',
+          systemRole: 'You are a helpful assistant',
+          title: 'Full Agent',
+          userId,
+        }),
+      );
 
       // Link supervisor and participant agents
       await serverDB.insert(chatGroupsAgents).values([
@@ -343,21 +352,23 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create supervisor and participant agents
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'supervisor-agent',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          id: 'participant-agent',
-          title: 'Participant',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'supervisor-agent',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+          },
+          {
+            ...runtimeFixture,
+            id: 'participant-agent',
+            title: 'Participant',
+            userId,
+          },
+        ]),
+      );
 
       // Link agents with roles
       await serverDB.insert(chatGroupsAgents).values([
@@ -410,34 +421,36 @@ describe('AgentGroupRepository', () => {
           visibility: 'public',
           workspaceId,
         });
-        await serverDB.insert(agents).values([
-          {
-            ...runtimeFixture,
-            id: 'ws-supervisor',
-            title: 'Supervisor',
-            userId,
-            virtual: true,
-            visibility: 'public',
-            workspaceId,
-          },
-          {
-            ...runtimeFixture,
-            id: 'ws-public-member',
-            title: 'Public member',
-            userId,
-            visibility: 'public',
-            workspaceId,
-          },
-          {
-            ...runtimeFixture,
-            id: 'ws-demoted-member',
-            systemRole: 'secret prompt',
-            title: 'Demoted member',
-            userId,
-            visibility: 'private',
-            workspaceId,
-          },
-        ]);
+        await serverDB.insert(agents).values(
+          await withTestAgentDevices(serverDB, [
+            {
+              ...runtimeFixture,
+              id: 'ws-supervisor',
+              title: 'Supervisor',
+              userId,
+              virtual: true,
+              visibility: 'public',
+              workspaceId,
+            },
+            {
+              ...runtimeFixture,
+              id: 'ws-public-member',
+              title: 'Public member',
+              userId,
+              visibility: 'public',
+              workspaceId,
+            },
+            {
+              ...runtimeFixture,
+              id: 'ws-demoted-member',
+              systemRole: 'secret prompt',
+              title: 'Demoted member',
+              userId,
+              visibility: 'private',
+              workspaceId,
+            },
+          ]),
+        );
         await serverDB.insert(chatGroupsAgents).values([
           {
             agentId: 'ws-supervisor',
@@ -522,23 +535,25 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create supervisor and participant agents
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'slug-supervisor',
-          slug: null,
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          id: 'slug-participant',
-          slug: 'custom-slug',
-          title: 'Participant',
-          userId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'slug-supervisor',
+            slug: null,
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+          },
+          {
+            ...runtimeFixture,
+            id: 'slug-participant',
+            slug: 'custom-slug',
+            title: 'Participant',
+            userId,
+          },
+        ]),
+      );
 
       // Link agents with roles
       await serverDB.insert(chatGroupsAgents).values([
@@ -585,33 +600,35 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create virtual and non-virtual agents
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          avatar: 'virtual-avatar.png',
-          description: 'Virtual agent description',
-          id: 'virtual-agent',
-          title: 'Virtual Agent',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          avatar: 'regular-avatar.png',
-          description: 'Regular agent description',
-          id: 'regular-agent',
-          title: 'Regular Agent',
-          userId,
-          virtual: false,
-        },
-        {
-          ...runtimeFixture,
-          id: 'another-regular',
-          title: 'Another Regular',
-          userId,
-          virtual: false,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            avatar: 'virtual-avatar.png',
+            description: 'Virtual agent description',
+            id: 'virtual-agent',
+            title: 'Virtual Agent',
+            userId,
+            virtual: true,
+          },
+          {
+            ...runtimeFixture,
+            avatar: 'regular-avatar.png',
+            description: 'Regular agent description',
+            id: 'regular-agent',
+            title: 'Regular Agent',
+            userId,
+            virtual: false,
+          },
+          {
+            ...runtimeFixture,
+            id: 'another-regular',
+            title: 'Another Regular',
+            userId,
+            virtual: false,
+          },
+        ]),
+      );
 
       // Link agents to group
       await serverDB.insert(chatGroupsAgents).values([
@@ -675,13 +692,15 @@ describe('AgentGroupRepository', () => {
 
     it('should not include agents belonging to other users', async () => {
       // Create agent for other user
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'other-user-agent',
-        title: 'Other User Agent',
-        userId: otherUserId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'other-user-agent',
+          title: 'Other User Agent',
+          userId: otherUserId,
+          virtual: true,
+        }),
+      );
 
       const result = await agentGroupRepo.checkAgentsBeforeRemoval('check-removal-group', [
         'virtual-agent',
@@ -705,29 +724,31 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create virtual and non-virtual agents
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'remove-virtual',
-          title: 'Virtual to Remove',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          id: 'remove-regular',
-          title: 'Regular to Remove',
-          userId,
-          virtual: false,
-        },
-        {
-          ...runtimeFixture,
-          id: 'keep-agent',
-          title: 'Keep Agent',
-          userId,
-          virtual: false,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'remove-virtual',
+            title: 'Virtual to Remove',
+            userId,
+            virtual: true,
+          },
+          {
+            ...runtimeFixture,
+            id: 'remove-regular',
+            title: 'Regular to Remove',
+            userId,
+            virtual: false,
+          },
+          {
+            ...runtimeFixture,
+            id: 'keep-agent',
+            title: 'Keep Agent',
+            userId,
+            virtual: false,
+          },
+        ]),
+      );
 
       // Link agents to group
       await serverDB.insert(chatGroupsAgents).values([
@@ -838,13 +859,15 @@ describe('AgentGroupRepository', () => {
 
     it('should handle multiple virtual agents', async () => {
       // Add another virtual agent
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'remove-virtual-2',
-        title: 'Virtual 2 to Remove',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'remove-virtual-2',
+          title: 'Virtual 2 to Remove',
+          userId,
+          virtual: true,
+        }),
+      );
       await serverDB.insert(chatGroupsAgents).values({
         agentId: 'remove-virtual-2',
         chatGroupId: 'remove-group',
@@ -926,15 +949,17 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create supervisor agent
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'source-supervisor',
-        model: 'gpt-4o',
-        provider: 'openai',
-        title: 'Supervisor',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'source-supervisor',
+          model: 'gpt-4o',
+          provider: 'openai',
+          title: 'Supervisor',
+          userId,
+          virtual: true,
+        }),
+      );
 
       // Link supervisor to group
       await serverDB.insert(chatGroupsAgents).values({
@@ -981,13 +1006,15 @@ describe('AgentGroupRepository', () => {
         userId,
       });
 
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'title-supervisor',
-        title: 'Supervisor',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'title-supervisor',
+          title: 'Supervisor',
+          userId,
+          virtual: true,
+        }),
+      );
 
       await serverDB.insert(chatGroupsAgents).values({
         agentId: 'title-supervisor',
@@ -1017,33 +1044,35 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create supervisor and virtual member agents
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'vm-supervisor',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          agencyConfig: {
-            ...runtimeFixture.agencyConfig,
-            heterogeneousProvider: { type: 'orvilo', model: 'gpt-4' },
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'vm-supervisor',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
           },
-          avatar: 'virtual-avatar.png',
-          backgroundColor: '#ff0000',
-          description: 'Virtual member description',
-          id: 'vm-virtual-member',
-          model: 'gpt-4',
-          provider: 'openai',
-          systemRole: 'You are a virtual assistant',
-          tags: ['tag1', 'tag2'],
-          title: 'Virtual Member',
-          userId,
-          virtual: true,
-        },
-      ]);
+          {
+            ...runtimeFixture,
+            agencyConfig: {
+              ...runtimeFixture.agencyConfig,
+              heterogeneousProvider: { type: 'orvilo', model: 'gpt-4' },
+            },
+            avatar: 'virtual-avatar.png',
+            backgroundColor: '#ff0000',
+            description: 'Virtual member description',
+            id: 'vm-virtual-member',
+            model: 'gpt-4',
+            provider: 'openai',
+            systemRole: 'You are a virtual assistant',
+            tags: ['tag1', 'tag2'],
+            title: 'Virtual Member',
+            userId,
+            virtual: true,
+          },
+        ]),
+      );
 
       // Link agents to group
       await serverDB.insert(chatGroupsAgents).values([
@@ -1118,29 +1147,31 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create supervisor and non-virtual member agents
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'nvm-supervisor',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          agencyConfig: {
-            ...runtimeFixture.agencyConfig,
-            heterogeneousProvider: { type: 'orvilo', model: 'claude-3-opus' },
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'nvm-supervisor',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
           },
-          description: 'Regular agent description',
-          id: 'nvm-regular-member',
-          model: 'claude-3-opus',
-          provider: 'anthropic',
-          title: 'Regular Member',
-          userId,
-          virtual: false,
-        },
-      ]);
+          {
+            ...runtimeFixture,
+            agencyConfig: {
+              ...runtimeFixture.agencyConfig,
+              heterogeneousProvider: { type: 'orvilo', model: 'claude-3-opus' },
+            },
+            description: 'Regular agent description',
+            id: 'nvm-regular-member',
+            model: 'claude-3-opus',
+            provider: 'anthropic',
+            title: 'Regular Member',
+            userId,
+            virtual: false,
+          },
+        ]),
+      );
 
       // Link agents to group
       await serverDB.insert(chatGroupsAgents).values([
@@ -1197,29 +1228,31 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create supervisor, virtual member, and non-virtual member agents
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'mixed-supervisor',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          id: 'mixed-virtual',
-          title: 'Virtual Agent',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          id: 'mixed-regular',
-          title: 'Regular Agent',
-          userId,
-          virtual: false,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'mixed-supervisor',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+          },
+          {
+            ...runtimeFixture,
+            id: 'mixed-virtual',
+            title: 'Virtual Agent',
+            userId,
+            virtual: true,
+          },
+          {
+            ...runtimeFixture,
+            id: 'mixed-regular',
+            title: 'Regular Agent',
+            userId,
+            virtual: false,
+          },
+        ]),
+      );
 
       // Link agents to group
       await serverDB.insert(chatGroupsAgents).values([
@@ -1297,36 +1330,38 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create agents
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'order-supervisor',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-        },
-        {
-          ...runtimeFixture,
-          id: 'order-agent-1',
-          title: 'Agent 1',
-          userId,
-          virtual: false,
-        },
-        {
-          ...runtimeFixture,
-          id: 'order-agent-2',
-          title: 'Agent 2',
-          userId,
-          virtual: false,
-        },
-        {
-          ...runtimeFixture,
-          id: 'order-agent-3',
-          title: 'Agent 3',
-          userId,
-          virtual: false,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'order-supervisor',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+          },
+          {
+            ...runtimeFixture,
+            id: 'order-agent-1',
+            title: 'Agent 1',
+            userId,
+            virtual: false,
+          },
+          {
+            ...runtimeFixture,
+            id: 'order-agent-2',
+            title: 'Agent 2',
+            userId,
+            virtual: false,
+          },
+          {
+            ...runtimeFixture,
+            id: 'order-agent-3',
+            title: 'Agent 3',
+            userId,
+            virtual: false,
+          },
+        ]),
+      );
 
       // Link agents with specific order
       await serverDB.insert(chatGroupsAgents).values([
@@ -1390,13 +1425,15 @@ describe('AgentGroupRepository', () => {
         userId,
       });
 
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'no-title-supervisor',
-        title: 'Supervisor',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'no-title-supervisor',
+          title: 'Supervisor',
+          userId,
+          virtual: true,
+        }),
+      );
 
       await serverDB.insert(chatGroupsAgents).values({
         agentId: 'no-title-supervisor',
@@ -1426,19 +1463,21 @@ describe('AgentGroupRepository', () => {
       });
 
       // Create supervisor with specific config
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        agencyConfig: {
-          ...runtimeFixture.agencyConfig,
-          heterogeneousProvider: { type: 'orvilo', model: 'claude-3-opus' },
-        },
-        id: 'source-supervisor-with-config',
-        model: 'claude-3-opus',
-        provider: 'anthropic',
-        title: 'Custom Supervisor',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          agencyConfig: {
+            ...runtimeFixture.agencyConfig,
+            heterogeneousProvider: { type: 'orvilo', model: 'claude-3-opus' },
+          },
+          id: 'source-supervisor-with-config',
+          model: 'claude-3-opus',
+          provider: 'anthropic',
+          title: 'Custom Supervisor',
+          userId,
+          virtual: true,
+        }),
+      );
 
       await serverDB.insert(chatGroupsAgents).values({
         agentId: 'source-supervisor-with-config',
@@ -1619,24 +1658,26 @@ describe('AgentGroupRepository', () => {
         userId,
         workspaceId,
       });
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'transfer-supervisor',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-          workspaceId,
-        },
-        {
-          ...runtimeFixture,
-          id: 'transfer-member',
-          title: 'Member',
-          userId,
-          virtual: false,
-          workspaceId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'transfer-supervisor',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+            workspaceId,
+          },
+          {
+            ...runtimeFixture,
+            id: 'transfer-member',
+            title: 'Member',
+            userId,
+            virtual: false,
+            workspaceId,
+          },
+        ]),
+      );
       await serverDB.insert(chatGroupsAgents).values([
         {
           agentId: 'transfer-supervisor',
@@ -1921,32 +1962,34 @@ describe('AgentGroupRepository', () => {
         userId,
         workspaceId,
       });
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'copy-supervisor',
-          model: 'gpt-4o',
-          provider: 'openai',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-          workspaceId,
-        },
-        {
-          ...runtimeFixture,
-          agencyConfig: {
-            ...runtimeFixture.agencyConfig,
-            heterogeneousProvider: { type: 'orvilo', model: 'claude-3' },
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'copy-supervisor',
+            model: 'gpt-4o',
+            provider: 'openai',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+            workspaceId,
           },
-          id: 'copy-member',
-          model: 'claude-3',
-          provider: 'anthropic',
-          title: 'Member',
-          userId,
-          virtual: false,
-          workspaceId,
-        },
-      ]);
+          {
+            ...runtimeFixture,
+            agencyConfig: {
+              ...runtimeFixture.agencyConfig,
+              heterogeneousProvider: { type: 'orvilo', model: 'claude-3' },
+            },
+            id: 'copy-member',
+            model: 'claude-3',
+            provider: 'anthropic',
+            title: 'Member',
+            userId,
+            virtual: false,
+            workspaceId,
+          },
+        ]),
+      );
       await serverDB.insert(chatGroupsAgents).values([
         {
           agentId: 'copy-supervisor',
@@ -2018,32 +2061,34 @@ describe('AgentGroupRepository', () => {
         userId,
         workspaceId,
       });
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'copy-history-supervisor',
-          model: 'gpt-4o',
-          provider: 'openai',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-          workspaceId,
-        },
-        {
-          ...runtimeFixture,
-          agencyConfig: {
-            ...runtimeFixture.agencyConfig,
-            heterogeneousProvider: { type: 'orvilo', model: 'claude-3' },
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'copy-history-supervisor',
+            model: 'gpt-4o',
+            provider: 'openai',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+            workspaceId,
           },
-          id: 'copy-history-member',
-          model: 'claude-3',
-          provider: 'anthropic',
-          title: 'Member',
-          userId,
-          virtual: false,
-          workspaceId,
-        },
-      ]);
+          {
+            ...runtimeFixture,
+            agencyConfig: {
+              ...runtimeFixture.agencyConfig,
+              heterogeneousProvider: { type: 'orvilo', model: 'claude-3' },
+            },
+            id: 'copy-history-member',
+            model: 'claude-3',
+            provider: 'anthropic',
+            title: 'Member',
+            userId,
+            virtual: false,
+            workspaceId,
+          },
+        ]),
+      );
       await serverDB.insert(chatGroupsAgents).values([
         {
           agentId: 'copy-history-supervisor',
@@ -2189,14 +2234,16 @@ describe('AgentGroupRepository', () => {
         userId,
         workspaceId,
       });
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'copy-large-member',
-        title: 'Member',
-        userId,
-        virtual: false,
-        workspaceId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'copy-large-member',
+          title: 'Member',
+          userId,
+          virtual: false,
+          workspaceId,
+        }),
+      );
       await serverDB.insert(chatGroupsAgents).values({
         agentId: 'copy-large-member',
         chatGroupId: 'copy-large-group',
@@ -2300,14 +2347,16 @@ describe('AgentGroupRepository', () => {
         userId,
         workspaceId,
       });
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'remove-cross-member-virtual',
-        title: 'Virtual From Other Member',
-        userId: otherUserId,
-        virtual: true,
-        workspaceId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'remove-cross-member-virtual',
+          title: 'Virtual From Other Member',
+          userId: otherUserId,
+          virtual: true,
+          workspaceId,
+        }),
+      );
       await serverDB.insert(chatGroupsAgents).values({
         agentId: 'remove-cross-member-virtual',
         chatGroupId: 'remove-cross-member-group',
@@ -2352,24 +2401,26 @@ describe('AgentGroupRepository', () => {
         userId,
         workspaceId,
       });
-      await serverDB.insert(agents).values([
-        {
-          ...runtimeFixture,
-          id: 'copy-member-history-supervisor',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-          workspaceId,
-        },
-        {
-          ...runtimeFixture,
-          id: 'copy-member-history-agent',
-          title: 'Member Agent',
-          userId,
-          virtual: false,
-          workspaceId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            ...runtimeFixture,
+            id: 'copy-member-history-supervisor',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+            workspaceId,
+          },
+          {
+            ...runtimeFixture,
+            id: 'copy-member-history-agent',
+            title: 'Member Agent',
+            userId,
+            virtual: false,
+            workspaceId,
+          },
+        ]),
+      );
       await serverDB.insert(chatGroupsAgents).values([
         {
           agentId: 'copy-member-history-supervisor',
@@ -2465,14 +2516,16 @@ describe('AgentGroupRepository', () => {
       });
       await seedRuntimeFixtures();
       await serverDB.insert(chatGroups).values({ id: 'tb-group', title: 'TB', userId });
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'tb-inbox',
-        slug: 'inbox',
-        title: 'Inbox',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'tb-inbox',
+          slug: 'inbox',
+          title: 'Inbox',
+          userId,
+          virtual: true,
+        }),
+      );
       await serverDB
         .insert(chatGroupsAgents)
         .values({ agentId: 'tb-inbox', chatGroupId: 'tb-group', userId });
@@ -2497,14 +2550,16 @@ describe('AgentGroupRepository', () => {
       // that brace, for a row that got there some other way. The blast radius
       // is somebody's Inbox.
       await serverDB.insert(chatGroups).values({ id: 'bb-group', title: 'BB', userId });
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'bb-inbox',
-        slug: 'inbox',
-        title: 'Inbox',
-        userId,
-        virtual: true,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'bb-inbox',
+          slug: 'inbox',
+          title: 'Inbox',
+          userId,
+          virtual: true,
+        }),
+      );
       await serverDB
         .insert(chatGroupsAgents)
         .values({ agentId: 'bb-inbox', chatGroupId: 'bb-group', userId });
@@ -2538,37 +2593,39 @@ describe('AgentGroupRepository', () => {
         workspaceId,
       });
 
-      await serverDB.insert(agents).values([
-        // Another member's agent, still shared with the workspace.
-        {
-          ...runtimeFixture,
-          id: 'lrm-public',
-          title: 'Shared Member',
-          userId: otherUserId,
-          virtual: false,
-          visibility: 'public',
-          workspaceId,
-        },
-        // Same, but its owner has since taken it private again.
-        {
-          ...runtimeFixture,
-          id: 'lrm-private',
-          title: 'Secret Member',
-          userId: otherUserId,
-          virtual: false,
-          visibility: 'private',
-          workspaceId,
-        },
-        // Group-owned: travels with the group, so never "referenced".
-        {
-          ...runtimeFixture,
-          id: 'lrm-owned',
-          title: 'Owned Member',
-          userId,
-          virtual: true,
-          workspaceId,
-        },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          // Another member's agent, still shared with the workspace.
+          {
+            ...runtimeFixture,
+            id: 'lrm-public',
+            title: 'Shared Member',
+            userId: otherUserId,
+            virtual: false,
+            visibility: 'public',
+            workspaceId,
+          },
+          // Same, but its owner has since taken it private again.
+          {
+            ...runtimeFixture,
+            id: 'lrm-private',
+            title: 'Secret Member',
+            userId: otherUserId,
+            virtual: false,
+            visibility: 'private',
+            workspaceId,
+          },
+          // Group-owned: travels with the group, so never "referenced".
+          {
+            ...runtimeFixture,
+            id: 'lrm-owned',
+            title: 'Owned Member',
+            userId,
+            virtual: true,
+            workspaceId,
+          },
+        ]),
+      );
 
       await serverDB.insert(chatGroupsAgents).values([
         { agentId: 'lrm-public', chatGroupId: 'lrm-group', order: 0, userId, workspaceId },
@@ -2581,16 +2638,18 @@ describe('AgentGroupRepository', () => {
       // The transfer passes `slug` and so treats a builtin on a roster as
       // referenced (cloning it); this warning must classify it the same way,
       // or it omits the exact row the move is about to act on.
-      await serverDB.insert(agents).values({
-        ...runtimeFixture,
-        id: 'lrm-builtin',
-        slug: 'inbox',
-        title: 'Inbox',
-        userId,
-        virtual: true,
-        visibility: 'public',
-        workspaceId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          ...runtimeFixture,
+          id: 'lrm-builtin',
+          slug: 'inbox',
+          title: 'Inbox',
+          userId,
+          virtual: true,
+          visibility: 'public',
+          workspaceId,
+        }),
+      );
       await serverDB.insert(chatGroupsAgents).values({
         agentId: 'lrm-builtin',
         chatGroupId: 'lrm-group',

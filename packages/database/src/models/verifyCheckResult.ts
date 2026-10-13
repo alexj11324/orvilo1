@@ -1,4 +1,6 @@
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+
+import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 
 import type { NewVerifyCheckResult, VerifyCheckResultItem } from '../schemas/verify';
 import { verifyCheckResults, verifyRuns } from '../schemas/verify';
@@ -207,6 +209,115 @@ export class VerifyCheckResultModel {
       );
   };
 
+  /** Reserve a pending criterion once, without rejudging completed criteria. */
+  claimPendingCheck = async (verifyRunId: string, checkItemId: string): Promise<string | null> => {
+    const attemptId = randomUUID();
+    const claimed = await this.db
+      .update(verifyCheckResults)
+      .set({
+        metadata: sql`coalesce(${verifyCheckResults.metadata}, '{}'::jsonb) || jsonb_build_object('verifierAttemptId', ${attemptId}::text)`,
+        status: 'running',
+        startedAt: new Date(),
+      })
+      .where(
+        and(
+          this.ownership(),
+          eq(verifyCheckResults.verifyRunId, verifyRunId),
+          eq(verifyCheckResults.checkItemId, checkItemId),
+          eq(verifyCheckResults.status, 'pending'),
+        ),
+      )
+      .returning({ id: verifyCheckResults.id });
+    return claimed.length > 0 ? attemptId : null;
+  };
+
+  /** Install the child identity before dispatch so old callbacks cannot settle a retry. */
+  bindVerifierOperation = async (
+    verifyRunId: string,
+    checkItemId: string,
+    operationId: string,
+    attemptId: string,
+  ) => {
+    const rows = await this.db
+      .update(verifyCheckResults)
+      .set({ verifierOperationId: operationId })
+      .where(
+        and(
+          this.ownership(),
+          eq(verifyCheckResults.verifyRunId, verifyRunId),
+          eq(verifyCheckResults.checkItemId, checkItemId),
+          eq(verifyCheckResults.status, 'running'),
+          isNull(verifyCheckResults.verifierOperationId),
+          sql`${verifyCheckResults.metadata}->>'verifierAttemptId' = ${attemptId}`,
+        ),
+      )
+      .returning({ id: verifyCheckResults.id });
+    return rows.length > 0;
+  };
+
+  /** Only the currently dispatched verifier may write a terminal result, once. */
+  completeVerifierCheck = async (
+    verifyRunId: string,
+    checkItemId: string,
+    operationId: string,
+    value: Partial<Omit<VerifyCheckResultItem, 'id' | 'userId'>>,
+  ) => {
+    const rows = await this.db
+      .update(verifyCheckResults)
+      .set(value)
+      .where(
+        and(
+          this.ownership(),
+          eq(verifyCheckResults.verifyRunId, verifyRunId),
+          eq(verifyCheckResults.checkItemId, checkItemId),
+          eq(verifyCheckResults.status, 'running'),
+          eq(verifyCheckResults.verifierOperationId, operationId),
+        ),
+      )
+      .returning({ id: verifyCheckResults.id });
+    return rows.length > 0;
+  };
+
+  failUnboundVerifierCheck = async (
+    verifyRunId: string,
+    checkItemId: string,
+    attemptId: string,
+    value: Partial<Omit<VerifyCheckResultItem, 'id' | 'userId'>>,
+  ) =>
+    this.db
+      .update(verifyCheckResults)
+      .set(value)
+      .where(
+        and(
+          this.ownership(),
+          eq(verifyCheckResults.verifyRunId, verifyRunId),
+          eq(verifyCheckResults.checkItemId, checkItemId),
+          eq(verifyCheckResults.status, 'running'),
+          isNull(verifyCheckResults.verifierOperationId),
+          sql`${verifyCheckResults.metadata}->>'verifierAttemptId' = ${attemptId}`,
+        ),
+      );
+
+  /** Match the exact claim for synchronous judgments and pre-dispatch failures. */
+  updateClaimedCheck = async (
+    verifyRunId: string,
+    checkItemId: string,
+    attemptId: string,
+    value: Partial<Omit<VerifyCheckResultItem, 'id' | 'userId'>>,
+  ) =>
+    this.db
+      .update(verifyCheckResults)
+      .set(value)
+      .where(
+        and(
+          this.ownership(),
+          eq(verifyCheckResults.verifyRunId, verifyRunId),
+          eq(verifyCheckResults.checkItemId, checkItemId),
+          eq(verifyCheckResults.status, 'running'),
+          sql`${verifyCheckResults.metadata}->>'verifierAttemptId' = ${attemptId}`,
+        ),
+      );
+
   /**
    * Late-bind the LLM tracing row onto already-written verdicts. The verdict is
    * persisted synchronously with `verifier_tracing_id = null`; the tracing row
@@ -214,7 +325,12 @@ export class VerifyCheckResultModel {
    * backfilled only once that row exists. Idempotent — only fills `NULL`s and is
    * scoped to the items judged in this call (a batch shares one tracing id).
    */
-  backfillTracingId = async (verifyRunId: string, checkItemIds: string[], tracingId: string) => {
+  backfillTracingId = async (
+    verifyRunId: string,
+    checkItemIds: string[],
+    tracingId: string,
+    attempts?: ReadonlyMap<string, string>,
+  ) => {
     if (checkItemIds.length === 0) return;
     return this.db
       .update(verifyCheckResults)
@@ -225,6 +341,16 @@ export class VerifyCheckResultModel {
           this.ownership(),
           inArray(verifyCheckResults.checkItemId, checkItemIds),
           isNull(verifyCheckResults.verifierTracingId),
+          attempts
+            ? or(
+                ...checkItemIds.map((id) =>
+                  and(
+                    eq(verifyCheckResults.checkItemId, id),
+                    sql`${verifyCheckResults.metadata}->>'verifierAttemptId' = ${attempts.get(id) ?? ''}`,
+                  ),
+                ),
+              )
+            : undefined,
         ),
       );
   };

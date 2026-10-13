@@ -87,6 +87,39 @@ afterEach(async () => {
 });
 
 describe('Agent creation admission', () => {
+  it('does not insert an unbound builtin when no explicit runtime is configured', async () => {
+    await expect(model.getBuiltinAgent('verify-agent')).rejects.toThrow(
+      'ORCHESTRATOR_SETUP_REQUIRED',
+    );
+    expect(await db.select().from(agents)).toHaveLength(0);
+  });
+
+  it('creates a bound native verifier from the scope default and keeps its own singleton binding', async () => {
+    const workspace = new AgentModel(db, userId, workspaceId);
+    const source = await workspace.create({
+      agencyConfig: {
+        boundDeviceId: 'shared-host',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'opencode', model: 'opencode/mimo-v2.6-flash-free' },
+      },
+      model: 'opencode',
+      provider: 'opencode',
+    });
+    await new WorkspaceUserSettingsModel(db, userId, workspaceId).updatePreference({
+      orchestratorAgentId: source.id,
+    });
+    const verifier = await workspace.getBuiltinAgent('verify-agent');
+    expect(verifier?.boundDeviceRowId).toBe(source.boundDeviceRowId);
+    expect(verifier?.agencyConfig?.heterogeneousProvider?.type).toBe('opencode');
+    expect(verifier?.model).toBe('opencode/mimo-v2.6-flash-free');
+    await new WorkspaceUserSettingsModel(db, userId, workspaceId).updatePreference({
+      orchestratorAgentId: 'removed-default',
+    });
+    expect((await workspace.getBuiltinAgent('verify-agent'))?.boundDeviceRowId).toBe(
+      verifier?.boundDeviceRowId,
+    );
+  });
+
   it('requires a configured scope-specific Orchestrator instead of choosing Prime', async () => {
     await model.create({ ...prime, title: 'Prime exists' });
     await expect(
@@ -267,8 +300,15 @@ describe('Agent creation admission', () => {
     expect(await db.select().from(agents)).toHaveLength(0);
   });
 
-  it('refuses legacy metadata-only duplication while leaving existing name edits available', async () => {
-    const [legacy] = await db.insert(agents).values({ title: 'Legacy', userId }).returning();
+  it('refuses duplication without a runtime while leaving device-bound name edits available', async () => {
+    const [legacy] = await db
+      .insert(agents)
+      .values({
+        title: 'Legacy',
+        userId,
+        agencyConfig: { boundDeviceId: 'saved-host', executionTarget: 'device' },
+      })
+      .returning();
     await model.updateConfig(legacy.id, { name: 'My legacy name' });
     await expect(model.duplicate(legacy.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',

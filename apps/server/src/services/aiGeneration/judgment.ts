@@ -1001,6 +1001,9 @@ export const runAcpJudgment = async <T = unknown>(
           taskId: judgment.taskId ?? null,
         },
         autoStart: true,
+        // Judgment operations inspect a delivery; they are not another builder
+        // run and must not instantiate the task's verification plan recursively.
+        skipTaskVerification: true,
         disableTools: judgment.outputMode !== 'tool',
         fileIds: judgment.fileIds,
         instructions,

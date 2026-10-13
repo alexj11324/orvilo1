@@ -3,6 +3,7 @@ import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DocumentModel } from '@/database/models/document';
+import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
@@ -89,6 +90,7 @@ const executeVerifyLifecycle = async (
   workspaceId?: string,
   evidenceSubmitted = false,
   throwOnError = false,
+  frozenDelivery = false,
 ): Promise<void> => {
   try {
     const run = await new VerifyRunModel(db, userId, workspaceId).findByOperation(
@@ -108,7 +110,9 @@ const executeVerifyLifecycle = async (
     // agent-submitted closeout/reports in the operation metadata — appended to
     // the deliverable as advisory self-report so every downstream consumer
     // (recorded evidence rows, the LLM judge, the verify report) sees them.
-    const aegisDeliverable = appendAegisDeliverableEvidence(params.deliverable, op.metadata);
+    const aegisDeliverable = frozenDelivery
+      ? params.deliverable
+      : appendAegisDeliverableEvidence(params.deliverable, op.metadata);
 
     if (op.taskId) {
       const taskTopic = await new TaskTopicModel(db, userId, workspaceId).findByOperationId(
@@ -246,6 +250,13 @@ const executeVerifyLifecycle = async (
       verifierAgentId = resolvedAcceptance?.config.verifierAgentId ?? undefined;
     }
 
+    const resolvedDeliverable = frozenDelivery
+      ? params.deliverable
+      : await resolveVerificationDeliverable(db, userId, aegisDeliverable, op.taskId, workspaceId);
+    await new VerifyRunModel(db, userId, workspaceId).recordVerificationContext(
+      run.id,
+      resolvedDeliverable,
+    );
     const modelConfig = await resolveVerifyModelConfig(
       db,
       userId,
@@ -254,13 +265,6 @@ const executeVerifyLifecycle = async (
         parentProvider: op.provider,
         verifierAgentId,
       },
-      workspaceId,
-    );
-    const resolvedDeliverable = await resolveVerificationDeliverable(
-      db,
-      userId,
-      aegisDeliverable,
-      op.taskId,
       workspaceId,
     );
     const verificationOrchestrationWorkflow =
@@ -329,3 +333,44 @@ export const runVerifyAfterEvidenceSubmission = async (
   params: RunVerifyOnCompletionParams,
   workspaceId?: string,
 ): Promise<void> => executeVerifyLifecycle(db, userId, params, workspaceId, true, true);
+
+/** Rejudge the existing delivery after verifier configuration/device repair; never starts a worker. */
+export const retryErroredVerification = async (
+  db: OrviloDatabase,
+  userId: string,
+  operationId: string,
+  workspaceId?: string,
+): Promise<boolean> => {
+  const model = new VerifyRunModel(db, userId, workspaceId);
+  const run = await model.findByOperation(operationId);
+  if (!run) throw new Error('Verification run not found');
+  let deliverable = run.metadata?.verificationDeliverable;
+  if (typeof deliverable !== 'string') {
+    const operation = await new AgentOperationModel(db, userId, workspaceId).findById(operationId);
+    const originalReply = operation?.topicId
+      ? await new MessageModel(db, run.userId, workspaceId).findLatestAssistantByOperationId({
+          operationId,
+          topicId: operation.topicId,
+        })
+      : undefined;
+    if (!originalReply?.content)
+      throw new Error('VERIFICATION_CONTEXT_UNAVAILABLE: the original delivery was not recorded');
+    deliverable = originalReply.content;
+    await model.recordVerificationContext(run.id, deliverable);
+  }
+  if (!(await model.prepareErroredRetry(run.id))) return false;
+  await executeVerifyLifecycle(
+    db,
+    userId,
+    {
+      deliverable: deliverable as string,
+      operationId,
+      orchestrationWorkflow: run.orchestrationWorkflow ?? '',
+    },
+    workspaceId,
+    true,
+    true,
+    true,
+  );
+  return true;
+};

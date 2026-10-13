@@ -12,6 +12,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 
 import { agentGroupRouter } from '../../agentGroup';
@@ -44,13 +45,15 @@ afterEach(async () => {
 it('duplicates a public Group without escalating the shared coordinator Agent use ACL', async () => {
   const [agent] = await testDB
     .insert(agents)
-    .values({
-      title: 'Shared coordinator',
-      userId: ownerId,
-      workspaceId,
-      visibility: 'public',
-      virtual: false,
-    })
+    .values(
+      await withTestAgentDevices(testDB, {
+        title: 'Shared coordinator',
+        userId: ownerId,
+        workspaceId,
+        visibility: 'public',
+        virtual: false,
+      }),
+    )
     .returning();
   const [group] = await testDB
     .insert(chatGroups)
@@ -94,19 +97,21 @@ it('duplicates a Group without a coordinator without writing an undefined Agent 
 it('preserves the shared coordinator brand while redacting its configuration', async () => {
   const [agent] = await testDB
     .insert(agents)
-    .values({
-      title: 'Shared Codex',
-      userId: ownerId,
-      workspaceId,
-      visibility: 'public',
-      virtual: false,
-      model: 'external-model',
-      agencyConfig: {
-        heterogeneousProvider: { type: 'codex', args: ['private-runtime-argument'] },
-        executionTarget: 'local',
-      },
-      systemRole: 'private configuration',
-    })
+    .values(
+      await withTestAgentDevices(testDB, {
+        title: 'Shared Codex',
+        userId: ownerId,
+        workspaceId,
+        visibility: 'public',
+        virtual: false,
+        model: 'external-model',
+        agencyConfig: {
+          heterogeneousProvider: { type: 'codex', args: ['private-runtime-argument'] },
+          executionTarget: 'local',
+        },
+        systemRole: 'private configuration',
+      }),
+    )
     .returning();
   const [group] = await testDB
     .insert(chatGroups)

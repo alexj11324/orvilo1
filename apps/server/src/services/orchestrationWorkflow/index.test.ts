@@ -4,6 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MetricModel } from '@/database/models/metric';
@@ -147,11 +148,13 @@ beforeEach(async () => {
   await serverDB.insert(users).values({ id: userId }).onConflictDoNothing();
   await serverDB
     .insert(agents)
-    .values({
-      id: 'orchestrator',
-      userId,
-      agencyConfig: { heterogeneousProvider: { type: 'codex' } },
-    })
+    .values(
+      await withTestAgentDevices(serverDB, {
+        id: 'orchestrator',
+        userId,
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+      }),
+    )
     .onConflictDoNothing();
   await new UserModel(serverDB, userId).updatePreference({ orchestratorAgentId: 'orchestrator' });
 });
@@ -1056,20 +1059,22 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('hands the orchestration workflow and its unfinished tasks to a new agent', async () => {
-    await serverDB.insert(agents).values([
-      {
-        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-        id: 'agt_old',
-        slug: 'agt-old',
-        userId,
-      },
-      {
-        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-        id: 'agt_new',
-        slug: 'agt-new',
-        userId,
-      },
-    ]);
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, [
+        {
+          agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+          id: 'agt_old',
+          slug: 'agt-old',
+          userId,
+        },
+        {
+          agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+          id: 'agt_new',
+          slug: 'agt-new',
+          userId,
+        },
+      ]),
+    );
     const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     await new UserModel(serverDB, userId).updatePreference({ orchestratorAgentId: 'agt_old' });
@@ -1100,20 +1105,22 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('refuses to bind an orchestration workflow to an agent whose engine cannot mount the builtin tool surface', async () => {
-    await serverDB.insert(agents).values([
-      {
-        agencyConfig: { heterogeneousProvider: { type: 'devin' } },
-        id: 'agt_devin',
-        slug: 'agt-devin',
-        userId,
-      },
-      {
-        agencyConfig: { heterogeneousProvider: { type: 'pi' } },
-        id: 'agt_pi',
-        slug: 'agt-pi',
-        userId,
-      },
-    ]);
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, [
+        {
+          agencyConfig: { heterogeneousProvider: { type: 'devin' } },
+          id: 'agt_devin',
+          slug: 'agt-devin',
+          userId,
+        },
+        {
+          agencyConfig: { heterogeneousProvider: { type: 'pi' } },
+          id: 'agt_pi',
+          slug: 'agt-pi',
+          userId,
+        },
+      ]),
+    );
     const service = confirmedService();
 
     // Every Task a orchestration workflow mints needs the MCP tool surface — both a bridge that
@@ -1146,12 +1153,14 @@ describe('OrchestrationWorkflowService', () => {
   });
 
   it('still binds a mount-capable heterogeneous agent', async () => {
-    await serverDB.insert(agents).values({
-      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      id: 'agt_claude',
-      slug: 'agt-claude',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'agt_claude',
+        slug: 'agt-claude',
+        userId,
+      }),
+    );
     const service = confirmedService();
 
     await new UserModel(serverDB, userId).updatePreference({ orchestratorAgentId: 'agt_claude' });
@@ -1162,12 +1171,14 @@ describe('OrchestrationWorkflowService', () => {
 
   it('restarts unfinished tasks under a new agent and cancels the stale runs they hold', async () => {
     const cancelSpy = vi.spyOn(TaskService.prototype, 'cancelTopic').mockResolvedValue();
-    await serverDB.insert(agents).values({
-      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      id: 'agt_restart',
-      slug: 'agt-restart',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'agt_restart',
+        slug: 'agt-restart',
+        userId,
+      }),
+    );
     const service = confirmedService();
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Stuck task'], title: 'Restartable' });
@@ -1739,12 +1750,14 @@ describe('OrchestrationWorkflowService', () => {
   it('files an orchestration workflow the agent created under that agent, not its owner', async () => {
     // `startOrchestrationWorkflow` is an agent making the call. `agentId` alone cannot say so — the
     // creation modal sets it too, and there the author is the person.
-    await serverDB.insert(agents).values({
-      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      id: 'agt_orchestration_workflow_author',
-      slug: 'agt-orchestration-workflow-author',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'agt_orchestration_workflow_author',
+        slug: 'agt-orchestration-workflow-author',
+        userId,
+      }),
+    );
     const service = confirmedService();
 
     await new UserModel(serverDB, userId).updatePreference({
@@ -1770,12 +1783,14 @@ describe('OrchestrationWorkflowService', () => {
 
   it('still files an orchestration workflow the user created under the user, even on an agent page', async () => {
     // The modal passes `agentId` for assignment; the author is the person.
-    await serverDB.insert(agents).values({
-      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      id: 'agt_assignee',
-      slug: 'agt-assignee',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'agt_assignee',
+        slug: 'agt-assignee',
+        userId,
+      }),
+    );
     const service = confirmedService();
 
     const graph = await service.create({
@@ -1853,12 +1868,14 @@ describe('OrchestrationWorkflowService', () => {
   it('gates every responsible task with a Task-scoped Acceptance requirement', async () => {
     const service = confirmedService();
     const agentId = 'orchestration-workflow-work-verifier-agent';
-    await serverDB.insert(agents).values({
-      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      id: agentId,
-      title: 'Orchestration workflow worker',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: agentId,
+        title: 'Orchestration workflow worker',
+        userId,
+      }),
+    );
     const graph = await service.create({
       agentId,
       requirement: 'Generate data, then train and evaluate a model.',

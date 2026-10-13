@@ -10,6 +10,7 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import type { tasks } from '../../schemas';
 import {
   agents,
@@ -300,7 +301,9 @@ describe('WorkQueryModel', () => {
   });
 
   it('treats delegated work as an explicit grant, not agent ownership', async () => {
-    await serverDB.insert(agents).values({ id: 'agt_shared', slug: 'shared', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'agt_shared', slug: 'shared', userId }));
     const someoneElses = await createTask(otherUserId, {
       assigneeAgentId: 'agt_shared',
       name: 'Not mine',
@@ -388,7 +391,9 @@ describe('WorkQueryModel', () => {
   });
 
   it('activity scoped by the delegated filter matches the old delegated tab', async () => {
-    await serverDB.insert(agents).values({ id: 'agt_delf', slug: 'delf', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'agt_delf', slug: 'delf', userId }));
     const delegated = await createTask(otherUserId, { name: 'Delegated' });
     await serverDB.insert(executionGrants).values({
       agentId: 'agt_delf',
@@ -924,7 +929,9 @@ describe('WorkQueryModel', () => {
   });
 
   it('groups a list by the agent assignee and keeps that axis on a board', async () => {
-    await serverDB.insert(agents).values({ id: 'agt_axis', slug: 'axis', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'agt_axis', slug: 'axis', userId }));
     const owned = await createTask(userId, { assigneeAgentId: 'agt_axis', name: 'Owned' });
     await createTask(userId, { name: 'Open' });
     const model = new WorkQueryModel(serverDB, userId, workspaceId);

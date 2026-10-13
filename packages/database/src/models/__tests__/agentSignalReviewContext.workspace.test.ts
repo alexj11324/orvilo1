@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agentDocuments, agents, documents, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentDocumentModel } from '../agentDocuments';
@@ -22,24 +23,26 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
-  await serverDB.insert(agents).values([
-    {
-      chatConfig: { selfIteration: { enabled: true } },
-      id: 'personal-review-agent',
-      title: 'Personal Review Agent',
-      userId,
-      virtual: false,
-      workspaceId: null,
-    },
-    {
-      chatConfig: { selfIteration: { enabled: true } },
-      id: 'workspace-review-agent',
-      title: 'Workspace Review Agent',
-      userId,
-      virtual: false,
-      workspaceId,
-    },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      {
+        chatConfig: { selfIteration: { enabled: true } },
+        id: 'personal-review-agent',
+        title: 'Personal Review Agent',
+        userId,
+        virtual: false,
+        workspaceId: null,
+      },
+      {
+        chatConfig: { selfIteration: { enabled: true } },
+        id: 'workspace-review-agent',
+        title: 'Workspace Review Agent',
+        userId,
+        virtual: false,
+        workspaceId,
+      },
+    ]),
+  );
 });
 
 afterEach(async () => {

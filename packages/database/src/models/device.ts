@@ -1,8 +1,9 @@
 import type { DeviceCapabilitySnapshot, WorkingDirEntry } from '@orvilo/types';
-import { and, desc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
+import { and, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 
 import type { DeviceItem } from '../schemas';
-import { agents, devices, workspaces } from '../schemas';
+import { agents, devices, workspaceMembers, workspaces } from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { buildStrictWorkspaceWhere } from '../utils/workspace';
 
@@ -78,18 +79,32 @@ export class DeviceModel {
    * Returns only a boolean so device-management callers cannot infer private
    * agent metadata from the reference guard.
    */
-  hasFixedAgentBinding = async (deviceId: string): Promise<boolean> => {
-    if (!this.workspaceId) return false;
+  hasAgentBinding = async (deviceId: string): Promise<boolean> => {
+    const registryIds = this.db
+      .select({ id: devices.id })
+      .from(devices)
+      .where(
+        and(
+          eq(devices.deviceId, deviceId),
+          this.workspaceId
+            ? eq(devices.workspaceId, this.workspaceId)
+            : and(eq(devices.userId, this.userId), isNull(devices.workspaceId)),
+        ),
+      );
 
     const [row] = await this.db
       .select({ id: agents.id })
       .from(agents)
       .where(
-        and(
-          eq(agents.workspaceId, this.workspaceId),
-          sql`${agents.agencyConfig}->>'executionTargetSelectionPolicy' = 'fixed'`,
-          sql`${agents.agencyConfig}->>'executionTarget' = 'device'`,
-          sql`${agents.agencyConfig}->>'boundDeviceId' = ${deviceId}`,
+        or(
+          inArray(agents.boundDeviceRowId, registryIds),
+          and(
+            isNull(agents.boundDeviceRowId),
+            sql`${agents.agencyConfig}->>'boundDeviceId' = ${deviceId}`,
+            this.workspaceId
+              ? eq(agents.workspaceId, this.workspaceId)
+              : eq(agents.userId, this.userId),
+          ),
         ),
       )
       .limit(1);
@@ -172,64 +187,94 @@ export class DeviceModel {
       workspaceId: string;
     },
   ) => {
-    await this.assertNoCrossUserPrivateConflict(params.deviceId, params.workspaceId);
+    return this.db.transaction(async (tx) => {
+      const [member] = await tx
+        .select({ role: workspaceMembers.role })
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, params.workspaceId),
+            eq(workspaceMembers.userId, this.userId),
+            isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
+          ),
+        )
+        .for('update');
+      const [workspace] = await tx
+        .select({ owner: workspaces.primaryOwnerId })
+        .from(workspaces)
+        .where(eq(workspaces.id, params.workspaceId));
+      if (
+        (!member || !['owner', 'admin', 'member'].includes(member.role)) &&
+        workspace?.owner !== this.userId
+      )
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Active writable membership is required to enroll a device',
+        });
+      await new DeviceModel(
+        tx as OrviloDatabase,
+        this.userId,
+        params.workspaceId,
+      ).assertNoCrossUserPrivateConflict(params.deviceId, params.workspaceId);
 
-    const now = new Date();
-    const [result] = await this.db
-      .insert(devices)
-      .values({
-        adapterVersion: params.adapterVersion,
-        deviceId: params.deviceId,
-        hostname: params.hostname,
-        identitySource: params.identitySource,
-        lastSeenAt: now,
-        lastVerifiedAt: now,
-        platform: params.platform,
-        // Set for enrollments driven from the owner's personal device list —
-        // links this workspace row back to its personal twin (see the schema
-        // comment on `devices.sharedFromDeviceId`).
-        sharedFromDeviceId: params.sharedFromDeviceId,
-        userId: this.userId,
-        // 'public' shares the device with the whole workspace; defaults to
-        // 'private' (enroller-only) — see the schema comment on
-        // `devices.visibility`.
-        visibility: params.visibility ?? 'private',
-        workspaceId: params.workspaceId,
-      })
-      // Dedupe on (workspaceId, deviceId): a machine enrolled into a workspace is
-      // ONE device no matter which member (re-)runs the enrollment. `userId` and
-      // `sharedFromDeviceId` are left untouched on conflict — the original
-      // enroller keeps the enrollment. `visibility` on conflict:
-      //   - an EXPLICIT `visibility: 'public'` (`orvilo connect --workspace --public`)
-      //     always publishes — the caller just asked for it, silently keeping the
-      //     row private would make the flag a no-op on re-enroll. Callers pass
-      //     `visibility` only when the user chose explicitly, so a plain
-      //     reconnect (undefined) still preserves the stored choice;
-      //   - anything else preserves the stored choice. An explicit 'private'
-      //     never demotes a published row here — pulling a shared device out of
-      //     the pool must stay an explicit `setWorkspaceDeviceVisibility` call.
-      // A DIFFERENT member colliding with an existing PRIVATE row never reaches
-      // this upsert — the guard above fails closed (see
-      // `WorkspaceDevicePrivateConflictError`); a cross-user collision with a
-      // public row is the legit shared-infra flow and just refreshes liveness.
-      // The partial unique index requires its predicate be repeated in
-      // `targetWhere`.
-      .onConflictDoUpdate({
-        set: {
+      const now = new Date();
+      const [result] = await tx
+        .insert(devices)
+        .values({
           adapterVersion: params.adapterVersion,
+          deviceId: params.deviceId,
           hostname: params.hostname,
           identitySource: params.identitySource,
           lastSeenAt: now,
           lastVerifiedAt: now,
           platform: params.platform,
-          visibility: params.visibility === 'public' ? 'public' : sql`${devices.visibility}`,
-        },
-        target: [devices.workspaceId, devices.deviceId],
-        targetWhere: sql`${devices.workspaceId} IS NOT NULL`,
-      })
-      .returning();
+          // Set for enrollments driven from the owner's personal device list —
+          // links this workspace row back to its personal twin (see the schema
+          // comment on `devices.sharedFromDeviceId`).
+          sharedFromDeviceId: params.sharedFromDeviceId,
+          userId: this.userId,
+          // 'public' shares the device with the whole workspace; defaults to
+          // 'private' (enroller-only) — see the schema comment on
+          // `devices.visibility`.
+          visibility: params.visibility ?? 'private',
+          workspaceId: params.workspaceId,
+        })
+        // Dedupe on (workspaceId, deviceId): a machine enrolled into a workspace is
+        // ONE device no matter which member (re-)runs the enrollment. `userId` and
+        // `sharedFromDeviceId` are left untouched on conflict — the original
+        // enroller keeps the enrollment. `visibility` on conflict:
+        //   - an EXPLICIT `visibility: 'public'` (`orvilo connect --workspace --public`)
+        //     always publishes — the caller just asked for it, silently keeping the
+        //     row private would make the flag a no-op on re-enroll. Callers pass
+        //     `visibility` only when the user chose explicitly, so a plain
+        //     reconnect (undefined) still preserves the stored choice;
+        //   - anything else preserves the stored choice. An explicit 'private'
+        //     never demotes a published row here — pulling a shared device out of
+        //     the pool must stay an explicit `setWorkspaceDeviceVisibility` call.
+        // A DIFFERENT member colliding with an existing PRIVATE row never reaches
+        // this upsert — the guard above fails closed (see
+        // `WorkspaceDevicePrivateConflictError`); a cross-user collision with a
+        // public row is the legit shared-infra flow and just refreshes liveness.
+        // The partial unique index requires its predicate be repeated in
+        // `targetWhere`.
+        .onConflictDoUpdate({
+          set: {
+            adapterVersion: params.adapterVersion,
+            hostname: params.hostname,
+            identitySource: params.identitySource,
+            lastSeenAt: now,
+            lastVerifiedAt: now,
+            platform: params.platform,
+            visibility: params.visibility === 'public' ? 'public' : sql`${devices.visibility}`,
+          },
+          target: [devices.workspaceId, devices.deviceId],
+          targetWhere: sql`${devices.workspaceId} IS NOT NULL`,
+        })
+        .returning();
 
-    return result;
+      return result;
+    });
   };
 
   /**
@@ -285,7 +330,7 @@ export class DeviceModel {
   query = async (): Promise<DeviceItem[]> => {
     return this.db.query.devices.findMany({
       orderBy: [desc(devices.lastSeenAt)],
-      where: eq(devices.userId, this.userId),
+      where: and(eq(devices.userId, this.userId), isNull(devices.retiredAt)),
     });
   };
 
@@ -293,7 +338,11 @@ export class DeviceModel {
   queryPersonal = async (): Promise<DeviceItem[]> => {
     return this.db.query.devices.findMany({
       orderBy: [desc(devices.lastSeenAt)],
-      where: and(eq(devices.userId, this.userId), isNull(devices.workspaceId)),
+      where: and(
+        eq(devices.userId, this.userId),
+        isNull(devices.workspaceId),
+        isNull(devices.retiredAt),
+      ),
     });
   };
 
@@ -310,7 +359,13 @@ export class DeviceModel {
       .select()
       .from(devices)
       .where(
-        buildStrictWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, devices),
+        and(
+          isNull(devices.retiredAt),
+          buildStrictWorkspaceWhere(
+            { userId: this.userId, workspaceId: this.workspaceId },
+            devices,
+          ),
+        ),
       )
       .orderBy(desc(devices.lastSeenAt));
   };
@@ -331,8 +386,10 @@ export class DeviceModel {
       .where(
         and(
           eq(devices.workspaceId, this.workspaceId),
-          eq(devices.visibility, 'private'),
-          ne(devices.userId, this.userId),
+          or(
+            isNotNull(devices.retiredAt),
+            and(eq(devices.visibility, 'private'), ne(devices.userId, this.userId)),
+          ),
         ),
       );
     return rows.map((r) => r.deviceId);
@@ -344,7 +401,10 @@ export class DeviceModel {
    * `undefined`, exactly like a device that doesn't exist, so every write path
    * gated on this lookup fails closed with NOT_FOUND.
    */
-  findWorkspaceDeviceById = async (deviceId: string) => {
+  findWorkspaceDeviceById = async (
+    deviceId: string,
+    options: { includeRetired?: boolean } = {},
+  ) => {
     if (!this.workspaceId) return undefined;
     const [device] = await this.db
       .select()
@@ -352,6 +412,7 @@ export class DeviceModel {
       .where(
         and(
           eq(devices.deviceId, deviceId),
+          options.includeRetired ? undefined : isNull(devices.retiredAt),
           buildStrictWorkspaceWhere(
             { userId: this.userId, workspaceId: this.workspaceId },
             devices,
@@ -368,6 +429,7 @@ export class DeviceModel {
         eq(devices.userId, this.userId),
         eq(devices.deviceId, deviceId),
         isNull(devices.workspaceId),
+        isNull(devices.retiredAt),
       ),
     });
   };
@@ -386,6 +448,11 @@ export class DeviceModel {
   };
 
   delete = async (deviceId: string) => {
+    if (await new DeviceModel(this.db, this.userId).hasAgentBinding(deviceId))
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'DEVICE_IN_USE: rebind the Agent before removing its device',
+      });
     return this.db
       .delete(devices)
       .where(
@@ -418,6 +485,11 @@ export class DeviceModel {
    */
   deleteWorkspaceDevice = async (deviceId: string) => {
     if (!this.workspaceId) return;
+    if (await this.hasAgentBinding(deviceId))
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'DEVICE_IN_USE: rebind the Agent before removing its device',
+      });
     return this.db
       .delete(devices)
       .where(and(eq(devices.workspaceId, this.workspaceId), eq(devices.deviceId, deviceId)));
@@ -460,19 +532,46 @@ export class DeviceModel {
     params: { sharedFromDeviceId: string; visibility: DeviceVisibility },
   ) => {
     if (!this.workspaceId) return undefined;
-    const now = new Date();
-    const [row] = await this.db
-      .update(devices)
-      .set({
-        lastSeenAt: now,
-        sharedFromDeviceId: params.sharedFromDeviceId,
-        updatedAt: now,
-        userId: this.userId,
-        visibility: params.visibility,
-      })
-      .where(and(eq(devices.workspaceId, this.workspaceId), eq(devices.deviceId, deviceId)))
-      .returning();
-    return row;
+    return this.db.transaction(async (tx) => {
+      const [member] = await tx
+        .select({ role: workspaceMembers.role })
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, this.workspaceId!),
+            eq(workspaceMembers.userId, this.userId),
+            isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
+          ),
+        )
+        .for('update');
+      const [workspace] = await tx
+        .select({ owner: workspaces.primaryOwnerId })
+        .from(workspaces)
+        .where(eq(workspaces.id, this.workspaceId!));
+      if (
+        (!member || !['owner', 'admin', 'member'].includes(member.role)) &&
+        workspace?.owner !== this.userId
+      )
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Active writable membership is required to restore a device',
+        });
+      const now = new Date();
+      const [row] = await tx
+        .update(devices)
+        .set({
+          lastSeenAt: now,
+          retiredAt: null,
+          sharedFromDeviceId: params.sharedFromDeviceId,
+          updatedAt: now,
+          userId: this.userId,
+          visibility: params.visibility,
+        })
+        .where(and(eq(devices.workspaceId, this.workspaceId), eq(devices.deviceId, deviceId)))
+        .returning();
+      return row;
+    });
   };
 
   /**
@@ -493,6 +592,12 @@ export class DeviceModel {
       })
       .from(devices)
       .innerJoin(workspaces, eq(devices.workspaceId, workspaces.id))
-      .where(and(eq(devices.userId, this.userId), isNotNull(devices.sharedFromDeviceId)));
+      .where(
+        and(
+          eq(devices.userId, this.userId),
+          isNull(devices.retiredAt),
+          isNotNull(devices.sharedFromDeviceId),
+        ),
+      );
   };
 }

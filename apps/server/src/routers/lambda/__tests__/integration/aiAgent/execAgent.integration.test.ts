@@ -18,6 +18,8 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { aiAgentRouter } from '../../../aiAgent';
 import { cleanupTestUser, createTestUser } from '../setup';
 
@@ -68,13 +70,15 @@ beforeEach(async () => {
   // Create test agent with gpt-5-pro (uses Responses API)
   const [agent] = await serverDB
     .insert(agents)
-    .values({
-      model: 'gpt-5-pro',
-      provider: 'openai',
-      systemRole: 'You are a helpful assistant.',
-      title: 'Test Assistant',
-      userId,
-    })
+    .values(
+      await withTestAgentDevices(serverDB, {
+        model: 'gpt-5-pro',
+        provider: 'openai',
+        systemRole: 'You are a helpful assistant.',
+        title: 'Test Assistant',
+        userId,
+      }),
+    )
     .returning();
   testAgentId = agent.id;
 

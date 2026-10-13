@@ -16,6 +16,8 @@ import { today } from '@/utils/time';
 
 import type { NewUser, UserItem, UserSettingsItem } from '../schemas';
 import {
+  agents,
+  devices,
   documentHistories,
   documents,
   messages,
@@ -474,6 +476,20 @@ export class UserModel {
       throw new Error(AGENT_TRANSFER_PENDING_OWNER_DELETE);
     }
     return db.transaction(async (tx) => {
+      // Registry rows still referenced by teammates keep their identity after
+      // account deletion, but custody never restores execution permission.
+      await tx.execute(sql`
+        UPDATE ${devices}
+        SET "user_id" = ${workspaces.primaryOwnerId}, "retired_at" = now(), "updated_at" = now()
+        FROM ${workspaces}
+        WHERE ${devices.userId} = ${id} AND ${devices.workspaceId} = ${workspaces.id}
+          AND ${workspaces.primaryOwnerId} <> ${id}
+          AND EXISTS (SELECT 1 FROM ${agents}
+            WHERE (${agents.boundDeviceRowId} = ${devices.id}
+              OR (${agents.boundDeviceRowId} IS NULL AND ${agents.workspaceId} = ${devices.workspaceId}
+                AND ${agents.agencyConfig}->>'boundDeviceId' = ${devices.deviceId}))
+              AND ${agents.userId} <> ${id})
+      `);
       // Purge share-visitor topics authored by this user under any creator.
       await tx.delete(topics).where(eq(topics.senderId, id));
       // Team Pages belong to the workspace, so deleting a non-owner creator

@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   messagePlugins,
@@ -83,7 +84,9 @@ describe('HeteroSessionImporterRepo.importSessions', () => {
     await serverDB.delete(users);
     await serverDB.transaction(async (tx) => {
       await tx.insert(users).values([{ id: userId }]);
-      await tx.insert(agents).values({ id: agentId, title: 'Test Agent', userId });
+      await tx
+        .insert(agents)
+        .values(await withTestAgentDevices(tx, { id: agentId, title: 'Test Agent', userId }));
     });
   });
 
@@ -127,12 +130,14 @@ describe('HeteroSessionImporterRepo.importSessions', () => {
 
   it('pins the agent heterogeneous runtime type onto the created topic', async () => {
     const heteroAgentId = 'session-importer-hetero-agent';
-    await serverDB.insert(agents).values({
-      agencyConfig: { heterogeneousProvider: { command: 'codex', type: 'codex' } },
-      id: heteroAgentId,
-      title: 'Codex Agent',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        agencyConfig: { heterogeneousProvider: { command: 'codex', type: 'codex' } },
+        id: heteroAgentId,
+        title: 'Codex Agent',
+        userId,
+      }),
+    );
 
     const repo = new HeteroSessionImporterRepo(serverDB, userId);
     const [result] = await repo.importSessions({

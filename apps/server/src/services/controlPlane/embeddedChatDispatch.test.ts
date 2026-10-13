@@ -5,6 +5,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import {
   agentOperations,
   agents,
@@ -113,7 +114,9 @@ describe('openEmbeddedChatDispatchHost', () => {
       workspaceId = workspace.id;
     }
     const agentId = `agt_${randomUUID()}`;
-    await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: agentId, userId, workspaceId }));
     const topicId = `tpc_${randomUUID()}`;
     await db.insert(topics).values({
       agentId,

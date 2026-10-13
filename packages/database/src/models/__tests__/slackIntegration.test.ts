@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   slackChannelBindings,
@@ -51,15 +52,17 @@ beforeEach(async () => {
       slug: 'slack-other',
     },
   ]);
-  await db.insert(agents).values([
-    { id: 'slack-agent', title: 'Agent', userId: 'slack-user', workspaceId: 'slack-workspace' },
-    {
-      id: 'slack-other-agent',
-      title: 'Other agent',
-      userId: 'slack-other-user',
-      workspaceId: 'slack-other-workspace',
-    },
-  ]);
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, [
+      { id: 'slack-agent', title: 'Agent', userId: 'slack-user', workspaceId: 'slack-workspace' },
+      {
+        id: 'slack-other-agent',
+        title: 'Other agent',
+        userId: 'slack-other-user',
+        workspaceId: 'slack-other-workspace',
+      },
+    ]),
+  );
 });
 afterEach(async () => {
   await db.delete(users);

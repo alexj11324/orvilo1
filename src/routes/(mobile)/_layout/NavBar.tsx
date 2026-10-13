@@ -11,10 +11,14 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import { SidebarTabKey } from '@/store/global/initialState';
 
+import navGeometry from './NavBar.module.css';
+
 const styles = {
   active: '[&_svg]:fill-[color-mix(in_srgb,var(--primary)_33%,transparent)]',
-  container:
-    'fixed z-100 inset-be-0 inset-x-0 box-border w-full select-none overflow-hidden border-t border-divider bg-background h-[calc(var(--spacing)*12+env(safe-area-inset-bottom))] pbe-[env(safe-area-inset-bottom)]',
+  container: cn(
+    'fixed z-100 inset-be-0 inset-x-0 box-border w-full select-none overflow-hidden border-t border-divider bg-background h-(--mobile-nav-height) pbe-(--mobile-nav-safe-area-bottom)',
+    navGeometry.container,
+  ),
 };
 
 const NavBar = memo(() => {

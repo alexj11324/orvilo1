@@ -50,8 +50,7 @@ const styles = {
   chipLabels: '[@container_issue-row_(width<=760px)]:hidden',
   chipMilestone: 'flex [@container_issue-row_(width<=640px)]:hidden',
   chipProject: 'flex [@container_issue-row_(width<=540px)]:hidden',
-  identifier:
-    'flex-none min-w-[var(--issue-id-width,auto)] font-mono text-xs leading-5 tabular-nums',
+  identifier: 'flex-none min-w-(--issue-id-width,auto) font-mono text-xs leading-5 tabular-nums',
   parent: 'min-w-17 max-w-60 text-xs leading-5',
   parentSeparator: 'flex-none w-4.25 text-xs leading-5 text-center',
   row: 'cursor-pointer [container:issue-row/inline-size] min-h-11 rounded-(--radius-button) hover:bg-accent flex flex-col gap-1 justify-center py-1 pe-3',

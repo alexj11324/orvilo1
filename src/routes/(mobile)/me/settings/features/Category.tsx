@@ -1,15 +1,19 @@
 'use client';
 
+import { cn } from 'cn';
 import { Fragment, memo } from 'react';
 
 import Cell from '@/components/Cell';
 import Divider from '@/components/Cell/Divider';
 
+import categoryGeometry from './Category.module.css';
 import { useCategory } from './useCategory';
 
 const styles = {
-  groupTitle:
-    'pbs-4 pbe-1 px-4 text-xs font-medium leading-5 text-muted-foreground uppercase tracking-[calc(var(--spacing)*0.125)]',
+  groupTitle: cn(
+    'pbs-4 pbe-1 px-4 text-xs font-medium leading-5 text-muted-foreground uppercase tracking-(--mobile-settings-category-tracking)',
+    categoryGeometry.groupTitle,
+  ),
 };
 
 const Category = memo(() => {

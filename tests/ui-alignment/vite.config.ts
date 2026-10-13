@@ -6,6 +6,14 @@ import { defineConfig } from 'vite';
 const repository = fileURLToPath(new URL('../..', import.meta.url));
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      input: [
+        `${repository}/tests/ui-alignment/index.html`,
+        `${repository}/tests/ui-alignment/standaloneTheme.html`,
+      ],
+    },
+  },
   css: { postcss: repository },
   plugins: [react()],
   resolve: { alias: { '@': `${repository}/src` } },

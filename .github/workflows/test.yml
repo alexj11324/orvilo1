@@ -191,6 +191,11 @@ jobs:
       - name: Install deps
         run: pnpm install
 
+      - name: Build real UI fixture module graphs
+        run: |
+          pnpm exec vite build --config tests/ui-alignment/vite.config.ts --outDir "$RUNNER_TEMP/ui-alignment/alignment" --emptyOutDir
+          pnpm exec vite build --config tests/ui-alignment/design.vite.config.ts --outDir "$RUNNER_TEMP/ui-alignment/design" --emptyOutDir
+
       - name: Typecheck
         # Two runs lost their runner during tsgo without a TypeScript diagnostic.
         # Keep the full check, reduce Go's memory/concurrency pressure, and record

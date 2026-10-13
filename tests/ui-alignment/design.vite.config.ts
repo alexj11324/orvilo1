@@ -6,6 +6,11 @@ import { defineConfig } from 'vite';
 const repository = fileURLToPath(new URL('../..', import.meta.url));
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      input: [`${repository}/tests/ui-alignment/design.html`],
+    },
+  },
   cacheDir: process.env.UI_ALIGNMENT_CACHE_DIR ?? repository + '/node_modules/.vite-ui-alignment',
   css: { postcss: repository },
   define: { __ELECTRON__: true },

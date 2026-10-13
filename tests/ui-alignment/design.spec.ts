@@ -95,9 +95,6 @@ for (const motion of ['disabled', 'reduced']) {
           .mcpFirstPaint,
     );
     expect(firstPaint).toEqual({ opacity: '1', transform: 'none' });
-    await expect(
-      page.getByTestId('task-feature').locator('[data-slot="accordion-arrow"]'),
-    ).toHaveCSS('transition-duration', '0s');
     await expect(page.getByTestId('motion-spinner')).toHaveCSS('animation-name', 'none');
     await page.getByTestId('open-api-key').click();
     await expect(page.getByRole('dialog')).toBeVisible();

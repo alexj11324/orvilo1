@@ -1788,6 +1788,7 @@ export const dispatchHeteroAgent = async (
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
             env: {
+              ...effectiveHeterogeneousProvider?.env,
               ...(aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : {}),
               ORVILO_AGENT_ID: resolvedAgentId,
             },

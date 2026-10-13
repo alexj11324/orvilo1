@@ -70,7 +70,8 @@ vi.mock('antd', async (importOriginal) => ({
   App: { useApp: () => ({ message: { error: vi.fn() } }) },
 }));
 
-vi.mock('@/components/NeuralNetworkLoading', () => ({ default: () => <div>loading</div> }));
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('@/features/Acceptance/hooks', () => ({ useRubrics: () => ({ data: [] }) }));
 
 vi.mock('@/features/Acceptance', async () => ({
   // The real row/list primitives: the assertions cover the shared grammar.
@@ -88,18 +89,22 @@ vi.mock('@/features/Acceptance', async () => ({
       label: category,
     })),
   useAcceptanceBundle: () => ({
-    data: mocks.bundle,
+    data: fixture.active ? undefined : mocks.bundle,
     error: undefined,
-    isLoading: false,
-    mutate: mocks.mutateBundle,
+    isLoading: fixture.active && fixture.busyPath === 'bundle',
+    mutate: fixture.active ? fixture.mutateBundle : mocks.mutateBundle,
   }),
   useAcceptanceBySubject: (...args: unknown[]) => {
     mocks.subjectArgs = args;
     return {
-      data: mocks.acceptanceSubject,
+      data: fixture.active
+        ? fixture.busyPath === 'bundle'
+          ? { id: 'motion-acceptance' }
+          : undefined
+        : mocks.acceptanceSubject,
       error: undefined,
-      isLoading: false,
-      mutate: mocks.mutateSubject,
+      isLoading: fixture.active && fixture.busyPath === 'subject',
+      mutate: fixture.active ? fixture.mutateSubject : mocks.mutateSubject,
     };
   },
 }));
@@ -141,6 +146,7 @@ vi.mock('@/services/verify', () => ({
   verifyService: {
     deleteAcceptance: (id: string, purge?: boolean) => mocks.deleteAcceptance(id, purge),
     reviewChecks: vi.fn(),
+    generateCriteria: (...args: unknown[]) => fixture.generateCriteria(...args),
   },
 }));
 
@@ -472,11 +478,12 @@ describe('TaskAcceptance', () => {
 });
 
 // Existing TaskAcceptance tests above keep their original fixtures and cases.
-// The following describe mounts real loading owners in an isolated module graph.
+// The motion cases use the same module graph and switch only the data fixtures.
 let MotionTaskAcceptance: typeof TaskAcceptance;
 let MotionTaskVerifyConfig: typeof TaskVerifyConfig;
 let MotionTaskDetailScope: typeof TaskDetailScope;
 let useMotionUserStore: typeof UserStoreHook;
+let originalUserSettings: ReturnType<typeof UserStoreHook.getState>['settings'];
 
 const fixture = vi.hoisted(() => {
   const originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia');
@@ -513,8 +520,8 @@ const fixture = vi.hoisted(() => {
   // Install the public native boundary before any component import evaluates.
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: matchMedia });
   return {
+    active: false,
     originalMatchMedia,
-    matchMedia,
     busyPath: 'subject' as 'subject' | 'bundle',
     generateCriteria: vi.fn(),
     mutateBundle: vi.fn(),
@@ -578,102 +585,17 @@ const expectLoading = (container: HTMLElement, animated: boolean, path: BusyPath
 
 describe('Task loading motion respects both live preferences', () => {
   beforeAll(async () => {
-    // The existing suite already completed using its original module graph.
-    // Rebuild only this describe's real owners after installing the public
-    // browser media function and bounded data fixtures; no control is mocked.
-    vi.resetModules();
-    vi.doUnmock('@/components/NeuralNetworkLoading');
-    vi.doUnmock('@/components/ActionIcon');
-    vi.doUnmock('./TaskVerifyConfig');
-    vi.doMock('./TaskReviewerProperty', () => ({ default: () => <div>Reviewer Agent</div> }));
-    // Fixtures stop network/device side effects at data boundaries, preserving
-    // public selectors and actual Zustand subscriptions for preference changes.
-    vi.doMock('@/store/user', async () => {
-      const { create } = await import('zustand');
-      return {
-        useUserStore: create(() => ({
-          defaultSettings: { general: { animationMode: 'agile' } },
-          settings: { general: { animationMode: 'agile' } },
-        })),
-      };
-    });
-    vi.doMock('@/store/task', async () => {
-      const { create } = await import('zustand');
-      return {
-        useTaskStore: create(() => ({
-          activeTaskId: 'T-motion',
-          taskDetailMap: {
-            'T-motion': {
-              id: 'motion-db',
-              name: 'A motion regression goal',
-              reviewerAgentId: 'reviewer-1',
-              verify: undefined,
-            },
-          },
-          updateVerifyConfig: vi.fn(),
-        })),
-      };
-    });
-    vi.doMock('@/store/chat', () => {
-      const readChatState = (selector: (state: object) => unknown) =>
-        selector({ openAcceptance: vi.fn(), openAcceptanceCheck: vi.fn() });
-      return { useChatStore: readChatState };
-    });
-    vi.doMock('@/store/global', () => {
-      const readGlobalState = (selector: (state: object) => unknown) =>
-        selector({ toggleTaskAgentPanel: vi.fn() });
-      return { useGlobalStore: readGlobalState };
-    });
-    vi.doMock('@/hooks/usePermission', () => {
-      const readPermission = () => ({ allowed: true });
-      return { usePermission: readPermission };
-    });
-    vi.doMock('@/features/Acceptance', async () => {
-      const readAcceptanceBySubject = () => ({
-        data: fixture.busyPath === 'bundle' ? { id: 'motion-acceptance' } : undefined,
-        error: undefined,
-        isLoading: fixture.busyPath === 'subject',
-        mutate: fixture.mutateSubject,
-      });
-      const readAcceptanceBundle = () => ({
-        data: undefined,
-        error: undefined,
-        isLoading: fixture.busyPath === 'bundle',
-        mutate: fixture.mutateBundle,
-      });
-      return {
-        ...(await vi.importActual('@/features/Acceptance/CriterionList')),
-        checkDisplayTitle: (title: string) => title,
-        checkHeadMeta: () => ({ color: 'green', icon: () => null }),
-        groupChecks: () => [],
-        shouldGroupChecks: () => false,
-        useAcceptanceBySubject: readAcceptanceBySubject,
-        useAcceptanceBundle: readAcceptanceBundle,
-      };
-    });
-    vi.doMock('@/features/Acceptance/hooks', () => {
-      const readRubrics = () => ({ data: [] });
-      return { useRubrics: readRubrics };
-    });
-    vi.doMock('@/services/verify', () => ({
-      verifyService: {
-        generateCriteria: (...args: unknown[]) => fixture.generateCriteria(...args),
-      },
-    }));
-
-    // Resolve the queued data fixtures before mounting the actual owners.
-    // importActual bypasses this file's hoisted Verifier mock explicitly;
-    // importing the real scope normally preserves the owners' context identity.
-    const [userStore, scope, acceptance, verification] = await Promise.all([
+    fixture.active = true;
+    const [userStore, scope, verification] = await Promise.all([
       import('@/store/user'),
       import('./TaskDetailScope'),
-      vi.importActual<{ default: typeof TaskAcceptance }>('./TaskAcceptance'),
       vi.importActual<{ default: typeof TaskVerifyConfig }>('./TaskVerifyConfig'),
     ]);
-    MotionTaskAcceptance = acceptance.default;
+    MotionTaskAcceptance = TaskAcceptance;
     MotionTaskVerifyConfig = verification.default;
     MotionTaskDetailScope = scope.TaskDetailScope;
     useMotionUserStore = userStore.useUserStore;
+    originalUserSettings = useMotionUserStore.getState().settings;
   });
 
   afterAll(() => {
@@ -683,19 +605,8 @@ describe('Task loading motion respects both live preferences', () => {
     } else {
       Reflect.deleteProperty(window, 'matchMedia');
     }
-    for (const moduleName of [
-      '@/store/user',
-      '@/store/task',
-      '@/store/chat',
-      '@/store/global',
-      '@/hooks/usePermission',
-      '@/features/Acceptance',
-      '@/features/Acceptance/hooks',
-      '@/services/verify',
-    ]) {
-      vi.doUnmock(moduleName);
-    }
-    vi.resetModules();
+    fixture.active = false;
+    useMotionUserStore.setState({ settings: originalUserSettings });
   });
 
   beforeEach(() => {

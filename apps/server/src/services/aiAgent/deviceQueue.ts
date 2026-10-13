@@ -5,6 +5,7 @@ import { AEGIS_PACK_ENV, ChatErrorType, resolveHarnessAdapter } from '@orvilo/ty
 import { toRecord } from '@orvilo/utils/object';
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
+import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
@@ -312,6 +313,12 @@ export async function dispatchQueuedDeviceRun(
       prime = composed.value.descriptor;
       payload.primeRegistration = composed.value.binding;
     }
+    const agent = await new AgentModel(
+      db,
+      operation.userId,
+      workspaceId,
+    ).getAgentConfigForExecution(payload.agentId);
+    const provider = agent?.agencyConfig?.heterogeneousProvider;
     // Cancellation after the claim still fences this last pre-send boundary.
     if (!(await queuedLaunchStillAllowed(db, operation)))
       return { error: 'DEVICE_QUEUE_CANCELED', success: false };
@@ -323,6 +330,7 @@ export async function dispatchQueuedDeviceRun(
       cwd: payload.cwd,
       deviceId: payload.deviceId,
       env: {
+        ...(provider?.type === payload.agentType ? provider.env : undefined),
         ...(payload.aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : {}),
         ORVILO_AGENT_ID: payload.agentId,
       },

@@ -27,6 +27,7 @@ const {
   composePrime,
   issueTask,
   repairCurrent,
+  savedAgentConfig,
 } = vi.hoisted(() => ({
   rows: new Map<string, AgentOperationItem>(),
   dispatch: vi.fn(),
@@ -41,6 +42,12 @@ const {
   composePrime: vi.fn(),
   issueTask: vi.fn(),
   repairCurrent: vi.fn(),
+  savedAgentConfig: vi.fn(),
+}));
+vi.mock('@/database/models/agent', () => ({
+  AgentModel: class {
+    getAgentConfigForExecution = savedAgentConfig;
+  },
 }));
 vi.mock('@/database/models/agentOperation', () => ({
   AgentOperationModel: class {
@@ -212,6 +219,7 @@ describe('ordinary offline device queue', () => {
     decision.mockReturnValue(null);
     runDecision.mockReturnValue(null);
     reviewer.mockResolvedValue('agent');
+    savedAgentConfig.mockResolvedValue(undefined);
     rows.set('parent', { id: 'parent', taskId: 'task', userId: 'user' } as AgentOperationItem);
   });
 
@@ -265,6 +273,35 @@ describe('ordinary offline device queue', () => {
       ).toBe(expired);
     },
   );
+
+  it('rehydrates current saved Agent env at reconnect without storing it in the queue', async () => {
+    savedAgentConfig.mockResolvedValue({
+      agencyConfig: {
+        heterogeneousProvider: { type: 'opencode', env: { XDG_DATA_HOME: '/marker-before-queue' } },
+      },
+    });
+    await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
+    const queued = JSON.stringify(readDeviceQueue(rows.get('original-op')?.metadata));
+    expect(queued).not.toContain('XDG_DATA_HOME');
+    expect(queued).not.toContain('/marker-before-queue');
+    savedAgentConfig.mockResolvedValue({
+      agencyConfig: {
+        heterogeneousProvider: {
+          type: 'opencode',
+          env: {
+            XDG_DATA_HOME: '/marker-at-reconnect',
+            ORVILO_AGENT_ID: 'must-not-replace-source-agent',
+          },
+        },
+      },
+    });
+    await sweepQueuedDeviceOperations({ db });
+    expect(dispatch.mock.calls[0][0].env).toMatchObject({
+      XDG_DATA_HOME: '/marker-at-reconnect',
+      ORVILO_AGENT_ID: 'agent',
+    });
+    expect(JSON.stringify(rows.get('original-op')?.metadata)).not.toContain('/marker-at-reconnect');
+  });
 
   it('does not turn a failed presence read into an offline expiry', async () => {
     await queueOfflineDeviceRun(db, 'user', 'original-op', payload);

@@ -20,9 +20,9 @@ const styles = {
     'overflow-hidden w-full border border-sidebar-border rounded-(--radius-overlay) bg-card',
   empty: 'p-6 text-foreground-tertiary text-center',
   item: 'py-2.5 px-3 [border-block-end:1px_dashed_var(--sidebar-border)] last:[border-block-end:none]',
-  itemContent: 'text-(length:--text-dense) leading-[1.5] text-muted-foreground',
-  itemTitle: 'text-sm leading-[inherit] font-medium text-foreground',
-  sectionHeader: 'text-xs leading-[inherit] font-medium',
+  itemContent: 'text-sm text-muted-foreground',
+  itemTitle: 'text-sm font-medium text-foreground',
+  sectionHeader: 'text-xs font-medium',
   tags: 'pbs-1.5',
 };
 

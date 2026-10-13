@@ -351,9 +351,7 @@ const ConnectorDetail = memo<ConnectorDetailProps>(
         <div className={'flex min-h-0 flex-1 flex-col p-4'}>
           {/* Description */}
           {connectorDescription && (
-            <div className={'mbe-4 text-sm leading-[1.6] text-muted-foreground'}>
-              {connectorDescription}
-            </div>
+            <div className={'mbe-4 text-sm text-muted-foreground'}>{connectorDescription}</div>
           )}
 
           {middleSlot}

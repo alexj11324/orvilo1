@@ -13,10 +13,10 @@ import type { BatchCreateAgentsParams, BatchCreateAgentsState } from '../../type
 
 const styles = {
   container: 'rounded-(--radius-card) bg-fill-quaternary px-4 py-1',
-  description: 'line-clamp-1 text-ellipsis text-xs leading-[1.5] text-foreground-description',
+  description: 'line-clamp-1 text-ellipsis text-xs text-foreground-description',
   empty: 'p-4 text-foreground-tertiary',
   item: 'py-3 not-last:[border-block-end:1px_solid_var(--sidebar-border)]',
-  title: 'truncate text-(length:--text-dense) font-medium',
+  title: 'truncate text-sm font-medium',
 };
 
 interface AgentItemProps {

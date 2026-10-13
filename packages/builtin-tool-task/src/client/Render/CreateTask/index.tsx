@@ -14,7 +14,7 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 import type { CreateTaskParams, CreateTaskState } from '../../../types';
 
 const styles = {
-  description: 'line-clamp-3 text-xs leading-[1.5] text-foreground-tertiary',
+  description: 'line-clamp-3 text-sm text-foreground-tertiary',
   identifier:
     'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-muted-foreground',
   // Fade the model-facing markdown preview; the detail panel contains the full content.
@@ -22,7 +22,7 @@ const styles = {
     'max-h-33 overflow-hidden [mask-image:linear-gradient(to_bottom,black_78%,transparent)]',
   row: 'flex items-center gap-2',
   taskItem: 'flex flex-col gap-1.5 px-3 py-2.5',
-  title: 'min-w-0 flex-1 truncate text-(length:--text-dense) leading-[1.4] text-foreground',
+  title: 'min-w-0 flex-1 truncate text-sm text-foreground',
 };
 
 export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, CreateTaskState>>(

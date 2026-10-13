@@ -13,8 +13,9 @@ const styles = {
   container:
     'overflow-hidden min-w-90 max-w-90 border border-sidebar-border rounded-(--radius-overlay)',
   footer: 'py-2 ps-4 pe-4 rounded-(--radius-card) text-center bg-fill-quaternary',
-  footerText: 'text-xs leading-[inherit] text-foreground-tertiary',
-  preview: 'overflow-hidden max-h-20 p-2 rounded-(--radius-input) leading-[1.5]',
+  footerText: 'text-xs text-foreground-tertiary',
+  preview:
+    'overflow-hidden [--knowledge-preview-height:calc(var(--leading-5)*4+var(--spacing)*4)] max-h-(--knowledge-preview-height) p-2 rounded-(--radius-input)',
   title: 'line-clamp-1 [margin-block-end:0]',
   titleRow: 'text-foreground',
 };

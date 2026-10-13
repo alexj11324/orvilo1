@@ -19,7 +19,7 @@ const styles = {
   imageList: 'flex-wrap',
   path: 'mt-1 px-1 text-xs text-muted-foreground break-all',
   previewBox: 'relative overflow-hidden rounded-(--radius-card) bg-card px-2 py-0',
-  previewText: 'overflow-auto font-mono text-xs leading-[1.6] break-all whitespace-pre-wrap',
+  previewText: 'overflow-auto font-mono text-sm break-all whitespace-pre-wrap',
 };
 
 const ReadFileView = memo<ReadFileState>(

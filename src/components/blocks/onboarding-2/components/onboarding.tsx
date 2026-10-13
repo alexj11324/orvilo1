@@ -116,10 +116,8 @@ export function createTimezoneGroups(t: TFunction<'onboarding'>): TimezoneGroup[
 function StepHeading({ title, description }: { title: string; description: string }) {
   return (
     <div aria-live="polite" className="flex max-w-md flex-col gap-1.5">
-      <h1 className="text-foreground text-xl leading-7 font-semibold text-balance sm:text-[1.375rem]">
-        {title}
-      </h1>
-      <p className="text-muted-foreground text-sm leading-5 text-pretty">{description}</p>
+      <h1 className="text-foreground text-xl leading-7 font-semibold text-balance">{title}</h1>
+      <p className="text-muted-foreground text-sm text-pretty">{description}</p>
     </div>
   );
 }
@@ -659,7 +657,7 @@ function SuccessStep({
           <h1 className="text-foreground text-2xl leading-8 font-semibold tracking-tight">
             {t('reui.workspace.successTitle', { name: displayName })}
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm leading-6">
+          <p className="text-muted-foreground mt-2 text-sm">
             {t('reui.workspace.successDescription')}
           </p>
         </div>

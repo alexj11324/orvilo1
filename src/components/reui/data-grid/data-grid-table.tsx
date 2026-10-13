@@ -1478,12 +1478,11 @@ function DataGridTableBodyRow<TData extends object>({
             ? cn('hover:bg-transparent', dataIndex % 2 === 0 && 'bg-muted/90 hover:bg-accent')
             : 'odd:bg-muted/90 odd:hover:bg-accent hover:bg-transparent'),
         props.tableLayout?.rowsPinnable && isRowPinned && 'bg-muted/30 hover:bg-accent',
-        pinnedBoundary === 'top' &&
-          '[&>td]:shadow-[0_2px_0_rgba(0,0,0,0.03)] dark:[&>td]:shadow-[0_2px_0_rgba(255,255,255,0.06)]',
+        // The pinned edge uses the theme's static wash; its offset faces scrolled content.
+        pinnedBoundary === 'top' && '[&>td]:shadow-[0_2px_0_var(--muted)]',
         // A bottom-pinned row borders scrolled content along its TOP edge,
         // so its separator shadow casts upward.
-        pinnedBoundary === 'bottom' &&
-          '[&>td]:shadow-[0_-2px_0_rgba(0,0,0,0.03)] dark:[&>td]:shadow-[0_-2px_0_rgba(255,255,255,0.06)]',
+        pinnedBoundary === 'bottom' && '[&>td]:shadow-[0_-2px_0_var(--muted)]',
         props.tableLayout?.rowsPinnable && isRowPinned && props.tableClassNames?.rowPinned,
         props.tableClassNames?.bodyRow,
       )}

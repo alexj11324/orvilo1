@@ -1746,6 +1746,15 @@ describe('tiered orchestration', () => {
     expect(
       (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
     ).toEqual([ordinary.id]);
+    for (const planConfirmedAt of [null, '']) {
+      await db
+        .update(orchestrationWorkflows)
+        .set({ config: { ...split.config, planConfirmedAt } as never })
+        .where(eq(orchestrationWorkflows.id, split.id));
+      expect(
+        (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
+      ).toEqual([ordinary.id]);
+    }
     await db
       .update(orchestrationWorkflows)
       .set({ config: { ...split.config, planConfirmedAt: new Date().toISOString() } })

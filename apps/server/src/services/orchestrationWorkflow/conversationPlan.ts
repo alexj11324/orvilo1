@@ -14,6 +14,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { TaskService } from '@/server/services/task';
 import { AcceptanceService } from '@/server/services/verify/acceptanceService';
+import { VerifyPlanGeneratorService } from '@/server/services/verify/planGenerator';
 
 import { type CreateOrchestrationWorkflowGraphInput, OrchestrationWorkflowService } from './index';
 
@@ -147,12 +148,14 @@ export class OrchestrationWorkflowConversationPlanService {
           code: 'CONFLICT',
           message: 'Only a pending split in this conversation can be posted',
         });
-      const issues = await new TaskModel(tx, this.userId, this.workspaceId).findSubtasks(
-        item.subjectId!,
-      );
+      const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
+      const parent = await taskModel.findById(item.subjectId!);
+      if (!parent) throw new TRPCError({ code: 'NOT_FOUND', message: 'Parent Issue not found' });
+      const title = parent.name ?? item.title;
+      const requirement = parent.instruction ?? item.requirement;
+      const issues = await taskModel.findSubtasks(item.subjectId!);
       if (!issues.length)
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'The split has no sub-Issues' });
-      const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
       const dependencies = await taskModel.getDependenciesByTaskIds(
         issues.map((issue) => issue.id),
       );
@@ -164,6 +167,45 @@ export class OrchestrationWorkflowConversationPlanService {
           .map((node) => [node.taskId!, node.id]),
       );
       const reviewers = new Map<string, string | undefined>();
+      const priorTasks =
+        graph?.nodes.filter((node) => node.kind === 'task' && node.status !== 'retired') ?? [];
+      const contractChanged =
+        title !== item.title ||
+        requirement !== item.requirement ||
+        priorTasks.length !== issues.length ||
+        issues.some((issue) => {
+          const node = priorTasks.find((node) => node.taskId === issue.id);
+          return !node || node.title !== issue.name || node.description !== issue.instruction;
+        });
+      let acceptance = item.config?.acceptance;
+      if (contractChanged) {
+        // The final acceptance task must judge the revised Issues, not criteria
+        // drafted for an obsolete split. These are authored contracts, not LLM inference.
+        const criteriaIds = await new VerifyPlanGeneratorService(
+          tx,
+          this.userId,
+          this.workspaceId,
+        ).createCriteriaFromDrafts([
+          {
+            title,
+            instruction: requirement ?? undefined,
+            verifierType: 'agent',
+            required: true,
+            onFail: 'manual',
+          },
+          ...issues.map((issue) => ({
+            title: issue.name ?? issue.identifier,
+            instruction: issue.instruction ?? undefined,
+            verifierType: 'agent' as const,
+            required: true,
+            onFail: 'manual' as const,
+          })),
+        ]);
+        acceptance = { ...acceptance, criteriaIds };
+        const problem = graph?.nodes.find((node) => node.kind === 'problem');
+        if (problem)
+          await graphModel.updateNodeText(id, problem.id, { title, description: requirement });
+      }
       for (const node of graph?.nodes.filter((node) => node.kind === 'task') ?? []) {
         const issue = issues.find((item) => item.id === node.taskId);
         if (issue)
@@ -232,7 +274,7 @@ export class OrchestrationWorkflowConversationPlanService {
         ),
       );
       const content = [
-        `Orchestration workflow: ${item.title}`,
+        `Orchestration workflow: ${title}`,
         `Attempt budget per Issue: ${item.config?.recovery?.maxAttemptsPerTask ?? 3}; parallelism: ${item.config?.maxConcurrentTasks ?? 'coordinator default'}; cost budget: ${item.maxTotalCost ?? 'none'}; deadline: ${item.config?.schedule?.deadline ?? 'none'}.`,
         ...issues.map(
           (issue) =>
@@ -256,8 +298,11 @@ export class OrchestrationWorkflowConversationPlanService {
         topicId: context.topicId,
       });
       await model.update(id, {
+        title,
+        requirement,
         config: {
           ...item.config,
+          ...(acceptance ? { acceptance } : {}),
           conversationPlan: {
             topicId: context.topicId,
             postedMessageId: posted.id,

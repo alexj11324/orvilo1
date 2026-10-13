@@ -21,6 +21,7 @@ import {
   tasks,
   topics,
   users,
+  verifyCriteria,
 } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
 import { TaskRunnerService } from '@/server/services/taskRunner';
@@ -275,6 +276,41 @@ describe('board split and conversation reply admission', () => {
       .where(eq(taskDispatches.taskId, result.taskIds[0]));
     expect(dispatch.initiator).toBe(userId);
     expect(dispatch.origin).toBe('caid');
+  });
+  it('rebinds terminal acceptance to the current parent and edited Issue contracts', async () => {
+    const result = await plans().prepare(
+      { ...input, criteria: [{ title: 'Original Alpha', instruction: 'Exactly Alpha' }] },
+      context,
+    );
+    const model = new OrchestrationWorkflowModel(db, userId);
+    const before = await model.findById(result.orchestrationWorkflowId);
+    const oldCriteria = before!.config!.acceptance!.criteriaIds!;
+    await new TaskModel(db, userId).update(result.parentTaskId, {
+      name: 'Deliver Gamma and Beta',
+      instruction: 'Scope: Gamma and Beta only. Acceptance: exactly Gamma and Beta.',
+    });
+    await new TaskModel(db, userId).update(result.taskIds[0], {
+      name: 'Write Gamma',
+      instruction: 'Scope: gamma.txt only. Acceptance: exactly Gamma.',
+    });
+    const posted = await plans().post(result.orchestrationWorkflowId, context);
+    const revised = await model.findById(result.orchestrationWorkflowId);
+    expect(revised?.title).toBe('Deliver Gamma and Beta');
+    expect(revised?.requirement).toContain('Gamma and Beta only');
+    expect(revised!.config!.acceptance!.criteriaIds).not.toEqual(oldCriteria);
+    const criteria = await db.select().from(verifyCriteria);
+    const active = criteria.filter((row) =>
+      revised!.config!.acceptance!.criteriaIds!.includes(row.id),
+    );
+    expect(active.map((row) => row.title)).toEqual(
+      expect.arrayContaining(['Deliver Gamma and Beta', 'Write Gamma', 'Write Beta']),
+    );
+    expect(active.map((row) => row.title)).not.toContain('Original Alpha');
+    const [message] = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.id, posted.postedMessageId));
+    expect(message.content).toContain('Orchestration workflow: Deliver Gamma and Beta');
   });
   it('preserves the proposed reviewer in the canonical policy and reflects ordinary policy edits', async () => {
     const result = await plans().prepare(

@@ -26,6 +26,12 @@ Sign-in uses the existing seed-login helper. Device enrollment and Agent configu
 
 See [runtime-checks.txt](./runtime-checks.txt) for fixture ids and compact observations. Screenshots preserve the frontend owner's existing copy, including old labels in execution history; this backend PR does not change those labels.
 
+## Revision path
+
+Revision `f1f179f4dd63f38f796fa6345e65879b2507321a` exercised a plain second request and a change request through real Electron. The coordinator prepared parent T-13 and children T-14/T-15, then used normal Issue tools to change Alpha to Gamma on the existing parent/child Issues. It reposted the same split, resetting `postedAt` from `2026-10-13T18:15:01.999Z` to `2026-10-13T18:18:01.556Z`. The workflow id, parent and child ids remained the same; confirmation stayed absent and total parent/child dispatches remained 0. No revision output files were created. The stale internal parent title/terminal criteria observed in this attempt were subsequently fixed and covered by a regression that fails before and passes after the correction. Its final live repost check is recorded in PR #779 at the correction's source SHA.
+
+![Revised existing split still waits for a reply](./revised-split-waits-for-reply.png)
+
 ## Limits and failures observed
 
 The independent verification engine did not complete in the original test setup: the default builtin reviewer had no bound device, and an ACP task-handoff judgment also returned no parseable JSON. File delivery and actual dispatch are proven; a final verified/achieved result is not claimed. The existing verification engine is retained, with independent reviewer work separately tracked in #769. An available device-bound reviewer can be selected through the ordinary Issue verification settings; that selection must be reflected by the card API and posted plan.

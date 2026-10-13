@@ -686,11 +686,11 @@ export class TaskDispatchModel {
             WHERE split.config ? 'conversationPlan'
               AND (
                 (split.subject_type = 'task' AND split.subject_id = ${tasks.id})
-                OR (split.config ->> 'planConfirmedAt' IS NULL AND EXISTS (
+                OR (COALESCE(split.config ->> 'planConfirmedAt', '') = '' AND EXISTS (
                   SELECT 1 FROM ${orchestrationWorkflowNodes} n
                   WHERE n.orchestration_workflow_id = split.id AND n.task_id = ${tasks.id}
                 ))
-                OR (split.config ->> 'planConfirmedAt' IS NULL AND EXISTS (
+                OR (COALESCE(split.config ->> 'planConfirmedAt', '') = '' AND EXISTS (
                   WITH RECURSIVE ancestors AS (
                     SELECT seed.id, seed.parent_task_id FROM tasks seed WHERE seed.id = ${tasks.id}
                     UNION SELECT parent.id, parent.parent_task_id FROM tasks parent JOIN ancestors ON parent.id = ancestors.parent_task_id

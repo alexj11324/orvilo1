@@ -12,7 +12,7 @@ The Orchestrator calls `prepareOrchestrationWorkflow` with the parent request an
 
 Confirmation is the person's reply in that conversation. On a confirming reply, the Orchestrator calls `startOrchestrationWorkflow` with the existing id. The server checks that this turn's source message is a real user message in the same conversation, later than the posted split. An Agent cannot manufacture its own confirmation. The guard checks arrival, while the Orchestrator judges whether the reply confirms or requests changes. No permission dialog, Start button or special pending-plan editor is involved.
 
-For revisions, the Orchestrator edits or deletes the ordinary Backlog Issues, then calls `postOrchestrationWorkflowPlan`. This synchronizes the graph with the current Issue descriptions and dependency order, posts the revised split, and resets the reply boundary. The server stamps `config.planConfirmedAt` on release. After release the existing coordinator executes the Issues; the conversation does not duplicate their delivery.
+For revisions, the Orchestrator edits or deletes the ordinary Backlog Issues, then calls `postOrchestrationWorkflowPlan`. This synchronizes the graph with the current parent/child Issue contracts and dependency order, rebinds terminal acceptance criteria when those contracts changed, posts the revised split, and resets the reply boundary. The server stamps `config.planConfirmedAt` on release. After release the existing coordinator executes the Issues; the conversation does not duplicate their delivery.
 
 There is no Orvilo slash-command contract for starting this engine. Codex's own `/goal` remains a Codex command.
 
@@ -48,3 +48,5 @@ All procedures live under `orchestrationWorkflow`. The caller supplies the orche
 Waiting reasons distinguish `plan_not_confirmed`, `decision_pending`, `dispatch_not_admitted`, `device_offline`, `planning` and `paused`; terminal states have no waiting reason. The durable conversation plan represents the pending split, including after reload. Card reads query only their own rows and do not hydrate graph artifacts, trace history or Work versions.
 
 The frontend owner removes the old pages and entry points and adds these controls to conversation cards. Backend changes follow renamed public references while preserving frontend-owned directories, copy, route parameter keys and persisted UI preferences.
+
+The frontend timeline and label handoff is documented in [the source-backed Multica/Plane comparison](./orchestration-workflow-timeline-handoff.md). It covers the legacy provenance label and the distinction between execution and verification without changing frontend behavior.

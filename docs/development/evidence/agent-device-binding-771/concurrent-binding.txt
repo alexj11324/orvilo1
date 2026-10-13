@@ -1,0 +1,2 @@
+Migration replayed twice in 155 ms in disposable PostgreSQL
+Concurrent device demotion waited on binding creation, then failed with SQLSTATE 23503; public Agent binding retained

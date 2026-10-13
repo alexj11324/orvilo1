@@ -18,6 +18,11 @@ const mocks = vi.hoisted(() => ({
   taskTopicFindByOperationId: vi.fn(),
   updateStatus: vi.fn(),
   updatePolicyStatus: vi.fn(),
+  listCheckResults: vi.fn(),
+  updateCheckResult: vi.fn(),
+  cancelQueuedDeviceOperation: vi.fn(),
+  finishQueuedDeviceOperation: vi.fn(),
+  findOperation: vi.fn(),
 }));
 
 vi.mock('@/database/models/acceptance', () => ({
@@ -42,7 +47,20 @@ vi.mock('@/database/models/verifyRun', () => ({
     };
   }),
 }));
-vi.mock('@/database/models/verifyCheckResult', () => ({ VerifyCheckResultModel: vi.fn() }));
+vi.mock('@/database/models/verifyCheckResult', () => ({
+  VerifyCheckResultModel: vi.fn(function () {
+    return { listByRun: mocks.listCheckResults, update: mocks.updateCheckResult };
+  }),
+}));
+vi.mock('@/database/models/agentOperation', () => ({
+  AgentOperationModel: vi.fn(function () {
+    return { findById: mocks.findOperation };
+  }),
+}));
+vi.mock('@/server/services/aiAgent/deviceQueue', () => ({
+  cancelQueuedDeviceOperation: mocks.cancelQueuedDeviceOperation,
+  finishQueuedDeviceOperation: mocks.finishQueuedDeviceOperation,
+}));
 vi.mock('@/database/models/verifyEvidence', () => ({ VerifyEvidenceModel: vi.fn() }));
 vi.mock('@/database/models/verifyReport', () => ({
   VerifyReportModel: vi.fn(function () {
@@ -67,7 +85,11 @@ vi.mock('@/database/models/topic', () => ({
 vi.mock('@/database/models/document', () => ({ DocumentModel: vi.fn() }));
 vi.mock('@/server/services/task', () => ({ TaskService: vi.fn() }));
 
-const service = () => new AcceptanceService({} as any, 'user-1');
+const service = () =>
+  new AcceptanceService(
+    { transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback({}) } as any,
+    'user-1',
+  );
 
 const acceptance = (status: string) => ({
   id: 'acc-1',
@@ -84,6 +106,9 @@ describe('AcceptanceService decision gating', () => {
     });
     mocks.listByAcceptance.mockResolvedValue([{ id: 'run-1', roundIndex: 1 }]);
     mocks.taskTopicFindByOperationId.mockResolvedValue(null);
+    mocks.listCheckResults.mockResolvedValue([]);
+    mocks.cancelQueuedDeviceOperation.mockResolvedValue(false);
+    mocks.findOperation.mockResolvedValue({ id: 'queued-reviewer', status: 'interrupted' });
   });
 
   it('creates a standalone acceptance without resolving a Orvilo task, topic, or document', async () => {
@@ -115,13 +140,41 @@ describe('AcceptanceService decision gating', () => {
   });
 
   it.each(['pending', 'planned', 'verifying', 'repairing'])(
-    'refuses to accept while the round chain is still %s',
+    'allows manual acceptance while the verification round is %s',
     async (status) => {
       mocks.findById.mockResolvedValue(acceptance(status));
 
-      await expect(service().accept('acc-1')).rejects.toThrow('still in progress');
-      expect(mocks.setDecision).not.toHaveBeenCalled();
-      expect(mocks.updateStatus).not.toHaveBeenCalled();
+      await expect(service().accept('acc-1')).resolves.toBeDefined();
+      expect(mocks.setDecision).toHaveBeenCalledWith('run-1', 'accept', expect.any(Object));
+      expect(mocks.updateStatus).toHaveBeenCalledWith('acc-1', 'accepted');
+    },
+  );
+
+  it.each(['accept', 'reject'] as const)(
+    'a manual %s retires queued checks and stamps their explicit decision',
+    async (action) => {
+      mocks.findById.mockResolvedValue(acceptance('verifying'));
+      mocks.listCheckResults.mockResolvedValue([
+        {
+          id: 'check-result',
+          status: 'running',
+          verifierOperationId: 'queued-reviewer',
+          userDecision: null,
+        },
+      ]);
+      mocks.cancelQueuedDeviceOperation.mockResolvedValue(true);
+      await service()[action]('acc-1', 'Decision while the device is offline');
+      expect(mocks.cancelQueuedDeviceOperation).toHaveBeenCalledWith(
+        expect.anything(),
+        'user-1',
+        'queued-reviewer',
+        undefined,
+      );
+      expect(mocks.updateCheckResult).toHaveBeenCalledWith(
+        'check-result',
+        expect.objectContaining({ userDecision: action === 'accept' ? 'accepted' : 'rejected' }),
+      );
+      expect(mocks.finishQueuedDeviceOperation).toHaveBeenCalledTimes(1);
     },
   );
 

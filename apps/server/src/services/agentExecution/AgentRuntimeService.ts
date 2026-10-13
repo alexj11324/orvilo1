@@ -12,6 +12,7 @@ import {
   type IAgentStateManager,
   type IStreamEventManager,
 } from '@/server/modules/AgentExecution/types';
+import { isQueuedDeviceOperation } from '@/server/services/aiAgent/deviceQueue';
 
 import { ChildRunService } from './ChildRunService';
 import { InterventionService } from './InterventionService';
@@ -200,6 +201,9 @@ export class AgentRuntimeService {
       // snapshot over an `idle` or absent durable row must never mint an
       // `alreadyStarted` ack for a dispatch that does not exist.
       const status = operation?.status;
+      if (isQueuedDeviceOperation(operation)) {
+        return { alreadyStarted: false, operationId, scheduled: true, success: true };
+      }
       if (
         status === 'running' ||
         status === 'waiting_for_human' ||

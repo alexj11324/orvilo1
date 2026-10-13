@@ -7,6 +7,7 @@ import { sql } from 'drizzle-orm';
 import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { drizzle as nodeDrizzle } from 'drizzle-orm/node-postgres';
 import { migrate as nodeMigrate } from 'drizzle-orm/node-postgres/migrator';
+import { getTableConfig } from 'drizzle-orm/pg-core';
 import { drizzle as pgliteDrizzle } from 'drizzle-orm/pglite';
 import { Pool as NodePool } from 'pg';
 
@@ -87,6 +88,23 @@ export const assertTestDatabaseUrl = (connectionString: string) => {
 let testClientDB: ReturnType<typeof pgliteDrizzle<typeof schema>> | null = null;
 let testServerDB: ReturnType<typeof nodeDrizzle<typeof schema>> | null = null;
 
+/** Source-only Issue reviewer change has no production migration; align disposable test databases. */
+const applyTaskReviewerTestSchema = async (db: OrviloDatabase) => {
+  await db.execute(sql`ALTER TABLE tasks DROP COLUMN IF EXISTS reviewer_user_id`);
+  await db.execute(
+    sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS reviewer_agent_id text REFERENCES agents(id) ON DELETE SET NULL`,
+  );
+  const constraint = getTableConfig(schema.tasks).checks.find(
+    (item) => item.name === 'tasks_in_review_reviewer_required',
+  )!;
+  await db.execute(
+    sql`ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_in_review_reviewer_required`,
+  );
+  await db.execute(
+    sql`ALTER TABLE tasks ADD CONSTRAINT tasks_in_review_reviewer_required CHECK (${constraint.value})`,
+  );
+};
+
 export const getTestDB = async (): Promise<OrviloDatabase> => {
   // Server DB mode (node-postgres)
   if (isServerDBMode) {
@@ -104,6 +122,7 @@ export const getTestDB = async (): Promise<OrviloDatabase> => {
     testServerDB = nodeDrizzle(client, { schema });
 
     await nodeMigrate(testServerDB, { migrationsFolder });
+    await applyTaskReviewerTestSchema(testServerDB as unknown as OrviloDatabase);
 
     return testServerDB as unknown as OrviloDatabase;
   }
@@ -142,5 +161,6 @@ export const getTestDB = async (): Promise<OrviloDatabase> => {
     );
   }
 
+  await applyTaskReviewerTestSchema(testClientDB as unknown as OrviloDatabase);
   return testClientDB as unknown as OrviloDatabase;
 };

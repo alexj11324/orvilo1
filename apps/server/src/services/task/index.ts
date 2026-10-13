@@ -136,6 +136,7 @@ export interface CreateTaskInput {
   parentTaskId?: string;
   priority?: number | null;
   projectId?: string;
+  reviewerAgentId?: string | null;
   schedulePattern?: string;
   scheduleTimezone?: string;
   sortOrder?: number;
@@ -223,6 +224,15 @@ export class TaskService {
    */
   async createTask(input: CreateTaskInput, mutation: TaskMutationContext = {}): Promise<TaskItem> {
     await this.assertAssigneeAgentBelongsToUser(input.assigneeAgentId);
+    if (input.reviewerAgentId) {
+      await this.assertAssigneeAgentBelongsToUser(input.reviewerAgentId);
+      await assertCanUseWorkspaceAgent({
+        agentId: input.reviewerAgentId,
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+    }
 
     const taskInput = input;
     const createData: CreateTaskInput & { config?: Record<string, unknown> } = {
@@ -1409,6 +1419,15 @@ export class TaskService {
     actor: { agentId?: string | null; userId?: string | null } = {},
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
+    if (data.reviewerAgentId) {
+      await this.assertAssigneeAgentBelongsToUser(data.reviewerAgentId);
+      await assertCanUseWorkspaceAgent({
+        agentId: data.reviewerAgentId,
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+    }
     if (data.projectId) {
       const project = await this.projectModel.findManageableById(data.projectId);
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
@@ -1838,17 +1857,17 @@ export class TaskService {
       ),
     ];
     const issueTaskIds = [task.id, ...allDescendantIds];
-    const subtaskAgents =
+    const childAgents =
       subtaskAssigneeIds.length > 0
         ? await this.agentModel.getAgentAvatarsByIds(subtaskAssigneeIds, issueTaskIds)
         : [];
-    const subtaskAgentMap = new Map(subtaskAgents.map((a) => [a.id, a]));
+    const childAgentMap = new Map(childAgents.map((a) => [a.id, a]));
 
     const buildSubtaskTree = (parentId: string): TaskDetailSubtask[] | undefined => {
       const children = childrenMap.get(parentId);
       if (!children || children.length === 0) return undefined;
       return children.map((s) => {
-        const agent = s.assigneeAgentId ? subtaskAgentMap.get(s.assigneeAgentId) : undefined;
+        const agent = s.assigneeAgentId ? childAgentMap.get(s.assigneeAgentId) : undefined;
         const runningTopic = runningTopicByTaskId.get(s.id);
         return {
           ...(agent
@@ -1871,7 +1890,7 @@ export class TaskService {
           identifier: s.identifier,
           name: s.name,
           priority: s.priority,
-          reviewerUserId: s.reviewerUserId,
+          reviewerAgentId: s.reviewerAgentId,
           ...(runningTopic?.topicId
             ? {
                 runningTopic: {
@@ -2001,7 +2020,7 @@ export class TaskService {
       // Property events carry values, not participant ids.
       if (log.type !== 'assignee_agent' && log.type !== 'assignee_user' && log.type !== 'reviewer')
         continue;
-      const target = log.type === 'assignee_agent' ? agentIds : userIds;
+      const target = log.type === 'assignee_user' ? userIds : agentIds;
       for (const id of [log.payload?.fromId, log.payload?.toId]) if (id) target.add(id);
     }
 
@@ -2189,7 +2208,7 @@ export class TaskService {
         // actor reads as the system (falsely crediting it for an agent's work).
         const resolveSide = (id?: string | null): TaskDetailActivityAuthor | null => {
           if (!id) return null;
-          return authorMap.get(id) ?? stub(id, kind === 'agent' ? 'agent' : 'user');
+          return authorMap.get(id) ?? stub(id, kind === 'member' ? 'user' : 'agent');
         };
         return [
           {
@@ -2286,7 +2305,7 @@ export class TaskService {
               timezone: task.scheduleTimezone,
             }
           : undefined,
-      reviewerUserId: task.reviewerUserId,
+      reviewerAgentId: task.reviewerAgentId,
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
       status: heartbeatStatus ?? task.status,
       dispatchPhase: task.dispatchPhase,

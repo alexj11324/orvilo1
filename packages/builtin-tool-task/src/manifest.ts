@@ -262,7 +262,7 @@ export const TaskManifest: BuiltinToolManifest = {
     },
     {
       description:
-        "Edit a task's fields (name, description, instruction, priority), assignee (agent or workspace member), parent, or project or dependencies (batched). Before changing either assignee, call viewTask and pass its domainRevision as expectedDomainRevision. Status changes go through updateTaskStatus; schedule configuration goes through setTaskSchedule.",
+        "Edit a task's fields (name, description, instruction, priority), assignee (agent or workspace member), reviewer Agent, parent, or project or dependencies (batched). Before changing either assignee or the reviewer, call viewTask and pass its domainRevision as expectedDomainRevision. Status changes go through updateTaskStatus; schedule configuration goes through setTaskSchedule.",
       name: TaskApiName.editTask,
       parameters: {
         properties: {
@@ -271,6 +271,11 @@ export const TaskManifest: BuiltinToolManifest = {
               'Identifiers of tasks this task should block on (e.g. ["TASK-2", "TASK-3"]).',
             items: { type: 'string' },
             type: 'array',
+          },
+          reviewerAgentId: {
+            description:
+              'Reviewer Agent ID. Choose a usable workspace Agent from viewTask, including yourself. A delivered Issue needs a reviewer before entering review. Set at any pre-review stage; null clears it only outside review.',
+            type: ['string', 'null'],
           },
           assigneeAgentId: {
             description:
@@ -289,7 +294,7 @@ export const TaskManifest: BuiltinToolManifest = {
           },
           expectedDomainRevision: {
             description:
-              'The latest domainRevision returned by viewTask. Required when changing assigneeAgentId or assigneeUserId; also fences other field edits. If the task changed, view it again and reconsider the edit instead of repeating a stale revision.',
+              'The latest domainRevision returned by viewTask. Required when changing assigneeAgentId, assigneeUserId or reviewerAgentId; also fences other field edits. If the task changed, view it again and reconsider the edit instead of repeating a stale revision.',
             minimum: 0,
             type: 'integer',
           },
@@ -443,11 +448,6 @@ export const TaskManifest: BuiltinToolManifest = {
           requirement: {
             description:
               'One-sentence acceptance requirement describing what "done" means for this task (e.g. "All unit tests pass and the new endpoint returns 200"). The server synthesizes acceptance criteria from it when no explicit criteria are given. Pass null to clear.',
-            type: ['string', 'null'],
-          },
-          verifierAgentId: {
-            description:
-              'Agent ID that executes the verify run. Omit to use the built-in verify agent. Pass null to clear an existing value.',
             type: ['string', 'null'],
           },
           verifyCriteriaIds: {

@@ -27,7 +27,7 @@ vi.mock('@/database/models/verifyCheckResult', () => ({
   VerifyCheckResultModel: vi.fn().mockImplementation(function () {
     return {
       listByRun: listResultsByRunMock,
-      updateByCheckItem: updateByCheckItemMock,
+      recordReviewerVerdict: updateByCheckItemMock,
     };
   }),
 }));
@@ -45,6 +45,7 @@ const db = {} as any;
 describe('settleVerifierCheckFromTerminal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    updateByCheckItemMock.mockResolvedValue(true);
     findRunByOperationMock.mockResolvedValue({ id: 'run-1' });
     listResultsByRunMock.mockResolvedValue([
       {
@@ -71,21 +72,22 @@ describe('settleVerifierCheckFromTerminal', () => {
     // A verifier that terminated without a verdict is an infra failure, not a
     // delivery judgment — recorded as `errored` with no verdict so it never gates
     // delivery or seeds a repair round.
-    const written = updateByCheckItemMock.mock.calls[0][2];
+    const written = updateByCheckItemMock.mock.calls[0][3];
     expect(written).toMatchObject({
       status: 'errored',
       toulmin: {
         limitation: 'Verifier failed before submitting a verdict: InvalidProviderAPIKey',
       },
-      verifierOperationId: 'verifier-op',
     });
-    expect(written.verdict).toBeUndefined();
+    expect(written.verdict).toBeNull();
     expect(recomputeMock).toHaveBeenCalledWith('parent-op');
     expect(finalizeVerifyRunMock).toHaveBeenCalledWith(db, 'u', 'parent-op', {}, 'ws');
   });
 
   it('does not overwrite a result already written by submitVerifyResult', async () => {
-    listResultsByRunMock.mockResolvedValue([{ checkItemId: 'check-1', status: 'passed' }]);
+    listResultsByRunMock.mockResolvedValue([
+      { checkItemId: 'check-1', status: 'passed', verdict: 'passed' },
+    ]);
 
     await settleVerifierCheckFromTerminal(db, 'u', {
       checkItemId: 'check-1',
@@ -97,5 +99,58 @@ describe('settleVerifierCheckFromTerminal', () => {
     expect(updateByCheckItemMock).not.toHaveBeenCalled();
     expect(recomputeMock).not.toHaveBeenCalled();
     expect(finalizeVerifyRunMock).not.toHaveBeenCalled();
+  });
+  it('keeps a pending check manually accepted while its reviewer was offline', async () => {
+    listResultsByRunMock.mockResolvedValue([
+      { checkItemId: 'check-1', status: 'running', userDecision: 'accepted' },
+    ]);
+    await settleVerifierCheckFromTerminal(db, 'u', {
+      checkItemId: 'check-1',
+      parentOperationId: 'parent-op',
+      reason: 'interrupted',
+      verifierOperationId: 'verifier-op',
+    });
+    expect(updateByCheckItemMock).not.toHaveBeenCalled();
+  });
+  it('ignores a delayed terminal hook from a prior reviewer attempt', async () => {
+    updateByCheckItemMock.mockResolvedValue(false);
+    await settleVerifierCheckFromTerminal(db, 'u', {
+      checkItemId: 'check-1',
+      parentOperationId: 'parent-op',
+      reason: 'error',
+      verifierOperationId: 'old-reviewer-op',
+    });
+    expect(recomputeMock).not.toHaveBeenCalled();
+    expect(finalizeVerifyRunMock).not.toHaveBeenCalled();
+  });
+  it('records a synchronous failed retry before its runner can bind the new operation', async () => {
+    listResultsByRunMock.mockResolvedValue([
+      {
+        checkItemId: 'check-1',
+        status: 'errored',
+        verifierOperationId: null,
+        metadata: { reviewerOperationId: 'fresh-retry-op' },
+      },
+    ]);
+    await settleVerifierCheckFromTerminal(db, 'u', {
+      checkItemId: 'check-1',
+      parentOperationId: 'parent-op',
+      reason: 'error',
+      errorMessage: 'Device dispatch failed',
+      verifierOperationId: 'fresh-retry-op',
+    });
+    expect(updateByCheckItemMock).toHaveBeenCalledWith(
+      'run-1',
+      'check-1',
+      'fresh-retry-op',
+      expect.objectContaining({
+        status: 'errored',
+        verdict: null,
+        toulmin: {
+          limitation: 'Verifier failed before submitting a verdict: Device dispatch failed',
+        },
+      }),
+    );
+    expect(finalizeVerifyRunMock).toHaveBeenCalledOnce();
   });
 });

@@ -71,6 +71,24 @@ describe('DeviceGateway', () => {
     });
   });
 
+  it('distinguishes confirmed device absence from a failed queue presence probe', async () => {
+    mockEnv.DEVICE_GATEWAY_URL = 'https://gateway.example.com';
+    mockEnv.DEVICE_GATEWAY_SERVICE_TOKEN = 'token';
+    const proxy = new DeviceGateway();
+    mockClient.queryDeviceList.mockResolvedValue([]);
+    await expect(proxy.queryDevicePresence('user', 'saved-device', 'workspace')).resolves.toBe(
+      false,
+    );
+    mockClient.queryDeviceList.mockResolvedValue([{ deviceId: 'saved-device' }]);
+    await expect(proxy.queryDevicePresence('user', 'saved-device', 'workspace')).resolves.toBe(
+      true,
+    );
+    mockClient.queryDeviceList.mockRejectedValue(new Error('gateway unavailable'));
+    await expect(proxy.queryDevicePresence('user', 'saved-device', 'workspace')).rejects.toThrow(
+      'gateway unavailable',
+    );
+  });
+
   describe('isConfigured', () => {
     it('should return false when DEVICE_GATEWAY_URL is not set', () => {
       const proxy = new DeviceGateway();

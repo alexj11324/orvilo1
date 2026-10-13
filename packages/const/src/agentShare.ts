@@ -103,8 +103,6 @@ export const RESERVED_AGENT_SHARE_SLUGS: string[] = [
   'self-feedback-intent',
   'self-reflection',
   'skill-management',
-  'task-agent',
-  'verify-agent',
   'web-onboarding',
 ];
 

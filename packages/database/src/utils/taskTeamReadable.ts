@@ -11,7 +11,6 @@ import { buildWorkspaceWhere } from './workspace';
 type TaskReadColumns = {
   assigneeUserId: AnyPgColumn;
   createdByUserId: AnyPgColumn;
-  reviewerUserId: AnyPgColumn;
   teamId: AnyPgColumn;
   projectId: AnyPgColumn;
   workspaceId: AnyPgColumn;

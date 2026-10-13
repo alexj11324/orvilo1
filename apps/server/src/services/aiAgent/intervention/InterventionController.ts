@@ -26,6 +26,11 @@ import {
   resolveRemoteCancel,
 } from '@/server/services/heterogeneousAgent/runAdmission';
 
+import {
+  cancelQueuedDeviceOperation,
+  finishQueuedDeviceOperation,
+  isQueuedDeviceOperation,
+} from '../deviceQueue';
 import { STOPPED_TOOL_CONTENT } from '../helpers/agentFactory';
 
 const log = debug('orvilo-server:ai-agent-service');
@@ -110,6 +115,25 @@ export class InterventionController {
     // for callers that don't know it, the durable admission ledger (the pinned
     // execution host + cancel tri-state), and the terminal-state check.
     const durableOperation = await this.deps.agentOperationModel.findById(resolvedOperationId);
+    if (
+      isQueuedDeviceOperation(durableOperation) &&
+      (await cancelQueuedDeviceOperation(
+        this.deps.db,
+        this.deps.userId,
+        resolvedOperationId,
+        durableOperation?.workspaceId ?? undefined,
+      ))
+    ) {
+      const stopped = await this.deps.agentOperationModel.findById(resolvedOperationId);
+      if (stopped) await finishQueuedDeviceOperation(this.deps.db, stopped);
+      return {
+        cancelState: 'confirmed',
+        deviceCancellationConfirmed: true,
+        operationId: resolvedOperationId,
+        success: true,
+        threadId,
+      };
+    }
     const resolvedTopicId = topicId ?? durableOperation?.topicId ?? undefined;
     const admission = readRemoteRunAdmission(durableOperation?.metadata);
     // A terminal durable row means the host already reported terminal — there

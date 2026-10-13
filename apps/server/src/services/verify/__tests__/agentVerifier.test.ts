@@ -1,20 +1,19 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { VerifyToolIdentifier } from '@orvilo/builtin-tool-verify';
 import type { VerifyCheckItem } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 
 import { createVerifierAgentRunner } from '../agentVerifier';
 
 // AgentModel exposes its methods as arrow-function class fields
 // (instance props, not on the prototype), so they can't be spied via the
 // prototype — mock the modules instead. Hoisted so the factories can close over them.
-const { existsByIdMock, getBuiltinAgentMock, execAgentMock, settleVerifierCheckFromTerminalMock } =
-  vi.hoisted(() => ({
-    execAgentMock: vi.fn(async (_params: any) => ({ operationId: 'verifier-op-1' })),
-    existsByIdMock: vi.fn(),
-    getBuiltinAgentMock: vi.fn(),
-    settleVerifierCheckFromTerminalMock: vi.fn(),
-  }));
+const { getReviewerMock, execAgentMock, settleVerifierCheckFromTerminalMock } = vi.hoisted(() => ({
+  execAgentMock: vi.fn(async (_params: any) => ({ operationId: 'verifier-op-1' })),
+  getReviewerMock: vi.fn(),
+  settleVerifierCheckFromTerminalMock: vi.fn(),
+}));
 
 /** The single execAgent param object, asserted to exist. */
 const execParams = (): any => {
@@ -23,14 +22,27 @@ const execParams = (): any => {
   return call![0];
 };
 
-vi.mock('@/database/models/agent', () => ({
-  AgentModel: vi.fn().mockImplementation(function () {
+vi.mock('@/database/models/agentOperation', () => ({
+  AgentOperationModel: vi.fn().mockImplementation(function () {
+    return { findById: vi.fn().mockResolvedValue(null) };
+  }),
+}));
+
+vi.mock('@/database/models/verifyRun', () => ({
+  VerifyRunModel: vi.fn().mockImplementation(function () {
+    return { findByOperation: vi.fn().mockResolvedValue({ id: 'run-1' }) };
+  }),
+}));
+vi.mock('@/database/models/verifyCheckResult', () => ({
+  VerifyCheckResultModel: vi.fn().mockImplementation(function () {
     return {
-      existsById: existsByIdMock,
-      getBuiltinAgent: getBuiltinAgentMock,
+      listByRun: vi.fn().mockResolvedValue([{ checkItemId: 'check-1' }]),
+      updateByCheckItem: vi.fn(),
     };
   }),
 }));
+
+vi.mock('../reviewerAgent', () => ({ resolveIssueReviewer: getReviewerMock }));
 // The runner dynamically imports AiAgentService to break a static cycle.
 vi.mock('@/server/services/aiAgent', () => ({
   AiAgentService: vi.fn().mockImplementation(function () {
@@ -57,8 +69,6 @@ const db = {} as any;
 const baseParams = {
   db,
   deliverable: 'the toolbar',
-  model: 'gpt-parent',
-  provider: 'openai',
   taskId: 'task-1',
   topicId: 'topic-1',
   userId: 'u',
@@ -68,22 +78,20 @@ describe('createVerifierAgentRunner', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     execAgentMock.mockResolvedValue({ operationId: 'verifier-op-1' });
+    getReviewerMock.mockResolvedValue('agent-codex');
   });
 
-  it('returns undefined without a topicId (no thread to host the verifier)', () => {
-    const runner = createVerifierAgentRunner({ db, deliverable: 'x', topicId: null, userId: 'u' });
+  it('returns undefined without an Issue binding', () => {
+    const runner = createVerifierAgentRunner({ db, deliverable: 'x', userId: 'u' });
     expect(runner).toBeUndefined();
   });
 
   it('runs a pinned agent by agentId, keeping its own model/provider', async () => {
-    existsByIdMock.mockResolvedValue(true);
-
-    const runner = createVerifierAgentRunner({ ...baseParams, verifierAgentId: 'agent-codex' })!;
+    const runner = createVerifierAgentRunner({ ...baseParams })!;
     const result = await runner(runnerArgs);
 
-    expect(result).toEqual({ verifierOperationId: 'verifier-op-1' });
-    expect(existsByIdMock).toHaveBeenCalledWith('agent-codex');
-    expect(getBuiltinAgentMock).not.toHaveBeenCalled();
+    expect(result).toEqual(expect.objectContaining({ verifierOperationId: 'verifier-op-1' }));
+    expect(getReviewerMock).toHaveBeenCalledWith(db, 'u', 'task-1', undefined);
 
     const params = execParams();
     expect(params.agentId).toBe('agent-codex');
@@ -91,37 +99,30 @@ describe('createVerifierAgentRunner', () => {
     expect(params.slug).toBeUndefined();
     expect(params.model).toBeUndefined();
     expect(params.provider).toBeUndefined();
+    expect(params.instructions).toBeUndefined();
+    expect(params.topicId).toBeUndefined();
     // A pinned agent lacks the writeback tool, so it must be injected.
     expect(params.additionalPluginIds).toEqual([VerifyToolIdentifier]);
   });
 
-  it('falls back to the builtin verify agent (by slug) with the provided verify model config', async () => {
-    existsByIdMock.mockResolvedValue(false); // pinned id no longer exists
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
-    const runner = createVerifierAgentRunner({ ...baseParams, verifierAgentId: 'agent-deleted' })!;
-    await runner(runnerArgs);
-
-    expect(getBuiltinAgentMock).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.verifyAgent);
-    const params = execParams();
-    expect(params.slug).toBe(BUILTIN_AGENT_SLUGS.verifyAgent);
-    expect(params.agentId).toBeUndefined();
-    expect(params.model).toBe('gpt-parent');
-    expect(params.provider).toBe('openai');
-    // The builtin verify agent already declares the tool — not re-injected.
-    expect(params.additionalPluginIds).toBeUndefined();
-  });
+  it.each(['missing reviewer', 'deleted reviewer', 'unsupported runtime', 'Agent Use denied'])(
+    'never executes a fallback when %s',
+    async (reason) => {
+      getReviewerMock.mockRejectedValue(new Error(reason));
+      const runner = createVerifierAgentRunner(baseParams)!;
+      await expect(runner(runnerArgs)).rejects.toThrow(reason);
+      expect(execAgentMock).not.toHaveBeenCalled();
+    },
+  );
 
   it('registers a verifier-terminal hook for local and queued completion handling', async () => {
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
     const runner = createVerifierAgentRunner({ ...baseParams, workspaceId: 'ws-1' })!;
     await runner(runnerArgs);
 
     const hooks = execParams().hooks;
     expect(hooks).toEqual([
       expect.objectContaining({
-        id: 'verify-agent-terminal',
+        id: 'reviewer-terminal',
         type: 'onComplete',
         webhook: expect.objectContaining({
           body: {
@@ -158,20 +159,7 @@ describe('createVerifierAgentRunner', () => {
     );
   });
 
-  it('uses the builtin agent when no verifierAgentId is pinned', async () => {
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
-    const runner = createVerifierAgentRunner({ ...baseParams })!;
-    await runner(runnerArgs);
-
-    // No pinned id → never probes existsById, goes straight to the builtin.
-    expect(existsByIdMock).not.toHaveBeenCalled();
-    expect(execParams().slug).toBe(BUILTIN_AGENT_SLUGS.verifyAgent);
-  });
-
   it('keeps the parent task scope while starting a fresh isolated topic', async () => {
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
     const runner = createVerifierAgentRunner({ ...baseParams })!;
     await runner(runnerArgs);
 
@@ -179,8 +167,6 @@ describe('createVerifierAgentRunner', () => {
   });
 
   it('injects the builder-captured evidence into the verifier prompt', async () => {
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
     const runner = createVerifierAgentRunner({ ...baseParams })!;
     await runner({
       ...runnerArgs,
@@ -198,8 +184,6 @@ describe('createVerifierAgentRunner', () => {
   });
 
   it('omits the captured-evidence section when no evidence was provided', async () => {
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
     const runner = createVerifierAgentRunner({ ...baseParams })!;
     await runner(runnerArgs);
 
@@ -207,8 +191,6 @@ describe('createVerifierAgentRunner', () => {
   });
 
   it('attaches file-backed evidence to the verifier run so it can see the artifact', async () => {
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
     const runner = createVerifierAgentRunner({ ...baseParams })!;
     await runner({
       ...runnerArgs,
@@ -224,11 +206,24 @@ describe('createVerifierAgentRunner', () => {
   });
 
   it('does not pass fileIds when no evidence is file-backed', async () => {
-    getBuiltinAgentMock.mockResolvedValue({ id: 'builtin-verify' });
-
     const runner = createVerifierAgentRunner({ ...baseParams })!;
     await runner({ ...runnerArgs, evidence: [{ content: 'text', type: 'text' }] });
 
     expect(execParams().fileIds).toBeUndefined();
+  });
+  it('binds the minted reviewer operation to its check before dispatch', async () => {
+    execAgentMock.mockImplementationOnce(async (params) => {
+      await params.beforeOperationStart({ operationId: 'reviewer-minted', topicId: 'fresh-topic' });
+      return { operationId: 'reviewer-minted' };
+    });
+    await createVerifierAgentRunner(baseParams)!(runnerArgs);
+    const model = vi.mocked(VerifyCheckResultModel).mock.results[0].value;
+    expect(model.updateByCheckItem).toHaveBeenCalledWith('run-1', 'check-1', {
+      metadata: {
+        reviewerOperationId: 'reviewer-minted',
+        initiatingMessage: expect.stringContaining('Issue task-1'),
+      },
+      verifierOperationId: null,
+    });
   });
 });

@@ -21,8 +21,6 @@ export const BUILTIN_AGENT_SLUGS = {
   selfFeedbackIntent: 'self-feedback-intent',
   selfReflection: 'self-reflection',
   skillManagement: 'skill-management',
-  taskAgent: 'task-agent',
-  verifyAgent: 'verify-agent',
   webOnboarding: 'web-onboarding',
 } as const;
 
@@ -95,7 +93,7 @@ export interface RuntimeContext {
    * The system role stored on the agent row, when the user customized it.
    * Builtins whose runtime prompt is only a default the user may edit (the
    * renameable inbox assistant) honor it; builtins whose prompt is the
-   * feature itself (page / task / supervisor) ignore it or embed it via
+   * feature itself (page / supervisor) ignore it or embed it via
    * their own context.
    */
   storedSystemRole?: string;

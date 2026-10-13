@@ -382,27 +382,14 @@ export const resolveAgentConfig = (
     }
 
     if (ctx.scope === 'task') {
-      const taskAgentPlugins = finalPlugins.includes(TaskIdentifier)
+      const scopedPlugins = finalPlugins.includes(TaskIdentifier)
         ? finalPlugins
         : [TaskIdentifier, ...finalPlugins];
-      const taskAgentRuntime = getAgentRuntimeConfig(BUILTIN_AGENT_SLUGS.taskAgent, {});
-      const taskAgentSystemRole = taskAgentRuntime?.systemRole || '';
-      const mergedSystemRole = taskAgentSystemRole
-        ? systemRoleWithLocale
-          ? `${systemRoleWithLocale}\n\n${taskAgentSystemRole}`
-          : taskAgentSystemRole
-        : systemRoleWithLocale || '';
-
-      finalAgentConfig = {
-        ...finalAgentConfig,
-        systemRole: mergedSystemRole,
-      };
-
       return {
         agentConfig: finalAgentConfig,
         chatConfig: finalChatConfig,
         isBuiltinAgent: false,
-        plugins: applyPluginFilters(taskAgentPlugins),
+        plugins: applyPluginFilters(scopedPlugins),
       };
     }
 
@@ -527,19 +514,8 @@ export const resolveAgentConfig = (
     };
   }
 
-  if (ctx.scope === 'task' && slug !== BUILTIN_AGENT_SLUGS.taskAgent) {
-    if (!finalPlugins.includes(TaskIdentifier)) {
-      finalPlugins = [TaskIdentifier, ...finalPlugins];
-    }
-
-    const taskAgentRuntime = getAgentRuntimeConfig(BUILTIN_AGENT_SLUGS.taskAgent, {});
-    const taskAgentSystemRole = taskAgentRuntime?.systemRole || '';
-
-    if (taskAgentSystemRole) {
-      resolvedSystemRole = resolvedSystemRole
-        ? `${resolvedSystemRole}\n\n${taskAgentSystemRole}`
-        : taskAgentSystemRole;
-    }
+  if (ctx.scope === 'task' && !finalPlugins.includes(TaskIdentifier)) {
+    finalPlugins = [TaskIdentifier, ...finalPlugins];
   }
 
   // Merge runtime systemRole into agent config

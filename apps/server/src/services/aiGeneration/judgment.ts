@@ -990,6 +990,7 @@ export const runAcpJudgment = async <T = unknown>(
         ...binding,
         appContext: {
           ...(initialTopicMetadata ? { initialTopicMetadata } : {}),
+          skipTaskVerification: true,
           judgment: {
             attempt: judgment.attempt,
             budget: { maxSteps, maxWaitMs: timeoutMs },

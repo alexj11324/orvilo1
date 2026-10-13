@@ -47,6 +47,8 @@ const mocks = vi.hoisted(() => ({
 
 // Real ActionIcon only surfaces its title via a hover Tooltip; the
 // assertions click the title text directly.
+vi.mock('./TaskReviewerProperty', () => ({ default: () => <div>Reviewer Agent</div> }));
+
 vi.mock('@/components/ActionIcon', () => ({
   default: ({ onClick, title }: { onClick?: () => void; title?: string }) => (
     <button type="button" onClick={onClick}>
@@ -169,6 +171,11 @@ vi.mock('@/store/task', () => {
       activeTaskId: 'T-231',
       taskDetailMap: {
         'T-231': { id: 'task-database-231', identifier: 'T-231', ...mocks.taskDetailOverrides },
+        'T-motion': {
+          id: 'motion-db',
+          name: 'A motion regression goal',
+          reviewerAgentId: 'reviewer-1',
+        },
       },
     });
   useTaskStore.getState = () => ({
@@ -578,6 +585,7 @@ describe('Task loading motion respects both live preferences', () => {
     vi.doUnmock('@/components/NeuralNetworkLoading');
     vi.doUnmock('@/components/ActionIcon');
     vi.doUnmock('./TaskVerifyConfig');
+    vi.doMock('./TaskReviewerProperty', () => ({ default: () => <div>Reviewer Agent</div> }));
     // Fixtures stop network/device side effects at data boundaries, preserving
     // public selectors and actual Zustand subscriptions for preference changes.
     vi.doMock('@/store/user', async () => {
@@ -595,7 +603,12 @@ describe('Task loading motion respects both live preferences', () => {
         useTaskStore: create(() => ({
           activeTaskId: 'T-motion',
           taskDetailMap: {
-            'T-motion': { id: 'motion-db', name: 'A motion regression goal', verify: undefined },
+            'T-motion': {
+              id: 'motion-db',
+              name: 'A motion regression goal',
+              reviewerAgentId: 'reviewer-1',
+              verify: undefined,
+            },
           },
           updateVerifyConfig: vi.fn(),
         })),
@@ -642,15 +655,6 @@ describe('Task loading motion respects both live preferences', () => {
       const readRubrics = () => ({ data: [] });
       return { useRubrics: readRubrics };
     });
-    vi.doMock('./useTaskVerifyModel', () => {
-      const readTaskVerifyModel = () => ({
-        isLoading: false,
-        isReady: true,
-        model: 'test-model',
-        provider: 'test-provider',
-      });
-      return { useTaskVerifyModel: readTaskVerifyModel };
-    });
     vi.doMock('@/services/verify', () => ({
       verifyService: {
         generateCriteria: (...args: unknown[]) => fixture.generateCriteria(...args),
@@ -660,14 +664,12 @@ describe('Task loading motion respects both live preferences', () => {
     // Resolve the queued data fixtures before mounting the actual owners.
     // importActual bypasses this file's hoisted Verifier mock explicitly;
     // importing the real scope normally preserves the owners' context identity.
-    const userStore = await import('@/store/user');
-    const scope = await import('./TaskDetailScope');
-    const acceptance = await vi.importActual<{ default: typeof TaskAcceptance }>(
-      './TaskAcceptance',
-    );
-    const verification = await vi.importActual<{ default: typeof TaskVerifyConfig }>(
-      './TaskVerifyConfig',
-    );
+    const [userStore, scope, acceptance, verification] = await Promise.all([
+      import('@/store/user'),
+      import('./TaskDetailScope'),
+      vi.importActual<{ default: typeof TaskAcceptance }>('./TaskAcceptance'),
+      vi.importActual<{ default: typeof TaskVerifyConfig }>('./TaskVerifyConfig'),
+    ]);
     MotionTaskAcceptance = acceptance.default;
     MotionTaskVerifyConfig = verification.default;
     MotionTaskDetailScope = scope.TaskDetailScope;
@@ -689,7 +691,6 @@ describe('Task loading motion respects both live preferences', () => {
       '@/hooks/usePermission',
       '@/features/Acceptance',
       '@/features/Acceptance/hooks',
-      './useTaskVerifyModel',
       '@/services/verify',
     ]) {
       vi.doUnmock(moduleName);

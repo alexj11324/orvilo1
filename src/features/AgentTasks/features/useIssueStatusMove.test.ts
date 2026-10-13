@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   confirmModal: vi.fn(),
   contractContext: vi.fn(),
   find: vi.fn(),
+  pickReviewer: vi.fn(),
   moveBoardMaybePickingState: vi.fn(),
   mutate: vi.fn(),
   refreshDetail: vi.fn(),
@@ -20,6 +21,10 @@ const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
   toastKey: vi.fn(() => 'myWork.moveConflict'),
   updateTask: vi.fn(),
+}));
+
+vi.mock('@/features/AgentTasks/features/ReviewerAgentSelector', () => ({
+  pickReviewerAgent: mocks.pickReviewer,
 }));
 
 vi.mock('@/services/task', () => ({
@@ -66,6 +71,7 @@ const teamTask = (overrides: Record<string, unknown> = {}) => ({
     domainRevision: 7,
     id: 'tsk_9',
     teamId: 'team-1',
+    reviewerAgentId: 'reviewer-1',
     ...overrides,
   },
 });
@@ -261,6 +267,17 @@ describe('useIssueStatusMove', () => {
     expect(mocks.toastKey).toHaveBeenCalledWith(conflict);
     expect(mocks.toastError).toHaveBeenCalled();
     expect(mocks.refreshDetail).not.toHaveBeenCalled();
+  });
+
+  it('keeps the status unchanged when reviewer selection is dismissed', async () => {
+    mocks.find.mockResolvedValue(teamTask({ reviewerAgentId: null }));
+    mocks.pickReviewer.mockResolvedValue(null);
+    const { result } = renderHook(() => useIssueStatusMove());
+    await expect(
+      result.current({ taskIdentifier: 'T-9', target: target({ category: 'in_review' }) }),
+    ).resolves.toBe(false);
+    expect(mocks.updateTask).not.toHaveBeenCalled();
+    expect(mocks.moveBoardMaybePickingState).not.toHaveBeenCalled();
   });
 
   it('never spawns a builder when the issue moves into review', async () => {

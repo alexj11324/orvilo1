@@ -25,6 +25,68 @@ afterEach(async () => {
 });
 
 describe('AgentOperationModel', () => {
+  it('parks the same offline operation and permits only one launch claim', async () => {
+    const model = new AgentOperationModel(serverDB, userId);
+    await model.recordStart({ operationId: 'offline-queue', metadata: { _hooks: ['original'] } });
+    const queue = {
+      offlineSince: new Date().toISOString(),
+      queuedAt: new Date().toISOString(),
+      state: 'waiting',
+      payload: { prompt: 'Original request' },
+    };
+    expect(await model.parkForDevice('offline-queue', queue)).toBe(true);
+    expect((await model.findById('offline-queue'))?.status).toBe('idle');
+    expect(
+      await new AgentOperationModel(serverDB, otherUserId).claimDeviceQueue('offline-queue'),
+    ).toBeUndefined();
+    const claims = await Promise.all([
+      model.claimDeviceQueue('offline-queue'),
+      model.claimDeviceQueue('offline-queue'),
+    ]);
+    expect(claims.filter(Boolean)).toHaveLength(1);
+    expect(claims.find(Boolean)?.metadata).toMatchObject({
+      _hooks: ['original'],
+      deviceQueue: { payload: { prompt: 'Original request' }, state: 'launching' },
+    });
+  });
+
+  it('fences stale presence resets and expiry against the observed waiting queue', async () => {
+    const model = new AgentOperationModel(serverDB, userId);
+    const queue = {
+      queuedAt: '2026-10-13T00:00:00Z',
+      offlineSince: '2026-10-13T00:00:00Z',
+      state: 'waiting',
+      payload: {},
+    };
+    await model.recordStart({ operationId: 'offline-observation' });
+    await model.parkForDevice('offline-observation', queue);
+    const refreshed = { ...queue, offlineSince: '2026-10-13T00:01:00Z' };
+    expect(await model.parkForDevice('offline-observation', refreshed, queue)).toBe(true);
+    expect(await model.settleDeviceQueue('offline-observation', 'error', undefined, queue)).toBe(
+      false,
+    );
+    expect(await model.claimDeviceQueue('offline-observation')).toBeDefined();
+    expect(await model.parkForDevice('offline-observation', queue, refreshed)).toBe(false);
+    expect((await model.findById('offline-observation'))?.status).toBe('running');
+  });
+
+  it('cancels a parked device operation before a later launch can claim it', async () => {
+    const model = new AgentOperationModel(serverDB, userId);
+    await model.recordStart({ operationId: 'offline-cancel' });
+    await model.parkForDevice('offline-cancel', {
+      queuedAt: new Date().toISOString(),
+      offlineSince: new Date().toISOString(),
+      state: 'waiting',
+      payload: {},
+    });
+    expect(
+      await new AgentOperationModel(serverDB, otherUserId).cancelDeviceQueue('offline-cancel'),
+    ).toBe(false);
+    expect(await model.cancelDeviceQueue('offline-cancel')).toBe(true);
+    expect(await model.claimDeviceQueue('offline-cancel')).toBeUndefined();
+    expect((await model.findById('offline-cancel'))?.status).toBe('interrupted');
+  });
+
   it('matches diagnostic source identity within both topic and owner', async () => {
     await serverDB.insert(topics).values({ id: 'diagnostic-topic', userId });
     const model = new AgentOperationModel(serverDB, userId);

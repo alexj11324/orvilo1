@@ -12,7 +12,6 @@ import {
   countActiveDelegations,
   countMemberWorkload,
   countOpenTasksAssignedTo,
-  countOpenTasksReviewedBy,
   findMembershipRow,
   listMembersWithProfiles,
   listOpenAssignedTaskTitles,
@@ -25,8 +24,6 @@ import { canGrantWorkspaceRole, canManageMember, type WorkspaceRoleName } from '
 export interface MemberSummary extends WorkspaceMemberItem {
   /** Open tasks the member currently owns — drives the roster's work column. */
   openAssignedCount: number;
-  /** Open tasks awaiting the member's review. */
-  openReviewingCount: number;
   /** Project memberships the member holds inside this workspace. */
   projectCount: number;
   user: {
@@ -40,7 +37,6 @@ export interface MemberSummary extends WorkspaceMemberItem {
 export interface MemberRemovalPreview {
   assignedTaskCount: number;
   assignedTasks: Array<{ id: string; title: string }>;
-  reviewingTaskCount: number;
   runningDelegationCount: number;
   sharedDeviceCount: number;
 }
@@ -63,7 +59,6 @@ export const listMemberSummaries = async (
   return rows.map(({ member, user }) => ({
     ...member,
     openAssignedCount: workload.get(member.userId)?.openAssignedCount ?? 0,
-    openReviewingCount: workload.get(member.userId)?.openReviewingCount ?? 0,
     projectCount: workload.get(member.userId)?.projectCount ?? 0,
     user: user
       ? {
@@ -248,18 +243,15 @@ export const previewMemberRemoval = async (
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Not an active member' });
   }
 
-  const [assignedTaskCount, reviewingTaskCount, runningDelegationCount, assignedTasks] =
-    await Promise.all([
-      countOpenTasksAssignedTo(db, params.workspaceId, params.targetUserId),
-      countOpenTasksReviewedBy(db, params.workspaceId, params.targetUserId),
-      countActiveDelegations(db, params.workspaceId, params.targetUserId),
-      listOpenAssignedTaskTitles(db, params.workspaceId, params.targetUserId),
-    ]);
+  const [assignedTaskCount, runningDelegationCount, assignedTasks] = await Promise.all([
+    countOpenTasksAssignedTo(db, params.workspaceId, params.targetUserId),
+    countActiveDelegations(db, params.workspaceId, params.targetUserId),
+    listOpenAssignedTaskTitles(db, params.workspaceId, params.targetUserId),
+  ]);
 
   return {
     assignedTaskCount,
     assignedTasks,
-    reviewingTaskCount,
     runningDelegationCount,
     // Released clients retain this preview field; removal never unenrolls hosts.
     sharedDeviceCount: 0,

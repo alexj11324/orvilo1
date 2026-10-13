@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, isNull, or, sql } from 'drizzle-orm';
 
 import type { NewVerifyCheckResult, VerifyCheckResultItem } from '../schemas/verify';
 import { verifyCheckResults, verifyRuns } from '../schemas/verify';
@@ -205,6 +205,49 @@ export class VerifyCheckResultModel {
           this.ownership(),
         ),
       );
+  };
+
+  /** Commit the assigned reviewer once, without replacing a human decision or an earlier verdict. */
+  recordReviewerVerdict = async (
+    verifyRunId: string,
+    checkItemId: string,
+    verifierOperationId: string,
+    value: Pick<VerifyCheckResultItem, 'status' | 'verdict'> &
+      Partial<Pick<VerifyCheckResultItem, 'completedAt' | 'confidence' | 'suggestion' | 'toulmin'>>,
+  ): Promise<boolean> => {
+    const written = await this.db
+      .update(verifyCheckResults)
+      .set({ ...value, verifierOperationId })
+      .where(
+        and(
+          eq(verifyCheckResults.verifyRunId, verifyRunId),
+          eq(verifyCheckResults.checkItemId, checkItemId),
+          this.ownership(),
+          isNull(verifyCheckResults.verdict),
+          isNull(verifyCheckResults.userDecision),
+          exists(
+            this.db
+              .select({ id: verifyRuns.id })
+              .from(verifyRuns)
+              .where(
+                and(
+                  eq(verifyRuns.id, verifyRunId),
+                  this.runOwnership(),
+                  isNull(verifyRuns.userDecision),
+                ),
+              ),
+          ),
+          or(
+            eq(verifyCheckResults.verifierOperationId, verifierOperationId),
+            and(
+              isNull(verifyCheckResults.verifierOperationId),
+              sql`${verifyCheckResults.metadata}->>'reviewerOperationId' = ${verifierOperationId}`,
+            ),
+          ),
+        ),
+      )
+      .returning({ id: verifyCheckResults.id });
+    return written.length > 0;
   };
 
   /**

@@ -18,13 +18,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import LabelChips from '@/features/Labels/LabelChips';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import IssueStatusPicker from '../features/IssueStatusPicker';
 import { type PickerControl } from '../features/PickerTrigger';
+import { ReviewerAgentSelector } from '../features/ReviewerAgentSelector';
 import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
@@ -32,6 +33,7 @@ import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTeamWorkflowStates } from '../features/useTeamWorkflowStates';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
+import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { isDueDateOverdue } from './isDueDateOverdue';
 import { RAIL_CONTROL_CLASS, RAIL_PLACEHOLDER_CLASS } from './railControl';
@@ -107,7 +109,7 @@ const TaskProperties = memo(() => {
   const dueDate = useTaskDetailSelector(taskDetailSelectors.taskDueDate);
   const labels = useTaskDetailSelector(taskDetailSelectors.taskLabels);
   const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
-  const reviewerUserId = useTaskDetailSelector(taskDetailSelectors.taskReviewerUserId);
+  const reviewerAgentId = useTaskDetailSelector(taskDetailSelectors.taskReviewerAgentId);
   const createdByUserId = useTaskDetailSelector(taskDetailSelectors.taskCreatedByUserId);
   const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const heartbeatInterval = useTaskDetailSelector(taskDetailSelectors.taskPeriodicInterval);
@@ -115,8 +117,7 @@ const TaskProperties = memo(() => {
   const schedulePattern = useTaskDetailSelector(taskDetailSelectors.taskSchedulePattern);
   const scheduleTimezone = useTaskDetailSelector(taskDetailSelectors.taskScheduleTimezone);
   const memberMeta = useUserDisplayMeta(assigneeUserId);
-  const reviewerMeta = useUserDisplayMeta(reviewerUserId);
-  const updateTask = useTaskStore((s) => s.updateTask);
+  const reviewerMeta = useAgentDisplayMeta(reviewerAgentId);
   const activeWorkspaceId = useActiveWorkspaceId();
   // The rail names the team's own workflow state (the shared Issue status
   // model), falling back to the category label until the catalog resolves.
@@ -152,18 +153,13 @@ const TaskProperties = memo(() => {
   const optionalFields = {
     dueDate: !!dueDate || revealed.has('dueDate'),
     labels: labels.length > 0 || revealed.has('labels'),
-    reviewer:
-      (workflowCategory === 'in_review' || !!reviewerUserId || revealed.has('reviewer')) &&
-      shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId),
+    reviewer: workflowCategory === 'in_review' || !!reviewerAgentId || revealed.has('reviewer'),
     schedule: !!(schedulePattern || heartbeatInterval) || revealed.has('schedule'),
   };
   const addableFields = [
     { key: 'dueDate', label: t('taskDetail.dueDate'), shown: optionalFields.dueDate },
     { key: 'labels', label: t('taskDetail.labels.title'), shown: optionalFields.labels },
-    // Only where there are members to pick from (see `shouldShowMemberAssignee`).
-    ...(shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId)
-      ? [{ key: 'reviewer', label: t('taskDetail.reviewer'), shown: optionalFields.reviewer }]
-      : []),
+    { key: 'reviewer', label: t('taskDetail.reviewer'), shown: optionalFields.reviewer },
     { key: 'schedule', label: t('taskDetail.property.schedule'), shown: optionalFields.schedule },
     ...ISSUE_RELATION_KINDS.map((kind) => ({
       key: kind,
@@ -331,34 +327,15 @@ const TaskProperties = memo(() => {
 
         {optionalFields.reviewer && (
           <PropertyRow label={t('taskDetail.reviewer')}>
-            <AssigneeMemberSelector
+            <ReviewerAgentSelector
               control={{ ...railControl, title: t('taskDetail.reviewer') }}
-              currentUserId={reviewerUserId}
+              currentAgentId={reviewerAgentId}
               defaultOpen={opening === 'reviewer'}
-              disabled={status === 'running'}
-              taskCreatorId={createdByUserId}
               taskIdentifier={taskId}
-              taskVisibility={visibility}
-              onChange={(userId, member) =>
-                void updateTask(
-                  taskId,
-                  { reviewerUserId: userId },
-                  {
-                    optimisticReviewer: member
-                      ? {
-                          avatar: member.user?.avatar ?? null,
-                          id: member.userId,
-                          name: member.user?.fullName ?? null,
-                          type: 'user',
-                        }
-                      : undefined,
-                  },
-                )
-              }
             >
-              {reviewerUserId ? (
+              {reviewerAgentId ? (
                 <>
-                  <AssigneeUserAvatar size={16} userId={reviewerUserId} />
+                  <AssigneeAvatar agentId={reviewerAgentId} size={16} />
                   <span className="truncate">{reviewerMeta?.title}</span>
                 </>
               ) : (
@@ -369,7 +346,7 @@ const TaskProperties = memo(() => {
                   </span>
                 </>
               )}
-            </AssigneeMemberSelector>
+            </ReviewerAgentSelector>
           </PropertyRow>
         )}
 

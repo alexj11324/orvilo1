@@ -149,10 +149,10 @@ export const listMembersWithProfiles = async (
   }));
 };
 
-const openTaskWhere = (workspaceId: string, userId: string, column: 'assignee' | 'reviewer') =>
+const openTaskWhere = (workspaceId: string, userId: string) =>
   and(
     eq(tasks.workspaceId, workspaceId),
-    eq(column === 'assignee' ? tasks.assigneeUserId : tasks.reviewerUserId, userId),
+    eq(tasks.assigneeUserId, userId),
     inArray(tasks.status, [...OPEN_TASK_STATUSES]),
     isNull(tasks.deletedAt),
   );
@@ -165,44 +165,28 @@ export const countOpenTasksAssignedTo = async (
   const [row] = await db
     .select({ total: count() })
     .from(tasks)
-    .where(openTaskWhere(workspaceId, userId, 'assignee'));
-  return Number(row?.total ?? 0);
-};
-
-export const countOpenTasksReviewedBy = async (
-  db: OrviloDatabase,
-  workspaceId: string,
-  userId: string,
-) => {
-  const [row] = await db
-    .select({ total: count() })
-    .from(tasks)
-    .where(openTaskWhere(workspaceId, userId, 'reviewer'));
+    .where(openTaskWhere(workspaceId, userId));
   return Number(row?.total ?? 0);
 };
 
 export interface MemberWorkload {
   openAssignedCount: number;
-  openReviewingCount: number;
   projectCount: number;
 }
 
 const EMPTY_WORKLOAD: MemberWorkload = {
   openAssignedCount: 0,
-  openReviewingCount: 0,
   projectCount: 0,
 };
 
 /**
- * Per-member workload for the whole roster in three grouped aggregates —
- * project memberships, open assignee tasks, open reviewer tasks. One row per
- * member would N+1 the directory; grouping in SQL keeps it at three queries.
+ * Per-member project and assigned Issue workload in two grouped aggregates.
  */
 export const countMemberWorkload = async (
   db: OrviloDatabase,
   workspaceId: string,
 ): Promise<Map<string, MemberWorkload>> => {
-  const [projectRows, assignedRows, reviewingRows] = await Promise.all([
+  const [projectRows, assignedRows] = await Promise.all([
     db
       .select({ total: count(), userId: projectMembers.userId })
       .from(projectMembers)
@@ -226,18 +210,6 @@ export const countMemberWorkload = async (
         ),
       )
       .groupBy(tasks.assigneeUserId),
-    db
-      .select({ total: count(), userId: tasks.reviewerUserId })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.workspaceId, workspaceId),
-          inArray(tasks.status, [...OPEN_TASK_STATUSES]),
-          isNull(tasks.deletedAt),
-          isNotNull(tasks.reviewerUserId),
-        ),
-      )
-      .groupBy(tasks.reviewerUserId),
   ]);
 
   const workload = new Map<string, MemberWorkload>();
@@ -247,7 +219,6 @@ export const countMemberWorkload = async (
   };
   for (const row of projectRows) merge(row.userId, { projectCount: Number(row.total) });
   for (const row of assignedRows) merge(row.userId, { openAssignedCount: Number(row.total) });
-  for (const row of reviewingRows) merge(row.userId, { openReviewingCount: Number(row.total) });
   return workload;
 };
 
@@ -260,7 +231,7 @@ export const listOpenAssignedTaskTitles = async (
   const rows = await db
     .select({ id: tasks.id, title: tasks.name })
     .from(tasks)
-    .where(openTaskWhere(workspaceId, userId, 'assignee'))
+    .where(openTaskWhere(workspaceId, userId))
     .orderBy(asc(tasks.createdAt), asc(tasks.id))
     .limit(limit);
   return rows.map((row) => ({ id: row.id, title: row.title ?? '' }));

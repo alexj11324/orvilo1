@@ -22,6 +22,7 @@ import {
   gt,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   like,
   ne,
@@ -645,7 +646,10 @@ export class AgentModel {
                   sql`${tasks.isDeleted} IS NOT TRUE`,
                   or(
                     and(
-                      eq(tasks.assigneeAgentId, agents.id),
+                      or(
+                        eq(tasks.assigneeAgentId, agents.id),
+                        eq(tasks.reviewerAgentId, agents.id),
+                      ),
                       or(
                         eq(agents.workspaceId, this.workspaceId),
                         and(isNull(agents.workspaceId), eq(agents.userId, tasks.createdByUserId)),
@@ -963,20 +967,36 @@ export class AgentModel {
 
   private assertAgentNotAssigned = async (db: OrviloDatabase, agentIds: string[]) => {
     if (agentIds.length === 0) return;
-    const [task] = await db
-      .select({ id: tasks.id })
+    const references = await db
+      .select({
+        identifier: tasks.identifier,
+        name: tasks.name,
+        readable: sql<boolean>`${buildTaskReadableWhere(db, { userId: this.userId, workspaceId: this.workspaceId })}`,
+      })
       .from(tasks)
       .where(
         and(
-          inArray(tasks.assigneeAgentId, agentIds),
-          or(isNull(tasks.isDeleted), eq(tasks.isDeleted, false)),
+          or(
+            and(
+              inArray(tasks.assigneeAgentId, agentIds),
+              or(isNull(tasks.isDeleted), eq(tasks.isDeleted, false)),
+            ),
+            inArray(tasks.reviewerAgentId, agentIds),
+          ),
         ),
-      )
-      .limit(1);
-    if (task)
+      );
+    if (references.length)
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'Reassign Issues before deleting their Agent',
+        message: `Reassign Issues before deleting their Agent: ${references
+          .map((issue) =>
+            issue.readable
+              ? issue.name
+                ? `${issue.identifier} (${issue.name})`
+                : issue.identifier
+              : 'an Issue outside your access',
+          )
+          .join(', ')}`,
       });
   };
 
@@ -2684,6 +2704,70 @@ export class AgentModel {
         userId: targetUserId,
         workspaceId: targetWorkspaceId,
       };
+
+      const reviewIssues = await trx
+        .select({
+          assigneeAgentId: tasks.assigneeAgentId,
+          createdByAgentId: tasks.createdByAgentId,
+          createdByUserId: tasks.createdByUserId,
+          identifier: tasks.identifier,
+          name: tasks.name,
+          readable: sql<boolean>`${buildTaskReadableWhere(trx, { userId: this.userId, workspaceId: this.workspaceId })}`,
+          reviewerAgentId: tasks.reviewerAgentId,
+          workspaceId: tasks.workspaceId,
+        })
+        .from(tasks)
+        .where(
+          and(
+            or(
+              inArray(tasks.assigneeAgentId, agentIds),
+              inArray(tasks.createdByAgentId, agentIds),
+              inArray(tasks.reviewerAgentId, agentIds),
+            ),
+            isNotNull(tasks.reviewerAgentId),
+          ),
+        );
+      if (reviewIssues.length) {
+        const reviewers = await trx
+          .select({ id: agents.id, userId: agents.userId, workspaceId: agents.workspaceId })
+          .from(agents)
+          .where(
+            inArray(
+              agents.id,
+              reviewIssues.map((issue) => issue.reviewerAgentId!),
+            ),
+          )
+          .for('key share');
+        const byId = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer]));
+        const movedIds = new Set(agentIds);
+        const blocked = reviewIssues.filter((issue) => {
+          const issueMoves =
+            movedIds.has(issue.assigneeAgentId ?? '') || movedIds.has(issue.createdByAgentId ?? '');
+          const reviewer = movedIds.has(issue.reviewerAgentId!)
+            ? { workspaceId: targetWorkspaceId, userId: targetUserId }
+            : byId.get(issue.reviewerAgentId!);
+          const workspaceId = issueMoves ? targetWorkspaceId : issue.workspaceId;
+          const ownerId = issueMoves ? targetUserId : issue.createdByUserId;
+          return (
+            !reviewer ||
+            reviewer.workspaceId !== workspaceId ||
+            (workspaceId === null && reviewer.userId !== ownerId)
+          );
+        });
+        if (blocked.length)
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: `Reassign reviewer Agents before transferring these Issues: ${blocked
+              .map((issue) =>
+                issue.readable
+                  ? issue.name
+                    ? `${issue.identifier} (${issue.name})`
+                    : issue.identifier
+                  : 'an Issue outside your access',
+              )
+              .join(', ')}`,
+          });
+      }
 
       // 4. Update the agent records. slug / agencyConfig differ per agent, so
       //    these are per-row PK updates (cheap); the large cascaded tables

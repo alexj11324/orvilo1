@@ -77,9 +77,8 @@ export const recomputeRepairAncestors = async (
 interface ReportContext {
   deliverable: string;
   goal: string;
-  modelConfig: { model: string; provider: string };
   /** Preferred ACP binding for the report-narrative judgment. */
-  verifierAgentId?: string;
+  reviewerAgentId: string;
 }
 
 /**

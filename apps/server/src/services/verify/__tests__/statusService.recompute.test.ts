@@ -116,4 +116,21 @@ describe('VerifyStatusService.recompute — errored rollup', () => {
 
     expect(status).toBe('passed');
   });
+  it.each([
+    ['accepted', 'passed'],
+    ['overridden', 'passed'],
+    ['rejected', 'failed'],
+  ])('honors a manual %s decision while the reviewer is queued', async (userDecision, expected) => {
+    runFindByOperation.mockResolvedValue(runWith([{ id: 'c1' }]));
+    resultListByRun.mockResolvedValue([
+      { checkItemId: 'c1', status: 'running', verdict: null, userDecision },
+    ]);
+    expect(await new VerifyStatusService(db, 'u1').recompute('op-1')).toBe(expected);
+  });
+  it('settles an aggregate manual decision before check rows exist', async () => {
+    runFindByOperation.mockResolvedValue({ ...runWith([{ id: 'c1' }]), userDecision: 'accept' });
+    resultListByRun.mockResolvedValue([]);
+    expect(await new VerifyStatusService(db, 'u1').recompute('op-1')).toBe('passed');
+    expect(runUpdateStatus).toHaveBeenCalledWith('run-1', 'passed');
+  });
 });

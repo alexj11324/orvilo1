@@ -1,39 +1,15 @@
-import { randomUUID } from 'node:crypto';
-
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import { TRACING_SCENARIOS } from '@orvilo/const';
-import type { TracingOptions } from '@orvilo/llm-generation-tracing';
-import { getModelPropertyWithFallback } from '@orvilo/model-runtime';
-import {
-  BATCH_VERDICT_JSON_SCHEMA,
-  chainVerifyJudge,
-  type JudgeEvidence,
-  SINGLE_VERDICT_JSON_SCHEMA,
-  VERIFY_JUDGE_PROMPT_VERSION,
-} from '@orvilo/prompts';
-import type {
-  ToulminVerdict,
-  VerifyCheckItem,
-  VerifyCheckResultStatus,
-  VerifyVerdict,
-} from '@orvilo/types';
+import type { JudgeEvidence } from '@orvilo/prompts';
+import type { VerifyCheckItem, VerifyCheckResultStatus } from '@orvilo/types';
 import debug from 'debug';
 
 import { DocumentModel } from '@/database/models/document';
-import { FileModel } from '@/database/models/file';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
-import { AiGenerationService } from '@/server/services/aiGeneration';
-import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
-import { FileService } from '@/server/services/file';
 
 import { coverageGaps, readRequiredEvidence } from './evidenceCoverage';
-import { planEvidenceVerification } from './evidencePlanner';
-import { resolveModelReadableFrameUrl } from './modelFrames';
 import { planItemToPendingResult } from './resultSnapshot';
-import { BatchVerdictSchema, type SingleVerdict, SingleVerdictSchema } from './schema';
 import { VerifyStatusService } from './statusService';
 
 const log = debug('orvilo-server:verify-executor');
@@ -52,29 +28,26 @@ export interface VerifierAgentRunner {
     evidence?: JudgeEvidence[];
     goal: string;
     operationId: string;
-  }): Promise<{ verifierOperationId: string } | null>;
+  }): Promise<{
+    initiatingMessage?: string;
+    verifierOperationId: string;
+    waitingReason?: string;
+  } | null>;
 }
 
 export interface ExecuteVerifyParams {
-  /** Judge all LLM items in one batched generateObject (default true). */
-  batchLlm?: boolean;
   /** The run's final output / artifacts, judged against the criteria. */
   deliverable: string;
   goal: string;
-  modelConfig: { model: string; provider: string };
   operationId: string;
+  /**
+   * Reviewer selected by the live task; its saved runtime owns every judgment.
+   */
+  reviewerAgentId: string;
   /** Runs agent checks and program checks without a native runner as verifier sub-agents. */
   runVerifierAgent?: VerifierAgentRunner;
-  /**
-   * Task-pinned verifier agent — the preferred ACP binding for the LLM judge.
-   * Falls back to the builtin verify agent slug, then the operator env
-   * binding; no binding at all blocks the judgment (items gate delivery).
-   */
-  verifierAgentId?: string;
 }
 
-const verdictToStatus = (verdict: VerifyVerdict): VerifyCheckResultStatus =>
-  verdict === 'passed' ? 'passed' : 'failed';
 const terminalResultStatuses = new Set<VerifyCheckResultStatus>([
   'passed',
   'failed',
@@ -85,56 +58,29 @@ const terminalResultStatuses = new Set<VerifyCheckResultStatus>([
 /** Group a run's evidence rows by the plan item they back, for judge injection. */
 type EvidenceByItem = Map<string, JudgeEvidence[]>;
 
-const toToulmin = (v: SingleVerdict): ToulminVerdict => ({
-  counterEvidence: v.counterEvidence ?? undefined,
-  evidence: v.evidence ?? undefined,
-  limitation: v.limitation ?? undefined,
-  reasoning: v.reasoning ?? undefined,
-});
-
 export class VerifyExecutorService {
-  private readonly db: OrviloDatabase;
-  private readonly userId: string;
   private readonly runModel: VerifyRunModel;
   private readonly resultModel: VerifyCheckResultModel;
   private readonly statusService: VerifyStatusService;
   private readonly documentModel: DocumentModel;
   private readonly evidenceModel: VerifyEvidenceModel;
-  private readonly fileModel: FileModel;
-  private readonly fileService: FileService;
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
-    this.db = db;
-    this.userId = userId;
     this.runModel = new VerifyRunModel(db, userId, workspaceId);
     this.resultModel = new VerifyCheckResultModel(db, userId, workspaceId);
     this.statusService = new VerifyStatusService(db, userId, workspaceId);
     this.documentModel = new DocumentModel(db, userId, workspaceId);
     this.evidenceModel = new VerifyEvidenceModel(db, userId, workspaceId);
-    this.fileModel = new FileModel(db, userId, workspaceId);
-    this.fileService = new FileService(db, userId, workspaceId);
   }
 
   /**
-   * Resolve a check item's detailed judging instruction — the criterion's rule
-   * body lives in its linked document (the single source of truth).
-   */
-  private async resolveInstruction(item: VerifyCheckItem): Promise<string | undefined> {
-    if (item.definition || item.resourceSnapshot)
-      return JSON.stringify({ definition: item.definition, resources: item.resourceSnapshot });
-    if (!item.documentId) return undefined;
-    const doc = await this.documentModel.findById(item.documentId);
-    return doc?.content ?? undefined;
-  }
-
-  /**
-   * Run the confirmed check plan for an operation. LLM items are judged inline;
-   * program items are placeholders (v1); agent items are spawned via the injected
-   * spawner (results land asynchronously). Recomputes the rollup at the end.
+   * Run the confirmed plan through the Issue reviewer, one session per check.
+   * Results land asynchronously through submitVerifyResult. Recomputes the rollup at the end.
    */
   async execute(params: ExecuteVerifyParams): Promise<void> {
     // Resolve (or lazily create) the verification session bound to this Agent Run.
     const run = await this.runModel.ensureForOperation(params.operationId);
+    if (run.userDecision) return;
     if (!run.plan?.length) {
       log('execute: no plan for op %s, skipping', params.operationId);
       return;
@@ -165,36 +111,14 @@ export class VerifyExecutorService {
     // Structural gate (server, no LLM): an evidence-driven item missing any of
     // its declared evidence types is marked uncertain up front and excluded from
     // the judges — we never let a required artifact-backed claim pass unseen.
-    const gapIds = await this.runStructuralGate(verifyRunId, items, evidenceByItem);
-    const gated = items.filter((i) => !gapIds.has(i.id));
+    const decidedIds = new Set(
+      existing.filter((row) => row.userDecision || row.verdict).map((row) => row.checkItemId),
+    );
+    const undecidedItems = items.filter((item) => !decidedIds.has(item.id));
+    const gapIds = await this.runStructuralGate(verifyRunId, undecidedItems, evidenceByItem);
+    const gated = undecidedItems.filter((i) => !gapIds.has(i.id));
 
-    const declaredLlmItems = gated.filter((i) => i.verifierType === 'llm');
-    const supportsVision = await this.modelSupportsVision(
-      params.modelConfig.model,
-      params.modelConfig.provider,
-    );
-    const evidencePlans = new Map(
-      declaredLlmItems.map((item) => [
-        item.id,
-        planEvidenceVerification({
-          evidence: evidenceByItem.get(item.id) ?? [],
-          item,
-          modelSupportsVision: supportsVision,
-        }),
-      ]),
-    );
-    const llmItems = declaredLlmItems.filter(
-      (item) => evidencePlans.get(item.id)?.route !== 'agent',
-    );
-    const multimodalItemIds = new Set(
-      llmItems
-        .filter((item) => evidencePlans.get(item.id)?.route === 'llm_multimodal')
-        .map((item) => item.id),
-    );
-    const agentItems = [
-      ...gated.filter((i) => i.verifierType === 'agent'),
-      ...declaredLlmItems.filter((item) => evidencePlans.get(item.id)?.route === 'agent'),
-    ];
+    const agentItems = gated.filter((item) => item.verifierType !== 'program');
     const programItems = gated.filter((i) => i.verifierType === 'program');
 
     // The verifier kinds are independent — run them concurrently. Program checks
@@ -202,7 +126,6 @@ export class VerifyExecutorService {
     // sandboxed native program runner is available.
     await Promise.all([
       this.runProgramItems(params, verifyRunId, programItems, evidenceByItem),
-      this.runLlmItems(params, verifyRunId, llmItems, evidenceByItem, multimodalItemIds),
       ...agentItems.map((item) =>
         this.runAgentItem(params, verifyRunId, item, evidenceByItem.get(item.id) ?? []),
       ),
@@ -232,26 +155,6 @@ export class VerifyExecutorService {
       byItem.set(row.checkItemId, list);
     }
     return byItem;
-  }
-
-  private async hydrateInlineMedia(evidence: JudgeEvidence[]): Promise<JudgeEvidence[]> {
-    return Promise.all(
-      evidence.map(async (item) => {
-        if (!item.fileId || (item.type !== 'screenshot' && item.type !== 'gif')) return item;
-        const file = await this.fileModel.findById(item.fileId);
-        if (!file) return item;
-        return { ...item, accessUrl: await resolveModelReadableFrameUrl(this.fileService, file) };
-      }),
-    );
-  }
-
-  private async modelSupportsVision(model: string, provider: string): Promise<boolean> {
-    const abilities = await getModelPropertyWithFallback<{ vision?: boolean }>(
-      model,
-      'abilities',
-      provider,
-    );
-    return abilities?.vision === true;
   }
 
   /**
@@ -317,52 +220,6 @@ export class VerifyExecutorService {
     }
   }
 
-  /** Judge all LLM items via the Toulmin judge (one batched call by default). */
-  private async runLlmItems(
-    params: ExecuteVerifyParams,
-    verifyRunId: string,
-    items: VerifyCheckItem[],
-    evidenceByItem: EvidenceByItem,
-    multimodalItemIds: Set<string>,
-  ): Promise<void> {
-    if (items.length === 0) return;
-    try {
-      const textItems = items.filter((item) => !multimodalItemIds.has(item.id));
-      const multimodalItems = items.filter((item) => multimodalItemIds.has(item.id));
-      if ((params.batchLlm ?? true) && textItems.length > 1) {
-        await this.judgeBatch(params, verifyRunId, textItems, evidenceByItem);
-      } else {
-        for (const item of textItems)
-          await this.judgeSingle(params, verifyRunId, item, evidenceByItem);
-      }
-      for (const item of multimodalItems)
-        await this.judgeSingle(params, verifyRunId, item, evidenceByItem, true);
-    } catch (error) {
-      log('llm judge failed for op %s: %O', params.operationId, error);
-      if (isAcpJudgmentBindingError(error)) {
-        // Missing authorization is not an infra hiccup — it means no verifier
-        // agent is bound, so the judgment can never legitimately run. Mark each
-        // item failed/uncertain so it GATES delivery (unlike `errored`).
-        await Promise.all(
-          items.map((item) =>
-            this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-              completedAt: new Date(),
-              status: 'failed',
-              toulmin: { limitation: error.message },
-              verdict: 'uncertain',
-            }),
-          ),
-        );
-        return;
-      }
-      await this.markUnfinishedErrored(
-        verifyRunId,
-        items,
-        `LLM judge failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  }
-
   /** Run one agent check as a verifier sub-agent (verdict lands async via its hook) or skip. */
   private async runAgentItem(
     params: ExecuteVerifyParams,
@@ -409,14 +266,38 @@ export class VerifyExecutorService {
       const current = (await this.resultModel.listByRun(verifyRunId)).find(
         (result) => result.checkItemId === item.id,
       );
-      if (current && terminalResultStatuses.has(current.status)) return;
+      if (
+        current &&
+        (current.userDecision ||
+          current.verdict ||
+          (terminalResultStatuses.has(current.status) &&
+            current.verifierOperationId === spawned.verifierOperationId))
+      )
+        return;
 
       await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
+        metadata: {
+          ...current?.metadata,
+          ...(spawned.initiatingMessage ? { initiatingMessage: spawned.initiatingMessage } : {}),
+          ...(spawned.waitingReason ? { waitingReason: spawned.waitingReason } : {}),
+        },
+        completedAt: null,
         startedAt: new Date(),
         status: 'running',
+        suggestion: null,
+        toulmin: null,
         verifierOperationId: spawned.verifierOperationId,
       });
     } catch (error) {
+      const current = (await this.resultModel.listByRun(verifyRunId)).find(
+        (row) => row.checkItemId === item.id,
+      );
+      if (
+        current?.userDecision ||
+        current?.verdict ||
+        (await this.runModel.findByOperation(params.operationId))?.userDecision
+      )
+        return;
       // Surface the real cause: the spawn throws during agent startup (before
       // the verifier operation is persisted), and this catch previously only
       // emitted a debug-level line + a generic limitation — so in production the
@@ -434,227 +315,5 @@ export class VerifyExecutorService {
         toulmin: { limitation: `Agent verifier failed to start: ${detail}` },
       });
     }
-  }
-
-  private async judgeBatch(
-    params: ExecuteVerifyParams,
-    verifyRunId: string,
-    items: VerifyCheckItem[],
-    evidenceByItem: EvidenceByItem,
-  ): Promise<void> {
-    // Batch: N verdicts share ONE tracing row (N:1).
-    const tracingId = randomUUID();
-    const promptItems = await Promise.all(
-      items.map(async (i) => ({
-        evidence: evidenceByItem.get(i.id),
-        id: i.id,
-        instruction: await this.resolveInstruction(i),
-        title: i.title,
-      })),
-    );
-    const chain = chainVerifyJudge({
-      deliverable: params.deliverable,
-      goal: params.goal,
-      items: promptItems,
-      mode: 'batch',
-    });
-
-    const ai = new AiGenerationService(this.db, this.userId);
-    const raw = await ai.generateObject(
-      {
-        ...chain,
-        model: params.modelConfig.model,
-        provider: params.modelConfig.provider,
-        schema: BATCH_VERDICT_JSON_SCHEMA,
-      },
-      {
-        judgment: {
-          binding: {
-            agentId: params.verifierAgentId,
-            slug: BUILTIN_AGENT_SLUGS.verifyAgent,
-          },
-          parentOperationId: params.operationId,
-          purpose: 'verify.judge',
-        },
-        kind: 'judgment',
-        tracing: {
-          ...({
-            promptVersion: VERIFY_JUDGE_PROMPT_VERSION,
-            scenario: TRACING_SCENARIOS.VerifyJudge,
-            schemaName: BATCH_VERDICT_JSON_SCHEMA.name,
-            tracingId,
-          } satisfies TracingOptions),
-          // Backfill the tracing FK only after the (async, best-effort) tracing
-          // row is persisted — verdicts are written with a null link below.
-          onPersisted: this.backfillTracing(
-            verifyRunId,
-            items.map((i) => i.id),
-          ),
-        },
-      },
-    );
-
-    const parsed = BatchVerdictSchema.safeParse(raw);
-    if (!parsed.success) {
-      log('batch judge output invalid: %O', parsed.error.flatten());
-      for (const item of items) await this.judgeSingle(params, verifyRunId, item, evidenceByItem);
-      return;
-    }
-
-    const validIds = new Set(items.map((i) => i.id));
-    const returnedIds = new Set<string>();
-    for (const v of parsed.data.verdicts) {
-      if (!validIds.has(v.checkItemId)) continue;
-      returnedIds.add(v.checkItemId);
-      await this.writeVerdict({
-        checkItemId: v.checkItemId,
-        verdict: v,
-        verifyRunId,
-      });
-    }
-    for (const item of items) {
-      if (!returnedIds.has(item.id)) {
-        await this.judgeSingle(params, verifyRunId, item, evidenceByItem);
-      }
-    }
-  }
-
-  private async judgeSingle(
-    params: ExecuteVerifyParams,
-    verifyRunId: string,
-    item: VerifyCheckItem,
-    evidenceByItem: EvidenceByItem,
-    multimodal = false,
-  ): Promise<void> {
-    // Per-criterion: each result gets its own tracing row (1:1).
-    const tracingId = randomUUID();
-    const hydratedEvidence = multimodal
-      ? await this.hydrateInlineMedia(evidenceByItem.get(item.id) ?? [])
-      : evidenceByItem.get(item.id);
-    const chain = chainVerifyJudge({
-      deliverable: params.deliverable,
-      goal: params.goal,
-      items: [
-        {
-          evidence: hydratedEvidence,
-          id: item.id,
-          instruction: await this.resolveInstruction(item),
-          title: item.title,
-        },
-      ],
-      mode: 'single',
-    });
-
-    const ai = new AiGenerationService(this.db, this.userId);
-    const raw = await ai.generateObject(
-      {
-        ...chain,
-        model: params.modelConfig.model,
-        provider: params.modelConfig.provider,
-        schema: SINGLE_VERDICT_JSON_SCHEMA,
-      },
-      {
-        judgment: {
-          binding: {
-            agentId: params.verifierAgentId,
-            slug: BUILTIN_AGENT_SLUGS.verifyAgent,
-          },
-          // Multimodal judgments read the evidence frames through the bound
-          // agent's file access (attached to the judgment turn).
-          fileIds: multimodal
-            ? hydratedEvidence?.flatMap((entry) => (entry.fileId ? [entry.fileId] : []))
-            : undefined,
-          parentOperationId: params.operationId,
-          purpose: 'verify.judge',
-        },
-        kind: 'judgment',
-        tracing: {
-          ...({
-            promptVersion: VERIFY_JUDGE_PROMPT_VERSION,
-            scenario: TRACING_SCENARIOS.VerifyJudge,
-            schemaName: SINGLE_VERDICT_JSON_SCHEMA.name,
-            tracingId,
-          } satisfies TracingOptions),
-          onPersisted: this.backfillTracing(verifyRunId, [item.id]),
-        },
-      },
-    );
-
-    const parsed = SingleVerdictSchema.safeParse(raw);
-    if (!parsed.success) {
-      log('single judge output invalid: %O', parsed.error.flatten());
-      await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-        completedAt: new Date(),
-        status: 'errored',
-        toulmin: { limitation: 'LLM judge returned an invalid structured verdict.' },
-      });
-      return;
-    }
-    await this.writeVerdict({
-      checkItemId: item.id,
-      verdict: parsed.data,
-      verifyRunId,
-    });
-  }
-
-  private async markUnfinishedErrored(
-    verifyRunId: string,
-    items: VerifyCheckItem[],
-    limitation: string,
-  ): Promise<void> {
-    const results = await this.resultModel.listByRun(verifyRunId);
-    const terminalIds = new Set(
-      results
-        .filter((result) => terminalResultStatuses.has(result.status))
-        .map((result) => result.checkItemId),
-    );
-    await Promise.all(
-      items
-        .filter((item) => !terminalIds.has(item.id))
-        .map((item) =>
-          this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-            completedAt: new Date(),
-            status: 'errored',
-            toulmin: { limitation },
-          }),
-        ),
-    );
-  }
-
-  private async writeVerdict(params: {
-    checkItemId: string;
-    verdict: SingleVerdict;
-    verifyRunId: string;
-  }): Promise<void> {
-    const { verifyRunId, checkItemId, verdict } = params;
-    // `verifier_tracing_id` is intentionally left null here — the tracing row is
-    // written asynchronously (best-effort, after the response), so linking it now
-    // would violate the FK. It is backfilled by `backfillTracing` once the row exists.
-    await this.resultModel.updateByCheckItem(verifyRunId, checkItemId, {
-      completedAt: new Date(),
-      confidence: verdict.confidence,
-      status: verdictToStatus(verdict.verdict),
-      suggestion: verdict.suggestion ?? null,
-      toulmin: toToulmin(verdict),
-      verdict: verdict.verdict,
-    });
-  }
-
-  /**
-   * Build the `onPersisted` callback handed to the tracing layer. It fires in the
-   * tracing hook's deferred (post-response) continuation once the
-   * `llm_generation_tracing` row is committed — only then is it safe to set the
-   * FK link. Receives the persisted tracing id (or null if tracing was disabled
-   * or the record failed), so a missing tracing row simply leaves the link null.
-   */
-  private backfillTracing(verifyRunId: string, checkItemIds: string[]) {
-    return async (tracingId: string | null): Promise<void> => {
-      if (!tracingId) return;
-      try {
-        await this.resultModel.backfillTracingId(verifyRunId, checkItemIds, tracingId);
-      } catch (error) {
-        log('tracing-id backfill failed for run %s (non-fatal): %O', verifyRunId, error);
-      }
-    };
   }
 }

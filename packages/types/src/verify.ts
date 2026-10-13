@@ -97,7 +97,7 @@ export interface AcceptanceVisualRender {
  */
 /**
  * One user-authored acceptance criterion in a subject's standing checklist
- * (e.g. the topic acceptance tray). Every item is judged by the verify agent;
+ * (e.g. the topic acceptance tray). Every item is judged by the Issue's reviewer Agent;
  * `method` is the optional "how to check" note.
  */
 export interface AcceptanceChecklistItem {
@@ -114,7 +114,6 @@ export interface AcceptanceConfig {
   checklist?: AcceptanceChecklistItem[];
   enabled?: boolean;
   maxIterations?: number;
-  verifierAgentId?: string;
   verifyCriteriaIds?: string[];
   verifyRubricId?: string;
 }

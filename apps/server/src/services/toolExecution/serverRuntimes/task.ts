@@ -386,6 +386,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       const updateData: {
         assigneeAgentId?: string | null;
         assigneeUserId?: string | null;
+        reviewerAgentId?: string | null;
         description?: string;
         instruction?: string;
         name?: string;
@@ -416,6 +417,12 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
           args.assigneeUserId
             ? `assignee member → ${await resolveMemberLabel(args.assigneeUserId)}`
             : 'assignee member cleared',
+        );
+      }
+      if (args.reviewerAgentId !== undefined) {
+        updateData.reviewerAgentId = args.reviewerAgentId;
+        changes.push(
+          args.reviewerAgentId ? `reviewer agent → ${args.reviewerAgentId}` : 'reviewer cleared',
         );
       }
       if (args.instruction !== undefined) {
@@ -688,7 +695,6 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       identifier: string;
       maxIterations?: number | null;
       requirement?: string | null;
-      verifierAgentId?: string | null;
       verifyCriteriaIds?: string[] | null;
       verifyRubricId?: string | null;
     }) => {
@@ -703,7 +709,6 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         enabled?: boolean | null;
         maxIterations?: number | null;
         requirement?: string | null;
-        verifierAgentId?: string | null;
         verifyCriteriaIds?: string[] | null;
         verifyRubricId?: string | null;
       } = {};
@@ -731,14 +736,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
             : `max iterations → ${args.maxIterations}`,
         );
       }
-      if (args.verifierAgentId !== undefined) {
-        verify.verifierAgentId = args.verifierAgentId;
-        changes.push(
-          args.verifierAgentId
-            ? `verifier agent → ${args.verifierAgentId}`
-            : 'verifier agent cleared',
-        );
-      }
+
       if (args.verifyRubricId !== undefined) {
         verify.verifyRubricId = args.verifyRubricId;
         changes.push(
@@ -951,8 +949,9 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       const detail = await taskService().getTaskDetail(id);
       if (!detail) return { content: `Task not found: ${id}`, success: false };
 
+      const reviewers = await taskCaller().listReviewerAgents();
       return {
-        content: formatTaskDetail(detail),
+        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review.`,
         state: {
           domainRevision: detail.domainRevision,
           identifier: detail.identifier,

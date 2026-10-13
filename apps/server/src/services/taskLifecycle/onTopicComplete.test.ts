@@ -29,6 +29,12 @@ const {
   settleDispatch: vi.fn().mockResolvedValue({ currentContract: true, currentGeneration: true }),
 }));
 
+vi.mock('@/server/services/task/reviewerAssignment', () => ({
+  requestReviewerAssignment: vi.fn(),
+  isWaitingForReviewer: () => false,
+  WAITING_FOR_REVIEWER: 'Delivery is waiting for a reviewer Agent',
+}));
+
 vi.mock('@/database/models/taskDispatch', () => ({
   TaskDispatchModel: vi.fn(function () {
     return { settle: settleDispatch };
@@ -432,6 +438,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     it('settles a successful dispatch through its immutable contract after legacy status becomes backlog', async () => {
       const task = baseTask({
         automationMode: null,
+        reviewerAgentId: 'reviewer-1',
         status: 'backlog',
         workflowCategory: 'in_progress',
         assigneeAgentId: 'agent-1',
@@ -852,7 +859,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
     });
 
-    it('non-automation task with no explicit review gate → status="completed"', async () => {
+    it('non-automation task with no explicit review gate → waits for a reviewer', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
 
@@ -864,18 +871,15 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      // Settlement killed the default-pause: with no explicit review gate a
-      // successful run settles the issue to done.
+      // Delivery still requires a reviewer even without a configured verify gate.
       expect(updateStatus).toHaveBeenCalledWith(
         'task-1',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
       expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'scheduled', expect.anything());
     });
 
@@ -897,17 +901,15 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
 
-    it('successful subtask → completes and unlocks downstream tasks instead of pausing', async () => {
+    it('successful subtask → waits for a reviewer before unlocking downstream tasks', async () => {
       const task = baseTask({ automationMode: null, parentTaskId: 'parent-task' });
       const parentTask = baseTask({ id: 'parent-task', identifier: 'TASK-0' });
       findById.mockImplementation(async (id) => (id === 'parent-task' ? parentTask : task));
@@ -924,18 +926,16 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
-      expect(cascadeOnCompletion).toHaveBeenCalledWith('task-1');
+      expect(cascadeOnCompletion).not.toHaveBeenCalled();
     });
 
-    it('successful subtask still honors an explicit parent after-completion checkpoint', async () => {
+    it('successful subtask waits for its own reviewer before the parent checkpoint', async () => {
       const task = baseTask({ automationMode: null, parentTaskId: 'parent-task' });
       const parentTask = baseTask({ id: 'parent-task', identifier: 'TASK-0' });
       findById.mockImplementation(async (id) => (id === 'parent-task' ? parentTask : task));
@@ -952,19 +952,22 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).toHaveBeenCalledWith('parent-task', 'paused');
-      expect(cascadeOnCompletion).toHaveBeenCalledWith('task-1');
+      expect(updateStatus).not.toHaveBeenCalledWith('parent-task', 'paused');
+      expect(cascadeOnCompletion).not.toHaveBeenCalled();
     });
 
     it('successful subtask with an explicit topic-after checkpoint → pauses for review', async () => {
-      const task = baseTask({ automationMode: null, parentTaskId: 'parent-task' });
+      const task = baseTask({
+        automationMode: null,
+        reviewerAgentId: 'reviewer-1',
+        parentTaskId: 'parent-task',
+      });
       findById.mockResolvedValue(task);
       (service as any).taskModel.getCheckpointConfig = vi
         .fn()
@@ -1003,11 +1006,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
       expect(cascadeOnCompletion).not.toHaveBeenCalled();
@@ -1054,7 +1056,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).not.toHaveBeenCalled();
     });
 
-    it('non-automation task with no review gate → completes instead of pausing', async () => {
+    it('non-automation task with no review gate → waits for a reviewer', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
 
@@ -1066,14 +1068,12 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      // The retired default-pause left the task 'running' forever; settlement
-      // now settles a gateless success straight to done.
+      // A delivered Issue waits for reviewer assignment.
       expect(updateStatus).toHaveBeenCalledWith(
         'task-1',
-        'completed',
-        expect.objectContaining({ workflowCategory: 'done' }),
+        'paused',
+        expect.objectContaining({ workflowCategory: 'in_progress' }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
 
     it('goal-owned root task completes instead of remaining running', async () => {
@@ -1093,14 +1093,12 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
   });
 
@@ -1167,8 +1165,15 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      // Did not pause — driveTaskFromVerify will complete/pause the task on settle.
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
+      // A confirmed plan cannot enter review until an Issue reviewer is selected.
+      expect(updateStatus).toHaveBeenCalledWith(
+        'task-1',
+        'paused',
+        expect.objectContaining({
+          workflowCategory: 'in_progress',
+          error: 'Delivery is waiting for a reviewer Agent',
+        }),
+      );
       // The creator callback is DEFERRED to the verify settle path, not fired here.
       expect(bridge).not.toHaveBeenCalled();
       // The completion lease fences this generation until Verify settles.

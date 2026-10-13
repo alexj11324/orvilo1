@@ -382,7 +382,6 @@ export class ActionSourceRegistry {
       }
       if (
         row.assigneeUserId !== this.userId &&
-        row.reviewerUserId !== this.userId &&
         row.createdByUserId !== this.userId &&
         !this.callerIsWorkspaceAdmin
       ) {

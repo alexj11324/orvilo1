@@ -3,6 +3,7 @@ import { VerifyToolIdentifier } from '@orvilo/builtin-tool-verify';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import { TaskModel } from '@/database/models/task';
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
@@ -42,7 +43,7 @@ class VerifyResultExecutionRuntime {
     if (!this.operationId) {
       return { content: 'No operation context.', error: 'NO_OPERATION', success: false };
     }
-    if (!params?.checkItemId || !params?.verdict) {
+    if (!params?.checkItemId || !['passed', 'failed', 'uncertain'].includes(params?.verdict)) {
       return {
         content: 'checkItemId and verdict are required.',
         error: 'INVALID_ARGUMENTS',
@@ -54,7 +55,25 @@ class VerifyResultExecutionRuntime {
     const op = await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
       this.operationId,
     );
-    const targetOperationId = op?.parentOperationId ?? this.operationId;
+    if (!op?.parentOperationId)
+      return {
+        content: 'This operation is not an Issue review check.',
+        error: 'NO_REVIEW_CONTEXT',
+        success: false,
+      };
+    const targetOperationId = op.parentOperationId;
+    const parent = await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
+      targetOperationId,
+    );
+    const task = parent?.taskId
+      ? await new TaskModel(this.db, this.userId, this.workspaceId).findById(parent.taskId)
+      : null;
+    if (!task?.reviewerAgentId || task.reviewerAgentId !== op.agentId)
+      return {
+        content: 'Only the Issue current reviewer Agent can record this check.',
+        error: 'REVIEWER_CHANGED',
+        success: false,
+      };
 
     // The result row is keyed by the parent run's verification session.
     const run = await new VerifyRunModel(this.db, this.userId, this.workspaceId).findByOperation(
@@ -64,13 +83,32 @@ class VerifyResultExecutionRuntime {
       return { content: 'No verification session for this run.', error: 'NO_RUN', success: false };
     }
 
+    const resultModel = new VerifyCheckResultModel(this.db, this.userId, this.workspaceId);
+    const result = (await resultModel.listByRun(run.id)).find(
+      (row) => row.checkItemId === params.checkItemId,
+    );
+    if (!result || (result.verifierOperationId && result.verifierOperationId !== this.operationId))
+      return {
+        content: 'This check does not belong to this reviewer operation.',
+        error: 'CHECK_MISMATCH',
+        success: false,
+      };
+    if (result.userDecision || result.verdict)
+      return {
+        content: 'This check already has a recorded decision.',
+        error: 'ALREADY_RECORDED',
+        success: false,
+      };
+
     const status = params.verdict === 'passed' ? 'passed' : 'failed';
-    await new VerifyCheckResultModel(this.db, this.userId, this.workspaceId).updateByCheckItem(
+    const recorded = await resultModel.recordReviewerVerdict(
       run.id,
       params.checkItemId,
+      this.operationId,
       {
         completedAt: new Date(),
         status,
+        suggestion: params.suggestion ?? null,
         toulmin: {
           counterEvidence: params.counterEvidence,
           evidence: params.evidence,
@@ -80,6 +118,12 @@ class VerifyResultExecutionRuntime {
         verdict: params.verdict,
       },
     );
+    if (!recorded)
+      return {
+        content: 'This check was already decided or belongs to another reviewer operation.',
+        error: 'ALREADY_RECORDED',
+        success: false,
+      };
     await new VerifyStatusService(this.db, this.userId, this.workspaceId).recompute(
       targetOperationId,
     );
@@ -96,7 +140,7 @@ class VerifyResultExecutionRuntime {
     );
 
     return {
-      content: `Recorded verdict "${params.verdict}" for the check. Verification complete.`,
+      content: `Recorded verdict "${params.verdict}" for the check.`,
       success: true,
     };
   };

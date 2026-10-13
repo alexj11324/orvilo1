@@ -20,7 +20,7 @@ export const useCommentCopyLink = () => {
   const appOrigin = useAppOrigin();
   const workspaceSlug = useActiveWorkspaceSlug();
   const taskId = useTaskDetailTaskId();
-  const taskAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const taskAssigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeAgentId);
   const taskTitle = useTaskDetailSelector(taskDetailSelectors.taskName);
   const taskIdentifier = useTaskDetailSelector(
     (s, scopedTaskId) => taskDetailSelectors.taskDetail(s, scopedTaskId)?.identifier,
@@ -30,7 +30,7 @@ export const useCommentCopyLink = () => {
   return useCallback(
     async (commentId: string) => {
       if (!taskRef) return;
-      const path = taskDetailPath(taskRef, taskAgentId ?? undefined, taskTitle);
+      const path = taskDetailPath(taskRef, taskAssigneeAgentId ?? undefined, taskTitle);
       const url = `${appOrigin}${buildWorkspaceAwarePath(path, workspaceSlug)}#${commentAnchorId(commentId)}`;
       try {
         await navigator.clipboard.writeText(url);
@@ -39,6 +39,6 @@ export const useCommentCopyLink = () => {
         toast.error(t('taskDetail.comment.copyLinkFailed'));
       }
     },
-    [appOrigin, t, taskAgentId, taskRef, taskTitle, workspaceSlug],
+    [appOrigin, t, taskAssigneeAgentId, taskRef, taskTitle, workspaceSlug],
   );
 };

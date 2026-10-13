@@ -5,6 +5,11 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import type { OrviloDatabase } from '@/database/type';
 
+import {
+  isWaitingForReviewer,
+  requestReviewerAssignment,
+  WAITING_FOR_REVIEWER,
+} from '../task/reviewerAssignment';
 import { resolveSettlementPlan } from './policy';
 import type { SettlementPlan, SettlementResult, SettleTaskExecutionInput } from './types';
 import { resolveWorkflowTransition, type TaskWorkflowPatch } from './workflowTransition';
@@ -94,7 +99,7 @@ export const settleTaskExecution = async (
       ? await taskModel.resolveTaskReviewRequirement(task)
       : false;
 
-  const plan = resolveSettlementPlan({
+  let plan = resolveSettlementPlan({
     context: { ...context, unresolvedInput },
     outcome: input.outcome,
     reviewRequired,
@@ -102,6 +107,37 @@ export const settleTaskExecution = async (
     task,
     verifyOutcome: input.verifyOutcome,
   });
+
+  const deliveredIssue =
+    input.outcome === 'succeeded' && !task.automationMode && !context?.blocked && !unresolvedInput;
+  if (deliveredIssue) {
+    plan = {
+      ...plan,
+      attention: 'review_required',
+      decision: { type: 'review' },
+      execution: 'succeeded',
+      legacyStatus: 'paused',
+      workflowCategory: 'in_review',
+    };
+  }
+  // An unusable reviewer already parked this delivered operation; its completion
+  // callback must preserve that explanation instead of moving it into review.
+  if (deliveredIssue && task.reviewerAgentId && isWaitingForReviewer(task)) {
+    plan = { ...plan, workflowCategory: 'in_progress' };
+    input = { ...input, context: { ...context, error: task.error } };
+  }
+  const waitingForReviewer = !task.reviewerAgentId && plan.workflowCategory === 'in_review';
+  if (waitingForReviewer) {
+    plan = {
+      ...plan,
+      attention: 'review_required',
+      decision: { type: 'review' },
+      execution: 'succeeded',
+      legacyStatus: 'paused',
+      workflowCategory: 'in_progress',
+    };
+    input = { ...input, context: { ...context, error: WAITING_FOR_REVIEWER } };
+  }
 
   const execution = plan.execution ?? (await deriveExecution(db, userId, input, workspaceId));
 
@@ -141,6 +177,15 @@ export const settleTaskExecution = async (
       skippedReason: 'stale_generation',
       task,
     };
+  }
+
+  if (waitingForReviewer) {
+    await requestReviewerAssignment(
+      db,
+      userId,
+      updated,
+      workspaceId ?? updated.workspaceId ?? undefined,
+    );
   }
 
   return {

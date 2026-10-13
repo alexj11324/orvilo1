@@ -377,24 +377,16 @@ completion whose `content` is parsed as the object. A text-only evidence check i
 Assert the round from three places together: the toast copy (a MutationObserver on
 `document.body`), the rows' `status`/`action`/`created_at`, and the card count.
 
-#### P11 · Structured generation crashes on the deepseek provider path — stub via openai instead
+#### P11 · Verification judgments use the Issue reviewer over ACP
 
-**applies-to:** surface=any · runtime=gateway · phase=fixture
+**applies-to:** surface=any · runtime=ACP · phase=fixture
 
-**Situation:** driving a server-side `generateObject` scenario (e.g. `verify_plan_gen`)
-through `llm-stub.mjs` when the resolved model config is `deepseek` (the OSS default).
-
-**Doesn't work:** pointing the deepseek provider's keyVaults at the stub. The chat
-turn streams fine, but `generateObject` fails with `TypeError: Cannot read properties
-of undefined (reading '0')` (visible in `llm_generation_tracing.error_detail`), and
-the caller silently falls back (verify plan gen → holistic single check), which reads
-as "my feature didn't run".
-
-**Works:** route the generation through the openai protocol path — e.g. point the
-resolver's agent (for verify: `update agents set model='gpt-5.6-luna', provider='openai'
-where slug='verify-agent'`) at the stubbed openai provider. The server-side openai
-provider calls `/v1/responses`, which the stub answers correctly for `stream:false`
-structured generation (`llm_generation_tracing.success=t` is the confirmation probe).
+Bind a normal reviewer Agent on the Issue and run its saved device/model.
+The retained criteria, plan, prediction and report jobs use ACP with that
+explicit Agent; server-provider stubs do not exercise this path. An offline
+device leaves an ordinary queued run, and an unsupported builtin-tool mount
+blocks the check. Capture the real `submitVerifyResult` tool call and persisted
+verdict before claiming delivery verification passed.
 
 #### P12・Forcing the goal frontier 失联 state needs >15 min, not the server's 5
 

@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import * as schema from '../../schemas';
 import {
+  agentOperations,
   agents,
   executionGrants,
   taskDispatches,
@@ -161,6 +162,61 @@ afterEach(async () => {
   await db.delete(users).where(eq(users.id, b.userId));
 });
 describe('canonical durable runtime handoff', () => {
+  it('renews only the exact definitely unactivated queued registration after its lease expired', async () => {
+    const control = (await model().readControl(b))!.control!;
+    await db
+      .update(taskTopics)
+      .set({
+        executionControl: {
+          ...control,
+          state: 'registering',
+          leaseExpiresAt: Date.now() - 1,
+          treeId: null,
+          supervisorId: null,
+          sessionId: null,
+        },
+      })
+      .where(eq(taskTopics.topicId, b.topicId));
+    await db.insert(agentOperations).values({
+      id: b.operationId,
+      userId: b.userId,
+      workspaceId: b.workspaceId,
+      status: 'running',
+      metadata: {
+        remoteAdmission: { state: 'pending' },
+        deviceQueue: { state: 'launching', payload: { primeRegistration: b } },
+      },
+    });
+    const renewed = await model().renewQueuedRegistration(b, 60_000);
+    expect(renewed.registrationId).toBe(b.runtimeRegistrationId);
+    expect(renewed.leaseId).toBe(b.runtimeLeaseId);
+    expect(renewed.leaseExpiresAt).toBeGreaterThan(Date.now());
+    await expect(
+      model().renewQueuedRegistration({ ...b, runtimeLeaseId: 'different' }, 60_000),
+    ).rejects.toThrow();
+    await model().activate(b, identity);
+    await expect(model().renewQueuedRegistration(b, 60_000)).rejects.toThrow(
+      'not an unactivated queued registration',
+    );
+  });
+
+  it('cannot renew a registering run without the durable offline queue proof', async () => {
+    const control = (await model().readControl(b))!.control!;
+    await db
+      .update(taskTopics)
+      .set({
+        executionControl: {
+          ...control,
+          state: 'registering',
+          treeId: null,
+          supervisorId: null,
+          sessionId: null,
+        },
+      })
+      .where(eq(taskTopics.topicId, b.topicId));
+    await expect(model().renewQueuedRegistration(b, 60_000)).rejects.toThrow();
+  });
+
   it('recovers each phase with a fresh model and transfers owner and epoch atomically', async () => {
     const i = await quiescent();
     expect((await model().readControl(b))?.control?.ownerId).toBe('source');

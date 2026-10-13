@@ -138,6 +138,7 @@ class TaskService {
     name?: string;
     parentTaskId?: string;
     priority?: number;
+    reviewerAgentId?: string;
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
@@ -205,7 +206,7 @@ class TaskService {
       priority?: number;
       /** Owning project; `null` unassigns the task from its project. */
       projectId?: string | null;
-      reviewerUserId?: string | null;
+      reviewerAgentId?: string | null;
       // schedulePattern: cron expression for scheduled automation (e.g. '0 9 * * *')
       schedulePattern?: string | null;
       // scheduleTimezone: IANA timezone for the cron expression (e.g. 'Asia/Shanghai')

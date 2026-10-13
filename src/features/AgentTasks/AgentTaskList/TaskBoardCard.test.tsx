@@ -301,11 +301,11 @@ describe('TaskBoardCard', () => {
   it('shows the reviewer — not the assignee — in the owner slot while in review', () => {
     render(
       <TaskBoardCard
-        task={createTask({ reviewerUserId: 'user-reviewer', workflowCategory: 'in_review' })}
+        task={createTask({ reviewerAgentId: 'agent-reviewer', workflowCategory: 'in_review' })}
       />,
     );
 
-    expect(document.querySelector('[data-user-avatar="user-reviewer"]')).toBeInTheDocument();
+    expect(document.querySelector('[data-agent-avatar="agent-reviewer"]')).toBeInTheDocument();
     // The executor assignee is not rendered in the owner slot.
     expect(document.querySelector('[data-user-avatar="user-1"]')).not.toBeInTheDocument();
   });

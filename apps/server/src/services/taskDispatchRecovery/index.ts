@@ -6,6 +6,7 @@ import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel, type TaskDispatchRecoveryClaim } from '@/database/models/taskDispatch';
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
 import type { OrviloDatabase } from '@/database/type';
+import { isQueuedDeviceOperation } from '@/server/services/aiAgent/deviceQueue';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 
 const DEFAULT_LEASE_MS = 2 * 60 * 1000;
@@ -149,7 +150,10 @@ export const processTaskDispatchRecovery = async (input: {
       });
     }
 
-    if (['running', 'waiting_for_async_tool', 'waiting_for_human'].includes(operation.status)) {
+    if (
+      isQueuedDeviceOperation(operation) ||
+      ['running', 'waiting_for_async_tool', 'waiting_for_human'].includes(operation.status)
+    ) {
       const staleBefore = Date.now() - (input.staleOperationMs ?? DEFAULT_STALE_OPERATION_MS);
       const stale = new Date(operation.updatedAt).getTime() < staleBefore;
       if (operation.status === 'running' && stale) {

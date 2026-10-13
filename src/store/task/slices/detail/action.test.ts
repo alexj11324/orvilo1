@@ -423,6 +423,37 @@ describe('TaskDetailSliceAction', () => {
       await pending;
     });
 
+    it('keeps the reviewer and review status intact when clearing is refused', async () => {
+      useTaskStore.setState({
+        taskDetailMap: {
+          'T-1': {
+            identifier: 'T-1',
+            reviewerAgentId: 'reviewer-1',
+            workflowCategory: 'in_review',
+          },
+        },
+      });
+      await expect(
+        useTaskStore.getState().updateTask('T-1', { reviewerAgentId: null }),
+      ).rejects.toThrow('TASK_REVIEWER_REQUIRED');
+      expect(useTaskStore.getState().taskDetailMap['T-1']).toMatchObject({
+        reviewerAgentId: 'reviewer-1',
+        workflowCategory: 'in_review',
+      });
+      expect(taskService.update).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('checks the current revision when assigning a reviewer Agent', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({ data: { domainRevision: 7 } } as any);
+      vi.mocked(taskService.update).mockResolvedValue({ success: true } as any);
+      await useTaskStore.getState().updateTask('T-1', { reviewerAgentId: 'reviewer-1' });
+      expect(taskService.update).toHaveBeenCalledWith(
+        'T-1',
+        expect.objectContaining({ reviewerAgentId: 'reviewer-1', expectedDomainRevision: 7 }),
+      );
+    });
+
     it('attaches the row domainRevision as the CAS on assignee updates', async () => {
       vi.mocked(taskService.find).mockResolvedValue({
         data: { domainRevision: 7, id: 'task-uuid-1' },

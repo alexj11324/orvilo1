@@ -25,6 +25,7 @@ import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/li
 import {
   TaskHandoffRequiredError,
   TaskModel,
+  TaskReviewerRequiredError,
   TaskRevisionConflictError,
 } from '@/database/models/task';
 import {
@@ -259,7 +260,6 @@ const taskVerifyConfigPatchSchema = z.object({
   enabled: z.boolean().nullish(),
   maxIterations: z.number().min(1).max(10).nullish(),
   requirement: z.string().nullish(),
-  verifierAgentId: z.string().nullish(),
   verifyCriteriaIds: z.array(z.string()).nullish(),
   verifyRubricId: z.string().nullish(),
 });
@@ -292,6 +292,7 @@ const createSchema = z.object({
   parentTaskId: z.string().optional(),
   priority: z.number().min(0).max(4).optional(),
   projectId: z.string().optional(),
+  reviewerAgentId: z.string().nullish(),
   schedulePattern: z.string().optional(),
   scheduleTimezone: z.string().optional(),
   /** Execution-status preset — a status-grouped board column's `+`. */
@@ -371,7 +372,7 @@ const updateSchema = z.object({
   position: z.number().optional(),
   priority: z.number().min(0).max(4).optional(),
   projectId: z.string().nullish(),
-  reviewerUserId: z.string().nullish(),
+  reviewerAgentId: z.string().nullish(),
   schedulePattern: z.string().nullish(),
   scheduleTimezone: z.string().nullish(),
   status: z.enum(TASK_STATUSES).optional(),
@@ -1731,6 +1732,13 @@ export const taskRouter = router({
         return { data: result, message: 'Task handed off', success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskRevisionConflictError) {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
@@ -1783,6 +1791,28 @@ export const taskRouter = router({
         message: 'Failed to fetch grouped tasks',
       });
     }
+  }),
+
+  listReviewerAgents: taskProcedure.query(async ({ ctx }) => {
+    const agents = await ctx.agentModel.queryAgents();
+    const results = await Promise.all(
+      agents.map(async (agent) => {
+        try {
+          await assertCanUseWorkspaceAgent({
+            agentId: agent.id,
+            db: ctx.serverDB,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          });
+          return { id: agent.id, name: agent.title ?? agent.name ?? agent.id };
+        } catch (error) {
+          if (error instanceof TRPCError && ['FORBIDDEN', 'NOT_FOUND'].includes(error.code))
+            return null;
+          throw error;
+        }
+      }),
+    );
+    return { data: results.filter((agent) => agent !== null), success: true };
   }),
 
   list: taskProcedure.input(listSchema).query(async ({ input, ctx }) => {
@@ -1930,6 +1960,13 @@ export const taskRouter = router({
         });
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2348,6 +2385,13 @@ export const taskRouter = router({
         return { data: result, success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2380,12 +2424,14 @@ export const taskRouter = router({
         // Every first-party caller resolves `expectedDomainRevision` before
         // writing; anything else must fetch the task and retry.
         if (
-          (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) &&
+          (data.assigneeAgentId !== undefined ||
+            data.assigneeUserId !== undefined ||
+            data.reviewerAgentId !== undefined) &&
           expectedDomainRevision === undefined
         ) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'expectedDomainRevision is required when changing a task assignee',
+            message: 'expectedDomainRevision is required when changing a task assignee or reviewer',
           });
         }
         const model = ctx.taskModel;
@@ -2507,7 +2553,18 @@ export const taskRouter = router({
           }
         }
 
-        await ctx.taskService.assertAssigneeUserAssignable(data.reviewerUserId);
+        if (data.reviewerAgentId) {
+          await assertAgentVisibleTo(ctx.serverDB, data.reviewerAgentId, {
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId ?? undefined,
+          });
+          await assertCanUseWorkspaceAgent({
+            agentId: data.reviewerAgentId,
+            db: ctx.serverDB,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          });
+        }
 
         const resolvedParentTaskId =
           parentTaskId === undefined
@@ -2595,18 +2652,35 @@ export const taskRouter = router({
             })
           : await commit(ctx.serverDB);
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+        if (data.reviewerAgentId && task.reviewerAgentId !== resolved.reviewerAgentId) {
+          const { resumeReviewerAssignment } =
+            await import('@/server/services/task/reviewerAssignment');
+          await resumeReviewerAssignment(
+            ctx.serverDB,
+            ctx.userId,
+            task.id,
+            ctx.workspaceId ?? task.workspaceId ?? undefined,
+          );
+        }
         // Only an actual assignee change notifies — re-saving the same assignee
         // stays silent (self-assignment is filtered inside the helper).
         if (task.assigneeUserId !== resolved.assigneeUserId) {
           notifyAssignedBestEffort(ctx, task);
         }
         return {
-          data: (await withDerivedStatus(model, [task]))[0],
+          data: (await withDerivedStatus(model, [(await model.findById(task.id)) ?? task]))[0],
           message: 'Task updated',
           success: true,
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2946,6 +3020,13 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -3016,6 +3097,13 @@ export const taskRouter = router({
         return { data: result, message: `Task family ${input.status}`, success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }

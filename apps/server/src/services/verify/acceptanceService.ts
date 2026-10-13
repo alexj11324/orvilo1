@@ -15,10 +15,12 @@ import type {
   VerifyRunDecisionDetail,
   VerifySurface,
 } from '@orvilo/types';
+import { pickTrimmedString } from '@orvilo/utils/object';
 import debug from 'debug';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { AgentModel } from '@/database/models/agent';
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DocumentModel } from '@/database/models/document';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
@@ -35,6 +37,10 @@ import type {
   VerifyRunItem,
 } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
+import {
+  cancelQueuedDeviceOperation,
+  finishQueuedDeviceOperation,
+} from '@/server/services/aiAgent/deviceQueue';
 import { TaskService } from '@/server/services/task';
 
 import { type AcceptanceMergeSummary, mergeAcceptanceRounds } from './acceptanceMerge';
@@ -847,7 +853,6 @@ export class AcceptanceService {
     }
 
     await this.stampDecision(acceptanceId, 'accept', comment);
-    await this.acceptanceModel.updateStatus(acceptanceId, 'accepted');
 
     if (acceptance.subjectType === 'task') {
       await this.completeTaskSubject(acceptance.subjectId, operationId);
@@ -871,7 +876,6 @@ export class AcceptanceService {
     await this.requireDecidableAcceptance(acceptanceId);
 
     await this.stampDecision(acceptanceId, 'reject', comment);
-    await this.acceptanceModel.updateStatus(acceptanceId, 'rejected');
 
     return (await this.acceptanceModel.findById(acceptanceId))!;
   };
@@ -966,8 +970,21 @@ export class AcceptanceService {
     // prediction stayed unanswered — and the decision then HIDES the proposal,
     // so nothing could ever reconcile the pair again. Agreement analysis reads
     // those two rows as a matched set; a durable split is worse than failing.
+    const canceledQueuedOperations: string[] = [];
     await this.db.transaction(async (tx) => {
       const resultModel = new VerifyCheckResultModel(tx, this.userId, this.workspaceId);
+
+      // A manual verdict retires unlaunched checks under the same CAS as reconnect claims.
+      for (const result of targets.values()) {
+        const operationId =
+          result.verifierOperationId ?? pickTrimmedString(result.metadata?.reviewerOperationId);
+        if (
+          operationId &&
+          (await cancelQueuedDeviceOperation(tx, this.userId, operationId, this.workspaceId))
+        ) {
+          canceledQueuedOperations.push(operationId);
+        }
+      }
 
       await Promise.all(
         [...targets.values()].map((result) => {
@@ -997,18 +1014,13 @@ export class AcceptanceService {
       }
     });
 
+    await this.finishCanceledReviewers(canceledQueuedOperations);
+
     log('acceptance %s: %d check result(s) marked %s', acceptanceId, targets.size, decision);
     return { resultIds: [...targets.keys()] };
   };
 
-  /**
-   * A user decision needs a SETTLED round to judge (`delivered`, or `errored`
-   * — the verifier could not run, the user may still take or refuse the
-   * delivery). Deciding mid-flight would stamp a terminal state (and possibly
-   * complete a task) before any report/verdict exists, and `recomputeStatus`
-   * treats `accepted` as sticky, so a premature accept could never be
-   * corrected by the pipeline.
-   */
+  /** A person may decide while review is queued or running; their decision wins. */
   private requireDecidableAcceptance = async (acceptanceId: string): Promise<AcceptanceItem> => {
     const acceptance = await this.acceptanceModel.findById(acceptanceId);
     if (!acceptance) throw new Error(`Acceptance "${acceptanceId}" not found`);
@@ -1020,11 +1032,6 @@ export class AcceptanceService {
     }
     if (acceptance.status === 'rejected') {
       throw new Error('This delivery was rejected — the next verification round re-opens it');
-    }
-    if (acceptance.status !== 'delivered' && acceptance.status !== 'errored') {
-      throw new Error(
-        `Verification is still in progress (${acceptance.status}) — the decision comes once the round settles`,
-      );
     }
     return acceptance;
   };
@@ -1043,7 +1050,54 @@ export class AcceptanceService {
       decidedBy: this.actorUserId,
       ...(comment ? { comment } : {}),
     };
-    await this.runModel.setDecision(current.id, decision, detail);
+    const canceled: string[] = [];
+    await this.db.transaction(async (tx) => {
+      const results = new VerifyCheckResultModel(tx, this.userId, this.workspaceId);
+      for (const result of await results.listByRun(current.id)) {
+        if (
+          result.userDecision ||
+          !['pending', 'running', 'errored', 'skipped'].includes(result.status)
+        )
+          continue;
+        const operationId =
+          result.verifierOperationId ?? pickTrimmedString(result.metadata?.reviewerOperationId);
+        if (
+          operationId &&
+          (await cancelQueuedDeviceOperation(tx, this.userId, operationId, this.workspaceId))
+        )
+          canceled.push(operationId);
+        await results.update(result.id, {
+          userDecision: decision === 'accept' ? 'accepted' : 'rejected',
+          userDecisionDetail: detail,
+        });
+      }
+      await new VerifyRunModel(tx, this.userId, this.workspaceId).setDecision(
+        current.id,
+        decision,
+        detail,
+      );
+      await new AcceptanceModel(tx, this.userId, this.workspaceId).updateStatus(
+        acceptanceId,
+        decision === 'accept' ? 'accepted' : 'rejected',
+      );
+    });
+    await this.finishCanceledReviewers(canceled);
+  };
+
+  private finishCanceledReviewers = async (operationIds: string[]): Promise<void> => {
+    for (const operationId of operationIds) {
+      try {
+        const operation = await new AgentOperationModel(
+          this.db,
+          this.userId,
+          this.workspaceId,
+        ).findById(operationId);
+        if (operation) await finishQueuedDeviceOperation(this.db, operation);
+      } catch (error) {
+        // Decisions and cancellation are committed; the watchdog retries terminal hooks.
+        console.error('[acceptance] Queued verifier cleanup deferred', { operationId, error });
+      }
+    }
   };
 
   /**

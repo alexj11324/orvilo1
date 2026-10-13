@@ -1,8 +1,8 @@
-import { isHeterogeneousAgentModelId } from '@orvilo/const';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DocumentModel } from '@/database/models/document';
+import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
@@ -11,16 +11,12 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { appendAegisDeliverableEvidence } from './aegisEvidence';
 import { createVerifierAgentRunner } from './agentVerifier';
-import {
-  recordHeterogeneousDeliverableEvidence,
-  startEvidenceSubmission,
-} from './evidenceSubmission';
+import { recordHeterogeneousDeliverableEvidence } from './evidenceSubmission';
 import { VerifyExecutorService } from './executor';
-import { resolveVerifyModelConfig } from './modelConfig';
+import { resolveIssueReviewer } from './reviewerAgent';
 import { finalizeVerifyRun } from './settle';
 import { VERIFY_ABANDONED_MS } from './staleness';
 import { VerifyStatusService } from './statusService';
-import { resolveTaskAcceptance } from './taskAcceptance';
 
 const log = debug('orvilo-server:verify-lifecycle');
 const MAX_TASK_DOCUMENT_CHARS = 80_000;
@@ -96,7 +92,7 @@ const executeVerifyLifecycle = async (
     );
 
     // Opt-in gate: only runs with a confirmed plan.
-    if (!run?.plan?.length || !run.planConfirmedAt) return;
+    if (!run?.plan?.length || !run.planConfirmedAt || run.userDecision) return;
 
     const op = await new AgentOperationModel(db, userId, workspaceId).findById(params.operationId);
     if (!op) {
@@ -189,37 +185,44 @@ const executeVerifyLifecycle = async (
       ).claimEvidenceCollection(run.id);
       if (evidenceClaimed) {
         try {
-          if (
-            op.provider === 'orvilo' ||
-            isHeterogeneousAgentModelId(op.model) ||
-            isHeterogeneousAgentModelId(op.provider)
-          ) {
-            await recordHeterogeneousDeliverableEvidence({
-              db,
-              deliverable: aegisDeliverable,
-              operation: op,
-              plan: run.plan,
-              userId,
-              workspaceId,
-            });
-            evidenceSubmitted = true;
-          } else {
-            await startEvidenceSubmission({
-              db,
-              deliverable: aegisDeliverable,
-              goal: params.goal,
-              operation: op,
-              plan: run.plan,
-              userId,
-              workspaceId,
-            });
-          }
+          await recordHeterogeneousDeliverableEvidence({
+            db,
+            deliverable: aegisDeliverable,
+            operation: op,
+            plan: run.plan,
+            userId,
+            workspaceId,
+          });
+          evidenceSubmitted = true;
         } catch (error) {
           await new VerifyRunModel(db, userId, workspaceId).updateStatus(run.id, 'planned');
           throw error;
         }
       }
       if (!evidenceSubmitted) return;
+    }
+
+    let reviewerAgentId: string;
+    try {
+      reviewerAgentId = await resolveIssueReviewer(db, userId, op.taskId, workspaceId);
+    } catch (error) {
+      if (op.taskId) {
+        const task = await new TaskModel(db, userId, workspaceId).findById(op.taskId);
+        if (task?.reviewerAgentId) {
+          const { markReviewerUnavailable } = await import('../task/reviewerAssignment');
+          await markReviewerUnavailable(
+            db,
+            userId,
+            {
+              taskId: op.taskId,
+              operationId: op.id,
+              reason: error instanceof Error ? error.message : String(error),
+            },
+            workspaceId,
+          );
+        }
+      }
+      throw error;
     }
 
     // Claim only after a task-bound builder has submitted evidence. Standalone
@@ -238,24 +241,6 @@ const executeVerifyLifecycle = async (
       return;
     }
 
-    // Task-bound runs may pin which agent verifies through its Acceptance policy.
-    // Non-task runs leave it undefined → builtin fallback.
-    let verifierAgentId: string | undefined;
-    if (op.taskId) {
-      const resolvedAcceptance = await resolveTaskAcceptance(db, userId, op.taskId, workspaceId);
-      verifierAgentId = resolvedAcceptance?.config.verifierAgentId ?? undefined;
-    }
-
-    const modelConfig = await resolveVerifyModelConfig(
-      db,
-      userId,
-      {
-        parentModel: op.model,
-        parentProvider: op.provider,
-        verifierAgentId,
-      },
-      workspaceId,
-    );
     const resolvedDeliverable = await resolveVerificationDeliverable(
       db,
       userId,
@@ -269,24 +254,20 @@ const executeVerifyLifecycle = async (
     await executor.execute({
       deliverable: resolvedDeliverable,
       goal: verificationGoal,
-      modelConfig,
+      reviewerAgentId,
       operationId: params.operationId,
       // `agent`-type checks run as the task-pinned verify agent (or the builtin
       // one), which writes its verdict back via the submitVerifyResult tool.
       runVerifierAgent: createVerifierAgentRunner({
         db,
         deliverable: resolvedDeliverable,
-        model: modelConfig.model,
-        provider: modelConfig.provider,
         taskId: op.taskId,
         topicId: op.topicId,
         userId,
-        verifierAgentId,
         workspaceId,
       }),
       // The LLM judge binds to the same verifier agent (builtin fallback inside
       // the executor) — it is an explicitly-authorized ACP judgment now.
-      verifierAgentId,
     });
 
     // Settle the run: repair-aware tail, then (on terminal settle) report + drive
@@ -302,8 +283,7 @@ const executeVerifyLifecycle = async (
         report: {
           deliverable: resolvedDeliverable,
           goal: verificationGoal,
-          modelConfig,
-          verifierAgentId,
+          reviewerAgentId,
         },
       },
       workspaceId,
@@ -328,3 +308,39 @@ export const runVerifyAfterEvidenceSubmission = async (
   params: RunVerifyOnCompletionParams,
   workspaceId?: string,
 ): Promise<void> => executeVerifyLifecycle(db, userId, params, workspaceId, true, true);
+
+/** Continue the delivered operation after a reviewer is assigned to its Issue. */
+export const resumeIssueVerification = async (
+  db: OrviloDatabase,
+  userId: string,
+  params: { taskId: string; operationId?: string },
+  workspaceId?: string,
+): Promise<void> => {
+  await resolveIssueReviewer(db, userId, params.taskId, workspaceId);
+  const task = await new TaskModel(db, userId, workspaceId).findById(params.taskId);
+  const topic = task?.currentTopicId
+    ? await new TaskTopicModel(db, userId, workspaceId).findByTopicId(task.currentTopicId)
+    : null;
+  const operationId = params.operationId ?? topic?.operationId;
+  if (!operationId) return;
+  const run = await new VerifyRunModel(db, userId, workspaceId).findByOperation(operationId);
+  if (!run?.planConfirmedAt) return;
+  const operation = await new AgentOperationModel(db, userId, workspaceId).findById(operationId);
+  if (!operation || operation.taskId !== params.taskId) return;
+  const delivered = operation.topicId
+    ? await new MessageModel(db, userId).findLatestAssistantByOperationId({
+        operationId,
+        topicId: operation.topicId,
+      })
+    : null;
+  await runVerifyAfterEvidenceSubmission(
+    db,
+    userId,
+    {
+      deliverable: delivered?.content ?? '',
+      goal: run.goal ?? task?.instruction ?? task?.name ?? '',
+      operationId,
+    },
+    workspaceId,
+  );
+};

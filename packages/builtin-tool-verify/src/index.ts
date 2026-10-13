@@ -1,5 +1,4 @@
 export { VerifyToolIdentifier, VerifyToolManifest } from './manifest';
-export { systemPrompt } from './systemRole';
 export {
   type SubmitVerifyResultParams,
   VerifyToolApiName,

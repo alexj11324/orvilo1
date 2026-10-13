@@ -202,7 +202,7 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
 
   const navigate = useWorkspaceAwareNavigate();
   const { allowed: canEditTask, reason } = usePermission('create_content');
-  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeAgentId);
   // Subtask composers inherit the parent's visibility as their default — a
   // child under a private parent must not default to workspace-visible (the
   // server rejects a subtask more public than its parent).

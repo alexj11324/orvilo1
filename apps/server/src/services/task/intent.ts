@@ -70,9 +70,6 @@ export class TaskIntentService {
     context?: string;
     instruction: string;
   }): Promise<TaskIntentAnalysis> {
-    // Intent reading is the same "structure the user's request" model role as
-    // goal criteria drafting, so it rides that assignment rather than adding a
-    // configurable model slot for a feature still behind a lab toggle.
     const modelConfig = await resolveLightweightJudgment(
       this.db,
       this.userId,
@@ -93,8 +90,7 @@ export class TaskIntentService {
       },
       {
         judgment: {
-          // Pre-creation intent reading binds to the builtin task agent; a
-          // missing binding surfaces as an explicit block to the caller.
+          // Use the selected Agent, or this workspace's configured Orchestrator.
           binding: modelConfig.binding,
           purpose: 'task.intent',
         },

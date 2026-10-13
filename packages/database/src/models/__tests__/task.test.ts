@@ -94,6 +94,7 @@ const derivedStatus = async (id: string) => {
 
 beforeEach(async () => {
   await serverDB.delete(workspaces);
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
   // Project creation provisions a coordinator through Prime inheritance.
@@ -102,6 +103,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await serverDB.delete(workspaces);
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
 });
 
@@ -467,80 +469,6 @@ describe('TaskModel', () => {
       const task = await model1.create({ instruction: 'User 1 task' });
       const result = await model2.update(task.id, { name: 'Hacked' });
       expect(result).toBeNull();
-    });
-
-    it('backfills the reviewer from the member assignee on the paused transition', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(await derivedStatus(task.id)).toBe('paused');
-      expect(updated!.reviewerUserId).toBe(userId2);
-    });
-
-    it('falls back to the creator when no member assignee exists', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-
-    it('keeps an explicitly chosen reviewer over the backfill', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, {
-        reviewerUserId: userId,
-        status: 'paused',
-      });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-
-    it('lets an explicit null clear the reviewer even while pausing', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, {
-        reviewerUserId: null,
-        status: 'paused',
-      });
-
-      expect(updated!.reviewerUserId).toBeNull();
-    });
-
-    it('does not touch the reviewer on non-paused transitions', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'running' });
-
-      expect(updated!.reviewerUserId).toBeNull();
-    });
-
-    it('keeps a previously stored reviewer on a later pause', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-      await model.update(task.id, { reviewerUserId: userId });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-  });
-
-  describe('updateStatusIfCurrent', () => {
-    it('backfills the reviewer when the transition lands on paused', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-      await dispatchFixture(task.id, 'running');
-
-      const updated = await model.updateStatusIfCurrent(task.id, 'running', 'paused');
-
-      expect(updated!.reviewerUserId).toBe(userId2);
     });
   });
 
@@ -2850,6 +2778,8 @@ describe('TaskModel', () => {
       // Both sides derive the same legacy status ('backlog'), which is why
       // this move used to leave no trace at all.
       await model.updateWithLog(task.id, { workflowCategory: 'in_progress' }, { userId });
+      await createAgent('workflow-reviewer');
+      await model.update(task.id, { reviewerAgentId: 'workflow-reviewer' });
       await model.updateWithLog(task.id, { workflowCategory: 'in_review' }, { userId });
 
       const activities = await model.getActivities(task.id);
@@ -3520,7 +3450,6 @@ describe('TaskModel', () => {
       await model.updateVerifyConfig(task.id, {
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
         verifyRubricId: 'rub_1',
       });
 
@@ -3530,7 +3459,6 @@ describe('TaskModel', () => {
       expect(config.verify).toEqual({
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
         verifyRubricId: 'rub_1',
       });
     });
@@ -3542,11 +3470,11 @@ describe('TaskModel', () => {
         instruction: 'Test',
       });
 
-      await model.updateVerifyConfig(task.id, { verifierAgentId: 'agt_codex' });
+      await model.updateVerifyConfig(task.id, { maxIterations: 4 });
 
       expect(model.getVerifyConfig((await model.findById(task.id))!)).toEqual({
         enabled: true,
-        verifierAgentId: 'agt_codex',
+        maxIterations: 4,
         verifyRubricId: 'rub_1',
       });
     });
@@ -3556,13 +3484,13 @@ describe('TaskModel', () => {
       const task = await model.create({
         config: {
           provider: 'anthropic',
-          verify: { enabled: true, verifierAgentId: 'agt_codex', verifyRubricId: 'rub_1' },
+          verify: { enabled: true, verifyRubricId: 'rub_1' },
         },
         instruction: 'Test',
       });
 
-      // Switch back to the default verifier + drop the rubric, keep enabled.
-      await model.updateVerifyConfig(task.id, { verifierAgentId: null, verifyRubricId: null });
+      // Drop the rubric while keeping the gate enabled.
+      await model.updateVerifyConfig(task.id, { verifyRubricId: null });
 
       const updated = (await model.findById(task.id))!;
       const config = updated.config as Record<string, any>;
@@ -4508,7 +4436,7 @@ describe('TaskModel', () => {
       expect((await outsider.findById(draft.id))?.id).toBe(draft.id);
     });
 
-    it('still lets assignees, reviewers, team members, and workspace admins find the task', async () => {
+    it('lets workspace members find shared Issues independently of assignment', async () => {
       const alice = new TaskModel(serverDB, userId, wsId);
       const bob = new TaskModel(serverDB, userId2, wsId);
       const assigned = await alice.create({
@@ -4521,7 +4449,6 @@ describe('TaskModel', () => {
       const reviewed = await alice.create({
         instruction: 'Review on the private team',
         name: 'Review on the private team',
-        reviewerUserId: userId2,
         teamId: privateTeamId,
         visibility: 'public',
       });

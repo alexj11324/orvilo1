@@ -36,13 +36,33 @@ const SETTINGS_SURFACE_FILES = [
   'src/features/Settings/agents/index.tsx',
   'src/features/Settings/agents/AgentSettingsDetailPage.tsx',
   'src/features/Settings/agents/AgentSettingsHeader.tsx',
-  'src/features/AgentSettings/AgentAccessSettings.tsx',
-  'src/features/AgentSettings/AgentAdvancedSettings.tsx',
   'src/features/AgentSettings/AgentDeviceSettings.tsx',
   'src/features/AgentSettings/AgentModelSettings.tsx',
   'src/features/AgentSettings/ExternalAgentConnectionSettings.tsx',
   'src/features/AgentSettings/SettingsGroup.tsx',
 ];
+
+describe('the agent settings page is one flat form', () => {
+  const page = read('src/features/Settings/agents/AgentSettingsDetailPage.tsx');
+
+  it('has no collapsible sections', () => {
+    expect(page).not.toContain('<details');
+    expect(page).not.toContain('<summary');
+  });
+
+  it('has no access-policy section; the member list is the only access control', () => {
+    expect(page).not.toContain('AgentAccessSettings');
+    expect(exists('src/features/AgentSettings/AgentAccessSettings.tsx')).toBe(false);
+    expect(page).toContain('<AgentUseSettings');
+  });
+
+  it('has no isolation switch among the execution rows', () => {
+    const runtime = read('src/features/AgentSettings/AgentRuntimeSettings.tsx');
+
+    expect(runtime).not.toContain('localSandbox');
+    expect(runtime).toContain('settingAgent.execution.cwd');
+  });
+});
 
 describe('the native agent settings page carries no profile chrome', () => {
   it('mounts AgentSettingsDetailPage instead of the profile embed', () => {

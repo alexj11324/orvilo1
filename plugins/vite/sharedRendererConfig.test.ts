@@ -60,6 +60,10 @@ describe('sharedRendererDedupe', () => {
   it('keeps editor entrypoints on one shared context instance', () => {
     expect(sharedRendererDedupe).toContain('@lobehub/editor');
   });
+
+  it('keeps the theme provider and every component on one @lobehub/ui copy', () => {
+    expect(sharedRendererDedupe).toContain('@lobehub/ui');
+  });
 });
 
 describe('sharedModulePreload', () => {

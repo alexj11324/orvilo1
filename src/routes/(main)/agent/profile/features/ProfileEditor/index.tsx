@@ -5,7 +5,6 @@ import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import React, { memo } from 'react';
 
-import AgentAccessSettings from '@/features/AgentSettings/AgentAccessSettings';
 import AgentAdvancedSettings from '@/features/AgentSettings/AgentAdvancedSettings';
 import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
 import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
@@ -63,7 +62,6 @@ const ProfileEditor = memo(() => {
                   a local-CLI concept. */}
               {isRemoteHetero ? null : <AgentModelSettings agentId={agentId} />}
               <AgentDeviceSettings agentId={agentId} />
-              <AgentAccessSettings agentId={agentId} />
               <AgentUseSettings agentId={agentId} />
               <AgentAdvancedSettings agentId={agentId} />
             </>
@@ -72,7 +70,6 @@ const ProfileEditor = memo(() => {
               <AgentGeneralSettings agentId={agentId} />
               <AgentModelSettings agentId={agentId} />
               <AgentDeviceSettings agentId={agentId} />
-              <AgentAccessSettings agentId={agentId} />
               <AgentUseSettings agentId={agentId} />
               <AgentAdvancedSettings agentId={agentId} />
             </>

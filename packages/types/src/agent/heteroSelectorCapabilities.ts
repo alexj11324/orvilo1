@@ -308,9 +308,9 @@ export interface HeteroSelectorModelCapability {
   extraStripFlags?: readonly string[];
   resolve: (source: HeteroSelectionSource | null | undefined) => string;
   /**
-   * `catalog` providers enumerate models through a device-local CLI call;
-   * `static` providers accept a small fixed set of aliases and must keep
-   * working with no device attached.
+   * `catalog` providers enumerate models through a device-local CLI call, so
+   * the list and its names are the ones the installed CLI reports. `static`
+   * providers accept a small fixed set of aliases; no agent uses it today.
    */
   source: 'catalog' | 'static';
 }
@@ -368,7 +368,7 @@ export const HETERO_SELECTOR_CAPABILITIES = {
     model: {
       encodings: [{ flags: ['--model'], kind: 'flag' }],
       resolve: resolveClaudeCodeModel,
-      source: 'static',
+      source: 'catalog',
     },
   },
   'codebuddy': {
@@ -392,7 +392,7 @@ export const HETERO_SELECTOR_CAPABILITIES = {
     model: {
       encodings: [MODEL_FLAGS_ENCODING, { key: 'model', kind: 'config' }],
       resolve: resolveCodexModel,
-      source: 'static',
+      source: 'catalog',
     },
     speed: {
       encodings: [{ key: CODEX_SERVICE_TIER_CONFIG_KEY, kind: 'config' }],

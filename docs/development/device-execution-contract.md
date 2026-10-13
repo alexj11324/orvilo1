@@ -136,6 +136,20 @@ this machine returns `undefined` and reads over Electron IPC. Reading the shared
 row instead treats a member's own "this device" pick as a workspace device, and
 the scan fails with `Workspace device not found.`
 
+## One gateway connection per install
+
+The desktop app holds one personal connection to the device gateway, identified
+by a connection id that is stable for the install. The gateway keeps one socket
+per connection id and closes the older one when a second arrives, which is how a
+reconnect replaces its own previous socket.
+
+Two clients must therefore never share an install's connection id. Sign-in and
+startup both ask the desktop to connect, so `GatewayConnectionService` runs
+those requests in turn: each one closes the client the previous one opened
+before opening its own. Run together, the earlier client was never closed, both
+kept auto-reconnecting, and the device went online and offline once a second
+and never appeared in Settings → Devices.
+
 ## Unified execution chain
 
 Agent config + execution principal → unified config/permission resolution →

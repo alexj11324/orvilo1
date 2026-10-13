@@ -42,7 +42,7 @@ profiles and raw ACP traces.
 
 ## Quality checks
 
-- [Executed Test CI](https://github.com/alexj11324/orvilo1/actions/runs/38415651029): all 18 jobs passed on `d32cb6b4b5a7679c56c7880c6a111658f6f622b1`, including remote Typecheck, both server/app shards, database, packages, desktop, Windows shell and Required Quality Gate.
+- [Executed Test CI](https://github.com/alexj11324/orvilo1/actions/runs/38415651029): all 17 jobs passed on `d32cb6b4b5a7679c56c7880c6a111658f6f622b1`, including remote Typecheck, both server/app shards, database, packages, desktop, Windows shell and Required Quality Gate.
 - [Executed E2E job](https://github.com/alexj11324/orvilo1/actions/runs/38415650902/job/115365753166): 36 scenarios and 221 steps passed on that same revision, including auto-scroll. [GitHub Actions artifact](https://github.com/alexj11324/orvilo1/actions/runs/38415650902/artifacts/11826070366). The first attempt failed before tests on Public ECR HTTP 429; one targeted retry passed.
 - Scoped local lint and regressions passed. Independent light reviews covered the DB/API/UI/runtime changes and the subsequent repairs. No local `tsgo` was run.
 - Source grep over `apps`, `src` and `packages`, excluding tests, test fixtures and historical migrations, has no `verifyAgent`, `taskAgent`, `verify-agent` or `task-agent` hits.

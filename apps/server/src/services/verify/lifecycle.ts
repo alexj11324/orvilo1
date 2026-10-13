@@ -347,12 +347,20 @@ export const retryErroredVerification = async (
   let deliverable = run.metadata?.verificationDeliverable;
   if (typeof deliverable !== 'string') {
     const operation = await new AgentOperationModel(db, userId, workspaceId).findById(operationId);
-    const originalReply = operation?.topicId
-      ? await new MessageModel(db, run.userId, workspaceId).findLatestAssistantByOperationId({
-          operationId,
-          topicId: operation.topicId,
-        })
-      : undefined;
+    const messages = new MessageModel(db, run.userId, workspaceId);
+    const replyId = operation?.metadata?.assistantMessageId;
+    const recordedReply = typeof replyId === 'string' ? await messages.findById(replyId) : null;
+    // Native historical runs recorded the exact reply id before they stamped
+    // operation provenance on messages. Keep the same role and topic boundary.
+    const originalReply =
+      recordedReply?.role === 'assistant' && recordedReply.topicId === operation?.topicId
+        ? recordedReply
+        : operation?.topicId
+          ? await messages.findLatestAssistantByOperationId({
+              operationId,
+              topicId: operation.topicId,
+            })
+          : undefined;
     if (!originalReply?.content)
       throw new Error('VERIFICATION_CONTEXT_UNAVAILABLE: the original delivery was not recorded');
     deliverable = originalReply.content;

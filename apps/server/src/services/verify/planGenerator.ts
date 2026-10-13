@@ -144,6 +144,7 @@ export class VerifyPlanGeneratorService {
   private readonly rubricModel: VerifyRubricModel;
   private readonly runModel: VerifyRunModel;
   private readonly documentModel: DocumentModel;
+  private readonly workspaceId?: string;
   /**
    * Visibility of the agent that triggered this plan (only set when invoked
    * from a tool runtime). Threaded into every instruction-document create so
@@ -160,6 +161,7 @@ export class VerifyPlanGeneratorService {
   ) {
     this.db = db;
     this.userId = userId;
+    this.workspaceId = workspaceId;
     this.callerAgentVisibility = callerAgentVisibility;
     this.criterionModel = new VerifyCriterionModel(db, userId, workspaceId);
     this.rubricModel = new VerifyRubricModel(db, userId, workspaceId);
@@ -181,7 +183,11 @@ export class VerifyPlanGeneratorService {
     modelConfig: { model: string; provider: string };
   }): Promise<CriterionDraft[]> {
     const maxCriteria = params.maxCriteria ?? DEFAULT_MAX_AI_CRITERIA;
-    const raw = await new AiGenerationService(this.db, this.userId).generateObject(
+    const raw = await new AiGenerationService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).generateObject(
       {
         ...chainVerifyPlan({
           context: params.context,
@@ -348,7 +354,7 @@ export class VerifyPlanGeneratorService {
       maxCriteria: params.maxCriteria,
     });
 
-    const ai = new AiGenerationService(this.db, this.userId);
+    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     const raw = await ai.generateObject(
       {
         ...chain,

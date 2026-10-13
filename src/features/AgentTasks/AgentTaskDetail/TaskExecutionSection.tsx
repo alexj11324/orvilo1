@@ -122,7 +122,7 @@ const TaskExecutionSection = memo(() => {
   const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   const taskId = useTaskDetailTaskId();
 
-  if (detail?.parkedReason === 'review_required' && !detail.reviewerAgentId) {
+  if (detail?.parkedReason === 'review_required') {
     return (
       <div className="flex min-w-0 flex-col gap-1.5" role="status">
         <p className="text-sm text-warning-text">{t('taskDetail.review.waitingReviewer')}</p>
@@ -130,9 +130,13 @@ const TaskExecutionSection = memo(() => {
           <p className="text-xs text-muted-foreground">{detail.error}</p>
         )}
         {!readOnly && (
-          <ReviewerAgentSelector taskIdentifier={taskId}>
+          <ReviewerAgentSelector currentAgentId={detail.reviewerAgentId} taskIdentifier={taskId}>
             <Button size="sm" variant="outline">
-              {t('taskDetail.property.addReviewer')}
+              {t(
+                detail.reviewerAgentId
+                  ? 'taskDetail.property.changeReviewer'
+                  : 'taskDetail.property.addReviewer',
+              )}
             </Button>
           </ReviewerAgentSelector>
         )}

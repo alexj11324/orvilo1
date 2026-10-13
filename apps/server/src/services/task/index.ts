@@ -18,6 +18,7 @@ import type {
   TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
+import { executionParkedReason } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
@@ -2203,7 +2204,7 @@ export class TaskService {
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,
-      parkedReason: task.parkedReason,
+      parkedReason: executionParkedReason(task.context),
       priority: task.priority,
       projectId: task.projectId,
       schedule:

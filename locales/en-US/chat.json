@@ -2177,6 +2177,7 @@
   "taskDetail.property.addLabels": "Add labels",
   "taskDetail.property.addReviewer": "Add reviewer Agent",
   "taskDetail.property.agentSchedule": "Agent scheduling",
+  "taskDetail.property.changeReviewer": "Change reviewer Agent",
   "taskDetail.property.priority": "Priority",
   "taskDetail.property.schedule": "Schedule",
   "taskDetail.property.setupHelp": "Changes are saved when you choose a value.",

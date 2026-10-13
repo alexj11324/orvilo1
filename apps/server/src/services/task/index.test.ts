@@ -375,7 +375,7 @@ describe('TaskService', () => {
           id: 'task_001',
           identifier: 'TASK-1',
           totalTopics: 0,
-          parkedReason: 'review_required',
+          context: { execution: { parked: { reason: 'review_required' } } },
         });
         mockTaskModel.findAllDescendants.mockResolvedValue([]);
         mockTaskModel.getDependencies.mockResolvedValue([]);

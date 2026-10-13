@@ -1868,6 +1868,34 @@ describe('Task Router Integration', () => {
     });
   });
 
+  it.each([
+    [
+      { execution: { parked: { at: '2026-10-13T12:34:00Z', reason: 'review_required' } } },
+      'review_required',
+    ],
+    [{ execution: { parked: { at: '2026-10-13T12:34:00Z' } } }, 'paused'],
+    [{}, null],
+  ])(
+    'detail exposes the canonical parked execution reason from persisted context %j',
+    async (context, reason) => {
+      const task = await caller.create({ instruction: 'Delivered waiting state' });
+      await serverDB
+        .update(tasks)
+        .set({
+          context,
+          workflowCategory: 'in_progress',
+          error: 'Reviewer runtime cannot mount submitVerifyResult',
+        })
+        .where(eq(tasks.id, task.data.id));
+      const detail = await caller.detail({ id: task.data.id });
+      expect(detail.data).toMatchObject({
+        workflowCategory: 'in_progress',
+        parkedReason: reason,
+        error: 'Reviewer runtime cannot mount submitVerifyResult',
+      });
+    },
+  );
+
   describe('reviewer Agent admission', () => {
     it('exposes saved-runtime verification eligibility without hiding an unsupported reviewer', async () => {
       const { agents } = await import('@/database/schemas');

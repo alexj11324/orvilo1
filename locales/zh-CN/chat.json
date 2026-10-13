@@ -2176,6 +2176,7 @@
   "taskDetail.property.addLabels": "添加标签",
   "taskDetail.property.addReviewer": "添加审核 Agent",
   "taskDetail.property.agentSchedule": "智能体调度",
+  "taskDetail.property.changeReviewer": "更换审核 Agent",
   "taskDetail.property.priority": "优先级",
   "taskDetail.property.schedule": "日程",
   "taskDetail.property.setupHelp": "选择属性值后会立即保存。",

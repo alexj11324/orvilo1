@@ -1876,6 +1876,7 @@ export default {
   'taskDetail.property.schedule': 'Schedule',
   'taskDetail.property.addAssignee': 'Add assignee',
   'taskDetail.property.addReviewer': 'Add reviewer Agent',
+  'taskDetail.property.changeReviewer': 'Change reviewer Agent',
   'taskDetail.property.addDueDate': 'Add due date',
   'taskDetail.property.add': 'Add property',
   'taskDetail.property.addLabels': 'Add labels',

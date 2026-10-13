@@ -18,7 +18,7 @@ import type {
   TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
+import { deriveLegacyTaskStatus, executionParkedReason } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 
@@ -2295,7 +2295,7 @@ export class TaskService {
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,
-      parkedReason: task.parkedReason,
+      parkedReason: executionParkedReason(task.context),
       priority: task.priority,
       projectId: task.projectId,
       schedule:

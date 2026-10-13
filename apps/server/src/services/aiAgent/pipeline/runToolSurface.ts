@@ -3,6 +3,7 @@ import { AuvIdentifier } from '@orvilo/builtin-tool-auv';
 import { LocalSystemIdentifier } from '@orvilo/builtin-tool-local-system';
 import { OrchestrationWorkflowIdentifier } from '@orvilo/builtin-tool-orchestration-workflow';
 import { SELF_FEEDBACK_INTENT_IDENTIFIER } from '@orvilo/builtin-tool-self-iteration';
+import { TaskIdentifier } from '@orvilo/builtin-tool-task';
 import {
   builtinTools,
   chatModeAllowedToolIds,
@@ -192,12 +193,12 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
           ...(selectedToolIds ?? []),
         ]),
       ];
-  if (
-    input.isOrchestratorConversation &&
-    !allowed &&
-    !requested.includes(OrchestrationWorkflowIdentifier)
-  ) {
-    requested.push(OrchestrationWorkflowIdentifier);
+  if (input.isOrchestratorConversation && !allowed) {
+    // Revisions use normal Issue tools, including policy edits and deletions.
+    // Keep the start protocol beside them; exclusive judgment runs stay scoped.
+    for (const identifier of [TaskIdentifier, OrchestrationWorkflowIdentifier]) {
+      if (!requested.includes(identifier)) requested.push(identifier);
+    }
   }
 
   const disabled = new Set(getDisabledPluginIds(agentPlugins));

@@ -6,7 +6,7 @@ Never shorten this concept to `workflow`. Use `orchestrationWorkflow`, `Orchestr
 
 ## Start and human confirmation
 
-The server mounts `orvilo-orchestration-workflow` automatically for a conversation with the scope's configured Orchestrator. An ordinary Agent, a child Task operation, and an exclusive judgment or supervisor run do not receive this start tool. A runtime that cannot mount the required surface is rejected with `ORCHESTRATOR_RUNTIME_UNSUPPORTED`.
+The server mounts `orvilo-orchestration-workflow` and the normal `orvilo-task` Issue tools automatically for a conversation with the scope's configured Orchestrator, so it can revise the split through normal Issue operations. An ordinary Agent, a child Task operation, and an exclusive judgment or supervisor run do not receive the start tool. Exclusive runs keep their scoped tool surfaces. A runtime that cannot mount the required surface is rejected with `ORCHESTRATOR_RUNTIME_UNSUPPORTED`.
 
 The Orchestrator calls `prepareOrchestrationWorkflow` with the parent request and the complete split: distinct sub-Issue titles, descriptions with scope and checkable acceptance criteria, assignees, reviewers, dependencies and budgets. The server creates real parent/sub-Issues in Backlog and posts the split in the originating conversation. `config.conversationPlan` persists that message and its reply boundary. Intake and every dispatch entry point, including direct runs, hold the split until release. Other Backlog Issues retain their normal intake behavior.
 

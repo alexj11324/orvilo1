@@ -73,7 +73,7 @@ const withRuntime = async (
     agencyConfig: {
       boundDeviceId,
       executionTarget: 'device' as const,
-      heterogeneousProvider: { type: 'codex' as const },
+      heterogeneousProvider: { model: 'default', type: 'codex' as const },
       ...config.agencyConfig,
     },
   };

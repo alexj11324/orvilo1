@@ -45,8 +45,8 @@ beforeEach(async () => {
     { role: 'member', userId: recipientId, workspaceId: wsId },
     { role: 'member', userId: teammateId, workspaceId: wsId },
   ]);
-  // Creation admission requires a resolvable bound host; a codex-typed runtime
-  // needs no provider bindings.
+  // Creation admission requires a saved host and an explicit Codex model;
+  // this runtime needs no provider bindings.
   await serverDB.insert(devices).values({
     deviceId: `creation-host-${wsId}`,
     identitySource: 'installation',
@@ -61,7 +61,7 @@ const withRuntime = (config: Parameters<typeof ownerModel.create>[0] = {}) => ({
   agencyConfig: {
     boundDeviceId: `creation-host-${wsId}`,
     executionTarget: 'device' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: { model: 'default', type: 'codex' as const },
     ...config.agencyConfig,
   },
 });

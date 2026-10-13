@@ -301,3 +301,9 @@ layout. Keep the chosen Orbs, Beam and Bot accents, real domain state, permissio
 guards, editor behavior and specialized preview engines. The removed composer
 operation ticker and four-square Tools shortcut stay removed; Skills use `/`.
 Source provenance and behavior coverage: `docs/research/thinking-orbs/ai-elements-migration.md`.
+
+One departure from upstream sizing: assistant message content takes the full
+message width. Upstream sizes `MessageContent` to its content (`w-fit`), which
+suits a user bubble but collapses the assistant's steps, tool calls and code to
+the width of their longest label, leaving half the column empty. User bubbles
+keep `w-fit`.

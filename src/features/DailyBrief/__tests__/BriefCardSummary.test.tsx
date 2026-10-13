@@ -8,6 +8,12 @@ vi.mock('ahooks', () => ({
   useSize: vi.fn(),
 }));
 
+// The real Markdown takes several seconds to import cold, which is longer than
+// the test timeout; these tests are about the summary wrapper around it.
+vi.mock('@lobehub/ui/es/Markdown/index', () => ({
+  default: ({ children }: { children: string }) => <div>{children}</div>,
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -24,9 +30,7 @@ describe('BriefCardSummary', () => {
   it('should render summary text', async () => {
     vi.mocked(useSize).mockReturnValue(undefined);
     render(<BriefCardSummary summary="Test summary content" />);
-    expect(
-      await screen.findByText('Test summary content', {}, { timeout: 10_000 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Test summary content')).toBeInTheDocument();
   });
 
   it('measures an eagerly mounted wrapper so the lazy markdown is observed', () => {

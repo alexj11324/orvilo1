@@ -37,10 +37,9 @@ const log = debug('orvilo-server:verify-agent-verifier');
  * (`TaskVerifyConfig.verifierAgentId`) that agent runs under its OWN agency
  * config (executionTarget / device / provider) — so picking a heterogeneous
  * agent (e.g. Codex) naturally gives the verifier device + browser access. When
- * unset it uses the builtin
- * verify agent, which receives a verify-safe provider/model resolved by the
- * lifecycle layer. That resolver intentionally filters heterogeneous runtime
- * identifiers (e.g. claude-code / codex) that cannot run Orvilo LLM calls.
+ * unset it uses the builtin verify agent in the same workspace or personal
+ * scope. The builtin inherits an explicitly configured, authorized device
+ * runtime and retains its verifier role and tools.
  */
 export const createVerifierAgentRunner = (params: {
   db: OrviloDatabase;
@@ -92,8 +91,8 @@ export const createVerifierAgentRunner = (params: {
 
     // Resolve which agent verifies. A pinned agent runs as itself (`agentId`) so
     // its own agency config drives execution target/provider — we don't override
-    // its model/provider. The builtin fallback runs by `slug` with the verify-safe
-    // model/provider selected by lifecycle.
+    // its model/provider. Resolve the builtin to an exact scoped id so a
+    // personal builtin with the same slug cannot substitute for the workspace's.
     let agentRef: { agentId: string } | { slug: string };
     let useProvidedModelConfig = false;
     // A pinned agent (selected for its runtime/device) carries only its own

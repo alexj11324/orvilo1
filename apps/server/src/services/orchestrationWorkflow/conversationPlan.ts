@@ -163,6 +163,7 @@ export class OrchestrationWorkflowConversationPlanService {
           .filter((node) => node.kind === 'task' && node.taskId)
           .map((node) => [node.taskId!, node.id]),
       );
+      const reviewers = new Map<string, string | undefined>();
       for (const node of graph?.nodes.filter((node) => node.kind === 'task') ?? []) {
         const issue = issues.find((item) => item.id === node.taskId);
         if (issue)
@@ -196,6 +197,7 @@ export class OrchestrationWorkflowConversationPlanService {
           this.userId,
           this.workspaceId,
         ).ensureForSubject('task', issue.id, { config: { enabled: true } });
+        reviewers.set(issue.id, acceptance.config?.verifierAgentId);
         await new AcceptanceModel(tx, this.userId, this.workspaceId).update(acceptance.id, {
           requirement: issue.instruction,
         });
@@ -217,11 +219,7 @@ export class OrchestrationWorkflowConversationPlanService {
       const agentIds = [
         ...new Set(
           issues
-            .flatMap((issue) => [
-              issue.assigneeAgentId,
-              (issue.config as { verify?: { verifierAgentId?: string } } | null)?.verify
-                ?.verifierAgentId,
-            ])
+            .flatMap((issue) => [issue.assigneeAgentId, reviewers.get(issue.id)])
             .filter((id): id is string => Boolean(id)),
         ),
       ];
@@ -238,7 +236,7 @@ export class OrchestrationWorkflowConversationPlanService {
         `Attempt budget per Issue: ${item.config?.recovery?.maxAttemptsPerTask ?? 3}; parallelism: ${item.config?.maxConcurrentTasks ?? 'coordinator default'}; cost budget: ${item.maxTotalCost ?? 'none'}; deadline: ${item.config?.schedule?.deadline ?? 'none'}.`,
         ...issues.map(
           (issue) =>
-            `${issue.identifier}: ${issue.name}\n${issue.instruction}\nAssignee Agent: ${agentNames.get(issue.assigneeAgentId ?? '') ?? 'unassigned'}; reviewer Agent: ${agentNames.get((issue.config as { verify?: { verifierAgentId?: string } } | null)?.verify?.verifierAgentId ?? '') ?? 'existing verification policy'}; dependencies: ${
+            `${issue.identifier}: ${issue.name}\n${issue.instruction}\nAssignee Agent: ${agentNames.get(issue.assigneeAgentId ?? '') ?? 'unassigned'}; reviewer Agent: ${agentNames.get(reviewers.get(issue.id) ?? '') ?? 'existing verification policy'}; dependencies: ${
               dependencies
                 .filter((dependency) => dependency.taskId === issue.id)
                 .map(

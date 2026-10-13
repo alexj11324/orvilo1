@@ -10,7 +10,9 @@ import {
   orchestrationWorkflowNodes,
 } from '@/database/schemas/orchestrationWorkflowGraph';
 import { tasks } from '@/database/schemas/task';
+import { acceptances } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
+import { buildWorkspaceWhere } from '@/database/utils/workspace';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { getScopedOnlineDevices } from '@/server/services/deviceGateway/scopedDevices';
 
@@ -86,10 +88,18 @@ export class OrchestrationWorkflowConversationService {
         workflowStateRefId: tasks.workflowStateRefId,
         parentTaskId: tasks.parentTaskId,
         assigneeAgentId: tasks.assigneeAgentId,
-        config: tasks.config,
+        config: acceptances.config,
       })
       .from(orchestrationWorkflowNodes)
       .innerJoin(tasks, eq(tasks.id, orchestrationWorkflowNodes.taskId))
+      .leftJoin(
+        acceptances,
+        and(
+          eq(acceptances.subjectType, 'task'),
+          eq(acceptances.subjectId, tasks.id),
+          buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, acceptances),
+        ),
+      )
       .where(eq(orchestrationWorkflowNodes.orchestrationWorkflowId, id));
     const dependencies = await new TaskModel(
       this.db,
@@ -98,9 +108,7 @@ export class OrchestrationWorkflowConversationService {
     ).getDependenciesByTaskIds(issues.map((issue) => issue.id));
     return issues.map(({ config, ...issue }) => ({
       ...issue,
-      reviewerAgentId:
-        (config as { verify?: { verifierAgentId?: string } } | null)?.verify?.verifierAgentId ??
-        null,
+      reviewerAgentId: config?.verifierAgentId ?? null,
       dependsOn: dependencies
         .filter((dependency) => dependency.taskId === issue.id)
         .map((dependency) => dependency.dependsOnId),

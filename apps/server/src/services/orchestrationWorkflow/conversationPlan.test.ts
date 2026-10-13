@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { AcceptanceModel } from '@/database/models/acceptance';
 import { MessageModel } from '@/database/models/message';
 import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import { TaskModel } from '@/database/models/task';
@@ -274,6 +275,32 @@ describe('board split and conversation reply admission', () => {
       .where(eq(taskDispatches.taskId, result.taskIds[0]));
     expect(dispatch.initiator).toBe(userId);
     expect(dispatch.origin).toBe('caid');
+  });
+  it('preserves the proposed reviewer in the canonical policy and reflects ordinary policy edits', async () => {
+    const result = await plans().prepare(
+      {
+        ...input,
+        tasks: input.tasks.map((task) => ({ ...task, reviewerAgentId: context.agentId })),
+      },
+      context,
+    );
+    const acceptanceModel = new AcceptanceModel(db, userId);
+    const policy = await acceptanceModel.findPolicyBySubject('task', result.taskIds[0]);
+    expect(policy?.config?.verifierAgentId).toBe(context.agentId);
+    await db.insert(agents).values({ id: 'split-reviewer', title: 'Independent reviewer', userId });
+    await acceptanceModel.updatePolicy(policy!.id, {
+      config: { ...policy!.config, verifierAgentId: 'split-reviewer' },
+    });
+    const conversation = new OrchestrationWorkflowConversationService(db, userId);
+    expect((await conversation.listIssues(result.orchestrationWorkflowId))[0].reviewerAgentId).toBe(
+      'split-reviewer',
+    );
+    const posted = await plans().post(result.orchestrationWorkflowId, context);
+    const [message] = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.id, posted.postedMessageId));
+    expect(message.content).toContain('reviewer Agent: Independent reviewer');
   });
   it('fills both parallel slots in one advance before waiting for worker completion', async () => {
     const result = await plans().prepare(

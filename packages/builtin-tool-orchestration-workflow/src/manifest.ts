@@ -65,8 +65,16 @@ export const OrchestrationWorkflowManifest: BuiltinToolManifest = {
               properties: {
                 title: { type: 'string' },
                 description: { type: 'string' },
-                assigneeAgentId: { type: 'string' },
-                reviewerAgentId: { type: 'string' },
+                assigneeAgentId: {
+                  type: 'string',
+                  description:
+                    'Existing accessible Agent id. Omit to assign the configured Orchestrator; never guess an id.',
+                },
+                reviewerAgentId: {
+                  type: 'string',
+                  description:
+                    'Existing accessible reviewer Agent id. Omit to use the existing verification policy; never guess an id.',
+                },
                 dependsOn: { type: 'array', items: { type: 'integer', minimum: 0 } },
               },
               required: ['title', 'description'],

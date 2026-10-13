@@ -1968,7 +1968,6 @@ export class OrchestrationWorkflowService {
         assigneeAgentId: split?.assigneeAgentId ?? graph.orchestrationWorkflow.agentId ?? undefined,
         config: {
           checkpoint: { topic: { after: false } },
-          ...(split?.reviewerAgentId ? { verify: { verifierAgentId: split.reviewerAgentId } } : {}),
         },
         createdByAgentId: split ? (graph.orchestrationWorkflow.agentId ?? undefined) : undefined,
         parentTaskId: split?.parentTaskId,
@@ -1992,6 +1991,7 @@ export class OrchestrationWorkflowService {
       const acceptance = await this.acceptanceService.ensureForSubject('task', task.id, {
         config: {
           enabled: true,
+          ...(split?.reviewerAgentId ? { verifierAgentId: split.reviewerAgentId } : {}),
           ...(orchestrationWorkflowCriteriaIds?.length
             ? { verifyCriteriaIds: orchestrationWorkflowCriteriaIds }
             : {}),

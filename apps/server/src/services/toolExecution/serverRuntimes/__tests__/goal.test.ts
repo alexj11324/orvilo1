@@ -28,7 +28,7 @@ const runtime = () =>
   } as never);
 
 const args = {
-  criteria: [{ title: 'It works' }],
+  criteriaDescription: 'It works',
   instruction: 'do the thing',
   name: 'A goal',
 };

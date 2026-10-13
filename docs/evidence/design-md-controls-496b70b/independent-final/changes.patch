@@ -1,0 +1,1918 @@
+diff --git a/.agents/skills/react/SKILL.md b/.agents/skills/react/SKILL.md
+index bf6630b6b..61e2c5db4 100755
+--- a/.agents/skills/react/SKILL.md
++++ b/.agents/skills/react/SKILL.md
+@@ -52,13 +52,13 @@ Pick the role, then write the class in this table. A literal such as `text-[13px
+ | Any other whole-pixel size or gap                  | px ÷ 4 on the scale: `h-11` 44px, `w-70` 280px, `gap-2` 8px                                 | 4px rhythm; half steps allowed                   |
+ | Full width or height                               | `w-full` / `h-full`                                                                         | not `w-[100%]`                                   |
+ 
+-`Input` names visual height with `visualSize`: `small` 28px, `compact` 32px, omitted/`default`/`normal` 36px, and `large` 40px. Native numeric `size` still means character width. Set `InputGroup visualSize` to size both the group and its `InputGroupInput`; an explicit child value overrides inheritance. `SelectTrigger size` supports `sm` 28px, `compact` 32px, omitted/`default`/`normal` 36px and `large` 40px. The local Select adapter maps `small`/`sm` to 28px, `compact` to 32px, omitted/`middle`/`default`/`normal` to 36px and `large`/`lg` to 40px for both single-select and multiple modes. Multiple mode forwards these roles to `ComboboxChips visualSize` using the shared `InputVisualSize` values `small`, `compact`, `default`, `normal`, and `large`. Chips uses minimum height and `flex-wrap` so selected values can form additional rows; its editable query uses 14px/22px normally and 16px/24px for `large`. Public caller `className` is merged after the role classes, and native `style`/props remain forwarded. NumberField and the local InputNumber adapter support `sm` 28px, `compact` 32px, omitted/`default`/`normal` 36px and `large` 40px; existing `lg` remains 36px. NumberField child overrides retain precedence, and InputNumber forwards that size contract. Button `lg` also remains the existing normal 36px spelling; use `large` for 40px. Modal OK/Cancel button props forward the local Button's `size`. Retain a nonstandard role only with current necessity evidence and independent review, not a legacy default.
++`Input` names visual height with `visualSize`: `small` 28px, `compact` 32px, omitted/`default`/`normal` 36px, and `large` 40px. Native numeric `size` still means character width. Set `InputGroup visualSize` to size both the group and its `InputGroupInput`; an explicit child value overrides inheritance. `SelectTrigger size` supports `sm` 28px, `compact` 32px, omitted/`default`/`normal` 36px and `large` 40px. The local Select adapter maps `small`/`sm` to 28px, `compact` to 32px, omitted/`middle`/`default`/`normal` to 36px and `large`/`lg` to 40px for both single-select and multiple modes. Multiple mode forwards these roles to `ComboboxChips visualSize` using the shared `InputVisualSize` values `small`, `compact`, `default`, `normal`, and `large`. Chips uses minimum height and `flex-wrap` so selected values can form additional rows; its editable query uses 14px/22px normally and 16px/24px for `large`. Public caller `className` is merged after the role classes, and native `style`/props remain forwarded. NumberField and the local InputNumber adapter support `sm` 28px, `compact` 32px, omitted/`default`/`normal` 36px and `large` 40px; existing `lg` remains 36px. NumberField child overrides retain precedence, and InputNumber forwards that size contract. Button `lg` also remains the existing normal 36px spelling; use `large` for 40px. [AutocompleteInput](../../../src/components/reui/autocomplete.tsx) uses `sm` 28px, `compact` 32px, omitted/`default`/`md`/`lg` 36px and `large` 40px. [Toggle](../../../src/components/ui/toggle.tsx) and [ToggleGroup](../../../src/components/ui/toggle-group.tsx) share `sm` 28px, `compact` 32px, omitted/`default`/`lg` 36px and `large` 40px; small toggle labels use the metadata role. An explicit group size is inherited by its items; omitting it preserves an item's explicit size before the ordinary default. Choose `compact` for an actual collection, chart or preview work toolbar, not every previously 32px call site. Modal OK/Cancel button props forward the local Button's `size`. Retain a nonstandard role only with current necessity evidence and independent review, not a legacy default.
+ 
+ - **`rounded-lg` is 10px and `rounded-xl` is 14px** until the Tailwind radius scale is re-pinned; neither is an approved role. Use the role forms above. `rounded-sm` (6px) and `rounded-md` (8px) happen to match and appear in installed primitives; new code still names the role.
+ - Raised-surface shadows use the ordinary `--shadow-raised` variable supplied by ThemeRoles and globals. Keep `shadow-(--shadow-raised)` as the variable form; do not create an `@theme` self-reference or give all cards a shadow.
+ - **Do not invent a utility name for a role.** `cn` cannot classify one: `cn('text-foreground', 'text-dense')` drops the text color and `cn('rounded-md', 'rounded-card')` keeps both. The variable forms above merge correctly, which is why role variables live in `:root` in [globals.css](../../../src/app/globals.css) and not in `@theme`.
+ - `text-xs` and `text-sm` use the DESIGN.md default line boxes: 12px/20px metadata and 14px/22px body at a 16px root. [globals.css](../../../src/app/globals.css) pins their unitless line-height ratios so they scale with the existing rem font sizes.
+-- Explicit `leading-*` utilities still override those defaults. Keep an override only when the owner's approved role and current layout justify it; old pixels alone do not justify an exception. When an explicit DESIGN.md line box is needed, use `leading-5` for metadata or `leading-5.5` for body.
++- Explicit `leading-*` utilities still override those defaults. Keep an override only when the owner's approved role and current layout justify it; old pixels alone do not justify an exception. When an explicit DESIGN.md line box is needed, use `leading-5` for metadata or `leading-5.5` for body. Numeric `leading-*` classes consume the rem-based `--leading-*` aliases in `globals.css`, independently of the fixed 4px geometry `--spacing`; when introducing a numeric suffix, supply its typography alias rather than relying on geometry fallback.
+ - The dense-role variable form sets font size only. Keep the scoped role's explicit line height, including the documented 13px/1.7 description; do not apply the metadata or body default to every dense or heading role.
+ - `border-border` is the stronger edge; `border-divider` is the everyday divider (`colorBorderSecondary`). `border-sidebar-border` remains the sidebar alias. Description text uses `text-foreground-description` to preserve its value; it is not interchangeable with secondary text. Status `*-wash` preserves the engine background, while `*-subtle` is the existing computed mix.
+ - An arbitrary value is right only when no row fits: `calc()`, viewport units, a CSS variable owned by the component, or a measured optical correction. Explain the last kind on the line, as DESIGN.md requires. If a role is missing, add it to DESIGN.md and `globals.css` rather than repeating a literal.
+diff --git a/DESIGN.md b/DESIGN.md
+index 098bd3870..b39507f84 100755
+--- a/DESIGN.md
++++ b/DESIGN.md
+@@ -166,9 +166,11 @@ The local [Tooltip](src/components/ui/tooltip.tsx) uses the existing inverse **`
+ 
+ Geist sets UI and prose; Geist Mono sets code, with tabular figures for aligned numbers. The normal scale is **14px body/labels, 12px metadata, 16px emphasis**. Headings use the existing 38/30/24/20/16px scale and 600 strong weight. Preserve role-appropriate line heights rather than shrinking text to fit a control.
+ 
++Local Tailwind font sizes remain rem-based, and the metadata/body default line-height ratios scale with them when the root font size changes. Explicit numeric line boxes use rem-based `--leading-*` aliases in [globals.css](src/app/globals.css), separate from the fixed physical `--spacing: 4px` geometry rhythm below. An explicit line-height override still needs the correct role and current layout justification.
++
+ Measured dense Linear/Plane surfaces may use a scoped **13px** label/body role; longer prose may use **15px** where that reading role is explicit. These are not universal defaults or automatically invalid sizes. Current project rail section labels use 13px/500 through [SECTION_LABEL_PROPS](src/features/Projects/sectionLabel.ts); activity links and milestone metadata in [ProjectSidePanel](src/features/Projects/Layout/ProjectSidePanel.tsx) remain 12px. The issue rail also retains [RAIL_VALUE_FONT_SIZE](src/features/AgentTasks/AgentTaskDetail/railText.ts) at 13px and its description at 15px/450, recorded in the [rail type checks](src/features/AgentTasks/AgentTaskDetail/railText.test.ts). Review the role and source before changing these values. Rank text through semantic tone and weight as well as size; there is no categorical 13px ban. Tailwind code writes the dense role as `text-(length:--text-dense)`, backed by `--text-dense` in [globals.css](src/app/globals.css); the [React role lookup](.agents/skills/react/SKILL.md#role-lookup) owns the class form for every role in this file.
+ 
+-Spreadsheet preview cells display document content. Unformatted cells use the 14px/22px body role on white paper with black fallback ink and neutral grid edges in both themes; the coordinate headers keep the ordinary themed metadata roles. Workbook-authored fills, ink, font family, font size and explicit row/column dimensions take precedence. In [SheetGrid](src/features/Portal/LocalFile/xlsx/SheetGrid.tsx), an authored font uses a proportional 1.35 line box: a 30pt font resolves to 40px and needs a 54px line box rather than the UI's fixed 22px box, which can clip automatic or multiline document rows. This applies only when the workbook supplies a font size; it does not change UI typography or unit conversion. Current source review identified and corrected that clipping risk; real Electron default/large-font, multiline and frozen-row acceptance remains required for the delivery.
++Spreadsheet preview cells display document content. Unformatted cells use the 14px/22px body role on white paper with black fallback ink and neutral grid edges in both themes; the coordinate headers keep the ordinary themed metadata roles. Workbook-authored fills, ink, font family, font size and explicit row/column dimensions take precedence. In [SheetGrid](src/features/Portal/LocalFile/xlsx/SheetGrid.tsx), an authored font uses a proportional 1.35 line box: a 30pt font resolves to 40px and needs a 54px line box rather than the default UI body line box, which can clip automatic or multiline document rows. This applies only when the workbook supplies a font size; it does not change UI typography or unit conversion. Current source review identified and corrected that clipping risk; real Electron default/large-font, multiline and frozen-row acceptance remains required for the delivery.
+ 
+ ## Density and exceptions
+ 
+@@ -182,7 +184,7 @@ Use the established role, not the library's size name, to choose geometry.
+ | Sidebar small actions / standard hit areas | 24 / 32px                                    |
+ | Task row                                   | 44px row role, separate from control heights |
+ 
+-Ordinary local controls default to 36px. Name known compact work controls explicitly at 32px and dense property controls at 28px; large controls use 40px. Button and NumberField retain `lg` as their existing 36px API spelling, while `large` selects 40px; this compatibility spelling does not create a visual exception. Input uses `visualSize` so native numeric `size` retains its character-width meaning. Shared default changes require scoped consumer review and product acceptance, including forwarded props and inherited styles. Any exception to these roles requires current evidence of necessity and an independent review; a legacy value or prior exception record alone is insufficient. Visible icon size and hit area are separate. Preserve accessible hit areas, labels, and keyboard paths, including for dense controls.
++Ordinary local controls default to 36px. Name known compact work controls explicitly at 32px and dense property controls at 28px; large controls use 40px. Button, NumberField, Toggle/ToggleGroup and AutocompleteInput retain `lg` as their existing 36px API spelling, while `large` selects 40px; this compatibility spelling does not create a visual exception. AutocompleteInput also accepts `md` for the ordinary 36px role. Toggle/ToggleGroup and AutocompleteInput name the 32px work-control role `compact`; classify the current toolbar or form purpose before selecting it. Input uses `visualSize` so native numeric `size` retains its character-width meaning. Shared default changes require scoped consumer review and product acceptance, including forwarded props and inherited styles. Any exception to these roles requires current evidence of necessity and an independent review; a legacy value or prior exception record alone is insufficient. Visible icon size and hit area are separate. Preserve accessible hit areas, labels, and keyboard paths, including for dense controls.
+ 
+ Spacing uses a 4px base rhythm: 4/8/12/16/20/24/32px for common gaps and insets. The selected [primitive reference](.agents/skills/design-system/references/primitive-tokens.md) also allows **2/6/10/14px half steps**. Assign those deliberately to a semantic or component role and repeat that role consistently; do not categorically round them away. Default grouping remains about 8px inside groups, 16px between groups, and 24–32px between sections; card padding is normally 16–24px.
+ 
+@@ -220,6 +222,8 @@ Depth comes from surfaces and borders first. Shared elevation roles are raised c
+ 
+ The local raised-surface role is `--shadow-raised`, used as `shadow-(--shadow-raised)`. It resolves to the existing `boxShadowTertiary` for document pages and other surfaces that already have that raised treatment; it does not add shadows to ordinary cards. The PDF viewer's clipped document page uses the 8px card radius and retains react-pdf's original paper/canvas paint. Its document canvas frame uses 16px block gutters while keeping the caller's 24px inline gutter; PDF page sizing and annotation coordinates remain owned by the renderer. ThemeRoles supplies the resolved light/dark engine value to the document host; globals uses the same engine variable with `none` until that value is available.
+ 
++NumberField's scrub cursor is 26×14px pointer artwork with black fill and a white contour. Pointer lock lets it move across the field, surrounding surfaces and mixed document backgrounds; one theme text color cannot keep both sides of that contour distinct everywhere. Its local `--number-field-cursor-shadow` token in [number-field.module.css](src/components/reui/number-field.module.css) retains the exact `0 1px 1px #0008` contour shadow, including black alpha 8/15. This scoped pointer treatment does not define surface elevation or an ordinary action-icon size. Current source inspection establishes that purpose; acceptance still requires a fresh independent review and real Electron scrub, light/dark and mixed-background evidence rather than a prior exception record.
++
+ Preserve the native desktop glass/translucency boundary in [global styles](src/styles/global.ts) and the desktop shell. Theme-aware translucent surfaces must remain legible over the actual native backdrop; an opaque web reference is not authority to flatten native glass.
+ 
+ ## Motion
+diff --git a/apps/share/src/features/topic/SharedMessageList.tsx b/apps/share/src/features/topic/SharedMessageList.tsx
+index ab3f49bf8..8396d7df8 100755
+--- a/apps/share/src/features/topic/SharedMessageList.tsx
++++ b/apps/share/src/features/topic/SharedMessageList.tsx
+@@ -54,7 +54,7 @@ const SharedMessageList = memo<SharedMessageListProps>((props) => {
+         footerSlot={
+           <div className="flex flex-col items-center px-6" style={{ paddingBlock: '16px 80px' }}>
+             <div
+-              className="text-[12px] text-muted-foreground"
++              className="text-xs text-muted-foreground"
+               style={{ maxWidth: 480, textAlign: 'center' }}
+             >
+               {t('sharePageDisclaimer')}
+diff --git a/packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx b/packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx
+index f8c33d19a..e6c28053f 100755
+--- a/packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx
++++ b/packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx
+@@ -7,7 +7,7 @@ import React, { memo } from 'react';
+ import { Skeleton } from '@/components/ui/skeleton';
+ 
+ const styles = {
+-  query: 'rounded-[8px] px-2 py-1 text-xs text-muted-foreground hover:bg-accent',
++  query: 'rounded-(--radius-chip) px-2 py-1 text-xs text-muted-foreground hover:bg-accent',
+ };
+ 
+ const SearchFiles = memo<BuiltinPlaceholderProps<LocalSearchFilesParams>>(({ args = {} }) => {
+diff --git a/packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx b/packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx
+index 6cfa0f973..09f469d43 100755
+--- a/packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx
++++ b/packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx
+@@ -7,7 +7,7 @@ import { shinyTextStyles } from '@/styles';
+ 
+ const styles = {
+   font: 'text-xs text-foreground-tertiary',
+-  query: 'rounded-[8px] px-2 py-1 text-xs text-muted-foreground',
++  query: 'rounded-(--radius-chip) px-2 py-1 text-xs text-muted-foreground',
+ };
+ 
+ interface SearchBarProps {
+diff --git a/packages/builtin-tool-local-system/src/client/components/FileItem.tsx b/packages/builtin-tool-local-system/src/client/components/FileItem.tsx
+index 6ddec0121..1562f1619 100755
+--- a/packages/builtin-tool-local-system/src/client/components/FileItem.tsx
++++ b/packages/builtin-tool-local-system/src/client/components/FileItem.tsx
+@@ -11,7 +11,8 @@ import FileIcon from '@/components/FileIcon';
+ import { formatSize } from '@/utils/format';
+ 
+ const styles = {
+-  container: 'rounded-[4px] text-muted-foreground [&_:hover]:bg-accent [&_:hover]:text-foreground',
++  container:
++    'rounded-(--radius-input) text-muted-foreground [&_:hover]:bg-accent [&_:hover]:text-foreground',
+   dir: 'truncate font-mono text-xs leading-[1.3] text-foreground-tertiary',
+   size: 'min-w-14 shrink-0 text-end font-mono text-xs text-foreground-tertiary',
+   time: 'truncate text-xs leading-none text-foreground-description',
+diff --git a/packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx b/packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx
+index 925cd207b..3ca33f95c 100755
+--- a/packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx
++++ b/packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx
+@@ -121,7 +121,7 @@ export const ExperienceMemoryCard = memo<ExperienceMemoryCardProps>(({ data, loa
+                           step={index + 1}
+                         >
+                           <div className="flex items-start gap-2">
+-                            <StepperIndicator className="size-5 rounded-md">
++                            <StepperIndicator className="size-5 rounded-(--radius-chip)">
+                               <Avatar
+                                 shadow
+                                 avatar={item.avatar}
+diff --git a/packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx b/packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx
+index af3294042..4deef5fff 100755
+--- a/packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx
++++ b/packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx
+@@ -151,7 +151,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
+                             step={index + 1}
+                           >
+                             <div className="flex items-start gap-2">
+-                              <StepperIndicator className="size-5 rounded-md">
++                              <StepperIndicator className="size-5 rounded-(--radius-chip)">
+                                 <Avatar
+                                   shadow
+                                   avatar={item.avatar}
+@@ -205,7 +205,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
+                             step={index + 1}
+                           >
+                             <div className="flex items-start gap-2">
+-                              <StepperIndicator className="size-5 rounded-md">
++                              <StepperIndicator className="size-5 rounded-(--radius-chip)">
+                                 <Avatar
+                                   shadow
+                                   avatar={item.avatar}
+diff --git a/packages/builtin-tool-task/src/client/Render/EditTask/index.tsx b/packages/builtin-tool-task/src/client/Render/EditTask/index.tsx
+index b468a47ff..36bedbb17 100755
+--- a/packages/builtin-tool-task/src/client/Render/EditTask/index.tsx
++++ b/packages/builtin-tool-task/src/client/Render/EditTask/index.tsx
+@@ -18,10 +18,10 @@ import {
+ } from '../shared';
+ 
+ const styles = {
+-  addChip: 'rounded-[999px] bg-success-wash px-2 py-px font-mono text-xs text-success',
++  addChip: 'rounded-full bg-success-wash px-2 py-px font-mono text-xs text-success',
+   deps: 'inline-flex flex-wrap items-center gap-1',
+   removeChip:
+-    'rounded-[999px] border border-dashed border-destructive-border px-2 py-px font-mono text-xs text-destructive line-through',
++    'rounded-full border border-dashed border-destructive-border px-2 py-px font-mono text-xs text-destructive line-through',
+ };
+ 
+ export const EditTaskRender = memo<BuiltinRenderProps<EditTaskParams, EditTaskState>>(
+diff --git a/packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx b/packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx
+index c30d6add6..8401803fe 100755
+--- a/packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx
++++ b/packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx
+@@ -112,6 +112,7 @@ const PageContent = memo<PageContentProps>(({ result }) => {
+         <div className="flex flex-col gap-3" style={{ paddingBlock: '0 12px' }}>
+           <div className="flex flex-row justify-between">
+             <ToggleGroup
++              size="compact"
+               value={[display]}
+               onValueChange={(value) => value[0] && setDisplay(value[0] as DisplayType)}
+             >
+diff --git a/packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx b/packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx
+index 4cba0a48f..246330c40 100755
+--- a/packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx
++++ b/packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx
+@@ -267,7 +267,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
+       style={{ justifyContent: showCountdown ? 'space-between' : 'flex-end', width: '100%' }}
+     >
+       {showCountdown && (
+-        <div className="text-[12px] text-muted-foreground">
++        <div className="text-xs text-muted-foreground">
+           {expired ? labels.timeExpired : labels.timeRemaining(formatRemaining(remainingMs))}
+         </div>
+       )}
+diff --git a/packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx b/packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx
+index f9b98818e..d23cf732a 100755
+--- a/packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx
++++ b/packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx
+@@ -76,7 +76,7 @@ export const QuestionPanel = memo<QuestionPanelProps>(
+         <div className="flex items-center gap-2">
+           {question.header && <div className="text-muted-foreground">{question.header}</div>}
+           {question.multiSelect && (
+-            <div className="text-[12px] text-muted-foreground">{multiSelectTag}</div>
++            <div className="text-xs text-muted-foreground">{multiSelectTag}</div>
+           )}
+         </div>
+         <div className="font-semibold">{question.question}</div>
+diff --git a/packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx b/packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx
+index 64d8ac8fe..30d417c41 100755
+--- a/packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx
++++ b/packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx
+@@ -62,7 +62,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
+     if (linesAdded > 0) {
+       statsParts.push(
+         <span
+-          className="font-mono rounded bg-muted px-1 text-[12px]"
++          className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs"
+           key="added"
+           style={{ color: 'var(--success)' }}
+         >
+@@ -74,7 +74,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
+     if (linesDeleted > 0) {
+       statsParts.push(
+         <span
+-          className="font-mono rounded bg-muted px-1 text-[12px]"
++          className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs"
+           key="deleted"
+           style={{ color: 'var(--destructive)' }}
+         >
+diff --git a/packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx b/packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx
+index bfc176855..1ea6d0fad 100755
+--- a/packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx
++++ b/packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx
+@@ -38,7 +38,7 @@ export const createMoveLocalFilesInspector = (translationKey: string) => {
+             {t(translationKey as any)}
+           </span>
+           {totalCount > 0 && (
+-            <span className="font-mono rounded bg-muted px-1 text-[12px]">
++            <span className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs">
+               {successCount === undefined ? totalCount : `${successCount}/${totalCount}`}
+             </span>
+           )}
+diff --git a/packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx b/packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx
+index ed283193e..62462a1c3 100755
+--- a/packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx
++++ b/packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx
+@@ -69,7 +69,7 @@ export const createSearchLocalFilesInspector = ({
+                 <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
+               ) : (
+                 <span
+-                  className="text-[12px]"
++                  className="text-xs"
+                   style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
+                 >
+                   ({t(noResultsKey as any)})
+diff --git a/packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx b/packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx
+index cec12d724..e12eb42c1 100755
+--- a/packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx
++++ b/packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx
+@@ -62,7 +62,7 @@ export const createWriteLocalFileInspector = (translationKey: string) => {
+             <>
+               {' '}
+               <span
+-                className="font-mono rounded bg-muted px-1 text-[12px]"
++                className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs"
+                 style={{ color: 'var(--success)' }}
+               >
+                 <Plus size={12} />
+diff --git a/packages/shared-tool-ui/src/components/FileChangeStats/index.tsx b/packages/shared-tool-ui/src/components/FileChangeStats/index.tsx
+index 174d4374d..e6b14b800 100755
+--- a/packages/shared-tool-ui/src/components/FileChangeStats/index.tsx
++++ b/packages/shared-tool-ui/src/components/FileChangeStats/index.tsx
+@@ -16,12 +16,12 @@ export type FileChangeKind = 'added' | 'deleted' | 'modified' | 'renamed';
+ const styles = {
+   kindAdded: 'bg-success',
+   kindDeleted: 'bg-destructive',
+-  kindDot: 'size-2 shrink-0 rounded-[999px]',
++  kindDot: 'size-2 shrink-0 rounded-full',
+   kindModified: 'bg-info',
+   kindRenamed: 'bg-warning',
+   lineAdded: 'text-success',
+   lineDeleted: 'text-destructive',
+-  lineStats: 'inline-flex shrink-0 items-center gap-1.5 text-[12px]',
++  lineStats: 'inline-flex shrink-0 items-center gap-1.5 text-xs',
+ };
+ 
+ const KIND_CLASS: Record<FileChangeKind, string> = {
+diff --git a/src/app/globals.css b/src/app/globals.css
+index a419e35ed..598b4d0d6 100644
+--- a/src/app/globals.css
++++ b/src/app/globals.css
+@@ -14,6 +14,19 @@
+ @custom-variant dark (&:is(.dark *, [data-theme='dark'] *));
+ 
+ @theme inline {
++    /* DESIGN.md geometry uses a physical 4px rhythm, independent of rem typography. */
++    --spacing: 4px;
++    /* Numeric line boxes scale with rem typography, independently of physical spacing. */
++    --leading-0: 0rem;
++    --leading-3: 0.75rem;
++    --leading-4: 1rem;
++    --leading-4_5: 1.125rem;
++    --leading-5: 1.25rem;
++    --leading-5_5: 1.375rem;
++    --leading-6: 1.5rem;
++    --leading-7: 1.75rem;
++    --leading-8: 2rem;
++    --leading-9: 2.25rem;
+     --animate-unread-ripple: unread-ripple 1.8s ease-out infinite;
+     --animate-dots-loading-fade: dots-loading-fade 1.2s ease-in-out infinite;
+     --animate-neural-pulse: dots-loading-fade 2s infinite;
+diff --git a/src/business/client/features/ShareShell/index.tsx b/src/business/client/features/ShareShell/index.tsx
+index 0890cabc7..8a025975b 100755
+--- a/src/business/client/features/ShareShell/index.tsx
++++ b/src/business/client/features/ShareShell/index.tsx
+@@ -33,11 +33,11 @@ export const ShareHero = ({ avatar, byline, title }: ShareHeroProps) => (
+   <div className="flex flex-col gap-2 px-6 pt-6 pb-4">
+     {avatar}
+     {title && (
+-      <h1 className="text-[24px] font-bold" style={{ margin: 0 }}>
++      <h1 className="text-2xl font-semibold" style={{ margin: 0 }}>
+         {title}
+       </h1>
+     )}
+-    {byline && <div className="text-[12px] text-muted-foreground">{byline}</div>}
++    {byline && <div className="text-xs text-muted-foreground">{byline}</div>}
+   </div>
+ );
+ 
+diff --git a/src/components/AgentRuntimeIcon.tsx b/src/components/AgentRuntimeIcon.tsx
+index c9a9e4340..69949f80a 100644
+--- a/src/components/AgentRuntimeIcon.tsx
++++ b/src/components/AgentRuntimeIcon.tsx
+@@ -10,9 +10,10 @@ const AgentRuntimeIcon = memo<{ size?: number; type?: string | null }>(({ size =
+       <img
+         aria-hidden
+         alt=""
++        className="rounded-(--radius-card)"
+         height={size}
+         src="/app-icons/icon-512x512.png"
+-        style={{ borderRadius: Math.max(4, Math.round(size * 0.22)), flex: 'none' }}
++        style={{ flex: 'none' }}
+         width={size}
+       />
+     );
+@@ -21,7 +22,12 @@ const AgentRuntimeIcon = memo<{ size?: number; type?: string | null }>(({ size =
+   if (!provider) return <CircleHelp aria-hidden size={size} />;
+   return (
+     <span aria-hidden style={{ flex: 'none' }}>
+-      <provider.brand.Avatar shape="square" size={size} />
++      <provider.brand.Avatar
++        className="rounded-(--radius-card)"
++        shape="square"
++        size={size}
++        style={{ borderRadius: undefined }}
++      />
+     </span>
+   );
+ });
+diff --git a/src/components/Avatar/index.test.tsx b/src/components/Avatar/index.test.tsx
+index c45de6688..72027929f 100644
+--- a/src/components/Avatar/index.test.tsx
++++ b/src/components/Avatar/index.test.tsx
+@@ -12,16 +12,29 @@ describe('Avatar', () => {
+     expect(img).toHaveAttribute('src', 'https://example.com/a.png');
+     expect(img).toHaveAttribute('width', '32');
+     expect(img).toHaveAttribute('height', '32');
+-    expect(img.style.borderRadius).toBe('16px');
++    expect(img.style.borderRadius).toBe('inherit');
++    expect(img.parentElement).toHaveClass('rounded-full');
+   });
+ 
+   it('keeps the rounded-square tile when shape="square"', () => {
+-    const { container } = render(
++    const { container, rerender } = render(
+       <Avatar avatar="https://example.com/a.png" shape="square" size={40} />,
+     );
+ 
+     const img = container.querySelector('img');
+-    expect(img?.style.borderRadius).toBe('9px');
++    expect(img?.style.borderRadius).toBe('inherit');
++    expect(img?.parentElement).toHaveClass('rounded-(--radius-card)');
++
++    rerender(
++      <Avatar
++        avatar="https://example.com/a.png"
++        shape="square"
++        size={40}
++        style={{ borderRadius: 12 }}
++      />,
++    );
++    expect(img?.parentElement?.style.borderRadius).toBe('12px');
++    expect(img?.style.borderRadius).toBe('inherit');
+   });
+ 
+   it('falls back to initials when there is no image', () => {
+diff --git a/src/components/Avatar/index.tsx b/src/components/Avatar/index.tsx
+index 246473688..caf86371b 100755
+--- a/src/components/Avatar/index.tsx
++++ b/src/components/Avatar/index.tsx
+@@ -100,9 +100,6 @@ const Avatar = memo<AvatarProps>(
+     const numericSize = typeof size === 'number' ? size : Number.parseFloat(size) || 48;
+     const imgAlt = alt ?? title ?? name ?? '';
+ 
+-    const borderRadius =
+-      shape === 'square' ? Math.max(4, Math.round(numericSize * 0.22)) : numericSize / 2;
+-
+     let content: ReactNode;
+     if (src && !isBroken) {
+       content = (
+@@ -113,7 +110,7 @@ const Avatar = memo<AvatarProps>(
+           src={src}
+           width={numericSize}
+           style={{
+-            borderRadius: style?.borderRadius ?? borderRadius,
++            borderRadius: 'inherit',
+             display: 'block',
+             height: '100%',
+             objectFit: 'cover',
+@@ -157,12 +154,15 @@ const Avatar = memo<AvatarProps>(
+       <AvatarPrimitive.Root
+         {...rest}
+         aria-label={imgAlt || (rest['aria-label'] as string | undefined)}
+-        className={cn('orvilo-avatar', className)}
+         title={title}
++        className={cn(
++          'orvilo-avatar',
++          shape === 'square' ? 'rounded-(--radius-card)' : 'rounded-full',
++          className,
++        )}
+         style={{
+           alignItems: 'center',
+           background: resolved.background ?? 'var(--border)',
+-          borderRadius,
+           display: 'inline-flex',
+           flexShrink: 0,
+           height: numericSize,
+diff --git a/src/components/ListSkeleton/index.tsx b/src/components/ListSkeleton/index.tsx
+index 2b58ffe9e..a9c8a428b 100755
+--- a/src/components/ListSkeleton/index.tsx
++++ b/src/components/ListSkeleton/index.tsx
+@@ -26,7 +26,7 @@ const ListSkeleton = memo<ListSkeletonProps>(({ paddingInline = 12, rows = 4 })
+         key={index}
+         style={{ paddingBlock: 12, paddingInline }}
+       >
+-        <Skeleton className={'size-12 rounded-md'} />
++        <Skeleton className={'size-12 rounded-(--radius-card)'} />
+         <div className={'flex flex-col gap-2 flex-1'}>
+           <Skeleton style={{ height: 14, width: 140 }} />
+           <Skeleton style={{ height: 12, width: 200 }} />
+diff --git a/src/components/Select/index.tsx b/src/components/Select/index.tsx
+index bb1613253..6dde3aad2 100644
+--- a/src/components/Select/index.tsx
++++ b/src/components/Select/index.tsx
+@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
+ import { useState } from 'react';
+ import { useTranslation } from 'react-i18next';
+ 
++import { Button } from '@/components/ui/button';
+ import {
+   Combobox,
+   ComboboxChip,
+@@ -14,6 +15,7 @@ import {
+   ComboboxEmpty,
+   ComboboxItem,
+   ComboboxList,
++  useComboboxAnchor,
+ } from '@/components/ui/combobox';
+ import { Input } from '@/components/ui/input';
+ import {
+@@ -97,6 +99,7 @@ const Select = <Value extends string | number = string>({
+ }: SelectProps<Value>) => {
+   const { t } = useTranslation('common');
+   const [query, setQuery] = useState('');
++  const anchor = useComboboxAnchor();
+   const items = (options ?? []).flatMap((option) =>
+     isGroup(option)
+       ? option.options.map((o) => ({ label: o.label, value: o.value }))
+@@ -126,12 +129,13 @@ const Select = <Value extends string | number = string>({
+         itemToStringLabel={(v) => textFor(v as Value)}
+         items={items.map((item) => item.value)}
+         value={values}
++        onOpenChange={(open) => onOpenChange?.(open)}
+         onValueChange={(v) => onChange?.(v as Value[])}
+       >
+         <ComboboxChips
+           aria-label={ariaLabel}
+           className={className}
+-          id={id}
++          ref={anchor}
+           style={style}
+           visualSize={
+             size === undefined
+@@ -151,10 +155,29 @@ const Select = <Value extends string | number = string>({
+             <ComboboxChip key={String(v)}>{labelFor(v)}</ComboboxChip>
+           ))}
+           <ComboboxChipsInput
++            aria-label={ariaLabel}
++            id={id}
+             placeholder={typeof placeholder === 'string' ? placeholder : undefined}
++            onKeyDown={(event) => {
++              if (
++                event.key === 'Escape' &&
++                event.currentTarget.getAttribute('aria-expanded') === 'false'
++              ) {
++                // Closed Escape dismisses ancestors; it must not clear this Select's values.
++                event.preventBaseUIHandler();
++              }
++            }}
+           />
++          {allowClear && (
++            <ComboboxClear
++              aria-label={t('clear')}
++              className="shrink-0"
++              render={<Button size="icon-sm" type="button" variant="ghost" />}
++              tabIndex={0}
++            />
++          )}
+         </ComboboxChips>
+-        <ComboboxContent className={popupClassName}>
++        <ComboboxContent anchor={anchor} className={popupClassName}>
+           <ComboboxEmpty>
+             {typeof placeholder === 'string' ? placeholder : 'No options'}
+           </ComboboxEmpty>
+@@ -171,7 +194,6 @@ const Select = <Value extends string | number = string>({
+             }}
+           </ComboboxList>
+         </ComboboxContent>
+-        {allowClear && <ComboboxClear />}
+       </Combobox>
+     );
+   }
+diff --git a/src/components/reui/autocomplete.tsx b/src/components/reui/autocomplete.tsx
+index 7835bf563..c00cdb4c1 100644
+--- a/src/components/reui/autocomplete.tsx
++++ b/src/components/reui/autocomplete.tsx
+@@ -8,14 +8,20 @@ import { ChevronsUpDownIcon, XIcon } from 'lucide-react';
+ import { ScrollArea } from '@/components/ui/scroll-area';
+ 
+ const inputVariants = cva(
+-  'outline-none flex w-full text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 [[readonly]]:bg-muted/80 [[readonly]]:cursor-not-allowed border border-input focus-visible:border-ring aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-lg bg-transparent dark:bg-input/30 text-sm transition-colors focus-visible:ring-ring/50 focus-visible:ring-3 aria-invalid:ring-3',
++  'outline-none flex w-full text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 [[readonly]]:bg-muted/80 [[readonly]]:cursor-not-allowed border border-input focus-visible:border-ring aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-(--radius-input) bg-transparent dark:bg-input/30 text-sm transition-colors focus-visible:ring-ring/50 focus-visible:ring-3 aria-invalid:ring-3',
+   {
+     variants: {
+       size: {
+         sm: 'h-7 px-2 [&~[data-slot=autocomplete-clear]]:end-1.5 [&~[data-slot=autocomplete-trigger]]:end-1.5',
+-        default:
++        compact:
+           'h-8 px-2.5 [&~[data-slot=autocomplete-clear]]:end-1.75 [&~[data-slot=autocomplete-trigger]]:end-1.75',
++        default:
++          'h-9 px-2.5 [&~[data-slot=autocomplete-clear]]:end-2 [&~[data-slot=autocomplete-trigger]]:end-2',
++        md: 'h-9 px-2.5 [&~[data-slot=autocomplete-clear]]:end-2 [&~[data-slot=autocomplete-trigger]]:end-2',
++        // lg remains a normal-height API alias; large selects the 40px role.
+         lg: 'h-9 px-2.5 [&~[data-slot=autocomplete-clear]]:end-2 [&~[data-slot=autocomplete-trigger]]:end-2',
++        large:
++          'h-10 px-2.5 text-base [&~[data-slot=autocomplete-clear]]:end-2.5 [&~[data-slot=autocomplete-trigger]]:end-2.5',
+       },
+     },
+     defaultVariants: {
+@@ -187,7 +193,7 @@ function AutocompleteContent({
+           <AutocompletePrimitive.Popup
+             data-slot="autocomplete-popup"
+             className={cn(
+-              'bg-popover text-popover-foreground rounded-lg shadow-md ring-foreground/10 flex max-h-[min(var(--available-height),24rem)] w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) scroll-pt-2 scroll-pb-2 flex-col overscroll-contain py-0.5 ring-1 transition-[scale,opacity] has-data-starting-style:scale-98 has-data-starting-style:opacity-0 has-data-[side=none]:scale-100 has-data-[side=none]:transition-none',
++              'bg-popover text-popover-foreground rounded-(--radius-overlay) shadow-md ring-foreground/10 flex max-h-[min(var(--available-height),24rem)] w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) scroll-pt-2 scroll-pb-2 flex-col overscroll-contain py-0.5 ring-1 transition-[scale,opacity] has-data-starting-style:scale-98 has-data-starting-style:opacity-0 has-data-[side=none]:scale-100 has-data-[side=none]:transition-none',
+               className,
+             )}
+             {...props}
+diff --git a/src/components/reui/code-block/code-block.tsx b/src/components/reui/code-block/code-block.tsx
+index 1f4c0b80e..c59f55051 100644
+--- a/src/components/reui/code-block/code-block.tsx
++++ b/src/components/reui/code-block/code-block.tsx
+@@ -166,8 +166,8 @@ const ROOT_TOKEN_CLASS = [
+   'data-[gutter-channel]:[--code-block-number-pad:calc(var(--code-block-gutter-gap)+var(--code-block-fold-width))]',
+   /* A diff column breathes: the +/- glyph gets a wider channel. */
+   'data-[has-diff]:[--code-block-gutter-gap:--spacing(4)]',
+-  '[--code-block-line-height:1.5rem]',
+-  '[--code-block-font-size:0.8125rem]',
++  '[--code-block-line-height:calc(var(--text-sm)*22/14)]',
++  '[--code-block-font-size:var(--text-sm)]',
+   '[--code-block-copy-inset:--spacing(2)]',
+   /* Where a PINNED control starts. With a header composed in, the root's top
+      edge is the header, so an unadjusted inset drops the copy button onto the
+@@ -551,7 +551,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
+                an 18px channel. Hover feedback only; folded state reads
+                through color. */
+             /* Square, centred in the line box: height matches the width and
+-               the translate makes up the difference to the 24px line. Open
++               the translate makes up the difference to the 22px line. Open
+                regions read darker than folded ones. */
+             'text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 sticky z-20 inline-flex size-(--code-block-fold-width) shrink-0 translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center justify-center rounded-(--radius-button) align-top outline-none focus-visible:ring-2',
+             /* Margins cancel: -(4px + width) then +4px, so the toggle paints
+@@ -1676,7 +1676,7 @@ function CodeBlockLanguage({ className, children, ...props }: ComponentProps<'sp
+       data-slot="code-block-language"
+       data-unsupported={!resolvedLanguage || undefined}
+       className={cn(
+-        'border-border bg-muted/60 text-muted-foreground inline-flex shrink-0 items-center rounded-(--radius-chip) border px-1.5 py-0.5 font-mono text-xs leading-5 uppercase',
++        'border-border bg-muted/60 text-muted-foreground inline-flex shrink-0 items-center rounded-(--radius-chip) border px-1.5 py-0.5 font-mono text-xs uppercase',
+         className,
+       )}
+       {...props}
+diff --git a/src/components/reui/data-grid/data-grid-cell-selection.tsx b/src/components/reui/data-grid/data-grid-cell-selection.tsx
+index 01d29e9ce..fe1a75ccc 100644
+--- a/src/components/reui/data-grid/data-grid-cell-selection.tsx
++++ b/src/components/reui/data-grid/data-grid-cell-selection.tsx
+@@ -2380,7 +2380,7 @@ function DataGridSelectionBar({
+           <div
+             data-slot="data-grid-selection-bar"
+             className={cn(
+-              'bg-background rounded-lg sticky inset-x-0 bottom-4 z-40 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-3 border px-4 py-2.5 shadow-lg',
++              'bg-background rounded-(--radius-overlay) sticky inset-x-0 bottom-4 z-40 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-3 border px-4 py-2.5 shadow-lg',
+               className,
+             )}
+           >
+diff --git a/src/components/reui/data-grid/data-grid-column-header.tsx b/src/components/reui/data-grid/data-grid-column-header.tsx
+index eeb5f286d..5cd549395 100644
+--- a/src/components/reui/data-grid/data-grid-column-header.tsx
++++ b/src/components/reui/data-grid/data-grid-column-header.tsx
+@@ -133,12 +133,12 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
+   };
+ 
+   const headerLabelClassName = cn(
+-    'text-secondary-foreground/80 inline-flex h-full items-center gap-1.5 font-normal [&_svg]:opacity-60 text-[0.8125rem] leading-[calc(1.125/0.8125)] [&_svg]:size-3.5',
++    'text-secondary-foreground/80 inline-flex h-full items-center gap-1.5 font-normal [&_svg]:opacity-60 text-sm [&_svg]:size-3.5',
+     className,
+   );
+ 
+   const headerButtonClassName = cn(
+-    'text-secondary-foreground/80 hover:bg-accent data-[state=open]:bg-accent hover:text-foreground data-[state=open]:text-foreground px-2 font-normal h-6 rounded-lg',
++    'text-secondary-foreground/80 hover:bg-accent data-[state=open]:bg-accent hover:text-foreground data-[state=open]:text-foreground px-2 text-sm font-normal rounded-(--radius-button)',
+     className,
+   );
+ 
+@@ -327,7 +327,12 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
+         <DropdownMenu>
+           <DropdownMenuTrigger
+             render={
+-              <Button className={headerButtonClassName} disabled={isLoading} variant="ghost">
++              <Button
++                className={headerButtonClassName}
++                disabled={isLoading}
++                size="sm"
++                variant="ghost"
++              >
+                 {icon && icon}
+                 {resolvedTitle}
+                 {sortIcon}
+@@ -341,7 +346,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
+         {props.tableLayout?.columnsPinnable && canPin && isPinned && (
+           <Button
+             aria-label={i18n.labels.unpinColumn(resolvedTitle)}
+-            className="rounded-lg -me-1 size-7"
++            className="rounded-(--radius-button) -me-1 size-7"
+             size="icon-sm"
+             title={i18n.labels.unpinColumn(resolvedTitle)}
+             variant="ghost"
+@@ -360,6 +365,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
+         <Button
+           className={headerButtonClassName}
+           disabled={isLoading}
++          size="sm"
+           variant="ghost"
+           onClick={handleSort}
+         >
+diff --git a/src/components/reui/data-grid/data-grid-table.tsx b/src/components/reui/data-grid/data-grid-table.tsx
+index 8a2881ba0..f8d2876bc 100644
+--- a/src/components/reui/data-grid/data-grid-table.tsx
++++ b/src/components/reui/data-grid/data-grid-table.tsx
+@@ -1257,8 +1257,8 @@ function DataGridTableBody({ children }: { children: ReactNode }) {
+     <tbody
+       data-slot="data-grid-table-body"
+       className={cn(
+-        props.tableLayout?.rowRounded && '[&_td:first-child]:rounded-l-lg',
+-        props.tableLayout?.rowRounded && '[&_td:last-child]:rounded-r-lg',
++        props.tableLayout?.rowRounded && '[&_td:first-child]:rounded-l-(--radius-card)',
++        props.tableLayout?.rowRounded && '[&_td:last-child]:rounded-r-(--radius-card)',
+         props.tableClassNames?.body,
+       )}
+     >
+@@ -1856,7 +1856,7 @@ function DataGridTableLoader() {
+ 
+   return (
+     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+-      <div className="text-muted-foreground bg-card rounded-lg flex items-center gap-2 border px-4 py-2 text-sm leading-none font-medium">
++      <div className="text-muted-foreground bg-card rounded-(--radius-card) flex items-center gap-2 border px-4 py-2 text-sm leading-none font-medium">
+         <Spinner className="size-5 opacity-60" />
+         {props.loadingMessage || i18n.labels.loading}
+       </div>
+@@ -1873,7 +1873,7 @@ function DataGridTableRowPin<TData extends object>({ row }: { row: Row<DataGridF
+       aria-label={isPinned ? i18n.labels.unpinRow : i18n.labels.pinRow}
+       type="button"
+       className={cn(
+-        'text-muted-foreground hover:text-foreground rounded-lg inline-flex size-7 items-center justify-center transition-colors',
++        'text-muted-foreground hover:text-foreground rounded-(--radius-button) inline-flex size-7 items-center justify-center transition-colors',
+         isPinned && 'text-primary hover:text-primary/80',
+       )}
+       onClick={(event) => {
+@@ -2021,7 +2021,7 @@ function DataGridTableRowExpand<TData extends object>({
+           aria-label={isExpanded ? i18n.labels.collapseRow : i18n.labels.expandRow}
+           type="button"
+           className={cn(
+-            'text-muted-foreground hover:text-foreground rounded-lg inline-flex items-center justify-center transition-colors',
++            'text-muted-foreground hover:text-foreground rounded-(--radius-button) inline-flex items-center justify-center transition-colors',
+             controlSize,
+           )}
+           onClick={(event) => {
+diff --git a/src/components/reui/number-field.module.css b/src/components/reui/number-field.module.css
+new file mode 100644
+index 000000000..19c5ef96c
+--- /dev/null
++++ b/src/components/reui/number-field.module.css
+@@ -0,0 +1,4 @@
++.cursor {
++  /* Pointer artwork needs a contour over light, dark and mixed backgrounds. */
++  --number-field-cursor-shadow: 0 1px 1px #0008;
++}
+diff --git a/src/components/reui/number-field.tsx b/src/components/reui/number-field.tsx
+index d3ed67c38..e227e902d 100644
+--- a/src/components/reui/number-field.tsx
++++ b/src/components/reui/number-field.tsx
+@@ -11,6 +11,8 @@ import { createContext, use, useId } from 'react';
+ import { FormControlProvider, useFormControlContext } from '@/components/FormControlContext';
+ import { Label } from '@/components/ui/label';
+ 
++import cursorStyles from './number-field.module.css';
++
+ const NumberFieldContext = createContext<{
+   fieldId: string;
+   size: 'sm' | 'default' | 'compact' | 'normal' | 'lg' | 'large';
+@@ -232,7 +234,9 @@ function NumberFieldScrubArea({
+       <Label className="cursor-ew-resize" htmlFor={context.fieldId}>
+         {label}
+       </Label>
+-      <NumberFieldPrimitive.ScrubAreaCursor className="drop-shadow-[0_1px_1px_#0008] filter">
++      <NumberFieldPrimitive.ScrubAreaCursor
++        className={cn(cursorStyles.cursor, 'drop-shadow-(--number-field-cursor-shadow) filter')}
++      >
+         <CursorGrowIcon />
+       </NumberFieldPrimitive.ScrubAreaCursor>
+     </NumberFieldPrimitive.ScrubArea>
+diff --git a/src/components/ui/accordion.tsx b/src/components/ui/accordion.tsx
+index 57f147c75..37079d799 100644
+--- a/src/components/ui/accordion.tsx
++++ b/src/components/ui/accordion.tsx
+@@ -35,7 +35,7 @@ function AccordionTrigger({
+       <AccordionPrimitive.Trigger
+         data-slot="accordion-trigger"
+         className={cn(
+-          'group/accordion-trigger relative flex flex-1 items-center justify-between min-h-9 pointer-coarse:min-h-11 rounded-(--radius-button) border border-transparent py-1.5 text-start text-sm font-medium leading-5.5 transition-[color,background-color,border-color,box-shadow,opacity] duration-(--orvilo-motion-mid) motion-reduce:transition-none outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring aria-disabled:pointer-events-none aria-disabled:opacity-50',
++          'group/accordion-trigger relative flex flex-1 items-center justify-between min-h-9 pointer-coarse:min-h-11 rounded-(--radius-button) border border-transparent py-1.5 text-start text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity] duration-(--orvilo-motion-mid) motion-reduce:transition-none outline-none hover:bg-accent focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring aria-disabled:pointer-events-none aria-disabled:opacity-50',
+           className,
+         )}
+         {...props}
+@@ -63,7 +63,7 @@ function AccordionTrigger({
+ function AccordionContent({ className, children, ...props }: AccordionPrimitive.Panel.Props) {
+   return (
+     <AccordionPrimitive.Panel
+-      className="h-(--accordion-panel-height) overflow-hidden text-sm leading-5.5 transition-[height] duration-(--orvilo-motion-mid) data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none"
++      className="h-(--accordion-panel-height) overflow-hidden text-sm transition-[height] duration-(--orvilo-motion-mid) data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none"
+       data-slot="accordion-content"
+       {...props}
+     >
+diff --git a/src/components/ui/button-group.tsx b/src/components/ui/button-group.tsx
+index 43cf149f0..a6d1afca6 100644
+--- a/src/components/ui/button-group.tsx
++++ b/src/components/ui/button-group.tsx
+@@ -6,14 +6,14 @@ import { cn } from 'cn';
+ import { Separator } from '@/components/ui/separator';
+ 
+ const buttonGroupVariants = cva(
+-  "flex w-fit items-stretch *:focus-visible:relative *:focus-visible:z-10 has-[>[data-slot=button-group]]:gap-2 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-lg [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1",
++  "flex w-fit items-stretch *:focus-visible:relative *:focus-visible:z-10 has-[>[data-slot=button-group]]:gap-2 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-(--radius-button) [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1",
+   {
+     variants: {
+       orientation: {
+         horizontal:
+-          '*:data-slot:rounded-r-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-r-lg! [&>[data-slot]~[data-slot]]:rounded-l-none [&>[data-slot]~[data-slot]]:border-l-0',
++          '*:data-slot:rounded-r-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-r-(--radius-button)! [&>[data-slot]~[data-slot]]:rounded-l-none [&>[data-slot]~[data-slot]]:border-l-0',
+         vertical:
+-          'flex-col *:data-slot:rounded-b-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-b-lg! [&>[data-slot]~[data-slot]]:rounded-t-none [&>[data-slot]~[data-slot]]:border-t-0',
++          'flex-col *:data-slot:rounded-b-none [&>[data-slot]:not(:has(~[data-slot]))]:rounded-b-(--radius-button)! [&>[data-slot]~[data-slot]]:rounded-t-none [&>[data-slot]~[data-slot]]:border-t-0',
+       },
+     },
+     defaultVariants: {
+@@ -44,7 +44,7 @@ function ButtonGroupText({ className, render, ...props }: useRender.ComponentPro
+     props: mergeProps<'div'>(
+       {
+         className: cn(
+-          "flex items-center gap-2 rounded-lg border bg-muted px-2.5 text-sm font-medium [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
++          "flex items-center gap-2 rounded-(--radius-button) border bg-muted px-2.5 text-sm font-medium [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
+           className,
+         ),
+       },
+diff --git a/src/components/ui/code-block.tsx b/src/components/ui/code-block.tsx
+index 1f4c0b80e..c59f55051 100644
+--- a/src/components/ui/code-block.tsx
++++ b/src/components/ui/code-block.tsx
+@@ -166,8 +166,8 @@ const ROOT_TOKEN_CLASS = [
+   'data-[gutter-channel]:[--code-block-number-pad:calc(var(--code-block-gutter-gap)+var(--code-block-fold-width))]',
+   /* A diff column breathes: the +/- glyph gets a wider channel. */
+   'data-[has-diff]:[--code-block-gutter-gap:--spacing(4)]',
+-  '[--code-block-line-height:1.5rem]',
+-  '[--code-block-font-size:0.8125rem]',
++  '[--code-block-line-height:calc(var(--text-sm)*22/14)]',
++  '[--code-block-font-size:var(--text-sm)]',
+   '[--code-block-copy-inset:--spacing(2)]',
+   /* Where a PINNED control starts. With a header composed in, the root's top
+      edge is the header, so an unadjusted inset drops the copy button onto the
+@@ -551,7 +551,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
+                an 18px channel. Hover feedback only; folded state reads
+                through color. */
+             /* Square, centred in the line box: height matches the width and
+-               the translate makes up the difference to the 24px line. Open
++               the translate makes up the difference to the 22px line. Open
+                regions read darker than folded ones. */
+             'text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 sticky z-20 inline-flex size-(--code-block-fold-width) shrink-0 translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center justify-center rounded-(--radius-button) align-top outline-none focus-visible:ring-2',
+             /* Margins cancel: -(4px + width) then +4px, so the toggle paints
+@@ -1676,7 +1676,7 @@ function CodeBlockLanguage({ className, children, ...props }: ComponentProps<'sp
+       data-slot="code-block-language"
+       data-unsupported={!resolvedLanguage || undefined}
+       className={cn(
+-        'border-border bg-muted/60 text-muted-foreground inline-flex shrink-0 items-center rounded-(--radius-chip) border px-1.5 py-0.5 font-mono text-xs leading-5 uppercase',
++        'border-border bg-muted/60 text-muted-foreground inline-flex shrink-0 items-center rounded-(--radius-chip) border px-1.5 py-0.5 font-mono text-xs uppercase',
+         className,
+       )}
+       {...props}
+diff --git a/src/components/ui/combobox.tsx b/src/components/ui/combobox.tsx
+index 8f977c8ce..bb5ab67b3 100644
+--- a/src/components/ui/combobox.tsx
++++ b/src/components/ui/combobox.tsx
+@@ -228,11 +228,11 @@ function ComboboxSeparator({ className, ...props }: ComboboxPrimitive.Separator.
+ }
+ 
+ const comboboxChipsSizeClasses: Record<InputVisualSize, string> = {
+-  default: 'min-h-9 text-sm leading-5.5',
+-  compact: 'min-h-8 text-sm leading-5.5',
+-  small: 'min-h-7 py-0.5 text-sm leading-5.5',
+-  normal: 'min-h-9 text-sm leading-5.5',
+-  large: 'min-h-10 text-base leading-6',
++  default: 'min-h-9 text-sm',
++  compact: 'min-h-8 text-sm',
++  small: 'min-h-7 py-0.5 text-sm',
++  normal: 'min-h-9 text-sm',
++  large: 'min-h-10 text-base',
+ };
+ 
+ function ComboboxChips({
+@@ -279,7 +279,7 @@ function ComboboxChip({
+     <ComboboxPrimitive.Chip
+       data-slot="combobox-chip"
+       className={cn(
+-        'flex min-h-7 w-fit items-center justify-center gap-1 rounded-(--radius-chip) bg-muted px-1.5 text-xs leading-5 font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pe-0',
++        'flex min-h-7 w-fit items-center justify-center gap-1 rounded-(--radius-chip) bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pe-0',
+         className,
+       )}
+       {...props}
+diff --git a/src/components/ui/empty.tsx b/src/components/ui/empty.tsx
+index 66e2ec886..e2fccdd9e 100644
+--- a/src/components/ui/empty.tsx
++++ b/src/components/ui/empty.tsx
+@@ -6,7 +6,7 @@ function Empty({ className, ...props }: React.ComponentProps<'div'>) {
+     <div
+       data-slot="empty"
+       className={cn(
+-        'flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-dashed p-6 text-center text-balance',
++        'flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-(--radius-card) border-dashed p-6 text-center text-balance',
+         className,
+       )}
+       {...props}
+@@ -30,7 +30,7 @@ const emptyMediaVariants = cva(
+     variants: {
+       variant: {
+         default: 'bg-transparent',
+-        icon: "flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground [&_svg:not([class*='size-'])]:size-4",
++        icon: "flex size-8 shrink-0 items-center justify-center rounded-(--radius-card) bg-muted text-foreground [&_svg:not([class*='size-'])]:size-4",
+       },
+     },
+     defaultVariants: {
+@@ -69,7 +69,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<'p'>) {
+     <div
+       data-slot="empty-description"
+       className={cn(
+-        'text-sm/relaxed text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary',
++        'text-sm text-muted-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary',
+         className,
+       )}
+       {...props}
+diff --git a/src/components/ui/field.tsx b/src/components/ui/field.tsx
+index 829bfd73e..a764f26aa 100644
+--- a/src/components/ui/field.tsx
++++ b/src/components/ui/field.tsx
+@@ -88,7 +88,7 @@ function Field({
+ function FieldContent({ className, ...props }: React.ComponentProps<'div'>) {
+   return (
+     <div
+-      className={cn('group/field-content flex flex-1 flex-col gap-0.5 leading-snug', className)}
++      className={cn('group/field-content flex flex-1 flex-col gap-0.5 text-sm', className)}
+       data-slot="field-content"
+       {...props}
+     />
+@@ -100,7 +100,7 @@ function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>)
+     <Label
+       data-slot="field-label"
+       className={cn(
+-        'group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5 has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border has-[>[data-slot=field]]:not-has-[:disabled,[data-disabled]]:hover:bg-accent has-[>[data-slot=field]]:has-[:focus-visible]:border-ring has-[>[data-slot=field]]:has-[:focus-visible]:ring-3 has-[>[data-slot=field]]:has-[:focus-visible]:ring-ring/50 *:data-[slot=field]:p-2.5 dark:has-data-checked:border-primary/20 dark:has-data-checked:bg-primary/10',
++        'group/field-label peer/field-label flex w-fit gap-2 group-data-[disabled=true]/field:opacity-50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5 has-[>[data-slot=field]]:rounded-(--radius-card) has-[>[data-slot=field]]:border has-[>[data-slot=field]]:not-has-[:disabled,[data-disabled]]:hover:bg-accent has-[>[data-slot=field]]:has-[:focus-visible]:border-ring has-[>[data-slot=field]]:has-[:focus-visible]:ring-3 has-[>[data-slot=field]]:has-[:focus-visible]:ring-ring/50 *:data-[slot=field]:p-2.5 dark:has-data-checked:border-primary/20 dark:has-data-checked:bg-primary/10',
+         'has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col',
+         className,
+       )}
+@@ -127,7 +127,7 @@ function FieldDescription({ className, ...props }: React.ComponentProps<'p'>) {
+     <p
+       data-slot="field-description"
+       className={cn(
+-        'text-left text-sm leading-normal font-normal text-muted-foreground group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5',
++        'text-left text-sm font-normal text-muted-foreground group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5',
+         'last:mt-0 nth-last-2:-mt-1',
+         '[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary',
+         className,
+diff --git a/src/components/ui/item.tsx b/src/components/ui/item.tsx
+index c24563b7c..cbde28092 100644
+--- a/src/components/ui/item.tsx
++++ b/src/components/ui/item.tsx
+@@ -32,7 +32,7 @@ function ItemSeparator({ className, ...props }: React.ComponentProps<typeof Sepa
+ }
+ 
+ const itemVariants = cva(
+-  'group/item flex w-full flex-wrap items-center rounded-lg border text-sm transition-colors duration-100 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [a]:transition-colors [a]:hover:bg-accent',
++  'group/item flex w-full flex-wrap items-center rounded-(--radius-card) border text-sm transition-colors duration-100 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [a]:transition-colors [a]:hover:bg-accent',
+   {
+     variants: {
+       variant: {
+@@ -85,7 +85,7 @@ const itemMediaVariants = cva(
+         default: 'bg-transparent',
+         icon: "[&_svg:not([class*='size-'])]:size-4",
+         image:
+-          'size-10 overflow-hidden rounded-sm group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_img]:size-full [&_img]:object-cover',
++          'size-10 overflow-hidden rounded-(--radius-card) group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_img]:size-full [&_img]:object-cover',
+       },
+     },
+     defaultVariants: {
+@@ -127,7 +127,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<'div'>) {
+     <div
+       data-slot="item-title"
+       className={cn(
+-        'line-clamp-1 flex w-fit items-center gap-2 text-sm leading-snug font-medium underline-offset-4',
++        'line-clamp-1 flex w-fit items-center gap-2 text-sm font-medium underline-offset-4',
+         className,
+       )}
+       {...props}
+@@ -140,7 +140,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<'p'>) {
+     <p
+       data-slot="item-description"
+       className={cn(
+-        'line-clamp-2 text-left text-sm leading-normal font-normal text-muted-foreground group-data-[size=xs]/item:text-xs [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary',
++        'line-clamp-2 text-left text-sm font-normal text-muted-foreground group-data-[size=xs]/item:text-xs [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary',
+         className,
+       )}
+       {...props}
+diff --git a/src/components/ui/label.tsx b/src/components/ui/label.tsx
+index dd689eade..a5e96a5e4 100644
+--- a/src/components/ui/label.tsx
++++ b/src/components/ui/label.tsx
+@@ -8,7 +8,7 @@ function Label({ className, ...props }: React.ComponentProps<'label'>) {
+     <label
+       data-slot="label"
+       className={cn(
+-        'flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
++        'flex items-center gap-2 text-sm font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
+         className,
+       )}
+       {...props}
+diff --git a/src/components/ui/tabs.tsx b/src/components/ui/tabs.tsx
+index 53dfc466c..59e3f67c2 100644
+--- a/src/components/ui/tabs.tsx
++++ b/src/components/ui/tabs.tsx
+@@ -17,7 +17,7 @@ function Tabs({ className, orientation = 'horizontal', ...props }: TabsPrimitive
+ }
+ 
+ const tabsListVariants = cva(
+-  'group/tabs-list inline-flex w-fit items-center justify-center rounded-lg text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none',
++  'group/tabs-list inline-flex w-fit items-center justify-center rounded-(--radius-button) text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none',
+   {
+     variants: {
+       variant: {
+@@ -53,7 +53,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
+     <TabsPrimitive.Tab
+       data-slot="tabs-trigger"
+       className={cn(
+-        "relative inline-flex h-full flex-1 group-data-[variant=line]/tabs-list:h-[calc(100%-1px)] items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
++        "relative inline-flex h-full flex-1 group-data-[variant=line]/tabs-list:h-[calc(100%-1px)] items-center justify-center gap-1.5 rounded-(--radius-input) border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+         'group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent',
+         // The pill is the panel surface: the page canvas is as grey as the track.
+         'data-active:bg-card data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground',
+diff --git a/src/components/ui/textarea.tsx b/src/components/ui/textarea.tsx
+index cbae84efb..e88f44705 100644
+--- a/src/components/ui/textarea.tsx
++++ b/src/components/ui/textarea.tsx
+@@ -23,8 +23,8 @@ function Textarea({ className, disabled, visualSize, ...props }: TextareaProps)
+       data-slot="textarea"
+       disabled={disabled ?? formControl.disabled}
+       className={cn(
+-        'flex field-sizing-content min-h-16 w-full rounded-(--radius-input) border border-input bg-transparent px-2.5 py-2 text-sm leading-5.5 transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40',
+-        size === 'large' && 'text-base leading-6',
++        'flex field-sizing-content min-h-16 w-full rounded-(--radius-input) border border-input bg-transparent px-2.5 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40',
++        size === 'large' && 'text-base',
+         className,
+       )}
+       {...props}
+diff --git a/src/components/ui/toggle-group.tsx b/src/components/ui/toggle-group.tsx
+index c5e76f316..2208be902 100644
+--- a/src/components/ui/toggle-group.tsx
++++ b/src/components/ui/toggle-group.tsx
+@@ -36,13 +36,13 @@ function ToggleGroup({
+   return (
+     <ToggleGroupPrimitive
+       data-orientation={orientation}
+-      data-size={size}
++      data-size={size ?? 'default'}
+       data-slot="toggle-group"
+       data-spacing={spacing}
+       data-variant={variant}
+       style={{ '--gap': spacing } as React.CSSProperties}
+       className={cn(
+-        'group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] rounded-lg data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-vertical:flex-col data-vertical:items-stretch',
++        'group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] rounded-(--radius-button) data-[size=sm]:rounded-(--radius-input) data-vertical:flex-col data-vertical:items-stretch',
+         className,
+       )}
+       {...props}
+@@ -62,18 +62,19 @@ function ToggleGroupItem({
+   ...props
+ }: TogglePrimitive.Props & VariantProps<typeof toggleVariants>) {
+   const context = React.use(ToggleGroupContext);
++  const resolvedSize = context.size || size;
+ 
+   return (
+     <TogglePrimitive
+-      data-size={context.size || size}
++      data-size={resolvedSize}
+       data-slot="toggle-group-item"
+       data-spacing={context.spacing}
+       data-variant={context.variant || variant}
+       className={cn(
+-        'shrink-0 group-data-[spacing=0]/toggle-group:rounded-none group-data-[spacing=0]/toggle-group:px-2 focus:z-10 focus-visible:z-10 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-end]:pr-1.5 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-start]:pl-1.5 group-data-horizontal/toggle-group:data-[spacing=0]:first:rounded-l-lg group-data-vertical/toggle-group:data-[spacing=0]:first:rounded-t-lg group-data-horizontal/toggle-group:data-[spacing=0]:last:rounded-r-lg group-data-vertical/toggle-group:data-[spacing=0]:last:rounded-b-lg group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:border-l-0 group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:border-t-0 group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-l group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-t',
++        'shrink-0 group-data-[spacing=0]/toggle-group:rounded-none group-data-[spacing=0]/toggle-group:px-2 focus:z-10 focus-visible:z-10 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-end]:pr-1.5 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-start]:pl-1.5 group-data-horizontal/toggle-group:data-[spacing=0]:first:rounded-l-(--radius-button) group-data-horizontal/toggle-group:data-[spacing=0]:data-[size=sm]:first:rounded-l-(--radius-input) group-data-vertical/toggle-group:data-[spacing=0]:first:rounded-t-(--radius-button) group-data-vertical/toggle-group:data-[spacing=0]:data-[size=sm]:first:rounded-t-(--radius-input) group-data-horizontal/toggle-group:data-[spacing=0]:last:rounded-r-(--radius-button) group-data-horizontal/toggle-group:data-[spacing=0]:data-[size=sm]:last:rounded-r-(--radius-input) group-data-vertical/toggle-group:data-[spacing=0]:last:rounded-b-(--radius-button) group-data-vertical/toggle-group:data-[spacing=0]:data-[size=sm]:last:rounded-b-(--radius-input) group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:border-l-0 group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:border-t-0 group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-l group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-t',
+         toggleVariants({
+           variant: context.variant || variant,
+-          size: context.size || size,
++          size: resolvedSize,
+         }),
+         className,
+       )}
+diff --git a/src/components/ui/toggle.tsx b/src/components/ui/toggle.tsx
+index 64f3bbffa..4b407a448 100644
+--- a/src/components/ui/toggle.tsx
++++ b/src/components/ui/toggle.tsx
+@@ -5,7 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
+ import { cn } from 'cn';
+ 
+ const toggleVariants = cva(
+-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-selected data-[state=on]:bg-selected dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
++  "group/toggle inline-flex items-center justify-center gap-1 rounded-(--radius-button) text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-selected data-[state=on]:bg-selected dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+   {
+     variants: {
+       variant: {
+@@ -14,9 +14,14 @@ const toggleVariants = cva(
+       },
+       size: {
+         default:
++          'h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
++        compact:
+           'h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+-        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
++        sm: "h-7 min-w-7 rounded-(--radius-input) px-2.5 text-xs has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
++        // lg remains a normal-height API alias; large selects the 40px role.
+         lg: 'h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
++        large:
++          'h-10 min-w-10 px-2.5 text-base has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+       },
+     },
+     defaultVariants: {
+diff --git a/src/features/AgentGoals/GoalDetailPage.tsx b/src/features/AgentGoals/GoalDetailPage.tsx
+index 7351177a2..328b96c09 100755
+--- a/src/features/AgentGoals/GoalDetailPage.tsx
++++ b/src/features/AgentGoals/GoalDetailPage.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 22px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { EyeIcon, PauseIcon, PlayIcon } from 'lucide-react';
+ import { memo, type ReactNode, useEffect, useMemo, useState } from 'react';
+@@ -229,7 +228,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
+         <div className="flex flex-col flex-1" style={{ overflowY: 'auto' }}>
+           <WideScreenContainer wrapperStyle={{ gap: 20, paddingBlock: 16 }}>
+             <div className={`flex flex-col gap-2 ${styles.header}`}>
+-              <h1 className="text-[22px] font-semibold">{goal.title}</h1>
++              <h1 className="text-xl font-semibold">{goal.title}</h1>
+               <div className={`flex gap-2 flex-wrap ${styles.metrics}`}>
+                 <Metric
+                   label={t('goalProcess.metrics.status')}
+diff --git a/src/features/AgentGoals/ProcessControl/Graph/index.tsx b/src/features/AgentGoals/ProcessControl/Graph/index.tsx
+index 8c7efdc5d..81220ed5b 100755
+--- a/src/features/AgentGoals/ProcessControl/Graph/index.tsx
++++ b/src/features/AgentGoals/ProcessControl/Graph/index.tsx
+@@ -691,7 +691,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
+       {experiments.length === 0 && (
+         <ToggleGroup
+           className="rounded-(--radius-button)"
+-          size="default"
++          size="compact"
+           value={[view]}
+           onValueChange={(value) => {
+             if (value.length > 0) setView(value[0] as GraphViewMode);
+diff --git a/src/features/AgentGoals/ProcessControl/shared.tsx b/src/features/AgentGoals/ProcessControl/shared.tsx
+index 8cf89fb15..aadba0e81 100755
+--- a/src/features/AgentGoals/ProcessControl/shared.tsx
++++ b/src/features/AgentGoals/ProcessControl/shared.tsx
+@@ -38,7 +38,7 @@ export const KIND_ICON: Record<GoalGraphNodeKind, LucideIcon> = {
+ };
+ 
+ const styles = {
+-  dot: 'inline-block flex-none size-2 rounded-[2px]',
++  dot: 'inline-block flex-none size-2 rounded-full',
+   mono: 'font-mono tabular-nums',
+ };
+ 
+diff --git a/src/features/AgentHome/AgentInfo.tsx b/src/features/AgentHome/AgentInfo.tsx
+index 93cfc7a37..665db6064 100755
+--- a/src/features/AgentHome/AgentInfo.tsx
++++ b/src/features/AgentHome/AgentInfo.tsx
+@@ -43,7 +43,7 @@ const AgentInfo = memo(() => {
+   if (isLoading) {
+     return (
+       <div className="flex flex-col gap-3">
+-        <Skeleton className="rounded-md shrink-0" style={{ width: 64, height: 64 }} />
++        <Skeleton className="rounded-(--radius-card) shrink-0" style={{ width: 64, height: 64 }} />
+         <Skeleton style={{ height: 32, width: 200 }} />
+         <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
+           <div className="flex flex-col gap-2">
+diff --git a/src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx b/src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx
+index dc94b2630..9b8942bdd 100755
+--- a/src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx
++++ b/src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx
+@@ -697,7 +697,7 @@ const QuotaCalendar = memo<QuotaCalendarProps>(({ externalAccountId }) => {
+               it starts at the body top instead of below a full-width control. */}
+           <ToggleGroup
+             className="rounded-(--radius-button)"
+-            size="default"
++            size="compact"
+             style={{ alignSelf: 'flex-start' }}
+             value={[seriesId(series)]}
+             onValueChange={(value) => {
+diff --git a/src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts b/src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts
+index 6a3da3ac0..251429d13 100644
+--- a/src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts
++++ b/src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts
+@@ -1,10 +1,10 @@
+ /**
+  * Geometry for the routed issue page; split and Portal keep their own width.
+  * The main/rail switch lives in one place — the `task-detail` container query
+- * in `taskDetailLayoutStyles` — so the page only sets gutters and caps the
+- * content width instead of redefining the breakpoint.
++ * in `taskDetailLayoutStyles`. WorkSurfaceDocument owns the fixed gutters and
++ * document cap; the header stays within that inherited content width.
+  */
+ export const taskDetailFullPageStyles = {
+   document:
+-    'w-full max-w-240 mx-0 px-4 [&_[data-task-detail-header]]:max-w-240 [&_[data-task-detail-header]]:mx-auto [&_[data-task-detail-header]]:pbs-1.25',
++    'w-full [&_[data-task-detail-header]]:max-w-full [&_[data-task-detail-header]]:mx-auto [&_[data-task-detail-header]]:pbs-1.25',
+ };
+diff --git a/src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx b/src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx
+index d9ec3308b..2e8d48f26 100755
+--- a/src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx
++++ b/src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx
+@@ -16,8 +16,8 @@ const TaskItemSkeleton = memo<TaskItemSkeletonProps>(({ variant = 'default' }) =
+         </div>
+         <div className="flex items-start gap-1.5">
+           <Skeleton
+-            className="rounded-md shrink-0"
+-            style={{ borderRadius: 4, flex: 'none', width: 14, height: 14 }}
++            className="rounded-(--radius-chip) shrink-0"
++            style={{ flex: 'none', width: 14, height: 14 }}
+           />
+           <div className="flex flex-1 flex-col gap-1" style={{ minWidth: 0 }}>
+             <Skeleton style={{ height: 14 }} />
+@@ -26,8 +26,8 @@ const TaskItemSkeleton = memo<TaskItemSkeletonProps>(({ variant = 'default' }) =
+         </div>
+         <div className="flex items-center gap-1.5">
+           <Skeleton
+-            className="rounded-md shrink-0"
+-            style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
++            className="rounded-(--radius-chip) shrink-0"
++            style={{ flex: 'none', width: 16, height: 16 }}
+           />
+           <Skeleton style={{ minWidth: 40, height: 12, width: 40 }} />
+         </div>
+@@ -44,12 +44,12 @@ const TaskItemSkeleton = memo<TaskItemSkeletonProps>(({ variant = 'default' }) =
+       <div className="flex items-center justify-between gap-2">
+         <div className="flex items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
+           <Skeleton
+-            className="rounded-md shrink-0"
+-            style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
++            className="rounded-(--radius-chip) shrink-0"
++            style={{ flex: 'none', width: 16, height: 16 }}
+           />
+           <Skeleton
+-            className="rounded-md shrink-0"
+-            style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
++            className="rounded-(--radius-chip) shrink-0"
++            style={{ flex: 'none', width: 16, height: 16 }}
+           />
+           <Skeleton style={{ minWidth: 64, height: 14, width: 64 }} />
+           <Skeleton style={{ minWidth: 200, height: 16, width: 200 }} />
+diff --git a/src/features/AgentUsage/UsageTrendChart.tsx b/src/features/AgentUsage/UsageTrendChart.tsx
+index d68b119ab..4ecdd649f 100755
+--- a/src/features/AgentUsage/UsageTrendChart.tsx
++++ b/src/features/AgentUsage/UsageTrendChart.tsx
+@@ -57,6 +57,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
+       <div className="flex items-center gap-2 justify-between">
+         <div className="text-base font-medium">{t('usageStats.chart.title')}</div>
+         <ToggleGroup
++          size="compact"
+           value={[type]}
+           onValueChange={(value) => value[0] && setType(value[0] as ShowType)}
+         >
+diff --git a/src/features/AgentViewAll/AgentViewAllPage.tsx b/src/features/AgentViewAll/AgentViewAllPage.tsx
+index 4dea4c7d2..c239bca26 100755
+--- a/src/features/AgentViewAll/AgentViewAllPage.tsx
++++ b/src/features/AgentViewAll/AgentViewAllPage.tsx
+@@ -374,6 +374,7 @@ const AgentViewAllPage = memo(() => {
+               personal mode leads with the search box instead. */}
+           {activeWorkspaceId ? (
+             <ToggleGroup
++              size="compact"
+               value={[segment]}
+               onValueChange={(value) => value[0] && handleSegmentChange(value[0] as SegmentValue)}
+             >
+diff --git a/src/features/Auth/MarketAuthCallback/index.tsx b/src/features/Auth/MarketAuthCallback/index.tsx
+index 29053ebb8..dd1a7f022 100755
+--- a/src/features/Auth/MarketAuthCallback/index.tsx
++++ b/src/features/Auth/MarketAuthCallback/index.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { CircleCheckIcon, FrownIcon, HourglassIcon } from 'lucide-react';
+ import { useEffect, useState } from 'react';
+@@ -176,9 +175,9 @@ const MarketAuthCallbackPage = () => {
+     <Empty>
+       <EmptyHeader>
+         <EmptyMedia variant="default">{getStatusIcon()}</EmptyMedia>
+-        <EmptyTitle>{<div className="text-[32px] font-bold">{getTitle()}</div>}</EmptyTitle>
++        <EmptyTitle>{<div className="text-3xl font-semibold">{getTitle()}</div>}</EmptyTitle>
+         <EmptyDescription>
+-          {<div className="text-base text-muted-foreground">{getSubTitle()}</div>}
++          {<div className="text-sm text-muted-foreground">{getSubTitle()}</div>}
+         </EmptyDescription>
+       </EmptyHeader>
+       <EmptyContent>{getExtra()}</EmptyContent>
+diff --git a/src/features/Auth/OAuthCallback/Social.tsx b/src/features/Auth/OAuthCallback/Social.tsx
+index bc15bd6fc..8564a4333 100755
+--- a/src/features/Auth/OAuthCallback/Social.tsx
++++ b/src/features/Auth/OAuthCallback/Social.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { CircleCheckIcon, FrownIcon } from 'lucide-react';
+ import React, { memo, useEffect, useState } from 'react';
+@@ -92,14 +91,14 @@ const SocialOAuthCallbackPage = memo(() => {
+         </EmptyMedia>
+         <EmptyTitle>
+           {
+-            <div className="text-[32px] font-bold">
++            <div className="text-3xl font-semibold">
+               {status === 'success' ? t('success.title') : t('error.title')}
+             </div>
+           }
+         </EmptyTitle>
+         <EmptyDescription>
+           {
+-            <div className="text-base text-muted-foreground">
++            <div className="text-sm text-muted-foreground">
+               {status === 'success' && provider
+                 ? t('success.subTitleWithCountdown', {
+                     countdown,
+diff --git a/src/features/Auth/OAuthCallback/Success.tsx b/src/features/Auth/OAuthCallback/Success.tsx
+index 92dc0525e..a8e85c952 100755
+--- a/src/features/Auth/OAuthCallback/Success.tsx
++++ b/src/features/Auth/OAuthCallback/Success.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { CircleCheckIcon } from 'lucide-react';
+ import React, { memo, useEffect, useState } from 'react';
+@@ -57,10 +56,12 @@ const SuccessPage = memo(() => {
+     <Empty>
+       <EmptyHeader>
+         <EmptyMedia variant="default">{<CircleCheckIcon size={96} />}</EmptyMedia>
+-        <EmptyTitle>{<div className="text-[32px] font-bold">{t('success.title')}</div>}</EmptyTitle>
++        <EmptyTitle>
++          {<div className="text-3xl font-semibold">{t('success.title')}</div>}
++        </EmptyTitle>
+         <EmptyDescription>
+           {
+-            <div className="text-base text-muted-foreground">
++            <div className="text-sm text-muted-foreground">
+               {provider
+                 ? t('success.subTitleWithCountdown', {
+                     countdown,
+diff --git a/src/features/Auth/OAuthConsent/ClientError.tsx b/src/features/Auth/OAuthConsent/ClientError.tsx
+index f00e9d244..67ac40900 100755
+--- a/src/features/Auth/OAuthConsent/ClientError.tsx
++++ b/src/features/Auth/OAuthConsent/ClientError.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { FrownIcon } from 'lucide-react';
+ import React, { memo } from 'react';
+@@ -37,9 +36,9 @@ const ConsentClientError = memo<ClientProps>(({ error }) => {
+     <Empty>
+       <EmptyHeader>
+         <EmptyMedia variant="default">{<FrownIcon size={96} />}</EmptyMedia>
+-        <EmptyTitle>{<div className="text-[32px] font-bold">{title}</div>}</EmptyTitle>
++        <EmptyTitle>{<div className="text-3xl font-semibold">{title}</div>}</EmptyTitle>
+         <EmptyDescription>
+-          {<div className="text-base text-muted-foreground">{message}</div>}
++          {<div className="text-sm text-muted-foreground">{message}</div>}
+         </EmptyDescription>
+       </EmptyHeader>
+     </Empty>
+diff --git a/src/features/Auth/OAuthDevice/DeviceSuccess.tsx b/src/features/Auth/OAuthDevice/DeviceSuccess.tsx
+index 006bf3472..81bb8051c 100755
+--- a/src/features/Auth/OAuthDevice/DeviceSuccess.tsx
++++ b/src/features/Auth/OAuthDevice/DeviceSuccess.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { CircleCheckIcon } from 'lucide-react';
+ import React, { memo } from 'react';
+@@ -21,10 +20,10 @@ const DeviceSuccess = memo(() => {
+       <EmptyHeader>
+         <EmptyMedia variant="default">{<CircleCheckIcon size={96} />}</EmptyMedia>
+         <EmptyTitle>
+-          {<div className="text-[32px] font-bold">{t('device.success.title')}</div>}
++          {<div className="text-xl font-semibold">{t('device.success.title')}</div>}
+         </EmptyTitle>
+         <EmptyDescription>
+-          {<div className="text-base text-muted-foreground">{t('device.success.description')}</div>}
++          {<div className="text-sm text-muted-foreground">{t('device.success.description')}</div>}
+         </EmptyDescription>
+       </EmptyHeader>
+     </Empty>
+diff --git a/src/features/Automations/AutomationRunsPage.tsx b/src/features/Automations/AutomationRunsPage.tsx
+index 9d7f9daae..37ac53080 100644
+--- a/src/features/Automations/AutomationRunsPage.tsx
++++ b/src/features/Automations/AutomationRunsPage.tsx
+@@ -1,4 +1,3 @@
+-// #691: Preserve the existing 22px title geometry pending a design-scale choice; no matching role is approved.
+ import { formatAbsoluteDateTime } from '@orvilo/utils/time';
+ import { cn } from 'cn';
+ import dayjs from 'dayjs';
+@@ -78,7 +77,7 @@ const StatCard = memo<{
+       {createElement(icon, { color: danger ? 'var(--destructive)' : 'var(--success)', size: 16 })}
+       <div className="text-xs text-muted-foreground">{label}</div>
+     </div>
+-    <div className="text-[22px] font-semibold">{value}</div>
++    <div className="text-xl font-semibold">{value}</div>
+   </div>
+ ));
+ 
+diff --git a/src/features/Automations/AutomationTriggerDraft.tsx b/src/features/Automations/AutomationTriggerDraft.tsx
+index 08d4bc67c..6d8984a63 100644
+--- a/src/features/Automations/AutomationTriggerDraft.tsx
++++ b/src/features/Automations/AutomationTriggerDraft.tsx
+@@ -43,7 +43,7 @@ export interface TriggerDraft {
+ 
+ const styles = {
+   fieldLabel: 'text-xs text-muted-foreground',
+-  preview: 'rounded-[12px] bg-fill-quaternary px-3.5 py-3',
++  preview: 'rounded-(--radius-card) bg-fill-quaternary px-3.5 py-3',
+ };
+ 
+ interface AutomationTriggerDraftProps {
+diff --git a/src/features/DailyBrief/BriefCardSkeleton.tsx b/src/features/DailyBrief/BriefCardSkeleton.tsx
+index 7c38737e8..f8042d26d 100755
+--- a/src/features/DailyBrief/BriefCardSkeleton.tsx
++++ b/src/features/DailyBrief/BriefCardSkeleton.tsx
+@@ -7,10 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton';
+ const BriefCardSkeleton = memo(() => {
+   return (
+     <div
+-      className="flex flex-col gap-3 p-3"
++      className="flex flex-col gap-3 p-3 rounded-(--radius-card)"
+       style={{
+         border: `1px solid ${'var(--ant-color-border)'}`,
+-        borderRadius: 'var(--ant-border-radius-lg)',
+       }}
+     >
+       <div className="flex items-center gap-4 justify-between">
+@@ -19,9 +18,8 @@ const BriefCardSkeleton = memo(() => {
+           style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
+         >
+           <Skeleton
+-            className="rounded-md shrink-0"
++            className="rounded-(--radius-card) shrink-0"
+             style={{
+-              borderRadius: 'var(--ant-border-radius)',
+               flex: 'none',
+               width: 28,
+               height: 28,
+diff --git a/src/features/FileViewer/NotSupport/index.tsx b/src/features/FileViewer/NotSupport/index.tsx
+index 305402585..42ae2434c 100755
+--- a/src/features/FileViewer/NotSupport/index.tsx
++++ b/src/features/FileViewer/NotSupport/index.tsx
+@@ -25,7 +25,7 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
+     <div className={cn('flex flex-col', styles.page)} id="not-support-renderer" style={style}>
+       <div className="flex flex-col items-center justify-center h-full">
+         <div className="flex flex-col items-center gap-3">
+-          <span className="text-[64px] leading-none">{'👀'}</span>
++          <span className="text-[4rem] leading-none">{'👀'}</span>
+           <div className="flex flex-col text-center">
+             <Trans
+               i18nKey="preview.unsupportedFileAndContact"
+diff --git a/src/features/GroupAvatar/GroupAvatar.module.css b/src/features/GroupAvatar/GroupAvatar.module.css
+new file mode 100644
+index 000000000..bdbdbfea1
+--- /dev/null
++++ b/src/features/GroupAvatar/GroupAvatar.module.css
+@@ -0,0 +1,12 @@
++.identity {
++  border-radius: var(--radius-card);
++}
++
++/* Only the square entity frame replaces the SDK's artistic corner mask.
++ * Repeating our own class outranks each public SDK root class without
++ * targeting its private selectors. Other corner shapes retain their masks.
++ */
++.square.square {
++  border-radius: var(--radius-card);
++  mask-image: none;
++}
+diff --git a/src/features/GroupAvatar/index.tsx b/src/features/GroupAvatar/index.tsx
+index e3c72fba8..0ce0b5bff 100755
+--- a/src/features/GroupAvatar/index.tsx
++++ b/src/features/GroupAvatar/index.tsx
+@@ -2,6 +2,7 @@
+ 
+ import { type GroupAvatarProps } from '@lobehub/ui';
+ import { GroupAvatar } from '@lobehub/ui';
++import { cn } from 'cn';
+ import { memo, useMemo } from 'react';
+ 
+ import { Skeleton } from '@/components/ui/skeleton';
+@@ -9,13 +10,25 @@ import { DEFAULT_AVATAR } from '@/const/meta';
+ import { useUserStore } from '@/store/user';
+ import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
+ 
++import styles from './GroupAvatar.module.css';
++
+ interface GroupAvatarComponentProps extends GroupAvatarProps {
+   background?: string;
+   loading?: boolean;
+ }
+ 
+ const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
+-  ({ size = 28, avatars = [], background, loading, ...rest }) => {
++  ({
++    size = 28,
++    avatars = [],
++    avatarShape = 'square',
++    cornerShape = 'square',
++    background,
++    className,
++    loading,
++    style,
++    ...rest
++  }) => {
+     const [userAvatar, nickName, username] = useUserStore((s) => [
+       userProfileSelectors.userAvatar(s),
+       userProfileSelectors.nickName(s),
+@@ -41,23 +54,25 @@ const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
+     }, [avatars, userAvatar, nickName, username]);
+ 
+     if (loading)
+-      return <Skeleton className="rounded-md shrink-0" style={{ width: size, height: size }} />;
++      return (
++        <Skeleton
++          className={cn('shrink-0', cornerShape === 'circle' ? 'rounded-full' : styles.identity)}
++          style={{ width: size, height: size }}
++        />
++      );
+ 
+     return (
+       <GroupAvatar
+-        avatarShape={'square'}
+-        cornerShape={'square'}
++        avatarShape={avatarShape}
++        className={cn(cornerShape === 'square' && styles.square, className)}
++        cornerShape={cornerShape}
+         size={size}
++        style={style ?? (background && background !== 'rgba(0,0,0,0)' ? { background } : undefined)}
+         avatars={groupAvatars.map((agent: any) => ({
+           avatar: agent.avatar || DEFAULT_AVATAR,
+           background: agent?.backgroundColor || undefined,
+           ...agent,
+         }))}
+-        style={
+-          background && background !== 'rgba(0,0,0,0)'
+-            ? { background, borderRadius: '22%' }
+-            : undefined
+-        }
+         {...rest}
+       />
+     );
+diff --git a/src/features/HomeInbox/index.tsx b/src/features/HomeInbox/index.tsx
+index f19b22315..5383ed76a 100755
+--- a/src/features/HomeInbox/index.tsx
++++ b/src/features/HomeInbox/index.tsx
+@@ -264,7 +264,7 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
+   const scopeToggle = isTeam ? (
+     <ToggleGroup
+       className="rounded-(--radius-button)"
+-      size="default"
++      size="compact"
+       value={[scope]}
+       onValueChange={(value) => value[0] && setScope(value[0] as 'mine' | 'team')}
+     >
+diff --git a/src/features/MCP/MCPDetail/Loading.tsx b/src/features/MCP/MCPDetail/Loading.tsx
+index 2ce58428b..e9e8199eb 100755
+--- a/src/features/MCP/MCPDetail/Loading.tsx
++++ b/src/features/MCP/MCPDetail/Loading.tsx
+@@ -15,7 +15,7 @@ const DetailsLoading = memo(() => {
+     <div className="flex flex-col gap-6">
+       <div className="flex flex-col gap-3">
+         <div className="flex items-center gap-4" style={{ width: '100%' }}>
+-          <Skeleton className="rounded-md" style={{ height: 64, width: 64 }} />
++          <Skeleton className="rounded-(--radius-card)" style={{ height: 64, width: 64 }} />
+           <Skeleton style={{ height: 36, width: 200 }} />
+         </div>
+         <Skeleton style={{ height: 28, width: 200 }} />
+diff --git a/src/features/Members/MembersPage.tsx b/src/features/Members/MembersPage.tsx
+index a336cba59..2129f7b83 100644
+--- a/src/features/Members/MembersPage.tsx
++++ b/src/features/Members/MembersPage.tsx
+@@ -442,7 +442,7 @@ const MembersPage = memo(() => {
+             aside={
+               <ToggleGroup
+                 className="w-full rounded-(--radius-button)"
+-                size="default"
++                size="compact"
+                 value={[groupFilter]}
+                 onValueChange={(value) => value[0] && setGroupFilter(value[0] as DirectoryFilter)}
+               >
+diff --git a/src/features/Portal/LocalFile/Body.tsx b/src/features/Portal/LocalFile/Body.tsx
+index 62a7dbf4c..29c1fe524 100755
+--- a/src/features/Portal/LocalFile/Body.tsx
++++ b/src/features/Portal/LocalFile/Body.tsx
+@@ -284,7 +284,7 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
+                 {canRender && (
+                   <ToggleGroup
+                     className="rounded-(--radius-button)"
+-                    size="default"
++                    size="compact"
+                     value={[mode]}
+                     variant="outline"
+                     onValueChange={(value) => {
+diff --git a/src/features/Portal/LocalFile/xlsx/SheetGrid.tsx b/src/features/Portal/LocalFile/xlsx/SheetGrid.tsx
+index 30cad4532..40ac8dc2f 100755
+--- a/src/features/Portal/LocalFile/xlsx/SheetGrid.tsx
++++ b/src/features/Portal/LocalFile/xlsx/SheetGrid.tsx
+@@ -7,14 +7,14 @@ const styles = {
+   // Unformatted cells are document body on white paper. Authored workbook
+   // ink, fonts, fills and borders continue to override this readable fallback.
+   container:
+-    'flex-1 overflow-auto bg-white text-black [&_table]:table-fixed [&_table]:border-separate [&_table]:border-spacing-0 [&_td]:overflow-hidden [&_td]:border-e [&_td]:border-be [&_td]:border-neutral-200 [&_td]:bg-white [&_td]:px-1 [&_td]:py-px [&_td]:text-sm [&_td]:leading-5.5 [&_td]:align-bottom',
++    'flex-1 overflow-auto bg-white text-black [&_table]:table-fixed [&_table]:border-separate [&_table]:border-spacing-0 [&_td]:overflow-hidden [&_td]:border-e [&_td]:border-be [&_td]:border-neutral-200 [&_td]:bg-white [&_td]:px-1 [&_td]:py-px [&_td]:text-sm [&_td]:align-bottom',
+   corner: 'inset-bs-0 start-0 z-5',
+   frozen: '[&_td]:sticky [&_td]:z-3 [&_th]:sticky [&_th]:z-3',
+   frozenLast: '[&_td]:shadow-[0_1px_0_0_var(--border)] [&_th]:shadow-[0_1px_0_0_var(--border)]',
+   frozenColumnLast: 'shadow-[1px_0_0_0_var(--border)]',
+   // Coordinates are application chrome; the sheet cells retain authored colors.
+   gutter:
+-    'sticky border-e border-be border-divider bg-card text-center text-xs leading-5 font-normal whitespace-nowrap text-muted-foreground',
++    'sticky border-e border-be border-divider bg-card text-center text-xs font-normal whitespace-nowrap text-muted-foreground',
+   headCell: 'inset-bs-0 z-3 h-5.5',
+   rowHead: 'start-0 z-2 w-11.5',
+ } as const;
+diff --git a/src/features/Portal/LocalFile/xlsx/XlsxPane.tsx b/src/features/Portal/LocalFile/xlsx/XlsxPane.tsx
+index 8ddc0b9e1..cc9d83042 100755
+--- a/src/features/Portal/LocalFile/xlsx/XlsxPane.tsx
++++ b/src/features/Portal/LocalFile/xlsx/XlsxPane.tsx
+@@ -16,8 +16,7 @@ const styles = {
+   modes: 'h-9 w-auto flex-none rounded-(--radius-button)',
+   tab: 'cursor-pointer border-0 bg-transparent px-3 py-1 text-muted-foreground hover:bg-accent data-[active=true]:bg-selected data-[active=true]:font-medium data-[active=true]:text-foreground',
+   tabs: 'me-auto flex gap-1 overflow-x-auto',
+-  truncatedNote:
+-    'flex-none border-bs border-divider px-3 py-1.5 text-xs leading-5 text-foreground-tertiary',
++  truncatedNote: 'flex-none border-bs border-divider px-3 py-1.5 text-xs text-foreground-tertiary',
+ } as const;
+ 
+ interface XlsxPaneProps {
+diff --git a/src/features/Portal/LocalFile/xlsx/styles.ts b/src/features/Portal/LocalFile/xlsx/styles.ts
+index 3e9f031d9..86c1ab49b 100755
+--- a/src/features/Portal/LocalFile/xlsx/styles.ts
++++ b/src/features/Portal/LocalFile/xlsx/styles.ts
+@@ -1,19 +1,19 @@
+ export const styles = {
+-  aside: 'flex flex-wrap items-baseline gap-2.5 text-sm leading-5.5',
++  aside: 'flex flex-wrap items-baseline gap-2.5 text-sm',
+   asideLabel: 'text-muted-foreground',
+   asideValue: 'font-medium tabular-nums',
+-  chip: 'rounded-(--radius-chip) bg-primary-wash px-2.5 py-0.5 text-xs leading-5 font-medium text-primary-text',
++  chip: 'rounded-(--radius-chip) bg-primary-wash px-2.5 py-0.5 text-xs font-medium text-primary-text',
+   container: 'flex-1 overflow-auto bg-card',
+   doc: 'mx-auto flex max-w-240 flex-col gap-8 px-4 py-6',
+   docHead: 'flex flex-col gap-1.5 border-be border-divider pbe-4',
+-  docSubtitle: 'text-sm leading-5.5 text-muted-foreground',
++  docSubtitle: 'text-sm text-muted-foreground',
+   docTitle: 'text-balance text-2xl font-semibold tracking-[-0.015em]',
+-  extra: 'mbs-0.5 block text-xs leading-5 text-foreground-quaternary',
+-  hint: 'text-xs leading-5 text-foreground-quaternary',
+-  kv: 'm-0 grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 [&_dt]:text-xs [&_dt]:leading-5 [&_dt]:text-muted-foreground [&_dd]:m-0 [&_dd]:text-sm [&_dd]:leading-5.5 [&_dd]:tabular-nums',
++  extra: 'mbs-0.5 block text-xs text-foreground-quaternary',
++  hint: 'text-xs text-foreground-quaternary',
++  kv: 'm-0 grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 [&_dt]:text-xs [&_dt]:text-muted-foreground [&_dd]:m-0 [&_dd]:text-sm [&_dd]:tabular-nums',
+   section: 'flex flex-col gap-3',
+   sectionHead: 'flex items-center gap-3 text-base font-semibold',
+   sectionRule: 'h-px flex-1 bg-divider',
+   table:
+-    'overflow-x-auto [&_table]:w-full [&_table]:min-w-max [&_table]:border-collapse [&_table]:text-sm [&_table]:leading-5.5 [&_th]:border-be [&_th]:border-border [&_th]:px-2.5 [&_th]:pbe-2 [&_th]:text-start [&_th]:text-xs [&_th]:leading-5 [&_th]:font-medium [&_th]:text-foreground-quaternary [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:whitespace-nowrap [&_td]:max-w-80 [&_td]:border-be [&_td]:border-fill-quaternary [&_td]:px-2.5 [&_td]:py-2 [&_td]:align-baseline [&_tr[data-total]_td]:border-bs [&_tr[data-total]_td]:border-border [&_tr[data-total]_td]:border-be-0 [&_tr[data-total]_td]:pbs-2.75 [&_tr[data-total]_td]:font-semibold [&_tbody_tr:last-child_td]:border-be-0 [&_tbody_tr:not([data-total]):hover_td]:bg-fill-quaternary [&_td[data-align=right]]:text-end [&_td[data-align=right]]:tabular-nums [&_th[data-align=right]]:text-end [&_th[data-align=right]]:tabular-nums [&_td[data-align=center]]:text-center [&_th[data-align=center]]:text-center',
++    'overflow-x-auto [&_table]:w-full [&_table]:min-w-max [&_table]:border-collapse [&_table]:text-sm [&_th]:border-be [&_th]:border-border [&_th]:px-2.5 [&_th]:pbe-2 [&_th]:text-start [&_th]:text-xs [&_th]:font-medium [&_th]:text-foreground-quaternary [&_th]:uppercase [&_th]:tracking-[0.1em] [&_th]:whitespace-nowrap [&_td]:max-w-80 [&_td]:border-be [&_td]:border-fill-quaternary [&_td]:px-2.5 [&_td]:py-2 [&_td]:align-baseline [&_tr[data-total]_td]:border-bs [&_tr[data-total]_td]:border-border [&_tr[data-total]_td]:border-be-0 [&_tr[data-total]_td]:pbs-2.75 [&_tr[data-total]_td]:font-semibold [&_tbody_tr:last-child_td]:border-be-0 [&_tbody_tr:not([data-total]):hover_td]:bg-fill-quaternary [&_td[data-align=right]]:text-end [&_td[data-align=right]]:tabular-nums [&_th[data-align=right]]:text-end [&_th[data-align=right]]:tabular-nums [&_td[data-align=center]]:text-center [&_th[data-align=center]]:text-center',
+ };
+diff --git a/src/features/Projects/FilterMenu/FilterMenuPopover.tsx b/src/features/Projects/FilterMenu/FilterMenuPopover.tsx
+index 31849ac1d..570179b0a 100644
+--- a/src/features/Projects/FilterMenu/FilterMenuPopover.tsx
++++ b/src/features/Projects/FilterMenu/FilterMenuPopover.tsx
+@@ -123,6 +123,7 @@ const ListPane = ({
+       aria-label={searchLabel}
+       className={searchPlaceholder ? undefined : 'sr-only'}
+       placeholder={searchPlaceholder}
++      size="compact"
+     />
+     <AutocompletePrimitive.List
+       className="mt-1 flex max-h-72 flex-col gap-0.5 overflow-y-auto overscroll-contain"
+diff --git a/src/features/Projects/Layout/ProjectIssueProgress.tsx b/src/features/Projects/Layout/ProjectIssueProgress.tsx
+index 7d793ecfa..70bb660cd 100644
+--- a/src/features/Projects/Layout/ProjectIssueProgress.tsx
++++ b/src/features/Projects/Layout/ProjectIssueProgress.tsx
+@@ -6,7 +6,7 @@ import { projectIssueProgress } from '../projectIssueProgress';
+ 
+ const styles = {
+   metric: 'm-0 flex-1 text-xs leading-5',
+-  marker: 'size-1.5 rounded-[1px]', // linear-token-override: preserve the existing 1px progress legend marker radius; this is not a chip.
++  marker: 'size-1.5 rounded-full',
+ };
+ 
+ const colors = {
+diff --git a/src/features/ReUIShell/WorkspaceSwitcher.tsx b/src/features/ReUIShell/WorkspaceSwitcher.tsx
+index d0ff35e0b..d8c1908f3 100644
+--- a/src/features/ReUIShell/WorkspaceSwitcher.tsx
++++ b/src/features/ReUIShell/WorkspaceSwitcher.tsx
+@@ -46,7 +46,7 @@ export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
+                 </>
+               ) : (
+                 <>
+-                  <Skeleton className="size-6 shrink-0 rounded-md" />
++                  <Skeleton className="size-6 shrink-0 rounded-(--radius-chip)" />
+                   <Skeleton className="h-4 min-w-0 flex-1" />
+                 </>
+               )}
+diff --git a/src/features/Reviews/ReviewPullRequestPage.tsx b/src/features/Reviews/ReviewPullRequestPage.tsx
+index ab39f1a1e..ebdc750fc 100644
+--- a/src/features/Reviews/ReviewPullRequestPage.tsx
++++ b/src/features/Reviews/ReviewPullRequestPage.tsx
+@@ -856,7 +856,7 @@ const ReviewPullRequestPage = memo((props: ReviewPullRequestPageProps) => {
+                       <div className="flex flex-col flex-1" />
+                       <ToggleGroup
+                         className="rounded-(--radius-button)"
+-                        size="default"
++                        size="compact"
+                         value={[viewMode]}
+                         onValueChange={(value) =>
+                           value[0] && setViewMode(value[0] as 'split' | 'unified')
+diff --git a/src/features/SelfLearning/ExperienceList/index.tsx b/src/features/SelfLearning/ExperienceList/index.tsx
+index b2c79f780..c08ad510a 100755
+--- a/src/features/SelfLearning/ExperienceList/index.tsx
++++ b/src/features/SelfLearning/ExperienceList/index.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 26px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { DnaIcon } from 'lucide-react';
+ import { memo, useMemo } from 'react';
+@@ -97,7 +96,7 @@ const ExperienceList = memo(() => {
+             {domain && activeAgentId && (
+               <div className="flex flex-col gap-5" style={{ paddingBlock: '22px 64px' }}>
+                 <div className="flex flex-col gap-1">
+-                  <div className="text-[26px] font-bold">{t('experience.title')}</div>
++                  <div className="text-xl font-semibold">{t('experience.title')}</div>
+                   <div className="text-muted-foreground">
+                     {t('experience.subtitle', { count: habits.length, name: domain.title })}
+                   </div>
+diff --git a/src/features/SelfLearning/LessonDetail/index.tsx b/src/features/SelfLearning/LessonDetail/index.tsx
+index e4fabcbff..a2c9677aa 100755
+--- a/src/features/SelfLearning/LessonDetail/index.tsx
++++ b/src/features/SelfLearning/LessonDetail/index.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 26px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { cn } from 'cn';
+ import dayjs from 'dayjs';
+@@ -109,14 +108,11 @@ const LessonDetail = memo(() => {
+                   <div className="text-xs text-muted-foreground font-semibold">
+                     {t('rules.detail.eyebrow', { code: data.lesson.code })}
+                   </div>
+-                  <div
+-                    className={cn('text-[26px] font-bold', styles.title)}
+-                    style={{ lineHeight: 1.35 }}
+-                  >
++                  <div className={cn('text-xl font-semibold', styles.title)}>
+                     {data.lesson.title}
+                   </div>
+                   <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+-                    <div className="text-muted-foreground" style={{ fontSize: 12.5 }}>
++                    <div className="text-xs text-muted-foreground">
+                       {t('rules.detail.meta', {
+                         hits: data.lesson.hitCount,
+                         runs: data.lesson.hitRunCount,
+@@ -144,7 +140,7 @@ const LessonDetail = memo(() => {
+                     </div>
+                   </div>
+                   {domainError && (
+-                    <div className="text-destructive" style={{ fontSize: 12.5 }}>
++                    <div className="text-xs text-destructive">
+                       {t('rules.detail.domainUnavailable')} ·{' '}
+                       <Button
+                         className="h-auto p-0 text-info"
+@@ -170,9 +166,7 @@ const LessonDetail = memo(() => {
+                       <div className="text-xs text-muted-foreground font-semibold">
+                         <SectionLabel sectionKey={section.key} />
+                       </div>
+-                      <div className="text-sm" style={{ lineHeight: 1.65 }}>
+-                        {section.body}
+-                      </div>
++                      <div className="text-sm">{section.body}</div>
+                     </div>
+                   ))}
+                 </div>
+@@ -193,12 +187,7 @@ const LessonDetail = memo(() => {
+                         key={`${hit.createdAt}-${index}`}
+                       >
+                         <div className="flex items-start gap-3 justify-between">
+-                          <div
+-                            className={cn('text-(length:--text-dense)', styles.hitTitle)}
+-                            style={{ lineHeight: 1.65 }}
+-                          >
+-                            {hit.example}
+-                          </div>
++                          <div className={cn('text-sm', styles.hitTitle)}>{hit.example}</div>
+                           <Badge variant={hit.outcome === 'pass' ? 'success' : 'destructive'}>
+                             {t(`rules.detail.outcome.${hit.outcome}`)}
+                           </Badge>
+diff --git a/src/features/WorkSurface/WorkSurface.module.css b/src/features/WorkSurface/WorkSurface.module.css
+new file mode 100644
+index 000000000..40e8e5994
+--- /dev/null
++++ b/src/features/WorkSurface/WorkSurface.module.css
+@@ -0,0 +1,6 @@
++.geometry {
++  /* DESIGN's work frames keep their geometry when the root font size changes. */
++  --work-surface-gutter-x: 16px;
++  --work-surface-gutter-y: 16px;
++  --work-surface-document-max-width: 960px;
++}
+diff --git a/src/features/WorkSurface/WorkSurface.tsx b/src/features/WorkSurface/WorkSurface.tsx
+index f25a54c0b..f7664d179 100644
+--- a/src/features/WorkSurface/WorkSurface.tsx
++++ b/src/features/WorkSurface/WorkSurface.tsx
+@@ -1,6 +1,6 @@
+ 'use client';
+ 
+-import { clsx as cx } from 'cn';
++import { clsx as cx, cn } from 'cn';
+ import { SlidersHorizontalIcon } from 'lucide-react';
+ import type { ComponentProps, CSSProperties, ReactNode } from 'react';
+ import { memo } from 'react';
+@@ -8,6 +8,8 @@ import { memo } from 'react';
+ import ActionIcon from '@/components/ActionIcon';
+ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+ 
++import geometry from './WorkSurface.module.css';
++
+ /**
+  * Work-surface layout skeletons (v6 parity contract).
+  *
+@@ -39,10 +41,19 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
+  */
+ 
+ const styles = {
+-  collectionBody: 'w-full p-4',
++  collectionBody: cx(
++    geometry.geometry,
++    'w-full px-(--work-surface-gutter-x) py-(--work-surface-gutter-y)',
++  ),
+   columnHeader: 'sticky inset-bs-0 z-1 bg-background',
+-  documentBody: 'mx-auto [width:min(calc(var(--spacing)*240),100%)] p-4',
+-  reviewFooter: 'flex-none border-bs border-divider px-4 py-2',
++  documentBody: cx(
++    geometry.geometry,
++    'mx-auto w-full max-w-(--work-surface-document-max-width) px-(--work-surface-gutter-x) py-(--work-surface-gutter-y)',
++  ),
++  reviewFooter: cx(
++    geometry.geometry,
++    'flex-none border-bs border-divider px-(--work-surface-gutter-x) py-2',
++  ),
+   reviewNav: 'w-70 flex-none overflow-y-auto border-e border-divider',
+   root: '@container/work-surface flex h-full min-h-0 min-w-0 flex-1 flex-col',
+   scrollHost: 'min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]',
+@@ -50,7 +61,10 @@ const styles = {
+   splitDetail: 'min-w-0 flex-1 overflow-y-auto',
+   splitList: 'w-90 max-w-9/20 flex-none overflow-y-auto border-e border-divider',
+   splitListSolo: 'min-w-0 flex-1 overflow-y-auto',
+-  toolbar: 'flex min-w-0 flex-none items-center gap-2 px-4 py-2',
++  toolbar: cx(
++    geometry.geometry,
++    'flex min-w-0 flex-none items-center gap-2 px-(--work-surface-gutter-x) py-2',
++  ),
+   toolbarAside:
+     'ms-auto flex flex-none items-center gap-2 [@container_work-surface_(width<=560px)]:hidden',
+   toolbarOverflowTrigger:
+@@ -86,7 +100,7 @@ const WorkSurfaceCollection = memo<WorkSurfaceCollectionProps>(
+     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+       {toolbar}
+       <div className={styles.scrollHost}>
+-        <div className={cx(styles.collectionBody, className)} style={style}>
++        <div className={cn(styles.collectionBody, className)} style={style}>
+           {columnHeader ? <div className={styles.columnHeader}>{columnHeader}</div> : null}
+           {children}
+         </div>
+@@ -107,7 +121,7 @@ export interface WorkSurfaceDocumentProps {
+ 
+ const WorkSurfaceDocument = memo<WorkSurfaceDocumentProps>(({ children, className, style }) => (
+   <div className={styles.scrollHost}>
+-    <div className={cx(styles.documentBody, className)} style={style}>
++    <div className={cn(styles.documentBody, className)} style={style}>
+       {children}
+     </div>
+   </div>
+@@ -199,7 +213,7 @@ export interface WorkSurfaceToolbarProps {
+ 
+ const WorkSurfaceToolbar = memo<WorkSurfaceToolbarProps>(
+   ({ aside, asideLabel, children, className }) => (
+-    <div className={cx(styles.toolbar, className)}>
++    <div className={cn(styles.toolbar, className)}>
+       <div className={styles.toolbarPrimary}>{children}</div>
+       {aside ? (
+         <>
+diff --git a/src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx b/src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx
+index dd3f67b6f..98aa43275 100755
+--- a/src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx
++++ b/src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx
+@@ -400,13 +400,10 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
+         width={640}
+         title={
+           <div className="flex flex-col gap-1">
+-            <div className="font-semibold text-[16px]" style={{ lineHeight: 1.4 }}>
++            <div className="font-semibold text-base" style={{ lineHeight: 1.4 }}>
+               {isFirstTimeSetup ? t('profileSetup.titleFirstTime') : t('profileSetup.titleEdit')}
+             </div>
+-            <div
+-              className="text-(length:--text-dense) text-muted-foreground"
+-              style={{ lineHeight: 1.4 }}
+-            >
++            <div className="text-sm font-normal text-muted-foreground">
+               {isFirstTimeSetup
+                 ? t('profileSetup.descriptionFirstTime')
+                 : t('profileSetup.descriptionEdit')}
+diff --git a/src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx b/src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx
+index 931efeb77..ec6f14a43 100755
+--- a/src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx
++++ b/src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx
+@@ -1,5 +1,4 @@
+ 'use client';
+-// #691: Preserve the existing 32px title geometry pending a design-scale choice; no matching role is approved.
+ 
+ import { Markdown } from '@lobehub/ui';
+ import isEqual from 'fast-deep-equal';
+@@ -45,9 +44,9 @@ const InboxWelcome = memo(() => {
+         }}
+       >
+         <SupervisorAvatar size={78} />
+-        <div className="text-[32px] font-bold">{displayTitle}</div>
++        <div className="text-xl font-semibold">{displayTitle}</div>
+         <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
+-          <Markdown fontSize={fontSize} variant={'chat'}>
++          <Markdown fontSize={fontSize} lineHeight={22 / 14} variant={'chat'}>
+             {isInbox
+               ? t('guide.defaultMessageWithoutCreate', { appName: 'Orvilo AI' })
+               : agentSystemRoleMsg}
+diff --git a/src/styles/roleClassForms.test.ts b/src/styles/roleClassForms.test.ts
+index cfc77f844..25988bd9f 100644
+--- a/src/styles/roleClassForms.test.ts
++++ b/src/styles/roleClassForms.test.ts
+@@ -17,7 +17,7 @@ describe('role class forms', () => {
+     expect(cn('text-foreground', 'text-(length:--text-dense)')).toBe(
+       'text-foreground text-(length:--text-dense)',
+     );
+-    expect(cn('rounded-lg', 'rounded-(--radius-card)')).toBe('rounded-(--radius-card)');
++    expect(cn('rounded-full', 'rounded-(--radius-card)')).toBe('rounded-(--radius-card)');
+     expect(cn('rounded-(--radius-card)', 'rounded-full')).toBe('rounded-full');
+   });
+ 
+@@ -25,7 +25,9 @@ describe('role class forms', () => {
+   // @theme. If `cn` learns custom names, the lookup can use the short form.
+   it('cannot classify an invented role utility', () => {
+     expect(cn('text-foreground', 'text-dense')).toBe('text-dense');
+-    expect(cn('rounded-md', 'rounded-card')).toBe('rounded-md rounded-card');
++    expect(cn('rounded-(--radius-input)', 'rounded-card')).toBe(
++      'rounded-(--radius-input) rounded-card',
++    );
+   });
+ 
+   it('declares every role variable the lookup names', () => {

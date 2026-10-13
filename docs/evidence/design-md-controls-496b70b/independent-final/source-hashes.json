@@ -1,0 +1,2036 @@
+{
+  "New24PathsPresent": 24,
+  "Source47PathsPresent": 47,
+  "base": "7a0db38fc2a78dc0c145ce180bcd638ae9dfeb6c",
+  "errors": [],
+  "head": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+  "necessaryAdditional10Paths": [
+    "packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx",
+    "src/features/AgentGoals/ProcessControl/Graph/index.tsx",
+    "src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx",
+    "src/features/AgentUsage/UsageTrendChart.tsx",
+    "src/features/AgentViewAll/AgentViewAllPage.tsx",
+    "src/features/HomeInbox/index.tsx",
+    "src/features/Members/MembersPage.tsx",
+    "src/features/Portal/LocalFile/Body.tsx",
+    "src/features/Projects/FilterMenu/FilterMenuPopover.tsx",
+    "src/features/Reviews/ReviewPullRequestPage.tsx"
+  ],
+  "packetManifest": {
+    "path": "/tmp/orvilo-next81-final-source-packet-496-v2/manifest.json",
+    "sha256": "5ef27c785411b18e21ad09d136160f8667f971d0790510b5356999a7d023d106",
+    "bytes": 48883
+  },
+  "patch": {
+    "path": "/tmp/orvilo-current81-independent-final/changes.patch",
+    "sha256": "a69443dc6baff5b5c5326fcedd6c13a15b25f899983f47d5dd9fc0390d251fe7",
+    "bytes": 122844
+  },
+  "rows": [
+    {
+      "path": ".agents/skills/react/SKILL.md",
+      "beforePresent": true,
+      "before": {
+        "sha256": "d35001c77790bb9838e91bc756a17905d78326f41f51b550ca63755f4d89e760",
+        "bytes": 16448,
+        "gitMode": "100755",
+        "gitBlob": "bf6630b6bab10efa18b7bfdabe0ae665c078c581",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "7a638362d740fc2b897e12f7d95cfdd19066994bf35c59da76485c8f6a7431b3",
+        "bytes": 17315,
+        "gitMode": "100755",
+        "gitBlob": "61e2c5db4753f541228b0f9b1ea834cf4079c1de",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/.agents/skills/react/SKILL.md",
+        "sha256": "7a638362d740fc2b897e12f7d95cfdd19066994bf35c59da76485c8f6a7431b3",
+        "bytes": 17315,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "DESIGN.md",
+      "beforePresent": true,
+      "before": {
+        "sha256": "e3e6f88db351b4660861110cb80a7a9a561f50555a0c42921dc29757653ae58e",
+        "bytes": 36935,
+        "gitMode": "100755",
+        "gitBlob": "098bd3870d863f4bcf24f64e10bbb8f69d275389",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "60bd9b5b9071cc16ed5b9d4d33ecf4eb509d24871fb9962a1b452da69f528cdf",
+        "bytes": 38386,
+        "gitMode": "100755",
+        "gitBlob": "b39507f8497a5b5ba9bfc1cd3c7616de682e65bc",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/DESIGN.md",
+        "sha256": "60bd9b5b9071cc16ed5b9d4d33ecf4eb509d24871fb9962a1b452da69f528cdf",
+        "bytes": 38386,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "apps/share/src/features/topic/SharedMessageList.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "48353c7884efd078181770a1a8d5736090d2b29af4370ca0c629389f938a6eeb",
+        "bytes": 2089,
+        "gitMode": "100755",
+        "gitBlob": "ab3f49bf80b325f48110d092906e8e76a7b01505",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "ae1d6bafb7140d49cfacafcb3862df79eb9e2b7db4d16d9fe3842986f7a5ae55",
+        "bytes": 2085,
+        "gitMode": "100755",
+        "gitBlob": "8396d7df86c5b273109b4471ac546a3a5ab15ff6",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/apps/share/src/features/topic/SharedMessageList.tsx",
+        "sha256": "ae1d6bafb7140d49cfacafcb3862df79eb9e2b7db4d16d9fe3842986f7a5ae55",
+        "bytes": 2085,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "31c2a66c7d0bf056827b40dcd205e344cd15ffda52c747462bf98fa903345688",
+        "bytes": 1409,
+        "gitMode": "100755",
+        "gitBlob": "f8c33d19a0c9a248aa48ec0629684a76f45e2b33",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "43c995a1097a98ea736b908335001ed7a462b4d7d98aa91396a313cf32e70124",
+        "bytes": 1419,
+        "gitMode": "100755",
+        "gitBlob": "e6c28053f087801f08095d22fc1b5002fa8697aa",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx",
+        "sha256": "43c995a1097a98ea736b908335001ed7a462b4d7d98aa91396a313cf32e70124",
+        "bytes": 1419,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "0a6e62e1e775e31d9b40a92b72ca60b776b2f06312cf68f70dbe4687b5fd4ca4",
+        "bytes": 1174,
+        "gitMode": "100755",
+        "gitBlob": "6cfa0f9731f80df617b269bd354977846720d4c2",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "c9057d9a8c714f0a3d966b8f893b5580f5ef195280362db209095a64786637ab",
+        "bytes": 1184,
+        "gitMode": "100755",
+        "gitBlob": "09f469d4377e8762827696718f0ce190c9e88bc2",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx",
+        "sha256": "c9057d9a8c714f0a3d966b8f893b5580f5ef195280362db209095a64786637ab",
+        "bytes": 1184,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/components/FileItem.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "4683d46605186875ccd1a50e930c16780a804980d2a295fe06a6b8ef21bb1e04",
+        "bytes": 3511,
+        "gitMode": "100755",
+        "gitBlob": "6ddec01219f051eccd100ff8c6ed02553ba6fa45",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "4c8affd5d7df7c4254660c04f31b752a29e6d9d7ff4dd506c43e141eb08093d7",
+        "bytes": 3526,
+        "gitMode": "100755",
+        "gitBlob": "1562f161942de07602ba7e8d88e706146639850d",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/builtin-tool-local-system/src/client/components/FileItem.tsx",
+        "sha256": "4c8affd5d7df7c4254660c04f31b752a29e6d9d7ff4dd506c43e141eb08093d7",
+        "bytes": 3526,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "9aecf7833ea0e97730a9bbd466b07f4a616fe81560d2d0285de118b47fe39f9c",
+        "bytes": 7928,
+        "gitMode": "100755",
+        "gitBlob": "925cd207b2b3ac86256dfd90b04752c10104f36e",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "d3cdfef8e0ee8786d6836219a853ca34dc215bc2e598fed097d54544453c9f30",
+        "bytes": 7941,
+        "gitMode": "100755",
+        "gitBlob": "3ca33f95c1fd63904c13191017051e7b1d3b4140",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx",
+        "sha256": "d3cdfef8e0ee8786d6836219a853ca34dc215bc2e598fed097d54544453c9f30",
+        "bytes": 7941,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "43a8aa1f69df2b6787e9e390cfe6fdd14a5e33261a12d3fb893a9c2cadc18f25",
+        "bytes": 13521,
+        "gitMode": "100755",
+        "gitBlob": "af32940429b1c2977d0dc2171a568d181275275e",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "c181ddaa01c992626e31c2a59446948edeb5bdf1067dab53d91e3ee103a57e20",
+        "bytes": 13547,
+        "gitMode": "100755",
+        "gitBlob": "4deef5fff873290d581f09b0d234bc4bfeb2a1e0",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx",
+        "sha256": "c181ddaa01c992626e31c2a59446948edeb5bdf1067dab53d91e3ee103a57e20",
+        "bytes": 13547,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Render/EditTask/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "11ff490b9417c6636fd6030003ce024a98e08bc4980685ffeb9f0810902c6de8",
+        "bytes": 5062,
+        "gitMode": "100755",
+        "gitBlob": "b468a47ff7c458d13da14427eb484826974938f0",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "787cc4632fa52b5a0d7fb2d8350b767cb37f7ed0fcb3b15c80027d10bc0b8fd2",
+        "bytes": 5056,
+        "gitMode": "100755",
+        "gitBlob": "36bedbb1750dc8676dbd10ee9f8f8191b09001a1",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/builtin-tool-task/src/client/Render/EditTask/index.tsx",
+        "sha256": "787cc4632fa52b5a0d7fb2d8350b767cb37f7ed0fcb3b15c80027d10bc0b8fd2",
+        "bytes": 5056,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "965d247f38039c2167c453203d7f550c4c97b5d92707f5b5ab918c4de97dca7f",
+        "bytes": 5909,
+        "gitMode": "100755",
+        "gitBlob": "c30d6add6712167563e6107db6ec3d242e060432",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "95035dc78430b7aeadc6564b439a4251800117afb8b677368ef9b792ec966c86",
+        "bytes": 5938,
+        "gitMode": "100755",
+        "gitBlob": "8401803fec1016dff562d93a2b74b7379d4c3921",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx",
+        "sha256": "95035dc78430b7aeadc6564b439a4251800117afb8b677368ef9b792ec966c86",
+        "bytes": 5938,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "a320e4433e9eefcff528e70c0cc3f34375d5755c3cebe5da303f68aa5ea13c93",
+        "bytes": 15550,
+        "gitMode": "100755",
+        "gitBlob": "4cba0a48f4b9be20fe3d79649803c6f057a561b9",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "9e1d49162ad77b5dac93a952a423502827ac06905264a6b4a503c51395e81837",
+        "bytes": 15546,
+        "gitMode": "100755",
+        "gitBlob": "246330c40f00639bb659bb46849b82e52ab9ae13",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx",
+        "sha256": "9e1d49162ad77b5dac93a952a423502827ac06905264a6b4a503c51395e81837",
+        "bytes": 15546,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "aca5903fe3f8b7c6624888db6371e7f114736c25b69ae75d23bfb6f285e5c873",
+        "bytes": 5548,
+        "gitMode": "100755",
+        "gitBlob": "f9b98818e20b77f013cfc72462345df2bdd87684",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "8dc04dd86ef5247b137e927d4dc61e9ecc6faed070ba322bbba2d789b0f70790",
+        "bytes": 5544,
+        "gitMode": "100755",
+        "gitBlob": "d23cf732a32a6375624f8c819a834d972490b030",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx",
+        "sha256": "8dc04dd86ef5247b137e927d4dc61e9ecc6faed070ba322bbba2d789b0f70790",
+        "bytes": 5544,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "7035e5854f15fd6c6d6bca26947c39882db5d1772e032f1d2f9cd008232a40aa",
+        "bytes": 3378,
+        "gitMode": "100755",
+        "gitBlob": "64d8ac8fe8b4060b547bb2b9281302b3ed267d66",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "3a42cd715d0c81184bac12312342ac7858f3b292f1282dc7025002ad1d51a5c8",
+        "bytes": 3402,
+        "gitMode": "100755",
+        "gitBlob": "30d417c41bfdc655783f67ea9992e840019d8c9e",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx",
+        "sha256": "3a42cd715d0c81184bac12312342ac7858f3b292f1282dc7025002ad1d51a5c8",
+        "bytes": 3402,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "6cc87d94b36316db30ddb17ad600908c9ce85163c061026726e55068886be8b3",
+        "bytes": 2172,
+        "gitMode": "100755",
+        "gitBlob": "bfc1768558c27f551dc54718dcb16c82de4c3599",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "419ab314365b9043b9ff87f1d0efdff11a34caf8ca4e7ccf945bb6512741014a",
+        "bytes": 2184,
+        "gitMode": "100755",
+        "gitBlob": "1ea6d0fad1d5e935895c89a68b8d28105cd7e26b",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx",
+        "sha256": "419ab314365b9043b9ff87f1d0efdff11a34caf8ca4e7ccf945bb6512741014a",
+        "bytes": 2184,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "6d79c7deff657419a5725acb574f5cbbf62216059e92b5ebc92d9b544a5c65c8",
+        "bytes": 2691,
+        "gitMode": "100755",
+        "gitBlob": "ed283193e00a1614003a12770b21f34e2d4f5097",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "70ff293b42e8ca806860f2695bbc27b512491bdfc1333c6ef9cb993637bb2883",
+        "bytes": 2687,
+        "gitMode": "100755",
+        "gitBlob": "62462a1c358bf51aa8329deb3c6ea8221326cf9b",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx",
+        "sha256": "70ff293b42e8ca806860f2695bbc27b512491bdfc1333c6ef9cb993637bb2883",
+        "bytes": 2687,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "6fefa949d5dd5f6c828ce436bd823547e30add1bb226928b7e4a8fa3dd7d9521",
+        "bytes": 2324,
+        "gitMode": "100755",
+        "gitBlob": "cec12d724451cb91913c450de856f9ac9bcac2f0",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "11037fa182c586356cf215a9102296b5dfaf0c581deadbd86b2c771fd17d1867",
+        "bytes": 2336,
+        "gitMode": "100755",
+        "gitBlob": "e12eb42c1ee26334b0e1eb4232ffa60ceff7ee8d",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx",
+        "sha256": "11037fa182c586356cf215a9102296b5dfaf0c581deadbd86b2c771fd17d1867",
+        "bytes": 2336,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "packages/shared-tool-ui/src/components/FileChangeStats/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "b4b17142d64004b25d39ffe431eca3147cba52f3dce5a6f136019473f9e17ebc",
+        "bytes": 3117,
+        "gitMode": "100755",
+        "gitBlob": "174d4374de61dffdabee276363d636fd3f5efd93",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "90890437d46f008cedbb05edf15edb5617d05bd9a0e11e259d011b806b89504e",
+        "bytes": 3110,
+        "gitMode": "100755",
+        "gitBlob": "e6b14b8002df4768a1d0950632b36ebf557ad6b7",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/packages/shared-tool-ui/src/components/FileChangeStats/index.tsx",
+        "sha256": "90890437d46f008cedbb05edf15edb5617d05bd9a0e11e259d011b806b89504e",
+        "bytes": 3110,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/app/globals.css",
+      "beforePresent": true,
+      "before": {
+        "sha256": "ee15c0ccb29367f13d5cba2e9ee658e2549ece7a67dc2adf8936b21276a41859",
+        "bytes": 23741,
+        "gitMode": "100644",
+        "gitBlob": "a419e35ed49a30fc0597a0128203e716bfdc4161",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "7f701be47135d88855e1a96027eb374b54d316acae77d030338bf6e409f2dedf",
+        "bytes": 24196,
+        "gitMode": "100644",
+        "gitBlob": "598b4d0d6a4be36061e0b32589cd5ca8cabc30bb",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/app/globals.css",
+        "sha256": "7f701be47135d88855e1a96027eb374b54d316acae77d030338bf6e409f2dedf",
+        "bytes": 24196,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/business/client/features/ShareShell/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "d7c7e7be791b3e26df5f232eb8daa1e02ccf6e344a5fb6712a6f0b9c3875ca65",
+        "bytes": 1708,
+        "gitMode": "100755",
+        "gitBlob": "0890cabc7b0a4b73295f1facc08217bb083cbd0c",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "17ff30e1a2ac7c3106b2223dc67b36bfe8988c5bd63a8f31db267ab8c508a5c3",
+        "bytes": 1705,
+        "gitMode": "100755",
+        "gitBlob": "8a025975bac01c104ee890d5312108f653f21f59",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/business/client/features/ShareShell/index.tsx",
+        "sha256": "17ff30e1a2ac7c3106b2223dc67b36bfe8988c5bd63a8f31db267ab8c508a5c3",
+        "bytes": 1705,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/AgentRuntimeIcon.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "2254781a4aa447571573784045a394fd23dfa7cab7c19e7fb912f5ea35ed3edf",
+        "bytes": 938,
+        "gitMode": "100644",
+        "gitBlob": "c9a9e4340980916fdcc9d81af397b2fd10c19ff7",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "b6b8ae001d256b618e2d81863031b51cc39f622a674700465dbe486b22bde734",
+        "bytes": 1040,
+        "gitMode": "100644",
+        "gitBlob": "69949f80a717cde88abb674f9d8a29e65b7c62ae",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/AgentRuntimeIcon.tsx",
+        "sha256": "b6b8ae001d256b618e2d81863031b51cc39f622a674700465dbe486b22bde734",
+        "bytes": 1040,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/Avatar/index.test.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "f19f89d0a9273df6479fb277b49a70568b8d47badf988689f0a1e3c26f760053",
+        "bytes": 2225,
+        "gitMode": "100644",
+        "gitBlob": "c45de668826d0e05591ea672c4e5b15f23db8f57",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "372aceed0f64252fedc9fc4081ef7b5bf54be818d877d63007e5f5d76372b6b8",
+        "bytes": 2657,
+        "gitMode": "100644",
+        "gitBlob": "72027929fa4de1e2fafd168331217981fad6fb6e",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/Avatar/index.test.tsx",
+        "sha256": "372aceed0f64252fedc9fc4081ef7b5bf54be818d877d63007e5f5d76372b6b8",
+        "bytes": 2657,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/Avatar/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "fa1ede5706ab4f3ec91d688ed52dbb955990d59848d60ceb2cadd64b110aa7de",
+        "bytes": 5880,
+        "gitMode": "100755",
+        "gitBlob": "246473688c475091da5af65bd4500501cfa28a72",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "261de95aa44d5a89b498484e2c0b40aa3cee67ac0072def90c6055ff5e39a572",
+        "bytes": 5820,
+        "gitMode": "100755",
+        "gitBlob": "caf86371bbb0493bab43115c4f3007a4ecb5b003",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/Avatar/index.tsx",
+        "sha256": "261de95aa44d5a89b498484e2c0b40aa3cee67ac0072def90c6055ff5e39a572",
+        "bytes": 5820,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ListSkeleton/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "bbbf598678cb84e0d6f40ede4665f7c1e6f98861e8108824657c230585dd7217",
+        "bytes": 1276,
+        "gitMode": "100755",
+        "gitBlob": "2b58ffe9ece482216ec984344c64cd8e9c7ecf1e",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "eed9fb5bb383c188a3b939d7295a7653bcb602b44fa71085aacafb1580708f3b",
+        "bytes": 1289,
+        "gitMode": "100755",
+        "gitBlob": "a9c8a428b592249d5495ff425e2298cbe6536a7b",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ListSkeleton/index.tsx",
+        "sha256": "eed9fb5bb383c188a3b939d7295a7653bcb602b44fa71085aacafb1580708f3b",
+        "bytes": 1289,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/Select/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "72baaf0261aea2f44a093e1fade7ce990fd338c2ccad89c0a0d349ff3c76762b",
+        "bytes": 7912,
+        "gitMode": "100644",
+        "gitBlob": "bb1613253d9b68abf768e112f2a1d63472c5f605",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "0ece6746087aff9d2d2870a54ac6413b257bd52a8b30e2320118b52ac0ad03a6",
+        "bytes": 8733,
+        "gitMode": "100644",
+        "gitBlob": "6dde3aad2d3892e62c90a7787166710b17e45fa7",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/Select/index.tsx",
+        "sha256": "0ece6746087aff9d2d2870a54ac6413b257bd52a8b30e2320118b52ac0ad03a6",
+        "bytes": 8733,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/reui/autocomplete.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "206984fa3ab1c72412ae1a6629f29b1b26fd0853845a3acdcc0d9d52e7491c05",
+        "bytes": 10175,
+        "gitMode": "100644",
+        "gitBlob": "7835bf563253dac50703d67c504cc1b20ad3339f",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "e4ec1577a6ea797a0d04d4ba5da9240a90537c0276744666a344572f1f075446",
+        "bytes": 10656,
+        "gitMode": "100644",
+        "gitBlob": "c00cdb4c133163dec3c20296efbc18300ba06ce7",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/reui/autocomplete.tsx",
+        "sha256": "e4ec1577a6ea797a0d04d4ba5da9240a90537c0276744666a344572f1f075446",
+        "bytes": 10656,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/reui/code-block/code-block.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "4e52c27165783118954058beb8a71f0c1ebead0f2b8640ce0f71834ecd833028",
+        "bytes": 81270,
+        "gitMode": "100644",
+        "gitBlob": "1f4c0b80e91adabe40b8f7b4c118592647626a65",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "10596fe854c5923fd9aa9708b134d55b6bb8d5dbcdefe55c565f58de731335bb",
+        "bytes": 81285,
+        "gitMode": "100644",
+        "gitBlob": "c59f5505142928a9d875da7f094aca281fcb10ab",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/reui/code-block/code-block.tsx",
+        "sha256": "10596fe854c5923fd9aa9708b134d55b6bb8d5dbcdefe55c565f58de731335bb",
+        "bytes": 81285,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-cell-selection.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "0276ff256879431ba9f6ae764bebc0a142b23d896db5feadab18b8fdb8c15b7a",
+        "bytes": 97780,
+        "gitMode": "100644",
+        "gitBlob": "01d29e9ce50cbd21724ceb404ee7419e24e38f5e",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "b1177706140338d0a25147628c919b4a2fb5fbb4cab8a2d3387cb512b04cb69a",
+        "bytes": 97796,
+        "gitMode": "100644",
+        "gitBlob": "fe1a75ccce0a0ea37cbfec4b5c2ffb14f9d11317",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/reui/data-grid/data-grid-cell-selection.tsx",
+        "sha256": "b1177706140338d0a25147628c919b4a2fb5fbb4cab8a2d3387cb512b04cb69a",
+        "bytes": 97796,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-column-header.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "d1d72597e8477b0d80c0e2e35bcaa4f18572a96a77abfa3a8162466663f4be6e",
+        "bytes": 14303,
+        "gitMode": "100644",
+        "gitBlob": "eeb5f286df17900a0073a84210d56f42037ae8d0",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "1757c3a0a8116ea011f5857b4a6df3f91d7d878a7f1f002da72f094000d768e5",
+        "bytes": 14408,
+        "gitMode": "100644",
+        "gitBlob": "5cd5493953012fccda2f4b3425705902af782bb0",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/reui/data-grid/data-grid-column-header.tsx",
+        "sha256": "1757c3a0a8116ea011f5857b4a6df3f91d7d878a7f1f002da72f094000d768e5",
+        "bytes": 14408,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-table.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "d6aa9c5a00fb8d18e68dba546d48d2f84cc0e97cddd02a69ba992391cc65f29b",
+        "bytes": 87584,
+        "gitMode": "100644",
+        "gitBlob": "8a2881ba06be17d859f770fca3fa86d7b7ce7817",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "76c36a29bc7b17655618ae1506a4be1960640fe493e33680269410b7b61a6646",
+        "bytes": 87653,
+        "gitMode": "100644",
+        "gitBlob": "f8d2876bc07783e280cfe98e1c6f7814d6082abe",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/reui/data-grid/data-grid-table.tsx",
+        "sha256": "76c36a29bc7b17655618ae1506a4be1960640fe493e33680269410b7b61a6646",
+        "bytes": 87653,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/reui/number-field.module.css",
+      "beforePresent": false,
+      "afterPresent": true,
+      "after": {
+        "sha256": "bcb063931c2eb736616ecb88132558673276619ae954cd25098f6ff20108a2da",
+        "bytes": 141,
+        "gitMode": "100644",
+        "gitBlob": "19c5ef96c4578835d2a80cd71262f964a96acd88",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/reui/number-field.module.css",
+        "sha256": "bcb063931c2eb736616ecb88132558673276619ae954cd25098f6ff20108a2da",
+        "bytes": 141,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/reui/number-field.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "945bca770cca557c90d900039754f4fd537c0bc0480831f41f9f233e4986b5d0",
+        "bytes": 7619,
+        "gitMode": "100644",
+        "gitBlob": "d3ed67c383c12ae88cf214cca0fb5ce420096018",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "7eae40a487e0a663adee7fc830905b429b6b9d8a615322008d32fb9e63c006c4",
+        "bytes": 7729,
+        "gitMode": "100644",
+        "gitBlob": "e227e902d778a6fff626b1c076299e90ecfb2b97",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/reui/number-field.tsx",
+        "sha256": "7eae40a487e0a663adee7fc830905b429b6b9d8a615322008d32fb9e63c006c4",
+        "bytes": 7729,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/accordion.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "df7954800b35de57c4acce32a6d1faa1eeb2dbcb1965e39973bee240f6d4ec3a",
+        "bytes": 2935,
+        "gitMode": "100644",
+        "gitBlob": "57f147c75ab894e6265518949c74571b42b653e7",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "441d979992745f5720b13a15d4df4c882b70de506b2a4d6485f86d71b2be871e",
+        "bytes": 2911,
+        "gitMode": "100644",
+        "gitBlob": "37079d79973d6f0e798b1ce43e97f9bae325da74",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/accordion.tsx",
+        "sha256": "441d979992745f5720b13a15d4df4c882b70de506b2a4d6485f86d71b2be871e",
+        "bytes": 2911,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/button-group.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "2d65e114334619104f1b64b24faa1117a95bec268214ecb782dd74e449c5ccc5",
+        "bytes": 2470,
+        "gitMode": "100644",
+        "gitBlob": "43cf149f04ed3ab591c3ca61dc5c1c5116648c98",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "16fb366e719e412f1bc952acff14ab205200632a0cc83c88471ed354317192cc",
+        "bytes": 2530,
+        "gitMode": "100644",
+        "gitBlob": "a6d1afca60e2c732cf03182b5e141bde5a3ba646",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/button-group.tsx",
+        "sha256": "16fb366e719e412f1bc952acff14ab205200632a0cc83c88471ed354317192cc",
+        "bytes": 2530,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/code-block.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "4e52c27165783118954058beb8a71f0c1ebead0f2b8640ce0f71834ecd833028",
+        "bytes": 81270,
+        "gitMode": "100644",
+        "gitBlob": "1f4c0b80e91adabe40b8f7b4c118592647626a65",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "10596fe854c5923fd9aa9708b134d55b6bb8d5dbcdefe55c565f58de731335bb",
+        "bytes": 81285,
+        "gitMode": "100644",
+        "gitBlob": "c59f5505142928a9d875da7f094aca281fcb10ab",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/code-block.tsx",
+        "sha256": "10596fe854c5923fd9aa9708b134d55b6bb8d5dbcdefe55c565f58de731335bb",
+        "bytes": 81285,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/combobox.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "0885e7a9d2f07ef03e3b598c6bf9e5ca28afc2891593226d5facd4c4fa5ad738",
+        "bytes": 11316,
+        "gitMode": "100644",
+        "gitBlob": "8f977c8ceed6816e20457ef4f17f72bd3e818aad",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "a0391e62703862cb177d807d00d2542ce1d2d95fe25411745a001a65a3330558",
+        "bytes": 11248,
+        "gitMode": "100644",
+        "gitBlob": "bb5ab67b33ad47ac859546fca8c9bbeaef57b62c",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/combobox.tsx",
+        "sha256": "a0391e62703862cb177d807d00d2542ce1d2d95fe25411745a001a65a3330558",
+        "bytes": 11248,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/empty.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "a92c1e5f86d23246e50bce3deb896c4d49fe3a9df216cb2df4655c135f32baa0",
+        "bytes": 2364,
+        "gitMode": "100644",
+        "gitBlob": "66e2ec8865b8615c15d26c1dfa800a0878fcdb98",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "c13e6910c5764dc910a5fa959d0985b315cd326ef8231cd7308c80359197f5c3",
+        "bytes": 2382,
+        "gitMode": "100644",
+        "gitBlob": "e2fccdd9e0836d2b4b220606c2400c94be8819d1",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/empty.tsx",
+        "sha256": "c13e6910c5764dc910a5fa959d0985b315cd326ef8231cd7308c80359197f5c3",
+        "bytes": 2382,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/field.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "ceeb7ff8958d89584f61044622760173a71eee4d5dec6e326420b50725ca0b27",
+        "bytes": 6227,
+        "gitMode": "100644",
+        "gitBlob": "829bfd73eda8fbba627232f64d2bc3f367659297",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "0a0658fdc1de08c2ce1d1d74458110dd6b73804d7fbfdd5d6106a3bb67a6ecc9",
+        "bytes": 6207,
+        "gitMode": "100644",
+        "gitBlob": "a764f26aa3679221260c0d2ead466646df7dfc83",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/field.tsx",
+        "sha256": "0a0658fdc1de08c2ce1d1d74458110dd6b73804d7fbfdd5d6106a3bb67a6ecc9",
+        "bytes": 6207,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/item.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "0b2019d10f0facec95deda28fcd933838dbb603975f525a34ae6a70f685c8dee",
+        "bytes": 4800,
+        "gitMode": "100644",
+        "gitBlob": "c24563b7c8317a58bd4088f2f54e9ff70ce1e717",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "6c35f06c97e954876f0f6710e379bbea983984576aad92970a454c3818fffc31",
+        "bytes": 4798,
+        "gitMode": "100644",
+        "gitBlob": "cbde28092ea3f157b1b8e256a9558cac00034b21",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/item.tsx",
+        "sha256": "6c35f06c97e954876f0f6710e379bbea983984576aad92970a454c3818fffc31",
+        "bytes": 4798,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/label.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "5c37d8babab5c419f81557d889f1318f3ad277bcfed9a5f0ead764dcf81fc750",
+        "bytes": 514,
+        "gitMode": "100644",
+        "gitBlob": "dd689eade92f4e63a2bfb7b3628390af35d602ec",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "87108ffaf0a4ee6bb30dc175abad84ecb7b8d2cc90b9f7201879811896346004",
+        "bytes": 501,
+        "gitMode": "100644",
+        "gitBlob": "a5e96a5e4f0bb8b0271909bfd81796643bb3ec8e",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/label.tsx",
+        "sha256": "87108ffaf0a4ee6bb30dc175abad84ecb7b8d2cc90b9f7201879811896346004",
+        "bytes": 501,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/tabs.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "ecd9a6e6a65558cd4bfbf7ca4294bd31850e844640fa6f8fb87668dbc1edee36",
+        "bytes": 3804,
+        "gitMode": "100644",
+        "gitBlob": "53dfc466cabdfb5047ec1b6cbf6915288ac14481",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "1c1a8dcfcb9f83bc150fe44a7aad7396a87bf7e3cb139b681a15fbbc93e9e7cf",
+        "bytes": 3833,
+        "gitMode": "100644",
+        "gitBlob": "59e3f67c231f3b239484a2282c92793e4ea44f6c",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/tabs.tsx",
+        "sha256": "1c1a8dcfcb9f83bc150fe44a7aad7396a87bf7e3cb139b681a15fbbc93e9e7cf",
+        "bytes": 3833,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/textarea.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "ef03421946cd7f2779a79574be6fe17ed7974ecd1b8c624367941a4b7c41d529",
+        "bytes": 1505,
+        "gitMode": "100644",
+        "gitBlob": "cbae84efb4b36e8e6aee7a7eadb355e92cd874b0",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "3df2e0e4adfc138c6ec3636c7fe42b73038df79bee541b4b1dd1188ca4b79668",
+        "bytes": 1483,
+        "gitMode": "100644",
+        "gitBlob": "e88f44705f9be2e50a79b27b71db2a52c48a6267",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/textarea.tsx",
+        "sha256": "3df2e0e4adfc138c6ec3636c7fe42b73038df79bee541b4b1dd1188ca4b79668",
+        "bytes": 1483,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/toggle-group.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "ce1f2a2ca72d27cc01ba0fc130c8c6986a49f1c0cb8357c806f11ffacd83192b",
+        "bytes": 3152,
+        "gitMode": "100644",
+        "gitBlob": "c5e76f316456ed4c806e8bfd907f08cd423bd35e",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "53f6a2491b096f777698f9e2164e5aff80442c75ce6944ea54b96f7e5693f3b5",
+        "bytes": 3651,
+        "gitMode": "100644",
+        "gitBlob": "2208be9026a61cc615da634dfc921c3aa4d1ba1e",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/toggle-group.tsx",
+        "sha256": "53f6a2491b096f777698f9e2164e5aff80442c75ce6944ea54b96f7e5693f3b5",
+        "bytes": 3651,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/components/ui/toggle.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "dbe45516e9effcd69f8dde156ff005ef580d3e5263e60499dbcb61d23e4d1968",
+        "bytes": 1764,
+        "gitMode": "100644",
+        "gitBlob": "64f3bbffa49be8301b4642e5e78f26a4babcbb18",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "fe5b52da153c276d821536b8b6a87ce6c59d19ba5013d183262e7ce9ba62572a",
+        "bytes": 2079,
+        "gitMode": "100644",
+        "gitBlob": "4b407a4480c6781ed6ad72cea4c825784d594616",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/components/ui/toggle.tsx",
+        "sha256": "fe5b52da153c276d821536b8b6a87ce6c59d19ba5013d183262e7ce9ba62572a",
+        "bytes": 2079,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentGoals/GoalDetailPage.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "e04c3454288ee13f1373fc305dd8c5c81ad3c7be16213a85ada84e6f762ca59e",
+        "bytes": 15153,
+        "gitMode": "100755",
+        "gitBlob": "7351177a2454811ad14ad8d479a5ad96454bb438",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "22e25775058c251ba2848a2cb8e5dd80c9a491773880d3444ff7ff2049476248",
+        "bytes": 15037,
+        "gitMode": "100755",
+        "gitBlob": "328b96c09271e7aaea40c28b86d2892339376ff0",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentGoals/GoalDetailPage.tsx",
+        "sha256": "22e25775058c251ba2848a2cb8e5dd80c9a491773880d3444ff7ff2049476248",
+        "bytes": 15037,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/Graph/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "40944dade4476a4a6b502051ae68dc9fbaa073f02a640192acb2345fa8acfe92",
+        "bytes": 30688,
+        "gitMode": "100755",
+        "gitBlob": "8c7efdc5d3169f894074c9d3e5a61632c1f0ae31",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "34cc1f85ec53b200ddca632c308d458d816cba45d54789442caffd5243bb280b",
+        "bytes": 30688,
+        "gitMode": "100755",
+        "gitBlob": "81220ed5b3fb4234c87ca56463a3f452d3312d44",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentGoals/ProcessControl/Graph/index.tsx",
+        "sha256": "34cc1f85ec53b200ddca632c308d458d816cba45d54789442caffd5243bb280b",
+        "bytes": 30688,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/shared.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "219822d6ed11439dc7e45104d0093643325bfa7d6d724f0bbba4f2843a4f3385",
+        "bytes": 2283,
+        "gitMode": "100755",
+        "gitBlob": "8cf89fb15c5fb93dea9924a07601019f378d3607",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "6fc367e235712a3ab266157cdc83952e1da9cbb724ddffc4118672627e9668e2",
+        "bytes": 2282,
+        "gitMode": "100755",
+        "gitBlob": "aadba0e81c1bd193526eecad1b537bc03fa6ca2d",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentGoals/ProcessControl/shared.tsx",
+        "sha256": "6fc367e235712a3ab266157cdc83952e1da9cbb724ddffc4118672627e9668e2",
+        "bytes": 2282,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentHome/AgentInfo.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "f9b5e514dc2ef53020872597abafcd2cb8911ea184ccae0463fa9a0bc16e84dc",
+        "bytes": 2890,
+        "gitMode": "100755",
+        "gitBlob": "93cfc7a3793a6377f3fd4d50384b0a9d59702ece",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "8868965f24c96ec0944c5ee3bb908f795e9b2db50c7399ca3a20d3e84d74ef62",
+        "bytes": 2903,
+        "gitMode": "100755",
+        "gitBlob": "665db60648ed4be7a5d0ab8197806d8598c80923",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentHome/AgentInfo.tsx",
+        "sha256": "8868965f24c96ec0944c5ee3bb908f795e9b2db50c7399ca3a20d3e84d74ef62",
+        "bytes": 2903,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "f693a66ce3ad741c17d7b73262a1abd9238081d7f8c3f9fdbb55ff2fbb3410d1",
+        "bytes": 33701,
+        "gitMode": "100755",
+        "gitBlob": "dc94b26307f80695096d1225dc2ceb43139b9ec9",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "28a0b0052a5d9cb512aba36806474c5dce1b6222053d5e273584ab860ddf034d",
+        "bytes": 33701,
+        "gitMode": "100755",
+        "gitBlob": "9b8942bdd7d3efd80f3f17e5a21aaf8f52cdfc8b",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx",
+        "sha256": "28a0b0052a5d9cb512aba36806474c5dce1b6222053d5e273584ab860ddf034d",
+        "bytes": 33701,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts",
+      "beforePresent": true,
+      "before": {
+        "sha256": "f0c65a28acfd665d4cb27a80c57418ac05fceacf89daa94f34c4d2c386f80fef",
+        "bytes": 508,
+        "gitMode": "100644",
+        "gitBlob": "6a3da3ac0b8232842d9bc95012fb60e781a27df6",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "0ddafcc192780cd6f8363f6e66cae625e6c395cabed71a697e6ff3f4079e7b9b",
+        "bytes": 506,
+        "gitMode": "100644",
+        "gitBlob": "251429d1397f174a50770f7253b86e0458f95c3d",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts",
+        "sha256": "0ddafcc192780cd6f8363f6e66cae625e6c395cabed71a697e6ff3f4079e7b9b",
+        "bytes": 506,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "38dd50245ad43e35aa59dc4c989ed54d43b4cd5259382dd5536e4170c0f73c9f",
+        "bytes": 2722,
+        "gitMode": "100755",
+        "gitBlob": "d9ec3308b8f4e0333a14775725052fc2b75f0985",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "86000b70f0141204d99063e69b5887413b780d40b67a27cd52572916b2dcc6c3",
+        "bytes": 2706,
+        "gitMode": "100755",
+        "gitBlob": "2e8d48f26a0bf94d65dad7a73fa99fd68c6e32b4",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx",
+        "sha256": "86000b70f0141204d99063e69b5887413b780d40b67a27cd52572916b2dcc6c3",
+        "bytes": 2706,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentUsage/UsageTrendChart.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "2f86b328224de187f6feb9cd4e444835ed5b125b0bd5295d4e8dc23f02902d64",
+        "bytes": 4568,
+        "gitMode": "100755",
+        "gitBlob": "d68b119ab8a9a138f1c1bc3b44d0171f35dca0a8",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "39b9be3afc8becb1023fdc89b3ee81704039fc0873573089d3333ee620267ea6",
+        "bytes": 4593,
+        "gitMode": "100755",
+        "gitBlob": "4ecdd649f166f2d23386960edce1c1cb936bb1ca",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentUsage/UsageTrendChart.tsx",
+        "sha256": "39b9be3afc8becb1023fdc89b3ee81704039fc0873573089d3333ee620267ea6",
+        "bytes": 4593,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/AgentViewAll/AgentViewAllPage.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "728c2bab739dbbbb42d6231e45ebf2954498681dfe531093e4ce984eb60657ed",
+        "bytes": 22737,
+        "gitMode": "100755",
+        "gitBlob": "4dea4c7d2842f86ac2a49955e3a9eb43c0d6ec87",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "2294a6bb0ded14a8926f46e663886e471aec71f33c9e07e1d2a4ff9cd5bcd680",
+        "bytes": 22766,
+        "gitMode": "100755",
+        "gitBlob": "c239bca26b827510768bbe997eb5b7e6196b8992",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/AgentViewAll/AgentViewAllPage.tsx",
+        "sha256": "2294a6bb0ded14a8926f46e663886e471aec71f33c9e07e1d2a4ff9cd5bcd680",
+        "bytes": 22766,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Auth/MarketAuthCallback/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "9b7a75a34aa7afa3a08e9ddf5ddcc813e737ae57ad128d57f707805b24d28328",
+        "bytes": 5061,
+        "gitMode": "100755",
+        "gitBlob": "29053ebb87e57613b87cbf1125e7d036d9cca1a0",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "9887111bf9931c94ed87d4849d28e1227efe402c5f817fd5764e33680d58a788",
+        "bytes": 4948,
+        "gitMode": "100755",
+        "gitBlob": "dd1a7f0226379557b0b67db44e068ecd93c3cf48",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Auth/MarketAuthCallback/index.tsx",
+        "sha256": "9887111bf9931c94ed87d4849d28e1227efe402c5f817fd5764e33680d58a788",
+        "bytes": 4948,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Auth/OAuthCallback/Social.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "93a8ab89b78bf4b3c43a48ea7942dcbf53bd57d630ab890a5d439757bc0a7099",
+        "bytes": 3473,
+        "gitMode": "100755",
+        "gitBlob": "bc15bd6fc38c8f38c67ca71ddb4f13dad027d63f",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "1b3fa2d3bd0386f2fb9ee2a9d370d23060e75b04dab9fa25cfca36561741272d",
+        "bytes": 3360,
+        "gitMode": "100755",
+        "gitBlob": "8564a4333bb69e3a13514aa6bf6ef6bf00b1a125",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Auth/OAuthCallback/Social.tsx",
+        "sha256": "1b3fa2d3bd0386f2fb9ee2a9d370d23060e75b04dab9fa25cfca36561741272d",
+        "bytes": 3360,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Auth/OAuthCallback/Success.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "bcb131f725b5ddcdbe292a579cd31735294db2a627e3ac526acbf7108dd738b0",
+        "bytes": 2227,
+        "gitMode": "100755",
+        "gitBlob": "92dc0525eae6a430b835e6019410db4555f6d760",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "aa902d80123646040fbe60c9deeb1e7022c3e8af2d25321cfeedd63b13647275",
+        "bytes": 2134,
+        "gitMode": "100755",
+        "gitBlob": "a8e85c9525f32bee25fa55811f8b6271168ab547",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Auth/OAuthCallback/Success.tsx",
+        "sha256": "aa902d80123646040fbe60c9deeb1e7022c3e8af2d25321cfeedd63b13647275",
+        "bytes": 2134,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Auth/OAuthConsent/ClientError.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "b7cb9d0e35aa1dc3227d4652d45a8b1e48369f9400a75af8de53ba35f08fc716",
+        "bytes": 1393,
+        "gitMode": "100755",
+        "gitBlob": "f00e9d2449a1ae271bfc70f773e699ea79b8da98",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "abd91da4efd79221d30f51d25b51b6ac5e4f96215cfb06f7daaeb951e6807124",
+        "bytes": 1280,
+        "gitMode": "100755",
+        "gitBlob": "67ac409006649293a82e2c84804e8b04896b5bef",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Auth/OAuthConsent/ClientError.tsx",
+        "sha256": "abd91da4efd79221d30f51d25b51b6ac5e4f96215cfb06f7daaeb951e6807124",
+        "bytes": 1280,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Auth/OAuthDevice/DeviceSuccess.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "4e5e49a5317dc7374dcdb1c95fdf6efcebd512dc1fdcf0cca12e636ee0483b97",
+        "bytes": 982,
+        "gitMode": "100755",
+        "gitBlob": "006bf34729d46c92987cd84a0403456dec6d32fb",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "33dbb3b6d963cfa9029e7d8c704161b4c3ada442cbeb7f24da4c134d3f4917a8",
+        "bytes": 868,
+        "gitMode": "100755",
+        "gitBlob": "81bb8051c900f6e9bf49b6a2f9407502c6bbcc9b",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Auth/OAuthDevice/DeviceSuccess.tsx",
+        "sha256": "33dbb3b6d963cfa9029e7d8c704161b4c3ada442cbeb7f24da4c134d3f4917a8",
+        "bytes": 868,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Automations/AutomationRunsPage.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "e1840563914a165d5ec05cfb34f4272a586029eb41c7d44f9cc188f6d6a3ed2a",
+        "bytes": 10879,
+        "gitMode": "100644",
+        "gitBlob": "9d7f9daaeb4a37569fd44ceae357f37979ae626c",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "040c8d7d31e9b11ef310852adb17c370200adccce076c73f6e52d10e0e0012c1",
+        "bytes": 10763,
+        "gitMode": "100644",
+        "gitBlob": "37ac5308048820d08a8dc94ff1de26ab381c3ded",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Automations/AutomationRunsPage.tsx",
+        "sha256": "040c8d7d31e9b11ef310852adb17c370200adccce076c73f6e52d10e0e0012c1",
+        "bytes": 10763,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Automations/AutomationTriggerDraft.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "72c2e6784101a673727916d8aef2f36b7061919096053fab9393a133bf0c4780",
+        "bytes": 9921,
+        "gitMode": "100644",
+        "gitBlob": "08d4bc67c679a155c345851171e13e48d8fa026b",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "85c61a5b7c39f610dae8b91dfaf4b82207a0f7e996f29870555b4f13607fb3bf",
+        "bytes": 9930,
+        "gitMode": "100644",
+        "gitBlob": "6d8984a63aa3f0a4afb38d16772945f0b06d9976",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Automations/AutomationTriggerDraft.tsx",
+        "sha256": "85c61a5b7c39f610dae8b91dfaf4b82207a0f7e996f29870555b4f13607fb3bf",
+        "bytes": 9930,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/DailyBrief/BriefCardSkeleton.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "9d57c7b66bb5ff6a62b8f47b64cd4a31d3f6db87197cfe145c12495215f591f5",
+        "bytes": 1794,
+        "gitMode": "100755",
+        "gitBlob": "7c38737e8878c713ba66c99778185dc98f452367",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "7d2a9c78a1aa50ffd36f30fec73ba6db4f436e69f20295dac379336a2bf9202f",
+        "bytes": 1722,
+        "gitMode": "100755",
+        "gitBlob": "f8042d26dd5425d074c44b99929a565f2c5c4359",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/DailyBrief/BriefCardSkeleton.tsx",
+        "sha256": "7d2a9c78a1aa50ffd36f30fec73ba6db4f436e69f20295dac379336a2bf9202f",
+        "bytes": 1722,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/FileViewer/NotSupport/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "41b4224f82867a2309ced13e6ac5d43dab12a7851677a5d2d9e4bbbae9917fdd",
+        "bytes": 1829,
+        "gitMode": "100755",
+        "gitBlob": "30540258599c4e59570f00daddcaf04e4da54074",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "67bc2aa8420fcee0f28fa12d77fc310b5aa953f510cf9904c1228aba515743c7",
+        "bytes": 1829,
+        "gitMode": "100755",
+        "gitBlob": "42ae2434cae6a5590a1784140b1062bd3cc3d040",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/FileViewer/NotSupport/index.tsx",
+        "sha256": "67bc2aa8420fcee0f28fa12d77fc310b5aa953f510cf9904c1228aba515743c7",
+        "bytes": 1829,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/GroupAvatar/GroupAvatar.module.css",
+      "beforePresent": false,
+      "afterPresent": true,
+      "after": {
+        "sha256": "d72a99362de457d0d9fce492d14185a2ef64e420b4232718307ba9ff098beaa8",
+        "bytes": 352,
+        "gitMode": "100644",
+        "gitBlob": "bdbdbfea1997cf4d08307ac63fb7d49576e3ba92",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/GroupAvatar/GroupAvatar.module.css",
+        "sha256": "d72a99362de457d0d9fce492d14185a2ef64e420b4232718307ba9ff098beaa8",
+        "bytes": 352,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/GroupAvatar/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "96e2bcf1d689c2d2f9cf26f073e196fe7671d1d1d47b9df24d12d90d7782c51d",
+        "bytes": 1924,
+        "gitMode": "100755",
+        "gitBlob": "e3c72fba81f0ab898351a8078f89cd0cb45d3cb9",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "393b627351a12621e62f08abe2de8681af1d3e5e5941a0c0144efcbda313a650",
+        "bytes": 2232,
+        "gitMode": "100755",
+        "gitBlob": "0ce0b5bffe7e4cf81fe0e10e104ed51457bde5fa",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/GroupAvatar/index.tsx",
+        "sha256": "393b627351a12621e62f08abe2de8681af1d3e5e5941a0c0144efcbda313a650",
+        "bytes": 2232,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/HomeInbox/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "d269b8a975820e89ef578b4d9e2b9b01fa2cd2fa67dfb90a4755ae5aa57f4ab5",
+        "bytes": 23712,
+        "gitMode": "100755",
+        "gitBlob": "f19b223151e2174071232b16a81def2655276aa6",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "2bb111bb835e7df992badf87b1649e3f205bec33f06ebed92fdfa55301ddb38a",
+        "bytes": 23712,
+        "gitMode": "100755",
+        "gitBlob": "5383ed76a213e130949f694c88c0c4b8f8b157ed",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/HomeInbox/index.tsx",
+        "sha256": "2bb111bb835e7df992badf87b1649e3f205bec33f06ebed92fdfa55301ddb38a",
+        "bytes": 23712,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/MCP/MCPDetail/Loading.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "3366fadb949901da56a9280fc6384377840b90563d854fb5b5923478bd50a46c",
+        "bytes": 1352,
+        "gitMode": "100755",
+        "gitBlob": "2ce58428b81026ba8b64d383aa566985e43530f4",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "c874454c4474cac6a7c3f513f0fe4c9a6518b156c8442c3ccfb057a6e7099d7b",
+        "bytes": 1365,
+        "gitMode": "100755",
+        "gitBlob": "e9e8199ebe50b1f21098b771866f813c5f11cf7e",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/MCP/MCPDetail/Loading.tsx",
+        "sha256": "c874454c4474cac6a7c3f513f0fe4c9a6518b156c8442c3ccfb057a6e7099d7b",
+        "bytes": 1365,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Members/MembersPage.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "b0511d40c55fa7ed1dd2aec54703f52122e4f74ac075921022409c2d8f9bbb57",
+        "bytes": 20379,
+        "gitMode": "100644",
+        "gitBlob": "a336cba5998529ce12872b6427d3ece2accd7c18",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "95a4c5d2779f0b1c341b7588115b8edb5c6483f89a2857d2595eae27da359ee0",
+        "bytes": 20379,
+        "gitMode": "100644",
+        "gitBlob": "2129f7b8373ec3e5b720e2b75bc3b1ddf3c84db3",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Members/MembersPage.tsx",
+        "sha256": "95a4c5d2779f0b1c341b7588115b8edb5c6483f89a2857d2595eae27da359ee0",
+        "bytes": 20379,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Portal/LocalFile/Body.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "475e239d67facb8df7fb1d74995672cf5712f36163893be51629e36ec8a4aafd",
+        "bytes": 20050,
+        "gitMode": "100755",
+        "gitBlob": "62a7dbf4ce125761a33192f8f80bc418b8090d55",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "49786413539bb9bdd7c74701a29fdb4818aa6807c0cd9532f2d6a79e48b9c523",
+        "bytes": 20050,
+        "gitMode": "100755",
+        "gitBlob": "29c1fe5248d1c3351af966d80ad43548d5ed8060",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Portal/LocalFile/Body.tsx",
+        "sha256": "49786413539bb9bdd7c74701a29fdb4818aa6807c0cd9532f2d6a79e48b9c523",
+        "bytes": 20050,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/SheetGrid.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "0733578c2e3680387e2574ee76f82cb271c435707f1eaaa0d0aac29b4558290b",
+        "bytes": 6778,
+        "gitMode": "100755",
+        "gitBlob": "30cad45325e8dcd025100be8499c227dc5117dfc",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "9cb10c56edcb410eb9406919d1642734d603280ddce3ba1860221186dee2a7df",
+        "bytes": 6749,
+        "gitMode": "100755",
+        "gitBlob": "40ac8dc2fd658f7495dd05370916c23f5e567407",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Portal/LocalFile/xlsx/SheetGrid.tsx",
+        "sha256": "9cb10c56edcb410eb9406919d1642734d603280ddce3ba1860221186dee2a7df",
+        "bytes": 6749,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/XlsxPane.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "b782df63788d244373b5c7301c28ccc0ba1882a4652200b71f3158929ab0d4b8",
+        "bytes": 3884,
+        "gitMode": "100755",
+        "gitBlob": "8ddc0b9e123048eb77168acaf777003c6837556e",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "157c97ccad72ce9935414096f29c50c22f61cb75ec6f4579c125b11116e7c44e",
+        "bytes": 3870,
+        "gitMode": "100755",
+        "gitBlob": "cc9d830427206c0e3ee9688689850c5c25cfc618",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Portal/LocalFile/xlsx/XlsxPane.tsx",
+        "sha256": "157c97ccad72ce9935414096f29c50c22f61cb75ec6f4579c125b11116e7c44e",
+        "bytes": 3870,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/styles.ts",
+      "beforePresent": true,
+      "before": {
+        "sha256": "5f7507e5514ee1769800b2932d741acc676c25b5766316d50447a20f56550262",
+        "bytes": 2030,
+        "gitMode": "100755",
+        "gitBlob": "3e9f031d95165895463d767b1440bd9bef231082",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "050543a7319af7af8e45977f6fefba8750b32ce774e70ccb27b7142d16e8a3a4",
+        "bytes": 1901,
+        "gitMode": "100755",
+        "gitBlob": "86c1ab49b63c074bb2de67d67535fb8436971543",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Portal/LocalFile/xlsx/styles.ts",
+        "sha256": "050543a7319af7af8e45977f6fefba8750b32ce774e70ccb27b7142d16e8a3a4",
+        "bytes": 1901,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Projects/FilterMenu/FilterMenuPopover.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "ec405f9e9c21fb0937a4d4ac4cdccdacbbee312179bd45a44365556d900bfbcc",
+        "bytes": 13972,
+        "gitMode": "100644",
+        "gitBlob": "31849ac1d22e82f612b54b0f0dd8a5bf3d09eb57",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "1a3f2a83b853404a1f21a40deda90373eb4296d289194d1fcdc7080f0ab5f182",
+        "bytes": 13993,
+        "gitMode": "100644",
+        "gitBlob": "570179b0af43dd160388a1a8f9f2595db83d0e9e",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Projects/FilterMenu/FilterMenuPopover.tsx",
+        "sha256": "1a3f2a83b853404a1f21a40deda90373eb4296d289194d1fcdc7080f0ab5f182",
+        "bytes": 13993,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Projects/Layout/ProjectIssueProgress.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "2b9395c0322b3e58b8a8ea27ce485f1175fb28f1668898cdd88eca3092ad64b2",
+        "bytes": 1292,
+        "gitMode": "100644",
+        "gitBlob": "7d793ecfa8fa8086091ae1173a50347ce96fe92a",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "a4c15b269a6ae8e119b0eac733b8e5ec4e6ea3042ced80f351c8221e60957c2c",
+        "bytes": 1188,
+        "gitMode": "100644",
+        "gitBlob": "70bb660cd74ab9ee0526e6b60a831ff712b7fef7",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Projects/Layout/ProjectIssueProgress.tsx",
+        "sha256": "a4c15b269a6ae8e119b0eac733b8e5ec4e6ea3042ced80f351c8221e60957c2c",
+        "bytes": 1188,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/ReUIShell/WorkspaceSwitcher.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "33b6b3d023f8684f2130768bdd97762a9d8e99c4a5c68e0f550d091f70e1a4cb",
+        "bytes": 2460,
+        "gitMode": "100644",
+        "gitBlob": "d0ff35e0b4c5f5140c9cf9b697b8190717cc005d",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "da016e544426360d6ae4698b5db18c6c3deb7d53d43ba7e47b6b2226f3e8ca1c",
+        "bytes": 2473,
+        "gitMode": "100644",
+        "gitBlob": "d8c1908f3c5a97dc832e34a3027f31eda40a2e9e",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/ReUIShell/WorkspaceSwitcher.tsx",
+        "sha256": "da016e544426360d6ae4698b5db18c6c3deb7d53d43ba7e47b6b2226f3e8ca1c",
+        "bytes": 2473,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/Reviews/ReviewPullRequestPage.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "3155dc92e57249a1bc3677f102be6ea858cc3e58d4ed7c4535e7c8a58ab4e072",
+        "bytes": 37903,
+        "gitMode": "100644",
+        "gitBlob": "ab39f1a1e4b464f0832356efbdb640269684bd08",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "3207a8d3a1ecb7161176f538f086bc64f794803bb18bb82c6ddacca778f8e79c",
+        "bytes": 37903,
+        "gitMode": "100644",
+        "gitBlob": "ebdc750fc3fd77d0fd454f109f62014790d7031b",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/Reviews/ReviewPullRequestPage.tsx",
+        "sha256": "3207a8d3a1ecb7161176f538f086bc64f794803bb18bb82c6ddacca778f8e79c",
+        "bytes": 37903,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/SelfLearning/ExperienceList/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "034c632f50ccc3369a1179b77684c76139a0a46e828490935b22773a10f1ef38",
+        "bytes": 4572,
+        "gitMode": "100755",
+        "gitBlob": "b2c79f78027274105e0262a41f7cd39e146d282c",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "e7548edfe1832c67654e3208ed98af3f3e1a4531b46a13299abf125f33ffe91d",
+        "bytes": 4460,
+        "gitMode": "100755",
+        "gitBlob": "c08ad510aafb2ffb6c9e3885d5fcc0cd923ca4f7",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/SelfLearning/ExperienceList/index.tsx",
+        "sha256": "e7548edfe1832c67654e3208ed98af3f3e1a4531b46a13299abf125f33ffe91d",
+        "bytes": 4460,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/SelfLearning/LessonDetail/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "0be56aec1a993b875e8ca704c67ef904741862c4a4d2a844cd5465be2a456d61",
+        "bytes": 10285,
+        "gitMode": "100755",
+        "gitBlob": "e4fabcbffbd4df461b6cc55ae04f17b3f369f73c",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "4d83817af14402faafae100712631d3b8c3acb0600cbdeb0356031dc747a313b",
+        "bytes": 9783,
+        "gitMode": "100755",
+        "gitBlob": "a2c9677aa0f64ddc7fd950f49ce0b4fa09125f25",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/SelfLearning/LessonDetail/index.tsx",
+        "sha256": "4d83817af14402faafae100712631d3b8c3acb0600cbdeb0356031dc747a313b",
+        "bytes": 9783,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/WorkSurface/WorkSurface.module.css",
+      "beforePresent": false,
+      "afterPresent": true,
+      "after": {
+        "sha256": "5d8e38a0dddcc9833527ff5d457d53848fe7d773d3e89a6743499b03361d7512",
+        "bytes": 206,
+        "gitMode": "100644",
+        "gitBlob": "40e8e5994c115de504ce6e9e1bb253120b06c3d8",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/WorkSurface/WorkSurface.module.css",
+        "sha256": "5d8e38a0dddcc9833527ff5d457d53848fe7d773d3e89a6743499b03361d7512",
+        "bytes": 206,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/features/WorkSurface/WorkSurface.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "91f74c1436820ff9a6773f9f46a90d2406f3b0ed5f20527143be0f8d895e0f3e",
+        "bytes": 8656,
+        "gitMode": "100644",
+        "gitBlob": "f25a54c0bece2f8ff7e89b215bd601398597f538",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "f0762ea7325ceb4af16d1c63c6f45dcd86e5fc88d7e385f7b6e22f4786d7a16c",
+        "bytes": 9016,
+        "gitMode": "100644",
+        "gitBlob": "f7664d1793230a92ec29b305bc9ea0f8e8c60642",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/features/WorkSurface/WorkSurface.tsx",
+        "sha256": "f0762ea7325ceb4af16d1c63c6f45dcd86e5fc88d7e385f7b6e22f4786d7a16c",
+        "bytes": 9016,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "f98435ff2a899a05acff9aa71c52ed1d5efc81a881f8e73a2a436d51e4a1f9f6",
+        "bytes": 23894,
+        "gitMode": "100755",
+        "gitBlob": "dd3f67b6f251256afee113deca42d6278b0686e9",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "7a2b1b62276099547ecae70e954713bfb2975c7f21a721b0c442210f18daf9c2",
+        "bytes": 23816,
+        "gitMode": "100755",
+        "gitBlob": "98aa43275313f340c62de29c942665a1739e7c53",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx",
+        "sha256": "7a2b1b62276099547ecae70e954713bfb2975c7f21a721b0c442210f18daf9c2",
+        "bytes": 23816,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx",
+      "beforePresent": true,
+      "before": {
+        "sha256": "b8fac2778e23c92e1e25818a0475bd2c017cd4d6dc67cba62b2f930f27c3c24e",
+        "bytes": 2298,
+        "gitMode": "100755",
+        "gitBlob": "931efeb77913389de0838bd774dfc34885249150",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "1e5fbb34d3672ab13516ca056651be9ccdb0714b981c3b3870b15f046aa5247b",
+        "bytes": 2207,
+        "gitMode": "100755",
+        "gitBlob": "ec6f14a439392ef3594249d67c8cab769059708b",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx",
+        "sha256": "1e5fbb34d3672ab13516ca056651be9ccdb0714b981c3b3870b15f046aa5247b",
+        "bytes": 2207,
+        "matchesImmutableHead": true
+      }
+    },
+    {
+      "path": "src/styles/roleClassForms.test.ts",
+      "beforePresent": true,
+      "before": {
+        "sha256": "c9599a2cd73278e65915a25cf90ef0fa0962c85e89091b780a10268723656819",
+        "bytes": 2262,
+        "gitMode": "100644",
+        "gitBlob": "cfc77f844a664556b55e069fe10957c6f8b7c8c9",
+        "frozenWholeBytesMatch": true
+      },
+      "afterPresent": true,
+      "after": {
+        "sha256": "dce727b550367324b8a1b74f3655443ebe53151e017ad5747ebd1c910190f0c4",
+        "bytes": 2305,
+        "gitMode": "100644",
+        "gitBlob": "25988bd9f0fda2174a0209b3bf105c0be5e43aea",
+        "frozenWholeBytesMatch": true
+      },
+      "currentWorkingSource": {
+        "path": "/workspace/orvilo1/src/styles/roleClassForms.test.ts",
+        "sha256": "dce727b550367324b8a1b74f3655443ebe53151e017ad5747ebd1c910190f0c4",
+        "bytes": 2305,
+        "matchesImmutableHead": true
+      }
+    }
+  ],
+  "tree": "19d705fbabeff164295a6b3e23245a734867b9ac"
+}

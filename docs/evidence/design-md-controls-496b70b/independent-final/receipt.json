@@ -1,0 +1,480 @@
+{
+  "Source47OriginalFindings": [],
+  "acceptance": {
+    "source81Accepted": true,
+    "actualRecordedComponentFixtureCompositionAccepted": true,
+    "all8SupersededPredicatesClosedByGenuineRecordedFactsAndStrictDecoder": true,
+    "native005OriginalPassed": false,
+    "native006OriginalPassed": false,
+    "native005UnaffectedPassedChecks": 1544,
+    "native006ActualPassedChecks": 56,
+    "strictOfflinePassedChecks": 8,
+    "actualFullSceneCaptureHashesVerified": 136,
+    "rawOfflineInputHashesVerified": 38,
+    "exactScopedNativeBindingCount": 34,
+    "every81OwnerRuntimeCoverageClaimed": false,
+    "routedFullAppAccepted": false,
+    "backendLocalAgentAccepted": false,
+    "SDKPublicationAccepted": false,
+    "wholeDESIGNAccepted": false,
+    "wholeGoalStatus": "HOLD",
+    "issue694Activated": false,
+    "only496PushCIConfirmed": true,
+    "successorPRCIInheritedFrom496": false
+  },
+  "createdUTC": "2026-10-13T18:27:26.984218+00:00",
+  "deliverables": {
+    "review.md": {
+      "path": "/tmp/orvilo-current81-independent-final/review.md",
+      "sha256": "0de0003aba591e5b061975d35af7467db768c333a42572ea7825e3b286573e33",
+      "bytes": 9354
+    },
+    "documentation-successor-receipt.json": {
+      "path": "/tmp/orvilo-current81-independent-final/documentation-successor-receipt.json",
+      "sha256": "3c0755b14155807fc3832e0054d5b3ae07de1e90b0065492e7dfa758f8678bde",
+      "bytes": 16268
+    },
+    "documentation-successor.patch": {
+      "path": "/tmp/orvilo-current81-independent-final/documentation-successor.patch",
+      "sha256": "a1fd223d3b0d15e05cafcbe81b89a38a53983d6cce63431d5494ebfa5c2d49ae",
+      "bytes": 3518
+    },
+    "evidence-assessment.json": {
+      "path": "/tmp/orvilo-current81-independent-final/evidence-assessment.json",
+      "sha256": "2a0299e36d6bcc67c77474705d427911ab0463d3094b00e2616d004ef0892d13",
+      "bytes": 87293
+    },
+    "source-hashes.json": {
+      "path": "/tmp/orvilo-current81-independent-final/source-hashes.json",
+      "sha256": "30207781cc391e9080f238ca131b7fd6368b6102e671ed0cde3974eddf2ea103",
+      "bytes": 76318
+    },
+    "changes.patch": {
+      "path": "/tmp/orvilo-current81-independent-final/changes.patch",
+      "sha256": "a69443dc6baff5b5c5326fcedd6c13a15b25f899983f47d5dd9fc0390d251fe7",
+      "bytes": 122844
+    }
+  },
+  "documentationSuccessor": {
+    "head": "f7a97a528489e5e4d6e85431365ded85568346fb",
+    "onlyChangedPath": ["docs/development/ui-migration-recovery.md"],
+    "all81ProductInstructionBytesUnchanged": true,
+    "docPlusLinesReviewed": 8,
+    "currentHead": "f7a97a528489e5e4d6e85431365ded85568346fb",
+    "currentClean": true
+  },
+  "evidence": [
+    {
+      "path": "/workspace/orvilo-evidence/native-md-remaining-fortyseven/initial-review.md",
+      "sha256": "172b81f07f8de2817da20e5b09b94cd802564f0766af0f5680c8f068988205cc",
+      "bytes": 7078
+    },
+    {
+      "path": "/workspace/orvilo-evidence/native-md-remaining-fortyseven/initial-review-hashes.json",
+      "sha256": "fa62961866430c9d5eca9c9a93de6e3f84c7d635194da6acc92757aa8be8a8d4",
+      "bytes": 62605
+    },
+    {
+      "path": "/tmp/orvilo-next71-independent-new24-initial/independent-initial-review.md",
+      "sha256": "6b8a2fcc1dbe1b738a38860b55838bca6fd2a8a4ea57d1993063659d217438e5",
+      "bytes": 4903
+    },
+    {
+      "path": "/tmp/orvilo-next71-independent-new24-initial/independent-initial-receipt.json",
+      "sha256": "effdf52837ac93a4305e053e8102205237af24494c3eaac1b79a2b028a5b6220",
+      "bytes": 13463
+    },
+    {
+      "path": "/tmp/orvilo-current-select-escape-external-regression-001/actual-before-after-receipt.json",
+      "sha256": "4a6d1d3260d34221fb7a96ed1d8901ccb0b4b275a9379af54a295066ff8a4da9",
+      "bytes": 1691
+    },
+    {
+      "path": "/tmp/orvilo-current-select-escape-external-regression-001/escape.regression.test.tsx",
+      "sha256": "6420a4349998e127341f5e87c2089c13a3b3e05c9e9b3c969b102b90edf1ec55",
+      "bytes": 5316
+    },
+    {
+      "path": "/tmp/orvilo-current-select-escape-external-regression-001/before-resolved.log",
+      "sha256": "b8ca8ac36ec4f962eceff0e6216131a4967f7260c19f96071d671ec4ca3eb30c",
+      "bytes": 3988
+    },
+    {
+      "path": "/tmp/orvilo-current-select-escape-external-regression-001/after.log",
+      "sha256": "c547603250cd771d2e8336d6821249efe356502399fe1ddd4c27e503d61e6e92",
+      "bytes": 423
+    },
+    {
+      "path": "/workspace/orvilo-evidence/next10-select-multiple-open-change-regression/actual-before-after-regression-root.json",
+      "sha256": "c6b7a65e030be7372650f07bcde2f47ad7a68c78df1537fe452d01f344bc51c3",
+      "bytes": 1225
+    },
+    {
+      "path": "/tmp/orvilo-current-control-roles-scoped-quality-005.log",
+      "sha256": "9a83f98cb3a2a165a0aaa72ae908968d861233f5bfe0a7e4c98cab9ff71d9942",
+      "bytes": 740
+    },
+    {
+      "path": "/tmp/orvilo-leading-currentccdc-actual-compiled-proof-003/tool-result/receipt.json",
+      "sha256": "5643af580dee2d98ca5970044fb6387427dd18895e67bd56d3805e223ab975a5",
+      "bytes": 747977
+    },
+    {
+      "path": "/tmp/orvilo-leading-currentccdc-actual-compiled-proof-003/execution.json",
+      "sha256": "61abd11754a9ff6071b0d41d79544ef5f233d52853cc93b172bf37e0fc07b9ba",
+      "bytes": 1733
+    },
+    {
+      "path": "/tmp/orvilo-690-current-complete-proof-002/tool-result/summary.json",
+      "sha256": "37da20985d6c8b3972901f881f47b17a3398a75a3bd866e4b84298be50d79ed4",
+      "bytes": 73914
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/source-receipt.json",
+      "sha256": "b5aab0a977e7b47f2903c01582b7e2b4deb4c13edf9b44f9c927e7e028f7683f",
+      "bytes": 5637
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/ua-declaration.mjs",
+      "sha256": "edad3cd1f2146001a40584de73234c89cfc63400dc2473e8d447802e7773cd66",
+      "bytes": 3013
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/read-native006-ua.mjs",
+      "sha256": "17399c4a7e00a4047aeed4324955f8ec28dcc8e3ce2f1309e2ca5eab0fa97a0c",
+      "bytes": 8501
+    },
+    {
+      "path": "/tmp/orvilo-current496-push-ci-actual-api-receipt.json",
+      "sha256": "26eb3c84f684ee64d97d13e95db5c1dbedc292fd82e0102ac8ae33383e8fddd8",
+      "bytes": 44694
+    },
+    {
+      "path": "/tmp/orvilo-current81-delivery-receipt-001.json",
+      "sha256": "8ef343cd0ab7d60cb710583cfbca789f7c816e8de4dc536006f727ab6b1b6147",
+      "bytes": 2725
+    }
+  ],
+  "evidenceReviewBoundaries": {
+    "publicEvidencePublication": "Parent reported immutable commit5688f6a1d30ed49f223598148791ca4ec1e73f44; object unavailable locally, publication/link not independently verified. Acceptance uses original local hashed artifacts.",
+    "noCurrentPRChecksClaimedFromPushChecks": true,
+    "archivedQualityAndNativeWereReadNotRerun": true
+  },
+  "extensionPacks": [],
+  "findings": [],
+  "independentFromPatchAuthor": true,
+  "instructions": [
+    {
+      "path": "/workspace/orvilo1/AGENTS.md",
+      "sha256": "03beafdd7635a50bfe4bac6e7666fddd0cba4d1a7852eaf7f0ace504588901ad",
+      "bytes": 15794
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/deep-review/SKILL.md",
+      "sha256": "dd5b13c2470ae0f2f7c33f9567146e88006aac9cf1487d407f132aea8beb7f1c",
+      "bytes": 21368
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/deep-review/references/light-review-prompt.md",
+      "sha256": "769c62018dff8409840b99a6470791705b74bc14dd2f6de46981e96cdc1c3213",
+      "bytes": 5096
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/deep-review/references/release-risk/rollout-surface.md",
+      "sha256": "26f883666533bed5cf43297f0478a218b89c274a45f2c5c97bfda3b06b9bc716",
+      "bytes": 2915
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/react/SKILL.md",
+      "sha256": "7a638362d740fc2b897e12f7d95cfdd19066994bf35c59da76485c8f6a7431b3",
+      "bytes": 17315
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/design-system/SKILL.md",
+      "sha256": "8aa5ff93320559a6e5289d37b6b06b3307737dbfb4a6f3fc44135c705613c511",
+      "bytes": 7458
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/design-system/references/token-architecture.md",
+      "sha256": "925f4049c4c4313d9fd5df98cdfd52004112aca49fba1664ad85e76bc9dce4d3",
+      "bytes": 5365
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/design-system/references/primitive-tokens.md",
+      "sha256": "91e6caa12646c08c8aadf8e09399aed65760a25c8d80595936d81a9131118fc3",
+      "bytes": 4562
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/design-system/references/semantic-tokens.md",
+      "sha256": "97e16d8061bbc22e82b51966a7015e3fc990932902e4647843506669a1cdebcc",
+      "bytes": 4245
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/design-system/references/component-tokens.md",
+      "sha256": "e27f8f5999badee425c98235eabbd2cb3ebe2a1a364766d5c7a6b3134ceaaec8",
+      "bytes": 4986
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/ux/SKILL.md",
+      "sha256": "698d66e2c3b480a0ce8195595e58c3915e18b679fcd7031f23410b546d246696",
+      "bytes": 9997
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/ux/references/design-values.md",
+      "sha256": "39d4debc91049c71267cda1748bb970ebcb954db5777de8b3076182bbe62b9a8",
+      "bytes": 2400
+    },
+    {
+      "path": "/workspace/orvilo1/.agents/skills/ux/references/edit.md",
+      "sha256": "4c2774629725539b8e4c31c252e9d7873d097c835aa7049f8722a316264f07bc",
+      "bytes": 4605
+    },
+    {
+      "path": "/workspace/orvilo1/DESIGN.md",
+      "sha256": "60bd9b5b9071cc16ed5b9d4d33ecf4eb509d24871fb9962a1b452da69f528cdf",
+      "bytes": 38386
+    }
+  ],
+  "originalFindingAssessments": [
+    {
+      "id": "role-default-autocomplete",
+      "originalSeverity": "P2",
+      "origin": "preexisting requirement omission",
+      "originalLikelihood": "high",
+      "status": "resolved",
+      "blocksScopedDelivery": false
+    },
+    {
+      "id": "role-default-toggle",
+      "originalSeverity": "P2",
+      "origin": "preexisting requirement omission",
+      "originalLikelihood": "high",
+      "status": "resolved",
+      "blocksScopedDelivery": false
+    },
+    {
+      "id": "role-small-toggle-text",
+      "originalSeverity": "P2",
+      "origin": "preexisting requirement omission",
+      "originalLikelihood": "high",
+      "status": "resolved",
+      "blocksScopedDelivery": false
+    },
+    {
+      "id": "role-empty-description-leading",
+      "originalSeverity": "P2",
+      "origin": "preexisting requirement omission",
+      "originalLikelihood": "high",
+      "status": "resolved",
+      "blocksScopedDelivery": false
+    }
+  ],
+  "otherApplicableUXSections": [
+    ".agents/skills/ux/references/read.md:228 option visibility",
+    ".agents/skills/ux/references/feedback.md:1 loading visuals including nested whole-surface subsection"
+  ],
+  "productScope": {
+    "base": "7a0db38fc2a78dc0c145ce180bcd638ae9dfeb6c",
+    "head": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+    "tree": "19d705fbabeff164295a6b3e23245a734867b9ac",
+    "changedPathCount": 81,
+    "frozenManifestSHA256": "5ef27c785411b18e21ad09d136160f8667f971d0790510b5356999a7d023d106",
+    "patchSHA256": "a69443dc6baff5b5c5326fcedd6c13a15b25f899983f47d5dd9fc0390d251fe7",
+    "allWholeSourceIdentitiesVerified": true,
+    "beforeAbsentPaths": [
+      "src/components/reui/number-field.module.css",
+      "src/features/GroupAvatar/GroupAvatar.module.css",
+      "src/features/WorkSurface/WorkSurface.module.css"
+    ],
+    "necessaryCallerCount": 10
+  },
+  "prunedDimensions": {
+    "new-feature": "no new product/operator/platform capability"
+  },
+  "quickChecklists": [
+    {
+      "dimension": "ai-coding-bad-habits",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/ai-coding-bad-habits.md",
+        "sha256": "b81f2586dccdbf3bb0ee026e1037352cf742a090b5016e29a7b7a5745166f289",
+        "bytes": 9397
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "2aa2c917e13cf75a1d7363fbae68bc8de4d9d0065edbad96d794328cea26e9e3"
+    },
+    {
+      "dimension": "code-style",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/code-style.md",
+        "sha256": "f912d87965ef3604de3422d6e8d3fa41c18dd199827ae866d491666d8b7a58c4",
+        "bytes": 3239
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "26512e5416393fb6765fda50d7540482008c5b62c494396aa25ea54524d13561"
+    },
+    {
+      "dimension": "logic",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/logic.md",
+        "sha256": "48d689f19512fb23d13b8c56750b922e3d450bdc5efc2517b0f862f3d0415864",
+        "bytes": 3642
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "881f82aa3e301ce59878db47e718eeb7e7ee1d7f2812f2cad3346b5dea91c1f0"
+    },
+    {
+      "dimension": "business-logic",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/business-logic.md",
+        "sha256": "fcd314274573f4bd5dbc018d2217418105740fe2bbe973937f884c6890599764",
+        "bytes": 3723
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "7e85fa413b9609a66f6239feb6af644b037a4ec6c43ae5c3f142174c0a789d29"
+    },
+    {
+      "dimension": "reuse-architecture",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/reuse-architecture.md",
+        "sha256": "6ef9cf0f6092cce0a5a2b40a5d37e11e1f7be6166138eac12abb716770991df2",
+        "bytes": 8108
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "63aa395cfd2b34a39b4d7d5903443eb5cddd338684ebe9896d4bc27a0dfc2843"
+    },
+    {
+      "dimension": "performance",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/performance.md",
+        "sha256": "526d73f26a6bea2f4f118821b08d98e38165199d00f74e66398bf4edf881a485",
+        "bytes": 4320
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "a6f17f3f8ec3bab905640cbec18caee907f362625425579f7c451d9013a26977"
+    },
+    {
+      "dimension": "release-risk",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/release-risk.md",
+        "sha256": "f175009c9ec11e8e6ac739ea0e84cfc582b555aacb4552fa01ffad5c1cffe05d",
+        "bytes": 5637
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "7018e79f4c28dba8a0d4f3a9d58e04605fb12befd21e27ef8dd35491ce2124d5"
+    },
+    {
+      "dimension": "security",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/security.md",
+        "sha256": "8311e52edecee6aae9f705581737332ae33854119b08514cc51a796d02db5f41",
+        "bytes": 2657
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "f656f4dfd4547ae63b847d6ef5f0f990a9cf7cc79e9af9e6f9068de20bc4c9e4"
+    },
+    {
+      "dimension": "compatibility",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/compatibility.md",
+        "sha256": "8a5f7f26d6103454938068da9c305ea04b5e24a53ebd8044aade99741af2373c",
+        "bytes": 5307
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "9d43139cd34764060e252a29dc0c9391d23bf6af4c9a14dc8cfa5d8aa5dbd785"
+    },
+    {
+      "dimension": "ux",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/ux.md",
+        "sha256": "1841351f1ea7d31098f7e1cc9d8e4059ac14fe7bf7b9e7cf96222a0e5a4410b8",
+        "bytes": 2348
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "17a76b8f7cc0775a1496e631c5b9d3c99966939893f09ce1aecf27dcc743468f"
+    },
+    {
+      "dimension": "observability",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/observability.md",
+        "sha256": "9cc5b7e4baf1ad425b6e660b8edbd99a88e190a0ed859fe23dfc16ec9f76658f",
+        "bytes": 7928
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "8f73da55ae7bd8064a2a01d3ddd869393d05be943071984a04cd44b5debeeb50"
+    },
+    {
+      "dimension": "workflow",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/workflow.md",
+        "sha256": "4e6be366adde960606ee29ae31ff2d9c97077a2512479ac493dedb1b2e753479",
+        "bytes": 2444
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "f8fa82d72adb4b5b3838de70cc9aaf60a991bbef984ff4332b5105c328a7877d"
+    },
+    {
+      "dimension": "skill-freshness",
+      "source": {
+        "path": "/workspace/orvilo1/.agents/skills/deep-review/references/dimensions/skill-freshness.md",
+        "sha256": "5f60d981783b167a85448055805d55677c469931e30a30011cf6deb5b500618b",
+        "bytes": 2001
+      },
+      "onlyQuickChecklistRead": true,
+      "nestedSubsectionsIncluded": true,
+      "quickSectionSHA256": "87af1ca2a9a739c99dd30451ec6c11c9c7542ab988993af6c363cdd24984ffc5"
+    }
+  ],
+  "releaseChecks": [
+    "Parent verifies all required checks on delivered PR781 head before normal merge; includes documentation and PR-only checks."
+  ],
+  "reviewBudgets": {
+    "Source47": {
+      "INITIAL": 1,
+      "FINAL": 1,
+      "maxINITIAL": 1,
+      "maxFINAL": 1,
+      "remainingFINAL": 0
+    },
+    "New24ExtendedTo34": {
+      "INITIAL": 1,
+      "FINAL": 1,
+      "maxINITIAL": 1,
+      "maxFINAL": 1,
+      "remainingFINAL": 0
+    },
+    "old780MainVisualBudgetsUntouched": true,
+    "SDKFinalBudgetUntouched": true,
+    "newLogicalRequirementInvented": false,
+    "additionalFinalRoundAuthorized": false
+  },
+  "reviewer": "/root/final_review_current81",
+  "reviewerExecution": {
+    "Node": 0,
+    "Bun": 0,
+    "compiler": 0,
+    "browser": 0,
+    "tests": 0,
+    "install": 0,
+    "credentials": 0,
+    "sourcePacketEdits": 0,
+    "productEdits": 0,
+    "commits": 0,
+    "pushes": 0,
+    "childAgents": 0,
+    "readOnlyGitAndPythonIdentityAnalysis": true
+  },
+  "schema": "independent-current81-light-final-source-and-recorded-native-composition-v1",
+  "status": "READY / STOP"
+}

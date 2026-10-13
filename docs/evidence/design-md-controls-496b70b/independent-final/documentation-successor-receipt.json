@@ -1,0 +1,420 @@
+{
+  "all81ProductInstructionBytesUnchanged": true,
+  "changedPaths": ["docs/development/ui-migration-recovery.md"],
+  "currentStatus": "",
+  "docAfterSHA256": "ad17c0a2dddc9258904ac3c5acee693a9c33cd15051ded07d86bc7d14b705d5d",
+  "documentationOnly": true,
+  "documentationReadAndNoFinding": true,
+  "documentationSuccessorHead": "f7a97a528489e5e4d6e85431365ded85568346fb",
+  "newReviewRoundCreated": false,
+  "patchSHA256": "a1fd223d3b0d15e05cafcbe81b89a38a53983d6cce63431d5494ebfa5c2d49ae",
+  "reviewedProductHead": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+  "sourceBindings": [
+    {
+      "path": ".agents/skills/react/SKILL.md",
+      "sha256": "7a638362d740fc2b897e12f7d95cfdd19066994bf35c59da76485c8f6a7431b3",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "DESIGN.md",
+      "sha256": "60bd9b5b9071cc16ed5b9d4d33ecf4eb509d24871fb9962a1b452da69f528cdf",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "apps/share/src/features/topic/SharedMessageList.tsx",
+      "sha256": "ae1d6bafb7140d49cfacafcb3862df79eb9e2b7db4d16d9fe3842986f7a5ae55",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx",
+      "sha256": "43c995a1097a98ea736b908335001ed7a462b4d7d98aa91396a313cf32e70124",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx",
+      "sha256": "c9057d9a8c714f0a3d966b8f893b5580f5ef195280362db209095a64786637ab",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/builtin-tool-local-system/src/client/components/FileItem.tsx",
+      "sha256": "4c8affd5d7df7c4254660c04f31b752a29e6d9d7ff4dd506c43e141eb08093d7",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx",
+      "sha256": "d3cdfef8e0ee8786d6836219a853ca34dc215bc2e598fed097d54544453c9f30",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx",
+      "sha256": "c181ddaa01c992626e31c2a59446948edeb5bdf1067dab53d91e3ee103a57e20",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/builtin-tool-task/src/client/Render/EditTask/index.tsx",
+      "sha256": "787cc4632fa52b5a0d7fb2d8350b767cb37f7ed0fcb3b15c80027d10bc0b8fd2",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx",
+      "sha256": "95035dc78430b7aeadc6564b439a4251800117afb8b677368ef9b792ec966c86",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx",
+      "sha256": "9e1d49162ad77b5dac93a952a423502827ac06905264a6b4a503c51395e81837",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx",
+      "sha256": "8dc04dd86ef5247b137e927d4dc61e9ecc6faed070ba322bbba2d789b0f70790",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx",
+      "sha256": "3a42cd715d0c81184bac12312342ac7858f3b292f1282dc7025002ad1d51a5c8",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx",
+      "sha256": "419ab314365b9043b9ff87f1d0efdff11a34caf8ca4e7ccf945bb6512741014a",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx",
+      "sha256": "70ff293b42e8ca806860f2695bbc27b512491bdfc1333c6ef9cb993637bb2883",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx",
+      "sha256": "11037fa182c586356cf215a9102296b5dfaf0c581deadbd86b2c771fd17d1867",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "packages/shared-tool-ui/src/components/FileChangeStats/index.tsx",
+      "sha256": "90890437d46f008cedbb05edf15edb5617d05bd9a0e11e259d011b806b89504e",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/app/globals.css",
+      "sha256": "7f701be47135d88855e1a96027eb374b54d316acae77d030338bf6e409f2dedf",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/business/client/features/ShareShell/index.tsx",
+      "sha256": "17ff30e1a2ac7c3106b2223dc67b36bfe8988c5bd63a8f31db267ab8c508a5c3",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/AgentRuntimeIcon.tsx",
+      "sha256": "b6b8ae001d256b618e2d81863031b51cc39f622a674700465dbe486b22bde734",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/Avatar/index.test.tsx",
+      "sha256": "372aceed0f64252fedc9fc4081ef7b5bf54be818d877d63007e5f5d76372b6b8",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/Avatar/index.tsx",
+      "sha256": "261de95aa44d5a89b498484e2c0b40aa3cee67ac0072def90c6055ff5e39a572",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ListSkeleton/index.tsx",
+      "sha256": "eed9fb5bb383c188a3b939d7295a7653bcb602b44fa71085aacafb1580708f3b",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/Select/index.tsx",
+      "sha256": "0ece6746087aff9d2d2870a54ac6413b257bd52a8b30e2320118b52ac0ad03a6",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/reui/autocomplete.tsx",
+      "sha256": "e4ec1577a6ea797a0d04d4ba5da9240a90537c0276744666a344572f1f075446",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/reui/code-block/code-block.tsx",
+      "sha256": "10596fe854c5923fd9aa9708b134d55b6bb8d5dbcdefe55c565f58de731335bb",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-cell-selection.tsx",
+      "sha256": "b1177706140338d0a25147628c919b4a2fb5fbb4cab8a2d3387cb512b04cb69a",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-column-header.tsx",
+      "sha256": "1757c3a0a8116ea011f5857b4a6df3f91d7d878a7f1f002da72f094000d768e5",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/reui/data-grid/data-grid-table.tsx",
+      "sha256": "76c36a29bc7b17655618ae1506a4be1960640fe493e33680269410b7b61a6646",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/reui/number-field.module.css",
+      "sha256": "bcb063931c2eb736616ecb88132558673276619ae954cd25098f6ff20108a2da",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/reui/number-field.tsx",
+      "sha256": "7eae40a487e0a663adee7fc830905b429b6b9d8a615322008d32fb9e63c006c4",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/accordion.tsx",
+      "sha256": "441d979992745f5720b13a15d4df4c882b70de506b2a4d6485f86d71b2be871e",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/button-group.tsx",
+      "sha256": "16fb366e719e412f1bc952acff14ab205200632a0cc83c88471ed354317192cc",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/code-block.tsx",
+      "sha256": "10596fe854c5923fd9aa9708b134d55b6bb8d5dbcdefe55c565f58de731335bb",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/combobox.tsx",
+      "sha256": "a0391e62703862cb177d807d00d2542ce1d2d95fe25411745a001a65a3330558",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/empty.tsx",
+      "sha256": "c13e6910c5764dc910a5fa959d0985b315cd326ef8231cd7308c80359197f5c3",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/field.tsx",
+      "sha256": "0a0658fdc1de08c2ce1d1d74458110dd6b73804d7fbfdd5d6106a3bb67a6ecc9",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/item.tsx",
+      "sha256": "6c35f06c97e954876f0f6710e379bbea983984576aad92970a454c3818fffc31",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/label.tsx",
+      "sha256": "87108ffaf0a4ee6bb30dc175abad84ecb7b8d2cc90b9f7201879811896346004",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/tabs.tsx",
+      "sha256": "1c1a8dcfcb9f83bc150fe44a7aad7396a87bf7e3cb139b681a15fbbc93e9e7cf",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/textarea.tsx",
+      "sha256": "3df2e0e4adfc138c6ec3636c7fe42b73038df79bee541b4b1dd1188ca4b79668",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/toggle-group.tsx",
+      "sha256": "53f6a2491b096f777698f9e2164e5aff80442c75ce6944ea54b96f7e5693f3b5",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/components/ui/toggle.tsx",
+      "sha256": "fe5b52da153c276d821536b8b6a87ce6c59d19ba5013d183262e7ce9ba62572a",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentGoals/GoalDetailPage.tsx",
+      "sha256": "22e25775058c251ba2848a2cb8e5dd80c9a491773880d3444ff7ff2049476248",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/Graph/index.tsx",
+      "sha256": "34cc1f85ec53b200ddca632c308d458d816cba45d54789442caffd5243bb280b",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentGoals/ProcessControl/shared.tsx",
+      "sha256": "6fc367e235712a3ab266157cdc83952e1da9cbb724ddffc4118672627e9668e2",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentHome/AgentInfo.tsx",
+      "sha256": "8868965f24c96ec0944c5ee3bb908f795e9b2db50c7399ca3a20d3e84d74ef62",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx",
+      "sha256": "28a0b0052a5d9cb512aba36806474c5dce1b6222053d5e273584ab860ddf034d",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts",
+      "sha256": "0ddafcc192780cd6f8363f6e66cae625e6c395cabed71a697e6ff3f4079e7b9b",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx",
+      "sha256": "86000b70f0141204d99063e69b5887413b780d40b67a27cd52572916b2dcc6c3",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentUsage/UsageTrendChart.tsx",
+      "sha256": "39b9be3afc8becb1023fdc89b3ee81704039fc0873573089d3333ee620267ea6",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/AgentViewAll/AgentViewAllPage.tsx",
+      "sha256": "2294a6bb0ded14a8926f46e663886e471aec71f33c9e07e1d2a4ff9cd5bcd680",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Auth/MarketAuthCallback/index.tsx",
+      "sha256": "9887111bf9931c94ed87d4849d28e1227efe402c5f817fd5764e33680d58a788",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Auth/OAuthCallback/Social.tsx",
+      "sha256": "1b3fa2d3bd0386f2fb9ee2a9d370d23060e75b04dab9fa25cfca36561741272d",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Auth/OAuthCallback/Success.tsx",
+      "sha256": "aa902d80123646040fbe60c9deeb1e7022c3e8af2d25321cfeedd63b13647275",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Auth/OAuthConsent/ClientError.tsx",
+      "sha256": "abd91da4efd79221d30f51d25b51b6ac5e4f96215cfb06f7daaeb951e6807124",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Auth/OAuthDevice/DeviceSuccess.tsx",
+      "sha256": "33dbb3b6d963cfa9029e7d8c704161b4c3ada442cbeb7f24da4c134d3f4917a8",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Automations/AutomationRunsPage.tsx",
+      "sha256": "040c8d7d31e9b11ef310852adb17c370200adccce076c73f6e52d10e0e0012c1",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Automations/AutomationTriggerDraft.tsx",
+      "sha256": "85c61a5b7c39f610dae8b91dfaf4b82207a0f7e996f29870555b4f13607fb3bf",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/DailyBrief/BriefCardSkeleton.tsx",
+      "sha256": "7d2a9c78a1aa50ffd36f30fec73ba6db4f436e69f20295dac379336a2bf9202f",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/FileViewer/NotSupport/index.tsx",
+      "sha256": "67bc2aa8420fcee0f28fa12d77fc310b5aa953f510cf9904c1228aba515743c7",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/GroupAvatar/GroupAvatar.module.css",
+      "sha256": "d72a99362de457d0d9fce492d14185a2ef64e420b4232718307ba9ff098beaa8",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/GroupAvatar/index.tsx",
+      "sha256": "393b627351a12621e62f08abe2de8681af1d3e5e5941a0c0144efcbda313a650",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/HomeInbox/index.tsx",
+      "sha256": "2bb111bb835e7df992badf87b1649e3f205bec33f06ebed92fdfa55301ddb38a",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/MCP/MCPDetail/Loading.tsx",
+      "sha256": "c874454c4474cac6a7c3f513f0fe4c9a6518b156c8442c3ccfb057a6e7099d7b",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Members/MembersPage.tsx",
+      "sha256": "95a4c5d2779f0b1c341b7588115b8edb5c6483f89a2857d2595eae27da359ee0",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Portal/LocalFile/Body.tsx",
+      "sha256": "49786413539bb9bdd7c74701a29fdb4818aa6807c0cd9532f2d6a79e48b9c523",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/SheetGrid.tsx",
+      "sha256": "9cb10c56edcb410eb9406919d1642734d603280ddce3ba1860221186dee2a7df",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/XlsxPane.tsx",
+      "sha256": "157c97ccad72ce9935414096f29c50c22f61cb75ec6f4579c125b11116e7c44e",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Portal/LocalFile/xlsx/styles.ts",
+      "sha256": "050543a7319af7af8e45977f6fefba8750b32ce774e70ccb27b7142d16e8a3a4",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Projects/FilterMenu/FilterMenuPopover.tsx",
+      "sha256": "1a3f2a83b853404a1f21a40deda90373eb4296d289194d1fcdc7080f0ab5f182",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Projects/Layout/ProjectIssueProgress.tsx",
+      "sha256": "a4c15b269a6ae8e119b0eac733b8e5ec4e6ea3042ced80f351c8221e60957c2c",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/ReUIShell/WorkspaceSwitcher.tsx",
+      "sha256": "da016e544426360d6ae4698b5db18c6c3deb7d53d43ba7e47b6b2226f3e8ca1c",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/Reviews/ReviewPullRequestPage.tsx",
+      "sha256": "3207a8d3a1ecb7161176f538f086bc64f794803bb18bb82c6ddacca778f8e79c",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/SelfLearning/ExperienceList/index.tsx",
+      "sha256": "e7548edfe1832c67654e3208ed98af3f3e1a4531b46a13299abf125f33ffe91d",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/SelfLearning/LessonDetail/index.tsx",
+      "sha256": "4d83817af14402faafae100712631d3b8c3acb0600cbdeb0356031dc747a313b",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/WorkSurface/WorkSurface.module.css",
+      "sha256": "5d8e38a0dddcc9833527ff5d457d53848fe7d773d3e89a6743499b03361d7512",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/features/WorkSurface/WorkSurface.tsx",
+      "sha256": "f0762ea7325ceb4af16d1c63c6f45dcd86e5fc88d7e385f7b6e22f4786d7a16c",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx",
+      "sha256": "7a2b1b62276099547ecae70e954713bfb2975c7f21a721b0c442210f18daf9c2",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx",
+      "sha256": "1e5fbb34d3672ab13516ca056651be9ccdb0714b981c3b3870b15f046aa5247b",
+      "equalsReviewed496": true
+    },
+    {
+      "path": "src/styles/roleClassForms.test.ts",
+      "sha256": "dce727b550367324b8a1b74f3655443ebe53151e017ad5747ebd1c910190f0c4",
+      "equalsReviewed496": true
+    }
+  ],
+  "successorCIClaimedFrom496": false
+}

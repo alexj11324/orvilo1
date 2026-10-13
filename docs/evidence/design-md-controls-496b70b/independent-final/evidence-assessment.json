@@ -1,0 +1,2076 @@
+{
+  "ciReceipt": {
+    "path": "/tmp/orvilo-current496-push-ci-actual-api-receipt.json",
+    "sha256": "26eb3c84f684ee64d97d13e95db5c1dbedc292fd82e0102ac8ae33383e8fddd8",
+    "bytes": 44694
+  },
+  "contexts": [
+    {
+      "label": "light-1240-16",
+      "full005ObservedFactsEqualFocused006": true,
+      "rawOrderedCascadeAndSavedOfflineFactsEqual": true,
+      "strictDecodedBothAxesExact": true,
+      "allFourActualGUIConditionsPassed": true,
+      "zeroClipRegion": true,
+      "actualProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-16-focused-project-sr-only-proof.json",
+        "sha256": "caa5ab68f0e7499a1ad7f06b8bab08875b575b60806896e4779acbf049bd136d",
+        "bytes": 6228
+      },
+      "actualKeyboardCapture": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-16-focused-project-sr-only-keyboard.png",
+        "sha256": "35eb5f313816a2ead8a9d84ab597b0081854c79182ab8a750f30664ef7f38f65",
+        "bytes": 32493
+      },
+      "native005FailureKept": true,
+      "native006FailureKept": true
+    },
+    {
+      "label": "light-1240-20",
+      "full005ObservedFactsEqualFocused006": true,
+      "rawOrderedCascadeAndSavedOfflineFactsEqual": true,
+      "strictDecodedBothAxesExact": true,
+      "allFourActualGUIConditionsPassed": true,
+      "zeroClipRegion": true,
+      "actualProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-20-focused-project-sr-only-proof.json",
+        "sha256": "e3ad8f4193e26bb4bab089e4998513a1029ebc457a2b32b88890662fda488bc7",
+        "bytes": 6228
+      },
+      "actualKeyboardCapture": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-20-focused-project-sr-only-keyboard.png",
+        "sha256": "c019742ef201829166e541a70919b76b068430424655aa04a0753c179e50aad7",
+        "bytes": 37493
+      },
+      "native005FailureKept": true,
+      "native006FailureKept": true
+    },
+    {
+      "label": "dark-1240-16",
+      "full005ObservedFactsEqualFocused006": true,
+      "rawOrderedCascadeAndSavedOfflineFactsEqual": true,
+      "strictDecodedBothAxesExact": true,
+      "allFourActualGUIConditionsPassed": true,
+      "zeroClipRegion": true,
+      "actualProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-16-focused-project-sr-only-proof.json",
+        "sha256": "a4357c530d7990389ddb0511f116238fe6b2375384422166a9c1fb3072e0c9b6",
+        "bytes": 6228
+      },
+      "actualKeyboardCapture": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-16-focused-project-sr-only-keyboard.png",
+        "sha256": "c9ce5f6d184f5cf039aefe1c43f644ba7f084c014f991114b062aad79cbaea70",
+        "bytes": 31631
+      },
+      "native005FailureKept": true,
+      "native006FailureKept": true
+    },
+    {
+      "label": "dark-1240-20",
+      "full005ObservedFactsEqualFocused006": true,
+      "rawOrderedCascadeAndSavedOfflineFactsEqual": true,
+      "strictDecodedBothAxesExact": true,
+      "allFourActualGUIConditionsPassed": true,
+      "zeroClipRegion": true,
+      "actualProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-20-focused-project-sr-only-proof.json",
+        "sha256": "0170ba48b2a67733eb65d4cc40bd94283e2edb64c82dacb5a14febe579c44601",
+        "bytes": 6228
+      },
+      "actualKeyboardCapture": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-20-focused-project-sr-only-keyboard.png",
+        "sha256": "bd9e904f8d36262543c273f7be4d12840292e164f4ff8dce82dd46e8c3c7a69d",
+        "bytes": 36830
+      },
+      "native005FailureKept": true,
+      "native006FailureKept": true
+    },
+    {
+      "label": "light-390-16",
+      "full005ObservedFactsEqualFocused006": true,
+      "rawOrderedCascadeAndSavedOfflineFactsEqual": true,
+      "strictDecodedBothAxesExact": true,
+      "allFourActualGUIConditionsPassed": true,
+      "zeroClipRegion": true,
+      "actualProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/light-390-16-focused-project-sr-only-proof.json",
+        "sha256": "617fcc0a4d03a6541a7766f114969466caa3ec6db7231368b209ab175672941f",
+        "bytes": 6228
+      },
+      "actualKeyboardCapture": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/light-390-16-focused-project-sr-only-keyboard.png",
+        "sha256": "f481700d1bfbab60d93986d49b781ea4e76bde9f8728f788c732cc42ba20f114",
+        "bytes": 27690
+      },
+      "native005FailureKept": true,
+      "native006FailureKept": true
+    },
+    {
+      "label": "light-390-20",
+      "full005ObservedFactsEqualFocused006": true,
+      "rawOrderedCascadeAndSavedOfflineFactsEqual": true,
+      "strictDecodedBothAxesExact": true,
+      "allFourActualGUIConditionsPassed": true,
+      "zeroClipRegion": true,
+      "actualProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/light-390-20-focused-project-sr-only-proof.json",
+        "sha256": "d2873566c5c446bb1e86ccb0a940666a146c98637e63f1d43124d666788ce1db",
+        "bytes": 6228
+      },
+      "actualKeyboardCapture": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/light-390-20-focused-project-sr-only-keyboard.png",
+        "sha256": "7cf6ed67898fe1bc9ec40c8ecca5d6ed372642d6e3b950265d34ff38c2b2ab51",
+        "bytes": 29892
+      },
+      "native005FailureKept": true,
+      "native006FailureKept": true
+    },
+    {
+      "label": "dark-390-16",
+      "full005ObservedFactsEqualFocused006": true,
+      "rawOrderedCascadeAndSavedOfflineFactsEqual": true,
+      "strictDecodedBothAxesExact": true,
+      "allFourActualGUIConditionsPassed": true,
+      "zeroClipRegion": true,
+      "actualProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-16-focused-project-sr-only-proof.json",
+        "sha256": "c1a9ce4e256ecd7f942f15fd917a885f5aa8655ad38d077b4bd6616accc94843",
+        "bytes": 6228
+      },
+      "actualKeyboardCapture": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-16-focused-project-sr-only-keyboard.png",
+        "sha256": "f5c29f460c11018570f653b17efff3d93c6376a680fd94916567e22828997b2f",
+        "bytes": 26961
+      },
+      "native005FailureKept": true,
+      "native006FailureKept": true
+    },
+    {
+      "label": "dark-390-20",
+      "full005ObservedFactsEqualFocused006": true,
+      "rawOrderedCascadeAndSavedOfflineFactsEqual": true,
+      "strictDecodedBothAxesExact": true,
+      "allFourActualGUIConditionsPassed": true,
+      "zeroClipRegion": true,
+      "actualProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-20-focused-project-sr-only-proof.json",
+        "sha256": "dc8ae781bc5ebccf90f80939f121aebc1c505f6ef407045672a6475273dc6b8e",
+        "bytes": 6228
+      },
+      "actualKeyboardCapture": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-20-focused-project-sr-only-keyboard.png",
+        "sha256": "278ae8f9e52070e779626ee4aff819080081d4637d9ba70ec895372232739313",
+        "bytes": 29402
+      },
+      "native005FailureKept": true,
+      "native006FailureKept": true
+    }
+  ],
+  "coverageClarification": {
+    "sourceBindingBoundary": "Native bindings cover34 exact scoped files from the fixture and its configuration. Remaining pure role owners are source-reviewed, not individually runtime-exercised; all81 owner hashes independently match immutable Git. The supplied component-fixture scope does not imply routed/native coverage for every owner.",
+    "unboundScopePathsAreCoverageLimits": true,
+    "unboundPathAssumptionNotReportedAsDefect": true,
+    "initialIdentityToolUnsupportedAssumptionCount": 88
+  },
+  "decoderExecutedByReviewer": false,
+  "electronExecutedByReviewer": false,
+  "errors": [],
+  "focused006": {
+    "passed": false,
+    "checks": 64,
+    "passedChecks": 56,
+    "failedChecks": 8,
+    "report": {
+      "path": "/tmp/orvilo-native-project-sr-only-006/runtime-report.json",
+      "sha256": "2243c1b23d476a71f4aa601d42eb83cbcc15cb4c8aa8f53aa35d4df8da3ebd60",
+      "bytes": 168869
+    },
+    "execution": {
+      "path": "/tmp/orvilo-native-project-sr-only-006/execution.json",
+      "sha256": "fb938bd28f893580b1bb128437e3ad7451fdffe84343ab77ae69cb439c244e19",
+      "bytes": 2251
+    },
+    "captureCount": 8
+  },
+  "full005": {
+    "passed": false,
+    "checks": 1552,
+    "passedChecks": 1544,
+    "failedChecks": 8,
+    "report": {
+      "path": "/tmp/orvilo-native-design-md-005/runtime-report.json",
+      "sha256": "fab9f9a07100af158ed8ed9ad9e0e8c5f6f342a11a413d2dcf80862fa786f3ed",
+      "bytes": 1782229
+    },
+    "execution": {
+      "path": "/tmp/orvilo-native-design-md-005/execution.json",
+      "sha256": "4d92c5c9a4bcdde8c24bd30f254cb1cbc60ebf82743c6f7b513c3f7554700fed",
+      "bytes": 2332
+    },
+    "captureCount": 136,
+    "captureHashes": [
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-controls.png",
+        "sha256": "da926e1775f99bbafb7a59c5f594e01e64dd9a2f560c200133bfad05dd334d5e",
+        "bytes": 36296,
+        "expectedSHA256": "da926e1775f99bbafb7a59c5f594e01e64dd9a2f560c200133bfad05dd334d5e",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-wide.png",
+        "sha256": "14478c4bb61a0dec246ddb4ce267085d77e7624d6cc809b396c00113c588c2ee",
+        "bytes": 39129,
+        "expectedSHA256": "14478c4bb61a0dec246ddb4ce267085d77e7624d6cc809b396c00113c588c2ee",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-proxy.png",
+        "sha256": "68d0dc079ca49f450b1243debb0203979b4ba164a5d9cb7bc0558362c34b8d65",
+        "bytes": 51760,
+        "expectedSHA256": "68d0dc079ca49f450b1243debb0203979b4ba164a5d9cb7bc0558362c34b8d65",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-assignments.png",
+        "sha256": "e1496e8b9cfd2889bc5e78ba16eaa3420544583f6a0af7b1f07a0cf194290254",
+        "bytes": 67096,
+        "expectedSHA256": "e1496e8b9cfd2889bc5e78ba16eaa3420544583f6a0af7b1f07a0cf194290254",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-provider-clear.png",
+        "sha256": "6469e107b634b719272d7a2bb5f70621ee1cb29effaa3c14a6e8f50914c9821f",
+        "bytes": 7950,
+        "expectedSHA256": "6469e107b634b719272d7a2bb5f70621ee1cb29effaa3c14a6e8f50914c9821f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-dialog.png",
+        "sha256": "0a0c2e705761127048a0f9a7bcfb67916818e29fd0c7736da113f128f05279bb",
+        "bytes": 8210,
+        "expectedSHA256": "0a0c2e705761127048a0f9a7bcfb67916818e29fd0c7736da113f128f05279bb",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-code.png",
+        "sha256": "10beb36a6569f147cb67e789ba103223a34419ba8b3e1fd25f5af70ca86acb11",
+        "bytes": 19783,
+        "expectedSHA256": "10beb36a6569f147cb67e789ba103223a34419ba8b3e1fd25f5af70ca86acb11",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-sheet.png",
+        "sha256": "5f5e1dfe7948ccffd5927020c2ae866dcf5cf3a25801c9c469a882beb5d66ae4",
+        "bytes": 36453,
+        "expectedSHA256": "5f5e1dfe7948ccffd5927020c2ae866dcf5cf3a25801c9c469a882beb5d66ae4",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-graph.png",
+        "sha256": "86abd5de88157ee0d9fe2a01291729885c8adf2cb7aebd9efe560f214b1b3840",
+        "bytes": 32065,
+        "expectedSHA256": "86abd5de88157ee0d9fe2a01291729885c8adf2cb7aebd9efe560f214b1b3840",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-work.png",
+        "sha256": "1bd2fb7dbaad23b94346425f5d05f373f23b80dc9c9a07bc01ebb222dad33bd2",
+        "bytes": 6680,
+        "expectedSHA256": "1bd2fb7dbaad23b94346425f5d05f373f23b80dc9c9a07bc01ebb222dad33bd2",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-audio.png",
+        "sha256": "fa79d533ad20d7566b8d8826662a15c3d5354837be397cdb5767434c800ab63f",
+        "bytes": 8732,
+        "expectedSHA256": "fa79d533ad20d7566b8d8826662a15c3d5354837be397cdb5767434c800ab63f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-approval.png",
+        "sha256": "62775d9a47af20bb59c426093607335e08a94dc5a9e45871b70d6e69c5d062e1",
+        "bytes": 24945,
+        "expectedSHA256": "62775d9a47af20bb59c426093607335e08a94dc5a9e45871b70d6e69c5d062e1",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-typography.png",
+        "sha256": "0a68bfa1e01a20cf9671f65012cd5ad73e2c6f2d99ebd686d0d234bdc73b4a68",
+        "bytes": 32171,
+        "expectedSHA256": "0a68bfa1e01a20cf9671f65012cd5ad73e2c6f2d99ebd686d0d234bdc73b4a68",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-work-collection.png",
+        "sha256": "a631a4143caf521bda9ee8f0f992dcd42e040182b981ba8df44b869cb0b07d4c",
+        "bytes": 32096,
+        "expectedSHA256": "a631a4143caf521bda9ee8f0f992dcd42e040182b981ba8df44b869cb0b07d4c",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-work-document.png",
+        "sha256": "32a5da53cf0a9c1a5f945ad71b63acf053c10e7fbec1189b895d0cd875bdb17c",
+        "bytes": 60912,
+        "expectedSHA256": "32a5da53cf0a9c1a5f945ad71b63acf053c10e7fbec1189b895d0cd875bdb17c",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-md-ui.png",
+        "sha256": "c5e708981c7e195e416de6aba7583ece18880e8c90ae7c43a7038d71935e9ac0",
+        "bytes": 60932,
+        "expectedSHA256": "c5e708981c7e195e416de6aba7583ece18880e8c90ae7c43a7038d71935e9ac0",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-16-md-reui.png",
+        "sha256": "97a13a02206516726bdd2fae9dfb31ccc07f3fb983945681f9a535dcef01c2a0",
+        "bytes": 27176,
+        "expectedSHA256": "97a13a02206516726bdd2fae9dfb31ccc07f3fb983945681f9a535dcef01c2a0",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-controls.png",
+        "sha256": "8a9a3e5511c68fed5a2e3c0a3d01bdaedcb77c7c37f1ef8f544c845e8783f18a",
+        "bytes": 44702,
+        "expectedSHA256": "8a9a3e5511c68fed5a2e3c0a3d01bdaedcb77c7c37f1ef8f544c845e8783f18a",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-wide.png",
+        "sha256": "9f6c908c1d7390565d7f0761610bd15b66fce0b1e3191c2d571b3245ad05af6d",
+        "bytes": 48387,
+        "expectedSHA256": "9f6c908c1d7390565d7f0761610bd15b66fce0b1e3191c2d571b3245ad05af6d",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-proxy.png",
+        "sha256": "9a2b7dfeb233eb63bebe12096034ce460e4d4c2a96db177a6de1945b8b9d98e6",
+        "bytes": 63430,
+        "expectedSHA256": "9a2b7dfeb233eb63bebe12096034ce460e4d4c2a96db177a6de1945b8b9d98e6",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-assignments.png",
+        "sha256": "fb07ac993405ad7fa13025bd2295398e1d6ba8be4637e19b3db0e331daa5faf8",
+        "bytes": 84097,
+        "expectedSHA256": "fb07ac993405ad7fa13025bd2295398e1d6ba8be4637e19b3db0e331daa5faf8",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-provider-clear.png",
+        "sha256": "5fddd9a28dd0315b25e1f068b872c214b0d149222d3a7de50b4b8c8daa6b7004",
+        "bytes": 8418,
+        "expectedSHA256": "5fddd9a28dd0315b25e1f068b872c214b0d149222d3a7de50b4b8c8daa6b7004",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-dialog.png",
+        "sha256": "e7d42aa0ee1404e631d82efe1b56afb8bf33c573e39b1b111a2817616c6ec9dc",
+        "bytes": 8865,
+        "expectedSHA256": "e7d42aa0ee1404e631d82efe1b56afb8bf33c573e39b1b111a2817616c6ec9dc",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-code.png",
+        "sha256": "edc14c6e7c1515818cb78d87e289dd2a5c4fee3ce833ee04fa24ce1f17d7b098",
+        "bytes": 23230,
+        "expectedSHA256": "edc14c6e7c1515818cb78d87e289dd2a5c4fee3ce833ee04fa24ce1f17d7b098",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-sheet.png",
+        "sha256": "0875a37ed1debd9bbb7a2b019cf68aa19c5451f763fbfbcd2f0d0e89a984cbc3",
+        "bytes": 40279,
+        "expectedSHA256": "0875a37ed1debd9bbb7a2b019cf68aa19c5451f763fbfbcd2f0d0e89a984cbc3",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-graph.png",
+        "sha256": "9699e12e2c1f01179679c405226a41e9edbafa431c49fe0fa0238849243c186f",
+        "bytes": 39319,
+        "expectedSHA256": "9699e12e2c1f01179679c405226a41e9edbafa431c49fe0fa0238849243c186f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-work.png",
+        "sha256": "1bd2fb7dbaad23b94346425f5d05f373f23b80dc9c9a07bc01ebb222dad33bd2",
+        "bytes": 6680,
+        "expectedSHA256": "1bd2fb7dbaad23b94346425f5d05f373f23b80dc9c9a07bc01ebb222dad33bd2",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-audio.png",
+        "sha256": "a66de3391fde8bd0f24f2557dc5885b8672ab5404cd5ad7fb975583a00924ded",
+        "bytes": 9290,
+        "expectedSHA256": "a66de3391fde8bd0f24f2557dc5885b8672ab5404cd5ad7fb975583a00924ded",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-approval.png",
+        "sha256": "88cc4e81ac305273342f8f11311c35571539a124ba788e4d0ae8b33045617664",
+        "bytes": 27738,
+        "expectedSHA256": "88cc4e81ac305273342f8f11311c35571539a124ba788e4d0ae8b33045617664",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-typography.png",
+        "sha256": "b382f38e76a92b2b9af9dfb94646fe99bfacca707671c6d79528eaeda6bfa666",
+        "bytes": 35999,
+        "expectedSHA256": "b382f38e76a92b2b9af9dfb94646fe99bfacca707671c6d79528eaeda6bfa666",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-work-collection.png",
+        "sha256": "cc3f695705ddfba8d01e9853d3e0b191423e021945c4c7712111d902e9af6d47",
+        "bytes": 40976,
+        "expectedSHA256": "cc3f695705ddfba8d01e9853d3e0b191423e021945c4c7712111d902e9af6d47",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-work-document.png",
+        "sha256": "88d49edf717317caa74ece8bcbdc11dfc6405fe6c76f1722a774a9e3bd2d2dcc",
+        "bytes": 62384,
+        "expectedSHA256": "88d49edf717317caa74ece8bcbdc11dfc6405fe6c76f1722a774a9e3bd2d2dcc",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-md-ui.png",
+        "sha256": "da2829660b5ad84b05f032b8e258fbec9c56a59246217f599c275c6622fd217e",
+        "bytes": 74097,
+        "expectedSHA256": "da2829660b5ad84b05f032b8e258fbec9c56a59246217f599c275c6622fd217e",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-1240-20-md-reui.png",
+        "sha256": "7f730f96fb689c0768164437ccd9adf2a258c87c79ec58003631a98815df7adb",
+        "bytes": 32201,
+        "expectedSHA256": "7f730f96fb689c0768164437ccd9adf2a258c87c79ec58003631a98815df7adb",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-controls.png",
+        "sha256": "d7281fb8eb802e6c8261fc061c3e984bc131f2e9d01d260017e7ea4392f6dd71",
+        "bytes": 36503,
+        "expectedSHA256": "d7281fb8eb802e6c8261fc061c3e984bc131f2e9d01d260017e7ea4392f6dd71",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-wide.png",
+        "sha256": "c7ea90227749a07416a4301df1e08894fe821cfde62a8091732c9dabf81eeb08",
+        "bytes": 39331,
+        "expectedSHA256": "c7ea90227749a07416a4301df1e08894fe821cfde62a8091732c9dabf81eeb08",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-proxy.png",
+        "sha256": "c78441c10ea3c63cc751b5e9485c9034eba4a9dc2f451ef1daeebd743a5c23a8",
+        "bytes": 51996,
+        "expectedSHA256": "c78441c10ea3c63cc751b5e9485c9034eba4a9dc2f451ef1daeebd743a5c23a8",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-assignments.png",
+        "sha256": "fd95f241ff21f0f01762a0335e31908fc5f9c689a3301ea8223d212909451a04",
+        "bytes": 66320,
+        "expectedSHA256": "fd95f241ff21f0f01762a0335e31908fc5f9c689a3301ea8223d212909451a04",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-provider-clear.png",
+        "sha256": "1047603fdfd53596502f1e1bc3a7c8a32c7dbbebbf6ec189a4c6e1d8e6d338e7",
+        "bytes": 7925,
+        "expectedSHA256": "1047603fdfd53596502f1e1bc3a7c8a32c7dbbebbf6ec189a4c6e1d8e6d338e7",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-dialog.png",
+        "sha256": "a0bfe981d4892eafea1f03d695680af8d0eeef8b0bfa008d98e5f114783fc1b5",
+        "bytes": 8238,
+        "expectedSHA256": "a0bfe981d4892eafea1f03d695680af8d0eeef8b0bfa008d98e5f114783fc1b5",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-code.png",
+        "sha256": "e4fc50e9cac6bd5d04fbf72c430574afc25166ad1521951a59fdb3d6decfcc37",
+        "bytes": 19752,
+        "expectedSHA256": "e4fc50e9cac6bd5d04fbf72c430574afc25166ad1521951a59fdb3d6decfcc37",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-sheet.png",
+        "sha256": "dda7d9ec98a7d41a3cf3ed0e9a267b7a8be6834ccc602aad520364cc33642558",
+        "bytes": 36247,
+        "expectedSHA256": "dda7d9ec98a7d41a3cf3ed0e9a267b7a8be6834ccc602aad520364cc33642558",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-graph.png",
+        "sha256": "d874e07ada9ad4bdb4c786abfa9f9ea4acf42daeea8045f694d5039c99fb76c0",
+        "bytes": 31814,
+        "expectedSHA256": "d874e07ada9ad4bdb4c786abfa9f9ea4acf42daeea8045f694d5039c99fb76c0",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-work.png",
+        "sha256": "d32a0019e30c70a1905b8f97d4a922a79b332d12f1ffe3526b2ad6a11464bb84",
+        "bytes": 6672,
+        "expectedSHA256": "d32a0019e30c70a1905b8f97d4a922a79b332d12f1ffe3526b2ad6a11464bb84",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-audio.png",
+        "sha256": "f7722f5f08d6f481074f78e2fae27e894858d17ecf0166eb0270a129bca34a78",
+        "bytes": 9126,
+        "expectedSHA256": "f7722f5f08d6f481074f78e2fae27e894858d17ecf0166eb0270a129bca34a78",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-approval.png",
+        "sha256": "0ae2e7f658bfa5dd67c46c6b626d6e3fc9650fd135b6cf30ac267b6fc6e193ef",
+        "bytes": 23624,
+        "expectedSHA256": "0ae2e7f658bfa5dd67c46c6b626d6e3fc9650fd135b6cf30ac267b6fc6e193ef",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-typography.png",
+        "sha256": "a883053798d8b6963b00f8a6c74d2ba6ac44185d69b6ed3d235b0ccf2a54abc3",
+        "bytes": 32631,
+        "expectedSHA256": "a883053798d8b6963b00f8a6c74d2ba6ac44185d69b6ed3d235b0ccf2a54abc3",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-work-collection.png",
+        "sha256": "817c4089ddb8acee10065cb54a6344ec44e02e6dc85af50861cee49c96d30650",
+        "bytes": 32446,
+        "expectedSHA256": "817c4089ddb8acee10065cb54a6344ec44e02e6dc85af50861cee49c96d30650",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-work-document.png",
+        "sha256": "30ea1d04099a4a90118207c6bbf02d32c9eb65645d50a5117788b24683781665",
+        "bytes": 61033,
+        "expectedSHA256": "30ea1d04099a4a90118207c6bbf02d32c9eb65645d50a5117788b24683781665",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-md-ui.png",
+        "sha256": "0c3cf8489c166522a5de048146a86aab9787ee86d77fd12aff3e5555aee8da63",
+        "bytes": 61549,
+        "expectedSHA256": "0c3cf8489c166522a5de048146a86aab9787ee86d77fd12aff3e5555aee8da63",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-16-md-reui.png",
+        "sha256": "fa1c73c402e4665219fd58c912f13a2c23ab5defec761befee1ec76b23cf6dad",
+        "bytes": 27448,
+        "expectedSHA256": "fa1c73c402e4665219fd58c912f13a2c23ab5defec761befee1ec76b23cf6dad",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-controls.png",
+        "sha256": "d8c06bc5c7e6cc98692d0a6be82900bb662e8b5bf82165c8b93c85a6f8adf371",
+        "bytes": 44889,
+        "expectedSHA256": "d8c06bc5c7e6cc98692d0a6be82900bb662e8b5bf82165c8b93c85a6f8adf371",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-wide.png",
+        "sha256": "94b22b6c17dc64e07553d3574d7a063fc5e7917ef03713459f98bb2e0fcd7dc8",
+        "bytes": 48605,
+        "expectedSHA256": "94b22b6c17dc64e07553d3574d7a063fc5e7917ef03713459f98bb2e0fcd7dc8",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-proxy.png",
+        "sha256": "8c069e3d423bba5d944909da46ecd0bea30bb259b41c7a099195a2484f3f7e74",
+        "bytes": 63710,
+        "expectedSHA256": "8c069e3d423bba5d944909da46ecd0bea30bb259b41c7a099195a2484f3f7e74",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-assignments.png",
+        "sha256": "bcb98074872b9d9b0d8bacb2116b464993de1007b072a6917388ad555036216f",
+        "bytes": 83468,
+        "expectedSHA256": "bcb98074872b9d9b0d8bacb2116b464993de1007b072a6917388ad555036216f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-provider-clear.png",
+        "sha256": "27e037e725a4b847c5e4795409febd5c783625ceb72ff07105b4b8dca8ef8e42",
+        "bytes": 8429,
+        "expectedSHA256": "27e037e725a4b847c5e4795409febd5c783625ceb72ff07105b4b8dca8ef8e42",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-dialog.png",
+        "sha256": "2c482bdcdf46ed3d0f6a084cb0ac9a0c302faa2db209d8c1ca51fadfea48d436",
+        "bytes": 8878,
+        "expectedSHA256": "2c482bdcdf46ed3d0f6a084cb0ac9a0c302faa2db209d8c1ca51fadfea48d436",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-code.png",
+        "sha256": "815ac31c86851c36aec822fa1fb759aca22c411d26912f208d8cffd0133db1a9",
+        "bytes": 23198,
+        "expectedSHA256": "815ac31c86851c36aec822fa1fb759aca22c411d26912f208d8cffd0133db1a9",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-sheet.png",
+        "sha256": "9f5a8657d5df5e912691a24e09a49674573fe73d5fd3d985e3b3fc6f0ec3540c",
+        "bytes": 40083,
+        "expectedSHA256": "9f5a8657d5df5e912691a24e09a49674573fe73d5fd3d985e3b3fc6f0ec3540c",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-graph.png",
+        "sha256": "ef318ad1e57893c8e3bf3297518e983085829686a3205e8c4f8f693bc1fcfb2e",
+        "bytes": 39210,
+        "expectedSHA256": "ef318ad1e57893c8e3bf3297518e983085829686a3205e8c4f8f693bc1fcfb2e",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-work.png",
+        "sha256": "d32a0019e30c70a1905b8f97d4a922a79b332d12f1ffe3526b2ad6a11464bb84",
+        "bytes": 6672,
+        "expectedSHA256": "d32a0019e30c70a1905b8f97d4a922a79b332d12f1ffe3526b2ad6a11464bb84",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-audio.png",
+        "sha256": "f293fc7baefac3de7b79ed0d600b1a2f1114a52aa1fa33ba43b2bcd0a46ddaec",
+        "bytes": 9712,
+        "expectedSHA256": "f293fc7baefac3de7b79ed0d600b1a2f1114a52aa1fa33ba43b2bcd0a46ddaec",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-approval.png",
+        "sha256": "757181cdf75ce5a2943daf594d1ca1850657d592c23cc63358a1f3fde6605a62",
+        "bytes": 26675,
+        "expectedSHA256": "757181cdf75ce5a2943daf594d1ca1850657d592c23cc63358a1f3fde6605a62",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-typography.png",
+        "sha256": "7a7119ec089e55d7a98a3b9ecd4f7f33a2255e8e0a804b95adb83a8ac2238843",
+        "bytes": 36586,
+        "expectedSHA256": "7a7119ec089e55d7a98a3b9ecd4f7f33a2255e8e0a804b95adb83a8ac2238843",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-work-collection.png",
+        "sha256": "6be9d16ff83c5fe9aedafd3a037531d1fda38742163447f66195dcb23354111b",
+        "bytes": 40914,
+        "expectedSHA256": "6be9d16ff83c5fe9aedafd3a037531d1fda38742163447f66195dcb23354111b",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-work-document.png",
+        "sha256": "c21e3fa6229f8eec986ca15eda84b1d9094c8bbf2c62ca4991e8042f9e295cdf",
+        "bytes": 62523,
+        "expectedSHA256": "c21e3fa6229f8eec986ca15eda84b1d9094c8bbf2c62ca4991e8042f9e295cdf",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-md-ui.png",
+        "sha256": "91671b5978a90a1576a8a3d17ce0a16ffda2122953da4a64dbe54aa5f806a603",
+        "bytes": 74933,
+        "expectedSHA256": "91671b5978a90a1576a8a3d17ce0a16ffda2122953da4a64dbe54aa5f806a603",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-1240-20-md-reui.png",
+        "sha256": "78129bb4fe01108548c0835f0acbbdc0006dda484a24fa3784f385fea6cc440b",
+        "bytes": 32608,
+        "expectedSHA256": "78129bb4fe01108548c0835f0acbbdc0006dda484a24fa3784f385fea6cc440b",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-controls.png",
+        "sha256": "1b5c7b604196b68598f1d4b18997177edc529a239d1ccdffc66e2d9a3a1bc56e",
+        "bytes": 31489,
+        "expectedSHA256": "1b5c7b604196b68598f1d4b18997177edc529a239d1ccdffc66e2d9a3a1bc56e",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-wide.png",
+        "sha256": "2d62cde6121dafb19c8f4c310cbddfbf4e2f408f178056daf0d492914e570923",
+        "bytes": 33987,
+        "expectedSHA256": "2d62cde6121dafb19c8f4c310cbddfbf4e2f408f178056daf0d492914e570923",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-proxy.png",
+        "sha256": "9fb2d013abfb2c286790c40da4444215cb2481cb3118987e998712294160bd39",
+        "bytes": 41033,
+        "expectedSHA256": "9fb2d013abfb2c286790c40da4444215cb2481cb3118987e998712294160bd39",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-assignments.png",
+        "sha256": "ea06ffbf2e8397ff23a66ea159c2af59989692ba3919c5d450f5bc0388c7b6fd",
+        "bytes": 47281,
+        "expectedSHA256": "ea06ffbf2e8397ff23a66ea159c2af59989692ba3919c5d450f5bc0388c7b6fd",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-provider-clear.png",
+        "sha256": "7c1f85f66aac9e7a64407e9e6c7136bc40e6e90dba87447be6155cbd7dba04fc",
+        "bytes": 5400,
+        "expectedSHA256": "7c1f85f66aac9e7a64407e9e6c7136bc40e6e90dba87447be6155cbd7dba04fc",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-dialog.png",
+        "sha256": "c2a98fe6f3239690388745a21b7cd110cc29059f293f0ddbd2dbb0cf6016c38e",
+        "bytes": 5643,
+        "expectedSHA256": "c2a98fe6f3239690388745a21b7cd110cc29059f293f0ddbd2dbb0cf6016c38e",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-code.png",
+        "sha256": "33e933cd2b6602085e59bd87da48c55d4bb4b6518ff953e01443e12c6ccd705b",
+        "bytes": 16237,
+        "expectedSHA256": "33e933cd2b6602085e59bd87da48c55d4bb4b6518ff953e01443e12c6ccd705b",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-sheet.png",
+        "sha256": "8522e3e296fcb4482476a9fa90db37829ee059df792d353cfc92a84a94bb35a6",
+        "bytes": 8797,
+        "expectedSHA256": "8522e3e296fcb4482476a9fa90db37829ee059df792d353cfc92a84a94bb35a6",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-graph.png",
+        "sha256": "2cbd407bea43a58d1e7404f4908c9db4b2e95d1d03cf5058082dac6d1a02186f",
+        "bytes": 27015,
+        "expectedSHA256": "2cbd407bea43a58d1e7404f4908c9db4b2e95d1d03cf5058082dac6d1a02186f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-work.png",
+        "sha256": "102f5c3a2968b7d500ba4d350c215a2d7020b776a9f6dcb0158636c9e796ed35",
+        "bytes": 4237,
+        "expectedSHA256": "102f5c3a2968b7d500ba4d350c215a2d7020b776a9f6dcb0158636c9e796ed35",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-audio.png",
+        "sha256": "baafe78e3f37b137702debeb662d2edc5eccfe9ba57c0710e4737b373e3ae54c",
+        "bytes": 6002,
+        "expectedSHA256": "baafe78e3f37b137702debeb662d2edc5eccfe9ba57c0710e4737b373e3ae54c",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-approval.png",
+        "sha256": "f364f096e62909bbf816aecdbfcc61f9e6ccf000db3134d4ef04c85254364013",
+        "bytes": 21025,
+        "expectedSHA256": "f364f096e62909bbf816aecdbfcc61f9e6ccf000db3134d4ef04c85254364013",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-typography.png",
+        "sha256": "dc1596e4d6395af22f86cc30de1ed44c5882cc4706c7081a5fcd27cdf668d1eb",
+        "bytes": 27458,
+        "expectedSHA256": "dc1596e4d6395af22f86cc30de1ed44c5882cc4706c7081a5fcd27cdf668d1eb",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-work-collection.png",
+        "sha256": "2b0abded28b19a03d57bbc6dd67210df0b746e07db12f1f2bf8061db1f577b74",
+        "bytes": 26417,
+        "expectedSHA256": "2b0abded28b19a03d57bbc6dd67210df0b746e07db12f1f2bf8061db1f577b74",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-work-document.png",
+        "sha256": "b493644efdf59c6f67057e904a1629b6b5f04bf14a4d5b6296ad5988d26011f2",
+        "bytes": 38180,
+        "expectedSHA256": "b493644efdf59c6f67057e904a1629b6b5f04bf14a4d5b6296ad5988d26011f2",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-md-ui.png",
+        "sha256": "8b7aa15f1e28b5b2ff2c29cba92b585a2e213f6b5407c7862049d580f4b4ffab",
+        "bytes": 52851,
+        "expectedSHA256": "8b7aa15f1e28b5b2ff2c29cba92b585a2e213f6b5407c7862049d580f4b4ffab",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-16-md-reui.png",
+        "sha256": "2c90ca0be537448876fa53c4f68468097bbf9fff6657860d0bdaba3760438e0f",
+        "bytes": 22873,
+        "expectedSHA256": "2c90ca0be537448876fa53c4f68468097bbf9fff6657860d0bdaba3760438e0f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-controls.png",
+        "sha256": "b12c6226367923ea7b111e4a8af1b936875be214003407ebd11505288e05f6e7",
+        "bytes": 38147,
+        "expectedSHA256": "b12c6226367923ea7b111e4a8af1b936875be214003407ebd11505288e05f6e7",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-wide.png",
+        "sha256": "a787f5336a612357a918c75b92bae9d7dbe87b815588e61fda58127fa0d1362a",
+        "bytes": 41324,
+        "expectedSHA256": "a787f5336a612357a918c75b92bae9d7dbe87b815588e61fda58127fa0d1362a",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-proxy.png",
+        "sha256": "889fba4ebb8eea965afdaa357657f9f3b31c529512888ce4d8533d20c8cef99a",
+        "bytes": 42428,
+        "expectedSHA256": "889fba4ebb8eea965afdaa357657f9f3b31c529512888ce4d8533d20c8cef99a",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-assignments.png",
+        "sha256": "21a368922bb017b05cfdfef34a0da67be4c7cd557dc0c626d0a47759cb13721f",
+        "bytes": 51612,
+        "expectedSHA256": "21a368922bb017b05cfdfef34a0da67be4c7cd557dc0c626d0a47759cb13721f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-provider-clear.png",
+        "sha256": "769820c71d4450fc8132e045c1df3797272399fca45f9dd8a7df6698aae576bc",
+        "bytes": 5816,
+        "expectedSHA256": "769820c71d4450fc8132e045c1df3797272399fca45f9dd8a7df6698aae576bc",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-dialog.png",
+        "sha256": "879c614abd49ded43875d718bec2e61ca01ac9018fb25af95a56b3940e71e354",
+        "bytes": 6253,
+        "expectedSHA256": "879c614abd49ded43875d718bec2e61ca01ac9018fb25af95a56b3940e71e354",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-code.png",
+        "sha256": "aacc09632b903dc89aa1aef3438c67840affb7e0f467eb9f6519359516844611",
+        "bytes": 19113,
+        "expectedSHA256": "aacc09632b903dc89aa1aef3438c67840affb7e0f467eb9f6519359516844611",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-sheet.png",
+        "sha256": "abbd890aa61b48631860a19a917b5509d8ff80fcc5158384d10ee0e76e98c43f",
+        "bytes": 4167,
+        "expectedSHA256": "abbd890aa61b48631860a19a917b5509d8ff80fcc5158384d10ee0e76e98c43f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-graph.png",
+        "sha256": "0ee39cb72f19d01a1dc04c2c389cfe8080c2491ab939f1033279115f9755bfbd",
+        "bytes": 36310,
+        "expectedSHA256": "0ee39cb72f19d01a1dc04c2c389cfe8080c2491ab939f1033279115f9755bfbd",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-work.png",
+        "sha256": "102f5c3a2968b7d500ba4d350c215a2d7020b776a9f6dcb0158636c9e796ed35",
+        "bytes": 4237,
+        "expectedSHA256": "102f5c3a2968b7d500ba4d350c215a2d7020b776a9f6dcb0158636c9e796ed35",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-audio.png",
+        "sha256": "d6d1310835f25d1dfe8c052f5f280d7b94c857360d9aa9c6f6b263cf97a9b545",
+        "bytes": 6382,
+        "expectedSHA256": "d6d1310835f25d1dfe8c052f5f280d7b94c857360d9aa9c6f6b263cf97a9b545",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-approval.png",
+        "sha256": "94c913b076f68c9051121041483ab70b2639145f29dbb134295898ed2002353d",
+        "bytes": 24467,
+        "expectedSHA256": "94c913b076f68c9051121041483ab70b2639145f29dbb134295898ed2002353d",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-typography.png",
+        "sha256": "2beedc8c1f05d56cfa0af5a2e7a4d6aa4f862ea173b6df7b00d9efc673716daa",
+        "bytes": 32004,
+        "expectedSHA256": "2beedc8c1f05d56cfa0af5a2e7a4d6aa4f862ea173b6df7b00d9efc673716daa",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-work-collection.png",
+        "sha256": "7f1e723f6414ac99d12e99d934f30004c1cc3c18ca27a9113e57ff7ad49106db",
+        "bytes": 34924,
+        "expectedSHA256": "7f1e723f6414ac99d12e99d934f30004c1cc3c18ca27a9113e57ff7ad49106db",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-work-document.png",
+        "sha256": "8ce36a9af7a5b484ac3607ea6ef4ad18299a1eea1b5a5e5c06c673835d991dec",
+        "bytes": 38896,
+        "expectedSHA256": "8ce36a9af7a5b484ac3607ea6ef4ad18299a1eea1b5a5e5c06c673835d991dec",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-md-ui.png",
+        "sha256": "3ea1fd7ae6325e29cac4cbaea302aead8b3746cfb45fccef6163376c5e15a61e",
+        "bytes": 59535,
+        "expectedSHA256": "3ea1fd7ae6325e29cac4cbaea302aead8b3746cfb45fccef6163376c5e15a61e",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/light-390-20-md-reui.png",
+        "sha256": "8490433a554fe905e8356f1b60795f5df871c48cb987d79525cb11579059d59a",
+        "bytes": 27225,
+        "expectedSHA256": "8490433a554fe905e8356f1b60795f5df871c48cb987d79525cb11579059d59a",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-controls.png",
+        "sha256": "8f7e707db1d25849ce9aff4b528c4160d9e8f36e29094bee585ca278476fa6b2",
+        "bytes": 31793,
+        "expectedSHA256": "8f7e707db1d25849ce9aff4b528c4160d9e8f36e29094bee585ca278476fa6b2",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-wide.png",
+        "sha256": "9c9ae5ccf176c764c8b027a6854942f4dee09734a39c47f44c859c42c4e4b1a8",
+        "bytes": 34291,
+        "expectedSHA256": "9c9ae5ccf176c764c8b027a6854942f4dee09734a39c47f44c859c42c4e4b1a8",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-proxy.png",
+        "sha256": "91a14db6ffdb6fc4e953c4fb0a5576c8dea0390ffe8cb079bd28614748843b0f",
+        "bytes": 41383,
+        "expectedSHA256": "91a14db6ffdb6fc4e953c4fb0a5576c8dea0390ffe8cb079bd28614748843b0f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-assignments.png",
+        "sha256": "97135e630d31fd709162a63f73718bc2be4ba99e565d045a97423f1a85b02a45",
+        "bytes": 47013,
+        "expectedSHA256": "97135e630d31fd709162a63f73718bc2be4ba99e565d045a97423f1a85b02a45",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-provider-clear.png",
+        "sha256": "0cd2ca2b9d2bea9f7528ea313fbf6022e1b42d01d42de7e9d25aa60ae8309881",
+        "bytes": 5395,
+        "expectedSHA256": "0cd2ca2b9d2bea9f7528ea313fbf6022e1b42d01d42de7e9d25aa60ae8309881",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-dialog.png",
+        "sha256": "7c2003ade3262e0f5c0819186509552493270c95d24869874177e1937a6c05b2",
+        "bytes": 5660,
+        "expectedSHA256": "7c2003ade3262e0f5c0819186509552493270c95d24869874177e1937a6c05b2",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-code.png",
+        "sha256": "06dad55bc9612acb6de593ca4a7a97ee1ea7aeaa5198ee3aebfbcdaeee547d47",
+        "bytes": 16232,
+        "expectedSHA256": "06dad55bc9612acb6de593ca4a7a97ee1ea7aeaa5198ee3aebfbcdaeee547d47",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-sheet.png",
+        "sha256": "b728f363dd410469e05cee4f3299ae3c85fa595a6cf8cd5bf75e8ce715754719",
+        "bytes": 8593,
+        "expectedSHA256": "b728f363dd410469e05cee4f3299ae3c85fa595a6cf8cd5bf75e8ce715754719",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-graph.png",
+        "sha256": "9fe7daa1d7d3a35f074842b6f4446bb088c7539a0c6372cb7f0d2a8e16629c86",
+        "bytes": 27135,
+        "expectedSHA256": "9fe7daa1d7d3a35f074842b6f4446bb088c7539a0c6372cb7f0d2a8e16629c86",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-work.png",
+        "sha256": "12561b6cd85e9df5111cb0ec57a29edf4fd41dc48c7b2c2bab936e56367155e9",
+        "bytes": 4224,
+        "expectedSHA256": "12561b6cd85e9df5111cb0ec57a29edf4fd41dc48c7b2c2bab936e56367155e9",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-audio.png",
+        "sha256": "e7178a9edd26b4cdb6e81d300aa3ac9cf1a887f5f2be96df7e90ccb1d628ff18",
+        "bytes": 6342,
+        "expectedSHA256": "e7178a9edd26b4cdb6e81d300aa3ac9cf1a887f5f2be96df7e90ccb1d628ff18",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-approval.png",
+        "sha256": "276788b325a772690f3283b06a975570b47714afde48703f7db4469fec39e785",
+        "bytes": 19904,
+        "expectedSHA256": "276788b325a772690f3283b06a975570b47714afde48703f7db4469fec39e785",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-typography.png",
+        "sha256": "4e9c8e9f91031794995fb6c6f1469b1df1b888924978f0ba3d4f1f58c93322c9",
+        "bytes": 27903,
+        "expectedSHA256": "4e9c8e9f91031794995fb6c6f1469b1df1b888924978f0ba3d4f1f58c93322c9",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-work-collection.png",
+        "sha256": "3884d9ef20e7f84b9af6c4631b9383f5ca13062b900ebb1387adf627e12ad74d",
+        "bytes": 26614,
+        "expectedSHA256": "3884d9ef20e7f84b9af6c4631b9383f5ca13062b900ebb1387adf627e12ad74d",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-work-document.png",
+        "sha256": "93f342cc941fe71748e64318b9fbcdedbad53a661d0de38bb6918ce4378f50b7",
+        "bytes": 37721,
+        "expectedSHA256": "93f342cc941fe71748e64318b9fbcdedbad53a661d0de38bb6918ce4378f50b7",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-md-ui.png",
+        "sha256": "91723a9a252fc9ac0a3fee1a693f19e0fc47a8e37a06ecc86d566df5d03f0acd",
+        "bytes": 53416,
+        "expectedSHA256": "91723a9a252fc9ac0a3fee1a693f19e0fc47a8e37a06ecc86d566df5d03f0acd",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-16-md-reui.png",
+        "sha256": "ec47b9a4af140579af6ecf05e07ba553d752bb215cf081003ff550457b3a6021",
+        "bytes": 23253,
+        "expectedSHA256": "ec47b9a4af140579af6ecf05e07ba553d752bb215cf081003ff550457b3a6021",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-controls.png",
+        "sha256": "89a298a9fd382452f4619bdbffeab86b321a5724b01947f2411f27b8c253401d",
+        "bytes": 38374,
+        "expectedSHA256": "89a298a9fd382452f4619bdbffeab86b321a5724b01947f2411f27b8c253401d",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-wide.png",
+        "sha256": "958e9aa7e89acc15acef41822c8a9688cca807bd70b74230f94d898ddc7a6526",
+        "bytes": 41569,
+        "expectedSHA256": "958e9aa7e89acc15acef41822c8a9688cca807bd70b74230f94d898ddc7a6526",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-proxy.png",
+        "sha256": "a7df813479e43f67bb97e2b3e5b3dd860b758b053c3a0e0d29fb8aa4b9706a67",
+        "bytes": 42931,
+        "expectedSHA256": "a7df813479e43f67bb97e2b3e5b3dd860b758b053c3a0e0d29fb8aa4b9706a67",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-assignments.png",
+        "sha256": "617b859998bb070e7b54d18914c77d90dd1862e1d961042cc40915ff728d0b21",
+        "bytes": 51309,
+        "expectedSHA256": "617b859998bb070e7b54d18914c77d90dd1862e1d961042cc40915ff728d0b21",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-provider-clear.png",
+        "sha256": "289bc0cc24b80adb6aefc94a214f9712fae909ecd95b9305668a0392496adfaa",
+        "bytes": 5826,
+        "expectedSHA256": "289bc0cc24b80adb6aefc94a214f9712fae909ecd95b9305668a0392496adfaa",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-dialog.png",
+        "sha256": "9a1b540c6517cd4b23264d857e14e83bac2f121cf65c5aa4af648ac1c84e37aa",
+        "bytes": 6266,
+        "expectedSHA256": "9a1b540c6517cd4b23264d857e14e83bac2f121cf65c5aa4af648ac1c84e37aa",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-code.png",
+        "sha256": "7c4a436fcc283c22924fc0c6608a5a1e23032afddd91adc8a355ba8602bf2241",
+        "bytes": 19143,
+        "expectedSHA256": "7c4a436fcc283c22924fc0c6608a5a1e23032afddd91adc8a355ba8602bf2241",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-sheet.png",
+        "sha256": "789486b5e28270a59c448e5195c62615a0b3cc89c40906f5bcce229efa8f0259",
+        "bytes": 3985,
+        "expectedSHA256": "789486b5e28270a59c448e5195c62615a0b3cc89c40906f5bcce229efa8f0259",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-graph.png",
+        "sha256": "45c7ad7c54d69dfb86b2be2be06bd4ea0520de28c74bd8ec4960d24018479061",
+        "bytes": 36116,
+        "expectedSHA256": "45c7ad7c54d69dfb86b2be2be06bd4ea0520de28c74bd8ec4960d24018479061",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-work.png",
+        "sha256": "12561b6cd85e9df5111cb0ec57a29edf4fd41dc48c7b2c2bab936e56367155e9",
+        "bytes": 4224,
+        "expectedSHA256": "12561b6cd85e9df5111cb0ec57a29edf4fd41dc48c7b2c2bab936e56367155e9",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-audio.png",
+        "sha256": "1c8c6699c459aba9123787f1ba2a9d0a87dff3d37f4f71b2da1d688d74f0cf6f",
+        "bytes": 6658,
+        "expectedSHA256": "1c8c6699c459aba9123787f1ba2a9d0a87dff3d37f4f71b2da1d688d74f0cf6f",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-approval.png",
+        "sha256": "d26371a8063589807ad1e0a03b1f1e63332cfdd2356fcfddeb291619c806b9fa",
+        "bytes": 23442,
+        "expectedSHA256": "d26371a8063589807ad1e0a03b1f1e63332cfdd2356fcfddeb291619c806b9fa",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-typography.png",
+        "sha256": "9e2f0c75e86022973c96c367d6021f74620c87a25490271ce2fbebd7994891c1",
+        "bytes": 32826,
+        "expectedSHA256": "9e2f0c75e86022973c96c367d6021f74620c87a25490271ce2fbebd7994891c1",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-work-collection.png",
+        "sha256": "98352b5b30f8b74f9546f5c9ab591347f1941b34fec748b6cad59bb905e245d1",
+        "bytes": 34941,
+        "expectedSHA256": "98352b5b30f8b74f9546f5c9ab591347f1941b34fec748b6cad59bb905e245d1",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-work-document.png",
+        "sha256": "dec8c5e36d3617da0adb789630276b3400caf35d69914e2cb575402764c3a36c",
+        "bytes": 39080,
+        "expectedSHA256": "dec8c5e36d3617da0adb789630276b3400caf35d69914e2cb575402764c3a36c",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-md-ui.png",
+        "sha256": "3f5fc9011e0ca7b591d90c1b8ec9fa629fbbf08a180fdb303ec094f8c9890168",
+        "bytes": 60036,
+        "expectedSHA256": "3f5fc9011e0ca7b591d90c1b8ec9fa629fbbf08a180fdb303ec094f8c9890168",
+        "matches": true
+      },
+      {
+        "path": "/tmp/orvilo-native-design-md-005/dark-390-20-md-reui.png",
+        "sha256": "bde2bb18111312a7f61d4a2d2d5d0d9efda07364d521a041848267d6955cc773",
+        "bytes": 27721,
+        "expectedSHA256": "bde2bb18111312a7f61d4a2d2d5d0d9efda07364d521a041848267d6955cc773",
+        "matches": true
+      }
+    ]
+  },
+  "kind": "independent source and recorded evidence identity/composition assessment; no product execution",
+  "nativeSourceAndProductionBindings": [
+    {
+      "directory": "/tmp/orvilo-native-design-md-005",
+      "sourceBinding": {
+        "path": "/tmp/orvilo-native-design-md-005/source-binding.json",
+        "sha256": "c53c742ba30d4e07970759eb2f5a10c60a5101246dd36215c131336009b5f18d",
+        "bytes": 858229
+      },
+      "scopedBoundSources": [
+        {
+          "path": "DESIGN.md",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "packages/shared-tool-ui/src/components/FileChangeStats/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/app/globals.css",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/AgentRuntimeIcon.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/Avatar/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ListSkeleton/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/Select/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/autocomplete.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/code-block/code-block.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/data-grid/data-grid-cell-selection.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/data-grid/data-grid-column-header.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/data-grid/data-grid-table.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/number-field.module.css",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/number-field.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/accordion.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/button-group.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/code-block.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/combobox.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/empty.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/field.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/item.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/label.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/tabs.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/textarea.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/toggle-group.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/toggle.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/Auth/OAuthDevice/DeviceSuccess.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/FileViewer/NotSupport/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/GroupAvatar/GroupAvatar.module.css",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/GroupAvatar/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/Portal/LocalFile/xlsx/SheetGrid.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/Projects/FilterMenu/FilterMenuPopover.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/WorkSurface/WorkSurface.module.css",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/WorkSurface/WorkSurface.tsx",
+          "matchesImmutableHead": true
+        }
+      ],
+      "unboundScopePaths": [
+        ".agents/skills/react/SKILL.md",
+        "apps/share/src/features/topic/SharedMessageList.tsx",
+        "packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx",
+        "packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx",
+        "packages/builtin-tool-local-system/src/client/components/FileItem.tsx",
+        "packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx",
+        "packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx",
+        "packages/builtin-tool-task/src/client/Render/EditTask/index.tsx",
+        "packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx",
+        "packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx",
+        "packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx",
+        "packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx",
+        "packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx",
+        "packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx",
+        "packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx",
+        "src/business/client/features/ShareShell/index.tsx",
+        "src/components/Avatar/index.test.tsx",
+        "src/features/AgentGoals/GoalDetailPage.tsx",
+        "src/features/AgentGoals/ProcessControl/Graph/index.tsx",
+        "src/features/AgentGoals/ProcessControl/shared.tsx",
+        "src/features/AgentHome/AgentInfo.tsx",
+        "src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx",
+        "src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts",
+        "src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx",
+        "src/features/AgentUsage/UsageTrendChart.tsx",
+        "src/features/AgentViewAll/AgentViewAllPage.tsx",
+        "src/features/Auth/MarketAuthCallback/index.tsx",
+        "src/features/Auth/OAuthCallback/Social.tsx",
+        "src/features/Auth/OAuthCallback/Success.tsx",
+        "src/features/Auth/OAuthConsent/ClientError.tsx",
+        "src/features/Automations/AutomationRunsPage.tsx",
+        "src/features/Automations/AutomationTriggerDraft.tsx",
+        "src/features/DailyBrief/BriefCardSkeleton.tsx",
+        "src/features/HomeInbox/index.tsx",
+        "src/features/MCP/MCPDetail/Loading.tsx",
+        "src/features/Members/MembersPage.tsx",
+        "src/features/Portal/LocalFile/Body.tsx",
+        "src/features/Portal/LocalFile/xlsx/XlsxPane.tsx",
+        "src/features/Portal/LocalFile/xlsx/styles.ts",
+        "src/features/Projects/Layout/ProjectIssueProgress.tsx",
+        "src/features/ReUIShell/WorkspaceSwitcher.tsx",
+        "src/features/Reviews/ReviewPullRequestPage.tsx",
+        "src/features/SelfLearning/ExperienceList/index.tsx",
+        "src/features/SelfLearning/LessonDetail/index.tsx",
+        "src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx",
+        "src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx",
+        "src/styles/roleClassForms.test.ts"
+      ],
+      "productionCSSProof": {
+        "path": "/tmp/orvilo-native-design-md-005/production-css-proof.json",
+        "sha256": "613c4deed12a0db80fcb4f2c1e0788b0b0f7f2d50a3c9a511447de11863fa7a8",
+        "bytes": 4619
+      },
+      "replacement": {
+        "path": "/tmp/orvilo-native-design-md-005/actual-production-css-replacement.json",
+        "sha256": "4ede74c3fcc58cfe6a4254dd48274d513375cac4b0a8b44a5878ca4ec906b382",
+        "bytes": 104040122
+      },
+      "replacementSnapshots": 164,
+      "computedDifferences": 0,
+      "missingClassOrPropertySnapshots": 0
+    },
+    {
+      "directory": "/tmp/orvilo-native-project-sr-only-006",
+      "sourceBinding": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/source-binding.json",
+        "sha256": "d1e55b6d32b572339724bd450532a1551878e5fb3780c245f9a90ad5690833e1",
+        "bytes": 857996
+      },
+      "scopedBoundSources": [
+        {
+          "path": "DESIGN.md",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "packages/shared-tool-ui/src/components/FileChangeStats/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/app/globals.css",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/AgentRuntimeIcon.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/Avatar/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ListSkeleton/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/Select/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/autocomplete.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/code-block/code-block.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/data-grid/data-grid-cell-selection.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/data-grid/data-grid-column-header.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/data-grid/data-grid-table.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/number-field.module.css",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/reui/number-field.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/accordion.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/button-group.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/code-block.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/combobox.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/empty.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/field.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/item.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/label.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/tabs.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/textarea.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/toggle-group.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/components/ui/toggle.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/Auth/OAuthDevice/DeviceSuccess.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/FileViewer/NotSupport/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/GroupAvatar/GroupAvatar.module.css",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/GroupAvatar/index.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/Portal/LocalFile/xlsx/SheetGrid.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/Projects/FilterMenu/FilterMenuPopover.tsx",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/WorkSurface/WorkSurface.module.css",
+          "matchesImmutableHead": true
+        },
+        {
+          "path": "src/features/WorkSurface/WorkSurface.tsx",
+          "matchesImmutableHead": true
+        }
+      ],
+      "unboundScopePaths": [
+        ".agents/skills/react/SKILL.md",
+        "apps/share/src/features/topic/SharedMessageList.tsx",
+        "packages/builtin-tool-local-system/src/client/Placeholder/SearchFiles.tsx",
+        "packages/builtin-tool-local-system/src/client/Render/SearchFiles/SearchQuery/SearchView.tsx",
+        "packages/builtin-tool-local-system/src/client/components/FileItem.tsx",
+        "packages/builtin-tool-memory/src/client/components/ExperienceMemoryCard.tsx",
+        "packages/builtin-tool-memory/src/client/components/PreferenceMemoryCard.tsx",
+        "packages/builtin-tool-task/src/client/Render/EditTask/index.tsx",
+        "packages/builtin-tool-web-browsing/src/client/Portal/PageContent/index.tsx",
+        "packages/shared-tool-ui/src/AskUserQuestion/AskUserQuestionView.tsx",
+        "packages/shared-tool-ui/src/AskUserQuestion/QuestionPanel.tsx",
+        "packages/shared-tool-ui/src/Inspector/EditLocalFile/index.tsx",
+        "packages/shared-tool-ui/src/Inspector/MoveLocalFiles/index.tsx",
+        "packages/shared-tool-ui/src/Inspector/SearchLocalFiles/index.tsx",
+        "packages/shared-tool-ui/src/Inspector/WriteLocalFile/index.tsx",
+        "src/business/client/features/ShareShell/index.tsx",
+        "src/components/Avatar/index.test.tsx",
+        "src/features/AgentGoals/GoalDetailPage.tsx",
+        "src/features/AgentGoals/ProcessControl/Graph/index.tsx",
+        "src/features/AgentGoals/ProcessControl/shared.tsx",
+        "src/features/AgentHome/AgentInfo.tsx",
+        "src/features/AgentQuotaCalendar/QuotaCalendarModal.tsx",
+        "src/features/AgentTasks/AgentTaskDetail/taskDetailFullPageStyles.ts",
+        "src/features/AgentTasks/AgentTaskList/TaskItemSkeleton.tsx",
+        "src/features/AgentUsage/UsageTrendChart.tsx",
+        "src/features/AgentViewAll/AgentViewAllPage.tsx",
+        "src/features/Auth/MarketAuthCallback/index.tsx",
+        "src/features/Auth/OAuthCallback/Social.tsx",
+        "src/features/Auth/OAuthCallback/Success.tsx",
+        "src/features/Auth/OAuthConsent/ClientError.tsx",
+        "src/features/Automations/AutomationRunsPage.tsx",
+        "src/features/Automations/AutomationTriggerDraft.tsx",
+        "src/features/DailyBrief/BriefCardSkeleton.tsx",
+        "src/features/HomeInbox/index.tsx",
+        "src/features/MCP/MCPDetail/Loading.tsx",
+        "src/features/Members/MembersPage.tsx",
+        "src/features/Portal/LocalFile/Body.tsx",
+        "src/features/Portal/LocalFile/xlsx/XlsxPane.tsx",
+        "src/features/Portal/LocalFile/xlsx/styles.ts",
+        "src/features/Projects/Layout/ProjectIssueProgress.tsx",
+        "src/features/ReUIShell/WorkspaceSwitcher.tsx",
+        "src/features/Reviews/ReviewPullRequestPage.tsx",
+        "src/features/SelfLearning/ExperienceList/index.tsx",
+        "src/features/SelfLearning/LessonDetail/index.tsx",
+        "src/layout/AuthProvider/MarketAuth/ProfileSetupModal.tsx",
+        "src/routes/(main)/group/features/Conversation/AgentWelcome/index.tsx",
+        "src/styles/roleClassForms.test.ts"
+      ],
+      "productionCSSProof": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/production-css-proof.json",
+        "sha256": "613c4deed12a0db80fcb4f2c1e0788b0b0f7f2d50a3c9a511447de11863fa7a8",
+        "bytes": 4619
+      },
+      "replacement": {
+        "path": "/tmp/orvilo-native-project-sr-only-006/actual-production-css-replacement.json",
+        "sha256": "8130624615502ae173a91da88be739c78d399b10286840f5ee46196db3bc05d4",
+        "bytes": 5029659
+      },
+      "replacementSnapshots": 8,
+      "computedDifferences": 0,
+      "missingClassOrPropertySnapshots": 0
+    }
+  ],
+  "originalReportsStillFalse": true,
+  "pushCIRuns": [
+    {
+      "id": 38439061817,
+      "name": "UI alignment",
+      "head_sha": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/alexj11324/orvilo1/actions/runs/38439061817"
+    },
+    {
+      "id": 38439061747,
+      "name": "E2E CI",
+      "head_sha": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/alexj11324/orvilo1/actions/runs/38439061747"
+    },
+    {
+      "id": 38439061925,
+      "name": "Test CI",
+      "head_sha": "496b70b6e6d4a9b55f7a5be42459808f88a9d75a",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/alexj11324/orvilo1/actions/runs/38439061925"
+    }
+  ],
+  "rawInputCount": 38,
+  "rawInputs": [
+    {
+      "path": "/tmp/orvilo-native-design-md-005/runtime-report.json",
+      "sha256": "fab9f9a07100af158ed8ed9ad9e0e8c5f6f342a11a413d2dcf80862fa786f3ed",
+      "bytes": 1782229,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-design-md-005/execution.json",
+      "sha256": "4d92c5c9a4bcdde8c24bd30f254cb1cbc60ebf82743c6f7b513c3f7554700fed",
+      "bytes": 2332,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-design-md-005/source-binding.json",
+      "sha256": "c53c742ba30d4e07970759eb2f5a10c60a5101246dd36215c131336009b5f18d",
+      "bytes": 858229,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-design-md-005/actual-revision.json",
+      "sha256": "bdabe915ef119168ca5e82e111836380607c10db07c0d389f7e9050f9cc36e88",
+      "bytes": 211,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-design-md-005/production-css-proof.json",
+      "sha256": "613c4deed12a0db80fcb4f2c1e0788b0b0f7f2d50a3c9a511447de11863fa7a8",
+      "bytes": 4619,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-design-md-005/actual-production-css-replacement.json",
+      "sha256": "4ede74c3fcc58cfe6a4254dd48274d513375cac4b0a8b44a5878ca4ec906b382",
+      "bytes": 104040122,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-design-md-005/production-css/assets/css-entry-AIEjgISh.css",
+      "sha256": "b69f5ec3602376ebf98bf32947ea9dc576492d088d274840e280ef15f197f77b",
+      "bytes": 562357,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/runtime-report.json",
+      "sha256": "2243c1b23d476a71f4aa601d42eb83cbcc15cb4c8aa8f53aa35d4df8da3ebd60",
+      "bytes": 168869,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/execution.json",
+      "sha256": "fb938bd28f893580b1bb128437e3ad7451fdffe84343ab77ae69cb439c244e19",
+      "bytes": 2251,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/source-binding.json",
+      "sha256": "d1e55b6d32b572339724bd450532a1551878e5fb3780c245f9a90ad5690833e1",
+      "bytes": 857996,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/actual-revision.json",
+      "sha256": "bdabe915ef119168ca5e82e111836380607c10db07c0d389f7e9050f9cc36e88",
+      "bytes": 211,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/production-css-proof.json",
+      "sha256": "613c4deed12a0db80fcb4f2c1e0788b0b0f7f2d50a3c9a511447de11863fa7a8",
+      "bytes": 4619,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/actual-production-css-replacement.json",
+      "sha256": "8130624615502ae173a91da88be739c78d399b10286840f5ee46196db3bc05d4",
+      "bytes": 5029659,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/production-css/assets/css-entry-AIEjgISh.css",
+      "sha256": "b69f5ec3602376ebf98bf32947ea9dc576492d088d274840e280ef15f197f77b",
+      "bytes": 562357,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-16-focused-project-sr-only-proof.json",
+      "sha256": "caa5ab68f0e7499a1ad7f06b8bab08875b575b60806896e4779acbf049bd136d",
+      "bytes": 6228,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-16-focused-project-sr-only-keyboard.png",
+      "sha256": "35eb5f313816a2ead8a9d84ab597b0081854c79182ab8a750f30664ef7f38f65",
+      "bytes": 32493,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-16-focused-business-receipts.json",
+      "sha256": "272a1b56aa7fb4672f03e6908f03ab7c0366ce88b42520c38769048a305e14fd",
+      "bytes": 6631,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-20-focused-project-sr-only-proof.json",
+      "sha256": "e3ad8f4193e26bb4bab089e4998513a1029ebc457a2b32b88890662fda488bc7",
+      "bytes": 6228,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-20-focused-project-sr-only-keyboard.png",
+      "sha256": "c019742ef201829166e541a70919b76b068430424655aa04a0753c179e50aad7",
+      "bytes": 37493,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-1240-20-focused-business-receipts.json",
+      "sha256": "e8cc6acff1b63bd746026e9653584506de14a6eefb56791b8901599df6d1ad69",
+      "bytes": 6643,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-16-focused-project-sr-only-proof.json",
+      "sha256": "a4357c530d7990389ddb0511f116238fe6b2375384422166a9c1fb3072e0c9b6",
+      "bytes": 6228,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-16-focused-project-sr-only-keyboard.png",
+      "sha256": "c9ce5f6d184f5cf039aefe1c43f644ba7f084c014f991114b062aad79cbaea70",
+      "bytes": 31631,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-16-focused-business-receipts.json",
+      "sha256": "1623371cba0f2b7dc2dd47bda8e90145d79ae4b88605435cbea77b6f78c6308d",
+      "bytes": 6646,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-20-focused-project-sr-only-proof.json",
+      "sha256": "0170ba48b2a67733eb65d4cc40bd94283e2edb64c82dacb5a14febe579c44601",
+      "bytes": 6228,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-20-focused-project-sr-only-keyboard.png",
+      "sha256": "bd9e904f8d36262543c273f7be4d12840292e164f4ff8dce82dd46e8c3c7a69d",
+      "bytes": 36830,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-1240-20-focused-business-receipts.json",
+      "sha256": "ac717b799874d4a0fdf4a998c666237326bb668426e4ea546c7d0f8911e3ddae",
+      "bytes": 6644,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-390-16-focused-project-sr-only-proof.json",
+      "sha256": "617fcc0a4d03a6541a7766f114969466caa3ec6db7231368b209ab175672941f",
+      "bytes": 6228,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-390-16-focused-project-sr-only-keyboard.png",
+      "sha256": "f481700d1bfbab60d93986d49b781ea4e76bde9f8728f788c732cc42ba20f114",
+      "bytes": 27690,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-390-16-focused-business-receipts.json",
+      "sha256": "aaf3334883f2101d3a51eec014004400bee69467344233b47453d6aceab74fac",
+      "bytes": 6642,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-390-20-focused-project-sr-only-proof.json",
+      "sha256": "d2873566c5c446bb1e86ccb0a940666a146c98637e63f1d43124d666788ce1db",
+      "bytes": 6228,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-390-20-focused-project-sr-only-keyboard.png",
+      "sha256": "7cf6ed67898fe1bc9ec40c8ecca5d6ed372642d6e3b950265d34ff38c2b2ab51",
+      "bytes": 29892,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/light-390-20-focused-business-receipts.json",
+      "sha256": "00e2f5a6a5b1901f0cf904615ac238eab4d10bd3f201e504ded1c12e6ea9b3f5",
+      "bytes": 6643,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-16-focused-project-sr-only-proof.json",
+      "sha256": "c1a9ce4e256ecd7f942f15fd917a885f5aa8655ad38d077b4bd6616accc94843",
+      "bytes": 6228,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-16-focused-project-sr-only-keyboard.png",
+      "sha256": "f5c29f460c11018570f653b17efff3d93c6376a680fd94916567e22828997b2f",
+      "bytes": 26961,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-16-focused-business-receipts.json",
+      "sha256": "afaec0467ee1e21555eccc4b56231bb15c5638ea92b48c1eff26d1c8fe35d17a",
+      "bytes": 6656,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-20-focused-project-sr-only-proof.json",
+      "sha256": "dc8ae781bc5ebccf90f80939f121aebc1c505f6ef407045672a6475273dc6b8e",
+      "bytes": 6228,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-20-focused-project-sr-only-keyboard.png",
+      "sha256": "278ae8f9e52070e779626ee4aff819080081d4637d9ba70ec895372232739313",
+      "bytes": 29402,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-006/dark-390-20-focused-business-receipts.json",
+      "sha256": "afcdcff924f5f6222042a2ea78996a59ec27f11d47a00f72a6ba7b5404a6c35f",
+      "bytes": 6645,
+      "matchesSavedSHA256": true,
+      "matchesSavedBytes": true
+    }
+  ],
+  "strictOfflineExecution": {
+    "path": "/tmp/orvilo-native006-ua-exact-decode-proof-001/execution.json",
+    "sha256": "a85b332463a0da0a4c3eaf12099e78f8a78f426e296c573d5b6e10e5cd83f19b",
+    "bytes": 1707
+  },
+  "strictOfflineResult": {
+    "path": "/tmp/orvilo-native006-ua-exact-decode-proof-001/result.json",
+    "sha256": "3c5aa24194c29ab0fc972f4c2c83bc8dd7b568454798cbc630bd44417a559c60",
+    "bytes": 84679
+  },
+  "v8SourceSeal": [
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/README.md",
+      "sha256": "3d407fdf3624568619148205da36586111b43a2a99bb9dee2563e2dc5a19cb27",
+      "bytes": 2630,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/approval-actions-scene.tsx",
+      "sha256": "a98a070da0681887ec85c0e062443333382cea752a5321352366c47b732ce6af",
+      "bytes": 882,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/audio-scene.tsx",
+      "sha256": "84d9620f9ddd35e5b4d08b35e37b55cf305e67cd41725d524ce0f5a34d3a8498",
+      "bytes": 1819,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/css-entry.ts",
+      "sha256": "086ebcd5242d437e63c529329583153afafea6ccd3d591dcda9e6c12e81413bf",
+      "bytes": 10081,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/electron-main.cjs",
+      "sha256": "b0d093f4c56ec140c2f94d461055c7d298fc6d1278214bb6d831aeb366b14005",
+      "bytes": 3536,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/fixture.tsx",
+      "sha256": "45f2920cf5d6cdc40ae88b2b42e3c403226034aa1e534c403a63c00adf5d2dc8",
+      "bytes": 20407,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/focused-v7-to-v8.patch",
+      "sha256": "22131c39cbbcb39707c7c9bdfbf19778b6c6426c97f1fe23ca372880ebc2c0a4",
+      "bytes": 1938,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/graph-scene.tsx",
+      "sha256": "96be983172fba99c20c8af0df15e8b8236edbf053121ff80a1532efbee668bce",
+      "bytes": 579,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/guard.py",
+      "sha256": "369f1de98160ba00cb87119f4008272e3ee12a5779a07005a9b2dfaeddde6ad1",
+      "bytes": 12994,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/index.html",
+      "sha256": "0b809a0ed65c2aa05b7de67120b7fa8ab6e763581f0456ce6c157770e0b5609e",
+      "bytes": 279,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/md-reui-scene.tsx",
+      "sha256": "69c5c3c48b8692b6311f0c101be682da82d2d45a0afbef2ac4706b58fbcdb067",
+      "bytes": 6075,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/md-ui-scene.tsx",
+      "sha256": "f79d855da363c75cdb17a5d290a2d0309908fc29e042f9fb26e280470a2270f2",
+      "bytes": 6579,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/md-work-surface-scene.tsx",
+      "sha256": "52800a99195b452a6029a6ef5c498d0e70e264b4459e3128b12a8c52f665439e",
+      "bytes": 1926,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/native006-offline-inputs.json",
+      "sha256": "5c6dffc2f558bd7ff4008b47302beef542cde710af09e6cd8d013c96b64211b3",
+      "bytes": 11954,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/original-focused-v7-hashes.json",
+      "sha256": "f3715379d7556faa996d081af7ea23d09f32fc1e582162f21861fa930ef2a712",
+      "bytes": 2348,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/original-main-source-hashes.json",
+      "sha256": "efc5ffb5393fb683f31a06c47b025b59272c3ffe16d6ea916800d449ea9ff65c",
+      "bytes": 1231,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/original-v2-source-hashes.json",
+      "sha256": "3c6736491c34986750b9d46d3c06a5ab9a07d55b8a7cf7d3356cb5aac102c5e3",
+      "bytes": 1616,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/original-v3-source-hashes.json",
+      "sha256": "9bf0e443b40d91c893d289d75bd4c565a1c49690424a76eff7bff5903244fb59",
+      "bytes": 1720,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/original-v4-source-hashes.json",
+      "sha256": "597389c830e4c6060b23e7f433a920164328e5c71b35524379f9309f754a267e",
+      "bytes": 1930,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/original-v5-source-hashes.json",
+      "sha256": "1cddb0b8c8a8662f05e8716fe4b0e4c5136e00ec3ed4fb8659ace8f45f8147f6",
+      "bytes": 2034,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/original-v6-source-hashes.json",
+      "sha256": "1d5e5579f4ae8fe4017436c24779f940e587b7a293daaadacd940102a9ca0e13",
+      "bytes": 2138,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/package.json",
+      "sha256": "7c64cc7dec89a2f84d234795592e2edab5afaf5431e4bceee239803ecddb1769",
+      "bytes": 73,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/public-import-source-checks.json",
+      "sha256": "21c7f4b4569a823a63cc1d66b566c5029ef618481b6ed5583e9a2f2aa3f32b29",
+      "bytes": 9854,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/read-native006-ua.mjs",
+      "sha256": "17399c4a7e00a4047aeed4324955f8ec28dcc8e3ce2f1309e2ca5eab0fa97a0c",
+      "bytes": 8501,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/run.mjs",
+      "sha256": "9c1d1db0003ab0d3f98944bec9274352d48ae4b348d9a3bd912baaf456826d6f",
+      "bytes": 91052,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/scope-namespaces.json",
+      "sha256": "f2293d96f11f24be1ff4a4c52a9016b917b0ea037a08b824fd4c55c0edb74bd8",
+      "bytes": 956,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/sr-only-native005-css-proof.json",
+      "sha256": "8e8eb253ed95305dc02b87cd2b9ec428132d0334a2c41f6d6cdcd71f8c64f0b3",
+      "bytes": 1274,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/ua-declaration.mjs",
+      "sha256": "edad3cd1f2146001a40584de73234c89cfc63400dc2473e8d447802e7773cd66",
+      "bytes": 3013,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/vite.config.mts",
+      "sha256": "d033d23afc8a2f79c2e7436c83ef5191ee6867f532190077bc82ddab020d54b7",
+      "bytes": 3809,
+      "matches": true
+    },
+    {
+      "path": "/tmp/orvilo-native-project-sr-only-v8/work-scene.tsx",
+      "sha256": "7f6babd55b9b4db7a0c23bf23d2cbba2202ae1f82e6140f4c2e92817fb6a50af",
+      "bytes": 1561,
+      "matches": true
+    }
+  ]
+}

@@ -342,9 +342,6 @@ importers:
       '@orvilo/builtin-tool-user-interaction':
         specifier: workspace:*
         version: link:../builtin-tool-user-interaction
-      '@orvilo/builtin-tool-verify':
-        specifier: workspace:*
-        version: link:../builtin-tool-verify
       '@orvilo/business-const':
         specifier: workspace:*
         version: link:../../apps/desktop/stubs/business-const
@@ -542,12 +539,6 @@ importers:
       react:
         specifier: 19.2.7
         version: 19.2.7
-    devDependencies:
-      '@orvilo/types':
-        specifier: workspace:*
-        version: link:../types
-
-  ../../packages/builtin-tool-verify:
     devDependencies:
       '@orvilo/types':
         specifier: workspace:*

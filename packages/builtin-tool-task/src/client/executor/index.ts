@@ -986,7 +986,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
 
       const reviewers = await lambdaClient.task.listReviewerAgents.query();
       return {
-        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review.`,
+        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. For automatic assignment, choose canVerifyDeliveries=true when available. Unsupported choices remain selectable but wait for a person.`,
         state: {
           domainRevision: detail.domainRevision,
           identifier: detail.identifier,

@@ -50,8 +50,11 @@ class WorkAttentionService {
   }) => {
     const { subGroupBy, ...rest } = input;
     // myWork lanes are member, priority, project, status, and workflow.
-    // Agent and milestone axes belong on the generic work query.
-    const lane = subGroupBy === 'agent' || subGroupBy === 'milestone' ? undefined : subGroupBy;
+    // Agent, reviewer, and milestone axes belong on the generic work query.
+    const lane =
+      subGroupBy === 'agent' || subGroupBy === 'reviewer' || subGroupBy === 'milestone'
+        ? undefined
+        : subGroupBy;
     return lambdaClient.workAttention.myWork.query(lane ? { ...rest, subGroupBy: lane } : rest);
   };
 

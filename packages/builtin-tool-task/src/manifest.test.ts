@@ -61,3 +61,21 @@ describe('Task edit concurrency contract', () => {
     });
   });
 });
+
+describe('automatic reviewer assignment contract', () => {
+  it('prefers verification-capable choices while preserving unsupported manual choices', () => {
+    const view = TaskManifest.api.find((api) => api.name === TaskApiName.viewTask);
+    const edit = TaskManifest.api.find((api) => api.name === TaskApiName.editTask);
+    expect(view?.description).toContain('choose canVerifyDeliveries=true when available');
+    expect(edit?.parameters).toMatchObject({
+      properties: {
+        reviewerAgentId: {
+          description: expect.stringContaining('choose canVerifyDeliveries=true when available'),
+        },
+      },
+    });
+    expect(view?.description).toContain(
+      'unsupported choices remain selectable but wait for a person',
+    );
+  });
+});

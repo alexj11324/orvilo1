@@ -639,6 +639,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         icon={BotMessageSquare}
         open={isExpanded}
         title={t('taskDetail.activities')}
+        variant="heading"
         trailing={
           <>
             <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />

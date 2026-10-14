@@ -9,8 +9,10 @@ const readSource = (file: string) => readFileSync(path.join(__dirname, file), 'u
 
 /**
  * Rail values keep DESIGN.md's scoped 13px role. The issue title consumes the
- * 20px/600 heading role on the control itself, including the responsive override.
- * Description keeps the scoped 15px/450 reading role.
+ * 24px/600 heading step on the control itself (Linear's issue-title role, one
+ * step inside the 38/30/24/20/16 scale), including the responsive override.
+ * Description keeps the scoped 15px/450 reading role, and the top-level
+ * Activity band carries the 15px/600 heading tier.
  */
 describe('issue rail type scale', () => {
   it('pins the shared rail value size to the measured step', () => {
@@ -37,15 +39,26 @@ describe('issue rail type scale', () => {
     expect(unstyled).toEqual([]);
   });
 
-  it('keeps the issue title at the DESIGN.md 20px strong heading role', () => {
-    const classes = taskStyles.titleInput.split(' ');
-    expect(classes).toEqual(
-      expect.arrayContaining(['text-xl', 'md:text-xl', 'leading-7', 'font-semibold']),
-    );
-    expect(classes).not.toContain('text-2xl');
-    expect(classes).not.toContain('md:text-2xl');
-    expect(taskStyles.titleInput).not.toMatch(/text-\[\d+px\]/);
+  it('keeps the issue title at the 24px/600 heading step, input and text alike', () => {
+    for (const key of ['titleInput', 'titleText'] as const) {
+      const classes = taskStyles[key].split(' ');
+      expect(classes).toEqual(expect.arrayContaining(['text-2xl', 'leading-8', 'font-semibold']));
+      expect(classes).not.toContain('text-xl');
+      expect(taskStyles[key]).not.toMatch(/text-\[\d+px\]/);
+    }
+    // The editable control keeps the responsive pin that guards the 24px step.
+    expect(taskStyles.titleInput.split(' ')).toContain('md:text-2xl');
     expect(taskStyles.titleInput).not.toContain('.ant-input');
+  });
+
+  it('keeps the top-level Activity band on the 15px/600 heading tier', () => {
+    const classes = taskDetailLayoutStyles.sectionHeading.split(' ');
+    expect(classes).toEqual(expect.arrayContaining(['text-[15px]', 'leading-5', 'font-semibold']));
+    // Only the Activity section opts in; the compact sections keep 14px/500.
+    expect(readSource('TaskActivities.tsx')).toContain('variant="heading"');
+    const header = readSource('TaskDetailSectionHeader.tsx');
+    expect(header).toContain('taskDetailLayoutStyles.sectionHeading');
+    expect(header).toContain('text-sm font-medium');
   });
 
   it('keeps the description at 15px/450 rather than the editor default', () => {

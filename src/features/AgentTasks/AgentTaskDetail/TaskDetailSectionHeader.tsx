@@ -1,9 +1,11 @@
+import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
+import { taskDetailLayoutStyles } from './taskDetailLayoutStyles';
 
 interface TaskDetailSectionHeaderProps {
   /** Trailing controls, e.g. a "+" — render them only when they can act. */
@@ -16,6 +18,11 @@ interface TaskDetailSectionHeaderProps {
   title: string;
   /** Status or filters that sit right after the toggle. */
   trailing?: ReactNode;
+  /**
+   * 'heading' promotes the band to the 15px/600 top-level tier (Linear's
+   * Activity header); the default stays the compact 14px/500 collapse label.
+   */
+  variant?: 'default' | 'heading';
 }
 
 /**
@@ -24,15 +31,18 @@ interface TaskDetailSectionHeaderProps {
  * is a real button, then optional status and trailing actions.
  */
 const TaskDetailSectionHeader = memo<TaskDetailSectionHeaderProps>(
-  ({ actions, count, icon: Icon, onToggle, open, title, trailing }) => (
+  ({ actions, count, icon: Icon, onToggle, open, title, trailing, variant = 'default' }) => (
     <div className="flex min-h-7 items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
         <Button
           aria-expanded={open}
-          className="gap-2 text-sm font-medium text-muted-foreground"
           size="sm"
           type="button"
           variant="ghost"
+          className={cn(
+            'gap-2 text-sm font-medium text-muted-foreground',
+            variant === 'heading' && taskDetailLayoutStyles.sectionHeading,
+          )}
           onClick={onToggle}
         >
           <Icon aria-hidden color={'var(--ant-color-text-description)'} size={16} />

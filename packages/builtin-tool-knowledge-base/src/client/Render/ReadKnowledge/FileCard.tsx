@@ -16,6 +16,9 @@ const styles = {
   footerText: 'text-xs text-foreground-tertiary',
   preview:
     'overflow-hidden [--knowledge-preview-height:calc(var(--leading-5)*4+var(--spacing)*4)] max-h-(--knowledge-preview-height) p-2 rounded-(--radius-input)',
+  // Keep padding outside the clamped text so it cannot expose an extra preview line.
+  previewText:
+    'line-clamp-4 overflow-hidden [--knowledge-preview-lines-height:calc(var(--leading-5)*4)] max-h-(--knowledge-preview-lines-height)',
   title: 'line-clamp-1 [margin-block-end:0]',
   titleRow: 'text-foreground',
 };
@@ -56,20 +59,19 @@ const FileCard = memo<FileCardProps>(({ file }) => {
           <div className={styles.title}>{file.filename}</div>
         </div>
         {file.preview && (
-          <span
-            className={cn(
-              'font-mono',
-              'rounded',
-              'bg-muted',
-              'px-1',
-              'line-clamp-4',
-              'text-xs',
-              'text-muted-foreground',
-              styles.preview,
-            )}
-          >
-            {file.preview}...
-          </span>
+          <div className={cn('bg-muted', styles.preview)}>
+            <span
+              className={cn(
+                'font-mono',
+                'text-xs',
+                'leading-5',
+                'text-muted-foreground',
+                styles.previewText,
+              )}
+            >
+              {file.preview}...
+            </span>
+          </div>
         )}
       </div>
       <div className={styles.footer}>

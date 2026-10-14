@@ -1,11 +1,15 @@
 ---
 name: llm-generation
-description: 'Use for application prompts, generateObject/generateText, model selection and generation tracing. Excludes provider adapters and agent snapshots.'
+description: 'Use for auxiliary title/follow-up API generation, prompts and generation tracing. Agent conversation, planning, execution and Reviewer use saved Agent configuration through ACP.'
 ---
 
 # LLM Generation
 
-Implement business-facing LLM calls as explicit, independently observable workflows. Keep prompt identity, model policy, structured output, and tracing responsibilities separate.
+The [product contract](../../../docs/development/product-scope.md#8-执行与辅助模型边界) owns the execution/model boundary. Conversation, planning, code execution and Reviewer use configured Agents through ACP; this skill does not authorize Goal/Verify service models or platform model fallbacks.
+
+Title and follow-up suggestion generation use the platform auxiliary model API. Reuse native titles when available; generating a title and writing it back to an external session are separate operations. Orvilo Topic metadata owns storage/display. Trace the actual title-notification/writeback path before blaming an absent title on auxiliary model configuration.
+
+For these auxiliary workflows, keep prompt identity, configured model, structured output and tracing explicit.
 
 ## Locate the Existing Boundary
 
@@ -40,14 +44,14 @@ Treat `scenario` as the stable product workflow and lifecycle-stage partition, n
 
 - Check `TRACING_SCENARIOS` before adding a call.
 - Reuse a scenario only for the same user-visible workflow and lifecycle stage.
-- Add a scenario when the business action differs, even if another call shares its prompt or JSON schema. Editable goal-criteria drafting and run-time verification planning are different scenarios.
+- Add a scenario when the business action differs, even if another call shares its prompt or JSON schema. Title generation and follow-up suggestion generation are different scenarios.
 - Never borrow a nearby scenario as a placeholder. Doing so contaminates latency, cost, success-rate, and quality data.
 - Pass `schemaName` for structured generation and relevant entity IDs when available.
 
 ## Model Policy
 
-- Resolve the model and provider through the owning service's configuration policy. Do not silently inherit an unrelated chat model.
-- When a workflow requires a stable service model, give it an explicit default and expose the corresponding service-model configuration instead of hardcoding the model only at the call site.
+- Resolve auxiliary model/provider through the platform auxiliary configuration; do not inherit an unrelated chat model or hardcode a probe model.
+- Agent execution and Reviewer resolve the saved Agent device/model/native mode through the existing runtime path. Do not add a service-model fallback or use this generation wrapper for planning or review.
 - Keep model choice separate from prompt version. Changing a configured model does not rename the prompt or scenario.
 - Prefer the shared server generation service when it fits the call so runtime initialization, routing, and tracing remain consistent.
 
@@ -66,6 +70,6 @@ For every new or corrected generation workflow:
 2. Test the prompt's important behavioral constraints without snapshotting the entire prose.
 3. Test structured-output validation and relevant failure behavior.
 4. Search for stale inline prompts, old version strings, and incorrectly reused scenarios.
-5. Run `bun run check <changed-files...>` and `bun run check --type` for cross-package changes.
+5. Run focused `bun run check <changed-files...>` for code changes. Use remote CI for Typecheck; never run local tsgo. Exercise the affected runtime path when behavior changes, recording revision and effective saved Agent configuration where applicable.
 
 Use the `testing` skill for test mechanics and the `typescript` skill for TypeScript changes.

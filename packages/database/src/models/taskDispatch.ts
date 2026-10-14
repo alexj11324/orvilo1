@@ -51,7 +51,6 @@ import { snapshotAutomationDefinition } from '../utils/automationOccurrence';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
 import { normalizeProjectOrchestrationPolicy } from './projectOrchestrationPolicy';
-import { TaskModel } from './task';
 import { hasActiveExecution, isExecutionParked, isParked, parkMarkerSet } from './taskExecutionSql';
 
 const ACTIVE_PHASES: TaskDispatchPhase[] = [
@@ -400,6 +399,7 @@ export class TaskDispatchModel {
 
   private async confirmedIssuePlanAdmission(db: OrviloDatabase, task: TaskItem) {
     if (!(task.context as TaskContext | null)?.issuePlan?.confirmedAt) return false;
+    const { TaskModel } = await import('./task');
     await new TaskModel(db, task.createdByUserId ?? '', this.workspaceId).assertConfirmedIssuePlan(
       task.id,
     );

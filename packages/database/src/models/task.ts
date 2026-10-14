@@ -84,7 +84,6 @@ import { lockTaskDependencyGraph } from '../utils/taskDependencyLock';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { insertOutboxEvent, newEventId } from './eventOutbox';
-import { IssueDeliveryModel } from './issueDelivery';
 import { LinearSyncModel } from './linearSync';
 import { NotificationModel } from './notification';
 import { projectEffectiveRequireHumanReview, ProjectModel } from './project';
@@ -749,6 +748,7 @@ export class TaskModel {
 
   /** Confirmed Issues complete only from their accepted current delivery ledger. */
   private async assertCompletedDeliveries(ids: string[]): Promise<void> {
+    const { IssueDeliveryModel } = await import('./issueDelivery');
     for (const task of await this.findByIds(ids)) {
       const plan = (task.context as TaskContext | null)?.issuePlan;
       if (!plan) continue;
@@ -4262,6 +4262,7 @@ export class TaskModel {
           'BAD_REQUEST',
           'CYCLE',
         );
+      const { IssueDeliveryModel } = await import('./issueDelivery');
       // A task mid-flight or already done cannot take a new open prerequisite.
       // `task.status` / `dependsOn.status` are the derived labels — live
       // execution and terminal workflow, never the retired column. A held run
@@ -4585,6 +4586,7 @@ export class TaskModel {
   /** Missing, trashed, inaccessible, canceled and failed prerequisites all block. */
   async findBlockedTaskIds(taskIds: string[]): Promise<string[]> {
     if (taskIds.length === 0) return [];
+    const { IssueDeliveryModel } = await import('./issueDelivery');
     const deliveryModel = new IssueDeliveryModel(this.db, this.userId, this.workspaceId);
     const readableIds = (await deliveryModel.readableTasks(taskIds)).map((row) => row.id);
     const dependencies = await this.getDependenciesByTaskIds(readableIds);

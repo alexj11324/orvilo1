@@ -402,7 +402,10 @@ export class TaskPlanService {
       ),
     );
     if (binding?.repo) allowedRepos.add(binding.repo);
-    const schema = z.toJSONSchema(issuePlanProposalSchema, { unrepresentable: 'any' });
+    const schema = z.toJSONSchema(issuePlanProposalSchema, {
+      target: 'draft-07',
+      unrepresentable: 'any',
+    });
     const result = await runAcpJudgment(this.db, this.userId, {
       workspaceId: this.workspaceId,
       judgment: {

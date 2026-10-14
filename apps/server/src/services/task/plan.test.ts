@@ -1,5 +1,6 @@
 // @vitest-environment node
 import type { TaskContext } from '@orvilo/types';
+import Ajv from 'ajv';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -124,6 +125,14 @@ afterEach(() => {
 });
 
 describe('Issue plan confirmation', () => {
+  it('emits a planning schema the judgment validator can compile and enforce', async () => {
+    await service().draftIssuePlan(id);
+    const input = vi.mocked(runAcpJudgment).mock.calls[0][2].input;
+    const validate = new Ajv({ allErrors: true, strict: false }).compile(input.schema!.schema);
+    expect(validate(proposal())).toBe(true);
+    expect(validate({ ...proposal(), tasks: 'not a task array' })).toBe(false);
+  });
+
   it('keeps an authorized intake repository in the Issue draft without starting delivery', async () => {
     const repository = await new RepositoryModel(db, user, ws).upsertByRemoteIdentity({
       providerHost: 'github.com',

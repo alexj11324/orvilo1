@@ -27,7 +27,7 @@ import {
 } from '@/features/EditorCanvas/editorAttachments';
 import { LinearFileCard } from '@/features/EditorCanvas/LinearFilePlugin';
 import { useWorkspaceCommentMentionOption } from '@/features/Portal/TopicComments/useWorkspaceCommentMentionOption';
-import { useActivityTime } from '@/hooks/useActivityTime';
+import { ALWAYS_RELATIVE, useActivityTime } from '@/hooks/useActivityTime';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { isOptimisticActivityId } from '@/store/task/slices/detail/optimisticActivity';
@@ -65,7 +65,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   const editor = useEditor();
   const mentionOption = useWorkspaceCommentMentionOption();
 
-  const { text: relTime, title: relTimeTitle } = useActivityTime(activity.time);
+  const { text: relTime, title: relTimeTitle } = useActivityTime(activity.time, ALWAYS_RELATIVE);
   const content = activity.content || t('taskDetail.activities.fallback.comment');
   const commentId = activity.id;
   const viewerId = useUserStore(userProfileSelectors.userId);
@@ -199,7 +199,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
 
   return (
     <div
-      className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
+      className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-3 py-3 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
       id={commentId ? commentAnchorId(commentId) : undefined}
       style={{
         borderColor: 'var(--ant-color-border-secondary)',

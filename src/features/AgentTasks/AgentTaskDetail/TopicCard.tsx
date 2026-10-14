@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
-import { useActivityTime } from '@/hooks/useActivityTime';
+import { ALWAYS_RELATIVE, useActivityTime } from '@/hooks/useActivityTime';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { isForbiddenError } from '@/utils/forbiddenError';
@@ -231,7 +231,10 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
     });
   }, [activity.id, canEditTask, deleteTopic, t]);
 
-  const { text: startedAt, title: startedAtTitle } = useActivityTime(activity.time);
+  const { text: startedAt, title: startedAtTitle } = useActivityTime(
+    activity.time,
+    ALWAYS_RELATIVE,
+  );
   const durationText = isRunning
     ? formatDuration(elapsed)
     : finalDuration != null && finalDuration >= 0

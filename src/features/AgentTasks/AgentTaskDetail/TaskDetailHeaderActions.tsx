@@ -48,7 +48,6 @@ import { useIssueStatusMove } from '../features/useIssueStatusMove';
 import { taskDeleteConfirmCopy } from '../shared/taskDeleteConfirm';
 import { openTaskIssueResourceModal } from './createTaskIssueResourceModal';
 import { issueResourceRef } from './issueResourceRef';
-import IssueSubscribeToggle from './IssueSubscribeToggle';
 import { relationKindOf } from './relationGroups';
 import { openTaskDescriptionHistoryModal } from './TaskDescriptionHistoryModal';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -419,9 +418,9 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
   const FavoriteGlyph = pinned ? FAVORITE_MARK_OFF.star : FAVORITE_MARK.star;
 
   // Linear surfaces link / issue-ID / branch copies as quiet icons ahead of the
-  // subscribe control and the overflow; the same commands stay in the ··· Copy
-  // submenu below. `copyId` writes the readable identifier (T-1) once known —
-  // the same value Linear's "copy issue ID" produces.
+  // favourite and the overflow; the same commands stay in the ··· Copy submenu
+  // below. `copyId` writes the readable identifier (T-1) once known — the same
+  // value Linear's "copy issue ID" produces.
   const headerCopyButtons = [
     {
       action: copy.copyLink,
@@ -635,7 +634,6 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
           {icon}
         </Button>
       ))}
-      <IssueSubscribeToggle />
       <Button
         aria-label={favoriteLabel}
         aria-pressed={pinned}

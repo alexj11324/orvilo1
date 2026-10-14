@@ -445,19 +445,20 @@ describe('TaskDetailHeaderActions', () => {
         );
       };
 
-      it('surfaces copy-link and copy-ID ahead of the subscribe control, branch hidden without one', () => {
+      it('surfaces copy-link and copy-ID ahead of the favourite, branch hidden without one', () => {
         render(<TaskDetailHeaderActions />);
 
+        // The subscribe control moved to the Activity section header — it is
+        // not part of this cluster any more.
         expect(clusterLabels()).toEqual([
           'taskList.contextMenu.copyLink',
           'taskList.contextMenu.copyId',
-          'myWork.subscribe',
           'taskList.contextMenu.favorite',
           'taskDetail.menu.actions',
         ]);
       });
 
-      it('seats the branch copy between ID and subscribe for workspace-bound tasks', () => {
+      it('seats the branch copy between ID and favourite for workspace-bound tasks', () => {
         mocks.hasBranch = true;
         render(<TaskDetailHeaderActions />);
 
@@ -465,7 +466,6 @@ describe('TaskDetailHeaderActions', () => {
           'taskList.contextMenu.copyLink',
           'taskList.contextMenu.copyId',
           'taskDetail.copyBranch',
-          'myWork.subscribe',
           'taskList.contextMenu.favorite',
           'taskDetail.menu.actions',
         ]);
@@ -568,26 +568,6 @@ describe('TaskDetailHeaderActions', () => {
       );
 
       expect(mocks.favoriteIds.at(-1)).toBe('task-uuid-2');
-    });
-  });
-
-  describe('subscribe', () => {
-    it('presents the control as a quiet text+icon button, not a bare icon', () => {
-      render(<TaskDetailHeaderActions />);
-
-      const subscribe = screen.getByRole('button', { name: 'myWork.subscribe' });
-      // Linear's link form: the action label is visible text on the control.
-      expect(subscribe.textContent).toContain('myWork.subscribe');
-      expect(subscribe.getAttribute('aria-pressed')).toBe('false');
-    });
-
-    it('labels the control Unsubscribe while subscribed', () => {
-      setDetail({ isSubscribed: true });
-      render(<TaskDetailHeaderActions />);
-
-      const unsubscribe = screen.getByRole('button', { name: 'myWork.unsubscribe' });
-      expect(unsubscribe.getAttribute('aria-pressed')).toBe('true');
-      expect(unsubscribe.getAttribute('data-subscribed')).toBe('true');
     });
   });
 

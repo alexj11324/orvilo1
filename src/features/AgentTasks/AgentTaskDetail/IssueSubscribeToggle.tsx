@@ -1,14 +1,17 @@
 'use client';
 
-import { BellIcon, BellRingIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { workAttentionService } from '@/services/workAttention';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
+import { useUserStore } from '@/store/user';
+import { userProfileSelectors } from '@/store/user/selectors';
 
 import { getIssueSubscriptionView } from './issueSubscription';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -17,12 +20,20 @@ import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
  * The reader's own subscription to this Issue. Like the favourite star it is
  * never write-gated: a read-only viewer can follow or stop following. The
  * state rides on the detail payload (`isSubscribed`).
+ *
+ * Mounted in the Activity section header's right cluster, matching Linear's
+ * "Unsubscribe + avatar". The avatar is the viewer's own — the detail payload
+ * carries only the viewer's subscription flag, not the subscriber list, so a
+ * real subscriber stack stays product-pending; when unsubscribed there is no
+ * avatar to claim and only the text link shows.
  */
 const IssueSubscribeToggle = () => {
   const { t } = useTranslation(['chat', 'common']);
   const taskId = useTaskDetailTaskId();
   const task = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
+  const userAvatar = useUserAvatar();
+  const displayName = useUserStore(userProfileSelectors.displayUserName);
   // Tagged with the Issue it was requested on: a peek pane keeps this
   // instance mounted while its Issue changes.
   const [pending, setPending] = useState<{ taskUuid: string; value: boolean }>();
@@ -49,24 +60,26 @@ const IssueSubscribeToggle = () => {
     }
   };
 
-  const Glyph = view.subscribed ? BellRingIcon : BellIcon;
   // Linear presents the subscription as a quiet "Subscribe"/"Unsubscribe"
-  // text link. The control still lives in the header icon row, so it keeps the
-  // row's 28px height and its bell glyph — a text+icon ghost button rather
-  // than a bare icon. The visible label names the button, so no aria-label.
+  // text link in the Activity header. The visible label names the button, so
+  // no aria-label.
   return (
-    <Button
-      aria-pressed={view.subscribed}
-      data-subscribed={view.subscribed}
-      disabled={!taskUuid || busy}
-      size="sm"
-      title={t(view.stateKey)}
-      variant="ghost"
-      onClick={() => void toggle()}
-    >
-      <Glyph aria-hidden data-icon="inline-start" />
-      {t(view.actionKey, { ns: 'common' })}
-    </Button>
+    <>
+      <Button
+        aria-pressed={view.subscribed}
+        data-subscribed={view.subscribed}
+        disabled={!taskUuid || busy}
+        size="sm"
+        title={t(view.stateKey)}
+        variant="ghost"
+        onClick={() => void toggle()}
+      >
+        {t(view.actionKey, { ns: 'common' })}
+      </Button>
+      {view.subscribed && (
+        <Avatar avatar={userAvatar} name={displayName} size={20} title={t(view.stateKey)} />
+      )}
+    </>
   );
 };
 

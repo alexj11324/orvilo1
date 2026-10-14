@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 describe('VirtuosoMasonry observer delivery', () => {
   type MockObserver = { callback: ResizeObserverCallback; targets: Set<Element> };
   let owners: Map<Element, MockObserver>;
-  let observe: ReturnType<typeof vi.fn>;
-  let unobserve: ReturnType<typeof vi.fn>;
+  let observe: ReturnType<typeof vi.fn<(target: Element, options?: ResizeObserverOptions) => void>>;
+  let unobserve: ReturnType<typeof vi.fn<(target: Element) => void>>;
   let frames: Map<number, FrameRequestCallback>;
   let nextFrame: number;
 
@@ -16,8 +16,8 @@ describe('VirtuosoMasonry observer delivery', () => {
     owners = new Map();
     frames = new Map();
     nextFrame = 0;
-    observe = vi.fn();
-    unobserve = vi.fn();
+    observe = vi.fn<(target: Element, options?: ResizeObserverOptions) => void>();
+    unobserve = vi.fn<(target: Element) => void>();
     vi.stubGlobal(
       'ResizeObserver',
       class {

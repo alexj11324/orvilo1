@@ -1,0 +1,133 @@
+{
+  "agent": {
+    "id": "agt_taIxMIVssPhE",
+    "title": "Issue 784 MiMo QA",
+    "userId": "user_agent_testing_001",
+    "visibility": "public",
+    "model": "opencode/mimo-v2.6-flash-free",
+    "provider": "opencode",
+    "savedDeviceId": "b26d477ac30d6080a4a038b66cb28a80",
+    "savedHeteroType": "opencode",
+    "savedHeteroModel": "opencode/mimo-v2.6-flash-free",
+    "savedPermission": {
+      "value": "build",
+      "configId": "mode"
+    },
+    "savedArgs": ["--pure"],
+    "savedWorkingDirectory": "/private/tmp/orvilo-issue784-acceptance/mimo/workspace"
+  },
+  "backendBaseSha": "6de41fbbda6d03b338e050b51be1a021b0eef4e9",
+  "interventionCount": 0,
+  "messages": [
+    {
+      "id": "msg_3m1uicKIBKv1N7AKv7",
+      "role": "user",
+      "responseMatches": false,
+      "errorFlags": {
+        "containsEnoent": false,
+        "containsAcpTimeout": false,
+        "containsEmptyCatalog": false,
+        "containsModelUnsupported": false
+      }
+    },
+    {
+      "id": "msg_E1B5h3DWrV3xJF2VC6",
+      "role": "assistant",
+      "responseMatches": false,
+      "errorFlags": {
+        "containsEnoent": false,
+        "containsAcpTimeout": false,
+        "containsEmptyCatalog": false,
+        "containsModelUnsupported": false
+      }
+    },
+    {
+      "id": "msg_e8QS9Jp8Uj8SJVq495",
+      "role": "tool",
+      "responseMatches": false,
+      "errorFlags": {
+        "containsEnoent": false,
+        "containsAcpTimeout": false,
+        "containsEmptyCatalog": false,
+        "containsModelUnsupported": false
+      }
+    },
+    {
+      "id": "msg_xfzAestsbzI0J4YU9N",
+      "role": "assistant",
+      "responseMatches": false,
+      "errorFlags": {
+        "containsEnoent": false,
+        "containsAcpTimeout": false,
+        "containsEmptyCatalog": false,
+        "containsModelUnsupported": false
+      }
+    },
+    {
+      "id": "msg_FSqVy3GXv5bnEDHWDj",
+      "role": "tool",
+      "responseMatches": false,
+      "errorFlags": {
+        "containsEnoent": false,
+        "containsAcpTimeout": false,
+        "containsEmptyCatalog": false,
+        "containsModelUnsupported": false
+      }
+    },
+    {
+      "id": "msg_WUJ7bClI6NdDMWGfxS",
+      "role": "assistant",
+      "responseMatches": true,
+      "errorFlags": {
+        "containsEnoent": false,
+        "containsAcpTimeout": false,
+        "containsEmptyCatalog": false,
+        "containsModelUnsupported": false
+      }
+    }
+  ],
+  "operation": {
+    "id": "op_1792010232596_agt_taIxMIVssPhE_tpc_ICJU0Di2i2Ln_fuROQeug",
+    "status": "done",
+    "callerId": "user_agent_testing_001",
+    "model": "opencode/mimo-v2.6-flash-free",
+    "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+    "deviceOwnerId": "user_agent_testing_001",
+    "admissionState": "running",
+    "executionPlanKeys": [
+      "agentId",
+      "subject",
+      "deviceId",
+      "harnessId",
+      "modelRoute",
+      "resolution",
+      "operationId",
+      "executionGeneration",
+      "workingDirectoryBinding"
+    ],
+    "resolutionKeys": ["kind", "reason"],
+    "workingDirectoryBinding": "/private/tmp/orvilo-issue784-acceptance/mimo/workspace",
+    "admissionKeys": [
+      "state",
+      "channel",
+      "deviceId",
+      "updatedAt",
+      "generation",
+      "acpSessionId",
+      "deviceUserId",
+      "idempotencyKey"
+    ],
+    "sessionId": "ses_ec3ddd264ffegQgAIK977yOG1C",
+    "errorKeys": [],
+    "errorFlags": {
+      "containsEnoent": false,
+      "containsAcpTimeout": false,
+      "containsEmptyCatalog": false,
+      "containsModelUnsupported": false
+    }
+  },
+  "proofFileExists": true,
+  "sourceAndBackendPatchSha256": "07a46dcc9df202d1653a23f8ebb68c176a6e6d62d61361524516ca28a9dafe57",
+  "sourceBaseSha": "6de41fbbda6d03b338e050b51be1a021b0eef4e9",
+  "sourceSha": "6de41fbbda6d03b338e050b51be1a021b0eef4e9"
+}

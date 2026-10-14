@@ -1,0 +1,21 @@
+{
+  "events": [
+    {
+      "eventId": "1792003143036-0",
+      "type": "agent_intervention_response",
+      "actorUserId": "user_agent_testing_001",
+      "toolCallId": "codex-permission-0-exec-3ba6316b-b4f8-412e-8589-029e569a3b8e",
+      "producerAck": false,
+      "resolutionRequestId": "31052b21-f5ee-45a9-8592-78d1ce4f92c7"
+    },
+    {
+      "eventId": "1792003143448-0",
+      "type": "agent_intervention_response",
+      "toolCallId": "codex-permission-0-exec-3ba6316b-b4f8-412e-8589-029e569a3b8e",
+      "producerAck": true,
+      "resolutionRequestId": "31052b21-f5ee-45a9-8592-78d1ce4f92c7"
+    }
+  ],
+  "operationId": "op_1792002951763_agt_44B3tqt5bkS5_tpc_sAHO4DFXuj3q_uSDXMJa5",
+  "sourceSha": "0caf355dcc65cc2284573a74362d4fc0e57aa474"
+}

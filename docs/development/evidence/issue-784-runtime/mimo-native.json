@@ -1,0 +1,145 @@
+{
+  "actualNativeCwd": "/private/tmp/orvilo-issue784-acceptance/mimo/workspace",
+  "backendBaseSha": "6de41fbbda6d03b338e050b51be1a021b0eef4e9",
+  "lastObservedNativeMode": "full-access",
+  "modeSnapshots": [
+    {
+      "rpcId": 2,
+      "id": "mode",
+      "currentValue": "build",
+      "options": [
+        {
+          "name": "build",
+          "value": "build"
+        },
+        {
+          "name": "full-access",
+          "value": "full-access"
+        },
+        {
+          "name": "librarian",
+          "value": "librarian"
+        },
+        {
+          "name": "metis",
+          "value": "metis"
+        },
+        {
+          "name": "momus",
+          "value": "momus"
+        },
+        {
+          "name": "oracle",
+          "value": "oracle"
+        },
+        {
+          "name": "plan",
+          "value": "plan"
+        },
+        {
+          "name": "planner",
+          "value": "planner"
+        }
+      ]
+    },
+    {
+      "rpcId": 3,
+      "id": "mode",
+      "currentValue": "build",
+      "options": [
+        {
+          "name": "build",
+          "value": "build"
+        },
+        {
+          "name": "full-access",
+          "value": "full-access"
+        },
+        {
+          "name": "librarian",
+          "value": "librarian"
+        },
+        {
+          "name": "metis",
+          "value": "metis"
+        },
+        {
+          "name": "momus",
+          "value": "momus"
+        },
+        {
+          "name": "oracle",
+          "value": "oracle"
+        },
+        {
+          "name": "plan",
+          "value": "plan"
+        },
+        {
+          "name": "planner",
+          "value": "planner"
+        }
+      ]
+    },
+    {
+      "rpcId": 4,
+      "id": "mode",
+      "currentValue": "full-access",
+      "options": [
+        {
+          "name": "build",
+          "value": "build"
+        },
+        {
+          "name": "full-access",
+          "value": "full-access"
+        },
+        {
+          "name": "librarian",
+          "value": "librarian"
+        },
+        {
+          "name": "metis",
+          "value": "metis"
+        },
+        {
+          "name": "momus",
+          "value": "momus"
+        },
+        {
+          "name": "oracle",
+          "value": "oracle"
+        },
+        {
+          "name": "plan",
+          "value": "plan"
+        },
+        {
+          "name": "planner",
+          "value": "planner"
+        }
+      ]
+    }
+  ],
+  "nativeModelValues": [
+    {
+      "rpcId": 2,
+      "currentValue": "opencode-go/glm-5.3-flash"
+    },
+    {
+      "rpcId": 3,
+      "currentValue": "opencode/mimo-v2.6-flash-free"
+    },
+    {
+      "rpcId": 4,
+      "currentValue": "opencode/mimo-v2.6-flash-free"
+    }
+  ],
+  "nativeSessionId": "ses_ec3ddd264ffegQgAIK977yOG1C",
+  "operationId": "op_1792010232596_agt_taIxMIVssPhE_tpc_ICJU0Di2i2Ln_fuROQeug",
+  "permissionRequestCount": 0,
+  "proofExists": true,
+  "proofMatches": true,
+  "sourceAndBackendPatchSha256": "07a46dcc9df202d1653a23f8ebb68c176a6e6d62d61361524516ca28a9dafe57",
+  "sourceBaseSha": "6de41fbbda6d03b338e050b51be1a021b0eef4e9"
+}

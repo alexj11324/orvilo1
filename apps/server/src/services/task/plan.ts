@@ -936,10 +936,12 @@ export class TaskPlanService {
         if (invalidated.has(scope.taskId))
           scope.minGeneration =
             members.find((task) => task.id === scope.taskId)!.executionGeneration + 1;
+      const { subtasks, dependencies } = await service.getIssuePlan(current.id);
       const refined: IssuePlan = {
         ...plan,
         checklists,
         executionScopes: scopes,
+        scopeFingerprint: issuePlanFingerprint([current, ...subtasks], dependencies),
         refinement: {
           revision: input.refinementRevision + 1,
           operationId,

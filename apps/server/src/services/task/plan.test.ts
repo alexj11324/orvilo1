@@ -669,6 +669,53 @@ async function refinementFixture() {
 }
 
 describe('confirmed implementation refinement', () => {
+  it.each(['added Issue', 'changed dependency'])(
+    'starts the next periodic graph after a legal refinement of %s',
+    async (change) => {
+      await db.update(tasks).set({ automationMode: 'heartbeat' }).where(eq(tasks.id, id));
+      const f = await refinementFixture();
+      const input =
+        change === 'added Issue'
+          ? f.input
+          : {
+              ...f.input,
+              addTasks: [],
+              dependencies: [
+                {
+                  identifier: f.draft.subtasks[0].identifier,
+                  dependsOnIdentifier: f.draft.subtasks[1].identifier,
+                  action: 'add' as const,
+                },
+              ],
+            };
+      const refined = await service().refineIssuePlan(input, f.operationId);
+      await db
+        .update(agentOperations)
+        .set({ status: 'done' })
+        .where(eq(agentOperations.id, f.operationId));
+      await expect(
+        startAutomationPlan(db, user, ws, {
+          task: (await new TaskModel(db, user, ws).findById(id))!,
+          trigger: 'heartbeat',
+          idempotencyKey: `heartbeat:refined-${change}`,
+        }),
+      ).rejects.toBeInstanceOf(TaskDispatchQueuedError);
+      const dispatch = await new TaskDispatchModel(db, ws).findActiveByTaskId(id);
+      expect(dispatch).toMatchObject({
+        phase: 'waiting',
+        waitingReason: 'automation_plan_running',
+        automationOccurrence: {
+          definition: { issuePlan: { scopeFingerprint: refined.plan!.scopeFingerprint } },
+        },
+      });
+      expect(TaskService.prototype.runReadySubtasks).toHaveBeenLastCalledWith(
+        id,
+        dispatch!.id,
+        dispatch!.id,
+      );
+    },
+  );
+
   it('refines from a task-scoped interactive Orchestrator conversation without a delivery generation', async () => {
     const f = await refinementFixture();
     await db

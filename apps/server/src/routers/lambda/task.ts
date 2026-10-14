@@ -75,6 +75,7 @@ import { acceptancePolicyChanged } from '@/server/services/task/activityLogChang
 import { IssueChecklistService } from '@/server/services/task/checklist';
 import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
 import { TaskIntentService } from '@/server/services/task/intent';
+import { TaskPlanService } from '@/server/services/task/plan';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
@@ -120,6 +121,7 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       taskLabelModel: new TaskLabelModel(ctx.serverDB, ctx.userId, wsId),
       taskService: new TaskService(ctx.serverDB, ctx.userId, wsId),
       issueChecklist: new IssueChecklistService(ctx.serverDB, ctx.userId, wsId),
+      taskPlan: new TaskPlanService(ctx.serverDB, ctx.userId, wsId),
       taskTopicModel: new TaskTopicModel(ctx.serverDB, ctx.userId, wsId),
       topicModel: new TopicModel(ctx.serverDB, ctx.userId, wsId),
     },
@@ -836,6 +838,48 @@ async function resolveSafeParentTaskId(
 }
 
 export const taskRouter = router({
+  intakeIssue: taskExecutionProcedure
+    .input(
+      z.object({
+        name: z.string().trim().min(1).max(2000),
+        instruction: z.string().trim().min(1).max(100000),
+        projectId: z.string().optional(),
+        teamId: z.string().optional(),
+        issueId: z.string().optional(),
+        sourceTopicId: z.string().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { sourceTopicId, ...request } = input;
+      const source = sourceTopicId ? await ctx.topicModel.findById(sourceTopicId) : undefined;
+      if (sourceTopicId && (!source || source.userId !== ctx.userId))
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Source conversation not found' });
+      return {
+        data: await ctx.taskPlan.intake({
+          ...request,
+          origin: source ? { topicId: source.id, agentId: source.agentId ?? undefined } : undefined,
+        }),
+        success: true,
+      };
+    }),
+  getIssuePlan: taskProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ({
+      data: await ctx.taskPlan.getIssuePlan(input.id),
+      success: true,
+    })),
+  draftIssuePlan: taskExecutionProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => ({
+      data: await ctx.taskPlan.draftIssuePlan(input.id),
+      success: true,
+    })),
+  confirmIssuePlan: taskExecutionProcedure
+    .input(z.object({ id: z.string().min(1), revision: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => ({
+      data: await ctx.taskPlan.confirmIssuePlan(input),
+      success: true,
+    })),
   acceptDelivery: taskProcedure
     .input(issueDeliveryDecisionSchema)
     .mutation(async ({ input, ctx }) => ({

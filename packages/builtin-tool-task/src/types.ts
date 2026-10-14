@@ -8,6 +8,8 @@ import type {
 
 export const TaskApiName = {
   readAutomationInput: 'readAutomationInput',
+  /** Create or link an Issue draft and request Orchestrator planning. */
+  intakeIssue: 'intakeIssue',
   /** Add a comment to a task */
   addTaskComment: 'addTaskComment',
 
@@ -61,6 +63,14 @@ export const TaskApiName = {
 } as const;
 
 export type TaskApiNameType = (typeof TaskApiName)[keyof typeof TaskApiName];
+
+export interface IntakeIssueParams {
+  instruction: string;
+  issueId?: string;
+  name: string;
+  projectId?: string;
+  teamId?: string;
+}
 
 // ==================== createTask ====================
 

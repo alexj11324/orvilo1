@@ -1,5 +1,6 @@
 import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
+import type { IssueChecklistItem } from '../verify';
 import type { TaskAttentionReason } from './stateModel';
 
 export * from './activityLine';
@@ -965,12 +966,36 @@ export interface TaskOriginContext {
   topicId?: string;
 }
 
+export interface IssuePlan {
+  checklists: Array<{
+    expectedRevision: number;
+    taskId: string;
+    items: IssueChecklistItem[];
+    deliveryKind: 'code' | 'artifact';
+    repo?: string;
+    targetBranch?: string;
+  }>;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  conversationPlan?: { topicId: string; postedMessageId: string; postedAt: string };
+  orchestratorAgentId: string;
+  parentTaskId: string;
+  plannedBy: string;
+  planningOperationId: string;
+  requirement: string;
+  revision: number;
+  scope: { description: string; repositories: Array<{ repo: string; targetBranch: string }> };
+  scopeFingerprint: string;
+  summary: string;
+}
+
 export interface TaskContext {
   completion?: {
     /** The running operation that asked to complete its own task. The lifecycle
      * finalizes the task only after that operation has finished cleanly. */
     requestedByOperationId?: string;
   };
+  issuePlan?: IssuePlan;
   lifecycle?: TaskLifecycleAudit;
   origin?: TaskOriginContext;
   scheduler?: TaskSchedulerContext;

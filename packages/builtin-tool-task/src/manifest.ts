@@ -26,16 +26,41 @@ export const TaskManifest: BuiltinToolManifest = {
         additionalProperties: false,
       },
     },
+    {
+      name: TaskApiName.intakeIssue,
+      description:
+        'Intake a clear code delivery request: create or link an Issue draft and ask the saved Orchestrator to draft its Checklist. Does not confirm or execute delivery. Ask for missing requirements before intake; ordinary Q&A does not need an Issue.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['name', 'instruction'],
+        properties: {
+          name: { type: 'string', minLength: 1, description: 'Short Issue title.' },
+          instruction: {
+            type: 'string',
+            minLength: 1,
+            description: 'Delivery requirements and acceptance criteria from the conversation.',
+          },
+          issueId: {
+            type: 'string',
+            description: 'Existing Issue ID or identifier to link, when known.',
+          },
+          projectId: { type: 'string', description: 'Existing project ID, when known.' },
+          teamId: { type: 'string', description: 'Existing team ID, when known.' },
+        },
+      },
+      work: { action: 'create', resourceType: 'task' },
+    },
     // ==================== Task CRUD ====================
     {
       description:
-        'Create a new task. Optionally attach it as a subtask by specifying parentIdentifier.',
+        'Create an unconfirmed Issue draft. Optionally attach it as a subtask by specifying parentIdentifier.',
       name: TaskApiName.createTask,
       parameters: {
         properties: {
           instruction: {
             description:
-              'The editable Issue description: what to deliver and its acceptance criteria.',
+              'The editable Issue description: background and delivery scope. Acceptance criteria are drafted in its Checklist.',
             type: 'string',
           },
           assigneeAgentId: {
@@ -87,7 +112,8 @@ export const TaskManifest: BuiltinToolManifest = {
             items: {
               properties: {
                 instruction: {
-                  description: 'The editable Issue description, including its acceptance criteria.',
+                  description:
+                    'The editable Issue description: background and delivery scope; its Checklist owns acceptance criteria.',
                   type: 'string',
                 },
                 assigneeAgentId: {

@@ -1,9 +1,12 @@
 import { cn } from 'cn';
 import { memo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { IssueChecklist } from './IssueChecklist';
 import TaskActivities from './TaskActivities';
 import TaskArtifacts from './TaskArtifacts';
 import TaskDetailAddActions from './TaskDetailAddActions';
@@ -26,6 +29,7 @@ import TaskSubtasks from './TaskSubtasks';
  * reads fall back to the store's `activeTaskId`).
  */
 const TaskDetailSections = memo(() => {
+  const { t } = useTranslation('chat');
   const taskId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   // The add row and the Sub-issues section share one composer.
   const [subIssueComposerOpen, setSubIssueComposerOpen] = useState(false);
@@ -64,7 +68,18 @@ const TaskDetailSections = memo(() => {
             />
             <TaskArtifacts />
             <TaskIssueResources />
-            <TaskActivities />
+            <Tabs defaultValue="activity" key={taskId}>
+              <TabsList variant="line">
+                <TabsTrigger value="activity">{t('taskDetail.activities')}</TabsTrigger>
+                <TabsTrigger value="checklist">{t('taskDetail.checklist.title')}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="activity">
+                <TaskActivities />
+              </TabsContent>
+              <TabsContent value="checklist">
+                <IssueChecklist />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

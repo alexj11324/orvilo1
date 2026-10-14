@@ -29,6 +29,7 @@ import { ViewTaskInspector } from './ViewTask';
  */
 export const TaskInspectors: Record<string, BuiltinInspector> = {
   [TaskApiName.addTaskComment]: AddTaskCommentInspector as BuiltinInspector,
+  [TaskApiName.intakeIssue]: CreateTaskInspector as BuiltinInspector,
   [TaskApiName.createTask]: CreateTaskInspector as BuiltinInspector,
   [TaskApiName.createGoal]: CreateGoalInspector as BuiltinInspector,
   [TaskApiName.createTasks]: CreateTasksInspector as BuiltinInspector,

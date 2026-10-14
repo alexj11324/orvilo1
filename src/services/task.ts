@@ -13,6 +13,13 @@ import type {
 import { lambdaClient } from '@/libs/trpc/client';
 
 class TaskService {
+  draftIssuePlan = async (id: string) => lambdaClient.task.draftIssuePlan.mutate({ id });
+
+  getIssuePlan = async (id: string) => lambdaClient.task.getIssuePlan.query({ id });
+
+  confirmIssuePlan = async (id: string, revision: number) =>
+    lambdaClient.task.confirmIssuePlan.mutate({ id, revision });
+
   getChecklist = async (taskId: string) => lambdaClient.task.getChecklist.query({ taskId });
 
   confirmChecklist = async (params: {

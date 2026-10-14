@@ -6,6 +6,13 @@ import type * as taskReview from '@/server/services/task/review';
 
 import { createTaskRuntime, taskRuntime } from '../task';
 
+const intakeMocks = vi.hoisted(() => ({ intake: vi.fn() }));
+vi.mock('@/server/services/task/plan', () => ({
+  TaskPlanService: vi.fn(function () {
+    return intakeMocks;
+  }),
+}));
+
 const verifyMocks = vi.hoisted(() => ({ createCriteriaFromDrafts: vi.fn() }));
 const reviewMocks = vi.hoisted(() => ({ submitIssueReview: vi.fn() }));
 vi.mock('@/server/services/task/review', async (importOriginal) => ({
@@ -123,6 +130,62 @@ describe('taskRuntime.factory', () => {
 });
 
 describe('createTaskRuntime', () => {
+  describe('intakeIssue', () => {
+    const runtime = () =>
+      createTaskRuntime({
+        agentId: 'agent-source',
+        topicId: 'topic-source',
+        assistantMessageId: 'message-source',
+        rootOperationId: 'root-operation',
+        operationId: 'child-operation',
+        toolCallId: 'intake-call',
+        agentModel: {} as never,
+        taskModel: {} as never,
+        taskService: {} as never,
+        taskCaller: {} as never,
+        taskPlanService: intakeMocks as never,
+      });
+
+    it('returns an Issue draft in the continuous source conversation without executing it', async () => {
+      intakeMocks.intake.mockResolvedValue({
+        id: 'issue-draft',
+        identifier: 'T-784',
+        name: 'Deliver feature',
+        priority: 0,
+        workflowCategory: 'triage',
+      });
+      const result = await runtime().intakeIssue({
+        name: 'Deliver feature',
+        instruction: 'Add the requested feature',
+        issueId: 'T-784',
+      });
+      expect(result).toMatchObject({
+        success: true,
+        state: { taskId: 'issue-draft', identifier: 'T-784', workflowCategory: 'triage' },
+      });
+      expect(result.content).toContain('Await human confirmation');
+      expect(intakeMocks.intake).toHaveBeenCalledWith(
+        expect.objectContaining({
+          issueId: 'T-784',
+          origin: {
+            agentId: 'agent-source',
+            topicId: 'topic-source',
+            messageId: 'message-source',
+            operationId: 'root-operation',
+            toolCallId: 'intake-call',
+          },
+        }),
+      );
+    });
+
+    it('asks for missing requirements without creating an Issue', async () => {
+      intakeMocks.intake.mockClear();
+      const result = await runtime().intakeIssue({ name: 'Feature', instruction: ' ' });
+      expect(result.success).toBe(false);
+      expect(intakeMocks.intake).not.toHaveBeenCalled();
+    });
+  });
+
   describe('submitTaskReview', () => {
     const round = {
       runId: '6a2e27c8-ec45-4c57-a77f-fd5019d24a9a',

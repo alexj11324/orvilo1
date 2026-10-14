@@ -41,6 +41,7 @@ import type {
   CreateTasksItemResult,
   DeleteTaskCommentParams,
   EditTaskParams,
+  IntakeIssueParams,
   ListWorkspaceMembersParams,
   RunTasksItemResult,
   SubmitTaskReviewParams,
@@ -61,6 +62,7 @@ const taskLinkBaseUrl = (): string | undefined => {
 // APIs whose execution mutates state that's surfaced in the renderer's task
 // list or detail caches. Used by `onAfterCall` to decide what to revalidate.
 const LIST_MUTATING_APIS = new Set<string>([
+  TaskApiName.intakeIssue,
   TaskApiName.createTask,
   TaskApiName.createTasks,
   TaskApiName.deleteTask,
@@ -73,6 +75,7 @@ const LIST_MUTATING_APIS = new Set<string>([
 ]);
 
 const DETAIL_MUTATING_APIS = new Set<string>([
+  TaskApiName.intakeIssue,
   TaskApiName.addTaskComment,
   TaskApiName.deleteTaskComment,
   TaskApiName.editTask,
@@ -117,7 +120,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
     // it lives here rather than in the renderer: the gateway re-fetches and
     // remounts the message after `tool_end`, so a render-mount effect never sees
     // the undefined → defined identifier transition and would never open.
-    if (apiName === TaskApiName.createTask && identifier) {
+    if ((apiName === TaskApiName.createTask || apiName === TaskApiName.intakeIssue) && identifier) {
       getChatStoreState().openTaskDetail(identifier);
     }
 
@@ -225,6 +228,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
           params.assigneeAgentId ?? (ctx?.scope === 'task' ? undefined : ctx?.agentId),
         assigneeUserId: params.assigneeUserId,
         createdByAgentId: ctx?.agentId,
+        workflowCategory: 'triage',
         instruction: params.instruction,
         name: params.name,
         parentTaskId: parentIdentifier,
@@ -275,6 +279,37 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
       return {
         content,
         error: { message, type: 'CreateTaskFailed' },
+        success: false,
+      };
+    }
+  };
+
+  intakeIssue = async (
+    params: IntakeIssueParams,
+    ctx?: BuiltinToolContext,
+  ): Promise<BuiltinToolResult> => {
+    try {
+      const result = await lambdaClient.task.intakeIssue.mutate({
+        ...params,
+        sourceTopicId: ctx?.topicId ?? undefined,
+      });
+      const task = result.data;
+      return {
+        content: `Issue ${task.identifier}: ${task.name}. Checklist drafted; await human confirmation before delivery.`,
+        state: {
+          identifier: task.identifier,
+          taskId: task.id,
+          name: task.name,
+          workflowCategory: task.workflowCategory,
+          success: true,
+        },
+        success: true,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        content: `Issue intake failed: ${message}`,
+        error: { type: 'IntakeIssueFailed', message },
         success: false,
       };
     }

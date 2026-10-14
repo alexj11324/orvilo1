@@ -1372,7 +1372,7 @@ export class AgentModel {
     return agentId;
   };
 
-  /** Future resource-owned coordinators use only the caller's explicit default in this scope. */
+  /** Workspace coordinators use the shared source; personal coordinators use the user's default. */
   getOrchestratorRuntimeForCreation = async (
     options: { visibility?: 'private' | 'public'; model?: string; provider?: string } = {},
   ) => {

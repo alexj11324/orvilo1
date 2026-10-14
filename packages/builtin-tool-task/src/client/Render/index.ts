@@ -17,6 +17,7 @@ import SetTaskVerifyRender from './SetTaskVerify';
  * (status/delete/comments) fall back to the generic argument/result render.
  */
 export const TaskRenders: Record<string, BuiltinRender> = {
+  [TaskApiName.intakeIssue]: CreateTaskRender as BuiltinRender,
   [TaskApiName.createTask]: CreateTaskRender as BuiltinRender,
   [TaskApiName.createGoal]: CreateGoalRender as BuiltinRender,
   [TaskApiName.createTasks]: CreateTasksRender as BuiltinRender,

@@ -94,13 +94,13 @@ describe('workspaceUserSettingsRouter.updatePreference', () => {
     mockCanPerform.mockResolvedValue(true);
   });
 
-  it('validates an explicit Orchestrator before saving the member preference', async () => {
+  it('validates an explicit shared Orchestrator before saving', async () => {
     await workspaceUserSettingsRouter
       .createCaller(ctx)
       .updatePreference({ orchestratorAgentId: 'agt_1' });
     expect(mockInheritRuntime).toHaveBeenCalledWith('agt_1', {
       purpose: 'orchestrator',
-      visibility: 'private',
+      visibility: 'public',
     });
     expect(mockUpdatePreference).toHaveBeenCalledWith({ orchestratorAgentId: 'agt_1' });
   });
@@ -125,6 +125,16 @@ describe('workspaceUserSettingsRouter.updatePreference', () => {
     expect(mockUpdatePreference).not.toHaveBeenCalled();
     await caller.updatePreference({ orchestratorAgentId: null });
     expect(mockUpdatePreference).toHaveBeenCalledWith({ orchestratorAgentId: null });
+  });
+
+  it('does not save a shared Orchestrator the caller cannot use', async () => {
+    mockCanPerform.mockResolvedValue(false);
+    await expect(
+      workspaceUserSettingsRouter
+        .createCaller(ctx)
+        .updatePreference({ orchestratorAgentId: 'agt_1' }),
+    ).rejects.toThrow('Agent is not available to use');
+    expect(mockUpdatePreference).not.toHaveBeenCalled();
   });
 
   // Seeing a workspace Agent's profile is not permission to run it; a default

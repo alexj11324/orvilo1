@@ -77,3 +77,17 @@ describe('automatic reviewer assignment contract', () => {
     expect(view?.description).toContain('cannot be assigned as reviewer');
   });
 });
+
+describe('Issue intake', () => {
+  it('registers a bounded planning API with Issue Work identity', () => {
+    const intake = TaskManifest.api.find((api) => api.name === TaskApiName.intakeIssue);
+    expect(intake).toMatchObject({
+      work: { action: 'create', resourceType: 'task' },
+      parameters: {
+        additionalProperties: false,
+        required: ['name', 'instruction'],
+        properties: { issueId: { type: 'string' } },
+      },
+    });
+  });
+});

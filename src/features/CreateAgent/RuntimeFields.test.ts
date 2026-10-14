@@ -62,6 +62,20 @@ beforeEach(() => {
 });
 
 describe('shared Agent runtime form', () => {
+  it.each(['private', 'public'] as const)(
+    'locks creation to the explicit %s visibility',
+    async (visibility) => {
+      render(
+        createElement(CreateAgentPanel, { initialType: 'codex', lockVisibility: true, visibility }),
+      );
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'createAgent.create' })).not.toBeDisabled(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'createAgent.create' }));
+      await waitFor(() => expect(state.create).toHaveBeenCalled());
+      expect(state.create.mock.calls[0][1].visibility).toBe(visibility);
+    },
+  );
   it('delivers edited reviewer instructions to the saved CLI runtime', async () => {
     render(createElement(CreateAgentPanel, { initialType: 'codex' }));
     fireEvent.click(screen.getByRole('button', { name: 'createAgent.moreSettings' }));

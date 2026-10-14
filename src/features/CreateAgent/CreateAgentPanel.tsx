@@ -51,9 +51,7 @@ const CreateAgentPanel = ({
   const { t } = useTranslation(['chat', 'common']);
   const workspaceId = useActiveWorkspaceId();
   const fieldId = useId();
-  const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(
-    lockVisibility ? 'private' : visibility,
-  );
+  const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(visibility);
   const form = useAgentRuntimeForm({ builtinOnly, initialType, visibility: selectedVisibility });
   const createAgent = useAgentStore((s) => s.createAgent);
   const [name, setName] = useState('');
@@ -142,7 +140,9 @@ const CreateAgentPanel = ({
                 {t('createAgent.visibility.label')}
               </FieldLabel>
               {lockVisibility ? (
-                <span className="text-muted-foreground">{t('createAgent.visibility.private')}</span>
+                <span className="text-muted-foreground">
+                  {t(`createAgent.visibility.${selectedVisibility}`)}
+                </span>
               ) : (
                 <Select
                   disabled={locked || !!groupId}

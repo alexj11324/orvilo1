@@ -1,19 +1,22 @@
 import type { WorkspaceUserPreference } from '@orvilo/types';
 import { mergeNotificationSettings } from '@orvilo/utils/mergeNotificationSettings';
-import { and, eq } from 'drizzle-orm';
+import { pickString, toRecord } from '@orvilo/utils/object';
+import { TRPCError } from '@trpc/server';
+import { and, eq, sql } from 'drizzle-orm';
 
-import { workspaceUserSettings } from '../schemas/workspace';
+import { agents } from '../schemas/agent';
+import { workspaces, workspaceUserSettings } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
+import { hasWorkspaceAdminAccess } from './workspace';
 
 /**
  * Per-user preferences scoped to a specific workspace — the workspace-scoped
  * counterpart to `UserSettingsModel`. Rows live in `workspace_user_settings`
  * (PK `(workspaceId, userId)`) and cascade with either identity anchor.
  *
- * Every operation is scoped to the constructor's `(workspaceId, userId)`
- * pair; there is no way to reach another member's preferences through this
- * model, mirroring how the caller can only ever write their own settings from
- * the UI.
+ * Member preferences remain scoped to `(workspaceId, userId)`. The Orchestrator
+ * source is shared in `workspaces.settings` and managed by Owner/Admin only;
+ * legacy per-member Orchestrator choices are never used as a fallback.
  *
  * Rows are lazily created — the first `updatePreference` call for a given
  * pair upserts, so members who never customize anything simply have no row
@@ -51,8 +54,17 @@ export class WorkspaceUserSettingsModel {
    * it without null-guarding every field.
    */
   getPreference = async (): Promise<WorkspaceUserPreference> => {
-    const row = await this.get();
-    return row?.preference ?? {};
+    const [row, [workspace]] = await Promise.all([
+      this.get(),
+      this.db
+        .select({ settings: workspaces.settings })
+        .from(workspaces)
+        .where(eq(workspaces.id, this.workspaceId))
+        .limit(1),
+    ]);
+    const { orchestratorAgentId: _legacy, ...personal } = row?.preference ?? {};
+    const orchestratorAgentId = pickString(toRecord(workspace?.settings)?.orchestratorAgentId);
+    return { ...personal, ...(orchestratorAgentId ? { orchestratorAgentId } : {}) };
   };
 
   /**
@@ -68,7 +80,32 @@ export class WorkspaceUserSettingsModel {
    * in the patch is a no-op — pass an explicit `{}` to clear it).
    */
   updatePreference = async (patch: Partial<WorkspaceUserPreference>) => {
-    const current = (await this.getPreference()) ?? {};
+    const { orchestratorAgentId, ...memberPatch } = patch;
+    if (orchestratorAgentId !== undefined) {
+      if (
+        !(await hasWorkspaceAdminAccess(this.db, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        }))
+      )
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace admin access required' });
+      if (orchestratorAgentId) {
+        const [source] = await this.db
+          .select({ id: agents.id })
+          .from(agents)
+          .where(
+            and(
+              eq(agents.id, orchestratorAgentId),
+              eq(agents.workspaceId, this.workspaceId),
+              eq(agents.visibility, 'public'),
+            ),
+          )
+          .limit(1);
+        if (!source)
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'ORCHESTRATOR_SOURCE_PRIVATE' });
+      }
+    }
+    const { orchestratorAgentId: _shared, ...current } = await this.getPreference();
     // Per-agent override maps merge one level deeper: clients patch a single
     // agent's leaf from a local copy that may be stale or empty (for example a
     // picker used before the preference fetch settles). A top-level replace
@@ -76,7 +113,7 @@ export class WorkspaceUserSettingsModel {
     // Individual per-agent entries still replace wholesale.
     const next: WorkspaceUserPreference = {
       ...current,
-      ...patch,
+      ...memberPatch,
       ...(patch.notification
         ? { notification: mergeNotificationSettings(current.notification, patch.notification) }
         : {}),
@@ -119,18 +156,36 @@ export class WorkspaceUserSettingsModel {
           }
         : {}),
     };
-    const [row] = await this.db
-      .insert(workspaceUserSettings)
-      .values({
-        preference: next,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      })
-      .onConflictDoUpdate({
-        set: { preference: next, updatedAt: new Date() },
-        target: [workspaceUserSettings.workspaceId, workspaceUserSettings.userId],
-      })
-      .returning();
-    return row;
+    return this.db.transaction(async (tx) => {
+      if (orchestratorAgentId !== undefined) {
+        await tx
+          .update(workspaces)
+          .set({
+            settings: sql`coalesce(${workspaces.settings}, '{}'::jsonb) || jsonb_build_object('orchestratorAgentId', ${orchestratorAgentId}::text)`,
+            updatedAt: new Date(),
+          })
+          .where(eq(workspaces.id, this.workspaceId));
+      }
+      const [row] = await tx
+        .insert(workspaceUserSettings)
+        .values({
+          preference: next,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        })
+        .onConflictDoUpdate({
+          set: { preference: next, updatedAt: new Date() },
+          target: [workspaceUserSettings.workspaceId, workspaceUserSettings.userId],
+        })
+        .returning();
+      return {
+        ...row,
+        preference: await new WorkspaceUserSettingsModel(
+          tx as OrviloDatabase,
+          this.userId,
+          this.workspaceId,
+        ).getPreference(),
+      };
+    });
   };
 }

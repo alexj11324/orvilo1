@@ -1,5 +1,6 @@
 import type {
   EditTaskParams,
+  IntakeIssueParams,
   ListWorkspaceMembersParams,
   SubmitTaskReviewParams,
 } from '@orvilo/builtin-tool-task';
@@ -38,6 +39,7 @@ import { tasks } from '@/database/schemas';
 import { appEnv } from '@/envs/app';
 import { taskRouter } from '@/server/routers/lambda/task';
 import { TaskService } from '@/server/services/task';
+import { TaskPlanService } from '@/server/services/task/plan';
 import { readIssueReview, submitIssueReview } from '@/server/services/task/review';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { after } from '@/server/utils/scheduleAfterResponse';
@@ -84,6 +86,7 @@ export interface TaskRuntimeDeps {
   taskCaller: ReturnType<typeof taskRouter.createCaller>;
   taskId?: string;
   taskModel: TaskModel;
+  taskPlanService?: TaskPlanService;
   taskService: TaskService;
   threadId?: string | null;
   toolCallId?: string;
@@ -236,6 +239,8 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       parentTaskId,
       priority: args.priority,
       sortOrder: args.sortOrder,
+      triageStatus: 'untriaged',
+      workflowCategory: 'triage',
     });
 
     notifyMemberAssigned(task);
@@ -263,6 +268,39 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
   };
 
   return {
+    intakeIssue: async (args: IntakeIssueParams) => {
+      if (!args.name.trim() || !args.instruction.trim()) {
+        return {
+          content: 'Ask for the missing Issue title or delivery requirements before intake.',
+          success: false,
+        };
+      }
+      if (!deps.taskPlanService) {
+        return { content: 'Issue planning is unavailable in this runtime.', success: false };
+      }
+      const origin =
+        agentId && topicId
+          ? {
+              agentId,
+              topicId,
+              messageId: assistantMessageId,
+              operationId: rootOperationId ?? operationId,
+              toolCallId,
+            }
+          : undefined;
+      const task = await deps.taskPlanService.intake({ ...args, origin });
+      return {
+        content: `${formatTaskCreated({ baseUrl: await taskLinkBaseUrl(), identifier: task.identifier, name: task.name, instruction: args.instruction, priority: task.priority, status: deriveLegacyTaskStatus(task) })}\nIssue Checklist drafted. Await human confirmation before delivery.`,
+        state: {
+          identifier: task.identifier,
+          taskId: task.id,
+          name: task.name,
+          workflowCategory: task.workflowCategory,
+          success: true,
+        },
+        success: true,
+      };
+    },
     addTaskComment: async (args: { content: string; identifier?: string }) => {
       const id = args.identifier?.trim() || taskId;
       if (!id) {
@@ -1084,6 +1122,7 @@ export const taskRuntime: ServerRuntimeRegistration = {
       agentModel: new AgentModel(db, userId),
       taskModel: new TaskModel(db, userId),
       taskService: new TaskService(db, userId),
+      taskPlanService: new TaskPlanService(db, userId),
       // `actingAgentId` names the agent for durable attribution (task
       // reassignment activity). Server-side only by contract — it must never
       // reach the router through a client-supplied field.
@@ -1103,6 +1142,7 @@ export const taskRuntime: ServerRuntimeRegistration = {
       deps.agentModel = new AgentModel(db, userId, wsId);
       deps.taskModel = new TaskModel(db, userId, wsId);
       deps.taskService = new TaskService(db, userId, wsId);
+      deps.taskPlanService = new TaskPlanService(db, userId, wsId);
       // MUST keep `actingAgentId`: this replaces the caller built above, and
       // every exported method awaits `ensureModels()` first — dropping it here
       // silently attributes every agent-driven task edit to the session user.

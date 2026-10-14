@@ -111,7 +111,7 @@ export const workspaceUserSettingsRouter = router({
         // Neither seeing nor configuring a workspace Agent is being allowed to run
         // it, and a default Agent the member cannot use would open onto a
         // conversation they cannot send in.
-        if (agentId === input.defaultAgentId && ctx.workspaceId) {
+        if (ctx.workspaceId) {
           const meta = await getResourceMeta(ctx.serverDB, 'agent', agentId);
           const usable =
             !!meta &&
@@ -133,7 +133,7 @@ export const workspaceUserSettingsRouter = router({
       if (input.orchestratorAgentId) {
         await ctx.preferenceAgentModel.inheritRuntimeForCreation(input.orchestratorAgentId, {
           purpose: 'orchestrator',
-          visibility: 'private',
+          visibility: 'public',
         });
       }
       // Compat for pre-shared-sidebar clients: their "Move to Category" still
@@ -210,6 +210,7 @@ export const workspaceUserSettingsRouter = router({
         );
         return { data: row?.preference ?? {}, message: 'Updated', success: true };
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         console.error('[workspaceUserSettings:updatePreference]', error);
         throw new TRPCError({
           cause: error,

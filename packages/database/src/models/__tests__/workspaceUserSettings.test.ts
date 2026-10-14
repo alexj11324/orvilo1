@@ -2,8 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { users, workspaces, workspaceUserSettings } from '../../schemas';
+import { agents, users, workspaceMembers, workspaces, workspaceUserSettings } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
+import { AgentModel } from '../agent';
 import { WorkspaceUserSettingsModel } from '../workspaceUserSettings';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -29,6 +30,62 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe('WorkspaceUserSettingsModel', () => {
+  it.each(['owner', 'admin'])(
+    'lets %s share one Orchestrator and ignores legacy member choices',
+    async (role) => {
+      await serverDB.insert(workspaceMembers).values([
+        { userId: userA, workspaceId, role },
+        { userId: userB, workspaceId, role: 'member' },
+      ]);
+      await serverDB
+        .insert(agents)
+        .values({ id: 'shared-source', userId: userA, workspaceId, visibility: 'public' });
+      await serverDB.insert(workspaceUserSettings).values({
+        userId: userB,
+        workspaceId,
+        preference: {
+          orchestratorAgentId: 'legacy-member-source',
+          defaultAgentId: 'member-default',
+        },
+      });
+      const owner = new WorkspaceUserSettingsModel(serverDB, userA, workspaceId);
+      const member = new WorkspaceUserSettingsModel(serverDB, userB, workspaceId);
+      await expect(
+        new AgentModel(serverDB, userB, workspaceId).getOrchestratorSourceAgentId(),
+      ).rejects.toThrow('ORCHESTRATOR_SETUP_REQUIRED');
+      await owner.updatePreference({ orchestratorAgentId: 'shared-source' });
+      expect(await member.getPreference()).toMatchObject({
+        orchestratorAgentId: 'shared-source',
+        defaultAgentId: 'member-default',
+      });
+      expect(
+        await new AgentModel(serverDB, userB, workspaceId).getOrchestratorSourceAgentId(),
+      ).toBe('shared-source');
+      expect((await owner.get())?.preference?.orchestratorAgentId).toBeUndefined();
+      await member.updatePreference({ defaultAgentId: 'updated-member-default' });
+      expect((await owner.getPreference()).orchestratorAgentId).toBe('shared-source');
+      await expect(member.updatePreference({ orchestratorAgentId: null })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await owner.updatePreference({ orchestratorAgentId: null });
+      expect((await member.getPreference()).orchestratorAgentId).toBeUndefined();
+    },
+  );
+
+  it('rejects private and cross-scope sources for the shared default', async () => {
+    await serverDB.insert(workspaceMembers).values({ userId: userA, workspaceId, role: 'owner' });
+    await serverDB.insert(agents).values([
+      { id: 'private-source', userId: userA, workspaceId, visibility: 'private' },
+      { id: 'personal-source', userId: userA, visibility: 'public' },
+    ]);
+    const owner = new WorkspaceUserSettingsModel(serverDB, userA, workspaceId);
+    for (const orchestratorAgentId of ['private-source', 'personal-source'])
+      await expect(owner.updatePreference({ orchestratorAgentId })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    expect(await owner.getPreference()).toEqual({});
+  });
+
   it('returns undefined / empty defaults when no row exists yet', async () => {
     const model = new WorkspaceUserSettingsModel(serverDB, userA, workspaceId);
     expect(await model.get()).toBeUndefined();

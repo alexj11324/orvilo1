@@ -49,6 +49,26 @@ describe('selected onboarding Orchestrator', () => {
     );
     expect(api.preference).not.toHaveBeenCalled();
   });
+  it('refuses a private first Agent and saves an independently configured public source', async () => {
+    const runtime = {
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'dev-one',
+        heterogeneousProvider: { type: 'opencode' },
+      },
+    };
+    api.runtime.mockImplementation(async ({ agentId, visibility }) => {
+      if (visibility === 'public' && agentId === 'private-first-agent')
+        throw new Error('ORCHESTRATOR_SOURCE_PRIVATE');
+      return runtime;
+    });
+    await expect(
+      verifyOnboardingOrchestrator('private-first-agent', 'workspace-one'),
+    ).rejects.toThrow('ORCHESTRATOR_SOURCE_PRIVATE');
+    expect(api.preference).not.toHaveBeenCalled();
+    await verifyOnboardingOrchestrator('public-source', 'workspace-one');
+    expect(api.preference).toHaveBeenCalledWith({ orchestratorAgentId: 'public-source' });
+  });
   it('does not finish or navigate when the chosen device is offline', async () => {
     api.devices.mockResolvedValue([{ deviceId: 'dev-one', online: false }]);
     const finish = vi.fn();
@@ -86,7 +106,7 @@ describe('selected onboarding Orchestrator', () => {
   });
 });
 
-it('checks a workspace-private Agent on its personal device and saves the workspace choice', async () => {
+it('checks a public workspace Agent on its owner device and saves the shared choice', async () => {
   api.runtime.mockResolvedValue({
     agencyConfig: {
       executionTarget: 'device',
@@ -96,9 +116,9 @@ it('checks a workspace-private Agent on its personal device and saves the worksp
   });
   api.devices.mockResolvedValue([{ deviceId: 'personal-device', online: true, scope: 'personal' }]);
   api.scan.mockResolvedValue({ agents: { codex: { available: true } } });
-  await verifyOnboardingOrchestrator('workspace-private-agent', 'workspace-one');
+  await verifyOnboardingOrchestrator('workspace-public-agent', 'workspace-one');
   expect(api.scan).toHaveBeenLastCalledWith({ deviceId: 'personal-device' }, 'workspace-one');
   expect(api.preference).toHaveBeenLastCalledWith({
-    orchestratorAgentId: 'workspace-private-agent',
+    orchestratorAgentId: 'workspace-public-agent',
   });
 });

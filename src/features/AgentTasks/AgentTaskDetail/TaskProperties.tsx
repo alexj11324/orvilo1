@@ -34,6 +34,7 @@ import { useTeamWorkflowStates } from '../features/useTeamWorkflowStates';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { isDueDateOverdue } from './isDueDateOverdue';
+import PropertyGroup from './PropertyGroup';
 import { RAIL_CONTROL_CLASS, RAIL_PLACEHOLDER_CLASS } from './railControl';
 import { ISSUE_RELATION_KINDS } from './relationGroups';
 import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
@@ -148,10 +149,10 @@ const TaskProperties = memo(() => {
   const priorityLevel = (priority as TaskPriority | undefined) ?? 0;
 
   // Linear shows Status, Priority and Assignee by default; every other field
-  // appears once it has a value, or after it is added from the menu.
+  // appears once it has a value, or after it is added from the menu. Labels is
+  // the exception — it has its own always-visible rail group below.
   const optionalFields = {
     dueDate: !!dueDate || revealed.has('dueDate'),
-    labels: labels.length > 0 || revealed.has('labels'),
     reviewer:
       (workflowCategory === 'in_review' || !!reviewerUserId || revealed.has('reviewer')) &&
       shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId),
@@ -159,7 +160,6 @@ const TaskProperties = memo(() => {
   };
   const addableFields = [
     { key: 'dueDate', label: t('taskDetail.dueDate'), shown: optionalFields.dueDate },
-    { key: 'labels', label: t('taskDetail.labels.title'), shown: optionalFields.labels },
     // Only where there are members to pick from (see `shouldShowMemberAssignee`).
     ...(shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId)
       ? [{ key: 'reviewer', label: t('taskDetail.reviewer'), shown: optionalFields.reviewer }]
@@ -199,119 +199,228 @@ const TaskProperties = memo(() => {
   );
 
   return (
-    // Plane's property order for the fields we share: State, Assignee,
-    // Priority, Due date, Labels. Reviewer and Schedule stay after those.
+    // Linear's rail reads as labelled groups: the Properties set first, then
+    // Labels as its own always-visible group (Project follows in
+    // TaskProjectSection). Inside Properties, Plane's field order for what we
+    // share: State, Assignee, Priority, Due date. Reviewer and Schedule stay
+    // after those.
     // Each picker enforces its permission; the due-date button is disabled below. Keep
     // the values and relation links available to assistive technology.
-    <div className={cn(styles.railSection, readOnly && 'opacity-60')}>
-      <span className={styles.railSectionLabel}>{t('taskDetail.properties')}</span>
-      <div className={styles.properties}>
-        <PropertyRow label={t('taskDetail.property.state')}>
-          <IssueStatusPicker
-            nativeButton
-            taskIdentifier={taskId}
-            teamId={taskTeamId}
-            workflowCategory={workflowCategory}
-            workflowStateId={workflowStateId}
-            workflowStateRefId={workflowStateRefId}
-          >
-            {statusValue}
-          </IssueStatusPicker>
-        </PropertyRow>
-
-        <PropertyRow label={t('taskDetail.agent')}>
-          <TaskDetailAssignee />
-        </PropertyRow>
-
-        {/* Execution sits under the agent it describes: state, reason and the
-            one action that moves it on, in a single place. */}
-        <TaskExecutionSection />
-
-        {/* The human half of "is it done": the acceptance state, one click from
-            its details. Automations have no acceptance to wait on. */}
-        {!automationMode && <TaskAcceptanceStateRow />}
-
-        {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
-          <PropertyRow label={t('taskDetail.assignee')}>
-            <AssigneeMemberSelector
-              control={railControl}
-              currentUserId={assigneeUserId}
-              disabled={status === 'running'}
-              taskCreatorId={createdByUserId}
+    <>
+      <PropertyGroup
+        className={readOnly ? 'opacity-60' : undefined}
+        label={t('taskDetail.properties')}
+      >
+        <div className={styles.properties}>
+          <PropertyRow label={t('taskDetail.property.state')}>
+            <IssueStatusPicker
+              nativeButton
               taskIdentifier={taskId}
-              taskVisibility={visibility}
+              teamId={taskTeamId}
+              workflowCategory={workflowCategory}
+              workflowStateId={workflowStateId}
+              workflowStateRefId={workflowStateRefId}
             >
-              {assigneeUserId ? (
-                <>
-                  <AssigneeUserAvatar size={16} userId={assigneeUserId} />
-                  <span className="truncate">{memberMeta?.title}</span>
-                </>
-              ) : (
-                <>
-                  <UnassignedAssigneeIcon kind="human" size={16} />
-                  <span className={RAIL_PLACEHOLDER_CLASS}>
-                    {t('taskDetail.property.addAssignee')}
-                  </span>
-                </>
-              )}
-            </AssigneeMemberSelector>
+              {statusValue}
+            </IssueStatusPicker>
           </PropertyRow>
-        )}
 
-        <PropertyRow label={t('taskDetail.property.priority')}>
-          <TaskPriorityTag nativeButton priority={priority} taskIdentifier={taskId}>
-            <Button
-              className={cn(RAIL_CONTROL_CLASS, "[&_svg:not([class*='size-'])]:size-4")}
-              size="sm"
-              variant="ghost"
-            >
-              <TaskPriorityTag
-                disableDropdown
-                priority={priority}
-                size={16}
+          <PropertyRow label={t('taskDetail.agent')}>
+            <TaskDetailAssignee />
+          </PropertyRow>
+
+          {/* Execution sits under the agent it describes: state, reason and the
+            one action that moves it on, in a single place. */}
+          <TaskExecutionSection />
+
+          {/* The human half of "is it done": the acceptance state, one click from
+            its details. Automations have no acceptance to wait on. */}
+          {!automationMode && <TaskAcceptanceStateRow />}
+
+          {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
+            <PropertyRow label={t('taskDetail.assignee')}>
+              <AssigneeMemberSelector
+                control={railControl}
+                currentUserId={assigneeUserId}
+                disabled={status === 'running'}
+                taskCreatorId={createdByUserId}
                 taskIdentifier={taskId}
-              />
-              <span className={cn(priorityLevel === 0 && RAIL_PLACEHOLDER_CLASS)}>
-                {t(`taskDetail.${priorityMeta.labelKey}` as never)}
-              </span>
-            </Button>
-          </TaskPriorityTag>
-        </PropertyRow>
-
-        {optionalFields.dueDate && (
-          <PropertyRow label={t('taskDetail.dueDate')}>
-            {/* A real button: the due date opens its dialog from the keyboard
-                as well as on click. */}
-            <Button
-              className={cn(styles.propertyButton, 'min-w-0 justify-start font-normal')}
-              disabled={readOnly}
-              size="sm"
-              variant="ghost"
-              onClick={() =>
-                openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })
-              }
-            >
-              {!dueDate && <CalendarIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} />}
-              <span
-                className={cn(
-                  dueDateOverdue && styles.propertyDanger,
-                  !dueDate && RAIL_PLACEHOLDER_CLASS,
-                )}
+                taskVisibility={visibility}
               >
-                {dueDate
-                  ? formatAbsoluteDate(parseISO(dueDate))
-                  : t('taskDetail.property.addDueDate')}
-              </span>
-            </Button>
-          </PropertyRow>
-        )}
+                {assigneeUserId ? (
+                  <>
+                    <AssigneeUserAvatar size={16} userId={assigneeUserId} />
+                    <span className="truncate">{memberMeta?.title}</span>
+                  </>
+                ) : (
+                  <>
+                    <UnassignedAssigneeIcon kind="human" size={16} />
+                    <span className={RAIL_PLACEHOLDER_CLASS}>
+                      {t('taskDetail.property.addAssignee')}
+                    </span>
+                  </>
+                )}
+              </AssigneeMemberSelector>
+            </PropertyRow>
+          )}
 
-        {optionalFields.labels && (
+          <PropertyRow label={t('taskDetail.property.priority')}>
+            <TaskPriorityTag nativeButton priority={priority} taskIdentifier={taskId}>
+              <Button
+                className={cn(RAIL_CONTROL_CLASS, "[&_svg:not([class*='size-'])]:size-4")}
+                size="sm"
+                variant="ghost"
+              >
+                <TaskPriorityTag
+                  disableDropdown
+                  priority={priority}
+                  size={16}
+                  taskIdentifier={taskId}
+                />
+                <span className={cn(priorityLevel === 0 && RAIL_PLACEHOLDER_CLASS)}>
+                  {t(`taskDetail.${priorityMeta.labelKey}` as never)}
+                </span>
+              </Button>
+            </TaskPriorityTag>
+          </PropertyRow>
+
+          {optionalFields.dueDate && (
+            <PropertyRow label={t('taskDetail.dueDate')}>
+              {/* A real button: the due date opens its dialog from the keyboard
+                as well as on click. */}
+              <Button
+                className={cn(styles.propertyButton, 'min-w-0 justify-start font-normal')}
+                disabled={readOnly}
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })
+                }
+              >
+                {!dueDate && <CalendarIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} />}
+                <span
+                  className={cn(
+                    dueDateOverdue && styles.propertyDanger,
+                    !dueDate && RAIL_PLACEHOLDER_CLASS,
+                  )}
+                >
+                  {dueDate
+                    ? formatAbsoluteDate(parseISO(dueDate))
+                    : t('taskDetail.property.addDueDate')}
+                </span>
+              </Button>
+            </PropertyRow>
+          )}
+
+          {optionalFields.reviewer && (
+            <PropertyRow label={t('taskDetail.reviewer')}>
+              <AssigneeMemberSelector
+                control={{ ...railControl, title: t('taskDetail.reviewer') }}
+                currentUserId={reviewerUserId}
+                defaultOpen={opening === 'reviewer'}
+                disabled={status === 'running'}
+                taskCreatorId={createdByUserId}
+                taskIdentifier={taskId}
+                taskVisibility={visibility}
+                onChange={(userId, member) =>
+                  void updateTask(
+                    taskId,
+                    { reviewerUserId: userId },
+                    {
+                      optimisticReviewer: member
+                        ? {
+                            avatar: member.user?.avatar ?? null,
+                            id: member.userId,
+                            name: member.user?.fullName ?? null,
+                            type: 'user',
+                          }
+                        : undefined,
+                    },
+                  )
+                }
+              >
+                {reviewerUserId ? (
+                  <>
+                    <AssigneeUserAvatar size={16} userId={reviewerUserId} />
+                    <span className="truncate">{reviewerMeta?.title}</span>
+                  </>
+                ) : (
+                  <>
+                    <UserCheckIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} size={16} />
+                    <span className={RAIL_PLACEHOLDER_CLASS}>
+                      {t('taskDetail.property.addReviewer')}
+                    </span>
+                  </>
+                )}
+              </AssigneeMemberSelector>
+            </PropertyRow>
+          )}
+
+          {optionalFields.schedule && (
+            <PropertyRow label={t('taskDetail.property.schedule')}>
+              <TaskScheduleConfig defaultOpen={opening === 'schedule'}>
+                <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
+                  {!(schedulePattern || heartbeatInterval) && (
+                    <ClockIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} size={16} />
+                  )}
+                  <TaskTriggerTag
+                    automationMode={automationMode}
+                    heartbeatInterval={heartbeatInterval}
+                    mode="inline"
+                    schedulePattern={schedulePattern}
+                    scheduleTimezone={scheduleTimezone}
+                  />
+                </div>
+              </TaskScheduleConfig>
+            </PropertyRow>
+          )}
+
+          {/* Linear parks relations in the properties sidebar: Blocked by, Blocks,
+            Related — one flag-marked field per kind. */}
+          <TaskPrerequisites openKind={opening} revealedKinds={revealed} />
+
+          {!readOnly && addableFields.some((field) => !field.shown) && (
+            <DropdownMenu
+              onOpenChange={(open) => {
+                if (open) addedFromMenu.current = false;
+              }}
+            >
+              <DropdownMenuTrigger
+                render={
+                  <Button className={styles.addProperty} size="sm" variant="ghost">
+                    <PlusIcon data-icon="inline-start" />
+                    {t('taskDetail.property.add')}
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="start" finalFocus={() => !addedFromMenu.current}>
+                <DropdownMenuGroup>
+                  {addableFields
+                    .filter((field) => !field.shown)
+                    .map((field) => (
+                      <DropdownMenuItem key={field.key} onClick={() => addProperty(field.key)}>
+                        {field.label}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </PropertyGroup>
+
+      {/* Linear keeps the Labels section on screen permanently — chips when
+          the issue has labels, the "Add label" affordance when it has none.
+          It is never part of the reveal model. */}
+      <PropertyGroup
+        className={readOnly ? 'opacity-60' : undefined}
+        label={t('taskDetail.labels.title')}
+      >
+        <div className={styles.properties}>
           <PropertyRow label={t('taskDetail.labels.title')}>
             <TaskLabelSelector
               assignedLabels={labels}
               control={railControl}
-              defaultOpen={opening === 'labels'}
               disabled={status === 'running'}
               taskIdentifier={taskId}
             >
@@ -327,104 +436,9 @@ const TaskProperties = memo(() => {
               )}
             </TaskLabelSelector>
           </PropertyRow>
-        )}
-
-        {optionalFields.reviewer && (
-          <PropertyRow label={t('taskDetail.reviewer')}>
-            <AssigneeMemberSelector
-              control={{ ...railControl, title: t('taskDetail.reviewer') }}
-              currentUserId={reviewerUserId}
-              defaultOpen={opening === 'reviewer'}
-              disabled={status === 'running'}
-              taskCreatorId={createdByUserId}
-              taskIdentifier={taskId}
-              taskVisibility={visibility}
-              onChange={(userId, member) =>
-                void updateTask(
-                  taskId,
-                  { reviewerUserId: userId },
-                  {
-                    optimisticReviewer: member
-                      ? {
-                          avatar: member.user?.avatar ?? null,
-                          id: member.userId,
-                          name: member.user?.fullName ?? null,
-                          type: 'user',
-                        }
-                      : undefined,
-                  },
-                )
-              }
-            >
-              {reviewerUserId ? (
-                <>
-                  <AssigneeUserAvatar size={16} userId={reviewerUserId} />
-                  <span className="truncate">{reviewerMeta?.title}</span>
-                </>
-              ) : (
-                <>
-                  <UserCheckIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} size={16} />
-                  <span className={RAIL_PLACEHOLDER_CLASS}>
-                    {t('taskDetail.property.addReviewer')}
-                  </span>
-                </>
-              )}
-            </AssigneeMemberSelector>
-          </PropertyRow>
-        )}
-
-        {optionalFields.schedule && (
-          <PropertyRow label={t('taskDetail.property.schedule')}>
-            <TaskScheduleConfig defaultOpen={opening === 'schedule'}>
-              <div className="flex min-w-0 cursor-pointer items-center gap-1.5">
-                {!(schedulePattern || heartbeatInterval) && (
-                  <ClockIcon aria-hidden className={RAIL_PLACEHOLDER_CLASS} size={16} />
-                )}
-                <TaskTriggerTag
-                  automationMode={automationMode}
-                  heartbeatInterval={heartbeatInterval}
-                  mode="inline"
-                  schedulePattern={schedulePattern}
-                  scheduleTimezone={scheduleTimezone}
-                />
-              </div>
-            </TaskScheduleConfig>
-          </PropertyRow>
-        )}
-
-        {/* Linear parks relations in the properties sidebar: Blocked by, Blocks,
-            Related — one flag-marked field per kind. */}
-        <TaskPrerequisites openKind={opening} revealedKinds={revealed} />
-
-        {!readOnly && addableFields.some((field) => !field.shown) && (
-          <DropdownMenu
-            onOpenChange={(open) => {
-              if (open) addedFromMenu.current = false;
-            }}
-          >
-            <DropdownMenuTrigger
-              render={
-                <Button className={styles.addProperty} size="sm" variant="ghost">
-                  <PlusIcon data-icon="inline-start" />
-                  {t('taskDetail.property.add')}
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="start" finalFocus={() => !addedFromMenu.current}>
-              <DropdownMenuGroup>
-                {addableFields
-                  .filter((field) => !field.shown)
-                  .map((field) => (
-                    <DropdownMenuItem key={field.key} onClick={() => addProperty(field.key)}>
-                      {field.label}
-                    </DropdownMenuItem>
-                  ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-    </div>
+        </div>
+      </PropertyGroup>
+    </>
   );
 });
 

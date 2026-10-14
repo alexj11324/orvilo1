@@ -33,7 +33,7 @@ interface TaskLabelSelectorProps {
   children: ReactNode;
   /** Render the trigger as a real Button (the Issue rail's value cell). */
   control?: PickerControl;
-  /** Open the picker as soon as it mounts ("+ Add property" → Labels). */
+  /** Open the picker as soon as it mounts (e.g. a just-added property row). */
   defaultOpen?: boolean;
   disabled?: boolean;
   /** Identifier or id — the label model resolves either under the caller's scope. */

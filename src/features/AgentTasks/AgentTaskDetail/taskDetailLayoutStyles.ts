@@ -19,8 +19,12 @@ export const taskDetailLayoutStyles = {
   propertyGroups:
     'flex flex-wrap gap-2 items-center min-w-0 [&>div]:contents [@container_task-detail_(width>=720px)]:flex-col [@container_task-detail_(width>=720px)]:flex-nowrap [@container_task-detail_(width>=720px)]:gap-6 [@container_task-detail_(width>=720px)]:items-stretch [@container_task-detail_(width>=720px)]:[&>div]:flex',
   railSection: 'flex flex-col gap-4 min-w-0',
+  // Linear's rail group labels (Properties / Labels / Project) share the
+  // compact secondary-ink tier `TaskDetailSectionHeader` established for the
+  // collapsible section headers: 12px/500 muted. They read as group headers
+  // only in the wide rail — the narrow chip strip keeps them hidden.
   railSectionLabel:
-    'hidden text-xs leading-5 font-medium text-foreground [@container_task-detail_(width>=720px)]:block',
+    'hidden text-xs leading-5 font-medium text-muted-foreground [@container_task-detail_(width>=720px)]:block',
   railRow:
     'w-fit max-w-full min-h-7 ps-2 pe-2.5 rounded-(--radius-input) whitespace-nowrap bg-muted [@container_task-detail_(width>=720px)]:w-full [@container_task-detail_(width>=720px)]:px-0 [@container_task-detail_(width>=720px)]:bg-transparent',
   properties:

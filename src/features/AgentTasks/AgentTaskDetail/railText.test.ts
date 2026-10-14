@@ -51,6 +51,15 @@ describe('issue rail type scale', () => {
     expect(taskStyles.titleInput).not.toContain('.ant-input');
   });
 
+  it('keeps the rail group labels on the compact secondary-ink tier', () => {
+    // Linear's rail section labels (Properties / Labels / Project) read in the
+    // same muted 12px/500 as the collapsible section headers — never body ink.
+    const classes = taskDetailLayoutStyles.railSectionLabel.split(' ');
+    expect(classes).toEqual(
+      expect.arrayContaining(['text-xs', 'font-medium', 'text-muted-foreground']),
+    );
+  });
+
   it('keeps the top-level Activity band on the 15px/600 heading tier', () => {
     const classes = taskDetailLayoutStyles.sectionHeading.split(' ');
     expect(classes).toEqual(expect.arrayContaining(['text-[15px]', 'leading-5', 'font-semibold']));

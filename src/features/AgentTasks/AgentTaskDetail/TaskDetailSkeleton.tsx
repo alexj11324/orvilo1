@@ -56,6 +56,20 @@ const TaskDetailBodySkeleton = () => (
               ))}
             </div>
           </div>
+          {/* The Labels group is always visible too — one affordance row. */}
+          <div className={layout.railSection}>
+            <span className={layout.railSectionLabel}>
+              <SkeletonBar height={12} width={48} />
+            </span>
+            <div className={layout.properties}>
+              <div className={layout.propertyRow}>
+                <div className={cn('gap-1.5', layout.propertyValue)}>
+                  <SkeletonBar height={16} radius={'50%'} width={16} />
+                  <SkeletonBar height={12} width={56} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

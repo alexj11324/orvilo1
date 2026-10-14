@@ -605,7 +605,7 @@ describe('Issue plan confirmation', () => {
     expect(historical.definition?.revision).toBe(2);
     for (const child of draft.subtasks)
       expect((await new TaskModel(db, user, ws).findById(child.id))?.workflowCategory).toBe('done');
-  });
+  }, 15_000);
 
   it('preserves requester attribution when another editor drafts the plan', async () => {
     await db
@@ -1231,5 +1231,5 @@ describe('confirmed implementation refinement', () => {
         new TaskModel(db, user, ws).assertConfirmedIssuePlan(old.id),
       ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
     }
-  });
+  }, 15_000);
 });

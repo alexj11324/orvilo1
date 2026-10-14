@@ -1,7 +1,7 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cn } from 'cn';
 import { CheckIcon, Flag, Link2, LinkIcon, MoreHorizontal, Plus, Search } from 'lucide-react';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -155,6 +155,10 @@ export const TaskRelationFields = ({
   // Rows past Linear's "Show N more" fold stay collapsed until asked for.
   const [expanded, setExpanded] = useState(false);
   const [searching, setSearching] = useState(false);
+  // A "mark as" pick hands focus to the search input it opens; the menu must
+  // not pull focus back to its own trigger (same escape hatch as
+  // TaskProperties' "+ Add property" menu).
+  const pickerFromMenu = useRef(false);
   const { edges, grouped } = useRelationEdges();
   const { hiddenCount, visible } = collapseRelationRows(grouped, expanded);
   const linkedKey = edges.map((edge) => edge.dependsOn).join('\n');
@@ -312,6 +316,10 @@ export const TaskRelationFields = ({
 
   /** The group menu's "Mark current issue as" pick: opens that kind's search, or closes it again. */
   const togglePicker = (kind: IssueRelationKind) => {
+    // Suppress focus restore only when the pick opens a search — its input
+    // autofocuses. Toggling the same kind off hands focus back to the menu
+    // trigger as usual.
+    pickerFromMenu.current = picker !== kind;
     setPicker(picker === kind ? null : kind);
     setQuery('');
     setHits([]);
@@ -520,7 +528,11 @@ export const TaskRelationFields = ({
         </Button>
       )}
       {allowed && (
-        <DropdownMenu>
+        <DropdownMenu
+          onOpenChange={(open) => {
+            if (open) pickerFromMenu.current = false;
+          }}
+        >
           <DropdownMenuTrigger
             render={
               <Button className={styles.addProperty} size="sm" variant="ghost">
@@ -529,7 +541,7 @@ export const TaskRelationFields = ({
               </Button>
             }
           />
-          <DropdownMenuContent align="start">
+          <DropdownMenuContent align="start" finalFocus={() => !pickerFromMenu.current}>
             <DropdownMenuGroup>
               {/* Linear's "Mark current issue as" picks, in the header menu's
                   order: each opens that kind's inline search under its header.

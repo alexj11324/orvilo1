@@ -62,9 +62,11 @@ Then(
     };
     const expectEmpty = async () => {
       await expect(sidebar).toBeVisible({ timeout: 25_000 });
-      for (const label of ['Blocked by', 'Blocks', 'Related']) {
-        await expect(sidebar.getByText(label, { exact: true })).toHaveCount(0);
-      }
+      // The rail keeps the Related group's own "Related" label when empty;
+      // each kind's header ("Blocked by" / "Blocks" / "Related") only mounts
+      // inside a [data-relation-kind] container alongside rows or an open
+      // picker, so no containers means no relations.
+      await expect(sidebar.locator('[data-relation-kind]')).toHaveCount(0);
       await expect(sidebar.getByText('None', { exact: true })).toHaveCount(0);
       await expect(relationActions).toHaveCount(0);
     };

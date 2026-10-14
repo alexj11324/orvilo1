@@ -49,7 +49,8 @@ vi.mock('@/libs/swr', () => ({
 }));
 
 vi.mock('@/store/task', () => ({
-  useTaskStore: (selector: (state: TaskStore) => unknown) => selector(mocks.state as TaskStore),
+  useTaskStore: (selector: (state: TaskStore) => unknown) =>
+    selector(mocks.state as unknown as TaskStore),
 }));
 
 vi.mock('@/services/taskMenu', () => ({

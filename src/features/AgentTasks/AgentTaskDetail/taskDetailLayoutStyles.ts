@@ -15,7 +15,7 @@ export const taskDetailLayoutStyles = {
   // Linear splits its section chrome into two tiers: the top-level "Activity"
   // band reads as a 15px/600 heading while the collapsible sections
   // (Sub-issues, …) keep the compact 12px/500 label on the default variant.
-  sectionHeading: 'text-[15px] leading-5 font-semibold',
+  sectionHeading: 'text-[15px] leading-5 font-semibold', // linear-token-override: Linear-measured 15px Activity band — no scale class between text-sm(14) and text-base(16).
   propertyGroups:
     'flex flex-wrap gap-2 items-center min-w-0 [&>div]:contents [@container_task-detail_(width>=720px)]:flex-col [@container_task-detail_(width>=720px)]:flex-nowrap [@container_task-detail_(width>=720px)]:gap-6 [@container_task-detail_(width>=720px)]:items-stretch [@container_task-detail_(width>=720px)]:[&>div]:flex',
   railSection: 'flex flex-col gap-4 min-w-0',

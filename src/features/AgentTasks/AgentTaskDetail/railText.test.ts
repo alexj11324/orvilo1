@@ -62,7 +62,7 @@ describe('issue rail type scale', () => {
 
   it('keeps the top-level Activity band on the 15px/600 heading tier', () => {
     const classes = taskDetailLayoutStyles.sectionHeading.split(' ');
-    expect(classes).toEqual(expect.arrayContaining(['text-[15px]', 'leading-5', 'font-semibold']));
+    expect(classes).toEqual(expect.arrayContaining(['text-[15px]', 'leading-5', 'font-semibold'])); // linear-token-override: asserts the annotated 15px Activity band literal in taskDetailLayoutStyles.sectionHeading.
     // Only the Activity section opts in; the compact sections keep 12px/500
     // (Linear's measured Sub-issues collapse label).
     expect(readSource('TaskActivities.tsx')).toContain('variant="heading"');

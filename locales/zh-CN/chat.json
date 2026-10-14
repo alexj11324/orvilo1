@@ -2204,6 +2204,8 @@
   "taskDetail.relations.remove": "移除关联",
   "taskDetail.relations.search": "搜索 Issue",
   "taskDetail.relations.searching": "正在搜索…",
+  "taskDetail.relations.showMore_one": "展开另外 {{count}} 个 Issue",
+  "taskDetail.relations.showMore_other": "展开另外 {{count}} 个 Issue",
   "taskDetail.relations.title": "关联",
   "taskDetail.replyInThread": "在此对话中回复",
   "taskDetail.replyPlaceholder": "在此对话中回复…",

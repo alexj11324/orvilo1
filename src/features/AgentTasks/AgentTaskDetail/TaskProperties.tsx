@@ -36,13 +36,11 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { isDueDateOverdue } from './isDueDateOverdue';
 import PropertyGroup from './PropertyGroup';
 import { RAIL_CONTROL_CLASS, RAIL_PLACEHOLDER_CLASS } from './railControl';
-import { ISSUE_RELATION_KINDS } from './relationGroups';
 import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskExecutionSection from './TaskExecutionSection';
-import TaskPrerequisites from './TaskPrerequisites';
 import {
   addsWithoutRow,
   createPropertyRevealState,
@@ -158,6 +156,8 @@ const TaskProperties = memo(() => {
       shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId),
     schedule: !!(schedulePattern || heartbeatInterval) || revealed.has('schedule'),
   };
+  // Relations are not addable properties — they live in the rail's own
+  // "Related" group (TaskRelatedSection).
   const addableFields = [
     { key: 'dueDate', label: t('taskDetail.dueDate'), shown: optionalFields.dueDate },
     // Only where there are members to pick from (see `shouldShowMemberAssignee`).
@@ -165,11 +165,6 @@ const TaskProperties = memo(() => {
       ? [{ key: 'reviewer', label: t('taskDetail.reviewer'), shown: optionalFields.reviewer }]
       : []),
     { key: 'schedule', label: t('taskDetail.property.schedule'), shown: optionalFields.schedule },
-    ...ISSUE_RELATION_KINDS.map((kind) => ({
-      key: kind,
-      label: t(`taskDetail.relations.${kind}` as never),
-      shown: revealed.has(kind),
-    })),
   ];
   // Adding a property goes straight to choosing its value. A due date is
   // chosen in a dialog, so no row appears until there is a date to show; the
@@ -201,11 +196,10 @@ const TaskProperties = memo(() => {
   return (
     // Linear's rail reads as labelled groups: the Properties set first, then
     // Labels as its own always-visible group (Project follows in
-    // TaskProjectSection). Inside Properties, Plane's field order for what we
-    // share: State, Assignee, Priority, Due date. Reviewer and Schedule stay
-    // after those.
-    // Each picker enforces its permission; the due-date button is disabled below. Keep
-    // the values and relation links available to assistive technology.
+    // TaskProjectSection, Related in TaskRelatedSection). Inside Properties,
+    // Plane's field order for what we share: State, Assignee, Priority, Due
+    // date. Reviewer and Schedule stay after those.
+    // Each picker enforces its permission; the due-date button is disabled below.
     <>
       <PropertyGroup
         className={readOnly ? 'opacity-60' : undefined}
@@ -374,10 +368,6 @@ const TaskProperties = memo(() => {
               </TaskScheduleConfig>
             </PropertyRow>
           )}
-
-          {/* Linear parks relations in the properties sidebar: Blocked by, Blocks,
-            Related — one flag-marked field per kind. */}
-          <TaskPrerequisites openKind={opening} revealedKinds={revealed} />
 
           {!readOnly && addableFields.some((field) => !field.shown) && (
             <DropdownMenu

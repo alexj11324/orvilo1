@@ -14,9 +14,9 @@ import { TaskDuplicateRelation } from './TaskDuplicateRelation';
 import TaskInstruction from './TaskInstruction';
 import TaskIssueResources from './TaskIssueResources';
 import TaskParentBar from './TaskParentBar';
-import { TaskBlockedNotice } from './TaskPrerequisites';
 import TaskProjectSection from './TaskProjectSection';
 import TaskProperties from './TaskProperties';
+import TaskRelatedSection, { TaskBlockedNotice } from './TaskRelatedSection';
 import TaskSubtasks from './TaskSubtasks';
 
 /**
@@ -50,6 +50,9 @@ const TaskDetailSections = memo(() => {
             <div className={styles.propertyGroups}>
               <TaskProperties />
               <TaskProjectSection />
+              {/* Linear's rail order ends on Related: the issues this one
+                  is linked to, grouped by kind. */}
+              <TaskRelatedSection />
             </div>
           </div>
           <div className={cn('flex flex-col gap-3', styles.description)}>

@@ -126,7 +126,7 @@ const useTaskRemoveMenuItems = (taskId: string | undefined, disabled: boolean) =
       const kind = relationKindOf(edge);
       if (!kind) continue;
 
-      // Same endpoints the relation rows in `TaskPrerequisites` unlink with.
+      // Same endpoints the relation rows in `TaskRelatedSection` unlink with.
       const unlink = () => {
         if (edge.relationId) return removeIssueRelation(taskId, edge.relationId);
         if (kind === 'blocking') return removeDependency(edge.dependsOn, taskId, 'blocks');

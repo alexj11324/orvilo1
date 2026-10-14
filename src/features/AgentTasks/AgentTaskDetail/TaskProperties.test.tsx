@@ -140,11 +140,6 @@ vi.mock('@/features/Workspace/WorkspaceLink', () => ({
   default: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('./TaskPrerequisites', () => ({
-  default: () => <div>relations</div>,
-  TaskBlockedNotice: () => null,
-}));
-
 vi.mock('./TaskScheduleConfig', () => ({
   default: ({ children, defaultOpen }: { children?: ReactNode; defaultOpen?: boolean }) => {
     mocks.scheduleConfigDefaultOpen(defaultOpen);
@@ -538,5 +533,17 @@ describe('TaskProperties', () => {
 
     expect(await screen.findByRole('menuitem', { name: 'taskDetail.dueDate' })).toBeTruthy();
     expect(screen.queryByRole('menuitem', { name: 'taskDetail.labels.title' })).toBeNull();
+  });
+
+  // Relations moved out of the reveal model into the rail's own Related group.
+  it('no longer offers relation kinds in the add-property menu', async () => {
+    render(<TaskProperties />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'taskDetail.dueDate' })).toBeTruthy();
+    for (const kind of ['blockedBy', 'blocking', 'relates']) {
+      expect(screen.queryByRole('menuitem', { name: `taskDetail.relations.${kind}` })).toBeNull();
+    }
   });
 });

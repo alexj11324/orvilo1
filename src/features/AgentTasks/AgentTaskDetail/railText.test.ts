@@ -30,7 +30,7 @@ describe('issue rail type scale', () => {
     'TaskAcceptanceStateRow.tsx',
     'TaskProjectSection.tsx',
     'TaskParentBar.tsx',
-    'TaskPrerequisites.tsx',
+    'TaskRelatedSection.tsx',
   ])('%s sizes every rail Text explicitly — never the 14px default', (file) => {
     const source = readSource(file);
     expect(source).toContain('RAIL_VALUE_FONT_SIZE');

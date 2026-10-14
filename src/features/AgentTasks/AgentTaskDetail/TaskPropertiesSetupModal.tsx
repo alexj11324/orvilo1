@@ -29,25 +29,21 @@ import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
 import { useTaskProjectChange } from '../shared/useTaskProjectChange';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
-import { ISSUE_RELATION_KINDS } from './relationGroups';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { TaskDetailScope, useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
-import TaskPrerequisites from './TaskPrerequisites';
+import { TaskRelationFields } from './TaskRelatedSection';
 import TaskScheduleConfig from './TaskScheduleConfig';
-
-// The dialog lists every relation kind, set or not.
-const ALL_RELATION_KINDS: ReadonlySet<string> = new Set(ISSUE_RELATION_KINDS);
 
 /**
  * Every issue property in one dialog, reusing the rail's own pickers and write
  * paths. A failed write stays on screen with its error instead of closing.
  *
  * It is a superset of the rail's "+ Add property" menu: that menu lists only
- * the optional properties that have no row yet (due date, labels, reviewer,
- * schedule, relations), and each of them is here too. Project, milestone and
- * the agent assignee always have a place in the rail, so they are never
- * "added" and appear only here.
+ * the optional properties that have no row yet (due date, reviewer, schedule),
+ * and each of them is here too. Project, milestone and the agent assignee
+ * always have a place in the rail, so they are never "added" and appear only
+ * here — as do all three relation kinds, set or not.
  */
 const TaskPropertiesSetup = () => {
   const { t } = useTranslation(['chat', 'common']);
@@ -266,7 +262,8 @@ const TaskPropertiesSetup = () => {
       </div>
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium">{t('taskDetail.relations.title')}</span>
-        <TaskPrerequisites revealedKinds={ALL_RELATION_KINDS} />
+        {/* The dialog is the one surface that lists every kind, set or not. */}
+        <TaskRelationFields showAllKinds taskId={taskId} />
       </div>
       {error ? (
         <p className="text-sm text-destructive" role="alert">

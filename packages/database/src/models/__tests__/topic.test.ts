@@ -1061,19 +1061,19 @@ describe('TopicModel', () => {
     it('does not overwrite a user selection when initializing a legacy topic', async () => {
       const topic = await topicModel.create({ title: 'execution' });
       await topicModel.updateMetadata(topic.id, {
-        executionConfig: { permission: { provider: 'codex', configId: 'approval', value: 'auto' } },
+        executionConfig: { inheritWorkspaceScope: true },
       });
       const [updated] = await topicModel.updateMetadata(
         topic.id,
         {
           executionConfig: {
-            permission: { provider: 'codex', configId: 'approval', value: 'read-only' },
+            inheritWorkspaceScope: false,
           },
         },
         { executionConfigIfAbsent: true },
       );
       expect(updated.metadata?.executionConfig).toEqual({
-        permission: { provider: 'codex', configId: 'approval', value: 'auto' },
+        inheritWorkspaceScope: true,
       });
     });
 

@@ -3759,14 +3759,14 @@ describe('topic action', () => {
   });
 });
 
-describe('Topic permission save failures', () => {
+describe('Topic metadata save failures', () => {
   const key = topicMapKey({ agentId: 'agent-execution' });
   const previous = {
-    executionConfig: { permission: { provider: 'codex', configId: 'permissions', value: 'safe' } },
+    executionConfig: { inheritWorkspaceScope: false },
   };
   const selected = {
     executionConfig: {
-      permission: { provider: 'codex', configId: 'permissions', value: 'fullAccess' },
+      inheritWorkspaceScope: true,
     },
   };
   const setup = () => {
@@ -3793,7 +3793,7 @@ describe('Topic permission save failures', () => {
     });
     vi.spyOn(useChatStore.getState(), 'refreshTopic').mockRejectedValue(new Error('offline'));
   };
-  it('restores the saved permission if the mutation fails while offline', async () => {
+  it('restores the saved metadata if the mutation fails while offline', async () => {
     setup();
     vi.spyOn(topicService, 'updateTopicMetadata').mockRejectedValueOnce(new Error('offline'));
     await expect(

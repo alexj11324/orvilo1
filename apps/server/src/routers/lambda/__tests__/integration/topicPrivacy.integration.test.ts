@@ -60,7 +60,7 @@ describe('workspace topic privacy (#784)', () => {
         userId: creator,
         workspaceId,
       })
-      .returning();
+      .returning({ id: messages.id, content: messages.content });
     return { message, topic };
   };
 
@@ -154,7 +154,7 @@ describe('workspace topic privacy (#784)', () => {
         userId: creator,
         workspaceId,
       })
-      .returning();
+      .returning({ id: threads.id });
     const model = messageModel(member);
     expect(await model.query({ agentId, topicId: topic.id })).toEqual([]);
     expect(await model.queryByIds([message.id])).toEqual([]);
@@ -268,7 +268,7 @@ describe('workspace topic privacy (#784)', () => {
           workspaceId,
         })),
       )
-      .returning();
+      .returning({ id: messages.id });
     const model = messageModel(member);
     expect(await model.query({ groupId: sharedGroup.id })).toEqual([
       expect.objectContaining({ id: groupMessages[0].id }),

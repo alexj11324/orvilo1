@@ -355,8 +355,21 @@ export const filterUserIdsByTopicViewAccess = async (
           ),
         );
       if (topicIds.some((id) => !readableTopics.some((topic) => topic.id === id))) return false;
+      const issueTopicIds = await readableWorkspaceIssueTopicIds(
+        ctx.db,
+        topicIds,
+        userId,
+        workspaceId,
+      );
+      const targets =
+        issueTopicIds.size > 0
+          ? await resolveTopicTargets(
+              ctx,
+              topicIds.filter((id) => !issueTopicIds.has(id)),
+            )
+          : resolvedTargets;
       const checks = await Promise.all(
-        resolvedTargets.map(({ meta, resourceId, resourceType }) =>
+        targets.map(({ meta, resourceId, resourceType }) =>
           canPerformResourceAction({
             action: 'view',
             db: ctx.db,

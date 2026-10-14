@@ -164,7 +164,9 @@ describe('ElasticsearchFtsSearchBackend', () => {
         indexNamespace,
       });
       const result = await backend.search(request(entity, { limit: 10 }));
-      expect(result.items.map(({ id }) => id).sort()).toEqual([...expected].sort());
+      expect(result.items.map((item) => ('id' in item ? item.id : undefined)).sort()).toEqual(
+        [...expected].sort(),
+      );
     }
   });
 

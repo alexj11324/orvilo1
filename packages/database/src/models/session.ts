@@ -5,8 +5,7 @@ import type {
   OrviloAgentSession,
   OrviloGroupSession,
 } from '@orvilo/types';
-import { TRPCError } from '@trpc/server';
-import { and, asc, count, desc, eq, inArray, not, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, not, notExists, or, sql } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
 import { merge } from '@/utils/merge';
@@ -49,6 +48,24 @@ export class SessionModel {
 
   private agentsToSessionsOwnership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, agentsToSessions);
+
+  /** Session DTOs include Agent configuration, so every linked Agent must be visible. */
+  private readable = () =>
+    and(
+      this.ownership(),
+      notExists(
+        this.db
+          .select({ one: sql`1` })
+          .from(agentsToSessions)
+          .innerJoin(agents, eq(agents.id, agentsToSessions.agentId))
+          .where(
+            and(
+              eq(agentsToSessions.sessionId, sessions.id),
+              sql`(${this.agentsOwnership()}) IS NOT TRUE`,
+            ),
+          ),
+      ),
+    );
   // **************** Query *************** //
 
   query = async ({ current = 0, pageSize = 9999 } = {}) => {
@@ -68,7 +85,7 @@ export class SessionModel {
       .leftJoin(agentsToSessions, eq(sessions.id, agentsToSessions.sessionId))
       .leftJoin(agents, eq(agentsToSessions.agentId, agents.id))
       .leftJoin(sessionGroups, eq(sessions.groupId, sessionGroups.id))
-      .where(and(this.ownership(), not(eq(sessions.slug, INBOX_SESSION_ID))))
+      .where(and(this.readable(), not(eq(sessions.slug, INBOX_SESSION_ID))))
       .orderBy(desc(sessions.updatedAt))
       .limit(pageSize)
       .offset(offset);
@@ -132,7 +149,7 @@ export class SessionModel {
         session: sessions,
       })
       .from(sessions)
-      .where(and(or(eq(sessions.id, idOrSlug), eq(sessions.slug, idOrSlug)), this.ownership()))
+      .where(and(or(eq(sessions.id, idOrSlug), eq(sessions.slug, idOrSlug)), this.readable()))
       .leftJoin(agentsToSessions, eq(sessions.id, agentsToSessions.sessionId))
       .leftJoin(agents, eq(agentsToSessions.agentId, agents.id))
       .leftJoin(sessionGroups, eq(sessions.groupId, sessionGroups.id))
@@ -155,7 +172,7 @@ export class SessionModel {
       .from(sessions)
       .where(
         genWhere([
-          this.ownership(),
+          this.readable(),
           params?.range
             ? genRangeWhere(params.range, sessions.createdAt, (date) => date.toDate())
             : undefined,
@@ -175,7 +192,7 @@ export class SessionModel {
     const result = await this.db
       .select({ id: sessions.id })
       .from(sessions)
-      .where(and(this.ownership()))
+      .where(and(this.readable()))
       .limit(n + 1);
 
     return result.length > n;
@@ -200,8 +217,6 @@ export class SessionModel {
     slug?: string;
     type: 'agent' | 'group';
   }): Promise<SessionItem> => {
-    if (this.workspaceId && config.visibility === 'private')
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Workspace Agents must be public' });
     return this.db.transaction(async (trx) => {
       if (slug) {
         const existResult = await trx.query.sessions.findFirst({
@@ -637,7 +652,7 @@ export class SessionModel {
         .select({ agentId: agentsToSessions.agentId, session: sessions })
         .from(agentsToSessions)
         .leftJoin(sessions, eq(agentsToSessions.sessionId, sessions.id))
-        .where(inArray(agentsToSessions.agentId, matchingAgentIds));
+        .where(and(inArray(agentsToSessions.agentId, matchingAgentIds), this.readable()));
       const firstSessionByAgentId = new Map<string, SessionItem>();
 
       for (const { agentId, session } of agentSessions) {
@@ -667,7 +682,7 @@ export class SessionModel {
       });
 
       // Filter and map results, ensuring valid session associations
-      return results
+      const matchedSessions = results
         .filter((item) => item.agentsToSessions && item.agentsToSessions.length > 0)
         .map(
           (item) =>
@@ -675,6 +690,21 @@ export class SessionModel {
               ?.session,
         )
         .filter((session) => session !== null && session !== undefined);
+      if (matchedSessions.length === 0) return [];
+      const readableSessions = await this.db
+        .select({ id: sessions.id })
+        .from(sessions)
+        .where(
+          and(
+            this.readable(),
+            inArray(
+              sessions.id,
+              matchedSessions.map((session) => session.id),
+            ),
+          ),
+        );
+      const readableIds = new Set(readableSessions.map(({ id }) => id));
+      return matchedSessions.filter((session) => readableIds.has(session.id));
     } catch (e) {
       console.error('findSessionsByKeywords error:', e, { keyword });
       return [];

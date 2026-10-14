@@ -398,6 +398,8 @@ describe('useAskUserForm additional notes', () => {
     act(() => vi.advanceTimersByTime(1000));
 
     expect(onInteractionAction).not.toHaveBeenCalled();
+    expect(hook.result.current.showCountdown).toBe(false);
+    expect(hook.result.current.expired).toBe(false);
     hook.unmount();
     vi.useRealTimers();
   });

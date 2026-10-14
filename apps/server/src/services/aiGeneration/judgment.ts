@@ -245,11 +245,7 @@ const OUTPUT_CONTRACT = [
 ].join('\n');
 
 const buildJudgmentPrompt = (transcript: string, schema?: AcpJudgmentSchema): string =>
-  [
-    transcript,
-    OUTPUT_CONTRACT,
-    schema ? JSON.stringify({ name: schema.name, schema: schema.schema }) : '{}',
-  ]
+  [transcript, OUTPUT_CONTRACT, schema ? JSON.stringify(schema.schema) : '{}']
     .filter(Boolean)
     .join('\n\n');
 

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import Ajv from 'ajv';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -184,6 +185,29 @@ describe('resolveAcpJudgmentAgent — binding precedence, never deployment keys'
 });
 
 describe('runAcpJudgment', () => {
+  it('sends the same constraining JSON Schema that validates the returned data', async () => {
+    mocks.agentExistsById.mockResolvedValue(true);
+    await runAcpJudgment(db, 'u1', {
+      input: {
+        ...JUDGMENT_INPUT,
+        schema: {
+          name: 'Verdict',
+          schema: {
+            properties: { verdict: { type: 'string' } },
+            required: ['verdict'],
+            type: 'object',
+          },
+        },
+      },
+      judgment: { binding: { agentId: 'agent-1' }, purpose: 'task.plan' },
+    });
+    const emittedSchema = extractJudgmentJson(mocks.execAgent.mock.calls[0][0].prompt);
+    const validate = new Ajv({ strict: false }).compile(emittedSchema as object);
+    expect(validate({ verdict: 'passed' })).toBe(true);
+    expect(validate({ verdict: 42 })).toBe(false);
+    expect(validate({})).toBe(false);
+  });
+
   it('dispatches a headless, tool-free ACP operation with the judgment marker', async () => {
     mocks.agentExistsById.mockResolvedValue(true);
 

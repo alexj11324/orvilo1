@@ -3,17 +3,24 @@ import { createHash } from 'node:crypto';
 import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
 import type { IssuePlan, TaskContext, TaskItem, TaskOriginContext } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { AcceptanceModel } from '@/database/models/acceptance';
 import { AgentModel } from '@/database/models/agent';
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { ProjectModel } from '@/database/models/project';
 import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
+import { agentOperations } from '@/database/schemas/agentOperations';
+import { taskDispatches } from '@/database/schemas/task';
+import { acceptances } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
 import { assertCanViewTopicTargets } from '@/server/routers/lambda/_helpers/conversationResourceGuard';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
@@ -112,6 +119,44 @@ export const issuePlanFingerprint = (
     )
     .digest('hex');
 
+export const issuePlanRefinementSchema = z
+  .object({
+    identifier: z.string().min(1),
+    revision: z.number().int().positive(),
+    refinementRevision: z.number().int().nonnegative(),
+    addTasks: z
+      .array(
+        z
+          .object({
+            sourceIdentifier: z.string().min(1),
+            name: z.string().trim().min(1),
+            instruction: z.string().trim().min(1),
+            assigneeAgentId: z.string().min(1).optional(),
+            dependsOn: z.array(z.string().min(1)).default([]),
+          })
+          .strict(),
+      )
+      .max(100)
+      .default([]),
+    dependencies: z
+      .array(
+        z
+          .object({
+            identifier: z.string().min(1),
+            dependsOnIdentifier: z.string().min(1),
+            action: z.enum(['add', 'remove']),
+          })
+          .strict(),
+      )
+      .max(200)
+      .default([]),
+  })
+  .strict()
+  .refine(
+    (input) => input.addTasks.length || input.dependencies.length,
+    'Provide an implementation task or dependency adjustment',
+  );
+
 export class TaskPlanService {
   constructor(
     private readonly db: OrviloDatabase,
@@ -144,8 +189,25 @@ export class TaskPlanService {
     return task;
   }
 
+  private requireStoppedWriters(ids: string[], controlOperationId?: string) {
+    return this.model().assertStoppedIssueWriters(ids, controlOperationId);
+  }
+
   private async requireSettledScope(task: TaskItem) {
     if (!(task.context as TaskContext | null)?.issuePlan?.confirmedAt) return;
+    const plan = (task.context as TaskContext).issuePlan!;
+    await this.requireStoppedWriters(plan.checklists.map((check) => check.taskId));
+    const [lastDispatch] = await this.db
+      .select()
+      .from(taskDispatches)
+      .where(eq(taskDispatches.taskId, task.id))
+      .orderBy(sql`${taskDispatches.generation} DESC`)
+      .limit(1);
+    if (
+      task.workflowCategory === 'canceled' ||
+      (lastDispatch?.phase === 'canceled' && lastDispatch.generation === task.executionGeneration)
+    )
+      return;
     const current = await new IssueChecklistService(
       this.db,
       this.userId,
@@ -419,7 +481,40 @@ export class TaskPlanService {
           message: 'Issue changed during planning; reload and draft again',
         });
       const model = service.model();
-      await model.update(current.id, { workflowCategory: 'triage', triageStatus: 'untriaged' });
+      await service.requireSettledScope(current);
+      await service.requireStoppedWriters([
+        current.id,
+        ...latest.subtasks
+          .filter(
+            (child) =>
+              !oldPlan?.confirmedAt && !['done', 'canceled'].includes(child.workflowCategory),
+          )
+          .map((child) => child.id),
+      ]);
+      if (oldPlan?.confirmedAt) {
+        for (const member of latest.subtasks)
+          if (
+            oldPlan.checklists.some((check) => check.taskId === member.id) &&
+            member.workflowCategory !== 'done'
+          )
+            await model.updateWithLog(
+              member.id,
+              { workflowCategory: 'canceled' },
+              { agentId, userId: this.userId },
+            );
+        for (const edge of latest.dependencies)
+          if (
+            edge.type === 'blocks' &&
+            edge.taskId === current.id &&
+            oldPlan.checklists.some((check) => check.taskId === edge.dependsOnId)
+          )
+            await model.removeDependency(current.id, edge.dependsOnId);
+      }
+      await model.update(current.id, {
+        workflowCategory: 'triage',
+        triageStatus: 'untriaged',
+        ...(oldPlan?.confirmedAt ? { executionGeneration: current.executionGeneration + 1 } : {}),
+      });
       const existingChildren = oldPlan?.confirmedAt
         ? []
         : latest.subtasks.filter((task) => !['done', 'canceled'].includes(task.workflowCategory));
@@ -447,7 +542,10 @@ export class TaskPlanService {
           triageStatus: 'untriaged' as const,
         };
         const child = existingChildren[index]
-          ? await model.update(existingChildren[index].id, fields)
+          ? await model.update(existingChildren[index].id, {
+              ...fields,
+              executionGeneration: existingChildren[index].executionGeneration + 1,
+            })
           : await new TaskService(
               db,
               current.createdByUserId ?? this.userId,
@@ -575,6 +673,308 @@ export class TaskPlanService {
     return this.getIssuePlan(task.id);
   }
 
+  /** Server runtime supplies the operation id; tool arguments never confer Agent authority. */
+  async refineIssuePlan(raw: z.input<typeof issuePlanRefinementSchema>, operationId: string) {
+    const input = issuePlanRefinementSchema.parse(raw);
+    const parent = await this.requireIssue(input.identifier, true);
+    const operation = await new AgentOperationModel(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).findOwnOperationById(operationId);
+    const initial = (parent.context as TaskContext | null)?.issuePlan;
+    const orchestrator = await new AgentModel(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).getOrchestratorSourceAgentId();
+    if (
+      !operation ||
+      !initial?.confirmedAt ||
+      parent.id !== initial.parentTaskId ||
+      operation.userId !== parent.createdByUserId ||
+      operation.userId !== this.userId ||
+      operation.workspaceId !== parent.workspaceId ||
+      operation.agentId !== orchestrator ||
+      initial.orchestratorAgentId !== orchestrator ||
+      !['running', 'waiting_for_async_tool'].includes(operation.status) ||
+      !(operation.taskId
+        ? initial.checklists.some((check) => check.taskId === operation.taskId)
+        : operation.topicId &&
+          operation.topicId === (parent.context as TaskContext | null)?.origin?.topicId)
+    )
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message:
+          'A current saved Orchestrator operation acting for the original requester is required',
+      });
+    await assertCanUseWorkspaceAgent({
+      db: this.db,
+      userId: operation.userId,
+      workspaceId: this.workspaceId,
+      agentId: orchestrator,
+    });
+    const result = await this.model().withIssueDelivery(parent.id, async (db, current) => {
+      const service = new TaskPlanService(db, operation.userId, this.workspaceId);
+      const model = service.model();
+      const plan = (current.context as TaskContext | null)?.issuePlan;
+      const live = await new AgentOperationModel(
+        db,
+        operation.userId,
+        this.workspaceId,
+      ).findOwnOperationById(operationId);
+      const [stopping] = await db
+        .select({ id: agentOperations.id })
+        .from(agentOperations)
+        .where(
+          and(
+            eq(agentOperations.id, operationId),
+            sql`${agentOperations.metadata} #>> '{remoteCancel,state}' IN ('requested', 'unknown')`,
+          ),
+        )
+        .limit(1);
+      if (
+        stopping ||
+        !plan?.confirmedAt ||
+        plan.revision !== input.revision ||
+        (plan.refinement?.revision ?? 0) !== input.refinementRevision ||
+        !live ||
+        live.status !== operation.status ||
+        live.agentId !== operation.agentId ||
+        ['done', 'canceled'].includes(current.workflowCategory)
+      )
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'The confirmed plan or Orchestrator operation changed; reload before refining',
+        });
+      if (
+        (await new AgentModel(
+          db,
+          operation.userId,
+          this.workspaceId,
+        ).getOrchestratorSourceAgentId()) !== orchestrator
+      )
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Saved Orchestrator changed; use its current operation',
+        });
+      await assertCanUseWorkspaceAgent({
+        db,
+        userId: operation.userId,
+        workspaceId: this.workspaceId,
+        agentId: orchestrator,
+      });
+      const members = await model.findByIds(plan.checklists.map((check) => check.taskId));
+      if (members.length !== plan.checklists.length || !plan.executionScopes)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Confirm the current execution scope before refining',
+        });
+      for (const member of members) await model.assertConfirmedIssuePlan(member.id);
+      const deliveryRun = await new TaskTopicModel(
+        db,
+        operation.userId,
+        this.workspaceId,
+      ).findByOperationId(live.id);
+      const [deliveryDispatch] = await db
+        .select()
+        .from(taskDispatches)
+        .where(eq(taskDispatches.operationId, live.id))
+        .limit(1);
+      const isDeliveryWriter = Boolean(
+        deliveryRun ||
+        deliveryDispatch ||
+        live.appContext?.dispatchId ||
+        live.appContext?.executionGeneration !== undefined,
+      );
+      if (live.taskId) {
+        const actorTask = members.find((member) => member.id === live.taskId);
+        const generation =
+          deliveryRun?.executionGeneration ??
+          deliveryDispatch?.generation ??
+          live.appContext?.executionGeneration;
+        if (
+          !actorTask ||
+          (isDeliveryWriter &&
+            (generation !== actorTask.executionGeneration ||
+              (deliveryRun && deliveryRun.taskId !== actorTask.id) ||
+              (deliveryDispatch && deliveryDispatch.taskId !== actorTask.id))) ||
+          ['done', 'canceled'].includes(actorTask.workflowCategory)
+        )
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'The Orchestrator Run no longer owns the current Issue generation',
+          });
+      }
+      const resolve = (identifier: string) => {
+        const member = members.find(
+          (task) => task.id === identifier || task.identifier === identifier,
+        );
+        if (!member)
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Refinement may reference only current confirmed plan members',
+          });
+        return member;
+      };
+      const changes = input.dependencies.map((change) => ({
+        ...change,
+        task: resolve(change.identifier),
+        prerequisite: resolve(change.dependsOnIdentifier),
+      }));
+      if (changes.some((change) => change.task.id === current.id && change.action === 'remove'))
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'The parent report must depend on every confirmed implementation task',
+        });
+      const affected = [...new Set([current.id, ...changes.map((change) => change.task.id)])];
+      await service.requireStoppedWriters(affected, isDeliveryWriter ? undefined : live.id);
+      const added: TaskItem[] = [];
+      const checklists = [...plan.checklists];
+      const scopes = [...plan.executionScopes];
+      for (const draft of input.addTasks) {
+        const source = resolve(draft.sourceIdentifier);
+        if (source.id === current.id)
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Reuse an approved implementation Checklist, not the combined parent report',
+          });
+        const standard = plan.checklists.find((check) => check.taskId === source.id)!;
+        const original = (
+          await new IssueChecklistService(db, operation.userId, this.workspaceId).getChecklist(
+            source.id,
+          )
+        ).definition!;
+        const assigneeAgentId = draft.assigneeAgentId ?? source.assigneeAgentId ?? orchestrator;
+        await assertCanUseWorkspaceAgent({
+          db,
+          userId: operation.userId,
+          workspaceId: this.workspaceId,
+          agentId: assigneeAgentId,
+        });
+        const child = await new TaskService(db, operation.userId, this.workspaceId).createTask({
+          name: draft.name,
+          instruction: draft.instruction,
+          description: draft.instruction.slice(0, 255),
+          assigneeAgentId,
+          reviewerAgentId: source.reviewerAgentId ?? undefined,
+          createdByAgentId: orchestrator,
+          parentTaskId: current.id,
+          projectId: current.projectId ?? undefined,
+          teamId: current.teamId ?? undefined,
+          workflowCategory: 'backlog',
+          config:
+            standard.deliveryKind === 'code'
+              ? {
+                  workspace: {
+                    provider: 'git',
+                    repo: standard.repo,
+                    baseBranch: standard.targetBranch,
+                  },
+                }
+              : undefined,
+        });
+        const aggregate = await new AcceptanceModel(
+          db,
+          operation.userId,
+          this.workspaceId,
+        ).ensureForSubject('task', child.id, { projectId: child.projectId });
+        await db
+          .update(acceptances)
+          .set({
+            metadata: {
+              ...aggregate.metadata,
+              issueChecklist: {
+                ...original,
+                revision: 1,
+                inheritedFrom: {
+                  taskId: source.id,
+                  checklistRevision: original.revision,
+                  planRevision: plan.revision,
+                  operationId,
+                },
+              },
+            },
+          })
+          .where(eq(acceptances.id, aggregate.id));
+        checklists.push({ ...standard, taskId: child.id, expectedRevision: 0 });
+        scopes.push({
+          taskId: child.id,
+          instruction: child.instruction,
+          projectId: child.projectId,
+          parentTaskId: current.id,
+          minGeneration: child.executionGeneration,
+        });
+        added.push(child);
+        for (const prerequisite of draft.dependsOn.map(resolve))
+          await model.addDependency(child.id, prerequisite.id, 'blocks', {
+            activityActor: { agentId: orchestrator, userId: operation.userId },
+          });
+        await model.addDependency(current.id, child.id, 'blocks', {
+          activityActor: { agentId: orchestrator, userId: operation.userId },
+        });
+      }
+      for (const change of changes) {
+        if (change.action === 'add')
+          await model.addDependency(change.task.id, change.prerequisite.id, 'blocks', {
+            activityActor: { agentId: orchestrator, userId: operation.userId },
+          });
+        else
+          await model.removeDependency(change.task.id, change.prerequisite.id, {
+            actorAgentId: orchestrator,
+            source: 'agent',
+          });
+      }
+      const invalidated = new Set<string>();
+      for (const id of affected) {
+        if (
+          (await new TaskTopicModel(db, operation.userId, this.workspaceId).findByTaskId(id)).length
+        )
+          invalidated.add(id);
+      }
+      for (const scope of scopes)
+        if (invalidated.has(scope.taskId))
+          scope.minGeneration =
+            members.find((task) => task.id === scope.taskId)!.executionGeneration + 1;
+      const refined: IssuePlan = {
+        ...plan,
+        checklists,
+        executionScopes: scopes,
+        refinement: {
+          revision: input.refinementRevision + 1,
+          operationId,
+          agentId: orchestrator,
+          at: new Date().toISOString(),
+        },
+      };
+      for (const member of [...members, ...added]) {
+        await model.update(member.id, {
+          context: { ...(member.context as TaskContext | null), issuePlan: refined },
+          ...(invalidated.has(member.id)
+            ? {
+                executionGeneration: member.executionGeneration + 1,
+                workflowCategory: 'backlog' as const,
+              }
+            : {}),
+        });
+      }
+      await model.addComment({
+        taskId: current.id,
+        userId: operation.userId,
+        authorAgentId: orchestrator,
+        content: `Refined implementation within confirmed plan ${plan.revision}: added ${added.map((task) => task.identifier).join(', ') || 'no tasks'}; adjusted ${changes.length} dependencies. Original goal, Checklist standards, repositories and final branches remain confirmed.`,
+      });
+      return { parent: current, plan: refined, added };
+    });
+    if (!result) throw new TRPCError({ code: 'NOT_FOUND', message: 'Issue not found' });
+    const dispatch = await new TaskService(
+      this.db,
+      operation.userId,
+      this.workspaceId,
+    ).runReadySubtasks(parent.id, `refinement:${result.plan.refinement!.revision}`);
+    return { ...(await this.getIssuePlan(parent.id)), added: result.added, dispatch };
+  }
+
   async confirmIssuePlan(input: { id: string; revision: number }) {
     const task = await this.requireIssue(input.id, true);
     if (!task.createdByUserId)
@@ -609,7 +1009,20 @@ export class TaskPlanService {
       for (const check of plan.checklists) {
         await checklist.confirmChecklist(check);
       }
-      const frozen = { ...plan, confirmedAt: new Date().toISOString(), confirmedBy: this.userId };
+      const frozen: IssuePlan = {
+        ...plan,
+        confirmedAt: new Date().toISOString(),
+        confirmedBy: this.userId,
+        executionScopes: [current, ...subtasks]
+          .filter((task) => plan.checklists.some((check) => check.taskId === task.id))
+          .map((task) => ({
+            taskId: task.id,
+            instruction: task.instruction,
+            projectId: task.projectId,
+            parentTaskId: task.parentTaskId,
+            minGeneration: task.executionGeneration,
+          })),
+      };
       for (const issue of [
         current,
         ...subtasks.filter((task) => plan.checklists.some((check) => check.taskId === task.id)),

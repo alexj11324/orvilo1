@@ -13,6 +13,7 @@ import { VerifyRunModel } from '@/database/models/verifyRun';
 import {
   agentOperations,
   agents,
+  taskDispatches,
   tasks,
   taskTopics,
   topics,
@@ -20,8 +21,9 @@ import {
   workspaceMembers,
   workspaces,
 } from '@/database/schemas';
-import { acceptances, verifyCheckResults } from '@/database/schemas/verify';
+import { acceptances, verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
 import type * as WorkspaceGuard from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { runAcpJudgment } from '@/server/services/aiGeneration/judgment';
 import {
@@ -265,7 +267,12 @@ describe('Issue plan confirmation', () => {
       const current = (await new TaskModel(db, user, ws).findById(child.id))!;
       await db
         .update(tasks)
-        .set({ config: { ...current.config, workspace: { repo: definition.repo } } })
+        .set({
+          config: {
+            ...current.config,
+            workspace: { repo: definition.repo, baseBranch: definition.targetBranch },
+          },
+        })
         .where(eq(tasks.id, child.id));
       Object.assign(
         standing.issuePlan!.checklists.find((check) => check.taskId === child.id)!,
@@ -628,4 +635,343 @@ describe('Issue plan confirmation', () => {
       expect(dispatch).not.toHaveBeenCalled();
     },
   );
+});
+
+async function refinementFixture() {
+  const topicId = 'refinement-origin';
+  await db.insert(topics).values({ id: topicId, userId: user, workspaceId: ws });
+  await new TaskModel(db, user, ws).update(id, { context: { origin: { topicId } } });
+  const draft = await service().draftIssuePlan(id);
+  await service().confirmIssuePlan({ id, revision: draft.plan!.revision });
+  const operationId = 'refinement-operation';
+  await db.insert(agentOperations).values({
+    id: operationId,
+    userId: user,
+    workspaceId: ws,
+    agentId: agent,
+    topicId,
+    status: 'running',
+  });
+  vi.mocked(TaskService.prototype.runReadySubtasks).mockClear();
+  const input = {
+    identifier: id,
+    revision: draft.plan!.revision,
+    refinementRevision: 0,
+    addTasks: [
+      {
+        sourceIdentifier: draft.subtasks[0].identifier,
+        name: 'Implementation detail',
+        instruction: 'Implement the already approved outcome using the refined approach',
+      },
+    ],
+  };
+  return { draft, input, operationId };
+}
+
+describe('confirmed implementation refinement', () => {
+  it('refines from a task-scoped interactive Orchestrator conversation without a delivery generation', async () => {
+    const f = await refinementFixture();
+    await db
+      .update(agentOperations)
+      .set({ taskId: id, appContext: { taskId: id } })
+      .where(eq(agentOperations.id, f.operationId));
+    const result = await service().refineIssuePlan(f.input, f.operationId);
+    expect(result.added).toHaveLength(1);
+    expect(result.plan?.refinement?.operationId).toBe(f.operationId);
+    expect(TaskService.prototype.runReadySubtasks).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a separate active writer blocked when the interactive Orchestrator refines', async () => {
+    const f = await refinementFixture();
+    await db
+      .update(agentOperations)
+      .set({ taskId: id, appContext: { taskId: id } })
+      .where(eq(agentOperations.id, f.operationId));
+    await db.insert(agentOperations).values({
+      id: 'other-active-writer',
+      taskId: id,
+      userId: user,
+      workspaceId: ws,
+      agentId: agent,
+      status: 'running',
+    });
+    await expect(service().refineIssuePlan(f.input, f.operationId)).rejects.toThrow(
+      'device acknowledgement',
+    );
+    expect((await service().getIssuePlan(id)).subtasks).toHaveLength(3);
+  });
+
+  it('does not exempt an actual current delivery writer just because its operation has no generation metadata', async () => {
+    const f = await refinementFixture();
+    const parent = (await new TaskModel(db, user, ws).findById(id))!;
+    await db
+      .update(agentOperations)
+      .set({ taskId: id })
+      .where(eq(agentOperations.id, f.operationId));
+    await db.insert(taskTopics).values({
+      seq: 1,
+      taskId: id,
+      topicId: 'refinement-origin',
+      userId: user,
+      workspaceId: ws,
+      operationId: f.operationId,
+      executionGeneration: parent.executionGeneration,
+      status: 'running',
+    });
+    await expect(service().refineIssuePlan(f.input, f.operationId)).rejects.toThrow(
+      'device acknowledgement',
+    );
+    expect(TaskService.prototype.runReadySubtasks).not.toHaveBeenCalled();
+  });
+
+  it('rejects a stale actual delivery Run even without generation metadata on its operation', async () => {
+    const f = await refinementFixture();
+    const member = f.draft.subtasks[0];
+    await db
+      .update(tasks)
+      .set({ executionGeneration: member.executionGeneration + 1 })
+      .where(eq(tasks.id, member.id));
+    await db
+      .update(agentOperations)
+      .set({ taskId: member.id })
+      .where(eq(agentOperations.id, f.operationId));
+    await db.insert(taskTopics).values({
+      seq: 1,
+      taskId: member.id,
+      topicId: 'refinement-origin',
+      userId: user,
+      workspaceId: ws,
+      operationId: f.operationId,
+      executionGeneration: member.executionGeneration,
+      status: 'running',
+    });
+    await expect(service().refineIssuePlan(f.input, f.operationId)).rejects.toThrow(
+      'current Issue generation',
+    );
+    expect(TaskService.prototype.runReadySubtasks).not.toHaveBeenCalled();
+  });
+
+  it('reuses exact approval provenance, adds actual parent blocks and auto-starts as original requester', async () => {
+    const f = await refinementFixture();
+    const prior = (
+      await new IssueChecklistService(db, user, ws).getChecklist(f.draft.subtasks[0].id)
+    ).definition!;
+    const originalIdentity: string[] = [];
+    vi.mocked(TaskService.prototype.runReadySubtasks).mockImplementation(async function (
+      this: TaskService,
+    ) {
+      originalIdentity.push((this as unknown as { userId: string }).userId);
+      return { kickedOff: [], failed: [], plan: { layers: [], blocked: [], cycles: [] } } as never;
+    });
+    const result = await service().refineIssuePlan(f.input, f.operationId);
+    expect(originalIdentity).toEqual([user]);
+    expect(result.plan).toMatchObject({
+      revision: f.draft.plan!.revision,
+      confirmedAt: (await service().getIssuePlan(id)).plan!.confirmedAt,
+      refinement: { revision: 1, operationId: f.operationId, agentId: agent },
+    });
+    expect(result.plan!.checklists).toHaveLength(f.draft.plan!.checklists.length + 1);
+    for (const check of f.draft.plan!.checklists)
+      expect(result.plan!.checklists.find((row) => row.taskId === check.taskId)).toEqual(check);
+    const added = result.added[0];
+    expect(added.createdByUserId).toBe(user);
+    expect(added.workflowCategory).toBe('backlog');
+    expect(result.dependencies).toContainEqual(
+      expect.objectContaining({ taskId: id, dependsOnId: added.id, type: 'blocks' }),
+    );
+    const checklist = await new IssueChecklistService(db, user, ws).getChecklist(added.id);
+    expect(checklist.definition).toMatchObject({
+      items: prior.items,
+      confirmedBy: prior.confirmedBy,
+      confirmedAt: prior.confirmedAt,
+      inheritedFrom: { taskId: f.draft.subtasks[0].id, operationId: f.operationId },
+    });
+    expect(checklist.history).toEqual([]);
+    expect(checklist.current?.deliveryAccepted).toBe(false);
+    expect(checklist.current?.itemsAccepted).toBe(false);
+    await expect(
+      new TaskModel(db, user, ws).assertConfirmedIssuePlan(added.id),
+    ).resolves.toBeUndefined();
+    expect(vi.mocked(assertCanUseWorkspaceAgent)).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: user, agentId: agent }),
+    );
+  });
+
+  it('cannot change or remove required criteria, repository or final target via refinement input', async () => {
+    const f = await refinementFixture();
+    for (const extra of [
+      { items: [] },
+      { checklist: { items: [] } },
+      { repo: 'outside/repo' },
+      { targetBranch: 'other' },
+    ])
+      await expect(
+        service().refineIssuePlan(
+          { ...f.input, addTasks: [{ ...f.input.addTasks[0], ...extra }] },
+          f.operationId,
+        ),
+      ).rejects.toThrow();
+    expect((await service().getIssuePlan(id)).plan!.checklists).toEqual(f.draft.plan!.checklists);
+    expect(TaskService.prototype.runReadySubtasks).not.toHaveBeenCalled();
+  });
+
+  it('uses persisted Orchestrator operation identity and rejects other Agents and callers', async () => {
+    const f = await refinementFixture();
+    await expect(service().refineIssuePlan(f.input, 'missing-operation')).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await db
+      .update(agentOperations)
+      .set({ agentId: null })
+      .where(eq(agentOperations.id, f.operationId));
+    await expect(service().refineIssuePlan(f.input, f.operationId)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await db
+      .update(agentOperations)
+      .set({ agentId: agent, status: 'done' })
+      .where(eq(agentOperations.id, f.operationId));
+    await expect(service().refineIssuePlan(f.input, f.operationId)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('rolls back a new implementation task and membership when legal dependency validation detects a cycle', async () => {
+    const f = await refinementFixture();
+    await expect(
+      service().refineIssuePlan(
+        {
+          ...f.input,
+          dependencies: [
+            {
+              identifier: f.draft.subtasks[0].identifier,
+              dependsOnIdentifier: f.draft.subtasks[2].identifier,
+              action: 'add',
+            },
+          ],
+        },
+        f.operationId,
+      ),
+    ).rejects.toMatchObject({ reason: 'CYCLE' });
+    const after = await service().getIssuePlan(id);
+    expect(after.subtasks).toHaveLength(3);
+    expect(after.plan?.refinement).toBeUndefined();
+    expect(TaskService.prototype.runReadySubtasks).not.toHaveBeenCalled();
+  });
+
+  it('preserves old accepted history without inheriting its results in the implementation task', async () => {
+    const f = await refinementFixture();
+    const old = await seedReviewedIssueDelivery(db, f.draft.subtasks[0].id);
+    const source = (await new TaskModel(db, user, ws).findById(f.draft.subtasks[0].id))!;
+    await db
+      .update(agents)
+      .set({ agencyConfig: { heterogeneousProvider: { type: 'codex' } } })
+      .where(eq(agents.id, source.reviewerAgentId!));
+    await db
+      .update(verifyRuns)
+      .set({ userDecision: 'accept' })
+      .where(eq(verifyRuns.id, old.run.id));
+    await db
+      .update(verifyCheckResults)
+      .set({ userDecision: 'accepted' })
+      .where(eq(verifyCheckResults.id, old.result.id));
+    const result = await service().refineIssuePlan(f.input, f.operationId);
+    const checklist = await new IssueChecklistService(db, user, ws).getChecklist(
+      result.added[0].id,
+    );
+    expect(checklist.history).toEqual([]);
+    expect(checklist.results).toEqual([]);
+    const [oldRound] = await db.select().from(verifyRuns).where(eq(verifyRuns.id, old.run.id));
+    expect(oldRound.userDecision).toBe('accept');
+  });
+
+  it('refuses to supersede an active parent writer or change dependencies of a live task', async () => {
+    const f = await refinementFixture();
+    await db.insert(agentOperations).values({
+      id: 'active-parent-report',
+      userId: user,
+      workspaceId: ws,
+      agentId: agent,
+      taskId: id,
+      status: 'running',
+    });
+    await expect(service().refineIssuePlan(f.input, f.operationId)).rejects.toThrow(
+      'device acknowledgement',
+    );
+    await db
+      .update(agentOperations)
+      .set({ status: 'interrupted' })
+      .where(eq(agentOperations.id, 'active-parent-report'));
+    await db.insert(agentOperations).values({
+      id: 'active-implementation',
+      userId: user,
+      workspaceId: ws,
+      agentId: agent,
+      taskId: f.draft.subtasks[0].id,
+      status: 'running',
+    });
+    await expect(
+      service().refineIssuePlan(
+        {
+          ...f.input,
+          dependencies: [
+            {
+              identifier: f.draft.subtasks[0].identifier,
+              dependsOnIdentifier: f.draft.subtasks[1].identifier,
+              action: 'add',
+            },
+          ],
+        },
+        f.operationId,
+      ),
+    ).rejects.toThrow('device acknowledgement');
+    expect((await service().getIssuePlan(id)).subtasks).toHaveLength(3);
+  });
+
+  it('reopens acknowledged canceled scope for a new human-confirmed plan without accepting unwanted old work', async () => {
+    const f = await refinementFixture();
+    const parent = (await new TaskModel(db, user, ws).findById(id))!;
+    const stopId = 'plan-stop-dispatch';
+    await db.insert(taskDispatches).values({
+      id: stopId,
+      taskId: id,
+      workspaceId: ws,
+      phase: 'cancel_requested',
+      generation: parent.executionGeneration,
+      taskRevision: parent.domainRevision,
+      requirementRevision: parent.requirementRevision,
+      policyRevision: parent.policyRevision,
+      requestedBy: user,
+      idempotencyKey: stopId,
+      fence: 1,
+      leaseOwner: 'stop-worker',
+      cancelRequestedAt: new Date(),
+    });
+    await db.update(tasks).set({ workflowCategory: 'canceled' }).where(eq(tasks.id, id));
+    await expect(service().draftIssuePlan(id)).rejects.toThrow('device acknowledgement');
+    const settled = await new TaskDispatchModel(db, ws).settleCancellation({
+      dispatchId: stopId,
+      fence: 1,
+      generation: parent.executionGeneration,
+      owner: 'stop-worker',
+    });
+    expect(settled?.dispatch.phase).toBe('canceled');
+    const next = await service().draftIssuePlan(id);
+    expect(next.plan!.confirmedAt).toBeUndefined();
+    expect(next.plan!.revision).toBe(f.draft.plan!.revision + 1);
+    const oldIds = new Set(f.draft.subtasks.map((task) => task.id));
+    expect(next.plan!.checklists.every((check) => !oldIds.has(check.taskId))).toBe(true);
+    expect(
+      next.dependencies.filter((edge) => edge.taskId === id && oldIds.has(edge.dependsOnId)),
+    ).toEqual([]);
+    await service().confirmIssuePlan({ id, revision: next.plan!.revision });
+    for (const old of f.draft.subtasks) {
+      expect((await new TaskModel(db, user, ws).findById(old.id))?.workflowCategory).toBe(
+        'canceled',
+      );
+      await expect(
+        new TaskModel(db, user, ws).assertConfirmedIssuePlan(old.id),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    }
+  });
 });

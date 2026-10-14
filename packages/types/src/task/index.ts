@@ -995,10 +995,20 @@ export interface IssuePlan {
   confirmedAt?: string;
   confirmedBy?: string;
   conversationPlan?: { topicId: string; postedMessageId: string; postedAt: string };
+  /** Server-authored execution scope; physical checkout/device hydration is deliberately excluded. */
+  executionScopes?: Array<{
+    taskId: string;
+    instruction: string;
+    projectId: string | null;
+    parentTaskId: string | null;
+    minGeneration: number;
+  }>;
   orchestratorAgentId: string;
   parentTaskId: string;
   plannedBy: string;
   planningOperationId: string;
+  /** Implementation refinement retains the original human-confirmed revision and standards. */
+  refinement?: { revision: number; operationId: string; agentId: string; at: string };
   requirement: string;
   revision: number;
   scope: { description: string; repositories: Array<{ repo: string; targetBranch: string }> };

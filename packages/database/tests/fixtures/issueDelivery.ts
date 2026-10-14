@@ -38,13 +38,29 @@ export async function seedConfirmedIssuePlan(db: OrviloDatabase, taskId: string)
     .set({
       config:
         definition.deliveryKind === 'code'
-          ? { ...config, workspace: { ...(config.workspace as object), repo: definition.repo } }
+          ? {
+              ...config,
+              workspace: {
+                ...(config.workspace as object),
+                repo: definition.repo,
+                baseBranch: definition.targetBranch,
+              },
+            }
           : config,
       context: {
         ...(task.context as object),
         issuePlan: {
           revision: 1,
           parentTaskId: taskId,
+          executionScopes: [
+            {
+              taskId,
+              instruction: task.instruction,
+              projectId: task.projectId,
+              parentTaskId: task.parentTaskId,
+              minGeneration: task.executionGeneration,
+            },
+          ],
           confirmedAt: definition.confirmedAt,
           confirmedBy: definition.confirmedBy,
           checklists: [

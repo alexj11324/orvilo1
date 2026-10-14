@@ -21,6 +21,7 @@ export type {
   IntakeIssueParams,
   ListWorkspaceMembersParams,
   ListWorkspaceMembersState,
+  RefineIssuePlanParams,
   SubmitTaskReviewParams,
   SubmitTaskReviewState,
 } from './types';

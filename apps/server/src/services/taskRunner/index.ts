@@ -669,12 +669,25 @@ export class TaskRunnerService {
       // contract for continuations; for repairs the caller may pin the exact
       // delivery being repaired, and only without a pin does the historical
       // latest-seq contract apply.
+      const minimumGeneration =
+        (task.context as TaskContext | null)?.issuePlan?.executionScopes?.find(
+          (scope) => scope.taskId === task.id,
+        )?.minGeneration ?? 0;
+      const eligibleTopics = existingTopics.filter(
+        (topic) => (topic.executionGeneration ?? 0) >= minimumGeneration,
+      );
+      if (continueTopicId && (continuedTopic?.executionGeneration ?? 0) < minimumGeneration)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'This Run belongs to superseded scope; start a fresh Run under the current confirmed plan.',
+        });
       const priorContract = (
         continueTopicId
           ? continuedTopic?.contract
           : sourceContractId
-            ? existingTopics.find((t) => t.contract?.contractId === sourceContractId)?.contract
-            : [...existingTopics]
+            ? eligibleTopics.find((t) => t.contract?.contractId === sourceContractId)?.contract
+            : [...eligibleTopics]
                 .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
                 .find((t) => t.contract)?.contract
       ) as TaskExecutionContract | undefined;

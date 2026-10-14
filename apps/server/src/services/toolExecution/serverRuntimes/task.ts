@@ -2,6 +2,7 @@ import type {
   EditTaskParams,
   IntakeIssueParams,
   ListWorkspaceMembersParams,
+  RefineIssuePlanParams,
   SubmitTaskReviewParams,
 } from '@orvilo/builtin-tool-task';
 import {
@@ -269,6 +270,28 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
   };
 
   return {
+    refineIssuePlan: async (args: RefineIssuePlanParams) => {
+      if (!deps.taskPlanService || !operationId)
+        return {
+          content: 'Refinement requires a live server-bound Orchestrator operation.',
+          success: false,
+        };
+      try {
+        const result = await deps.taskPlanService.refineIssuePlan(args, operationId);
+        return {
+          content: `Implementation refined within original confirmed plan ${result.plan!.revision}. Added: ${result.added.map((task) => task.identifier).join(', ') || 'none'}. Ready tasks are dispatched as the original requester.`,
+          state: {
+            success: true,
+            revision: result.plan!.revision,
+            refinementRevision: result.plan!.refinement!.revision,
+            added: result.added.map((task) => ({ id: task.id, identifier: task.identifier })),
+          },
+          success: true,
+        };
+      } catch (error) {
+        return { content: error instanceof Error ? error.message : String(error), success: false };
+      }
+    },
     intakeIssue: async (args: IntakeIssueParams) => {
       if (!args.name.trim() || !args.instruction.trim()) {
         return {
@@ -1079,7 +1102,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
 
       const reviewers = await taskCaller().listReviewerAgents();
       return {
-        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. Choose canReviewIssues=true; unsupported runtimes cannot be assigned as reviewer.`,
+        content: `${formatTaskDetail(detail)}\nConfirmed plan: ${JSON.stringify((detail.context as { issuePlan?: unknown } | null)?.issuePlan ?? null)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. Choose canReviewIssues=true; unsupported runtimes cannot be assigned as reviewer.`,
         state: {
           domainRevision: detail.domainRevision,
           identifier: detail.identifier,

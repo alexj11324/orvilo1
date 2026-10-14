@@ -174,6 +174,13 @@ export interface IssueChecklistDefinition {
   confirmedAt: string;
   confirmedBy: string;
   deliveryKind: 'code' | 'artifact';
+  /** Reused approval standards, not a new human acceptance or Reviewer result. */
+  inheritedFrom?: {
+    taskId: string;
+    checklistRevision: number;
+    planRevision: number;
+    operationId: string;
+  };
   items: IssueChecklistItem[];
   repo?: string;
   revision: number;

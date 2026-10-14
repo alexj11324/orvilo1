@@ -4,6 +4,7 @@ import type {
   IssueDeliveryProof,
   IssueReviewState,
   TaskConfig,
+  TaskContext,
   TaskItem,
 } from '@orvilo/types';
 import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
@@ -164,6 +165,15 @@ export class IssueDeliveryModel {
     const tasks = await this.readableTasks(taskIds);
     if (!tasks.length) return {};
     const ids = tasks.map((task) => task.id);
+    const plannedIds = tasks
+      .filter((task) => (task.context as TaskContext | null)?.issuePlan)
+      .map((task) => task.id);
+    const confirmedIds = new Set(
+      await new TaskModel(this.db, this.userId, this.workspaceId).findConfirmedIssuePlanIds(
+        plannedIds,
+        true,
+      ),
+    );
     const [aggregates, topics] = await Promise.all([
       this.db
         .select()
@@ -212,7 +222,10 @@ export class IssueDeliveryModel {
         const topic = topics
           .filter((row) => row.taskId === task.id)
           .sort((a, b) => b.seq - a.seq)[0];
-        const proof = currentIssueDeliveryProof(task, topic, aggregate?.metadata?.issueChecklist);
+        const proof =
+          !plannedIds.includes(task.id) || confirmedIds.has(task.id)
+            ? currentIssueDeliveryProof(task, topic, aggregate?.metadata?.issueChecklist)
+            : undefined;
         const run = runs.find(
           (row) =>
             row.acceptanceId === aggregate?.id &&

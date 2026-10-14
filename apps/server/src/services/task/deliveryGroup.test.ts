@@ -41,6 +41,13 @@ async function group() {
   await model().addDependency(parent.id, a.id);
   await model().addDependency(parent.id, b.id);
   const plan: IssuePlan = {
+    executionScopes: [parent, a, b].map((task) => ({
+      taskId: task.id,
+      instruction: task.instruction,
+      projectId: task.projectId,
+      parentTaskId: task.parentTaskId,
+      minGeneration: task.executionGeneration,
+    })),
     parentTaskId: parent.id,
     revision: 1,
     confirmedAt: '2026-10-14T00:00:00Z',
@@ -62,8 +69,8 @@ async function group() {
       taskId: task.id,
       expectedRevision: 0,
       deliveryKind: task.id === parent.id ? 'artifact' : 'code',
-      repo: task.id === b.id ? 'other/repo' : 'org/repo',
-      targetBranch: task.id === b.id ? 'main' : 'canary',
+      repo: task.id === parent.id ? undefined : task.id === b.id ? 'other/repo' : 'org/repo',
+      targetBranch: task.id === parent.id ? undefined : task.id === b.id ? 'main' : 'canary',
       items: [{ id: 'outcome', title: 'Outcome', required: true }],
     })),
   };
@@ -74,6 +81,19 @@ async function group() {
       .set({ context: { issuePlan: plan } })
       .where(eq(tasks.id, task.id));
     const delivery = await seedReviewedIssueDelivery(db, task.id);
+    if (task.id !== parent.id)
+      await db
+        .update(tasks)
+        .set({
+          config: {
+            ...((await model().findById(task.id))!.config as object),
+            workspace: {
+              repo: task.id === b.id ? 'other/repo' : 'org/repo',
+              baseBranch: task.id === b.id ? 'main' : 'canary',
+            },
+          },
+        })
+        .where(eq(tasks.id, task.id));
     const proof = {
       ...delivery.proof,
       ...(task.id === parent.id
@@ -83,6 +103,7 @@ async function group() {
             repo: undefined,
             branch: undefined,
             baseBranch: undefined,
+            targetBranch: undefined,
           }
         : {}),
       ...(task.id === b.id ? { repo: 'other/repo', targetBranch: 'main' } : {}),

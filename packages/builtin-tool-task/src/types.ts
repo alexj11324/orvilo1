@@ -10,6 +10,8 @@ export const TaskApiName = {
   readAutomationInput: 'readAutomationInput',
   /** Create or link an Issue draft and request Orchestrator planning. */
   intakeIssue: 'intakeIssue',
+  /** Refine implementation using unchanged human-confirmed scope; server-bound Orchestrator only. */
+  refineIssuePlan: 'refineIssuePlan',
   /** Add a comment to a task */
   addTaskComment: 'addTaskComment',
 
@@ -71,6 +73,24 @@ export interface IntakeIssueParams {
   projectId?: string;
   repositoryId?: string;
   teamId?: string;
+}
+
+export interface RefineIssuePlanParams {
+  addTasks?: Array<{
+    sourceIdentifier: string;
+    name: string;
+    instruction: string;
+    assigneeAgentId?: string;
+    dependsOn?: string[];
+  }>;
+  dependencies?: Array<{
+    identifier: string;
+    dependsOnIdentifier: string;
+    action: 'add' | 'remove';
+  }>;
+  identifier: string;
+  refinementRevision: number;
+  revision: number;
 }
 
 // ==================== createTask ====================

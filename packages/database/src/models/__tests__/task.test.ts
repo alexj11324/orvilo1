@@ -3621,14 +3621,14 @@ describe('TaskModel', () => {
   });
 
   describe('static getScheduledTasks', () => {
-    it('should return schedule-mode tasks that are not terminal/paused/running', async () => {
+    it('returns eligible schedules while running so subsequent occurrences can be queued', async () => {
       const model = new TaskModel(serverDB, userId);
       const eligible = await model.create({
         automationMode: 'schedule',
         instruction: 'Eligible',
         schedulePattern: '0 * * * *',
       });
-      // Running excluded
+      // Active schedules still produce occurrences; durable dispatch serializes them.
       const running = await model.create({
         automationMode: 'schedule',
         instruction: 'Running',
@@ -3643,7 +3643,7 @@ describe('TaskModel', () => {
       const result = await TaskModel.getScheduledTasks(serverDB);
       const ids = result.map((t) => t.id);
       expect(ids).toContain(eligible.id);
-      expect(ids).not.toContain(running.id);
+      expect(ids).toContain(running.id);
     });
   });
 

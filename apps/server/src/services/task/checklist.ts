@@ -169,7 +169,10 @@ export class IssueChecklistService {
             .from(verifyRuns)
             .where(eq(verifyRuns.operationId, latest.operationId))
         : [];
-      if (frozen?.metadata?.issueDelivery) {
+      if (
+        frozen?.metadata?.issueDelivery &&
+        latest?.executionGeneration === task.executionGeneration
+      ) {
         const delivered =
           frozen.userDecision === 'accept' &&
           (frozen.metadata.issueDelivery.deliveryKind === 'artifact' ||
@@ -183,6 +186,11 @@ export class IssueChecklistService {
             'This delivery Checklist is frozen; finish delivery before confirming new scope',
           );
       }
+      await new TaskModel(
+        service.db,
+        service.userId,
+        service.workspaceId,
+      ).assertStoppedIssueWriters([task.id]);
       const definition: IssueChecklistDefinition = {
         revision: input.expectedRevision + 1,
         items: input.items.map((item) => ({ ...item, title: item.title.trim() })),

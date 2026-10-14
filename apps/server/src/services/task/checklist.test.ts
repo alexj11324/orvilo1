@@ -119,6 +119,7 @@ beforeEach(async () => {
     createdByUserId: owner,
     workspaceId: ws,
     reviewerAgentId: 'checklist-reviewer',
+    config: { workspace: { repo: 'org/repo', baseBranch: 'canary' } },
     workflowCategory: 'in_review',
     executionGeneration: 1,
   });
@@ -128,8 +129,18 @@ beforeEach(async () => {
       context: {
         issuePlan: {
           revision: 1,
+          executionScopes: [
+            {
+              taskId,
+              instruction: 'Background only',
+              projectId: null,
+              parentTaskId: null,
+              minGeneration: 0,
+            },
+          ],
           parentTaskId: taskId,
           confirmedAt: '2026-10-14T00:00:00Z',
+          confirmedBy: owner,
           checklists: [
             {
               taskId,
@@ -354,6 +365,20 @@ it('a merged stacked delivery permits new Checklist scope using the actual final
       },
     })
     .where(eq(taskTopics.id, topic.id));
+  await expect(
+    service().confirmChecklist({
+      taskId,
+      expectedRevision: 1,
+      deliveryKind: 'code',
+      repo: 'org/repo',
+      targetBranch: 'canary',
+      items: [{ id: 'new-work', title: 'New work', required: true }],
+    }),
+  ).rejects.toThrow('device acknowledgement');
+  await db
+    .update(agentOperations)
+    .set({ status: 'done' })
+    .where(eq(agentOperations.id, input.reviewerOperationId));
   await expect(
     service().confirmChecklist({
       taskId,

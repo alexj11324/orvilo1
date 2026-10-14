@@ -23,6 +23,7 @@ afterEach(async () => {
 
 async function confirmed(id: string, withChecklist = true) {
   const confirmedAt = new Date().toISOString();
+  const task = (await model.findById(id))!;
   await db
     .update(tasks)
     .set({
@@ -31,6 +32,15 @@ async function confirmed(id: string, withChecklist = true) {
         issuePlan: {
           revision: 1,
           parentTaskId: id,
+          executionScopes: [
+            {
+              taskId: id,
+              instruction: task.instruction,
+              projectId: task.projectId,
+              parentTaskId: task.parentTaskId,
+              minGeneration: task.executionGeneration,
+            },
+          ],
           confirmedAt,
           confirmedBy: userId,
           checklists: [
@@ -118,5 +128,35 @@ describe('confirmed Issue plan admission', () => {
     await expect(model.reserveRun(task.id, 'stale-checklist')).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
     });
+  });
+});
+
+it('direct instruction and target edits invalidate approval while device/path hydration and legal graph changes do not', async () => {
+  const task = await model.create({ instruction: 'Implement the approved outcome' });
+  await confirmed(task.id);
+  await db
+    .update(tasks)
+    .set({
+      config: {
+        workspace: {
+          repo: 'org/approved',
+          baseBranch: 'canary',
+          deviceId: 'saved-device',
+          repoPath: '/hydrated/path',
+        },
+      },
+    })
+    .where(eq(tasks.id, task.id));
+  await expect(model.assertConfirmedIssuePlan(task.id)).resolves.toBeUndefined();
+  await model.update(task.id, { instruction: 'Different goal' });
+  await expect(model.assertConfirmedIssuePlan(task.id)).rejects.toMatchObject({
+    code: 'PRECONDITION_FAILED',
+  });
+  await model.update(task.id, {
+    instruction: task.instruction,
+    config: { workspace: { repo: 'org/approved', baseBranch: 'other' } },
+  });
+  await expect(model.assertConfirmedIssuePlan(task.id)).rejects.toMatchObject({
+    code: 'PRECONDITION_FAILED',
   });
 });

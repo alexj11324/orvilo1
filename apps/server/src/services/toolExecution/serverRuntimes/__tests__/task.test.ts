@@ -1779,3 +1779,35 @@ describe('agent-tool deletion prerequisite guard', () => {
     expect(deletionMocks.cleanupTaskWorktrees).not.toHaveBeenCalled();
   });
 });
+
+describe('Orchestrator implementation refinement wiring', () => {
+  it('binds refinement to the actual server operation and refuses an unbound client call', async () => {
+    const refineIssuePlan = vi.fn().mockResolvedValue({
+      plan: { revision: 1, refinement: { revision: 1 } },
+      added: [{ id: 'new-task', identifier: 'T-2' }],
+    });
+    const deps = {
+      agentModel: {},
+      taskModel: {},
+      taskService: {},
+      taskCaller: {},
+      taskPlanService: { refineIssuePlan },
+      operationId: 'server-current-operation',
+    } as unknown as Parameters<typeof createTaskRuntime>[0];
+    const input = {
+      identifier: 'T-1',
+      revision: 1,
+      refinementRevision: 0,
+      addTasks: [
+        { sourceIdentifier: 'T-2', name: 'Implementation', instruction: 'Approved outcome detail' },
+      ],
+    };
+    expect((await createTaskRuntime(deps).refineIssuePlan(input)).success).toBe(true);
+    expect(refineIssuePlan).toHaveBeenCalledWith(input, 'server-current-operation');
+    refineIssuePlan.mockClear();
+    expect(
+      (await createTaskRuntime({ ...deps, operationId: undefined }).refineIssuePlan(input)).success,
+    ).toBe(false);
+    expect(refineIssuePlan).not.toHaveBeenCalled();
+  });
+});

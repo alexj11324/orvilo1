@@ -400,6 +400,42 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     );
   });
 
+  it('a server-confirmed new generation rebuilds the report contract instead of reusing old scope receipts', async () => {
+    const task = baseTask({
+      executionGeneration: 2,
+      context: {
+        issuePlan: {
+          checklists: [],
+          executionScopes: [{ taskId: 'task-1', minGeneration: 2 }],
+        },
+      },
+    });
+    setupHappyPath(task, [priorTopic({ executionGeneration: 1 })]);
+    await newRunner().runTask(runParams);
+    const contract = vi.mocked(TaskTopicModel.prototype.startRun).mock.calls[0]?.[2].contract;
+    expect(contract?.content?.instruction).toBe('EDITED LIVE instruction');
+    expect(contract?.content?.verify).toBeUndefined();
+    expect(contract?.sourceContractId).toBeUndefined();
+    expect(consumeApprovalMock).not.toHaveBeenCalled();
+  });
+
+  it('an old contract cannot be explicitly repaired across the approved generation boundary', async () => {
+    const task = baseTask({
+      executionGeneration: 2,
+      context: {
+        issuePlan: {
+          checklists: [],
+          executionScopes: [{ taskId: 'task-1', minGeneration: 2 }],
+        },
+      },
+    });
+    const { execAgent } = setupHappyPath(task, [priorTopic({ executionGeneration: 1 })]);
+    await expect(
+      newRunner().runTask({ ...runParams, intent: 'repair', sourceContractId: 'contract-0' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(execAgent).not.toHaveBeenCalled();
+  });
+
   it('defaults to repair semantics when no intent is given', async () => {
     const task = baseTask();
     setupHappyPath(task, [priorTopic()]);

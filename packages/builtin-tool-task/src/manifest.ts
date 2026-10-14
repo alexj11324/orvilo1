@@ -55,10 +55,63 @@ export const TaskManifest: BuiltinToolManifest = {
       },
       work: { action: 'create', resourceType: 'task' },
     },
+    {
+      name: TaskApiName.refineIssuePlan,
+      description:
+        'The saved Orchestrator refines an active confirmed delivery plan. Read viewTask for its human revision, refinement revision and source Checklist identifiers. Reuse exact approved standards/repository/final branch; implementation instructions and legal dependencies may change within that goal. Starts ready work as the original requester. New goals, acceptance standards, repositories or final branches require human re-confirmation. Stop affected running work and wait for acknowledgement first.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['identifier', 'revision', 'refinementRevision'],
+        properties: {
+          identifier: { type: 'string', description: 'Confirmed parent Issue identifier.' },
+          revision: { type: 'integer', minimum: 1 },
+          refinementRevision: { type: 'integer', minimum: 0 },
+          addTasks: {
+            type: 'array',
+            maxItems: 100,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['sourceIdentifier', 'name', 'instruction'],
+              properties: {
+                sourceIdentifier: {
+                  type: 'string',
+                  description:
+                    'Existing approved implementation Issue whose exact Checklist and repo/target are reused.',
+                },
+                name: { type: 'string' },
+                instruction: {
+                  type: 'string',
+                  description: 'Implementation detail within the original confirmed goal.',
+                },
+                assigneeAgentId: { type: 'string' },
+                dependsOn: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          },
+          dependencies: {
+            type: 'array',
+            maxItems: 200,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['identifier', 'dependsOnIdentifier', 'action'],
+              properties: {
+                identifier: { type: 'string' },
+                dependsOnIdentifier: { type: 'string' },
+                action: { type: 'string', enum: ['add', 'remove'] },
+              },
+            },
+          },
+        },
+      },
+      work: { action: 'create', resourceType: 'task' },
+    },
     // ==================== Task CRUD ====================
     {
       description:
-        'Create an unconfirmed Issue draft. Optionally attach it as a subtask by specifying parentIdentifier.',
+        'Create an unconfirmed Issue draft. For implementation additions to an already confirmed plan, use refineIssuePlan instead. Optionally attach a draft by specifying parentIdentifier.',
       name: TaskApiName.createTask,
       parameters: {
         properties: {

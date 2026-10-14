@@ -714,11 +714,49 @@ export class TaskModel {
     });
   }
 
+  async assertStoppedIssueWriters(ids: string[], controlOperationId?: string) {
+    if (!ids.length) return;
+    const [active] = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(
+        and(
+          this.ownership(),
+          inArray(tasks.id, ids),
+          sql`(${hasActiveExecution} OR (${tasks.runReservationId} IS NOT NULL AND ${tasks.runReservationExpiresAt} > NOW()) OR EXISTS (
+        SELECT 1 FROM task_topics tt WHERE tt.task_id = ${tasks.id} AND tt.status = 'running'
+      ) OR EXISTS (
+        SELECT 1 FROM agent_operations op WHERE op.task_id = ${tasks.id} AND (op.status NOT IN ('done', 'error', 'interrupted') OR op.metadata #>> '{remoteCancel,state}' IN ('requested', 'unknown'))
+        AND (op.id IS DISTINCT FROM ${controlOperationId ?? null}
+          OR op.app_context ->> 'executionGeneration' IS NOT NULL
+          OR op.app_context ->> 'dispatchId' IS NOT NULL
+          OR op.metadata #>> '{remoteCancel,state}' IN ('requested', 'unknown')
+          OR EXISTS (SELECT 1 FROM task_topics writer_topic WHERE writer_topic.operation_id = op.id)
+          OR EXISTS (SELECT 1 FROM task_dispatches writer_dispatch WHERE writer_dispatch.operation_id = op.id))
+      ) OR EXISTS (
+        SELECT 1 FROM task_dispatches d WHERE d.task_id = ${tasks.id} AND d.cancel_requested_at IS NOT NULL AND d.phase = 'abandoned'
+      ))`,
+        ),
+      )
+      .limit(1);
+    if (active)
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message:
+          'Stop the affected active runs and wait for device acknowledgement before changing their scope or dependencies',
+      });
+  }
+
   /** Confirmed Issues complete only from their accepted current delivery ledger. */
   private async assertCompletedDeliveries(ids: string[]): Promise<void> {
     for (const task of await this.findByIds(ids)) {
       const plan = (task.context as TaskContext | null)?.issuePlan;
-      if (!plan?.confirmedAt) continue;
+      if (!plan) continue;
+      if (!plan.confirmedAt)
+        throw new TaskDependencyError(
+          'Confirm the current Issue scope before delivery completion.',
+          'PRECONDITION_FAILED',
+        );
       const members = [...new Set(plan.checklists.map((check) => check.taskId))];
       const dependencies = (await this.getDependenciesByTaskIds([task.id])).filter(
         (edge) => edge.type === 'blocks' && edge.taskId === task.id,
@@ -3039,8 +3077,24 @@ export class TaskModel {
     return Boolean(updated);
   }
 
-  private confirmedIssuePlanWhere() {
+  private confirmedIssuePlanWhere(includeDeliveredHistory = false) {
     return sql`nullif(${tasks.context} #>> '{issuePlan,confirmedAt}', '') is not null
+      and exists (
+        select 1 from jsonb_array_elements(coalesce(${tasks.context} #> '{issuePlan,executionScopes}', '[]'::jsonb)) scope
+        where scope ->> 'taskId' = ${tasks.id}
+          and scope ->> 'instruction' = ${tasks.instruction}
+          and scope ->> 'projectId' is not distinct from ${tasks.projectId}
+          and scope ->> 'parentTaskId' is not distinct from ${tasks.parentTaskId}
+          and (scope ->> 'minGeneration')::integer <= ${tasks.executionGeneration}
+      )
+      and (${includeDeliveredHistory ? sql`${tasks.workflowCategory} = 'done' OR` : sql``} exists (
+        select 1 from tasks parent
+        where parent.id = ${tasks.context} #>> '{issuePlan,parentTaskId}'
+          and parent.workspace_id is not distinct from ${tasks.workspaceId}
+          and parent.context #>> '{issuePlan,confirmedAt}' = ${tasks.context} #>> '{issuePlan,confirmedAt}'
+          and parent.context #>> '{issuePlan,revision}' = ${tasks.context} #>> '{issuePlan,revision}'
+          and exists (select 1 from jsonb_array_elements(coalesce(parent.context #> '{issuePlan,checklists}', '[]'::jsonb)) member where member ->> 'taskId' = ${tasks.id})
+      ))
       and exists (
         select 1 from ${acceptances} a,
           jsonb_array_elements(coalesce(${tasks.context} #> '{issuePlan,checklists}', '[]'::jsonb)) planned
@@ -3056,17 +3110,31 @@ export class TaskModel {
           and a.metadata #>> '{issueChecklist,repo}' is not distinct from planned ->> 'repo'
           and a.metadata #>> '{issueChecklist,targetBranch}' is not distinct from planned ->> 'targetBranch'
           and (planned ->> 'deliveryKind' <> 'code'
-            or planned ->> 'repo' = ${tasks.config} #>> '{workspace,repo}')
+            or (planned ->> 'repo' = ${tasks.config} #>> '{workspace,repo}'
+              and planned ->> 'targetBranch' = ${tasks.config} #>> '{workspace,baseBranch}'))
       )`;
   }
 
-  async assertConfirmedIssuePlan(id: string): Promise<void> {
-    const [task] = await this.db
+  async findConfirmedIssuePlanIds(
+    ids: string[],
+    includeDeliveredHistory = false,
+  ): Promise<string[]> {
+    if (!ids.length) return [];
+    const rows = await this.db
       .select({ id: tasks.id })
       .from(tasks)
-      .where(and(eq(tasks.id, id), this.ownership(), this.confirmedIssuePlanWhere()))
-      .limit(1);
-    if (!task)
+      .where(
+        and(
+          inArray(tasks.id, ids),
+          this.ownership(),
+          this.confirmedIssuePlanWhere(includeDeliveredHistory),
+        ),
+      );
+    return rows.map((row) => row.id);
+  }
+
+  async assertConfirmedIssuePlan(id: string): Promise<void> {
+    if (!(await this.findConfirmedIssuePlanIds([id])).includes(id))
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
         message: 'Confirm the Issue plan and its current Checklist before execution.',

@@ -4,18 +4,21 @@ import type {
   IssueChecklistDefinition,
   IssueChecklistItem,
   IssueChecklistReviewItem,
-  IssueCurrentDelivery,
   IssueDeliveryProof,
-  IssueReviewState,
   TaskConfig,
   TaskItem,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { FileModel } from '@/database/models/file';
+import {
+  currentIssueDeliveryProof,
+  IssueDeliveryModel,
+  sameIssueDeliveryProof,
+} from '@/database/models/issueDelivery';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
@@ -24,9 +27,6 @@ import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
-import type { TaskTopicItem } from '@/database/schemas/task';
-import { taskTopics } from '@/database/schemas/task';
-import type { VerifyCheckResultItem, VerifyRunItem } from '@/database/schemas/verify';
 import {
   acceptances,
   verifyCheckResults,
@@ -38,118 +38,13 @@ import type { OrviloDatabase } from '@/database/type';
 import { resolveWorkflowTransition } from '../taskSettlement/workflowTransition';
 import { createEvidenceFileResolver } from '../verify/evidenceFiles';
 
+export {
+  currentIssueDeliveryProof,
+  issueDeliveryReadiness,
+  sameIssueDeliveryProof,
+} from '@/database/models/issueDelivery';
+
 const denied = (message: string) => new TRPCError({ code: 'PRECONDITION_FAILED', message });
-
-export const sameIssueDeliveryProof = (a: IssueDeliveryProof, b: IssueDeliveryProof) =>
-  a.taskId === b.taskId &&
-  a.deliveryOperationId === b.deliveryOperationId &&
-  a.topicId === b.topicId &&
-  a.executionGeneration === b.executionGeneration &&
-  a.dispatchId === b.dispatchId &&
-  a.sourceSha === b.sourceSha &&
-  a.repo === b.repo &&
-  a.branch === b.branch &&
-  a.baseBranch === b.baseBranch &&
-  a.targetBranch === b.targetBranch &&
-  a.checklistRevision === b.checklistRevision &&
-  a.deliveryKind === b.deliveryKind;
-
-export const currentIssueDeliveryProof = (
-  task: Pick<TaskItem, 'id' | 'executionGeneration' | 'isDeleted' | 'workflowCategory'>,
-  topic: TaskTopicItem | undefined,
-  checklist: IssueChecklistDefinition | undefined,
-): IssueDeliveryProof | undefined => {
-  if (
-    !checklist ||
-    !topic?.topicId ||
-    !topic.operationId ||
-    topic.status !== 'completed' ||
-    task.isDeleted ||
-    task.workflowCategory === 'canceled' ||
-    topic.executionGeneration !== task.executionGeneration
-  )
-    return;
-  const integration = topic.integration;
-  if (
-    checklist.deliveryKind === 'code' &&
-    (!integration?.expectedHeadSha ||
-      !/^[a-f\d]{40,64}$/i.test(integration.expectedHeadSha) ||
-      integration.repo !== checklist.repo ||
-      !integration.branch ||
-      !checklist.targetBranch)
-  )
-    return;
-  return {
-    taskId: task.id,
-    deliveryOperationId: topic.operationId,
-    topicId: topic.topicId,
-    executionGeneration: task.executionGeneration,
-    dispatchId: topic.dispatchId ?? undefined,
-    sourceSha: integration?.expectedHeadSha,
-    repo: integration?.repo,
-    branch: integration?.branch,
-    baseBranch: integration?.baseBranch,
-    targetBranch: checklist.targetBranch,
-    checklistRevision: checklist.revision,
-    deliveryKind: checklist.deliveryKind,
-  };
-};
-
-export const issueDeliveryReadiness = (
-  proof: IssueDeliveryProof | undefined,
-  run: VerifyRunItem | undefined,
-  results: VerifyCheckResultItem[],
-  evidenceResultIds: ReadonlySet<string>,
-  topic?: TaskTopicItem,
-  review?: IssueReviewState,
-): IssueCurrentDelivery => {
-  const bound = Boolean(
-    proof &&
-    run?.metadata?.issueDelivery &&
-    sameIssueDeliveryProof(proof, run.metadata.issueDelivery),
-  );
-  const required = (run?.plan ?? []).filter((item) => item.required);
-  const byItem = new Map(results.map((result) => [result.checkItemId, result]));
-  const necessaryChecksPassed =
-    bound &&
-    required.length > 0 &&
-    required.every((item) => {
-      const result = byItem.get(item.id);
-      return (
-        result?.verdict === 'passed' &&
-        result.status === 'passed' &&
-        result.verifierOperationId === run?.metadata?.issueReviewer?.operationId &&
-        evidenceResultIds.has(result.id)
-      );
-    });
-  const reviewerPassed =
-    bound &&
-    run?.metadata?.issueReviewer?.verdict === 'pass' &&
-    review?.state === 'submitted' &&
-    review.verdict === 'pass' &&
-    review.cycleId === run.metadata.issueReviewer.cycleId &&
-    review.reviewerOperationId === run.metadata.issueReviewer.operationId;
-  const itemsAccepted =
-    necessaryChecksPassed &&
-    required.every((item) => byItem.get(item.id)?.userDecision === 'accepted');
-  const deliveryAccepted = bound && run?.userDecision === 'accept';
-  const merged =
-    bound &&
-    proof?.deliveryKind === 'code' &&
-    topic?.integration?.state === 'integrated' &&
-    !!topic.integration.integratedSha &&
-    topic.integration.baseBranch === proof.targetBranch;
-  return {
-    runId: bound ? run?.id : undefined,
-    proof,
-    reviewerPassed,
-    necessaryChecksPassed,
-    itemsAccepted,
-    deliveryAccepted,
-    availableForDependents: reviewerPassed && necessaryChecksPassed,
-    merged,
-  };
-};
 
 /** Issue-owned ledger operations. It does not launch the retired Verify engine or complete Issues. */
 export class IssueChecklistService {
@@ -355,77 +250,9 @@ export class IssueChecklistService {
     });
   }
 
-  /** Batch reads keep Issue/Project authorization ahead of all historical ledger reads. */
-  async readCurrentDeliveryProof(taskIds: string[]): Promise<Record<string, IssueCurrentDelivery>> {
-    const tasks = await this.readableTasks(taskIds);
-    if (!tasks.length) return {};
-    const ids = tasks.map((task) => task.id);
-    const [aggregates, topics] = await Promise.all([
-      this.db
-        .select()
-        .from(acceptances)
-        .where(and(eq(acceptances.subjectType, 'task'), inArray(acceptances.subjectId, ids))),
-      this.db.select().from(taskTopics).where(inArray(taskTopics.taskId, ids)),
-    ]);
-    const aggregateIds = aggregates.map((row) => row.id);
-    const runs = aggregateIds.length
-      ? await this.db
-          .select()
-          .from(verifyRuns)
-          .where(inArray(verifyRuns.acceptanceId, aggregateIds))
-      : [];
-    const runIds = runs.map((row) => row.id);
-    const results = runIds.length
-      ? await this.db
-          .select()
-          .from(verifyCheckResults)
-          .where(inArray(verifyCheckResults.verifyRunId, runIds))
-      : [];
-    const resultIds = results.map((row) => row.id);
-    const evidence = resultIds.length
-      ? await this.db
-          .select({ checkResultId: verifyEvidence.checkResultId })
-          .from(verifyEvidence)
-          .where(
-            and(
-              inArray(verifyEvidence.checkResultId, resultIds),
-              or(
-                isNotNull(verifyEvidence.fileId),
-                sql`nullif(btrim(${verifyEvidence.content}), '') IS NOT NULL`,
-              ),
-            ),
-          )
-      : [];
-    const evidenceIds = new Set(evidence.map((row) => row.checkResultId));
-    return Object.fromEntries(
-      tasks.map((task) => {
-        const aggregate = aggregates.find(
-          (row) =>
-            row.subjectId === task.id &&
-            row.workspaceId === task.workspaceId &&
-            (Boolean(task.workspaceId) || row.userId === task.createdByUserId),
-        );
-        const topic = topics
-          .filter((row) => row.taskId === task.id)
-          .sort((a, b) => b.seq - a.seq)[0];
-        const proof = currentIssueDeliveryProof(task, topic, aggregate?.metadata?.issueChecklist);
-        const run = runs.find(
-          (row) =>
-            row.operationId === topic?.operationId &&
-            row.metadata?.issueDelivery?.taskId === task.id,
-        );
-        return [
-          task.id,
-          issueDeliveryReadiness(
-            proof,
-            run,
-            results.filter((row) => row.verifyRunId === run?.id),
-            evidenceIds,
-            topic,
-            (task.config as TaskConfig | undefined)?.issueReview,
-          ),
-        ];
-      }),
+  readCurrentDeliveryProof(taskIds: string[]) {
+    return new IssueDeliveryModel(this.db, this.userId, this.workspaceId).readCurrentDeliveryProof(
+      taskIds,
     );
   }
 

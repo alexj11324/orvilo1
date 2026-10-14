@@ -1,6 +1,6 @@
 import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
-import type { IssueChecklistItem } from '../verify';
+import type { IssueChecklistItem, IssueDeliveryProof } from '../verify';
 import type { TaskAttentionReason } from './stateModel';
 
 export * from './activityLine';
@@ -170,6 +170,7 @@ export interface TaskExecutionEnvironmentSnapshot {
  */
 /** Evidence that a `blocks` dependency was satisfied at dispatch time. */
 export interface TaskDependencyReceipt {
+  checklistRunId?: string;
   /** Settled delivery the downstream run is built on, when known. */
   delivery?: {
     /** Dispatch identity that produced the delivery — binds the receipt to a
@@ -207,6 +208,8 @@ export interface TaskDependencyReceipt {
   evidenceKind?: 'delivery' | 'manual_completion';
   /** Upstream identifier rendered into the prompt. */
   identifier?: string;
+  /** Exact reviewed version consumed by this run. Historical receipts remain immutable. */
+  issueDelivery?: IssueDeliveryProof;
   /** Upstream task status observed at receipt time. */
   status?: string;
   type: string;
@@ -707,6 +710,8 @@ export interface TaskTopicIntegration {
     | 'remote_verification_unavailable'
     | 'workspace_unavailable'
     | null;
+  /** Actual provider merge destination; execution baseBranch remains immutable when retargeted. */
+  mergedTargetBranch?: string;
   /**
    * Set when GitHub accepted the merge request but the confirmation read has
    * not yet landed: later sweep passes reconcile (re-read the merged state)

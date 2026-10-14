@@ -27,6 +27,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { GoalModel } from '@/database/models/goal';
 import { GoalGraphModel } from '@/database/models/goalGraph';
+import { IssueDeliveryModel } from '@/database/models/issueDelivery';
 import { MetricModel } from '@/database/models/metric';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
@@ -1285,7 +1286,26 @@ export class GoalService {
       );
       if (result) return result;
     }
-    const frontier = selectFrontier(graph);
+    const issueTaskIds = graph.nodes.flatMap((node) =>
+      node.kind === 'task' && node.taskId ? [node.taskId] : [],
+    );
+    const issueDependencies = (await this.taskModel.getDependenciesByTaskIds(issueTaskIds)).filter(
+      (dep) => dep.type === 'blocks',
+    );
+    const issueDeliveries = await new IssueDeliveryModel(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).readCurrentDeliveryProof(issueDependencies.map((dep) => dep.dependsOnId));
+    const issueBlockers = new Map<string, string[]>(issueTaskIds.map((id) => [id, []]));
+    for (const dep of issueDependencies) {
+      if (!issueDeliveries[dep.dependsOnId]?.availableForDependents)
+        issueBlockers.get(dep.taskId)?.push(dep.dependsOnId);
+    }
+    for (const id of await this.taskModel.findBlockedTaskIds(issueTaskIds)) {
+      if (!issueBlockers.get(id)?.length) issueBlockers.set(id, ['unavailable-prerequisite']);
+    }
+    const frontier = selectFrontier(graph, issueBlockers);
 
     // Every candidate's task, not just the head's: the scheduler has to know
     // which of them are in flight before it can decide what else to start.
@@ -1877,16 +1897,12 @@ export class GoalService {
       // since the decision must not dispatch on the old receipt.
       const currentNode = currentGraph.nodes.find((node) => node.id === nodeId);
       if (!currentNode || TERMINAL_NODE_STATUSES.has(currentNode.status)) return 'stopped' as const;
-      const resolvedNodeIds = new Set(
-        currentGraph.nodes.filter((node) => node.status === 'resolved').map((node) => node.id),
-      );
-      const blockedBy = currentGraph.edges.filter(
-        (edge) =>
-          edge.kind === 'depends_on' &&
-          edge.sourceNodeId === nodeId &&
-          !resolvedNodeIds.has(edge.targetNodeId),
-      );
-      if (blockedBy.length > 0) return 'blocked' as const;
+      if (
+        !(await new TaskModel(tx, this.userId, this.workspaceId).areAllDependenciesCompleted(
+          task.id,
+        ))
+      )
+        return 'blocked' as const;
 
       const currentBudget = await new GoalService(tx, this.userId, this.workspaceId).evaluateBudget(
         currentGoal,

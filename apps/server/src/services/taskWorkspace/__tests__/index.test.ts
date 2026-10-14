@@ -1,5 +1,9 @@
 // @vitest-environment node
-import type { DeviceGitWorktreePathInspection, TaskItem } from '@orvilo/types';
+import type {
+  DeviceGitWorktreePathInspection,
+  TaskDependencyReceipt,
+  TaskItem,
+} from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
@@ -339,6 +343,274 @@ describe('TaskWorkspaceService', () => {
   });
 
   describe('provision', () => {
+    it('provisions C on the exact reviewed upstream branch before it is merged', async () => {
+      const sourceSha = 'a'.repeat(40);
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main', sha: 'main-sha' },
+        { isDefault: false, name: 'origin/work-A', sha: sourceSha },
+      ]);
+      const receipt: TaskDependencyReceipt = {
+        dependsOnId: 'issue-a',
+        type: 'blocks',
+        deliveryValid: true,
+        issueDelivery: {
+          taskId: 'issue-a',
+          topicId: 'topic-a',
+          deliveryOperationId: 'op-a',
+          executionGeneration: 1,
+          checklistRevision: 1,
+          deliveryKind: 'code',
+          repo: 'acme/widgets',
+          sourceSha,
+          branch: 'work-A',
+          baseBranch: 'canary',
+          targetBranch: 'canary',
+        },
+      };
+      const task = baseTask({
+        config: { workspace: { ...workspaceConfig, repo: 'acme/widgets' } },
+      });
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        dependencies: [receipt],
+      });
+      expect(provisioned?.integration).toMatchObject({
+        baseBranch: 'work-A',
+        baseSha: sourceSha,
+        state: 'pending',
+      });
+      expect(worktreeHead).toBe(sourceSha);
+    });
+
+    it('chooses the reviewed tip of an existing A/B stack independent of Issue id order', async () => {
+      const sourceSha = 'a'.repeat(40);
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main', sha: 'main-sha' },
+        { isDefault: false, name: 'origin/work-A', sha: sourceSha },
+        { isDefault: false, name: 'origin/work-B', sha: 'b'.repeat(40) },
+      ]);
+      const receipt: TaskDependencyReceipt = {
+        dependsOnId: 'issue-a',
+        type: 'blocks',
+        deliveryValid: true,
+        issueDelivery: {
+          taskId: 'issue-a',
+          topicId: 'topic-a',
+          deliveryOperationId: 'op-a',
+          executionGeneration: 1,
+          checklistRevision: 1,
+          deliveryKind: 'code',
+          repo: 'acme/widgets',
+          sourceSha,
+          branch: 'work-A',
+          baseBranch: 'canary',
+          targetBranch: 'canary',
+        },
+      };
+      const task = baseTask({
+        config: { workspace: { ...workspaceConfig, repo: 'acme/widgets' } },
+      });
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        dependencies: [
+          receipt,
+          {
+            ...receipt,
+            dependsOnId: '0-issue-b',
+            issueDelivery: {
+              ...receipt.issueDelivery!,
+              taskId: '0-issue-b',
+              branch: 'work-B',
+              baseBranch: 'work-A',
+              sourceSha: 'b'.repeat(40),
+            },
+          },
+        ],
+      });
+      expect(provisioned?.integration).toMatchObject({
+        baseBranch: 'work-B',
+        baseSha: 'b'.repeat(40),
+        state: 'pending',
+      });
+      expect(worktreeHead).toBe('b'.repeat(40));
+    });
+
+    it('provisions a repository-associated device checkout from the reviewed upstream branch', async () => {
+      const sourceSha = 'a'.repeat(40);
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main', sha: 'main-sha' },
+        { isDefault: false, name: 'origin/work-A', sha: sourceSha },
+      ]);
+      const receipt: TaskDependencyReceipt = {
+        dependsOnId: 'issue-a',
+        type: 'blocks',
+        deliveryValid: true,
+        issueDelivery: {
+          taskId: 'issue-a',
+          topicId: 'topic-a',
+          deliveryOperationId: 'op-a',
+          executionGeneration: 1,
+          checklistRevision: 1,
+          deliveryKind: 'code',
+          repo: 'acme/widgets',
+          sourceSha,
+          branch: 'work-A',
+          baseBranch: 'canary',
+          targetBranch: 'canary',
+        },
+      };
+      mockRepositoryModel.resolveForTask.mockResolvedValue({ ok: true, repositoryId: 'repo-1' });
+      mockRepositoryModel.findById.mockResolvedValue({
+        coordinate: { owner: 'acme', name: 'widgets', defaultBranch: 'main' },
+        remoteRepositoryId: 'github-1',
+      });
+      mockRepositoryModel.listCheckouts.mockResolvedValue([
+        { canonicalPath: '/repos/orvilo', deviceId: 'dev-1' },
+      ]);
+      const task = baseTask({ projectId: 'project-1' });
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        dependencies: [receipt],
+      });
+      expect(provisioned?.integration).toMatchObject({
+        baseBranch: 'work-A',
+        baseSha: sourceSha,
+        state: 'pending',
+      });
+      expect(worktreeHead).toBe(sourceSha);
+    });
+
+    it('resolves the verified repo for an explicit device path before stacking on the reviewed branch', async () => {
+      const sourceSha = 'a'.repeat(40);
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main', sha: 'main-sha' },
+        { isDefault: false, name: 'origin/work-A', sha: sourceSha },
+      ]);
+      const receipt: TaskDependencyReceipt = {
+        dependsOnId: 'issue-a',
+        type: 'blocks',
+        deliveryValid: true,
+        issueDelivery: {
+          taskId: 'issue-a',
+          topicId: 'topic-a',
+          deliveryOperationId: 'op-a',
+          executionGeneration: 1,
+          checklistRevision: 1,
+          deliveryKind: 'code',
+          repo: 'acme/widgets',
+          sourceSha,
+          branch: 'work-A',
+          baseBranch: 'canary',
+          targetBranch: 'canary',
+        },
+      };
+      mockRepositoryModel.resolveForTask.mockResolvedValue({ ok: true, repositoryId: 'repo-1' });
+      mockRepositoryModel.findById.mockResolvedValue({
+        coordinate: { owner: 'acme', name: 'widgets', defaultBranch: 'main' },
+        remoteRepositoryId: 'github-1',
+      });
+      mockRepositoryModel.listCheckouts.mockResolvedValue([
+        { canonicalPath: '/repos/orvilo', deviceId: 'dev-1' },
+      ]);
+      const task = baseTask({ projectId: 'project-1', config: { workspace: workspaceConfig } });
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+        dependencies: [receipt],
+      });
+      expect(provisioned?.integration).toMatchObject({
+        baseBranch: 'work-A',
+        baseSha: sourceSha,
+        state: 'pending',
+      });
+      expect(worktreeHead).toBe(sourceSha);
+    });
+
+    it('refuses a branch that changed after its reviewed receipt before creating a worktree', async () => {
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main', sha: 'main-sha' },
+        { isDefault: false, name: 'origin/work-A', sha: 'b'.repeat(40) },
+      ]);
+      const receipt: TaskDependencyReceipt = {
+        dependsOnId: 'issue-a',
+        type: 'blocks',
+        deliveryValid: true,
+        issueDelivery: {
+          taskId: 'issue-a',
+          topicId: 'topic-a',
+          deliveryOperationId: 'op-a',
+          executionGeneration: 1,
+          checklistRevision: 1,
+          deliveryKind: 'code',
+          repo: 'acme/widgets',
+          sourceSha: 'a'.repeat(40),
+          branch: 'work-A',
+          baseBranch: 'canary',
+          targetBranch: 'canary',
+        },
+      };
+      const task = baseTask({
+        config: { workspace: { ...workspaceConfig, repo: 'acme/widgets' } },
+      });
+      await expect(
+        service.provision({
+          task,
+          dispatchId: 'disp-1',
+          generation: 1,
+          seq: 1,
+          dependencies: [receipt],
+        }),
+      ).rejects.toThrow('branch changed after review');
+      expect(worktreeAdded).toBe(false);
+    });
+
+    it('refuses an unidentified repoPath binding for code dependencies', async () => {
+      vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
+        { isDefault: true, name: 'origin/main', sha: 'main-sha' },
+        { isDefault: false, name: 'origin/work-A', sha: 'b'.repeat(40) },
+      ]);
+      const receipt: TaskDependencyReceipt = {
+        dependsOnId: 'issue-a',
+        type: 'blocks',
+        deliveryValid: true,
+        issueDelivery: {
+          taskId: 'issue-a',
+          topicId: 'topic-a',
+          deliveryOperationId: 'op-a',
+          executionGeneration: 1,
+          checklistRevision: 1,
+          deliveryKind: 'code',
+          repo: 'acme/widgets',
+          sourceSha: 'a'.repeat(40),
+          branch: 'work-A',
+          baseBranch: 'canary',
+          targetBranch: 'canary',
+        },
+      };
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      await expect(
+        service.provision({
+          task,
+          dispatchId: 'disp-1',
+          generation: 1,
+          seq: 1,
+          dependencies: [receipt],
+        }),
+      ).rejects.toThrow('identified workspace repository');
+      expect(worktreeAdded).toBe(false);
+    });
+
     it('removes a device worktree that failed before topic registration', async () => {
       const task = baseTask({ config: { workspace: workspaceConfig } });
       const provisioned = await service.provision({

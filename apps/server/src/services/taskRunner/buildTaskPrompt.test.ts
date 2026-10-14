@@ -7,6 +7,7 @@ import { AcceptanceModel } from '@/database/models/acceptance';
 import { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
 import { GoalGraphModel } from '@/database/models/goalGraph';
+import { IssueDeliveryModel } from '@/database/models/issueDelivery';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
@@ -26,6 +27,7 @@ import {
   workspaces,
 } from '@/database/schemas';
 
+import { seedReviewedIssueDelivery } from '../../../../../packages/database/tests/fixtures/issueDelivery';
 import { buildTaskPrompt } from './buildTaskPrompt';
 
 const workspaceId = 'goal-work-prompt-test-workspace';
@@ -209,27 +211,11 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
       taskRevision: 0,
       workspaceId,
     });
-    await db.insert(taskTopics).values({
-      dispatchId,
-      // The receipt binds the dispatch identity + the upstream's execution
-      // generation (SA05-A): a completed row without either is not a
-      // provable delivery.
-      executionGeneration: opts?.executionGeneration ?? 0,
-      integration: {
-        attempts: 0,
-        baseBranch: 'main',
-        branch: `task/UP-${seq}`,
-        expectedHeadSha: `sha-head-${seq}`,
-        integratedSha: `sha-int-${seq}`,
-        role: 'task',
-        state: 'integrated',
-      },
-      seq,
-      status: 'completed',
-      taskId,
+    await seedReviewedIssueDelivery(db, taskId, {
       topicId: topic.id,
-      userId,
-      workspaceId,
+      seq,
+      dispatchId,
+      sourceSha: 'a'.repeat(40),
     });
     return topic.id;
   };
@@ -246,18 +232,16 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
       }),
     );
 
-  it('E05 — freezes a valid receipt when the upstream stands on its delivery', async () => {
+  it('E05 — freezes a valid exact reviewed receipt before upstream merge or Done', async () => {
     const { dependent, upstream } = await seedUpstreamWithDelivery();
     const topicId = await seedCompletedAttempt(upstream.id, 1);
-    await taskModel.updateStatus(upstream.id, 'completed');
 
     const result = await buildFor(dependent.id);
 
     expect(result.contractContent.dependencies).toMatchObject([
       {
         delivery: {
-          integratedSha: 'sha-int-1',
-          sourceSha: 'sha-head-1',
+          sourceSha: 'a'.repeat(40),
           topicId,
         },
         deliveryValid: true,
@@ -268,6 +252,45 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
         type: 'blocks',
       },
     ]);
+  });
+
+  it('records both unmerged A/B versions in C and blocks a continuation after upstream revision changes', async () => {
+    const { dependent, upstream } = await seedUpstreamWithDelivery();
+    await seedCompletedAttempt(upstream.id, 1);
+    const b = await taskModel.create({ instruction: 'B', workspaceId });
+    await db
+      .insert(taskDependencies)
+      .values({ taskId: dependent.id, dependsOnId: b.id, type: 'blocks', userId, workspaceId });
+    const seededB = await seedReviewedIssueDelivery(db, b.id, { sourceSha: 'b'.repeat(40) });
+    const result = await buildFor(dependent.id);
+    expect(
+      result.contractContent.dependencies?.map((receipt) => receipt.issueDelivery?.sourceSha),
+    ).toEqual(expect.arrayContaining(['a'.repeat(40), 'b'.repeat(40)]));
+    expect(result.contractContent.dependencies?.every((receipt) => !!receipt.checklistRunId)).toBe(
+      true,
+    );
+    expect(result.prompt).toContain(seededB.proof.branch!);
+    expect(result.prompt).toContain('b'.repeat(40));
+    await db
+      .update(taskTopics)
+      .set({ integration: { ...seededB.topic.integration!, expectedHeadSha: 'c'.repeat(40) } })
+      .where(eq(taskTopics.id, seededB.topic.id));
+    const current = await taskModel.findById(dependent.id);
+    await expect(
+      buildTaskPrompt(
+        current!,
+        {
+          briefModel: new BriefModel(db, userId, workspaceId),
+          db,
+          taskModel,
+          taskTopicModel,
+          userId,
+          workspaceId,
+        },
+        undefined,
+        { contractContent: result.contractContent },
+      ),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
   });
 
   it('E05 — refuses a fresh claim after the upstream reopened', async () => {
@@ -304,27 +327,10 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
     });
   });
 
-  it('E06 — a manual completion with no run history is itself a valid delivery', async () => {
+  it('E06 — manual completion without a reviewed delivery blocks the claim', async () => {
     const { dependent, upstream } = await seedUpstreamWithDelivery();
-    // Kanban/manual completion: the upstream was never executed, so no
-    // taskTopics exist — the 'completed' status is the delivery evidence.
     await taskModel.updateStatus(upstream.id, 'completed');
-
-    const result = await buildFor(dependent.id);
-
-    expect(result.contractContent.dependencies).toMatchObject([
-      {
-        deliveryValid: true,
-        dependsOnId: upstream.id,
-        // C02: a human completion is a separate evidence kind — never
-        // recorded as a Git/CI delivery receipt.
-        evidenceKind: 'manual_completion',
-        status: 'completed',
-        type: 'blocks',
-      },
-    ]);
-    // No artifact existed — the frozen receipt must record none.
-    expect(result.contractContent.dependencies?.[0]?.delivery).toBeUndefined();
+    await expect(buildFor(dependent.id)).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
   });
 
   it('E06 — refuses a manual completion contradicted by an in-flight attempt', async () => {
@@ -440,11 +446,9 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
 
   it('propagates a delivery-read failure instead of freezing blind receipts', async () => {
     const { dependent, upstream } = await seedUpstreamWithDelivery();
-    const failingTopicModel = {
-      ...taskTopicModel,
-      findByTaskId: vi.fn().mockRejectedValue(new Error('db read failed')),
-      findWithHandoff: taskTopicModel.findWithHandoff.bind(taskTopicModel),
-    } as unknown as TaskTopicModel;
+    vi.spyOn(IssueDeliveryModel.prototype, 'readCurrentDeliveryProof').mockRejectedValue(
+      new Error('db read failed'),
+    );
     const current = await taskModel.findById(dependent.id);
 
     await expect(
@@ -452,7 +456,7 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
         briefModel: new BriefModel(db, userId, workspaceId),
         db,
         taskModel,
-        taskTopicModel: failingTopicModel,
+        taskTopicModel,
         userId,
         workspaceId,
       }),

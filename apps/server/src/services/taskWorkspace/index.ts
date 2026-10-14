@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   DeviceGitRemoteBranchListItem,
   OrviloAgentAgencyConfig,
+  TaskDependencyReceipt,
   TaskItem,
   TaskTopicIntegration,
   TaskWorkspaceConfig,
@@ -147,9 +148,14 @@ export class TaskWorkspaceService {
 
   async resolveWorkspaceConfig(task: TaskItem): Promise<TaskWorkspaceConfig | undefined> {
     let current: TaskItem | null = task;
+    let localBinding: TaskWorkspaceConfig | undefined;
     for (let depth = 0; current && depth < WORKSPACE_INHERIT_DEPTH; depth += 1) {
       const config = parseWorkspaceConfig(current.config);
-      if (config) return config;
+      if (config) {
+        if (config.repo) return config;
+        localBinding = config;
+        break;
+      }
       const rawConfig = current.config as Record<string, unknown> | null;
       const rawWorkspace = rawConfig?.workspace;
       if (isRecord(rawWorkspace) && rawWorkspace.provider === 'git') {
@@ -168,7 +174,7 @@ export class TaskWorkspaceService {
       const resolution = await repositoryModel.resolveForTask(task.id);
       if (resolution.ok) {
         const repository = await repositoryModel.findById(resolution.repositoryId);
-        if (!repository) return undefined;
+        if (!repository) return localBinding;
 
         const boundDeviceId = task.assigneeAgentId
           ? (
@@ -179,7 +185,10 @@ export class TaskWorkspaceService {
           : undefined;
         const checkouts = await repositoryModel.listCheckouts(repository.id);
         const checkout = checkouts.find(
-          (candidate) => boundDeviceId !== undefined && candidate.deviceId === boundDeviceId,
+          (candidate) =>
+            boundDeviceId !== undefined &&
+            candidate.deviceId === boundDeviceId &&
+            (!localBinding || candidate.canonicalPath === localBinding.repoPath),
         );
         if (checkout) {
           return {
@@ -187,8 +196,16 @@ export class TaskWorkspaceService {
             deviceId: checkout.deviceId ?? undefined,
             provider: 'git',
             repoPath: checkout.canonicalPath,
+            ...localBinding,
+            ...(repository.remoteRepositoryId &&
+            repository.coordinate.owner &&
+            repository.coordinate.name
+              ? { repo: `${repository.coordinate.owner}/${repository.coordinate.name}` }
+              : {}),
           };
         }
+
+        if (localBinding) return localBinding;
 
         // A coordinate without a verified remote identity is only a display
         // snapshot. Never turn a local-only repository name into a GitHub clone
@@ -203,7 +220,7 @@ export class TaskWorkspaceService {
         }
       }
     }
-    return undefined;
+    return localBinding;
   }
 
   async provision(params: {
@@ -211,10 +228,36 @@ export class TaskWorkspaceService {
     generation: number;
     seq: number;
     task: TaskItem;
+    dependencies?: TaskDependencyReceipt[];
   }): Promise<ProvisionedWorkspace | undefined> {
     const { task, seq, dispatchId, generation } = params;
     let config = await this.resolveWorkspaceConfig(task);
     if (!config) return undefined;
+    if (
+      !config.repo &&
+      params.dependencies?.some(
+        (receipt) => receipt.type === 'blocks' && receipt.issueDelivery?.deliveryKind === 'code',
+      )
+    )
+      throw new Error('Code dependency provisioning requires an identified workspace repository');
+    const upstreams = (params.dependencies ?? []).filter(
+      (receipt) =>
+        receipt.type === 'blocks' &&
+        receipt.deliveryValid &&
+        receipt.issueDelivery?.deliveryKind === 'code' &&
+        receipt.issueDelivery.repo === config!.repo,
+    );
+    // Prefer the tip of an existing stack; independent branches are combined by the run's exact-SHA prompt.
+    const upstream = upstreams
+      .filter(
+        (receipt) =>
+          !upstreams.some(
+            (other) => other.issueDelivery?.baseBranch === receipt.issueDelivery?.branch,
+          ),
+      )
+      .sort((a, b) => a.dependsOnId.localeCompare(b.dependsOnId))
+      .at(-1)?.issueDelivery;
+    if (upstream) config = { ...config, baseBranch: upstream.branch };
     if (config.repo && !parseGithubRepo(config.repo)) {
       throw new Error(`Workspace repository is not a valid GitHub coordinate: ${config.repo}`);
     }
@@ -230,6 +273,7 @@ export class TaskWorkspaceService {
     if (config.repo && runsInSandbox(agent?.agencyConfig ?? undefined)) {
       return this.provisionOnRemote({
         config,
+        expectedUpstreamSha: upstream?.sourceSha,
         credKey: agent?.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY,
         seq,
         task,
@@ -237,7 +281,15 @@ export class TaskWorkspaceService {
     }
 
     if (config.repoPath && deviceId) {
-      return this.provisionOnDevice({ config, deviceId, dispatchId, generation, seq, task });
+      return this.provisionOnDevice({
+        config,
+        deviceId,
+        dispatchId,
+        generation,
+        seq,
+        task,
+        expectedUpstreamSha: upstream?.sourceSha,
+      });
     }
 
     const reason =
@@ -260,6 +312,7 @@ export class TaskWorkspaceService {
    * `expectedBaseSha`; only a fresh attempt resolves a new base.
    */
   private async provisionOnDevice(params: {
+    expectedUpstreamSha?: string;
     config: TaskWorkspaceConfig;
     deviceId: string;
     dispatchId: string;
@@ -445,6 +498,10 @@ export class TaskWorkspaceService {
             repoPath,
             deviceId,
           );
+          if (params.expectedUpstreamSha && expectedBaseSha !== params.expectedUpstreamSha)
+            throw new Error(
+              'Upstream branch changed after review; provisioning requires the reviewed source SHA',
+            );
           const minted = await this.claimModel.mint({
             baseBranch,
             deviceId,
@@ -588,6 +645,10 @@ export class TaskWorkspaceService {
       path: worktreePath,
       repoType: 'git',
     };
+    if (params.expectedUpstreamSha && baseSha !== params.expectedUpstreamSha)
+      throw new Error(
+        'Upstream branch changed after review; provisioning requires the reviewed source SHA',
+      );
     const integration: TaskTopicIntegration = {
       attempts: 0,
       baseBranch,
@@ -621,6 +682,7 @@ export class TaskWorkspaceService {
   }
 
   private async provisionOnRemote(params: {
+    expectedUpstreamSha?: string;
     config: TaskWorkspaceConfig;
     credKey?: string;
     seq: number;
@@ -652,6 +714,10 @@ export class TaskWorkspaceService {
         `Could not resolve the remote base commit for ${repo}#${baseBranch} — provision blocked`,
       );
     }
+    if (params.expectedUpstreamSha && baseSha !== params.expectedUpstreamSha)
+      throw new Error(
+        'Upstream branch changed after review; provisioning requires the reviewed source SHA',
+      );
     const integration: TaskTopicIntegration = {
       attempts: 0,
       baseBranch,

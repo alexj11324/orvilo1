@@ -24,6 +24,7 @@ import { TopicTrigger } from '@/const/topic';
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { BriefModel } from '@/database/models/brief';
+import { IssueDeliveryModel, sameIssueDeliveryProof } from '@/database/models/issueDelivery';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
@@ -352,7 +353,7 @@ export class TaskRunnerService {
     // under the dependency graph lock so a concurrent edit cannot bypass it.
     if (!(await this.taskModel.areAllDependenciesCompleted(task.id))) {
       throw new TaskDependencyError(
-        'Complete all prerequisite tasks before starting this task.',
+        'Current reviewed prerequisite deliveries are required before starting this task.',
         'PRECONDITION_FAILED',
       );
     }
@@ -883,6 +884,7 @@ export class TaskRunnerService {
             generation: preparedDispatch!.dispatch.generation,
             seq: (task.totalTopics || 0) + 1,
             task,
+            dependencies: contractContent.dependencies,
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Workspace provisioning failed';
@@ -1690,18 +1692,19 @@ export class TaskRunnerService {
    */
   private async markStaleDependencyInputs(completedTaskIds: string[]): Promise<void> {
     for (const completedTaskId of completedTaskIds) {
-      const [upstreamTopics, dependents] = await Promise.all([
-        this.taskTopicModel.findByTaskId(completedTaskId).catch(() => []),
-        this.taskModel.getDependents(completedTaskId).catch(() => []),
+      const [deliveries, dependents] = await Promise.all([
+        new IssueDeliveryModel(this.db, this.userId, this.workspaceId).readCurrentDeliveryProof([
+          completedTaskId,
+        ]),
+        this.taskModel.getDependents(completedTaskId),
       ]);
-      const latestDelivery = upstreamTopics.find((topic) => topic.status === 'completed');
-      const observedDelivery = latestDelivery
+      const current = deliveries[completedTaskId];
+      const proof = current?.proof;
+      const observedDelivery = proof
         ? {
-            integratedSha: latestDelivery.integration?.integratedSha,
-            operationId: latestDelivery.operationId ?? undefined,
-            seq: latestDelivery.seq ?? undefined,
-            sourceSha: latestDelivery.integration?.expectedHeadSha,
-            topicId: latestDelivery.topicId,
+            operationId: proof.deliveryOperationId,
+            sourceSha: proof.sourceSha,
+            topicId: proof.topicId,
           }
         : undefined;
 
@@ -1720,10 +1723,11 @@ export class TaskRunnerService {
           // that now exists (redelivery), or the upstream has none at all
           // (rollback). A same-topic redelivery of identical SHAs is not stale.
           const sameDelivery =
-            recorded.delivery?.topicId === observedDelivery?.topicId &&
-            (!observedDelivery ||
-              (recorded.delivery?.sourceSha === observedDelivery.sourceSha &&
-                recorded.delivery?.integratedSha === observedDelivery.integratedSha));
+            current?.availableForDependents &&
+            proof &&
+            recorded.issueDelivery &&
+            current.runId === recorded.checklistRunId &&
+            sameIssueDeliveryProof(proof, recorded.issueDelivery);
           if (sameDelivery) continue;
           await this.taskTopicModel
             .markInputStale(dep.taskId, topic.topicId, {

@@ -677,3 +677,17 @@ describe('exploration terminal phase', () => {
     );
   });
 });
+
+describe('Issue dependency frontier projection', () => {
+  it('uses Issue blockers even when the historical internal task edges disagree', () => {
+    const snapshot = graph({
+      nodes: [
+        node('a', { taskId: 'issue-a', status: 'resolved' }),
+        node('c', { taskId: 'issue-c' }),
+      ],
+      edges: [{ id: 'old-edge', kind: 'depends_on', sourceNodeId: 'c', targetNodeId: 'a' }],
+    });
+    expect(selectFrontier(snapshot, new Map([['issue-c', ['issue-b']]])).chosen).toBeUndefined();
+    expect(selectFrontier(snapshot, new Map([['issue-c', []]])).chosen?.id).toBe('c');
+  });
+});

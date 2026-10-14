@@ -1,7 +1,8 @@
 // @vitest-environment node
 import type { TaskItem } from '@orvilo/types';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { IssueDeliveryModel } from '@/database/models/issueDelivery';
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 
@@ -11,6 +12,10 @@ vi.mock('@/server/services/taskLifecycle', () => ({ TaskLifecycleService: vi.fn(
 vi.mock('@/server/services/taskWorkspace', () => ({ TaskWorkspaceService: vi.fn() }));
 vi.mock('./buildTaskPrompt', () => ({ buildTaskPrompt: vi.fn() }));
 
+beforeEach(() => {
+  vi.spyOn(IssueDeliveryModel.prototype, 'readCurrentDeliveryProof').mockResolvedValue({});
+  vi.spyOn(TaskModel.prototype, 'getDependents').mockResolvedValue([]);
+});
 afterEach(() => vi.restoreAllMocks());
 
 const candidate = {
@@ -89,7 +94,40 @@ describe('prerequisite completion cascade', () => {
   });
 
   describe('stale dependency inputs', () => {
+    const proofFor = (delivery: any) => ({
+      taskId: 'task-up',
+      topicId: delivery.topicId,
+      deliveryOperationId: 'op-2',
+      executionGeneration: 1,
+      checklistRevision: 1,
+      deliveryKind: 'code' as const,
+      repo: 'org/repo',
+      branch: 'work-up',
+      baseBranch: 'canary',
+      targetBranch: 'canary',
+      sourceSha: delivery.sourceSha,
+    });
     const serviceWith = ({ runningTopics, upstreamTopics }: any) => {
+      const upstream = upstreamTopics[0];
+      vi.mocked(IssueDeliveryModel.prototype.readCurrentDeliveryProof).mockResolvedValue(
+        upstream
+          ? {
+              'task-up': {
+                availableForDependents: true,
+                reviewerPassed: true,
+                necessaryChecksPassed: true,
+                deliveryAccepted: false,
+                itemsAccepted: false,
+                merged: false,
+                runId: 'checklist-round',
+                proof: proofFor({
+                  topicId: upstream.topicId,
+                  sourceSha: upstream.integration.expectedHeadSha,
+                }),
+              },
+            }
+          : {},
+      );
       const service = new TaskRunnerService({} as any, 'user-1', 'workspace-1');
       (service as any).taskModel = {
         getDependents: vi.fn().mockResolvedValue([{ taskId: 'task-dep', type: 'blocks' }]),
@@ -109,7 +147,14 @@ describe('prerequisite completion cascade', () => {
         contract: {
           content: {
             dependencies: [
-              { dependsOnId: 'task-up', delivery, identifier: 'T-UP', type: 'blocks' },
+              {
+                dependsOnId: 'task-up',
+                delivery,
+                issueDelivery: proofFor(delivery),
+                checklistRunId: 'checklist-round',
+                identifier: 'T-UP',
+                type: 'blocks',
+              },
             ],
             instruction: 'downstream work',
           },
@@ -147,7 +192,6 @@ describe('prerequisite completion cascade', () => {
           dependsOnId: 'task-up',
           expectedDelivery: expect.objectContaining({ topicId: 'topic-up-1' }),
           observedDelivery: expect.objectContaining({
-            integratedSha: 'sha-int-new',
             topicId: 'topic-up-2',
           }),
         }),

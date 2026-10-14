@@ -83,6 +83,7 @@ import { lockTaskDependencyGraph } from '../utils/taskDependencyLock';
 import { buildTaskReadableWhere, taskVisibilitySql } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { insertOutboxEvent, newEventId } from './eventOutbox';
+import { IssueDeliveryModel } from './issueDelivery';
 import { LinearSyncModel } from './linearSync';
 import { NotificationModel } from './notification';
 import { projectEffectiveRequireHumanReview, ProjectModel } from './project';
@@ -719,7 +720,7 @@ export class TaskModel {
     const blocked = await this.findBlockedTaskIds(ids);
     if (blocked.length > 0) {
       throw new TaskDependencyError(
-        'Complete all prerequisite tasks before starting or completing this task.',
+        'Current reviewed prerequisite deliveries are required before starting or completing this task.',
         'PRECONDITION_FAILED',
       );
     }
@@ -4097,7 +4098,13 @@ export class TaskModel {
       // reservation is the pre-dispatch half of 'running'.
       if (
         (['running', 'completed'].includes(task.status) || task.runReservationId !== null) &&
-        dependsOn.status !== 'completed'
+        !(
+          await new IssueDeliveryModel(
+            this.db,
+            this.userId,
+            this.workspaceId,
+          ).readCurrentDeliveryProof([dependsOnId])
+        )[dependsOnId]?.availableForDependents
       ) {
         throw new TaskDependencyError(
           'Pause or reopen this task before adding an unfinished prerequisite.',
@@ -4408,46 +4415,37 @@ export class TaskModel {
   /** Missing, trashed, inaccessible, canceled and failed prerequisites all block. */
   async findBlockedTaskIds(taskIds: string[]): Promise<string[]> {
     if (taskIds.length === 0) return [];
-    const readableIds = (await this.findByIds(taskIds)).map((row) => row.id);
-    if (readableIds.length === 0) return [];
-    const blocked = await this.db
-      .selectDistinct({ taskId: taskDependencies.taskId })
-      .from(taskDependencies)
-      .leftJoin(
-        tasks,
-        and(
-          eq(taskDependencies.dependsOnId, tasks.id),
-          this.ownership(),
-          isNull(tasks.deletedAt),
-          sql`${tasks.isDeleted} IS NOT TRUE`,
-        ),
-      )
-      .where(
-        and(
-          inArray(taskDependencies.taskId, readableIds),
-          eq(taskDependencies.type, 'blocks'),
-          or(isNull(tasks.id), ne(tasks.workflowCategory, 'done')),
-          this.depsOwnership(),
-        ),
-      );
-    return blocked.map(({ taskId }) => taskId);
+    const deliveryModel = new IssueDeliveryModel(this.db, this.userId, this.workspaceId);
+    const readableIds = (await deliveryModel.readableTasks(taskIds)).map((row) => row.id);
+    const dependencies = await this.getDependenciesByTaskIds(readableIds);
+    const blockers = dependencies.filter((dep) => dep.type === 'blocks');
+    const deliveries = await deliveryModel.readCurrentDeliveryProof([
+      ...new Set(blockers.map((dep) => dep.dependsOnId)),
+    ]);
+    const blocked = new Set(taskIds.filter((id) => !readableIds.includes(id)));
+    for (const dep of blockers) {
+      if (!deliveries[dep.dependsOnId]?.availableForDependents) blocked.add(dep.taskId);
+    }
+    if (this.workspaceId && readableIds.length) {
+      const unresolved = await this.db.execute<{ taskId: string }>(sql`
+        SELECT DISTINCT local_target_task_id AS "taskId"
+        FROM linear_external_relations
+        WHERE workspace_id = ${this.workspaceId}
+          AND local_target_task_id IN (${sql.join(
+            readableIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})
+          AND kind = 'blocks'
+          AND resolution_state = 'unresolved'
+          AND tombstone IS NULL
+      `);
+      for (const row of unresolved.rows) blocked.add(row.taskId);
+    }
+    return [...blocked];
   }
 
   async areAllDependenciesCompleted(taskId: string): Promise<boolean> {
     if (!(await this.findById(taskId))) return false;
-    if (this.workspaceId) {
-      const unresolvedExternal = await this.db.execute(sql`
-        SELECT 1
-        FROM linear_external_relations
-        WHERE workspace_id = ${this.workspaceId}
-          AND local_target_task_id = ${taskId}
-          AND kind = 'blocks'
-          AND resolution_state = 'unresolved'
-          AND tombstone IS NULL
-        LIMIT 1
-      `);
-      if (unresolvedExternal.rows.length > 0) return false;
-    }
     return (await this.findBlockedTaskIds([taskId])).length === 0;
   }
 

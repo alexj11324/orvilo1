@@ -42,7 +42,10 @@ export interface FrontierSelection {
  * before deciding, and exported so a trace keeps the whole ranking rather than
  * only the winner — "why not that node" is unanswerable from the winner alone.
  */
-export const selectFrontier = (graph: GoalGraphSnapshot): FrontierSelection => {
+export const selectFrontier = (
+  graph: GoalGraphSnapshot,
+  issueBlockers?: ReadonlyMap<string, string[]>,
+): FrontierSelection => {
   const resolvedNodeIds = new Set(
     graph.nodes.filter((node) => node.status === 'resolved').map((node) => node.id),
   );
@@ -50,14 +53,18 @@ export const selectFrontier = (graph: GoalGraphSnapshot): FrontierSelection => {
   const eligible = graph.nodes
     .filter((node) => node.kind === 'task' && !TERMINAL_NODE_STATUSES.has(node.status))
     .map((node) => ({
-      blockedBy: graph.edges
-        .filter(
-          (edge) =>
-            edge.kind === 'depends_on' &&
-            edge.sourceNodeId === node.id &&
-            !resolvedNodeIds.has(edge.targetNodeId),
-        )
-        .map((edge) => edge.targetNodeId),
+      blockedBy: issueBlockers
+        ? node.taskId
+          ? (issueBlockers.get(node.taskId) ?? [])
+          : []
+        : graph.edges
+            .filter(
+              (edge) =>
+                edge.kind === 'depends_on' &&
+                edge.sourceNodeId === node.id &&
+                !resolvedNodeIds.has(edge.targetNodeId),
+            )
+            .map((edge) => edge.targetNodeId),
       node,
     }))
     .sort(

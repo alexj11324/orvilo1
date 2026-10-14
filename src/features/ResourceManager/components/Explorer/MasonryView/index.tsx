@@ -3,7 +3,7 @@
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
 import { cn } from 'cn';
 import { type UIEvent } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -53,13 +53,17 @@ const MasonryView = memo(function MasonryView({
 
   const { t } = useTranslation(['components', 'file']);
   const columnCount = useMasonryColumnCount();
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // NEW: Read from resource store instead of fetching independently
   const resourceList = useFileStore((s) => s.resourceList);
   const resourceTotal = useFileStore((s) => s.total);
 
-  const { queryParams: currentQueryParams, hasMore, loadMoreResources } = useFileStore();
+  const {
+    queryParams: currentQueryParams,
+    hasMore,
+    isLoadingMore,
+    loadMoreResources,
+  } = useFileStore();
 
   const isNavigating = useMemo(
     () => isQueryNavigation(currentQueryParams, queryParams),
@@ -138,12 +142,7 @@ const MasonryView = memo(function MasonryView({
   const handleLoadMore = useCallback(async () => {
     if (!hasMore || isLoadingMore) return;
 
-    setIsLoadingMore(true);
-    try {
-      await loadMoreResources();
-    } finally {
-      setIsLoadingMore(false);
-    }
+    await loadMoreResources();
   }, [hasMore, isLoadingMore, loadMoreResources]);
 
   const handleSelectionChange = useCallback(

@@ -560,8 +560,8 @@ export class ResourceActionImpl {
   };
 
   loadMoreResources = async (): Promise<void> => {
-    const { hasMore, offset, queryParams } = this.#get();
-    if (!hasMore || !queryParams) return;
+    const { hasMore, isLoadingMore, offset, queryParams } = this.#get();
+    if (isLoadingMore || !hasMore || !queryParams) return;
 
     this.#set({ isLoadingMore: true }, false, 'resource/loadMoreResources/start');
 

@@ -125,6 +125,39 @@ afterEach(() => {
 });
 
 describe('Issue plan confirmation', () => {
+  it('starts a new explicit planning attempt after a terminal malformed reply', async () => {
+    await db.insert(agentOperations).values({
+      id: 'failed-planning-reply',
+      userId: user,
+      workspaceId: ws,
+      taskId: id,
+      status: 'done',
+      appContext: { judgment: { purpose: 'task.plan', attempt: 0 } },
+    });
+
+    await service().draftIssuePlan(id);
+
+    expect(vi.mocked(runAcpJudgment).mock.calls[0][2].judgment.attempt).toBe(1);
+  });
+
+  it.each(['running', 'unconfirmed-stop'] as const)(
+    'does not replace a planning writer that is %s',
+    async (state) => {
+      await db.insert(agentOperations).values({
+        id: 'live-planning-reply',
+        userId: user,
+        workspaceId: ws,
+        taskId: id,
+        status: state === 'running' ? 'running' : 'done',
+        appContext: { judgment: { purpose: 'task.plan', attempt: 0 } },
+        metadata: state === 'unconfirmed-stop' ? { remoteCancel: { state: 'unknown' } } : null,
+      });
+
+      await expect(service().draftIssuePlan(id)).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(runAcpJudgment).not.toHaveBeenCalled();
+    },
+  );
+
   it('emits a planning schema the judgment validator can compile and enforce', async () => {
     await service().draftIssuePlan(id);
     const input = vi.mocked(runAcpJudgment).mock.calls[0][2].input;

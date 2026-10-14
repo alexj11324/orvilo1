@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
 import type { IssuePlan, TaskContext, TaskItem, TaskOriginContext } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
@@ -406,10 +406,27 @@ export class TaskPlanService {
       target: 'draft-07',
       unrepresentable: 'any',
     });
+    const [previous] = await this.db
+      .select({ context: agentOperations.appContext })
+      .from(agentOperations)
+      .where(
+        and(
+          eq(agentOperations.taskId, task.id),
+          eq(agentOperations.userId, this.userId),
+          this.workspaceId === undefined
+            ? isNull(agentOperations.workspaceId)
+            : eq(agentOperations.workspaceId, this.workspaceId),
+          sql`${agentOperations.appContext}->'judgment'->>'purpose' = 'task.plan'`,
+        ),
+      )
+      .orderBy(sql`${agentOperations.createdAt} DESC`)
+      .limit(1);
+    await this.requireStoppedWriters([task.id]);
     const result = await runAcpJudgment(this.db, this.userId, {
       workspaceId: this.workspaceId,
       judgment: {
         purpose: 'task.plan',
+        attempt: previous ? (previous.context?.judgment?.attempt ?? 0) + 1 : 0,
         binding: { agentId, allowEnvFallback: false },
         taskId: task.id,
         sourceTopicId,

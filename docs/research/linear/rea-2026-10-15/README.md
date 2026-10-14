@@ -93,5 +93,6 @@ File > New 子菜单：Issue…、Project…、Initiative…、Agent chat…、D
 | 差异               | 证据                                                                                                                            | 落地                                                                                         |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `g>r` 前往评审队列 | Linear `key:['g','r']` → "Go to reviews"；Orvilo `goToReviews` id 与 i18n 早已存在但绑定未注册（遗留「surface withdrawn」测试） | `packages/const/src/hotkeys.ts` 注册 `g>r`；`GO_TO_DESTINATIONS` 加 `/reviews`；更新两个测试 |
+| `g>j` 前往 Agent   | Linear `key:['g','j']` → "Go to Agent"；Agent 是 Orvilo 固定主 IA 行，已有 \`ctrl+shift+\`\` 到达同一表面                       | 新增 `goToAgent` id + `g>j` 注册 + `useGoToAgentHotkey`（复用 agent 解析逻辑）+ i18n en/zh   |
 
-待评估（有证据、需产品裁决）：`g>j` Go to Agent、`o>*` 打开选择器、`n>*` 新建前缀、`p/m/r/w/s` 行级前缀 —— 依赖选中行上下文，超出本次切片。
+待评估（有证据、需产品裁决）：`o>*` 打开选择器、`n>*` 新建前缀、`p/m/r/w/s` 行级前缀 —— 依赖选中行上下文，超出本次切片。

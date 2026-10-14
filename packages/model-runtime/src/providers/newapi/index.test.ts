@@ -743,6 +743,11 @@ describe('NewAPI Runtime - 100% Branch Coverage', () => {
       const routers = params.routers(options);
 
       expect(routers[0].options.baseURL).toBe('https://custom.com');
+      expect(routers.slice(2).map((router) => router.options.baseURL)).toEqual([
+        'https://custom.com/v1',
+        'https://custom.com/v1',
+        'https://custom.com/v1',
+      ]);
     });
 
     it('should configure xai router with /v1 path', () => {
@@ -811,7 +816,8 @@ describe('NewAPI Runtime - 100% Branch Coverage', () => {
 
       expect(routers).toHaveLength(5);
       expect(routers[0].options.baseURL).toBe('');
-      expect(routers[4].options.baseURL).toBe('/v1');
+      expect(routers[1].options.baseURL).toBe('');
+      expect(routers.slice(2).map((router) => router.options.baseURL)).toEqual(['v1', 'v1', 'v1']);
     });
   });
 

@@ -177,6 +177,8 @@ export const params = {
   },
   routers: (options, runtimeContext?: { model?: string }) => {
     const userBaseURL = options.baseURL?.replace(/\/v\d+[a-z]*\/?$/, '') || '';
+    // Preserve the relative fallback when no endpoint is configured.
+    const versionedBaseURL = userBaseURL ? urlJoin(userBaseURL, '/v1') : 'v1';
 
     return [
       {
@@ -206,7 +208,7 @@ export const params = {
         ),
         options: {
           ...options,
-          baseURL: urlJoin(userBaseURL, '/v1'),
+          baseURL: versionedBaseURL,
         },
       },
       {
@@ -218,7 +220,7 @@ export const params = {
         ),
         options: {
           ...options,
-          baseURL: urlJoin(userBaseURL, '/v1'),
+          baseURL: versionedBaseURL,
           sdkType: 'openai',
         },
       },
@@ -226,7 +228,7 @@ export const params = {
         apiType: 'openai',
         options: {
           ...options,
-          baseURL: urlJoin(userBaseURL, '/v1'),
+          baseURL: versionedBaseURL,
           chatCompletion: {
             useResponseModels: [...Array.from(responsesAPIModels), /gpt-\d(?!\d)/, /^o\d/],
           },

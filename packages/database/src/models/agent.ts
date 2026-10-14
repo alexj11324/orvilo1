@@ -3371,6 +3371,16 @@ export class AgentModel {
       .limit(1);
     if (existingShare) throw new Error(AGENT_SHARED_TRANSFER_BLOCKED);
 
+    // Handover cannot leave the recipient with an unbound Agent. Validate
+    // the destination before sanitation or any associated-resource changes.
+    // The owner must select a device both parties can use before transferring.
+    await assertAgentDeviceBinding(
+      trx,
+      { userId: toUserId, workspaceId: this.workspaceId },
+      agent.agencyConfig,
+      agent.visibility,
+    );
+
     // A PRIVATE agent stops resolving for everyone but the recipient. Groups
     // that reference it and are NOT the recipient's would render a silent hole
     // in their roster; leave those groups explicitly instead (the manifest
@@ -3412,10 +3422,8 @@ export class AgentModel {
       }
     }
 
-    // Re-home device bindings: a boundDeviceId / workingDirByDevice entry (or
-    // a fixed device policy) pointing at the previous owner's personal device
-    // would leave the recipient's runs unroutable. Same sanitation as moving
-    // an agent into a workspace.
+    // Keep the already authorized device binding. Sanitation removes only
+    // inaccessible auxiliary working directories and selection policies.
     const [cleanedAgencyConfig] = await this.sanitizeAgencyConfigForWorkspace(
       trx,
       this.workspaceId,

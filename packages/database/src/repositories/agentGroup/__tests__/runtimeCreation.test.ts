@@ -114,7 +114,15 @@ describe('resource-owned runtime creation', () => {
       primaryOwnerId: userId,
     });
     await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
-    await db.update(devices).set({ workspaceId }).where(eq(devices.deviceId, 'resource-host'));
+    await db
+      .insert(devices)
+      .values({
+        deviceId: 'resource-host',
+        workspaceId,
+        userId,
+        visibility: 'public',
+        identitySource: 'installation',
+      });
     const copied = await repo.copyToWorkspace(original.group.id, workspaceId, userId, {
       targetVisibility: 'private',
     });

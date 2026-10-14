@@ -10,6 +10,8 @@ Run `bun scripts/backfillAgentDeviceBindings.ts --apply` with the intended datab
 
 Scope transfers retain a binding only when it is authorized in the destination. The backend `agent.transferAgents` input accepts an optional `targetDeviceId` for an explicit replacement; missing destination authority blocks the whole transaction rather than stripping the binding. Inbox session bootstrap preserves the builtin runtime rather than replacing it with server model defaults.
 
+Member-to-member ownership handover also checks the recipient's device authority before changing ownership or associated resources. An inaccessible personal or private host blocks handover; the current owner must explicitly select a device both parties can use first. Handover never clears the required binding.
+
 Member removal retires personal shares and private workspace enrollments in the same transaction as permission revocation. Retired devices remain referenced for history, but cannot be selected or dispatched to. A confirmed share with a fresh device-side enrollment may restore a retired row; a passive reconnect cannot. Account deletion preserves another member's referenced workspace registry identity under retired workspace-owner custody.
 
 ## Verification recovery

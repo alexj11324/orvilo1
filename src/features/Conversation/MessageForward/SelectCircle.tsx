@@ -7,7 +7,7 @@ import { memo } from 'react';
 const styles = {
   checked: 'border-primary bg-primary text-primary-foreground',
   circle:
-    'flex-none [inline-size:20px] [block-size:20px] border-[length:calc(var(--spacing)_*_3_/_8)] border-border rounded-full transition-[background-color,border-color] duration-150 ease-(--ant-motion-ease-in-out)',
+    'flex-none [inline-size:20px] [block-size:20px] border-[length:calc(var(--spacing)_*_3_/_8)] border-border [--select-circle-radius:50%] rounded-(--select-circle-radius) transition-[background-color,border-color] duration-150 ease-(--ant-motion-ease-in-out)',
 };
 
 interface SelectCircleProps {

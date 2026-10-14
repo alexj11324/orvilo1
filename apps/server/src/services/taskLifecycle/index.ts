@@ -414,11 +414,12 @@ export class TaskLifecycleService {
         // A failed read is a gate failure, not evidence that verification is
         // absent.
         try {
-          const verifyRun = currentTask.automationMode
-            ? await new VerifyRunModel(this.db, this.userId, this.workspaceId).findByOperation(
-                params.operationId,
-              )
-            : null;
+          const verifyRun =
+            currentTask.automationMode && !completionDispatch?.automationOccurrence
+              ? await new VerifyRunModel(this.db, this.userId, this.workspaceId).findByOperation(
+                  params.operationId,
+                )
+              : null;
           verifyBound = Boolean(verifyRun?.planConfirmedAt);
           verifySettled =
             verifyRun?.status === 'passed' ||
@@ -889,7 +890,11 @@ export class TaskLifecycleService {
       // been mutated by the branches above) and decide whether to publish the
       // next tick.
       const finalTask = await this.taskModel.findById(taskId);
-      if (finalTask && (!verifyBound || verifySettled)) {
+      if (
+        finalTask &&
+        (!verifyBound || verifySettled) &&
+        !completionDispatch?.automationOccurrence
+      ) {
         await this.maybeRearmHeartbeat(finalTask, reason, claimed);
       }
     } catch (error) {

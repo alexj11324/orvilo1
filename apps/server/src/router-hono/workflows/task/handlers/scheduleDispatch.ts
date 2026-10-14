@@ -1,8 +1,9 @@
+import type { TaskContext } from '@orvilo/types';
 import debug from 'debug';
 import type { Context } from 'hono';
 
 import { TaskModel } from '@/database/models/task';
-import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { TaskAutomationQuotaReachedError, TaskDispatchModel } from '@/database/models/taskDispatch';
 import { getServerDB } from '@/database/server';
 import { snapshotAutomationDefinition } from '@/database/utils/automationOccurrence';
 import { appEnv } from '@/envs/app';
@@ -10,7 +11,7 @@ import { enqueueHatchetTask } from '@/libs/hatchet';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 import {
-  latestScheduleOccurrence,
+  elapsedScheduleOccurrences,
   scheduleOccurrenceToken,
 } from '@/server/services/taskRunner/scheduleOccurrence';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
@@ -63,58 +64,61 @@ export const runScheduleDispatch = async ({ dryRun = false }: ScheduleDispatchPa
     if (!task.createdByUserId) continue;
     const startedAt = (task.context as { scheduler?: { scheduleStartedAt?: string } } | null)
       ?.scheduler?.scheduleStartedAt;
-    const plannedAt = latestScheduleOccurrence({
+    const scheduler = (task.context as TaskContext | null)?.scheduler;
+    const publishedAt =
+      scheduler?.lastPublishedScheduleAt ?? task.lastHeartbeatAt?.toISOString() ?? startedAt;
+    const occurrences = elapsedScheduleOccurrences({
       pattern: task.schedulePattern,
       timezone: task.scheduleTimezone,
       now,
+      after: publishedAt ? new Date(publishedAt) : null,
       notBefore: startedAt ? new Date(startedAt) : null,
     });
-    if (
-      !plannedAt ||
-      (task.lastHeartbeatAt && plannedAt.getTime() <= new Date(task.lastHeartbeatAt).getTime())
-    )
-      continue;
-    const tickToken = scheduleOccurrenceToken({
-      taskId: task.id,
-      pattern: task.schedulePattern,
-      timezone: task.scheduleTimezone,
-      plannedAt,
-    });
-    if (!dryRun) {
-      try {
-        // Queue publication happens only after the canonical occurrence has
-        // frozen its definition under the task lock. A lost queue publish is
-        // recoverable through the existing dispatch recovery worker.
-        const requested = await new TaskDispatchModel(db, task.workspaceId ?? undefined).request({
-          taskId: task.id,
-          trigger: 'schedule',
-          idempotencyKey: taskRunIdempotencyKey.automationTick({
-            kind: 'schedule',
+    for (const plannedAt of occurrences) {
+      const tickToken = scheduleOccurrenceToken({
+        taskId: task.id,
+        pattern: task.schedulePattern,
+        timezone: task.scheduleTimezone,
+        plannedAt,
+      });
+      if (!dryRun) {
+        try {
+          // Queue publication happens only after the canonical occurrence has
+          // frozen its definition under the task lock. A lost queue publish is
+          // recoverable through the existing dispatch recovery worker.
+          const requested = await new TaskDispatchModel(db, task.workspaceId ?? undefined).request({
             taskId: task.id,
-            tickToken,
-          }),
-          expectedDefinitionVersionId: snapshotAutomationDefinition(task).definitionVersionId,
-          requestedBy: task.createdByUserId,
-          initiator: task.createdByUserId,
-          origin: 'external',
-        });
-        // The one active dispatch owns the task; a later sweep coalesces missed
-        // slots when it is free, rather than creating another execution queue.
-        if (requested.state === 'busy') continue;
-      } catch (error) {
-        failedToPersist++;
-        console.error('[task/schedule-dispatch] failed to persist task=%s: %O', task.id, error);
-        continue;
+            trigger: 'schedule',
+            idempotencyKey: taskRunIdempotencyKey.automationTick({
+              kind: 'schedule',
+              taskId: task.id,
+              tickToken,
+            }),
+            expectedDefinitionVersionId: snapshotAutomationDefinition(task).definitionVersionId,
+            requestedBy: task.createdByUserId,
+            initiator: task.createdByUserId,
+            origin: 'external',
+            scheduledAt: plannedAt,
+          });
+          if (requested.state === 'busy') break;
+        } catch (error) {
+          if (error instanceof TaskAutomationQuotaReachedError) {
+            break;
+          }
+          failedToPersist++;
+          console.error('[task/schedule-dispatch] failed to persist task=%s: %O', task.id, error);
+          break;
+        }
       }
+      due.push({
+        pattern: task.schedulePattern,
+        taskId: task.id,
+        taskIdentifier: task.identifier,
+        tickToken,
+        timezone: task.scheduleTimezone,
+        userId: task.createdByUserId,
+      });
     }
-    due.push({
-      pattern: task.schedulePattern,
-      taskId: task.id,
-      taskIdentifier: task.identifier,
-      tickToken,
-      timezone: task.scheduleTimezone,
-      userId: task.createdByUserId,
-    });
   }
 
   log(

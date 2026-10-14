@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import type * as AgentModule from '@/database/models/agent';
+import { IssueDeliveryModel } from '@/database/models/issueDelivery';
 import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import {
   agentOperations,
@@ -18,13 +20,23 @@ import {
   workspaceMembers,
   workspaces,
 } from '@/database/schemas';
-import { verifyCheckResults } from '@/database/schemas/verify';
+import { acceptances, verifyCheckResults } from '@/database/schemas/verify';
 import type * as WorkspaceGuard from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
+import { AiAgentService } from '@/server/services/aiAgent';
 import { runAcpJudgment } from '@/server/services/aiGeneration/judgment';
+import {
+  cancelAutomationOccurrence,
+  requireAutomationParent,
+  startAutomationPlan,
+} from '@/server/services/taskAutomationQueue';
+import { TaskDispatchQueuedError } from '@/server/services/taskDispatch';
+import { TaskGraphService } from '@/server/services/taskGraph';
+import { TaskRunnerService } from '@/server/services/taskRunner';
 
+import { seedReviewedIssueDelivery } from '../../../../../packages/database/tests/fixtures/issueDelivery';
 import { IssueChecklistService } from './checklist';
 import { TaskService } from './index';
-import { TaskPlanService } from './plan';
+import { issuePlanFingerprint, TaskPlanService } from './plan';
 
 vi.mock('@/database/models/agent', async (importOriginal) => {
   const actual = await importOriginal<typeof AgentModule>();
@@ -131,6 +143,182 @@ describe('Issue plan confirmation', () => {
       service().intake({ name: 'Request', instruction: 'Scope', repositoryId: 'unreadable-repo' }),
     ).rejects.toThrow('Repository not found');
   });
+  it('captures a genuine periodic DAG occurrence before launching children and rejects a borrowed principal', async () => {
+    await db.update(tasks).set({ automationMode: 'heartbeat' }).where(eq(tasks.id, id));
+    const draft = await service().draftIssuePlan(id);
+    await service().confirmIssuePlan({ id, revision: draft.plan!.revision });
+    expect(TaskService.prototype.runReadySubtasks).not.toHaveBeenCalled();
+    const oldGenerations = new Map(
+      draft.subtasks.map((task) => [task.id, task.executionGeneration]),
+    );
+    const parent = (await new TaskModel(db, user, ws).findById(id))!;
+    await expect(
+      startAutomationPlan(db, user, ws, {
+        task: parent,
+        trigger: 'heartbeat',
+        idempotencyKey: 'heartbeat:first',
+      }),
+    ).rejects.toBeInstanceOf(TaskDispatchQueuedError);
+    const active = await new TaskDispatchModel(db, ws).findActiveByTaskId(id);
+    expect(active).toMatchObject({
+      phase: 'waiting',
+      waitingReason: 'automation_plan_running',
+      initiator: user,
+    });
+    expect(TaskService.prototype.runReadySubtasks).toHaveBeenCalledWith(id, active!.id, active!.id);
+    for (const oldChild of draft.subtasks) {
+      const fresh = (await new TaskModel(db, user, ws).findById(oldChild.id))!;
+      expect(fresh.executionGeneration).toBe(oldGenerations.get(oldChild.id)! + 1);
+    }
+    const child = (await new TaskModel(db, user, ws).findById(draft.subtasks[0].id))!;
+    expect(await requireAutomationParent(db, user, ws, child, active!.id)).toMatchObject({
+      id: active!.id,
+    });
+    await expect(
+      requireAutomationParent(db, 'another-member', ws, child, active!.id),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(
+      requireAutomationParent(db, user, 'another-workspace', child, active!.id),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const foreign = { ...child, id: 'unrelated-issue' };
+    await expect(requireAutomationParent(db, user, ws, foreign, active!.id)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await db
+      .update(tasks)
+      .set({ executionGeneration: active!.generation + 1 })
+      .where(eq(tasks.id, id));
+    await expect(requireAutomationParent(db, user, ws, child, active!.id)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('retains the active occurrence and queued successor when a native child stop is unconfirmed', async () => {
+    await db.update(tasks).set({ automationMode: 'heartbeat' }).where(eq(tasks.id, id));
+    const draft = await service().draftIssuePlan(id);
+    await service().confirmIssuePlan({ id, revision: draft.plan!.revision });
+    await expect(
+      startAutomationPlan(db, user, ws, {
+        task: (await new TaskModel(db, user, ws).findById(id))!,
+        trigger: 'heartbeat',
+        idempotencyKey: 'heartbeat:cancel-first',
+      }),
+    ).rejects.toBeInstanceOf(TaskDispatchQueuedError);
+    const model = new TaskDispatchModel(db, ws);
+    const active = (await model.findActiveByTaskId(id))!;
+    await model.request({
+      taskId: id,
+      trigger: 'heartbeat',
+      origin: 'external',
+      idempotencyKey: 'heartbeat:cancel-next',
+      requestedBy: user,
+      initiator: user,
+      executionUserId: user,
+    });
+    await db.insert(agentOperations).values({
+      id: 'native-child-still-running',
+      taskId: draft.subtasks[0].id,
+      userId: user,
+      workspaceId: ws,
+      agentId: agent,
+      status: 'running',
+    });
+    vi.spyOn(AiAgentService.prototype, 'interruptTask').mockResolvedValue({
+      success: true,
+      cancelState: 'unknown',
+      deviceCancellationConfirmed: false,
+    } as never);
+    await expect(cancelAutomationOccurrence(db, user, ws, id)).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+    expect((await model.findById(active.id))?.phase).toBe('cancel_requested');
+    expect((await model.findOldestQueued(id))?.idempotencyKey).toBe('heartbeat:cancel-next');
+    const [operation] = await db
+      .select()
+      .from(agentOperations)
+      .where(eq(agentOperations.id, 'native-child-still-running'));
+    expect(operation.status).toBe('running');
+  });
+
+  it('invalidates reviewed prior-round proofs before computing the next A/B → C layer', async () => {
+    await db.update(tasks).set({ automationMode: 'heartbeat' }).where(eq(tasks.id, id));
+    const draft = await service().draftIssuePlan(id);
+    await service().confirmIssuePlan({ id, revision: draft.plan!.revision });
+    // Fixture the finished prior round while preserving the same standing scope.
+    const standing = (await new TaskModel(db, user, ws).findById(id))!.context as TaskContext;
+    for (const child of draft.subtasks) {
+      await db.delete(acceptances).where(eq(acceptances.subjectId, child.id));
+      await seedReviewedIssueDelivery(db, child.id);
+      const [aggregate] = await db
+        .select()
+        .from(acceptances)
+        .where(eq(acceptances.subjectId, child.id));
+      const definition = {
+        ...aggregate.metadata!.issueChecklist!,
+        confirmedAt: standing.issuePlan!.confirmedAt!,
+        confirmedBy: user,
+      };
+      await db
+        .update(acceptances)
+        .set({ metadata: { issueChecklist: definition } })
+        .where(eq(acceptances.id, aggregate.id));
+      const current = (await new TaskModel(db, user, ws).findById(child.id))!;
+      await db
+        .update(tasks)
+        .set({ config: { ...current.config, workspace: { repo: definition.repo } } })
+        .where(eq(tasks.id, child.id));
+      Object.assign(
+        standing.issuePlan!.checklists.find((check) => check.taskId === child.id)!,
+        {
+          items: definition.items,
+          deliveryKind: definition.deliveryKind,
+          repo: definition.repo,
+          targetBranch: definition.targetBranch,
+        },
+      );
+    }
+    const graph = await new TaskGraphService(db, user, ws).planForParent(id);
+    const parent = (await new TaskModel(db, user, ws).findById(id))!;
+    standing.issuePlan!.scopeFingerprint = issuePlanFingerprint(
+      [parent, ...graph.descendants],
+      await new TaskModel(db, user, ws).getDependenciesByTaskIds([
+        id,
+        ...graph.descendants.map((child) => child.id),
+      ]),
+    );
+    for (const taskId of [id, ...draft.subtasks.map((child) => child.id)]) {
+      const current = (await new TaskModel(db, user, ws).findById(taskId))!;
+      await db
+        .update(tasks)
+        .set({ context: { ...current.context, issuePlan: standing.issuePlan } })
+        .where(eq(tasks.id, taskId));
+    }
+    const proofModel = new IssueDeliveryModel(db, user, ws);
+    const before = await proofModel.readCurrentDeliveryProof(
+      draft.subtasks.map((child) => child.id),
+    );
+    expect(Object.values(before).every((proof) => proof.availableForDependents)).toBe(true);
+    vi.mocked(TaskService.prototype.runReadySubtasks).mockRestore();
+    const run = vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
+    await expect(
+      startAutomationPlan(db, user, ws, {
+        task: (await new TaskModel(db, user, ws).findById(id))!,
+        trigger: 'heartbeat',
+        idempotencyKey: 'heartbeat:round-2',
+      }),
+    ).rejects.toBeInstanceOf(TaskDispatchQueuedError);
+    expect(run.mock.calls.map(([params]) => params.taskId).sort()).toEqual(
+      draft.subtasks
+        .slice(0, 2)
+        .map((child) => child.id)
+        .sort(),
+    );
+    const after = await proofModel.readCurrentDeliveryProof(
+      draft.subtasks.map((child) => child.id),
+    );
+    expect(Object.values(after).every((proof) => !proof.availableForDependents)).toBe(true);
+  });
+
   it('drafts real A/B → C and child → parent edges without executing, then freezes all Checklists before dispatch', async () => {
     const draft = await service().draftIssuePlan(id);
     expect(draft.subtasks.map((task) => task.name)).toEqual(['A', 'B', 'C']);
@@ -427,4 +615,17 @@ describe('Issue plan confirmation', () => {
       'Finish the current accepted delivery',
     );
   });
+  it.each(['schedule', 'heartbeat', 'event'] as const)(
+    'publishes %s standing scope without fabricating an occurrence or starting children',
+    async (mode) => {
+      await db.update(tasks).set({ automationMode: mode }).where(eq(tasks.id, id));
+      const draft = await service().draftIssuePlan(id);
+      const dispatch = vi.spyOn(TaskService.prototype, 'runReadySubtasks');
+      dispatch.mockClear();
+      const confirmed = await service().confirmIssuePlan({ id, revision: draft.plan!.revision });
+      expect(confirmed.plan?.confirmedAt).toBeTruthy();
+      expect(confirmed.dispatch).toBeUndefined();
+      expect(dispatch).not.toHaveBeenCalled();
+    },
+  );
 });

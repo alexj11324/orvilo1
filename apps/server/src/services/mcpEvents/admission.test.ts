@@ -22,6 +22,7 @@ import {
 import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 
+import { seedConfirmedIssuePlan } from '../../../../../packages/database/tests/fixtures/issueDelivery';
 import { McpEventDispatchAdmissionService } from './admission';
 import { sweepMcpEventInbox } from './runtime';
 
@@ -113,6 +114,7 @@ const seed = async (
     seq: 1,
     workspaceId,
   });
+  await seedConfirmedIssuePlan(db, taskId);
   await db.insert(mcpEventBindings).values({
     binding: {
       callbackToken: 'acceptance-callback',

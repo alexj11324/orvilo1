@@ -1,4 +1,9 @@
-import { deriveTaskExecutionState, type TaskItem, type TaskStatus } from '@orvilo/types';
+import {
+  deriveTaskExecutionState,
+  type TaskContext,
+  type TaskItem,
+  type TaskStatus,
+} from '@orvilo/types';
 
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
@@ -110,7 +115,8 @@ export const settleTaskExecution = async (
 
   const deliveredIssue =
     input.outcome === 'succeeded' &&
-    !task.automationMode &&
+    (!task.automationMode ||
+      Boolean((task.context as TaskContext | null)?.issuePlan?.confirmedAt)) &&
     !context?.blocked &&
     !unresolvedInput &&
     !context?.manualAcceptance;

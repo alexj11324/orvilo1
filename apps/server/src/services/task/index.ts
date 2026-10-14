@@ -348,6 +348,16 @@ export class TaskService {
    * Cancel a running topic: interrupt the remote operation (if any), then
    * mark the topic as `canceled` and pause its parent task.
    */
+  async cancelAutomationOccurrence(id: string) {
+    const task = await this.resolveOrThrow(id);
+    return (await import('../taskAutomationQueue')).cancelAutomationOccurrence(
+      this.db,
+      this.userId,
+      this.workspaceId,
+      task.id,
+    );
+  }
+
   async cancelTopic(topicId: string, authorizedIssueId?: string): Promise<void> {
     const target = authorizedIssueId
       ? await this.taskTopicModel.findIssueTopicById(topicId)
@@ -395,7 +405,9 @@ export class TaskService {
           message: 'Issue topic changed before cancellation.',
         });
     } else await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
-    await this.taskModel.updateStatus(target.taskId, 'paused');
+    const occurrence = stoppingDispatch?.automationOccurrence;
+    if (!occurrence || occurrence.parentDispatchId)
+      await this.taskModel.updateStatus(target.taskId, 'paused');
 
     if (stoppingDispatch) {
       const settled = await new TaskDispatchModel(this.db, this.workspaceId).settle({
@@ -413,6 +425,11 @@ export class TaskService {
         });
       }
     }
+
+    if (occurrence && !occurrence.parentDispatchId && stoppingDispatch)
+      await (
+        await import('../taskAutomationQueue')
+      ).advanceCanceledAutomation(this.db, stoppingDispatch.id, this.workspaceId);
 
     // The canceled run's provisioned worktrees are abandoned — tear them down
     // best-effort; a cleanup failure must not break the cancel.
@@ -627,7 +644,10 @@ export class TaskService {
       });
     }
 
-    if (resolvedStatus === 'running' && status !== 'running') {
+    const automationControl = Boolean(
+      resolved.automationMode && ['paused', 'scheduled'].includes(status) && !guard,
+    );
+    if (resolvedStatus === 'running' && status !== 'running' && !automationControl) {
       const topics = await this.taskTopicModel.findByTaskId(resolved.id);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
@@ -709,12 +729,17 @@ export class TaskService {
         }
       }
     }
+    if (automationControl && input.workflow === undefined && resolved.workflowCategory) {
+      extra.workflowCategory = resolved.workflowCategory;
+      extra.workflowStateId = resolved.workflowStateId;
+      extra.workflowStateRefId = resolved.workflowStateRefId;
+    }
     if (status === 'running') extra.startedAt = new Date();
     // A person changing state owns the generation boundary. Clear any dispatch
     // or completion lease so a crashed callback cannot reclaim after their
     // pause/restart. System-driven scheduled transitions keep the lease until
     // lifecycle side effects (bridge/re-arm) finish.
-    if (status !== 'running' && (actor || status !== 'scheduled')) {
+    if (!automationControl && status !== 'running' && (actor || status !== 'scheduled')) {
       extra.runReservationExpiresAt = null;
       extra.runReservationId = null;
     }
@@ -757,6 +782,23 @@ export class TaskService {
           : 'Task not found',
       });
     }
+    if (
+      resolved.automationMode &&
+      !guard &&
+      (status === 'paused' ||
+        (status === 'scheduled' &&
+          (resolvedStatus !== 'running' ||
+            (resolved.context as TaskContext | null)?.scheduler?.automationPaused)))
+    ) {
+      await this.taskModel.updateContext(task.id, {
+        scheduler: {
+          automationPaused: status === 'paused',
+          ...(status === 'scheduled' && resolved.automationMode === 'schedule'
+            ? { lastPublishedScheduleAt: new Date().toISOString() }
+            : {}),
+        },
+      });
+    }
     options?.onStatusCommitted?.();
     if (
       task.workflowCategory === 'in_review' &&
@@ -781,6 +823,18 @@ export class TaskService {
       } catch (error) {
         console.error('[TaskService:updateStatus] failed to log workflow move', error);
       }
+    }
+
+    if (status === 'scheduled' && resolved.automationMode && !guard) {
+      await (
+        await import('../taskAutomationQueue')
+      ).resumeAutomationQueue(this.db, task.id, this.workspaceId);
+    }
+
+    if (actor && ['completed', 'canceled'].includes(status)) {
+      await (
+        await import('@/database/models/taskDispatch')
+      ).TaskDispatchModel.cancelQueuedAutomationForTask(this.db, task.id, this.workspaceId);
     }
 
     // A terminal transition abandons the task's merge pipeline — tear down
@@ -1158,6 +1212,10 @@ export class TaskService {
       }
     });
 
+    if (actor)
+      for (const ended of targetTasks)
+        await TaskDispatchModel.cancelQueuedAutomationForTask(this.db, ended.id, this.workspaceId);
+
     // Every cascaded task reached a terminal status — its merge pipeline is
     // abandoned, so tear down any provisioned worktrees it left behind.
     const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
@@ -1204,6 +1262,7 @@ export class TaskService {
   async runReadySubtasks(
     idOrIdentifier: string,
     requestId: string = randomUUID(),
+    nativeAutomationParentDispatchId?: string,
   ): Promise<RunReadySubtasksResult> {
     const parent = await this.resolveOrThrow(idOrIdentifier);
     const graph = new TaskGraphService(this.db, this.userId, this.workspaceId);
@@ -1230,6 +1289,10 @@ export class TaskService {
         const id = identifierToId.get(identifier);
         if (!id) throw new Error(`Subtask ${identifier} not found`);
         await runner.runTask({
+          nativeAutomationParentDispatchId,
+          ...(nativeAutomationParentDispatchId
+            ? { intent: 'fresh_occurrence' as const, trigger: 'manual' as const }
+            : {}),
           idempotencyKey: taskRunIdempotencyKey.readySubtask({
             parentTaskId: parent.id,
             requestId,

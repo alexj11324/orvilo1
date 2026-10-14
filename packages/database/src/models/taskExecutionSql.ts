@@ -59,7 +59,7 @@ export const hasUnresolvedTaskInput = sql<boolean>`has_task_unresolved_input(${t
 /** Scalar: the phase of the task's most recent dispatch, or NULL when it never ran. */
 export const latestDispatchPhase = sql`(
   SELECT d.phase FROM ${taskDispatches} d
-  WHERE d.task_id = ${tasks.id}
+  WHERE d.task_id = ${tasks.id} AND d.phase <> 'queued'
   ORDER BY d.generation DESC, d.created_at DESC
   LIMIT 1
 )`;

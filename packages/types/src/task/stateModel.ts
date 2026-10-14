@@ -110,6 +110,7 @@ const DISPATCH_PHASE_EXECUTION: Readonly<Record<TaskDispatchPhase, TaskExecution
   failed: 'failed',
   outcome_unknown: 'outcome_unknown',
   provisioning: 'provisioning',
+  queued: 'queued',
   requested: 'queued',
   running: 'running',
   succeeded: 'succeeded',

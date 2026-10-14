@@ -322,7 +322,10 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
       const { execAgent, prepare } = setupHappyPath(
         baseTask({
           automationMode: trigger,
-          context: { execution: { parked: { at: new Date().toISOString(), reason: 'paused' } } },
+          context: {
+            scheduler: { automationPaused: true },
+            execution: { parked: { at: new Date().toISOString(), reason: 'paused' } },
+          },
         }),
       );
 

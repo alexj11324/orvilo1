@@ -7,6 +7,7 @@ import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task'
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ExecAgentResult,
+  TaskContext,
   TaskDispatchSettlementGrant,
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
@@ -16,7 +17,7 @@ import type {
   TaskTopicIntegration,
   WorkingDirConfig,
 } from '@orvilo/types';
-import { executionParkedReason, isAutomationRunTrigger } from '@orvilo/types';
+import { isAutomationRunTrigger } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
@@ -39,6 +40,7 @@ import { isQueuedDeviceOperation } from '@/server/services/aiAgent/deviceQueue';
 import type { EventDispatchEvidence, PreparedTaskDispatch } from '@/server/services/taskDispatch';
 import {
   TaskDispatchConflictError,
+  TaskDispatchQueuedError,
   TaskDispatchService,
   TaskDispatchWaitingError,
 } from '@/server/services/taskDispatch';
@@ -103,6 +105,8 @@ export interface RunTaskParams {
   issueReviewRepairCycleId?: string;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
+  /** Internal periodic DAG binding, verified against the persisted parent occurrence. */
+  nativeAutomationParentDispatchId?: string;
   /** Parent delivery operation for internal corrective runs. */
   parentOperationId?: string;
   planRevision?: number;
@@ -218,6 +222,7 @@ export class TaskRunnerService {
       issueReviewRepairCycleId,
       intent,
       maxSteps,
+      nativeAutomationParentDispatchId,
       parentOperationId,
       planRevision,
       replaceReservationId,
@@ -257,6 +262,18 @@ export class TaskRunnerService {
         message: 'Assign an Agent to this Issue before running it',
       });
     }
+    const parentAutomationDispatch = nativeAutomationParentDispatchId
+      ? await (
+          await import('../taskAutomationQueue')
+        ).requireAutomationParent(
+          this.db,
+          this.userId,
+          this.workspaceId,
+          resolvedTask,
+          nativeAutomationParentDispatchId,
+        )
+      : undefined;
+
     // Reading a shared task does not grant use of its owner's personal Agent.
     // Validate the actual executor before mutating task policy or dispatch state.
     const fallbackAgent =
@@ -282,7 +299,7 @@ export class TaskRunnerService {
     let task: TaskItem = resolvedTask;
     if (
       intent === 'fresh_occurrence' &&
-      (!isAutomationRunTrigger(trigger) ||
+      ((!isAutomationRunTrigger(trigger) && !parentAutomationDispatch) ||
         continueTopicId ||
         sourceContractId ||
         replanApprovalId ||
@@ -301,6 +318,7 @@ export class TaskRunnerService {
       isAutomationRunTrigger(trigger) &&
       !parentOperationId &&
       !replaceReservationId &&
+      !parentAutomationDispatch &&
       task.automationMode !== trigger
     ) {
       throw new TRPCError({
@@ -313,7 +331,8 @@ export class TaskRunnerService {
       isAutomationRunTrigger(trigger) &&
       !parentOperationId &&
       !replaceReservationId &&
-      (executionParkedReason(task.context) ||
+      ((!parentAutomationDispatch &&
+        (task.context as TaskContext | null)?.scheduler?.automationPaused) ||
         task.workflowCategory === 'done' ||
         task.workflowCategory === 'canceled')
     ) {
@@ -350,10 +369,36 @@ export class TaskRunnerService {
     }
 
     await this.taskModel.assertConfirmedIssuePlan(task.id);
+    const periodicPlan = (task.context as TaskContext | null)?.issuePlan;
+    if (
+      isAutomationRunTrigger(trigger) &&
+      !parentAutomationDispatch &&
+      periodicPlan?.confirmedAt &&
+      periodicPlan.parentTaskId === task.id &&
+      periodicPlan.checklists.some((check) => check.taskId !== task.id)
+    ) {
+      try {
+        await (
+          await import('../taskAutomationQueue')
+        ).startAutomationPlan(this.db, this.userId, this.workspaceId, {
+          task,
+          trigger,
+          idempotencyKey: resolvedIdempotencyKey,
+          eventEvidence,
+        });
+      } catch (error) {
+        if (error instanceof TaskDispatchQueuedError)
+          throw new TRPCError({ code: 'CONFLICT', cause: error, message: error.message });
+        throw error;
+      }
+    }
 
     // Preflight before assignment/provisioning; reserveRun repeats this check
     // under the dependency graph lock so a concurrent edit cannot bypass it.
-    if (!(await this.taskModel.areAllDependenciesCompleted(task.id))) {
+    if (
+      !isAutomationRunTrigger(trigger) &&
+      !(await this.taskModel.areAllDependenciesCompleted(task.id))
+    ) {
       throw new TaskDependencyError(
         'Current reviewed prerequisite deliveries are required before starting this task.',
         'PRECONDITION_FAILED',
@@ -400,6 +445,7 @@ export class TaskRunnerService {
       try {
         preparedDispatch = await this.taskDispatch.prepare({
           delegatedAgentId: delegation?.agentId,
+          automationParentDispatchId: parentAutomationDispatch?.id,
           eventEvidence,
           executionUserId: this.userId,
           idempotencyKey: resolvedIdempotencyKey,
@@ -413,9 +459,12 @@ export class TaskRunnerService {
           // trigger is a new orchestrated writer and must pass the gate.
           origin: internalSettlement
             ? 'internal'
-            : trigger === 'orchestrator' || trigger === 'goal'
-              ? 'caid'
-              : 'external',
+            : trigger === 'orchestrator' &&
+                (task.context as TaskContext | null)?.issuePlan?.confirmedAt
+              ? 'external'
+              : trigger === 'orchestrator' || trigger === 'goal'
+                ? 'caid'
+                : 'external',
           planRevision,
           requestedBy,
           settlementGrant: settlement?.grant,
@@ -424,6 +473,9 @@ export class TaskRunnerService {
           trigger,
         });
       } catch (error) {
+        if (error instanceof TaskDispatchQueuedError) {
+          throw new TRPCError({ code: 'CONFLICT', cause: error, message: error.message });
+        }
         if (error instanceof TaskDispatchConflictError) {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
@@ -1068,8 +1120,19 @@ export class TaskRunnerService {
         // dispatch instead of executing without them. Sourced from the
         // persisted contract so admission and the contract cannot diverge.
         requiredToolIds: executionContract.tools,
-        skipTaskVerification,
+        skipTaskVerification:
+          skipTaskVerification ?? Boolean(preparedDispatch!.dispatch.automationOccurrence),
         beforeOperationStart: async ({ operationId, topicId }) => {
+          if (nativeAutomationParentDispatchId)
+            await (
+              await import('../taskAutomationQueue')
+            ).requireAutomationParent(
+              this.db,
+              this.userId,
+              this.workspaceId,
+              task,
+              nativeAutomationParentDispatchId,
+            );
           await this.db.transaction(async (tx) => {
             const dispatch = new TaskDispatchService(tx, this.workspaceId);
             const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
@@ -1181,7 +1244,11 @@ export class TaskRunnerService {
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
         appContext: {
-          ...(isAutomationRunTrigger(trigger) && { nativeFullAccess: true }),
+          ...((isAutomationRunTrigger(trigger) ||
+            parentAutomationDispatch ||
+            preparedDispatch!.dispatch.automationOccurrence) && {
+            nativeFullAccess: true,
+          }),
           ...(issueReviewRepairCycleId ? { issueReviewRepairCycleId } : {}),
           dispatchFence: preparedDispatch!.fence,
           dispatchId: preparedDispatch!.dispatch.id,
@@ -1524,15 +1591,50 @@ export class TaskRunnerService {
    */
   async cascadeOnCompletionMany(completedTaskIds: string[]): Promise<CascadeResult> {
     await this.markStaleDependencyInputs(completedTaskIds);
-    const unlocked = await this.taskModel.getUnlockedTasksForMany(completedTaskIds);
-    if (unlocked.length === 0) return TaskRunnerService.cascadeEmpty();
-
     const result: CascadeResult = { failed: [], paused: [], started: [] };
+    const completed = await this.taskModel.findByIds(completedTaskIds);
+    const periodicParents = new Set(
+      completed.flatMap((task) => {
+        const id = (task.context as TaskContext | null)?.automationParentDispatchId;
+        return id ? [id] : [];
+      }),
+    );
+    for (const dispatchId of periodicParents) {
+      const dispatch = await new (await import('@/database/models/taskDispatch')).TaskDispatchModel(
+        this.db,
+        this.workspaceId,
+      ).findById(dispatchId);
+      if (!dispatch?.initiator || dispatch.waitingReason !== 'automation_plan_running') continue;
+      const parentRunner = new TaskRunnerService(this.db, dispatch.initiator, this.workspaceId);
+      const parent = await parentRunner.taskModel.findById(dispatch.taskId);
+      if (!parent || !(await parentRunner.taskModel.areAllDependenciesCompleted(parent.id)))
+        continue;
+      const resumed = await (
+        await import('../taskAutomationQueue')
+      ).resumeAutomationParentReport(
+        this.db,
+        dispatch.initiator,
+        this.workspaceId,
+        parent,
+        dispatchId,
+      );
+      if (resumed) result.started.push(parent.identifier);
+    }
+    const unlocked = await this.taskModel.getUnlockedTasksForMany(completedTaskIds);
+    if (unlocked.length === 0) return result;
 
     for (const task of unlocked) {
+      const automationParentId = (task.context as TaskContext | null)?.automationParentDispatchId;
+      const automationParent = automationParentId
+        ? await new (await import('@/database/models/taskDispatch')).TaskDispatchModel(
+            this.db,
+            this.workspaceId,
+          ).findById(automationParentId)
+        : undefined;
+      const executionUserId = automationParent?.initiator ?? task.createdByUserId;
       const runner =
-        task.createdByUserId && task.createdByUserId !== this.userId
-          ? new TaskRunnerService(this.db, task.createdByUserId, this.workspaceId)
+        executionUserId && executionUserId !== this.userId
+          ? new TaskRunnerService(this.db, executionUserId, this.workspaceId)
           : this;
       if (await runner.shouldHoldForCheckpoint(task)) {
         await runner.taskModel.updateStatusIfCurrent(task.id, 'backlog', 'paused');
@@ -1541,7 +1643,22 @@ export class TaskRunnerService {
       }
 
       try {
+        if (automationParentId && automationParent?.taskId === task.id) {
+          const resumed = await (
+            await import('../taskAutomationQueue')
+          ).resumeAutomationParentReport(
+            this.db,
+            executionUserId ?? this.userId,
+            this.workspaceId,
+            task,
+            automationParentId,
+          );
+          if (resumed) result.started.push(task.identifier);
+          continue;
+        }
         await runner.runTask({
+          nativeAutomationParentDispatchId: automationParentId,
+          ...(automationParentId ? { intent: 'fresh_occurrence' as const } : {}),
           idempotencyKey: taskRunIdempotencyKey.dependencyCascade({
             completedTaskIds,
             executionGeneration: task.executionGeneration ?? 0,
@@ -1549,7 +1666,7 @@ export class TaskRunnerService {
             taskRevision: task.domainRevision ?? 0,
           }),
           taskId: task.id,
-          trigger: 'orchestrator',
+          trigger: automationParentId ? 'manual' : 'orchestrator',
         });
         result.started.push(task.identifier);
       } catch (error) {

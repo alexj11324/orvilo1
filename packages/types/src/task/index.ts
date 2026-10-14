@@ -73,6 +73,7 @@ export type TaskRunState =
   | 'outcome_unknown';
 
 export type TaskDispatchPhase =
+  | 'queued'
   | 'requested'
   | 'claimed'
   | 'provisioning'
@@ -249,6 +250,7 @@ export interface AutomationDefinitionSnapshot {
   editorData?: unknown;
   heartbeatInterval?: number | null;
   instruction: string;
+  issuePlan?: IssuePlan;
   policyRevision: number;
   requirementRevision: number;
   schedulePattern?: string | null;
@@ -275,6 +277,10 @@ export interface AutomationOccurrenceSnapshot {
   input?: AutomationInputSnapshot;
   /** Stable scheduler identity or durable trigger-run id. */
   occurrenceId: string;
+  /** Trusted periodic DAG parent; business input cannot authorize this binding. */
+  parentDispatchId?: string;
+  /** Server marks the genuine periodic parent report after its children are ready. */
+  planExecutionStarted?: boolean;
 }
 
 /** Server evidence stored separately from the occurrence's untrusted business input. */
@@ -909,13 +915,17 @@ export interface TaskTopicHandoff {
 // ── Task context (runtime state pockets stored in tasks.context JSONB) ──
 
 export interface TaskSchedulerContext {
+  /** Explicit pause stops new occurrences without interrupting the current Run. */
+  automationPaused?: boolean;
   // Count of consecutive automation-tick 'error' reasons since the last 'done'.
   // When it hits the fuse threshold (currently 3) we pause the task / stop
   // re-arming until the user resolves the urgent brief. Manual "run now"
   // failures do NOT touch this counter.
   consecutiveFailures?: number;
+  lastPublishedScheduleAt?: string;
   // ISO timestamp when the latest tick was scheduled. Informational only.
   scheduledAt?: string;
+  scheduleStartedAt?: string;
   // Provider message id (or LocalScheduler scheduleId) for the next tick. Used
   // to cancel when the user wants an interval change to take effect immediately.
   tickMessageId?: string;
@@ -997,6 +1007,8 @@ export interface IssuePlan {
 }
 
 export interface TaskContext {
+  /** Server binding to the active periodic parent occurrence. */
+  automationParentDispatchId?: string;
   completion?: {
     /** The running operation that asked to complete its own task. The lifecycle
      * finalizes the task only after that operation has finished cleanly. */

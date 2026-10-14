@@ -1,4 +1,5 @@
 import { Mermaid } from '@lobehub/ui';
+import type { TaskContext } from '@orvilo/types';
 import { Workflow } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,8 +28,10 @@ export const TaskIssuePlan = ({ onChanged }: { onChanged?: () => Promise<unknown
     () => taskService.getIssuePlan(taskId!),
   );
   const [open, setOpen] = useState(true);
-  const [pending, setPending] = useState<'draft' | 'confirm' | null>(null);
-  const [writeError, setWriteError] = useState(false);
+  const [pending, setPending] = useState<'draft' | 'confirm' | 'stop' | 'pause' | 'resume' | null>(
+    null,
+  );
+  const [writeError, setWriteError] = useState<'plan' | 'stop' | 'automation' | null>(null);
   const plan = data?.data.plan;
   const subtasks = data?.data.subtasks ?? [];
   const { graph, edges } = issuePlanGraph(
@@ -39,17 +42,26 @@ export const TaskIssuePlan = ({ onChanged }: { onChanged?: () => Promise<unknown
     const task = id === parent?.id ? parent : subtasks.find((item) => item.id === id);
     return task ? `${task.identifier} ${task.name ?? ''}`.trim() : id;
   };
-  const write = async (action: 'draft' | 'confirm') => {
+  const write = async (action: 'draft' | 'confirm' | 'stop' | 'pause' | 'resume') => {
     if (!taskId || pending || !canEdit) return;
     setPending(action);
-    setWriteError(false);
+    setWriteError(null);
     try {
-      if (action === 'draft') await taskService.draftIssuePlan(taskId);
+      if (action === 'pause' || action === 'resume')
+        await taskService.updateStatus(taskId, action === 'pause' ? 'paused' : 'scheduled');
+      else if (action === 'stop') await taskService.cancelAutomationOccurrence(taskId);
+      else if (action === 'draft') await taskService.draftIssuePlan(taskId);
       else if (plan) await taskService.confirmIssuePlan(taskId, plan.revision);
       await Promise.all([mutate(), refreshDetail(taskId), refreshList(), onChanged?.()]);
     } catch (error) {
       console.error('[TaskIssuePlan] Could not save plan', error);
-      setWriteError(true);
+      setWriteError(
+        action === 'stop'
+          ? 'stop'
+          : action === 'pause' || action === 'resume'
+            ? 'automation'
+            : 'plan',
+      );
       // A stale revision must reload the current plan before another confirmation.
       await mutate();
     } finally {
@@ -202,9 +214,65 @@ export const TaskIssuePlan = ({ onChanged }: { onChanged?: () => Promise<unknown
               </Button>
             </>
           ) : null}
+          {data?.data.automationQueue && (
+            <div className="flex flex-col gap-2">
+              <p className="text-muted-foreground" role="status">
+                {t('taskDetail.plan.queuedRounds', { count: data.data.automationQueue.queued })}
+              </p>
+              {parent?.automationMode && (
+                <Button
+                  className="self-start"
+                  disabled={!canEdit || !!pending}
+                  loading={pending === 'pause' || pending === 'resume'}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    void write(
+                      (parent.context as TaskContext | null)?.scheduler?.automationPaused
+                        ? 'resume'
+                        : 'pause',
+                    )
+                  }
+                >
+                  {t(
+                    (parent.context as TaskContext | null)?.scheduler?.automationPaused
+                      ? 'taskDetail.plan.resumeAutomation'
+                      : 'taskDetail.plan.pauseAutomation',
+                  )}
+                </Button>
+              )}
+              {data.data.automationQueue.activeDispatchId && (
+                <Button
+                  className="self-start"
+                  disabled={!canEdit || !!pending}
+                  loading={pending === 'stop'}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void write('stop')}
+                >
+                  {t('taskDetail.plan.stopRound')}
+                </Button>
+              )}
+              {data.data.automationQueue.recent
+                .filter((round) => round.phase === 'canceled')
+                .map((round) => (
+                  <p className="text-muted-foreground" key={round.id}>
+                    {t('taskDetail.plan.canceledRound', {
+                      date: new Date(round.updatedAt).toLocaleString(),
+                    })}
+                  </p>
+                ))}
+            </div>
+          )}
           {writeError && (
             <p className="text-destructive-text" role="alert">
-              {t('taskDetail.plan.writeError')}
+              {t(
+                writeError === 'stop'
+                  ? 'taskDetail.plan.stopRoundError'
+                  : writeError === 'automation'
+                    ? 'taskDetail.plan.automationError'
+                    : 'taskDetail.plan.writeError',
+              )}
             </p>
           )}
         </div>

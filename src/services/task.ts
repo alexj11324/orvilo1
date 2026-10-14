@@ -384,6 +384,9 @@ class TaskService {
   reorderSubtasks = async (id: string, order: string[]) =>
     lambdaClient.task.reorderSubtasks.mutate({ id, order });
 
+  cancelAutomationOccurrence = async (id: string) =>
+    lambdaClient.task.cancelAutomationOccurrence.mutate({ id });
+
   cancelTopic = async (topicId: string) => lambdaClient.task.cancelTopic.mutate({ topicId });
 
   deleteTopic = async (topicId: string) => lambdaClient.task.deleteTopic.mutate({ topicId });

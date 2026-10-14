@@ -132,6 +132,13 @@ export const processTaskDispatchResume = async (input: {
       candidate.workspaceId ?? undefined,
     ).runTask({
       ...(candidate.eventEvidence ? { eventEvidence: candidate.eventEvidence } : {}),
+      ...(claim.dispatch.automationOccurrence?.parentDispatchId ||
+      claim.dispatch.automationOccurrence?.planExecutionStarted
+        ? {
+            nativeAutomationParentDispatchId:
+              claim.dispatch.automationOccurrence.parentDispatchId ?? claim.dispatch.id,
+          }
+        : {}),
       idempotencyKey: candidate.idempotencyKey,
       planRevision: candidate.planRevision ?? undefined,
       requestedBy: candidate.requestedBy,
@@ -185,6 +192,13 @@ export const sweepTaskDispatchResume = async (input: {
   const outcomes: TaskDispatchResumeOutcome[] = [];
   for (const candidate of [...stale, ...waiting]) {
     outcomes.push(await processTaskDispatchResume({ candidate, db: input.db }));
+  }
+  for (const candidate of await TaskDispatchModel.findQueuedAutomationTasks(
+    input.db,
+    input.limit,
+  )) {
+    const { resumeAutomationQueue } = await import('../taskAutomationQueue');
+    await resumeAutomationQueue(input.db, candidate.taskId, candidate.workspaceId ?? undefined);
   }
   return outcomes;
 };

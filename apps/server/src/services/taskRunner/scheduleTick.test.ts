@@ -4,8 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { taskDispatches } from '@/database/schemas';
+import { TaskService } from '@/server/services/task';
+import { TaskDispatchQueuedError } from '@/server/services/taskDispatch';
 
 import { TaskRunnerService } from './index';
 import { scheduleOccurrenceToken } from './scheduleOccurrence';
@@ -25,6 +28,9 @@ vi.mock('@/database/server', () => ({
     }),
   }),
 }));
+
+vi.mock('@/database/models/taskDispatch', () => ({ TaskDispatchModel: vi.fn() }));
+vi.mock('@/server/services/task', () => ({ TaskService: vi.fn() }));
 
 vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(),
@@ -52,6 +58,8 @@ describe('runScheduleTick', () => {
     plannedAt: new Date('2026-05-02T00:00:00Z'),
   });
 
+  const mockIssueService = { updateStatus: vi.fn() };
+  const mockDispatchModel = { countAutomationOccurrencesSince: vi.fn() };
   const mockTaskModel = {
     updateStatus: vi.fn(),
   };
@@ -80,6 +88,12 @@ describe('runScheduleTick', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(TaskService).mockImplementation(function () {
+      return mockIssueService as any;
+    });
+    vi.mocked(TaskDispatchModel).mockImplementation(function () {
+      return mockDispatchModel as any;
+    });
     mockSelectTask.mockResolvedValue([]);
     mockSelectDispatch.mockReset().mockResolvedValue([]);
     mockBriefModel.hasUnresolvedUrgentByTask.mockResolvedValue(false);
@@ -121,7 +135,10 @@ describe('runScheduleTick', () => {
       baseTask({
         context: {
           execution: { parked: { at: '2026-05-02T00:00:00.000Z' } },
-          scheduler: { scheduleStartedAt: new Date('2026-05-01T00:00:00Z').toISOString() },
+          scheduler: {
+            automationPaused: true,
+            scheduleStartedAt: new Date('2026-05-01T00:00:00Z').toISOString(),
+          },
         },
       }),
     ]);
@@ -201,9 +218,7 @@ describe('runScheduleTick', () => {
     const outcome = await runScheduleTick(taskId, userId, tickToken);
 
     expect(outcome).toEqual({ ran: true, taskIdentifier: 'T-1' });
-    expect(mockBriefModel.hasUnresolvedUrgentByTask).toHaveBeenCalledWith(taskId, {
-      excludeTypes: ['error'],
-    });
+    expect(mockBriefModel.hasUnresolvedUrgentByTask).not.toHaveBeenCalled();
     expect(mockTaskTopicModel.countByTask).not.toHaveBeenCalled();
     expect(mockRunner.runTask).toHaveBeenCalledWith({
       intent: 'fresh_occurrence',
@@ -248,6 +263,42 @@ describe('runScheduleTick', () => {
     });
   });
 
+  it('stops further captures at the confirmed Issue occurrence cap without completing its delivery', async () => {
+    mockSelectTask.mockResolvedValue([
+      baseTask({
+        config: { schedule: { maxExecutions: 1 } },
+        context: {
+          issuePlan: { confirmedAt: 'confirmed' },
+          scheduler: { scheduleStartedAt: '2026-05-01T00:00:00Z' },
+        },
+      }),
+    ]);
+    mockDispatchModel.countAutomationOccurrencesSince.mockResolvedValue(1);
+    expect(await runScheduleTick(taskId, userId, tickToken)).toEqual({
+      ran: false,
+      reason: 'max-executions-reached',
+    });
+    expect(mockIssueService.updateStatus).not.toHaveBeenCalled();
+    expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
+    expect(mockTaskTopicModel.countByTask).not.toHaveBeenCalled();
+  });
+
+  it('runs an already captured tick at the cap rather than stranding its delivery', async () => {
+    mockSelectTask.mockResolvedValue([
+      baseTask({
+        config: { schedule: { maxExecutions: 1 } },
+        context: {
+          issuePlan: { confirmedAt: 'confirmed' },
+          scheduler: { scheduleStartedAt: '2026-05-01T00:00:00Z' },
+        },
+      }),
+    ]);
+    mockSelectDispatch.mockResolvedValue([{ id: 'first-captured' }]);
+    mockDispatchModel.countAutomationOccurrencesSince.mockResolvedValue(1);
+    expect(await runScheduleTick(taskId, userId, tickToken)).toMatchObject({ ran: true });
+    expect(mockIssueService.updateStatus).not.toHaveBeenCalled();
+  });
+
   it('falls back to running when maxExecutions is set but scheduleStartedAt is missing', async () => {
     // Pre-existing scheduled tasks (created before this PR) won't have a
     // scheduleStartedAt stamp. They should still tick normally; the cap will
@@ -273,16 +324,16 @@ describe('runScheduleTick', () => {
     expect(outcome).toEqual({ ran: false, reason: 'in-flight' });
   });
 
-  it('skips when a human is waiting on an urgent brief', async () => {
+  it('retains a trigger while the current round waits for human acceptance', async () => {
     mockSelectTask.mockResolvedValue([baseTask({ config: {} })]);
-    mockBriefModel.hasUnresolvedUrgentByTask.mockResolvedValue(true);
+    mockRunner.runTask.mockRejectedValue(
+      new TRPCError({ code: 'CONFLICT', cause: new TaskDispatchQueuedError('queued-2') }),
+    );
 
     const outcome = await runScheduleTick(taskId, userId, tickToken);
 
-    expect(outcome).toEqual({ ran: false, reason: 'human-waiting' });
-    expect(mockBriefModel.hasUnresolvedUrgentByTask).toHaveBeenCalledWith(taskId, {
-      excludeTypes: ['error'],
-    });
-    expect(mockRunner.runTask).not.toHaveBeenCalled();
+    expect(outcome).toEqual({ ran: false, reason: 'queued' });
+    expect(mockBriefModel.hasUnresolvedUrgentByTask).not.toHaveBeenCalled();
+    expect(mockRunner.runTask).toHaveBeenCalledOnce();
   });
 });

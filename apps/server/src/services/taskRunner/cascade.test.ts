@@ -16,6 +16,7 @@ beforeEach(() => {
   vi.spyOn(IssueDeliveryModel.prototype, 'readCurrentDeliveryProof').mockResolvedValue({});
   vi.spyOn(TaskModel.prototype, 'getDependents').mockResolvedValue([]);
 });
+beforeEach(() => vi.spyOn(TaskModel.prototype, 'findByIds').mockResolvedValue([]));
 afterEach(() => vi.restoreAllMocks());
 
 const candidate = {
@@ -73,6 +74,7 @@ describe('prerequisite completion cascade', () => {
     const service = new TaskRunnerService({} as any, 'user-1', 'workspace-1');
     (service as any).taskModel = {
       getDependents: vi.fn().mockResolvedValue([]),
+      findByIds: vi.fn().mockResolvedValue([]),
       getUnlockedTasksForMany: vi.fn().mockResolvedValue([task]),
     };
     const runTask = vi.spyOn(service, 'runTask').mockResolvedValue({
@@ -131,6 +133,7 @@ describe('prerequisite completion cascade', () => {
       const service = new TaskRunnerService({} as any, 'user-1', 'workspace-1');
       (service as any).taskModel = {
         getDependents: vi.fn().mockResolvedValue([{ taskId: 'task-dep', type: 'blocks' }]),
+        findByIds: vi.fn().mockResolvedValue([]),
         getUnlockedTasksForMany: vi.fn().mockResolvedValue([]),
       };
       const markInputStale = vi.fn().mockResolvedValue(undefined);

@@ -67,13 +67,16 @@ const { findActiveDispatchMock, requestDispatchStopMock, settleDispatchMock } = 
   settleDispatchMock: vi.fn(),
 }));
 vi.mock('@/database/models/taskDispatch', () => ({
-  TaskDispatchModel: vi.fn().mockImplementation(function () {
-    return {
-      findActiveByTaskId: findActiveDispatchMock,
-      requestStop: requestDispatchStopMock,
-      settle: settleDispatchMock,
-    };
-  }),
+  TaskDispatchModel: Object.assign(
+    vi.fn().mockImplementation(function () {
+      return {
+        findActiveByTaskId: findActiveDispatchMock,
+        requestStop: requestDispatchStopMock,
+        settle: settleDispatchMock,
+      };
+    }),
+    { cancelQueuedAutomationForTask: vi.fn().mockResolvedValue(undefined) },
+  ),
 }));
 
 vi.mock('@/database/models/project', () => ({
@@ -189,6 +192,12 @@ vi.mock('@/server/services/taskScheduler', () => ({
 // out so getTaskDetail tests don't need a real file pipeline.
 vi.mock('@/server/services/file/resolveAttachments', () => ({
   resolveAttachmentMetadata: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('../taskAutomationQueue', () => ({
+  resumeAutomationQueue: vi.fn().mockResolvedValue(false),
+  advanceCanceledAutomation: vi.fn().mockResolvedValue(false),
+  cancelAutomationOccurrence: vi.fn(),
 }));
 
 describe('TaskService', () => {
@@ -2226,11 +2235,11 @@ describe('TaskService', () => {
       const service = new TaskService(db, userId);
       await service.updateStatus({ id: 'T-1', status: 'scheduled' as any });
 
-      expect(mockTaskModel.updateContext).toHaveBeenCalledTimes(1);
+      expect(mockTaskModel.updateContext).toHaveBeenCalledTimes(2);
       expect(mockTaskModel.updateContext).toHaveBeenCalledWith('task-1', {
         scheduler: { scheduleStartedAt: expect.any(String) },
       });
-      const stamped = (mockTaskModel.updateContext.mock.calls[0]![1] as any).scheduler
+      const stamped = (mockTaskModel.updateContext.mock.calls[1]![1] as any).scheduler
         .scheduleStartedAt as string;
       expect(() => new Date(stamped).toISOString()).not.toThrow();
     });
@@ -2380,7 +2389,7 @@ describe('TaskService', () => {
       expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
     });
 
-    it('does NOT stamp when the new status is not scheduled', async () => {
+    it('records explicit automation pause without starting a new scheduling window', async () => {
       const prev = baseTask({ status: 'backlog' });
       const next = baseTask({ status: 'paused' });
       mockTaskModel.resolve.mockResolvedValue(prev);
@@ -2389,10 +2398,12 @@ describe('TaskService', () => {
       const service = new TaskService(db, userId);
       await service.updateStatus({ id: 'T-1', status: 'paused' as any });
 
-      expect(mockTaskModel.updateContext).not.toHaveBeenCalled();
+      expect(mockTaskModel.updateContext).toHaveBeenCalledWith('task-1', {
+        scheduler: { automationPaused: true },
+      });
     });
 
-    it('clears a completion reservation when a person pauses the task', async () => {
+    it('preserves the current automation reservation and native operation when pausing', async () => {
       const prev = baseTask({ status: 'running' });
       const next = baseTask({ status: 'paused' });
       mockTaskModel.resolve.mockResolvedValue(prev);
@@ -2405,12 +2416,12 @@ describe('TaskService', () => {
       expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
         'task-1',
         expect.objectContaining({
-          runReservationExpiresAt: null,
-          runReservationId: null,
           status: 'paused',
         }),
         actor,
       );
+      expect(interruptTaskMock).not.toHaveBeenCalled();
+      expect(mockTaskModel.updateWithLog.mock.calls[0][1]).not.toHaveProperty('runReservationId');
     });
 
     it('returns no transition when the owning run reservation was superseded', async () => {
@@ -2507,7 +2518,7 @@ describe('TaskService', () => {
       const service = new TaskService(db, userId);
       await service.updateStatus({ id: 'T-1', status: 'scheduled' as any });
 
-      expect(mockTaskModel.updateContext).toHaveBeenCalledTimes(1);
+      expect(mockTaskModel.updateContext).toHaveBeenCalledTimes(2);
     });
 
     it('logs a system move under no actor, from where the Issue was to where it landed', async () => {

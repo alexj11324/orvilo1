@@ -1272,6 +1272,14 @@ export const taskRouter = router({
       }
     }),
 
+  cancelAutomationOccurrence: taskExecutionProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      await assertTaskExecutionUse(ctx, [task], [task.assigneeAgentId]);
+      return ctx.taskService.cancelAutomationOccurrence(task.id);
+    }),
+
   cancelTopic: taskExecutionProcedure
     .input(z.object({ topicId: z.string() }))
     .mutation(async ({ input, ctx }) => {

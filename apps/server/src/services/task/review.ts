@@ -106,7 +106,9 @@ export async function startIssueReview(
       appContext: {
         taskId,
         issueReviewCycleId: review.cycleId,
-        nativeFullAccess: isAutomationRunTrigger(delivery?.trigger ?? undefined),
+        nativeFullAccess:
+          isAutomationRunTrigger(delivery?.trigger ?? undefined) ||
+          !!delivery?.contract?.occurrence,
         ...(cwd ? { initialTopicMetadata: { workingDirectory: cwd } } : {}),
       },
       autoStart: true,
@@ -235,6 +237,10 @@ export async function resumeIssueReviewRepair(
       idempotencyKey,
       intent: 'repair',
       issueReviewRepairCycleId: review.cycleId,
+      nativeAutomationParentDispatchId: task.currentTopicId
+        ? (await new TaskTopicModel(db, userId, workspaceId).findByTopicId(task.currentTopicId))
+            ?.contract?.occurrence?.parentDispatchId
+        : undefined,
       parentOperationId: review.deliveryOperationId,
       skipTaskVerification: true,
       taskId,

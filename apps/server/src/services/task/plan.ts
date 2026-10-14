@@ -10,6 +10,7 @@ import { MessageModel } from '@/database/models/message';
 import { ProjectModel } from '@/database/models/project';
 import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
@@ -240,7 +241,16 @@ export class TaskPlanService {
       task.id,
       ...subtasks.map((task) => task.id),
     ]);
-    return { plan: (task.context as TaskContext | null)?.issuePlan, subtasks, dependencies };
+    const automationQueue =
+      task.automationMode || (task.context as TaskContext | null)?.automationParentDispatchId
+        ? await new TaskDispatchModel(this.db, this.workspaceId).automationQueueSummary(task.id)
+        : undefined;
+    return {
+      plan: (task.context as TaskContext | null)?.issuePlan,
+      subtasks,
+      dependencies,
+      automationQueue,
+    };
   }
 
   async draftIssuePlan(id: string) {
@@ -619,12 +629,13 @@ export class TaskPlanService {
       return { plan: frozen, dispatch: true };
     });
     if (!confirmed) throw new TRPCError({ code: 'NOT_FOUND', message: 'Issue not found' });
-    const dispatch = confirmed.dispatch
-      ? await new TaskService(this.db, task.createdByUserId, this.workspaceId).runReadySubtasks(
-          task.id,
-          `plan:${confirmed.plan.revision}`,
-        )
-      : undefined;
+    const dispatch =
+      confirmed.dispatch && !task.automationMode
+        ? await new TaskService(this.db, task.createdByUserId, this.workspaceId).runReadySubtasks(
+            task.id,
+            `plan:${confirmed.plan.revision}`,
+          )
+        : undefined;
     return { ...(await this.getIssuePlan(task.id)), dispatch };
   }
 }

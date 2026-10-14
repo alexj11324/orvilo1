@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BriefModel } from '@/database/models/brief';
 import { TaskDependencyError } from '@/database/models/taskDependency';
+import { TaskDispatchQueuedError } from '@/server/services/taskDispatch';
 
 import { runHeartbeatTick } from './heartbeatTick';
 import { TaskRunnerService } from './index';
@@ -160,7 +161,10 @@ describe('runHeartbeatTick', () => {
     // `status` is retired — a pause lives on the parked marker now.
     mockSelectTask.mockResolvedValue([
       baseTask({
-        context: { execution: { parked: { at: '2026-05-02T00:00:00.000Z' } } },
+        context: {
+          execution: { parked: { at: '2026-05-02T00:00:00.000Z' } },
+          scheduler: { automationPaused: true },
+        },
       }),
     ]);
     expect(await runHeartbeatTick(taskId, userId)).toEqual({ ran: false, reason: 'paused' });
@@ -175,9 +179,7 @@ describe('runHeartbeatTick', () => {
     const outcome = await runHeartbeatTick(taskId, userId, 'tick-1');
 
     expect(outcome).toEqual({ ran: true, taskIdentifier: 'T-1' });
-    expect(mockBriefModel.hasUnresolvedUrgentByTask).toHaveBeenCalledWith(taskId, {
-      excludeTypes: ['error'],
-    });
+    expect(mockBriefModel.hasUnresolvedUrgentByTask).not.toHaveBeenCalled();
     expect(mockRunner.runTask).toHaveBeenCalledWith({
       intent: 'fresh_occurrence',
       idempotencyKey: 'heartbeat:tick:tick-1',
@@ -186,17 +188,19 @@ describe('runHeartbeatTick', () => {
     });
   });
 
-  it('still skips when a non-error urgent brief requires human input', async () => {
+  it('retains a waiting occurrence and arms the next heartbeat independently of delivery', async () => {
     mockSelectTask.mockResolvedValue([baseTask()]);
-    mockBriefModel.hasUnresolvedUrgentByTask.mockResolvedValue(true);
+    mockRunner.runTask.mockRejectedValue(
+      new TRPCError({ code: 'CONFLICT', cause: new TaskDispatchQueuedError('queued-2') }),
+    );
 
     const outcome = await runHeartbeatTick(taskId, userId, 'tick-1');
 
-    expect(outcome).toEqual({ ran: false, reason: 'human-waiting' });
-    expect(mockBriefModel.hasUnresolvedUrgentByTask).toHaveBeenCalledWith(taskId, {
-      excludeTypes: ['error'],
-    });
-    expect(mockRunner.runTask).not.toHaveBeenCalled();
+    expect(outcome).toEqual({ ran: false, reason: 'queued' });
+    expect(mockBriefModel.hasUnresolvedUrgentByTask).not.toHaveBeenCalled();
+    expect(mockRunner.runTask).toHaveBeenCalledOnce();
+    expect(scheduleTick).toHaveBeenCalledOnce();
+    expect(commitTick).toHaveBeenCalledOnce();
   });
 
   it('skips a stale tick whose generation token no longer matches', async () => {

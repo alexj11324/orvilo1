@@ -26,6 +26,14 @@ export default {
   'taskDetail.checklist.decision.rejected': 'Rejected',
   'taskDetail.checklist.decision.ignored': 'Ignored',
 
+  'taskDetail.plan.queuedRounds': '{{count}} queued triggers.',
+  'taskDetail.plan.stopRound': 'Stop current round',
+  'taskDetail.plan.stopRoundError':
+    'The current round could not be stopped. Waiting for the execution device to confirm.',
+  'taskDetail.plan.canceledRound': 'Round canceled on {{date}}',
+  'taskDetail.plan.pauseAutomation': 'Pause automation',
+  'taskDetail.plan.resumeAutomation': 'Resume automation',
+  'taskDetail.plan.automationError': 'Could not update automation. Try again.',
   'taskDetail.plan.title': 'Plan',
   'taskDetail.plan.scope': 'Scope',
   'taskDetail.plan.checklist': 'Checklist',

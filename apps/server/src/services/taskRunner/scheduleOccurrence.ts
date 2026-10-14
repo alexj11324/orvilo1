@@ -114,6 +114,42 @@ export const latestScheduleOccurrence = (
   }
 };
 
+/** Preserve every elapsed slot after the persisted publication cursor in chronological order. */
+export const elapsedScheduleOccurrences = (
+  input: Schedule & { after?: Date | null; now?: Date; notBefore?: Date | null },
+): Date[] => {
+  if (!input.after) {
+    const latest = latestScheduleOccurrence(input);
+    return latest ? [latest] : [];
+  }
+  try {
+    const schedule = compileSchedule(input);
+    if (!schedule) return [];
+    const now = (input.now ?? new Date()).getTime();
+    let cursor = Math.max(
+      Math.floor(input.after.getTime() / MINUTE) * MINUTE + MINUTE,
+      Math.ceil((input.notBefore?.getTime() ?? 0) / MINUTE) * MINUTE,
+    );
+    if (!Number.isFinite(cursor) || !Number.isFinite(now)) return [];
+    const occurrences: Date[] = [];
+    for (; cursor <= now; cursor += MINUTE) {
+      const hourEnd = Math.floor(cursor / HOUR) * HOUR + HOUR - MINUTE;
+      if (
+        !schedule.matches(cursor, false) &&
+        !schedule.matches(hourEnd, false) &&
+        schedule.offsetAt(cursor) === schedule.offsetAt(hourEnd)
+      ) {
+        cursor = hourEnd;
+        continue;
+      }
+      if (schedule.matches(cursor)) occurrences.push(new Date(cursor));
+    }
+    return occurrences;
+  } catch {
+    return [];
+  }
+};
+
 export const scheduleOccurrenceToken = (
   input: Schedule & { plannedAt: Date; taskId: string },
 ): string => {

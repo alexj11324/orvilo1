@@ -92,7 +92,6 @@ import { TaskDependencyError } from './taskDependency';
 import {
   hasActiveExecution,
   hasLiveTaskExecutor,
-  hasUnresolvedExecution,
   isAutomationArmed,
   isExecutionParked,
   isParked,
@@ -3841,9 +3840,8 @@ export class TaskModel {
           eq(tasks.automationMode, 'heartbeat'),
           eq(tasks.heartbeatInterval, interval),
           sql`${tasks.context} #>> '{scheduler,tickToken}' IS NOT DISTINCT FROM ${tickToken ?? null}`,
-          // Armed-for-tick is the canonical 'scheduled': no live run, not parked.
-          sql`NOT ${hasActiveExecution}`,
-          sql`NOT ${isParked}`,
+          TASK_OPEN_WORKFLOW,
+          sql`NOT coalesce((${tasks.context} #>> '{scheduler,automationPaused}')::boolean, false)`,
         ),
       )
       .returning({ id: tasks.id });
@@ -4042,9 +4040,7 @@ export class TaskModel {
           eq(tasks.automationMode, 'schedule'),
           isNotNull(tasks.schedulePattern),
           TASK_OPEN_WORKFLOW,
-          sql`NOT ${hasActiveExecution}`,
-          sql`NOT ${hasUnresolvedExecution}`,
-          sql`NOT ${isParked}`,
+          sql`NOT coalesce((${tasks.context} #>> '{scheduler,automationPaused}')::boolean, false)`,
         ),
       );
   }

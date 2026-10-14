@@ -3,8 +3,10 @@ import type { ProjectOrchestrationPolicy } from '@orvilo/types';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { seedConfirmedIssuePlan } from '../../../tests/fixtures/issueDelivery';
 import { getTestDB } from '../../core/getTestDB';
 import {
+  agentOperations,
   agents,
   goalNodes,
   goals,
@@ -26,6 +28,7 @@ import {
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import {
+  TaskAutomationQuotaReachedError,
   TaskDispatchIdempotencyConflictError,
   TaskDispatchModel,
   TaskDispatchNotFoundError,
@@ -816,10 +819,13 @@ describe('TaskDispatchModel', () => {
       trigger: 'event' as const,
     };
     expect(await model.request(input)).toMatchObject({
-      active: { id: first.dispatch.id },
-      state: 'busy',
+      dispatch: {
+        phase: 'queued',
+        automationOccurrence: { input: { data: { reportId: 'FIRST-REPORT-731' } } },
+      },
+      state: 'created',
     });
-    expect(await db.select().from(taskDispatches)).toHaveLength(1);
+    expect(await db.select().from(taskDispatches)).toHaveLength(2);
     const taskModel = new TaskModel(db, userId, workspaceId);
     const current = await taskModel.findById(task.id);
     expect(current).toMatchObject({
@@ -847,6 +853,138 @@ describe('TaskDispatchModel', () => {
     const resumed = await model.request(input);
     if (resumed.state === 'busy') throw new Error('completed lease still held the next event');
     expect(resumed.dispatch.generation).toBe(first.dispatch.generation + 1);
+  });
+
+  it('retains three ordered occurrences through execution, review, pause and final-delivery CAS', async () => {
+    const task = await createTask('FIFO-1', 108);
+    await db
+      .update(tasks)
+      .set({ automationMode: 'schedule', instruction: 'First immutable input' })
+      .where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const request = (key: string) =>
+      model.request({
+        taskId: task.id,
+        trigger: 'schedule',
+        idempotencyKey: key,
+        requestedBy: userId,
+        initiator: userId,
+      });
+    const first = await request('fifo:first');
+    if (first.state === 'busy') throw new Error('unexpected busy');
+    await db
+      .update(tasks)
+      .set({ instruction: 'Second immutable input' })
+      .where(eq(tasks.id, task.id));
+    const second = await request('fifo:second');
+    if (second.state === 'busy') throw new Error('unexpected busy');
+    await db
+      .update(taskDispatches)
+      .set({ createdAt: new Date(Date.now() - 1000) })
+      .where(eq(taskDispatches.id, second.dispatch.id));
+    await db
+      .update(tasks)
+      .set({ instruction: 'Third immutable input' })
+      .where(eq(tasks.id, task.id));
+    const third = await request('fifo:third');
+    if (third.state === 'busy') throw new Error('unexpected busy');
+    expect(second.dispatch.phase).toBe('queued');
+    expect(third.dispatch.phase).toBe('queued');
+    expect(
+      (await db.select().from(tasks).where(eq(tasks.id, task.id)))[0].executionGeneration,
+    ).toBe(1);
+    expect(await request('fifo:second')).toMatchObject({
+      dispatch: { id: second.dispatch.id, phase: 'queued' },
+    });
+    expect(
+      (await model.findById(second.dispatch.id))?.automationOccurrence?.definition.instruction,
+    ).toBe('Second immutable input');
+    await model.settle({
+      dispatchId: first.dispatch.id,
+      expected: ['requested'],
+      fence: first.dispatch.fence,
+      generation: first.dispatch.generation,
+      phase: 'succeeded',
+    });
+    expect(await model.findActiveByTaskId(task.id)).toMatchObject({
+      id: first.dispatch.id,
+      phase: 'waiting',
+      waitingReason: 'automation_delivery_pending',
+    });
+    expect(await request('fifo:third')).toMatchObject({ dispatch: { phase: 'queued' } });
+    await db.insert(topics).values({ id: 'fifo-first-topic', userId });
+    await db.insert(taskTopics).values({
+      taskId: task.id,
+      topicId: 'fifo-first-topic',
+      userId,
+      workspaceId,
+      seq: 1,
+      status: 'completed',
+      executionGeneration: 1,
+      dispatchId: first.dispatch.id,
+    });
+    await db
+      .update(tasks)
+      .set({
+        currentTopicId: 'fifo-first-topic',
+        context: { scheduler: { automationPaused: true } },
+      })
+      .where(eq(tasks.id, task.id));
+    const proof = {
+      taskId: task.id,
+      topicId: 'fifo-first-topic',
+      dispatchId: first.dispatch.id,
+      executionGeneration: 1,
+    };
+    expect(await model.completeAutomationDelivery({ ...proof, executionGeneration: 9 })).toBe(
+      false,
+    );
+    expect(await model.completeAutomationDelivery(proof)).toBe(true);
+    expect(await model.completeAutomationDelivery(proof)).toBe(false);
+    // Paused automation preserves the queue; completing its current delivery does not consume another occurrence.
+    expect((await model.findOldestQueued(task.id))?.id).toBe(second.dispatch.id);
+    await db
+      .update(tasks)
+      .set({ context: { scheduler: { automationPaused: false } } })
+      .where(eq(tasks.id, task.id));
+    // Out-of-order retries cannot pass the oldest queued occurrence even when the slot is free.
+    expect(await request('fifo:third')).toMatchObject({ dispatch: { phase: 'queued' } });
+    expect(await request('fifo:second')).toMatchObject({
+      dispatch: { id: second.dispatch.id, phase: 'requested', generation: 2 },
+    });
+    expect(await model.findActiveByTaskId(task.id)).toMatchObject({ id: second.dispatch.id });
+    expect(
+      (await model.findById(third.dispatch.id))?.automationOccurrence?.definition.instruction,
+    ).toBe('Third immutable input');
+    expect(await db.select().from(taskTopics)).toHaveLength(1);
+  });
+
+  it('does not let another requester adopt a queued occurrence or claim it in another workspace', async () => {
+    const task = await createTask('FIFO-SCOPE', 109);
+    await db.update(tasks).set({ automationMode: 'heartbeat' }).where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    await model.request({
+      taskId: task.id,
+      trigger: 'heartbeat',
+      idempotencyKey: 'scope-first',
+      requestedBy: userId,
+      initiator: userId,
+    });
+    const input = {
+      taskId: task.id,
+      trigger: 'heartbeat' as const,
+      idempotencyKey: 'scope-second',
+      requestedBy: userId,
+      initiator: userId,
+    };
+    await model.request(input);
+    await expect(model.request({ ...input, executionUserId: otherUserId })).rejects.toThrow(
+      'Occurrence requester changed',
+    );
+    await expect(new TaskDispatchModel(db, otherWorkspaceId).request(input)).rejects.toThrow(
+      'Task not found',
+    );
+    expect((await model.findOldestQueued(task.id))?.initiator).toBe(userId);
   });
 
   it('identifies a late completion from an old execution generation', async () => {
@@ -1666,6 +1804,107 @@ describe('persisted dispatch origin + final admission re-check (SA05-B)', () => 
     });
 
     expect(parked?.waitingReason).toBe('caid_dispatch_disabled');
+  });
+});
+
+describe('confirmed periodic Issue admission', () => {
+  it('admits confirmed scope despite legacy project flags and fences the captured-occurrence quota', async () => {
+    const task = await createTask('SCOPE-1', 901);
+    await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    const [project] = await db
+      .insert(projects)
+      .values({
+        identifier: 'QUOTA',
+        name: 'Manual project',
+        userId,
+        workspaceId,
+        orchestrationPolicy: {
+          autoDispatch: false,
+          requireHumanReview: true,
+          replanMode: 'disabled',
+        },
+      })
+      .returning();
+    await db
+      .update(tasks)
+      .set({
+        projectId: project.id,
+        automationMode: 'schedule',
+        workflowCategory: 'backlog',
+        config: { schedule: { maxExecutions: 1 } },
+        context: { scheduler: { scheduleStartedAt: new Date(Date.now() - 1000).toISOString() } },
+      })
+      .where(eq(tasks.id, task.id));
+    await seedConfirmedIssuePlan(db, task.id);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const input = {
+      taskId: task.id,
+      trigger: 'schedule' as const,
+      origin: 'external' as const,
+      idempotencyKey: 'scope:first',
+      initiator: userId,
+      requestedBy: userId,
+      executionUserId: userId,
+    };
+    const first = await model.request(input);
+    if (first.state === 'busy') throw new Error('confirmed scope unexpectedly busy');
+    expect(first.dispatch.phase).toBe('requested');
+    expect(first.dispatch.waitingReason).toBeNull();
+    await db.insert(taskDispatches).values({
+      ...first.dispatch,
+      id: 'quota-repair-copy',
+      idempotencyKey: 'scope:repair',
+      phase: 'succeeded',
+    });
+    expect(await model.countAutomationOccurrencesSince(task.id, new Date(Date.now() - 2000))).toBe(
+      1,
+    );
+    await expect(
+      model.request({ ...input, idempotencyKey: 'scope:second' }),
+    ).rejects.toBeInstanceOf(TaskAutomationQuotaReachedError);
+    expect((await model.request(input)).state).toBe('existing');
+  });
+
+  it('keeps the next occurrence fenced while a parent native Reviewer still writes', async () => {
+    const task = await createTask('WRITER-1', 903);
+    await db.insert(agentOperations).values({
+      id: 'fifo-parent-review',
+      taskId: task.id,
+      userId,
+      workspaceId,
+      status: 'running',
+    });
+    const model = new TaskDispatchModel(db, workspaceId);
+    expect(await model.automationPlanHasWriters(undefined, task.id)).toBe(true);
+    await db
+      .update(agentOperations)
+      .set({ status: 'done' })
+      .where(eq(agentOperations.id, 'fifo-parent-review'));
+    expect(await model.automationPlanHasWriters(undefined, task.id)).toBe(false);
+  });
+
+  it('rejects a confirmation marker without its real confirmed Checklist ledger', async () => {
+    const task = await createTask('SCOPE-2', 902);
+    await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await db
+      .update(tasks)
+      .set({
+        context: {
+          issuePlan: { confirmedAt: 'marker', parentTaskId: task.id, revision: 1, checklists: [] },
+        },
+      })
+      .where(eq(tasks.id, task.id));
+    await expect(
+      new TaskDispatchModel(db, workspaceId).request({
+        taskId: task.id,
+        trigger: 'orchestrator',
+        origin: 'external',
+        idempotencyKey: 'marker:first',
+        initiator: userId,
+        requestedBy: userId,
+        executionUserId: userId,
+      }),
+    ).rejects.toBeDefined();
   });
 });
 

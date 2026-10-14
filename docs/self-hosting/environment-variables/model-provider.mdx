@@ -706,6 +706,10 @@ If you need to use Azure OpenAI to provide model services, you can refer to the 
 - Default: -
 - Example: `https://your-newapi-server.com/`
 
+The runtime removes a trailing API version such as `/v1` or `/v1beta/` before routing. Anthropic and Google routes use that base directly; xAI, DeepSeek, and OpenAI routes append `/v1`. For example, `https://your-newapi-server.com/v1` keeps exactly one `/v1` on those three routes.
+
+If no endpoint is configured, the runtime preserves its existing fallback: an empty base for Anthropic and Google, and the relative path `v1` for xAI, DeepSeek, and OpenAI. This fallback is explicit so updates to URL-joining dependencies cannot turn it into the root-relative path `/v1`. Configure your deployed endpoint to use a self-hosted NewAPI instance.
+
 NewAPI is a multi-provider model aggregation service that supports automatic model routing based on provider detection. It offers cost management features and provides a single endpoint for accessing models from multiple providers including OpenAI, Anthropic, Google, and more. Learn more about NewAPI at [https://github.com/Calcium-Ion/new-api](https://github.com/Calcium-Ion/new-api).
 
 ## Vercel AI Gateway

@@ -1007,6 +1007,41 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(dispatchParams.args).toEqual(['--model', 'opus', '--effort', 'high']);
   });
 
+  it.each(['device', 'sandbox'] as const)(
+    'forwards saved native provider env to %s without accepting caller overrides',
+    async (executionTarget) => {
+      const nativeConfig = JSON.stringify({
+        agent: { 'full-access': { permission: { '*': 'allow' } } },
+      });
+      heteroAgentConfig.agencyConfig = {
+        ...(executionTarget === 'device' ? { boundDeviceId: 'device-1' } : {}),
+        executionTarget,
+        heterogeneousProvider: {
+          env: {
+            OPENCODE_CONFIG_CONTENT: nativeConfig,
+            ORVILO_AGENT_ID: 'forged-agent',
+            ORVILO_AEGIS_PACK: 'forged-pack',
+          },
+          methodPacks: { aegis: true },
+          type: executionTarget === 'device' ? 'opencode' : 'claude-code',
+        },
+      } as any;
+
+      await service.execAgent({
+        agentId: 'agent-1',
+        env: { OPENCODE_CONFIG_CONTENT: 'caller-override', CALLER_ENV: 'forged' },
+        prompt: 'Use the saved native provider configuration',
+      } as any);
+
+      const dispatch = executionTarget === 'device' ? mockDispatchAgentRun : mockSpawnHeteroSandbox;
+      const { env } = dispatch.mock.calls[0][0];
+      expect(env.OPENCODE_CONFIG_CONTENT).toBe(nativeConfig);
+      expect(env.ORVILO_AGENT_ID).toBe('agent-1');
+      expect(env.ORVILO_AEGIS_PACK).toBe('1');
+      expect(env).not.toHaveProperty('CALLER_ENV');
+    },
+  );
+
   it('persists CLI-device routing so a stop request reaches the dispatched writer', async () => {
     heteroAgentConfig.agencyConfig = {
       boundDeviceId: 'device-1',

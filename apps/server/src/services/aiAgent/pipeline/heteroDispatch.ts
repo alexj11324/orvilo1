@@ -1754,6 +1754,7 @@ export const dispatchHeteroAgent = async (
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
             env: {
+              ...effectiveHeterogeneousProvider?.env,
               ...(aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : {}),
               ORVILO_AGENT_ID: resolvedAgentId,
             },
@@ -2109,6 +2110,7 @@ export const dispatchHeteroAgent = async (
         agentType: heteroType as 'claude-code' | 'codex',
         args: heteroExecArgs,
         env: {
+          ...effectiveHeterogeneousProvider?.env,
           ...(aegisEnabled ? { [AEGIS_PACK_ENV]: '1' } : {}),
           ORVILO_AGENT_ID: resolvedAgentId,
         },

@@ -60,16 +60,7 @@ import { HumanApprovalAlreadyResolvedError, MessageModel } from '@/database/mode
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import {
-  agentInterventions,
-  agentOperations,
-  messagePlugins,
-  messages,
-  tasks,
-  taskTopics,
-  topics,
-  workspaceMembers,
-} from '@/database/schemas';
+import { agentInterventions, agentOperations, topics, workspaceMembers } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreation';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
@@ -130,7 +121,10 @@ import {
   resolveActiveHeteroOperationPrincipal,
 } from '@/server/services/heterogeneousAgent/operationPrincipal';
 
-import { assertIssueExecutionInput } from './_helpers/issueExecutionInput';
+import {
+  assertCanUseOperationAgent,
+  assertPendingNativeInterventionCard,
+} from './_helpers/nativeInterventionInput';
 
 const log = debug('orvilo-server:ai-agent-router');
 
@@ -782,70 +776,6 @@ const resolveHeteroTopicWorkspace = async (params: {
   }
 
   return topic.workspaceId;
-};
-
-/** Issue input follows the current assignee; private Chat input stays owner-scoped. */
-const assertCanUseOperationAgent = async (params: {
-  db: OrviloDatabase;
-  operationId: string;
-  topicId?: string;
-  userId: string;
-  workspaceId?: string | null;
-}) => {
-  const { db, operationId, topicId, userId, workspaceId } = params;
-  const [row] = await db
-    .select({
-      agentId: agentOperations.agentId,
-      groupId: agentOperations.chatGroupId,
-      status: agentOperations.status,
-      topicId: agentOperations.topicId,
-      userId: agentOperations.userId,
-      workspaceId: agentOperations.workspaceId,
-    })
-    .from(agentOperations)
-    .where(eq(agentOperations.id, operationId))
-    .limit(1);
-  if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Operation not found' });
-  if (row.workspaceId !== (workspaceId ?? null)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
-  }
-  if (topicId && row.topicId !== topicId) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation does not belong to this topic' });
-  }
-  const [issue] =
-    row.topicId && row.workspaceId
-      ? await db
-          .select({ assigneeAgentId: tasks.assigneeAgentId, assigneeUserId: tasks.assigneeUserId })
-          .from(taskTopics)
-          .innerJoin(tasks, eq(tasks.id, taskTopics.taskId))
-          .where(
-            and(
-              eq(taskTopics.topicId, row.topicId),
-              eq(taskTopics.workspaceId, row.workspaceId),
-              eq(tasks.workspaceId, row.workspaceId),
-              eq(tasks.currentTopicId, row.topicId),
-              eq(taskTopics.operationId, operationId),
-            ),
-          )
-          .limit(1)
-      : [];
-  if (issue) {
-    await assertIssueExecutionInput({ serverDB: db, userId, workspaceId }, issue, row.agentId);
-  } else if (row.userId !== userId) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
-  }
-  if (row.workspaceId) {
-    if (!row.agentId)
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation has no authorized Agent' });
-    await assertCanUseWorkspaceAgent({
-      agentId: row.agentId,
-      db,
-      groupId: row.groupId,
-      userId,
-      workspaceId: row.workspaceId,
-    });
-  }
-  return row;
 };
 
 /**
@@ -3982,36 +3912,12 @@ export const aiAgentRouter = router({
       });
 
       if (input.toolMessageId) {
-        const [source] = await ctx.serverDB
-          .select({ intervention: messagePlugins.intervention })
-          .from(messagePlugins)
-          .innerJoin(messages, eq(messages.id, messagePlugins.id))
-          .where(
-            and(
-              eq(messagePlugins.id, input.toolMessageId),
-              eq(messagePlugins.userId, operation.userId),
-              eq(messages.userId, operation.userId),
-              eq(messages.role, 'tool'),
-              operation.topicId
-                ? eq(messages.topicId, operation.topicId)
-                : isNull(messages.topicId),
-              eq(messagePlugins.toolCallId, toolCallId),
-            ),
-          )
-          .limit(1);
-        if (
-          !['running', 'waiting_for_human'].includes(operation.status) ||
-          source?.intervention?.operationId !== operationId ||
-          source.intervention.status !== 'pending'
-        ) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'This Agent question is no longer pending.',
-          });
-        }
-        await assertCanUseAgentRunConversation({
+        await assertPendingNativeInterventionCard({
           db: ctx.serverDB,
-          messageIds: [input.toolMessageId],
+          operation,
+          operationId,
+          toolCallId,
+          toolMessageId: input.toolMessageId,
           userId: ctx.userId,
           workspaceId: ctx.workspaceId,
         });

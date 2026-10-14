@@ -1683,25 +1683,13 @@ export class ConversationControlActionImpl {
     // this is `execServerAgentRuntime`.
     const { operation, operationId } =
       this.#resolveHeteroInterventionExecutionOperation(candidateOperationId);
-    if (originalIntervention?.operationId && !operation) {
-      throw new Error('The original Agent operation is no longer pending on this device.');
-    }
 
-    // If the operation has already been garbage-collected (e.g. the bridge
-    // timed out earlier and `runtime_end` rolled the op into `completed`
-    // 30s+ ago), don't pass the stale opId into the optimistic chain — the
-    // `internal_getConversationContext` fallback uses global state, which
-    // matches the active conversation the user just clicked in. The IPC
-    // submit below stays unchanged: `bridge.resolve()` no-ops on unknown
-    // toolCallIds, so it's safe to fire even when the bridge is gone.
-    const operationAlive = !!operation;
-    if (!operationAlive) {
-      console.warn(
-        '[submitHeteroIntervention] operation already gone, using global-state fallback for optimistic write:',
-        operationId,
-      );
-    }
-    const optimisticContext: OptimisticUpdateContext = operationAlive ? { operationId } : {};
+    // Cold-loaded remote cards retain the original server operation even when
+    // this renderer has no operation tree. The remote endpoint authorizes the
+    // actor; explicit context keeps optimistic writes in this conversation.
+    const optimisticContext: OptimisticUpdateContext = operation
+      ? { operationId }
+      : { context: effectiveContext };
     const isLocalDesktopHetero = operation?.type === 'execHeterogeneousAgent';
 
     // Local and remote replies remain pending until their producer consumes them.
@@ -1800,6 +1788,7 @@ export class ConversationControlActionImpl {
                 resolutionRequestId,
                 result: payload ?? {},
                 toolCallId,
+                toolMessageId: originalIntervention?.operationId ? toolMessageId : undefined,
                 windowId: interventionWindowId,
               }
             : {
@@ -1808,6 +1797,7 @@ export class ConversationControlActionImpl {
                 operationId: remoteOperationId,
                 resolutionRequestId,
                 toolCallId,
+                toolMessageId: originalIntervention?.operationId ? toolMessageId : undefined,
                 windowId: interventionWindowId,
               },
         );

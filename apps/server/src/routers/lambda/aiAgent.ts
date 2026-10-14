@@ -63,6 +63,8 @@ import { UserModel } from '@/database/models/user';
 import {
   agentInterventions,
   agentOperations,
+  messagePlugins,
+  messages,
   tasks,
   taskTopics,
   topics,
@@ -795,6 +797,7 @@ const assertCanUseOperationAgent = async (params: {
     .select({
       agentId: agentOperations.agentId,
       groupId: agentOperations.chatGroupId,
+      status: agentOperations.status,
       topicId: agentOperations.topicId,
       userId: agentOperations.userId,
       workspaceId: agentOperations.workspaceId,
@@ -1688,6 +1691,8 @@ const SubmitHeteroInterventionSchema = z.object({
   /** Producer step index; harmless placeholder — correlation is by toolCallId. */
   stepIndex: z.number().int().nonnegative().default(0),
   toolCallId: z.string().min(1),
+  /** Persisted conversation card; server verifies its original Run binding. */
+  toolMessageId: z.string().min(1).optional(),
   /**
    * The approval window the answered card was minted for — CAS-matched
    * against the receipt's current `windowId` so a stale card can never
@@ -3976,6 +3981,42 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
+      if (input.toolMessageId) {
+        const [source] = await ctx.serverDB
+          .select({ intervention: messagePlugins.intervention })
+          .from(messagePlugins)
+          .innerJoin(messages, eq(messages.id, messagePlugins.id))
+          .where(
+            and(
+              eq(messagePlugins.id, input.toolMessageId),
+              eq(messagePlugins.userId, operation.userId),
+              eq(messages.userId, operation.userId),
+              eq(messages.role, 'tool'),
+              operation.topicId
+                ? eq(messages.topicId, operation.topicId)
+                : isNull(messages.topicId),
+              eq(messagePlugins.toolCallId, toolCallId),
+            ),
+          )
+          .limit(1);
+        if (
+          !['running', 'waiting_for_human'].includes(operation.status) ||
+          source?.intervention?.operationId !== operationId ||
+          source.intervention.status !== 'pending'
+        ) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'This Agent question is no longer pending.',
+          });
+        }
+        await assertCanUseAgentRunConversation({
+          db: ctx.serverDB,
+          messageIds: [input.toolMessageId],
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        });
+      }
+
       // SA02/F04 + SC-SB03: when this submit answers a `needs_approval` tool
       // card, the exec-time gate's durable receipt records the decision
       // BEFORE any claim resolution or publish — first-winner CAS bound to
@@ -4042,6 +4083,7 @@ export const aiAgentRouter = router({
       const streamEventManager = createStreamEventManager();
       await streamEventManager.publishStreamEvent(operationId, {
         data: {
+          actorUserId: ctx.userId,
           // Client-driven cancellation cannot impersonate producer timeout or
           // session teardown; those terminal reasons originate from bridge ACKs.
           cancelReason: effectiveCancelled ? 'user_cancelled' : undefined,

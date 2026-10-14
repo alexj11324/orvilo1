@@ -144,10 +144,6 @@ jobs:
       - name: Run database migrations
         run: bun run db:migrate
 
-      # #769: "No migration, no compatibility path for existing rows." This is a fresh CI database.
-      - name: Initialize fresh Issue reviewer schema
-        run: bunx tsx packages/database/tests/initializeFreshTaskReviewerSchema.ts
-
       - name: Build application
         run: bun run build
         env:

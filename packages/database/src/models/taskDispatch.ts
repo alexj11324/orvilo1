@@ -1202,6 +1202,20 @@ export class TaskDispatchModel {
       const automation = ['event', 'schedule', 'heartbeat'].includes(input.trigger);
       if (active && !automation && !repairTakesOccurrence)
         return { active, state: 'busy' as const, task };
+      if (!automation) {
+        const [operation] = await tx
+          .select({ id: agentOperations.id })
+          .from(agentOperations)
+          .where(
+            and(
+              eq(agentOperations.taskId, task.id),
+              notInArray(agentOperations.status, ['abandoned', 'done', 'error', 'interrupted']),
+            ),
+          )
+          .limit(1);
+        if (operation)
+          throw new TaskDispatchIdempotencyConflictError('Task has an active operation');
+      }
       const [olderQueued] = automation
         ? await tx
             .select({ id: taskDispatches.id })

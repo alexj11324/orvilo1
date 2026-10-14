@@ -1,9 +1,12 @@
 // @vitest-environment node
-import type { ProjectOrchestrationPolicy } from '@orvilo/types';
+import type { ProjectOrchestrationPolicy, TaskConfig } from '@orvilo/types';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { seedConfirmedIssuePlan } from '../../../tests/fixtures/issueDelivery';
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../tests/fixtures/issueDelivery';
 import { getTestDB } from '../../core/getTestDB';
 import {
   agentOperations,
@@ -26,6 +29,7 @@ import {
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
+import { IssueDeliveryModel } from '../issueDelivery';
 import { TaskModel } from '../task';
 import {
   TaskAutomationQuotaReachedError,
@@ -101,6 +105,51 @@ const createTask = async (identifier: string, seq: number, targetWorkspaceId = w
     })
     .returning();
   return task;
+};
+
+const reviewedTaskWithActiveReviewer = async () => {
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+  const initial = await createTask('REVIEW-1', 1);
+  await db.update(tasks).set({ executionGeneration: 2 }).where(eq(tasks.id, initial.id));
+  await db.insert(taskDispatches).values({
+    id: 'delivered-generation-two',
+    taskId: initial.id,
+    workspaceId,
+    generation: 2,
+    taskRevision: initial.domainRevision,
+    requirementRevision: initial.requirementRevision,
+    policyRevision: initial.policyRevision,
+    requestedBy: userId,
+    idempotencyKey: 'original-delivery',
+    phase: 'succeeded',
+  });
+  const delivery = await seedReviewedIssueDelivery(db, initial.id, {
+    dispatchId: 'delivered-generation-two',
+  });
+  await seedConfirmedIssuePlan(db, initial.id);
+  const taskModel = new TaskModel(db, userId, workspaceId);
+  const task = (await taskModel.findById(initial.id))!;
+  const config = task.config as TaskConfig;
+  await db
+    .update(tasks)
+    .set({
+      assigneeAgentId: task.reviewerAgentId,
+      config: { ...config, issueReview: { ...config.issueReview!, state: 'running' } },
+    })
+    .where(eq(tasks.id, task.id));
+  await db
+    .update(taskDispatches)
+    .set({ agentId: task.reviewerAgentId, operationId: delivery.proof.deliveryOperationId })
+    .where(eq(taskDispatches.id, delivery.proof.dispatchId!));
+  const reviewerOperationId = delivery.result.verifierOperationId!;
+  await db
+    .update(agentOperations)
+    .set({
+      status: 'running',
+      appContext: { taskId: task.id, issueReviewCycleId: config.issueReview!.cycleId },
+    })
+    .where(eq(agentOperations.id, reviewerOperationId));
+  return { task: (await taskModel.findById(task.id))!, delivery, reviewerOperationId };
 };
 
 const createPersonalTask = async (id: string, identifier: string, seq: number) => {
@@ -252,6 +301,115 @@ const seedEventEvidence = async (taskId: string) => {
     workspaceId,
   };
 };
+
+describe('dispatch admission while an Issue Reviewer is active', () => {
+  it.each(['manual', 'orchestrator'] as const)(
+    'refuses %s before advancing the reviewed generation, then permits the verified repair after Reviewer completion',
+    async (trigger) => {
+      const f = await reviewedTaskWithActiveReviewer();
+      const model = new TaskDispatchModel(db, workspaceId);
+      const proofModel = new IssueDeliveryModel(db, userId, workspaceId);
+      const before = (await proofModel.readCurrentDeliveryProof([f.task.id]))[f.task.id];
+      expect(before.proof?.executionGeneration).toBe(2);
+      expect(before.runId).toBe(f.delivery.run.id);
+      await expect(
+        model.request({
+          taskId: f.task.id,
+          trigger,
+          idempotencyKey: `duplicate-during-review:${trigger}`,
+          requestedBy: userId,
+          executionUserId: userId,
+          origin: 'external',
+        }),
+      ).rejects.toBeInstanceOf(TaskDispatchIdempotencyConflictError);
+      expect(
+        (await new TaskModel(db, userId, workspaceId).findById(f.task.id))?.executionGeneration,
+      ).toBe(2);
+      expect(
+        await db.select().from(taskDispatches).where(eq(taskDispatches.taskId, f.task.id)),
+      ).toHaveLength(1);
+      expect((await proofModel.readCurrentDeliveryProof([f.task.id]))[f.task.id]).toMatchObject({
+        proof: before.proof,
+        runId: before.runId,
+      });
+      await db
+        .update(agentOperations)
+        .set({ status: 'done' })
+        .where(eq(agentOperations.id, f.reviewerOperationId));
+      const repair = await model.request({
+        taskId: f.task.id,
+        trigger: 'manual',
+        idempotencyKey: 'verified-review-repair',
+        requestedBy: userId,
+        executionUserId: userId,
+        origin: 'internal',
+        sourceDispatchId: f.delivery.proof.dispatchId,
+        settlementGrant: {
+          kind: 'parent_operation',
+          workspaceId,
+          sourceDispatchId: f.delivery.proof.dispatchId,
+          sourceGeneration: 2,
+          sourceOperationId: f.delivery.proof.deliveryOperationId,
+          sourceTopicId: f.delivery.proof.topicId,
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          allowedIntents: ['repair'],
+        },
+      });
+      expect(repair).toMatchObject({
+        state: 'created',
+        dispatch: { generation: 3, origin: 'internal' },
+      });
+    },
+  );
+
+  it('durably queues automation triggers during Review without advancing or skipping FIFO', async () => {
+    const f = await reviewedTaskWithActiveReviewer();
+    await db
+      .update(tasks)
+      .set({ automationMode: 'heartbeat', heartbeatInterval: 60 })
+      .where(eq(tasks.id, f.task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const first = {
+      taskId: f.task.id,
+      trigger: 'heartbeat' as const,
+      idempotencyKey: 'review-heartbeat-first',
+      requestedBy: userId,
+      executionUserId: userId,
+      origin: 'external' as const,
+    };
+    const second = { ...first, idempotencyKey: 'review-heartbeat-second' };
+    expect(await model.request(first)).toMatchObject({
+      state: 'created',
+      dispatch: { phase: 'queued', automationOccurrence: { occurrenceId: first.idempotencyKey } },
+    });
+    expect(await model.request(second)).toMatchObject({
+      state: 'created',
+      dispatch: { phase: 'queued', automationOccurrence: { occurrenceId: second.idempotencyKey } },
+    });
+    expect(await model.request(first)).toMatchObject({
+      state: 'existing',
+      dispatch: { phase: 'queued' },
+    });
+    expect(
+      (await new TaskModel(db, userId, workspaceId).findById(f.task.id))?.executionGeneration,
+    ).toBe(2);
+    await db
+      .update(agentOperations)
+      .set({ status: 'done' })
+      .where(eq(agentOperations.id, f.reviewerOperationId));
+    expect(await model.request(second)).toMatchObject({
+      state: 'existing',
+      dispatch: { phase: 'queued' },
+    });
+    expect(await model.request(first)).toMatchObject({
+      state: 'existing',
+      dispatch: { phase: 'requested', generation: 3 },
+    });
+    expect(
+      (await new TaskModel(db, userId, workspaceId).findById(f.task.id))?.executionGeneration,
+    ).toBe(3);
+  });
+});
 
 describe('TaskDispatchModel', () => {
   it('authorizes the current executor as the runner user, honoring delegation over assignee', async () => {

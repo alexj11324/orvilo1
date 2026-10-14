@@ -689,6 +689,8 @@ export interface TaskTopicIntegration {
    * integrate through the remote (`repo`) rather than a device worktree.
    */
   deviceId?: string;
+  /** Verified saved host owner used for global device git transport and immutable cleanup. */
+  deviceOwnerUserId?: string;
   /** Immutable base commit observed when the delivery run completed. */
   expectedBaseSha?: string;
   /** Immutable source commit accepted for this delivery. */

@@ -7,6 +7,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
+import { DeviceModel } from '@/database/models/device';
 import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
 import { TaskWorkspaceClaimModel } from '@/database/models/taskWorkspaceClaim';
@@ -19,6 +20,10 @@ import {
 
 import { TaskWorkspaceService } from '../index';
 
+const DEVICE_ROW_ID = '00000000-0000-4000-8000-000000000001';
+const OTHER_DEVICE_ROW_ID = '00000000-0000-4000-8000-000000000002';
+const mockDeviceModel = { queryForExecution: vi.fn() };
+
 const mockTaskModel = {
   findById: vi.fn(),
 };
@@ -29,6 +34,7 @@ const mockRepositoryModel = {
   findById: vi.fn(),
   listCheckouts: vi.fn(),
   resolveForTask: vi.fn(),
+  listByWorkspace: vi.fn(),
 };
 const mockClaimModel = {
   lookup: vi.fn(),
@@ -37,6 +43,8 @@ const mockClaimModel = {
   release: vi.fn(),
   requestRecovery: vi.fn(),
 };
+
+vi.mock('@/database/models/device', () => ({ DeviceModel: vi.fn() }));
 
 vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(),
@@ -186,6 +194,16 @@ describe('TaskWorkspaceService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(DeviceModel).mockImplementation(function () {
+      return mockDeviceModel as unknown as DeviceModel;
+    });
+    mockDeviceModel.queryForExecution.mockResolvedValue([
+      {
+        id: DEVICE_ROW_ID,
+        deviceId: 'dev-1',
+        userId: 'host-owner',
+      },
+    ]);
     (TaskModel as any).mockImplementation(function () {
       return mockTaskModel;
     });
@@ -203,11 +221,24 @@ describe('TaskWorkspaceService', () => {
     worktreeHead = undefined;
     service = new TaskWorkspaceService({} as any, 'user-1', 'ws-1');
     mockAgentModel.getAgentConfig.mockResolvedValue({
+      userId: 'host-owner',
       agencyConfig: { boundDeviceId: 'dev-1' },
     });
     mockRepositoryModel.resolveForTask.mockReset();
     mockRepositoryModel.findById.mockReset();
     mockRepositoryModel.listCheckouts.mockReset();
+    mockRepositoryModel.listByWorkspace.mockResolvedValue([
+      {
+        id: 'repo-registered',
+        status: 'active',
+        providerHost: 'github.com',
+        remoteRepositoryId: 'github-1',
+        coordinate: { owner: 'acme', name: 'widgets', defaultBranch: 'main' },
+      },
+    ]);
+    mockRepositoryModel.listCheckouts.mockResolvedValue([
+      { canonicalPath: '/repos/orvilo', deviceId: DEVICE_ROW_ID },
+    ]);
     vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
       { isDefault: true, name: 'origin/main', sha: 'sha-base-1' },
     ]);
@@ -296,7 +327,11 @@ describe('TaskWorkspaceService', () => {
   describe('resolveWorkspaceConfig', () => {
     it('returns the task own workspace config', async () => {
       const task = baseTask({ config: { workspace: workspaceConfig } });
-      expect(await service.resolveWorkspaceConfig(task)).toEqual(workspaceConfig);
+      expect(await service.resolveWorkspaceConfig(task)).toEqual({
+        ...workspaceConfig,
+        deviceId: 'dev-1',
+        deviceOwnerUserId: 'host-owner',
+      });
     });
 
     it('inherits the workspace config from a parent task', async () => {
@@ -304,7 +339,11 @@ describe('TaskWorkspaceService', () => {
         baseTask({ config: { workspace: workspaceConfig }, id: 'task_parent' }),
       );
       const task = baseTask({ parentTaskId: 'task_parent' });
-      expect(await service.resolveWorkspaceConfig(task)).toEqual(workspaceConfig);
+      expect(await service.resolveWorkspaceConfig(task)).toEqual({
+        ...workspaceConfig,
+        deviceId: 'dev-1',
+        deviceOwnerUserId: 'host-owner',
+      });
     });
 
     it('returns undefined when no ancestor carries a binding', async () => {
@@ -328,7 +367,7 @@ describe('TaskWorkspaceService', () => {
         remoteRepositoryId: null,
       });
       mockRepositoryModel.listCheckouts.mockResolvedValue([
-        { canonicalPath: '/authorized/widgets', deviceId: 'dev-1' },
+        { canonicalPath: '/authorized/widgets', deviceId: DEVICE_ROW_ID },
       ]);
 
       await expect(
@@ -336,6 +375,7 @@ describe('TaskWorkspaceService', () => {
       ).resolves.toEqual({
         baseBranch: 'main',
         deviceId: 'dev-1',
+        deviceOwnerUserId: 'host-owner',
         provider: 'git',
         repoPath: '/authorized/widgets',
       });
@@ -343,6 +383,195 @@ describe('TaskWorkspaceService', () => {
   });
 
   describe('provision', () => {
+    it('hydrates a repo-only plan from the saved owner physical host and its different checkout UUID', async () => {
+      const task = baseTask({
+        config: { workspace: { provider: 'git', repo: 'acme/widgets', baseBranch: 'main' } },
+      });
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+      });
+      expect(DeviceModel).toHaveBeenCalledWith(expect.anything(), 'user-1', 'ws-1');
+      expect(mockDeviceModel.queryForExecution).toHaveBeenCalledWith();
+      expect(provisioned).toMatchObject({
+        deviceId: 'dev-1',
+        workingDirectory: '/repos/orvilo-task-T-1@task_1',
+        integration: { repo: 'acme/widgets', repoPath: '/repos/orvilo' },
+      });
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: 'dev-1', path: '/repos/orvilo' }),
+      );
+    });
+
+    it('provisions and cleans a shared Agent host globally as its recorded owner while claims remain caller-scoped', async () => {
+      const task = baseTask({ config: { workspace: { provider: 'git', repo: 'acme/widgets' } } });
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+      });
+      expect(provisioned?.integration.deviceOwnerUserId).toBe('host-owner');
+      expect(mockClaimModel.mint).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: 'ws-1', taskId: task.id, dispatchId: 'disp-1' }),
+      );
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'host-owner', deviceId: 'dev-1' }),
+      );
+      expect(vi.mocked(deviceGateway.addGitWorktree).mock.calls[0][0]).not.toHaveProperty(
+        'workspaceId',
+      );
+      mockAgentModel.getAgentConfig.mockResolvedValue({
+        userId: 'another-owner',
+        agencyConfig: { boundDeviceId: 'host-changed' },
+      });
+      await expect(service.discardUnregistered(provisioned!)).resolves.toBe(true);
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'host-owner', deviceId: 'dev-1' }),
+      );
+      expect(vi.mocked(deviceGateway.removeGitWorktree).mock.calls[0][0]).not.toHaveProperty(
+        'workspaceId',
+      );
+    });
+
+    it('uses the authorized C-owned host of an A-owned Agent invoked by B', async () => {
+      const task = baseTask({ config: { workspace: { provider: 'git', repo: 'acme/widgets' } } });
+      mockAgentModel.getAgentConfig.mockResolvedValue({
+        userId: 'agent-owner-A',
+        agencyConfig: { boundDeviceId: 'physical-C' },
+      });
+      mockDeviceModel.queryForExecution.mockResolvedValue([
+        { id: OTHER_DEVICE_ROW_ID, deviceId: 'physical-C', userId: 'device-owner-C' },
+      ]);
+      mockRepositoryModel.listCheckouts.mockResolvedValue([
+        { canonicalPath: '/registered/C/widgets', deviceId: OTHER_DEVICE_ROW_ID },
+      ]);
+      const callerB = new TaskWorkspaceService({} as never, 'caller-B', 'ws-1');
+      const provisioned = await callerB.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+      });
+      expect(DeviceModel).toHaveBeenCalledWith(expect.anything(), 'caller-B', 'ws-1');
+      expect(provisioned?.integration).toMatchObject({
+        deviceId: 'physical-C',
+        deviceOwnerUserId: 'device-owner-C',
+        repoPath: '/registered/C/widgets',
+      });
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'device-owner-C',
+          deviceId: 'physical-C',
+          path: '/registered/C/widgets',
+        }),
+      );
+      await expect(callerB.discardUnregistered(provisioned!)).resolves.toBe(true);
+      expect(deviceGateway.removeGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'device-owner-C', deviceId: 'physical-C' }),
+      );
+      expect(vi.mocked(deviceGateway.removeGitWorktree).mock.calls[0][0]).not.toHaveProperty(
+        'workspaceId',
+      );
+    });
+
+    it('preserves a historical checkout when its Run has no verified host owner', async () => {
+      const task = baseTask({ config: { workspace: workspaceConfig } });
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+      });
+      provisioned!.integration.deviceOwnerUserId = undefined;
+      await expect(service.discardUnregistered(provisioned!)).resolves.toBe(false);
+      expect(deviceGateway.removeGitWorktree).not.toHaveBeenCalled();
+    });
+
+    it('uses the new saved host checkout on a later Run and ignores a stale path/device in the plan', async () => {
+      const task = baseTask({
+        config: {
+          workspace: {
+            provider: 'git',
+            repo: 'acme/widgets',
+            repoPath: '/stale/frozen-path',
+            deviceId: 'stale-plan-host',
+          },
+        },
+      });
+      expect(await service.resolveWorkspaceConfig(task)).toMatchObject({
+        repoPath: '/repos/orvilo',
+        deviceId: 'dev-1',
+      });
+      mockAgentModel.getAgentConfig.mockResolvedValue({
+        userId: 'host-owner',
+        agencyConfig: { boundDeviceId: 'physical-host-2' },
+      });
+      mockDeviceModel.queryForExecution.mockResolvedValue([
+        {
+          id: OTHER_DEVICE_ROW_ID,
+          deviceId: 'physical-host-2',
+          userId: 'host-owner',
+        },
+      ]);
+      mockRepositoryModel.listCheckouts.mockResolvedValue([
+        { canonicalPath: '/repos/orvilo', deviceId: DEVICE_ROW_ID },
+        { canonicalPath: '/current/host-2/widgets', deviceId: OTHER_DEVICE_ROW_ID },
+      ]);
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-2',
+        generation: 2,
+        seq: 2,
+      });
+      expect(provisioned?.integration).toMatchObject({
+        deviceId: 'physical-host-2',
+        repoPath: '/current/host-2/widgets',
+      });
+      expect(deviceGateway.addGitWorktree).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: 'physical-host-2', path: '/current/host-2/widgets' }),
+      );
+    });
+
+    it.each(['wrong', 'unregistered'])(
+      'refuses a repo-only plan when the saved host is %s',
+      async (failure) => {
+        const task = baseTask({ config: { workspace: { provider: 'git', repo: 'acme/widgets' } } });
+        if (failure === 'unregistered') mockDeviceModel.queryForExecution.mockResolvedValue([]);
+        else
+          mockRepositoryModel.listCheckouts.mockResolvedValue([
+            { canonicalPath: '/other/host', deviceId: OTHER_DEVICE_ROW_ID },
+          ]);
+        await expect(
+          service.provision({ task, dispatchId: 'disp-1', generation: 1, seq: 1 }),
+        ).rejects.toThrow('registered active checkout');
+        expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
+      },
+    );
+
+    it('hydrates an inherited repo-only plan using the assigned Agent current host', async () => {
+      mockTaskModel.findById.mockResolvedValue(
+        baseTask({
+          id: 'parent',
+          config: { workspace: { provider: 'git', repo: 'acme/widgets', baseBranch: 'main' } },
+        }),
+      );
+      const task = baseTask({ parentTaskId: 'parent' });
+      const provisioned = await service.provision({
+        task,
+        dispatchId: 'disp-1',
+        generation: 1,
+        seq: 1,
+      });
+      expect(provisioned?.integration).toMatchObject({
+        repo: 'acme/widgets',
+        repoPath: '/repos/orvilo',
+        deviceId: 'dev-1',
+      });
+    });
+
     it('provisions C on the exact reviewed upstream branch before it is merged', async () => {
       const sourceSha = 'a'.repeat(40);
       vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
@@ -471,7 +700,7 @@ describe('TaskWorkspaceService', () => {
         remoteRepositoryId: 'github-1',
       });
       mockRepositoryModel.listCheckouts.mockResolvedValue([
-        { canonicalPath: '/repos/orvilo', deviceId: 'dev-1' },
+        { canonicalPath: '/repos/orvilo', deviceId: DEVICE_ROW_ID },
       ]);
       const task = baseTask({ projectId: 'project-1' });
       const provisioned = await service.provision({
@@ -519,7 +748,7 @@ describe('TaskWorkspaceService', () => {
         remoteRepositoryId: 'github-1',
       });
       mockRepositoryModel.listCheckouts.mockResolvedValue([
-        { canonicalPath: '/repos/orvilo', deviceId: 'dev-1' },
+        { canonicalPath: '/repos/orvilo', deviceId: DEVICE_ROW_ID },
       ]);
       const task = baseTask({ projectId: 'project-1', config: { workspace: workspaceConfig } });
       const provisioned = await service.provision({
@@ -627,8 +856,7 @@ describe('TaskWorkspaceService', () => {
         claimToken: provisioned?.claim?.ownerToken,
         deviceId: 'dev-1',
         path: '/repos/orvilo',
-        userId: 'user-1',
-        workspaceId: 'ws-1',
+        userId: 'host-owner',
         worktreePath: '/repos/orvilo-task-T-1@task_1',
       });
       expect(claimRows.get(CLAIM_KEY)?.releasedAt).not.toBeNull();
@@ -763,8 +991,7 @@ describe('TaskWorkspaceService', () => {
         deviceId: 'dev-1',
         path: '/repos/orvilo',
         ref: 'sha-base-1',
-        userId: 'user-1',
-        workspaceId: 'ws-1',
+        userId: 'host-owner',
         worktreePath: '/repos/orvilo-task-T-1@task_1',
       });
       expect(mockClaimModel.mint).toHaveBeenCalledWith(
@@ -1532,12 +1759,13 @@ describe('TaskWorkspaceService', () => {
 
       await expect(
         service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
-      ).rejects.toThrow('does not match the selected execution target');
+      ).rejects.toThrow('registered active checkout');
       expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
     });
 
     it('still prefers the device worktree when repoPath + device resolve', async () => {
       mockAgentModel.getAgentConfig.mockResolvedValue({
+        userId: 'host-owner',
         agencyConfig: {
           boundDeviceId: 'dev-1',
           executionTarget: 'device',
@@ -1569,7 +1797,7 @@ describe('TaskWorkspaceService', () => {
 
         await expect(
           service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
-        ).rejects.toThrow('does not match the selected execution target');
+        ).rejects.toThrow('registered active checkout');
         expect(deviceGateway.addGitWorktree).not.toHaveBeenCalled();
       } finally {
         (deviceGateway as { isConfigured: boolean }).isConfigured = false;
@@ -1586,7 +1814,7 @@ describe('TaskWorkspaceService', () => {
 
       await expect(
         service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task }),
-      ).rejects.toThrow('does not match the selected execution target');
+      ).rejects.toThrow('registered active checkout');
     });
 
     it('fails when the repo coordinate is unparseable', async () => {

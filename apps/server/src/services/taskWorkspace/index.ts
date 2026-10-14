@@ -14,6 +14,7 @@ import { isRecord } from '@orvilo/utils/object';
 import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
+import { DeviceModel } from '@/database/models/device';
 import { RepositoryModel } from '@/database/models/repository';
 import { TaskModel } from '@/database/models/task';
 import {
@@ -78,8 +79,13 @@ export class TaskWorkspaceService {
   }
 
   async discardUnregistered(workspace: ProvisionedWorkspace): Promise<boolean> {
-    const { deviceId, repoPath, worktreePath } = workspace.integration;
+    const { deviceId, deviceOwnerUserId, repoPath, worktreePath } = workspace.integration;
     if (!deviceId || !repoPath || !worktreePath || worktreePath === repoPath) return true;
+
+    if (!deviceOwnerUserId) {
+      log('discardUnregistered: %s carries no recorded host owner — preserving', worktreePath);
+      return false;
+    }
 
     // Cleanup is fenced on the immutable token minted with THIS provision —
     // never the row's current `ownerToken`, which a newer dispatch may
@@ -107,9 +113,8 @@ export class TaskWorkspaceService {
     const inspection = await deviceGateway.inspectGitWorktreePath({
       deviceId,
       path: repoPath,
-      userId: this.userId,
+      userId: deviceOwnerUserId,
       worktreePath,
-      workspaceId: this.workspaceId,
     });
     if (!inspection || inspection.activeWriter === undefined || inspection.activeWriter) {
       log(
@@ -128,8 +133,7 @@ export class TaskWorkspaceService {
       claimToken: claim.ownerToken,
       deviceId,
       path: repoPath,
-      userId: this.userId,
-      workspaceId: this.workspaceId,
+      userId: deviceOwnerUserId,
       worktreePath,
     });
     if (!removed.success || removed.claimTokenVerified !== true) {
@@ -146,81 +150,91 @@ export class TaskWorkspaceService {
     return true;
   }
 
-  async resolveWorkspaceConfig(task: TaskItem): Promise<TaskWorkspaceConfig | undefined> {
+  async resolveWorkspaceConfig(
+    task: TaskItem,
+    savedAgent?: Awaited<ReturnType<AgentModel['getAgentConfigForExecution']>>,
+  ): Promise<(TaskWorkspaceConfig & { deviceOwnerUserId?: string }) | undefined> {
     let current: TaskItem | null = task;
-    let localBinding: TaskWorkspaceConfig | undefined;
+    let binding: TaskWorkspaceConfig | undefined;
     for (let depth = 0; current && depth < WORKSPACE_INHERIT_DEPTH; depth += 1) {
       const config = parseWorkspaceConfig(current.config);
       if (config) {
-        if (config.repo) return config;
-        localBinding = config;
+        binding = config;
         break;
       }
-      const rawConfig = current.config as Record<string, unknown> | null;
-      const rawWorkspace = rawConfig?.workspace;
-      if (isRecord(rawWorkspace) && rawWorkspace.provider === 'git') {
+      const rawWorkspace = (current.config as Record<string, unknown> | null)?.workspace;
+      if (isRecord(rawWorkspace) && rawWorkspace.provider === 'git')
         throw new Error('Git workspace binding must provide repoPath or repo');
-      }
       if (!current.parentTaskId) break;
       current = await this.taskModel.findById(current.parentTaskId);
     }
+    if (binding?.repo && !parseGithubRepo(binding.repo))
+      throw new Error(`Workspace repository is not a valid GitHub coordinate: ${binding.repo}`);
+    const agent =
+      savedAgent === undefined && task.assigneeAgentId
+        ? await (this.workspaceId
+            ? this.agentModel.getAgentConfigForExecution(task.assigneeAgentId)
+            : this.agentModel.getAgentConfig(task.assigneeAgentId))
+        : savedAgent;
+    if (binding?.repo && runsInSandbox(agent?.agencyConfig ?? undefined)) return binding;
+    const physicalId = agent?.agencyConfig?.boundDeviceId;
+    const registered = physicalId
+      ? (await new DeviceModel(this.db, this.userId, this.workspaceId).queryForExecution()).find(
+          (device) => device.deviceId === physicalId,
+        )
+      : undefined;
+    if (!this.workspaceId || (!binding?.repo && !task.projectId && !task.teamId))
+      return binding
+        ? { ...binding, deviceId: physicalId, deviceOwnerUserId: registered?.userId }
+        : undefined;
 
-    // Association fallback (linear-workspace-v3): no explicit binding on the
-    // task or its ancestors — ask the deterministic resolver. A resolved
-    // repository produces a remote-coordinate binding; `ambiguous`/`unresolved`
-    // stays unbound rather than silently picking a candidate.
-    if (this.workspaceId && (task.projectId || task.teamId)) {
-      const repositoryModel = new RepositoryModel(this.db, this.userId, this.workspaceId);
+    const repositoryModel = new RepositoryModel(this.db, this.userId, this.workspaceId);
+    let repository;
+    if (binding?.repo) {
+      const matches = (await repositoryModel.listByWorkspace()).filter(
+        (candidate) =>
+          candidate.status === 'active' &&
+          candidate.remoteRepositoryId &&
+          `${candidate.coordinate.owner}/${candidate.coordinate.name}` === binding!.repo,
+      );
+      if (matches.length !== 1) throw new Error('Workspace repository is unavailable or ambiguous');
+      repository = matches[0];
+    } else {
       const resolution = await repositoryModel.resolveForTask(task.id);
-      if (resolution.ok) {
-        const repository = await repositoryModel.findById(resolution.repositoryId);
-        if (!repository) return localBinding;
-
-        const boundDeviceId = task.assigneeAgentId
-          ? (
-              await (this.workspaceId
-                ? this.agentModel.getAgentConfigForExecution(task.assigneeAgentId)
-                : this.agentModel.getAgentConfig(task.assigneeAgentId))
-            )?.agencyConfig?.boundDeviceId
-          : undefined;
-        const checkouts = await repositoryModel.listCheckouts(repository.id);
-        const checkout = checkouts.find(
-          (candidate) =>
-            boundDeviceId !== undefined &&
-            candidate.deviceId === boundDeviceId &&
-            (!localBinding || candidate.canonicalPath === localBinding.repoPath),
-        );
-        if (checkout) {
-          return {
-            baseBranch: repository.coordinate.defaultBranch ?? undefined,
-            deviceId: checkout.deviceId ?? undefined,
-            provider: 'git',
-            repoPath: checkout.canonicalPath,
-            ...localBinding,
-            ...(repository.remoteRepositoryId &&
-            repository.coordinate.owner &&
-            repository.coordinate.name
-              ? { repo: `${repository.coordinate.owner}/${repository.coordinate.name}` }
-              : {}),
-          };
-        }
-
-        if (localBinding) return localBinding;
-
-        // A coordinate without a verified remote identity is only a display
-        // snapshot. Never turn a local-only repository name into a GitHub clone
-        // target; require an authorized checkout or a verified remote row.
-        const { owner, name } = repository.coordinate;
-        if (repository.remoteRepositoryId && owner && name) {
-          return {
-            baseBranch: repository.coordinate.defaultBranch ?? undefined,
-            provider: 'git',
-            repo: `${owner}/${name}`,
-          };
-        }
-      }
+      if (!resolution.ok) return binding;
+      repository = await repositoryModel.findById(resolution.repositoryId);
+      if (!repository) return binding;
     }
-    return localBinding;
+    const checkouts = await repositoryModel.listCheckouts(repository.id);
+    const checkout =
+      registered &&
+      checkouts.find(
+        (candidate) =>
+          candidate.deviceId === registered.id &&
+          (!binding?.repoPath || binding.repo || candidate.canonicalPath === binding.repoPath),
+      );
+    if (registered && checkout) {
+      const { owner, name } = repository.coordinate;
+      return {
+        ...binding,
+        baseBranch: binding?.baseBranch ?? repository.coordinate.defaultBranch ?? undefined,
+        provider: 'git',
+        deviceId: physicalId,
+        deviceOwnerUserId: registered.userId,
+        repoPath: checkout.canonicalPath,
+        ...(repository.remoteRepositoryId && owner && name ? { repo: `${owner}/${name}` } : {}),
+      };
+    }
+    if (binding?.repo || physicalId)
+      throw new Error('The saved Agent host has no registered active checkout for this repository');
+    const { owner, name } = repository.coordinate;
+    return repository.remoteRepositoryId && owner && name
+      ? {
+          provider: 'git',
+          baseBranch: repository.coordinate.defaultBranch ?? undefined,
+          repo: `${owner}/${name}`,
+        }
+      : binding;
   }
 
   async provision(params: {
@@ -231,7 +245,12 @@ export class TaskWorkspaceService {
     dependencies?: TaskDependencyReceipt[];
   }): Promise<ProvisionedWorkspace | undefined> {
     const { task, seq, dispatchId, generation } = params;
-    let config = await this.resolveWorkspaceConfig(task);
+    const agent = task.assigneeAgentId
+      ? await (this.workspaceId
+          ? this.agentModel.getAgentConfigForExecution(task.assigneeAgentId)
+          : this.agentModel.getAgentConfig(task.assigneeAgentId))
+      : null;
+    let config = await this.resolveWorkspaceConfig(task, agent);
     if (!config) return undefined;
     if (
       !config.repo &&
@@ -262,11 +281,6 @@ export class TaskWorkspaceService {
       throw new Error(`Workspace repository is not a valid GitHub coordinate: ${config.repo}`);
     }
 
-    const agent = task.assigneeAgentId
-      ? await (this.workspaceId
-          ? this.agentModel.getAgentConfigForExecution(task.assigneeAgentId)
-          : this.agentModel.getAgentConfig(task.assigneeAgentId))
-      : null;
     const deviceId = agent?.agencyConfig?.boundDeviceId;
     config = { ...config, deviceId };
 
@@ -281,9 +295,12 @@ export class TaskWorkspaceService {
     }
 
     if (config.repoPath && deviceId) {
+      if (!config.deviceOwnerUserId)
+        throw new Error('The saved Agent host is not registered to its owner');
       return this.provisionOnDevice({
         config,
         deviceId,
+        deviceOwnerUserId: config.deviceOwnerUserId,
         dispatchId,
         generation,
         seq,
@@ -315,12 +332,13 @@ export class TaskWorkspaceService {
     expectedUpstreamSha?: string;
     config: TaskWorkspaceConfig;
     deviceId: string;
+    deviceOwnerUserId: string;
     dispatchId: string;
     generation: number;
     seq: number;
     task: TaskItem;
   }): Promise<ProvisionedWorkspace> {
-    const { config, deviceId, seq, task, dispatchId, generation } = params;
+    const { config, deviceId, deviceOwnerUserId, seq, task, dispatchId, generation } = params;
     const repoPath = config.repoPath!;
     // `deriveWorktreePath` composes a sibling directory of the repo path; a
     // relative or bare name would silently land somewhere else on the device.
@@ -341,9 +359,8 @@ export class TaskWorkspaceService {
     const inspection = await deviceGateway.inspectGitWorktreePath({
       deviceId,
       path: repoPath,
-      userId: this.userId,
+      userId: deviceOwnerUserId,
       worktreePath,
-      workspaceId: this.workspaceId,
     });
     if (!inspection) {
       // An unanswered RPC means an older host that predates this capability —
@@ -497,6 +514,7 @@ export class TaskWorkspaceService {
             config,
             repoPath,
             deviceId,
+            deviceOwnerUserId,
           );
           if (params.expectedUpstreamSha && expectedBaseSha !== params.expectedUpstreamSha)
             throw new Error(
@@ -550,8 +568,7 @@ export class TaskWorkspaceService {
           // add cannot shift the checkout away from the claimed base, and a
           // replay lands on the same pin even after the remote moved.
           ref: claim.expectedBaseSha,
-          userId: this.userId,
-          workspaceId: this.workspaceId,
+          userId: deviceOwnerUserId,
           worktreePath,
         });
         if (!added.success) {
@@ -622,8 +639,7 @@ export class TaskWorkspaceService {
     const checkout = await deviceGateway.inspectGitWorktreePath({
       deviceId,
       path: repoPath,
-      userId: this.userId,
-      workspaceId: this.workspaceId,
+      userId: deviceOwnerUserId,
       worktreePath,
     });
     if (checkout?.kind !== 'listed' || checkout.listed?.branch !== branch) {
@@ -655,6 +671,7 @@ export class TaskWorkspaceService {
       baseSha,
       branch,
       deviceId,
+      deviceOwnerUserId,
       repo: config.repo,
       repoPath,
       role: 'task',
@@ -754,6 +771,7 @@ export class TaskWorkspaceService {
     config: TaskWorkspaceConfig,
     repoPath: string,
     deviceId: string,
+    deviceOwnerUserId: string,
   ): Promise<{ baseBranch: string; expectedBaseSha: string }> {
     // The listing doubles as the availability preflight: a repo that cannot
     // answer it cannot provision a worktree either, and an explicit baseBranch
@@ -763,8 +781,7 @@ export class TaskWorkspaceService {
       remotes = await deviceGateway.listGitRemoteBranches({
         deviceId,
         path: repoPath,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
+        userId: deviceOwnerUserId,
       });
     } catch (error) {
       log('resolveBase: remote lookup failed for %s — %O', task.identifier, error);

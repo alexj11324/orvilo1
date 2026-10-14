@@ -1,0 +1,59 @@
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -497,7 +497,9 @@
+         throw new Error("ResizeObserver not found. Please ensure that you have a polyfill installed.");
+       return pe;
+     }
+-    return new ResizeObserver((c) => {
++    const targets = new Set(), pending = new Map();
++    let frame = null;
++    const measure = (c) => {
+       const d = c.length, S = n.getValue(k), W = n.getValue(j), q = Array.from({ length: S }, () => []), I = {};
+       let g = {};
+       for (let E = 0; E < d; E++) {
+@@ -536,7 +538,37 @@
+         ...g,
+         [Ft]: I
+       }), n.pubIn(g);
++    };
++    const cancelPending = () => {
++      if (frame !== null) cancelAnimationFrame(frame);
++      frame = null;
++      pending.clear();
++    };
++    const observer = new ResizeObserver((entries) => {
++      for (const entry of entries) {
++        if (targets.has(entry.target)) pending.set(entry.target, entry);
++      }
++      if (pending.size === 0 || frame !== null) return;
++      frame = requestAnimationFrame(() => {
++        frame = null;
++        const entries = Array.from(pending.values());
++        pending.clear();
++        measure(entries);
++      });
+     });
++    return {
++      observe: (target, options) => {
++        targets.add(target);
++        observer.observe(target, options);
++      },
++      unobserve: (target) => {
++        targets.delete(target);
++        pending.delete(target);
++        observer.unobserve(target);
++        if (pending.size === 0) cancelPending();
++      },
++      cancelPending
++    };
+   }), o = _(
+     (c) => {
+       r.observe(c);
+@@ -566,6 +598,7 @@
+     },
+     [r, f]
+   ), [$, y, B] = Zt(st, Mt, j);
++  St(() => () => r.cancelPending?.(), [r]);
+   return St(() => {
+     if (B) {
+       const c = l.current?.ownerDocument.defaultView, d = () => {

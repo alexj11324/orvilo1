@@ -4,15 +4,17 @@ import { initialState } from '@/store/file/initialState';
 import { useFileStore } from '@/store/file/store';
 import type { CreateDocumentParams, ResourceItem } from '@/types/resource';
 
-const { mockCreateResource, mockMoveResource } = vi.hoisted(() => ({
+const { mockCreateResource, mockMoveResource, mockQueryResources } = vi.hoisted(() => ({
   mockCreateResource: vi.fn(),
   mockMoveResource: vi.fn(),
+  mockQueryResources: vi.fn(),
 }));
 
 vi.mock('@/services/resource', () => ({
   resourceService: {
     createResource: mockCreateResource,
     moveResource: mockMoveResource,
+    queryResources: mockQueryResources,
   },
 }));
 
@@ -30,9 +32,109 @@ const createResource = (overrides: Partial<ResourceItem> = {}): ResourceItem => 
 });
 
 describe('resource actions', () => {
+  const deferredPage = () => {
+    let resolve!: (value: { items: ResourceItem[] }) => void;
+    let reject!: (reason: Error) => void;
+    const promise = new Promise<{ items: ResourceItem[] }>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, reject, resolve };
+  };
+  const preparePagination = () => {
+    useFileStore.setState({
+      hasMore: true,
+      isLoadingMore: false,
+      offset: 96,
+      queryParams: { parentId: null },
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockQueryResources.mockReset();
     useFileStore.setState(initialState);
+  });
+
+  it('starts only one request when load-more is called concurrently at the same offset', async () => {
+    preparePagination();
+    const page = deferredPage();
+    mockQueryResources.mockReturnValue(page.promise);
+    const first = useFileStore.getState().loadMoreResources();
+    const concurrent = useFileStore.getState().loadMoreResources();
+    expect(mockQueryResources).toHaveBeenCalledTimes(1);
+    expect(mockQueryResources).toHaveBeenCalledWith({ limit: 50, offset: 96, parentId: null });
+    expect(useFileStore.getState().isLoadingMore).toBe(true);
+    page.resolve({ items: [] });
+    await Promise.all([first, concurrent]);
+    expect(useFileStore.getState().isLoadingMore).toBe(false);
+  });
+
+  it('releases the loading guard after success so the next page uses the advanced offset', async () => {
+    preparePagination();
+    const page = deferredPage();
+    const nextPage = deferredPage();
+    const items = Array.from({ length: 50 }, (_, index) =>
+      createResource({ id: `page-96-${index}` }),
+    );
+    mockQueryResources.mockReturnValueOnce(page.promise).mockReturnValueOnce(nextPage.promise);
+    const first = useFileStore.getState().loadMoreResources();
+    page.resolve({ items });
+    await first;
+    expect(useFileStore.getState()).toMatchObject({
+      hasMore: true,
+      isLoadingMore: false,
+      offset: 146,
+    });
+    expect(useFileStore.getState().resourceList).toEqual(items);
+    const next = useFileStore.getState().loadMoreResources();
+    expect(mockQueryResources).toHaveBeenNthCalledWith(2, {
+      limit: 50,
+      offset: 146,
+      parentId: null,
+    });
+    expect(useFileStore.getState().isLoadingMore).toBe(true);
+    nextPage.resolve({ items: [] });
+    await next;
+    expect(useFileStore.getState()).toMatchObject({
+      hasMore: false,
+      isLoadingMore: false,
+      offset: 146,
+    });
+  });
+
+  it('releases a failed request for retry without advancing the offset or replacing data', async () => {
+    preparePagination();
+    const existing = createResource({ id: 'existing' });
+    useFileStore.setState({
+      resourceList: [existing],
+      resourceMap: new Map([[existing.id, existing]]),
+    });
+    const page = deferredPage();
+    const retryPage = deferredPage();
+    const error = new Error('page request failed');
+    mockQueryResources.mockReturnValueOnce(page.promise).mockReturnValueOnce(retryPage.promise);
+    const failed = useFileStore.getState().loadMoreResources();
+    const rejection = expect(failed).rejects.toBe(error);
+    page.reject(error);
+    await rejection;
+    expect(useFileStore.getState()).toMatchObject({
+      hasMore: true,
+      isLoadingMore: false,
+      offset: 96,
+    });
+    expect(useFileStore.getState().resourceList).toEqual([existing]);
+    expect(useFileStore.getState().resourceMap.get(existing.id)).toBe(existing);
+    const retry = useFileStore.getState().loadMoreResources();
+    expect(mockQueryResources).toHaveBeenNthCalledWith(2, {
+      limit: 50,
+      offset: 96,
+      parentId: null,
+    });
+    expect(useFileStore.getState().isLoadingMore).toBe(true);
+    retryPage.resolve({ items: [] });
+    await retry;
+    expect(useFileStore.getState().isLoadingMore).toBe(false);
   });
 
   it('should keep completed background uploads out of the current resource list when they are off-screen', () => {
